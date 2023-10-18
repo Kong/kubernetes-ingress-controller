@@ -4,103 +4,30 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
-func TestConvertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *testing.T) {
-	type Case struct {
-		msg         string
-		input       []gatewayv1beta1.HTTPHeaderMatch
-		kongVersion func(t *testing.T) semver.Version
-		output      map[string][]string
-		err         error
-	}
-
-	testcases := []Case{
-		{
-			msg: "regex header matches fail on unsupported versions",
-			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
-				Name:  "Content-Type",
-				Value: "^audio/*",
-			}},
-			kongVersion: func(t *testing.T) semver.Version {
-				kongVersion, err := semver.Parse("2.5.0")
-				require.NoError(t, err)
-				return kongVersion
-			},
-			output: nil,
-			err:    fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", semver.MustParse("2.5.0")),
-		},
-		{
-			msg: "a single exact header match succeeds on any version",
-			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Name:  "Content-Type",
-				Value: "audio/vorbis",
-			}},
-			kongVersion: func(t *testing.T) semver.Version {
-				kongVersion, err := semver.Parse("2.5.0")
-				require.NoError(t, err)
-				return kongVersion
-			},
-			output: map[string][]string{
-				"Content-Type": {"audio/vorbis"},
-			},
-		},
-		{
-			msg: "regex header matches succeed on supported versions",
-			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
-				Name:  "Content-Type",
-				Value: "^audio/*",
-			}},
-			kongVersion: func(t *testing.T) semver.Version {
-				kongVersion, err := semver.Parse("2.8.0")
-				require.NoError(t, err)
-				return kongVersion
-			},
-			output: map[string][]string{
-				"Content-Type": {kongHeaderRegexPrefix + "^audio/*"},
-			},
-		},
-	}
-
-	for _, tt := range testcases {
-		t.Run(tt.msg, func(t *testing.T) {
-			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input, tt.kongVersion(t))
-			assert.Equal(t, tt.err, err)
-			assert.Equal(t, tt.output, output)
-		})
-	}
-}
-
 func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
-	kongVersion, err := semver.Parse("2.8.0")
-	require.NoError(t, err)
-
 	t.Log("generating several gateway header matches")
 	tests := []struct {
 		msg    string
-		input  []gatewayv1beta1.HTTPHeaderMatch
+		input  []gatewayapi.HTTPHeaderMatch
 		output map[string][]string
 		err    error
 	}{
 		{
 			msg: "regex header matches convert correctly",
-			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
+			input: []gatewayapi.HTTPHeaderMatch{{
+				Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
@@ -110,7 +37,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "a single exact header match with no type defaults to exact type and converts properly",
-			input: []gatewayv1beta1.HTTPHeaderMatch{{
+			input: []gatewayapi.HTTPHeaderMatch{{
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -120,8 +47,8 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "a single exact header match with a single value converts properly",
-			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
+			input: []gatewayapi.HTTPHeaderMatch{{
+				Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -131,7 +58,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple header matches for the same header are rejected",
-			input: []gatewayv1beta1.HTTPHeaderMatch{
+			input: []gatewayapi.HTTPHeaderMatch{
 				{
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
@@ -146,9 +73,9 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple header matches convert properly",
-			input: []gatewayv1beta1.HTTPHeaderMatch{
+			input: []gatewayapi.HTTPHeaderMatch{
 				{
-					Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
+					Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
 				},
@@ -171,7 +98,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	t.Log("verifying header match conversions")
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input, kongVersion)
+			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input)
 			assert.Equal(t, tt.err, err)
 			assert.Equal(t, tt.output, output)
 		})
@@ -179,34 +106,34 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 }
 
 func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
-	grants := []*gatewayv1beta1.ReferenceGrant{
+	grants := []*gatewayapi.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewString(),
 				Namespace: "fitrat",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+			Spec: gatewayapi.ReferenceGrantSpec{
+				From: []gatewayapi.ReferenceGrantFrom{
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("garbage"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("garbage"),
 					},
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("behbudiy"),
 					},
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1beta1.ReferenceGrantTo{
+				To: []gatewayapi.ReferenceGrantTo{
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("GrantOne"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("GrantOne"),
 					},
 				},
 			},
@@ -216,23 +143,23 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 				Name:      uuid.NewString(),
 				Namespace: "cholpon",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+			Spec: gatewayapi.ReferenceGrantSpec{
+				From: []gatewayapi.ReferenceGrantFrom{
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("UDPRoute"),
+						Namespace: gatewayapi.Namespace("behbudiy"),
 					},
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1beta1.ReferenceGrantTo{
+				To: []gatewayapi.ReferenceGrantTo{
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("GrantTwo"),
 					},
 				},
 			},
@@ -240,79 +167,79 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 	tests := []struct {
 		msg    string
-		from   gatewayv1beta1.ReferenceGrantFrom
-		result map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo
+		from   gatewayapi.ReferenceGrantFrom
+		result map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo
 	}{
 		{
 			msg: "no matches whatsoever",
-			from: gatewayv1beta1.ReferenceGrantFrom{
-				Group:     gatewayv1alpha2.Group("invalid.example"),
-				Kind:      gatewayv1alpha2.Kind("invalid"),
-				Namespace: gatewayv1alpha2.Namespace("invalid"),
+			from: gatewayapi.ReferenceGrantFrom{
+				Group:     gatewayapi.Group("invalid.example"),
+				Kind:      gatewayapi.Kind("invalid"),
+				Namespace: gatewayapi.Namespace("invalid"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
+			result: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching namespace",
-			from: gatewayv1beta1.ReferenceGrantFrom{
-				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
-				Namespace: gatewayv1alpha2.Namespace("niyazi"),
+			from: gatewayapi.ReferenceGrantFrom{
+				Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+				Kind:      gatewayapi.Kind("UDPRoute"),
+				Namespace: gatewayapi.Namespace("niyazi"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
+			result: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching kind",
-			from: gatewayv1beta1.ReferenceGrantFrom{
-				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-				Kind:      gatewayv1alpha2.Kind("TLSRoute"),
-				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+			from: gatewayapi.ReferenceGrantFrom{
+				Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+				Kind:      gatewayapi.Kind("TLSRoute"),
+				Namespace: gatewayapi.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
+			result: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching group",
-			from: gatewayv1beta1.ReferenceGrantFrom{
-				Group:     gatewayv1alpha2.Group("invalid.example"),
-				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
-				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+			from: gatewayapi.ReferenceGrantFrom{
+				Group:     gatewayapi.Group("invalid.example"),
+				Kind:      gatewayapi.Kind("UDPRoute"),
+				Namespace: gatewayapi.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
+			result: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{},
 		},
 		{
 			msg: "single match",
-			from: gatewayv1beta1.ReferenceGrantFrom{
-				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
-				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+			from: gatewayapi.ReferenceGrantFrom{
+				Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+				Kind:      gatewayapi.Kind("UDPRoute"),
+				Namespace: gatewayapi.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{
+			result: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
 				"cholpon": {
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("GrantTwo"),
 					},
 				},
 			},
 		},
 		{
 			msg: "multiple matches",
-			from: gatewayv1beta1.ReferenceGrantFrom{
-				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-				Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-				Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+			from: gatewayapi.ReferenceGrantFrom{
+				Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+				Kind:      gatewayapi.Kind("TCPRoute"),
+				Namespace: gatewayapi.Namespace("qodiriy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{
+			result: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
 				"cholpon": {
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("GrantTwo"),
 					},
 				},
 				"fitrat": {
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("GrantOne"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("GrantOne"),
 					},
 				},
 			},
@@ -327,34 +254,34 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 }
 
 func TestGenerateKongServiceFromBackendRef(t *testing.T) {
-	grants := []*gatewayv1beta1.ReferenceGrant{
+	grants := []*gatewayapi.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewString(),
 				Namespace: "fitrat",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+			Spec: gatewayapi.ReferenceGrantSpec{
+				From: []gatewayapi.ReferenceGrantFrom{
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("garbage"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("garbage"),
 					},
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("behbudiy"),
 					},
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1beta1.ReferenceGrantTo{
+				To: []gatewayapi.ReferenceGrantTo{
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("Service"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("Service"),
 					},
 				},
 			},
@@ -364,23 +291,23 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				Name:      uuid.NewString(),
 				Namespace: "cholpon",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+			Spec: gatewayapi.ReferenceGrantSpec{
+				From: []gatewayapi.ReferenceGrantFrom{
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("behbudiy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("UDPRoute"),
+						Namespace: gatewayapi.Namespace("behbudiy"),
 					},
 					{
-						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
+						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+						Kind:      gatewayapi.Kind("TCPRoute"),
+						Namespace: gatewayapi.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1beta1.ReferenceGrantTo{
+				To: []gatewayapi.ReferenceGrantTo{
 					{
-						Group: gatewayv1alpha2.Group(""),
-						Kind:  gatewayv1alpha2.Kind("Service"),
+						Group: gatewayapi.Group(""),
+						Kind:  gatewayapi.Kind("Service"),
 					},
 				},
 			},
@@ -394,22 +321,22 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	rules := ingressRules{ServiceNameToServices: map[string]kongstate.Service{}}
 	ruleNumber := 999
 	protocol := "example"
-	port := gatewayv1beta1.PortNumber(7777)
-	redObjName := gatewayv1beta1.ObjectName("red-service")
-	blueObjName := gatewayv1beta1.ObjectName("blue-service")
-	cholponNamespace := gatewayv1beta1.Namespace("cholpon")
-	serviceKind := gatewayv1beta1.Kind("Service")
-	serviceGroup := gatewayv1beta1.Group("")
+	port := gatewayapi.PortNumber(7777)
+	redObjName := gatewayapi.ObjectName("red-service")
+	blueObjName := gatewayapi.ObjectName("blue-service")
+	cholponNamespace := gatewayapi.Namespace("cholpon")
+	serviceKind := gatewayapi.Kind("Service")
+	serviceGroup := gatewayapi.Group("")
 	tests := []struct {
 		msg     string
 		route   client.Object
-		refs    []gatewayv1beta1.BackendRef
+		refs    []gatewayapi.BackendRef
 		result  kongstate.Service
 		wantErr bool
 	}{
 		{
 			msg: "all backends in route namespace",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "HTTPRoute",
@@ -420,9 +347,9 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "cholpon",
 				},
 			},
-			refs: []gatewayv1beta1.BackendRef{
+			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:  blueObjName,
 						Kind:  &serviceKind,
 						Port:  &port,
@@ -430,7 +357,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:  redObjName,
 						Kind:  &serviceKind,
 						Port:  &port,
@@ -465,7 +392,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
-				Parent: &gatewayv1beta1.HTTPRoute{
+				Parent: &gatewayapi.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "tong-sirlari",
 						Namespace: "cholpon",
@@ -480,7 +407,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			msg: "same and different ns backend",
-			route: &gatewayv1alpha2.UDPRoute{
+			route: &gatewayapi.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "UDPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -490,9 +417,9 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "behbudiy",
 				},
 			},
-			refs: []gatewayv1beta1.BackendRef{
+			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:      blueObjName,
 						Port:      &port,
 						Kind:      &serviceKind,
@@ -501,7 +428,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:  redObjName,
 						Port:  &port,
 						Kind:  &serviceKind,
@@ -537,7 +464,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
-				Parent: &gatewayv1alpha2.UDPRoute{
+				Parent: &gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "padarkush",
 						Namespace: "behbudiy",
@@ -552,7 +479,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			msg: "only not permitted remote ns",
-			route: &gatewayv1alpha2.TCPRoute{
+			route: &gatewayapi.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TCPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -562,9 +489,9 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "behbudiy",
 				},
 			},
-			refs: []gatewayv1beta1.BackendRef{
+			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:      blueObjName,
 						Port:      &port,
 						Kind:      &serviceKind,
@@ -594,7 +521,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
-				Parent: &gatewayv1alpha2.TCPRoute{
+				Parent: &gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "kitab-ul-atfol",
 						Namespace: "behbudiy",
@@ -609,7 +536,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			msg: "same and different ns backend",
-			route: &gatewayv1alpha2.TCPRoute{
+			route: &gatewayapi.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TCPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -619,9 +546,9 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					Namespace: "behbudiy",
 				},
 			},
-			refs: []gatewayv1beta1.BackendRef{
+			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:      blueObjName,
 						Port:      &port,
 						Kind:      &serviceKind,
@@ -630,7 +557,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name:  redObjName,
 						Port:  &port,
 						Kind:  &serviceKind,
@@ -658,7 +585,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
-				Parent: &gatewayv1alpha2.TCPRoute{
+				Parent: &gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "muntaxabi-jugrofiyai-umumiy",
 						Namespace: "behbudiy",

@@ -5,53 +5,52 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {
 	var (
-		nonexistentListener = gatewayv1beta1.SectionName("listener-that-doesnt-exist")
-		group               = gatewayv1beta1.Group("gateway.networking.k8s.io")
-		defaultGWNamespace  = gatewayv1beta1.Namespace(corev1.NamespaceDefault)
-		exampleGroup        = gatewayv1beta1.Group("example")
-		podKind             = gatewayv1beta1.Kind("Pod")
+		nonexistentListener = gatewayapi.SectionName("listener-that-doesnt-exist")
+		group               = gatewayapi.Group("gateway.networking.k8s.io")
+		defaultGWNamespace  = gatewayapi.Namespace(corev1.NamespaceDefault)
+		exampleGroup        = gatewayapi.Group("example")
+		podKind             = gatewayapi.Kind("Pod")
 	)
 
 	for _, tt := range []struct {
 		msg           string
-		route         *gatewayv1beta1.HTTPRoute
-		gateways      []*gatewayv1beta1.Gateway
+		route         *gatewayapi.HTTPRoute
+		gateways      []*gatewayapi.Gateway
 		valid         bool
 		validationMsg string
 		err           error
 	}{
 		{
 			msg: "if you provide errant gateways for validation, it fails validation",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
 			}, // no parentRefs
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -65,32 +64,32 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "if you use sectionname to attach to a non-existent gateway listener, it fails validation",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name:        "testing-gateway",
 							SectionName: &nonexistentListener,
 						}},
 					},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "not-the-right-listener",
 						Port:     80,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -104,26 +103,26 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "if the provided gateway has NO listeners, the HTTPRoute fails validation",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{},
 				},
 			}},
 			valid:         false,
@@ -132,31 +131,31 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "parentRefs which omit the namespace pass validation in the same namespace",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -168,31 +167,31 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "if the gateway listener doesn't support HTTPRoute, validation fails",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "http-alternate",
 						Port:     8000,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "TCPRoute",
 							}},
@@ -205,28 +204,28 @@ func TestValidateHTTPRoute(t *testing.T) {
 			err:           fmt.Errorf("HTTPRoute not supported by listener http-alternate"),
 		},
 		{
-			msg: "if an HTTPRoute is using queryparams matching it fails validation due to lack of support",
-			route: &gatewayv1beta1.HTTPRoute{
+			msg: "if an HTTPRoute is using queryparams matching it fails validation due to only supporting expression router",
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{{
-							QueryParams: []gatewayv1beta1.HTTPQueryParamMatch{{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							QueryParams: []gatewayapi.HTTPQueryParamMatch{{
 								Name:  "user-agent",
 								Value: "netscape navigator",
 							}},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+						BackendRefs: []gatewayapi.HTTPBackendRef{{
+							BackendRef: gatewayapi.BackendRef{
+								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Namespace: &defaultGWNamespace,
 								},
 							},
@@ -234,18 +233,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -255,32 +254,32 @@ func TestValidateHTTPRoute(t *testing.T) {
 			}},
 			valid:         false,
 			validationMsg: "httproute spec did not pass validation",
-			err:           fmt.Errorf("queryparam matching is not yet supported for httproute"),
+			err:           fmt.Errorf("queryparam matching is supported with expression router only"),
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{{
-							Headers: []gatewayv1beta1.HTTPHeaderMatch{{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayv1beta1.BackendRef{
-									BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Group:     &exampleGroup,
 										Kind:      &podKind,
 										Namespace: &defaultGWNamespace,
@@ -292,18 +291,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -317,28 +316,28 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we don't support any core kind except Service for backendRefs",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-httproute",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{{
-							Headers: []gatewayv1beta1.HTTPHeaderMatch{{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayv1beta1.BackendRef{
-									BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Kind:      &podKind,
 										Namespace: &defaultGWNamespace,
 										Name:      "service1",
@@ -349,18 +348,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					}},
 				},
 			},
-			gateways: []*gatewayv1beta1.Gateway{{
+			gateways: []*gatewayapi.Gateway{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
 						Name:     "http",
 						Port:     80,
-						Protocol: (gatewayv1beta1.HTTPProtocolType),
-						AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-							Kinds: []gatewayv1beta1.RouteGroupKind{{
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
 								Group: &group,
 								Kind:  "HTTPRoute",
 							}},
@@ -373,9 +372,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 			err:           fmt.Errorf("Pod is not a supported kind for httproute backendRefs, only Service is supported"),
 		},
 	} {
-		// Passed Kong version and routesValidator are irrelevant for the above test cases.
+		// Passed routesValidator is irrelevant for the above test cases.
 		valid, validMsg, err := ValidateHTTPRoute(
-			context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, semver.MustParse("3.0.0"), tt.route, tt.gateways...,
+			context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, tt.route, tt.gateways...,
 		)
 		assert.Equal(t, tt.valid, valid, tt.msg)
 		assert.Equal(t, tt.validationMsg, validMsg, tt.msg)

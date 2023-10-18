@@ -19,7 +19,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
 	"github.com/kong/deck/dump"
-	gokong "github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -41,8 +41,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
@@ -168,8 +166,8 @@ kubeadmConfigPatches:
 
 func createKINDBuilder(t *testing.T) *environments.Builder {
 	clusterBuilder := kind.NewBuilder().WithConfigReader(strings.NewReader(kindConfig))
-	if testenv.ClusterVersion() != "" {
-		clusterVersion := semver.MustParse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
+	if v := testenv.ClusterVersion(); v != "" {
+		clusterVersion := semver.MustParse(strings.TrimPrefix(v, "v"))
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
 	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
@@ -221,14 +219,14 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		WithCreateSubnet(true).
 		WithLabels(gkeTestClusterLabels())
 
-	if testenv.ClusterVersion() != "" {
-		k8sVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
+	if v := testenv.ClusterVersion(); v != "" {
+		k8sVersion, err := semver.Parse(strings.TrimPrefix(v, "v"))
 		if err != nil {
 			return nil, err
 		}
 
 		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
-		clusterBuilder = clusterBuilder.WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
+		clusterBuilder.WithClusterVersion(k8sVersion)
 	}
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
@@ -410,8 +408,6 @@ const numberOfEchoBackends = 3
 func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) *netv1.Ingress {
 	t.Helper()
 
-	c, err := clientset.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
 	container := generators.NewContainer("echo", test.EchoImage, test.EchoHTTPPort)
 	container.Env = append(container.Env, corev1.EnvVar{
@@ -422,7 +418,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	})
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment.Spec.Replicas = lo.ToPtr(int32(noReplicas))
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
@@ -430,27 +426,12 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	kongIngressName := uuid.NewString()
-	king := &kongv1.KongIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kongIngressName,
-			Namespace: corev1.NamespaceDefault,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Route: &kongv1.KongIngressRoute{
-			Methods: []*string{lo.ToPtr(http.MethodGet)},
-		},
-	}
-	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
-	require.NoError(t, err)
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := generators.NewIngressForService(echoPath, map[string]string{
-		annotations.IngressClassKey: ingressClass,
-		"konghq.com/strip-path":     "true",
-		"konghq.com/override":       kongIngressName,
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+		annotations.AnnotationPrefix + annotations.MethodsKey:   http.MethodGet,
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 	return ingress
 }
@@ -535,7 +516,7 @@ func verifyIngressWithEchoBackendsPath(
 func verifyIngressWithEchoBackendsInAdminAPI(
 	ctx context.Context,
 	t *testing.T,
-	kongClient *gokong.Client,
+	kongClient *kong.Client,
 	noReplicas int,
 ) {
 	t.Helper()
@@ -713,40 +694,6 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	migrationJob, err := env.Cluster().Client().BatchV1().Jobs(namespace).Get(ctx, "kong-migrations", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
-}
-
-// killKong kills the Kong container in a given Pod and returns when it has restarted.
-func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
-	t.Helper()
-
-	var orig, after int32
-	for _, status := range pod.Status.ContainerStatuses {
-		if status.Name == proxyContainerName {
-			orig = status.RestartCount
-		}
-	}
-
-	kubeconfig := getTemporaryKubeconfig(t, env)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	require.NoErrorf(t, err, "kill failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
-	require.Eventually(t, func() bool {
-		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == proxyContainerName {
-				if status.RestartCount > orig {
-					after = status.RestartCount
-					return true
-				}
-			}
-		}
-		return false
-	}, kongComponentWait, time.Second)
-	t.Logf("kong container has %v restart after kill", after)
 }
 
 // buildImageLoadAddon creates addon to load KIC and kong images.

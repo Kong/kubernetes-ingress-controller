@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -33,9 +32,6 @@ var (
 	// proxyUDPURL provides access to the UDP API endpoint for the Kong Addon which is deployed to the test environment's cluster.
 	proxyUDPURL *url.URL
 
-	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
-	clusterVersion semver.Version
-
 	// runInvalidConfigTests is set to true to run the test cases including invalid test cases.
 	runInvalidConfigTests bool
 )
@@ -52,9 +48,11 @@ func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 		return
 	}
 
-	fmt.Println("WARNING: failure occurred, performing test cleanup")
-	if rmErr := helpers.RemoveCluster(ctx, env.Cluster()); rmErr != nil {
-		err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%w): %w", rmErr, err)
+	fmt.Printf("WARNING: failure occurred: %v\n", err)
+	if env != nil {
+		if rmErr := helpers.RemoveCluster(ctx, env.Cluster()); rmErr != nil {
+			err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%w): %w", rmErr, err)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "Error: tests failed: %s\n", err)

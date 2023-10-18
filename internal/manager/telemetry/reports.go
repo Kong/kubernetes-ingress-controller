@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"k8s.io/client-go/rest"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.
@@ -41,6 +44,7 @@ type ReportConfig struct {
 // error is not nil - to stop the reports sending.
 func SetupAnonymousReports(
 	ctx context.Context,
+	logger logr.Logger,
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
 	reportCfg ReportConfig,
@@ -65,24 +69,25 @@ func SetupAnonymousReports(
 		return nil, fmt.Errorf("failed to get Kong root config data: %w", err)
 	}
 
-	// gather versioning information from the kong client
-	kongVersion, ok := root["version"].(string)
-	if !ok {
+	// Gather versioning information from the kong client
+	kongVersion := kong.VersionFromInfo(root)
+	if kongVersion == "" {
 		return nil, fmt.Errorf("malformed Kong version found in Kong client root")
 	}
-	cfg, ok := root["configuration"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("malformed Kong configuration found in Kong client root")
+	kongDB, err := kongconfig.DBModeFromRoot(root)
+	if err != nil {
+		return nil, err
 	}
-	kongDB, ok := cfg["database"].(string)
-	if !ok {
-		return nil, fmt.Errorf("malformed database configuration found in Kong client root")
+	routerFlavor, err := kongconfig.RouterFlavorFromRoot(root)
+	if err != nil {
+		return nil, err
 	}
 
 	fixedPayload := Payload{
 		"v":  metadata.Release,
 		"kv": kongVersion,
 		"db": kongDB,
+		"rf": routerFlavor,
 		"id": instanceIDProvider.GetID(), // universal unique identifier for this system
 	}
 
@@ -97,7 +102,7 @@ func SetupAnonymousReports(
 		reportCfg.TelemetryPeriod = telemetryPeriod
 	}
 
-	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, reportCfg)
+	tMgr, err := CreateManager(logger, kubeCfg, clientsProvider, fixedPayload, reportCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

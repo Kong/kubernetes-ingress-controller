@@ -8,17 +8,16 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/blang/semver/v4"
-	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
 	"github.com/kong/deck/cprint"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -38,36 +37,34 @@ import (
 // -----------------------------------------------------------------------------
 
 // SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger, error) {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
+func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
+	zapBase, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
-		return nil, logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
+		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}
-
-	if c.LogReduceRedundancy {
-		deprecatedLogger.Info("WARNING: log stifling has been enabled (experimental)")
-		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(output, &logrus.TextFormatter{}, 3, time.Second*30)
-	}
-
-	logger := logrusr.New(deprecatedLogger)
+	logger := zapr.NewLoggerWithOptions(zapBase, zapr.LogInfoLevel("v"))
 
 	if c.LogLevel != "trace" && c.LogLevel != "debug" {
 		// disable deck's per-change diff output
 		cprint.DisableOutput = true
 	}
 
-	return deprecatedLogger, logger, nil
+	// Prevents controller-runtime from logging
+	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrllog.SetLogger(logger)
+
+	return logger, nil
 }
 
-func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
-	scheme, err := scheme.Get(featureGates)
+	scheme, err := scheme.Get()
 	if err != nil {
 		return ctrl.Options{}, err
 	}
 
-	// configure the general controller options
-	controllerOpts := ctrl.Options{
+	// configure the general manager options
+	managerOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: c.MetricsAddr,
@@ -78,7 +75,8 @@ func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, 
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
 		},
-		Logger: ctrl.LoggerFrom(ctx),
+		Logger:    ctrl.LoggerFrom(ctx),
+		NewClient: newManagerClient,
 	}
 
 	// If there are no configured watch namespaces, then we're watching ALL namespaces,
@@ -88,30 +86,30 @@ func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, 
 	if len(c.WatchNamespaces) > 0 {
 		watchNamespaces := c.WatchNamespaces
 
-		// in all other cases we are a multi-namespace setup and must watch all the
+		// In all other cases we are a multi-namespace setup and must watch all the
 		// c.WatchNamespaces.
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
 		logger.Info("manager set up with multiple namespaces", "namespaces", watchNamespaces)
 
-		// if publish service has been provided the namespace for it should be
+		// If ingress service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
-		if s, ok := c.PublishService.Get(); ok {
+		if s, ok := c.IngressService.Get(); ok {
 			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
 		}
 		watched := make(map[string]cache.Config)
 		for _, n := range sets.NewString(watchNamespaces...).List() {
 			watched[n] = cache.Config{}
 		}
-		controllerOpts.Cache.DefaultNamespaces = watched
+		managerOpts.Cache.DefaultNamespaces = watched
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {
-		controllerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
+		managerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
-	return controllerOpts, nil
+	return managerOpts, nil
 }
 
 func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
@@ -135,7 +133,6 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 
 func setupDataplaneSynchronizer(
 	logger logr.Logger,
-	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
 	proxySyncSeconds float32,
@@ -150,7 +147,7 @@ func setupDataplaneSynchronizer(
 	}
 
 	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
-		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
+		logger.WithName("dataplane-synchronizer"),
 		dataplaneClient,
 		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
 		dataplane.WithInitCacheSyncDuration(initCacheSyncWait),
@@ -172,11 +169,10 @@ func setupAdmissionServer(
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
 	managerClient client.Client,
-	deprecatedLogger logrus.FieldLogger,
+	logger logr.Logger,
 	parserFeatures parser.FeatureFlags,
-	kongVersion semver.Version,
 ) error {
-	logger := deprecatedLogger.WithField("component", "admission-server")
+	admissionLogger := logger.WithName("admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
 		logger.Info("admission webhook server disabled")
@@ -186,39 +182,38 @@ func setupAdmissionServer(
 	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			logger,
+			admissionLogger,
 			managerClient,
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
 			parserFeatures,
-			kongVersion,
 		),
-		Logger: logger,
-	}, logger)
+		Logger: admissionLogger,
+	}, admissionLogger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.WithError(err).Error("admission webhook server stopped")
+		logger.Error(err, "admission webhook server stopped")
 	}()
 	return nil
 }
 
 // setupDataplaneAddressFinder returns a default and UDP address finder. These finders return the override addresses if
-// set or the publish service addresses if no overrides are set. If no UDP overrides or UDP publish service are set,
-// the UDP finder will also return the default addresses. If no override or publish service is set, this function
+// set or the ingress service addresses if no overrides are set. If no UDP overrides or UDP ingress service are set,
+// the UDP finder will also return the default addresses. If no override or ingress service is set, this function
 // returns nil finders and an error.
 func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
 	if !c.UpdateStatus {
 		return nil, nil, nil
 	}
 
-	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddress, c.PublishService)
+	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.IngressAddresses, c.IngressService)
 	if err != nil {
 		return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses: %w", err)
 	}
-	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP)
+	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.IngressAddressesUDP, c.IngressServiceUDP)
 	if err != nil {
 		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
 		udpAddressFinder = defaultAddressFinder
@@ -227,25 +222,25 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, ingressAddresses []string, ingressServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
-	if len(publishStatusAddress) > 0 {
-		addressFinder.SetOverrides(publishStatusAddress)
+	if len(ingressAddresses) > 0 {
+		addressFinder.SetOverrides(ingressAddresses)
 		return addressFinder, nil
 	}
-	if serviceNN, ok := publishServiceNN.Get(); ok {
+	if serviceNN, ok := ingressServiceNN.Get(); ok {
 		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNN))
 		return addressFinder, nil
 	}
 
-	return nil, errors.New("no publish status address or publish service were provided")
+	return nil, errors.New("no publish status address or ingress service were provided")
 }
 
-func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.NamespacedName) func(context.Context) ([]string, error) {
+func generateAddressFinderGetter(mgrc client.Client, ingressServiceNN k8stypes.NamespacedName) func(context.Context) ([]string, error) {
 	return func(ctx context.Context) ([]string, error) {
 		svc := new(corev1.Service)
-		if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
+		if err := mgrc.Get(ctx, ingressServiceNN, svc); err != nil {
 			return nil, err
 		}
 
@@ -265,7 +260,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 		}
 
 		if len(addrs) == 0 {
-			return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
+			return nil, fmt.Errorf("waiting for addresses to be provisioned for ingress service %q", ingressServiceNN)
 		}
 
 		return addrs, nil

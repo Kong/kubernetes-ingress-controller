@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/conditions"
 )
 
@@ -26,10 +26,11 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	RunManager(ctx, t, envcfg, func(cfg *manager.Config) {
-		cfg.UpdateStatus = true
-		cfg.PublishStatusAddress = []string{"http://localhost:8080"}
-	})
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithUpdateStatus(),
+		WithIngressAddress("http://localhost:8080"),
+	)
 
 	ns := CreateNamespace(ctx, t, ctrlClient)
 
@@ -315,7 +316,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 					return false
 				}
 				return true
-			}, 10*time.Second, 50*time.Millisecond)
+			}, test.RequestTimeout, 50*time.Millisecond)
 		})
 	}
 }

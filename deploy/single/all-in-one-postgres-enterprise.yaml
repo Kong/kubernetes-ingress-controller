@@ -779,7 +779,9 @@ spec:
               `Services` can be a target, OR `Endpoints` can be targets).
             properties:
               algorithm:
-                description: Algorithm is the load balancing algorithm to use.
+                description: 'Algorithm is the load balancing algorithm to use. Accepted
+                  values are: "round-robin", "consistent-hashing", "least-connections",
+                  "latency".'
                 enum:
                 - round-robin
                 - consistent-hashing
@@ -1937,28 +1939,6 @@ rules:
   - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kong-ingress-knative
-rules:
-- apiGroups:
-  - networking.internal.knative.dev
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.internal.knative.dev
-  resources:
-  - ingresses/status
-  verbs:
-  - get
-  - patch
-  - update
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: kong-leader-election
@@ -2006,19 +1986,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: kong-ingress-gateway
-subjects:
-- kind: ServiceAccount
-  name: kong-serviceaccount
-  namespace: kong
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kong-ingress-knative
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kong-ingress-knative
 subjects:
 - kind: ServiceAccount
   name: kong-serviceaccount

@@ -1,6 +1,7 @@
 package envtest
 
 import (
+	"context"
 	"go/build"
 	"os"
 	"os/signal"
@@ -11,13 +12,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
@@ -115,6 +125,8 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 }
 
 func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+	t.Helper()
+
 	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
@@ -125,6 +137,8 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 }
 
 func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+	t.Helper()
+
 	// extract project root path.
 	_, thisFilePath, _, _ := runtime.Caller(0) //nolint:dogsled
 	projectRoot := filepath.Join(filepath.Dir(thisFilePath), "..", "..")
@@ -137,4 +151,75 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err)
+}
+
+func deployIngressClass(ctx context.Context, t *testing.T, name string, client ctrlclient.Client) {
+	t.Helper()
+
+	ingress := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
+	}
+	require.NoError(t, client.Create(ctx, ingress))
+}
+
+// deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
+func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) gatewayapi.Gateway {
+	ns := CreateNamespace(ctx, t, client)
+
+	publishSvc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      IngressServiceName,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: builder.NewServicePort().
+				WithName("http").
+				WithProtocol(corev1.ProtocolTCP).
+				WithPort(8000).
+				IntoSlice(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &publishSvc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
+
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+
+	gw := gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayapi.HTTPProtocolType,
+					Port:     gatewayapi.PortNumber(8000),
+				},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      uuid.NewString(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gw))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
+
+	return gw
 }

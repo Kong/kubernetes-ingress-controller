@@ -35,7 +35,7 @@ jobs:
       # it reports the next release to be released as semver in the version field.
       # ref: https://github.com/Kong/kubernetes-ingress-controller/issues/4014
       kong-image: kong/kong-gateway-dev:nightly
-      kong-effective-version: "3.4"
+      kong-effective-version: "3.4.1"
       all-supported-k8s-versions: false
       run-gke: false
       run-istio: false
@@ -46,10 +46,10 @@ jobs:
     with:
       kong-container-repo: kong/kong
       kong-container-tag: nightly
-      kong-oss-effective-version: "3.4"
+      kong-oss-effective-version: "3.4.1"
       kong-enterprise-container-repo: kong/kong-gateway-dev
       kong-enterprise-container-tag: nightly
-      kong-enterprise-effective-version: "3.4"
+      kong-enterprise-effective-version: "3.4.1"
 
   test-reports:
     needs:
@@ -78,4 +78,4 @@ jobs:
           # Since notify-on-slack is triggered on failure (if statement), we can hardcode this.
           status: failure
           fields: repo,message,commit,author,action,eventName,ref,workflow
-          text: 'E2E tests failed for nightly run, please check why.'
+          text: ':red_circle: E2E tests failed for nightly run, please check why.'

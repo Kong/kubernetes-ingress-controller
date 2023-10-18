@@ -80,3 +80,16 @@ func (f HTTPHeaderField) FieldType() FieldType {
 func (f HTTPHeaderField) String() string {
 	return "http.headers." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
 }
+
+// HTTPQueryField extracts the value of an HTTP query parameter from the query string of the request.
+type HTTPQueryField struct {
+	QueryParamName string
+}
+
+func (f HTTPQueryField) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f HTTPQueryField) String() string {
+	return "http.queries." + f.QueryParamName
+}

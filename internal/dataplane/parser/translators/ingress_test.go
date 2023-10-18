@@ -38,14 +38,12 @@ func (noopObjectsCollector) Add(client.Object) {}
 
 func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
-		name           string
-		ingress        *netv1.Ingress
-		addRegexPrefix bool
-		expected       map[string]kongstate.Service
+		name     string
+		ingress  *netv1.Ingress
+		expected map[string]kongstate.Service
 	}{
 		{
-			name:           "a basic ingress resource with a single rule and prefix path type",
-			addRegexPrefix: true,
+			name: "a basic ingress resource with a single rule and prefix path type",
 			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
@@ -75,10 +73,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -148,10 +146,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -222,10 +220,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -243,7 +241,7 @@ func TestTranslateIngress(t *testing.T) {
 						Route: kong.Route{
 							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Hosts:             kong.StringSlice("konghq.com"),
-							Paths:             kong.StringSlice("/api/", "/api$"),
+							Paths:             kong.StringSlice("/api/", "~/api$"),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
 							RegexPriority:     kong.Int(0),
@@ -296,10 +294,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -317,7 +315,7 @@ func TestTranslateIngress(t *testing.T) {
 						Route: kong.Route{
 							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Hosts:             kong.StringSlice("konghq.com"),
-							Paths:             kong.StringSlice("/api$"), // No Prefix Pathing
+							Paths:             kong.StringSlice("~/api$"),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
 							RegexPriority:     kong.Int(0),
@@ -370,10 +368,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -443,10 +441,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -516,10 +514,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -654,10 +652,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -679,7 +677,7 @@ func TestTranslateIngress(t *testing.T) {
 								"/v1/api",
 								"/v2/api",
 								"/v3/api",
-								"/other/path/1$",
+								"~/other/path/1$",
 								"/other/path/2",
 								"/",
 							),
@@ -798,10 +796,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -822,7 +820,7 @@ func TestTranslateIngress(t *testing.T) {
 								"/v1/api",
 								"/v2/api",
 								"/v3/api",
-								"/other/path/1$",
+								"~/other/path/1$",
 								"/other/path/2",
 								"/",
 							),
@@ -891,10 +889,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service1.80": {
+				"default.test-service1.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service1.80"),
+						Name:           kong.String("default.test-service1.80"),
 						Host:           kong.String("test-service1.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -934,10 +932,10 @@ func TestTranslateIngress(t *testing.T) {
 					}},
 					Parent: expectedParentIngress(),
 				},
-				"default.test-ingress.test-service2.80": {
+				"default.test-service2.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service2.80"),
+						Name:           kong.String("default.test-service2.80"),
 						Host:           kong.String("test-service2.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1034,10 +1032,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.ad-service.80": {
+				"default.ad-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.ad-service.80"),
+						Name:           kong.String("default.ad-service.80"),
 						Host:           kong.String("ad-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1077,10 +1075,10 @@ func TestTranslateIngress(t *testing.T) {
 					}},
 					Parent: expectedParentIngress(),
 				},
-				"default.test-ingress.mad-service.80": {
+				"default.mad-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.mad-service.80"),
+						Name:           kong.String("default.mad-service.80"),
 						Host:           kong.String("mad-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1152,10 +1150,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1228,10 +1226,10 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 			expected: map[string]kongstate.Service{
-				"default.test-ingress.test-service.http": {
+				"default.test-service.http": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.http"),
+						Name:           kong.String("default.test-service.http"),
 						Host:           kong.String("test-service.default.http.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1293,89 +1291,11 @@ func TestTranslateIngress(t *testing.T) {
 				[]*netv1.Ingress{tt.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
-					RegexPathPrefix:  tt.addRegexPrefix,
 					ExpressionRoutes: false,
-					CombinedServices: false,
 				},
 				noopObjectsCollector{},
 			), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
-		})
-	}
-}
-
-func TestPathsFromIngressPaths(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		in   netv1.HTTPIngressPath
-		out  []*string
-	}{
-		{
-			name: "path type prefix will expand the match to a trailing slash if not provided",
-			in: netv1.HTTPIngressPath{
-				Path:     "/v1/api/packages",
-				PathType: &pathTypePrefix,
-			},
-			out: kong.StringSlice(
-				"/v1/api/packages/",
-				"/v1/api/packages$",
-			),
-		},
-		{
-			name: "path type prefix will expand the match with a literal match if a slash is provided",
-			in: netv1.HTTPIngressPath{
-				Path:     "/v1/api/packages/",
-				PathType: &pathTypePrefix,
-			},
-			out: kong.StringSlice(
-				"/v1/api/packages/",
-				"/v1/api/packages$",
-			),
-		},
-		{
-			name: "path type prefix will provide a default when no path is provided",
-			in: netv1.HTTPIngressPath{
-				Path:     "",
-				PathType: &pathTypePrefix,
-			},
-			out: kong.StringSlice("/"),
-		},
-		{
-			name: "path type exact will cause an exact matching path on a regular path",
-			in: netv1.HTTPIngressPath{
-				Path:     "/v1/api/packages",
-				PathType: &pathTypeExact,
-			},
-			out: kong.StringSlice("/v1/api/packages$"),
-		},
-		{
-			name: "path type exact will cause an exact matching path on a regular path with a / suffix",
-			in: netv1.HTTPIngressPath{
-				Path:     "/v1/api/packages/",
-				PathType: &pathTypeExact,
-			},
-			out: kong.StringSlice("/v1/api/packages/$"),
-		},
-		{
-			name: "path type exact will supply a default if no path is provided",
-			in: netv1.HTTPIngressPath{
-				Path:     "",
-				PathType: &pathTypeExact,
-			},
-			out: kong.StringSlice("/$"),
-		},
-		{
-			name: "path type implementation-specific will leave the path alone",
-			in: netv1.HTTPIngressPath{
-				Path:     "/asdfasd9jhf09432$",
-				PathType: &pathTypeImplementationSpecific,
-			},
-			out: kong.StringSlice("/asdfasd9jhf09432$"),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			// TODO split test cases to handle regex
-			assert.Equal(t, tt.out, PathsFromIngressPaths(tt.in, false))
 		})
 	}
 }
@@ -1438,7 +1358,7 @@ func TestFlattenMultipleSlashes(t *testing.T) {
 	}
 }
 
-func TestPathsFromIngressPathsRegexPrefix(t *testing.T) {
+func TestPathsFromIngressPaths(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   netv1.HTTPIngressPath
@@ -1508,7 +1428,7 @@ func TestPathsFromIngressPathsRegexPrefix(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.out, PathsFromIngressPaths(tt.in, true))
+			assert.Equal(t, tt.out, PathsFromIngressPaths(tt.in))
 		})
 	}
 }

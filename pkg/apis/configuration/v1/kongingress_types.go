@@ -162,6 +162,7 @@ type KongIngressUpstream struct {
 	HostHeader *string `json:"host_header,omitempty" yaml:"host_header,omitempty"`
 
 	// Algorithm is the load balancing algorithm to use.
+	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency".
 	// +kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections;latency
 	Algorithm *string `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 
@@ -210,7 +211,7 @@ type KongIngressUpstream struct {
 	// HashFallbackURICapture is the "hash_fallback" version of HashOnURICapture.
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty" yaml:"hash_fallback_uri_capture,omitempty"`
 
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
+	// we need to check this one TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 	// ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
 }
 

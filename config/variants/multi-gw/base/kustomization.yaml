@@ -11,11 +11,9 @@ resources:
 components:
   - ../../../image/oss
 
-patchesStrategicMerge:
-- manager_multi_gateway_patch.yaml
-- gateway_service_patch.yaml
-
-patchesJson6902:
+patches:
+- path: manager_multi_gateway_patch.yaml
+- path: ./gateway_service_patch.yaml
 - target:
     group: apps
     version: v1

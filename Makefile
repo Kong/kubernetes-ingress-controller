@@ -157,13 +157,13 @@ fmt:
 
 .PHONY: lint
 lint: verify.tidy golangci-lint staticcheck looppointer
-	$(GOLANGCI_LINT) run -v
+	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml
 
 .PHONY: staticcheck
 staticcheck: staticcheck.download
 	# Workaround for staticcheck not supporting nolint directives, see: https://github.com/dominikh/go-tools/issues/822.
 	go list ./... | \
-		grep -F -e internal/konnect/runtimegroups -v | \
+		grep -F -e internal/konnect/controlplanes -v | \
 		xargs $(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests -f stylish
 
 looppointer: looppointer.download
@@ -208,7 +208,6 @@ manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResour
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/"
-	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-knative paths="./internal/controllers/knative/" output:rbac:artifacts:config=config/rbac/knative
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
@@ -250,8 +249,15 @@ generate.clientsets: client-gen
 		--trim-path-prefix pkg/$(REPO_URL)/v2/
 
 .PHONY: generate.docs
-generate.docs: crd-ref-docs
+generate.docs: generate.apidocs generate.cli-arguments-docs
+
+.PHONY: generate.apidocs
+generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+
+.PHONY: generate.cli-arguments
+generate.cli-arguments-docs:
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
@@ -363,10 +369,14 @@ test.unit.pretty:
 test.golden.update:
 	@go test -v -run TestParser_GoldenTests ./internal/dataplane/parser -update
 
-.PHONY: test.envtest
-.ONESHELL: test.envtest
-test.envtest: gotestsum setup-envtest
+
+.PHONY: use-setup-envtest
+use-setup-envtest:
 	$(SETUP_ENVTEST) use
+
+.PHONY: _test.envtest
+.ONESHELL: _test.envtest
+_test.envtest: gotestsum setup-envtest use-setup-envtest
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \
@@ -377,9 +387,19 @@ test.envtest: gotestsum setup-envtest
 		-coverprofile=coverage.envtest.out \
 		./test/envtest/...
 
+.PHONY: test.envtest
+test.envtest:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
+
+.PHONY: test.envtest.pretty
+test.envtest.pretty:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
+
 .PHONY: _check.container.environment
 _check.container.environment:
 	@./scripts/check-container-environment.sh
+
+TEST_KONG_HELM_CHART_VERSION ?= $(shell yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml)
 
 # Integration tests don't use gotestsum because there's a data race issue
 # when go toolchain is writing to os.Stderr which is being read in go-kong
@@ -391,6 +411,7 @@ _check.container.environment:
 .PHONY: _test.integration
 _test.integration: _check.container.environment go-junit-report
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
+		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=$(GOTAGS)" \
 		KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
@@ -405,30 +426,12 @@ _test.integration: _check.container.environment go-junit-report
 		./test/integration | \
 	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
-.PHONY: test.integration.dbless.knative
-test.integration.dbless.knative:
-	@$(MAKE) _test.integration \
-		GOTAGS="integration_tests,knative" \
-		GOTESTFLAGS="-run TestKnative" \
-		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
-		DBMODE=off \
-		COVERAGE_OUT=coverage.dbless.knative.out
-
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@$(MAKE) _test.integration \
 		GOTAGS="integration_tests" \
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.out
-
-.PHONY: test.integration.postgres.knative
-test.integration.postgres.knative:
-	@$(MAKE) _test.integration \
-		GOTAGS="integration_tests,knative" \
-		GOTESTFLAGS="-run TestKnative" \
-		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
-		DBMODE=postgres \
-		COVERAGE_OUT=coverage.postgres.knative.out
 
 .PHONY: test.integration.postgres
 test.integration.postgres:
@@ -474,13 +477,28 @@ test.istio: gotestsum
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
-.PHONY: test.expression_router
-test.expression_router: gotestsum
+.PHONY: test.kongintegration
+test.kongintegration:
+	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
+
+.PHONY: test.kongintegration.pretty
+test.kongintegration.pretty:
+	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
+
+.PHONY: _test.kongintegration
+_test.kongintegration: gotestsum go-junit-report
+	# Disable testcontainer's reaper (Ryuk). It's needed because Ryuk requires
+	# privileged mode to run, which is not desired and could cause issues in CI.
+	TESTCONTAINERS_RYUK_DISABLED="true" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	GOFLAGS="-tags=expression_router_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
-		-parallel 1 \
-		./test/expressionrouter
+		-parallel $(NCPU) \
+		-coverpkg=$(PKG_LIST) \
+		-run=$(TEST_CASE) \
+		-coverprofile=coverage.kongintegration.out \
+		./test/kongintegration | \
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 # ------------------------------------------------------------------------------
 # Operations - Local Deployment
@@ -527,8 +545,8 @@ debug: install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
-		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
-		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
+		--ingress-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--ingress-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 
@@ -561,8 +579,8 @@ debug.skaffold:
 # port with debugger/IDE of your choice.
 #
 # To make it work with Konnect, you must provide following files under ./config/variants/konnect/debug:
-#   * `konnect.env` with CONTROLLER_KONNECT_RUNTIME_GROUP_ID env variable set
-#     to the UUID of a Runtime Group you have created in Konnect.
+#   * `konnect.env` with CONTROLLER_KONNECT_CONTROL_PLANE_ID env variable set
+#     to the UUID of a Control Plane you have created in Konnect.
 #   * `tls.crt` and `tls.key` with TLS client cerificate and its key (generated by Konnect).
 .PHONY: debug.skaffold.konnect
 debug.skaffold.konnect:
@@ -600,8 +618,8 @@ _run:
 	go run ./internal/cmd/main.go \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
-		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
-		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
+		--ingress-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--ingress-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 

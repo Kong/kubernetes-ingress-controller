@@ -1,0 +1,41 @@
+name: kong integration tests
+
+on:
+  workflow_call: {}
+
+jobs:
+  kongintegration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: set kong version
+        run: |
+          echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
+
+      - name: run kong integration tests
+        run: make test.kongintegration
+        env:
+          GOTESTSUM_JUNITFILE: kongintegration-tests.xml
+
+      - name: collect test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: "coverage.*.out"
+
+      - name: collect test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"

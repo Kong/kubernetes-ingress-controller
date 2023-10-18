@@ -6,6 +6,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func mustNewPredicate(t *testing.T, lhs LHS, op BinaryOperator, rhs Literal) Predicate {
+	t.Helper()
+
+	predicate, err := NewPredicate(lhs, op, rhs)
+	require.NoError(t, err)
+	return predicate
+}
+
 func TestGenerateExpression(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -24,7 +32,8 @@ func TestGenerateExpression(t *testing.T) {
 		},
 		{
 			name: "simple predicate with lower() transformer",
-			matcher: NewPredicate(
+			matcher: mustNewPredicate(
+				t,
 				NewTransformerLower(FieldHTTPMethod),
 				OpEqual,
 				StringLiteral("get"),

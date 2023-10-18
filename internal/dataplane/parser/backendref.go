@@ -3,19 +3,19 @@ package parser
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func backendRefsToKongStateBackends(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	route client.Object,
-	backendRefs []gatewayv1beta1.BackendRef,
-	allowed map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
+	backendRefs []gatewayapi.BackendRef,
+	allowed map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo,
 ) kongstate.ServiceBackends {
 	backends := kongstate.ServiceBackends{}
 
@@ -60,9 +60,12 @@ func backendRefsToKongStateBackends(
 				route.GetObjectKind().GroupVersionKind().String(),
 				route.GetNamespace(),
 				route.GetName())
-			logger.Errorf(
-				"%s requested backendRef to %s %s/%s, but no ReferenceGrant permits it, skipping...",
-				objName, kind, namespace, backendRef.Name)
+			logger.Error(nil, "object requested backendRef to target, but no ReferenceGrant permits it, skipping...",
+				"object_name", objName,
+				"target_kind", kind,
+				"target_namespace", namespace,
+				"target_name", backendRef.Name,
+			)
 		}
 	}
 

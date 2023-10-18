@@ -3,10 +3,8 @@ package parser
 import (
 	"fmt"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------
@@ -20,19 +18,12 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	udpRouteList, err := p.storer.ListUDPRoutes()
 	if err != nil {
-		p.logger.WithError(err).Errorf("failed to list UDPRoutes")
+		p.logger.Error(err, "failed to list UDPRoutes")
 		return result
 	}
 
 	var errs []error
 	for _, udproute := range udpRouteList {
-		// Disable the translation to expression routes and register translation errors
-		// when expression route is enabled and Kong version is less than 3.4.
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
-			p.registerResourceFailureNotSupportedForExpressionRoutes(udproute)
-			continue
-		}
-
 		if err := validateUDPRoute(udproute); err != nil {
 			errs = append(errs, err)
 			p.registerTranslationFailure(err.Error(), udproute)
@@ -54,17 +45,15 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 		applyExpressionToIngressRules(&result)
 	}
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			p.logger.Errorf(err.Error())
-		}
+	for _, err := range errs {
+		p.logger.Error(err, "could not generate route from UDPRoute")
 	}
 
 	return result
 }
 
-func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayv1alpha2.UDPRoute) error {
-	// first we grab the spec and gather some metdata about the object
+func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayapi.UDPRoute) error {
+	// first we grab the spec and gather some metadata about the object
 	spec := udproute.Spec
 
 	// each rule may represent a different set of backend services that will be accepting
@@ -96,7 +85,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 // validation at this level as well as a fallback so that if routes are posted which
 // are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 // at least try to provide a helpful message about the situation in the manager logs.
-func validateUDPRoute(udproute *gatewayv1alpha2.UDPRoute) error {
+func validateUDPRoute(udproute *gatewayapi.UDPRoute) error {
 	if len(udproute.Spec.Rules) == 0 {
 		return translators.ErrRouteValidationNoRules
 	}

@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -15,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
@@ -253,37 +251,6 @@ func setupControllers(
 			},
 		},
 		// ---------------------------------------------------------------------------
-		// Other Controllers
-		// ---------------------------------------------------------------------------
-		{
-			// knative is a special case because it existed before we added feature gates functionality
-			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
-			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: featureGates[featuregates.KnativeFeature] || c.KnativeIngressEnabled,
-			Controller: &crds.DynamicCRDController{
-				Manager:          mgr,
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KnativeV1Alpha1/Ingress"),
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: []schema.GroupVersionResource{{
-					Group:    knativev1alpha1.SchemeGroupVersion.Group,
-					Version:  knativev1alpha1.SchemeGroupVersion.Version,
-					Resource: "ingresses",
-				}},
-				Controller: &knative.Knativev1alpha1IngressReconciler{
-					Client:                     mgr.GetClient(),
-					Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-					Scheme:                     mgr.GetScheme(),
-					DataplaneClient:            dataplaneClient,
-					IngressClassName:           c.IngressClassName,
-					DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
-					StatusQueue:                kubernetesStatusQueue,
-					DataplaneAddressFinder:     dataplaneAddressFinder,
-					CacheSyncTimeout:           c.CacheSyncTimeout,
-					ReferenceIndexers:          referenceIndexers,
-				},
-			},
-		},
-		// ---------------------------------------------------------------------------
 		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
@@ -298,8 +265,8 @@ func setupControllers(
 					Log:                  ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Gateway"),
 					Scheme:               mgr.GetScheme(),
 					DataplaneClient:      dataplaneClient,
-					PublishServiceRef:    c.PublishService.OrEmpty(),
-					PublishServiceUDPRef: c.PublishServiceUDP,
+					IngressServiceRef:    c.IngressService.OrEmpty(),
+					IngressServiceUDPRef: c.IngressServiceUDP,
 					WatchNamespaces:      c.WatchNamespaces,
 					CacheSyncTimeout:     c.CacheSyncTimeout,
 					ReferenceIndexers:    referenceIndexers,
@@ -327,11 +294,8 @@ func setupControllers(
 				},
 			},
 		},
-		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Alpha APIs
-		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates[featuregates.GatewayFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
@@ -350,6 +314,9 @@ func setupControllers(
 				},
 			},
 		},
+		// ---------------------------------------------------------------------------
+		// Gateway API Controllers - Alpha APIs
+		// ---------------------------------------------------------------------------
 		{
 			Enabled: featureGates[featuregates.GatewayAlphaFeature],
 			Controller: &crds.DynamicCRDController{

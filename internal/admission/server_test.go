@@ -9,15 +9,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/lithammer/dedent"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -62,11 +63,11 @@ func (v KongFakeValidator) ValidateCredential(_ context.Context, _ corev1.Secret
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayv1beta1.Gateway) (bool, string, error) {
+func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayapi.Gateway) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayv1beta1.HTTPRoute) (bool, string, error) {
+func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayapi.HTTPRoute) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
@@ -79,7 +80,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	res := httptest.NewRecorder()
 	server := RequestHandler{
 		Validator: KongFakeValidator{},
-		Logger:    logrus.New(),
+		Logger:    zapr.NewLogger(zap.NewNop()),
 	}
 	handler := http.HandlerFunc(server.ServeHTTP)
 
@@ -351,7 +352,7 @@ func TestValidationWebhook(t *testing.T) {
 				res := httptest.NewRecorder()
 				server := RequestHandler{
 					Validator: tt.validator,
-					Logger:    logrus.New(),
+					Logger:    zapr.NewLogger(zap.NewNop()),
 				}
 				handler := http.HandlerFunc(server.ServeHTTP)
 

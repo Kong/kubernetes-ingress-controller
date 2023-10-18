@@ -13,14 +13,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
 func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExceeded(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -28,15 +29,19 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
-		// Enable status updates and change the queue's buffer size to 0 to
-		// ensure that the status update notifications do not block the
-		// sync loop despite the fact that the status update queue is full.
-		// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
-		// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
-		cfg.UpdateStatus = true
-		cfg.UpdateStatusQueueBufferSize = 0
-	})
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithIngressService(gw.Namespace),
+		WithGatewayFeatureEnabled,
+		func(cfg *manager.Config) {
+			// Enable status updates and change the queue's buffer size to 0 to
+			// ensure that the status update notifications do not block the
+			// sync loop despite the fact that the status update queue is full.
+			// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
+			// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
+			cfg.UpdateStatus = true
+			cfg.UpdateStatusQueueBufferSize = 0
+		})
 
 	backendService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,18 +59,18 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	require.NoError(t, ctrlClient.Create(ctx, &backendService))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &backendService) })
 
-	httpRoute := gatewayv1beta1.HTTPRoute{
+	httpRoute := gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gw.Name),
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
+			Rules: []gatewayapi.HTTPRouteRule{{
 				Matches: builder.NewHTTPRouteMatch().
 					WithPathPrefix("/path").
 					ToSlice(),
@@ -82,7 +87,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 		time.Second*10, time.Millisecond*50)
 }
 
-func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayv1beta1.HTTPRoute) func() bool {
+func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayapi.HTTPRoute) func() bool {
 	return func() bool {
 		if err := cl.Get(ctx, client.ObjectKeyFromObject(&httpRoute), &httpRoute); err != nil {
 			t.Logf("failed to get httpRoute: %v", err)
@@ -93,7 +98,7 @@ func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client
 			return false
 		}
 		programmed, ok := lo.Find(httpRoute.Status.Parents[0].Conditions, func(c metav1.Condition) bool {
-			return c.Type == string(gatewayv1beta1.GatewayConditionProgrammed)
+			return c.Type == string(gatewayapi.GatewayConditionProgrammed)
 		})
 		if !ok {
 			t.Logf("no programmed condition in httpRoute status")
@@ -108,6 +113,8 @@ func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client
 }
 
 func Test_WatchNamespaces(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -116,17 +123,21 @@ func Test_WatchNamespaces(t *testing.T) {
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
 	hidden := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
-		// Enable status updates and change the queue's buffer size to 0 to
-		// ensure that the status update notifications do not block the
-		// sync loop despite the fact that the status update queue is full.
-		// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
-		// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
-		cfg.UpdateStatus = true
-		cfg.UpdateStatusQueueBufferSize = 0
-		// hidden is excluded
-		cfg.WatchNamespaces = []string{gw.Namespace}
-	})
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithIngressService(gw.Namespace),
+		WithGatewayFeatureEnabled,
+		func(cfg *manager.Config) {
+			// Enable status updates and change the queue's buffer size to 0 to
+			// ensure that the status update notifications do not block the
+			// sync loop despite the fact that the status update queue is full.
+			// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
+			// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
+			cfg.UpdateStatus = true
+			cfg.UpdateStatusQueueBufferSize = 0
+			// hidden is excluded
+			cfg.WatchNamespaces = []string{gw.Namespace}
+		})
 
 	backendService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -151,18 +162,18 @@ func Test_WatchNamespaces(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &hiddenService))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &hiddenService) })
 
-	httpRoute := gatewayv1beta1.HTTPRoute{
+	httpRoute := gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gw.Name),
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
+			Rules: []gatewayapi.HTTPRouteRule{{
 				Matches: builder.NewHTTPRouteMatch().
 					WithPathPrefix("/path").
 					ToSlice(),
@@ -195,61 +206,4 @@ func Test_WatchNamespaces(t *testing.T) {
 		}
 		return false
 	}, time.Second*10, time.Second)
-}
-
-// deployGateway deploys a Gateway, GatewayClass, and publish Service for use in tests.
-func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayv1beta1.Gateway {
-	ns := CreateNamespace(ctx, t, client)
-
-	publishSvc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      PublishServiceName,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: builder.NewServicePort().
-				WithName("http").
-				WithProtocol(corev1.ProtocolTCP).
-				WithPort(8000).
-				IntoSlice(),
-		},
-	}
-	require.NoError(t, client.Create(ctx, &publishSvc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
-
-	gwc := gatewayv1beta1.GatewayClass{
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
-		},
-	}
-
-	require.NoError(t, client.Create(ctx, &gwc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-
-	gw := gatewayv1beta1.Gateway{
-		Spec: gatewayv1beta1.GatewaySpec{
-			GatewayClassName: gatewayv1beta1.ObjectName(gwc.Name),
-			Listeners: []gatewayv1beta1.Listener{
-				{
-					Name:     "http",
-					Protocol: gatewayv1beta1.HTTPProtocolType,
-					Port:     gatewayv1beta1.PortNumber(8000),
-				},
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
-		},
-	}
-	require.NoError(t, client.Create(ctx, &gw))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
-
-	return gw
 }

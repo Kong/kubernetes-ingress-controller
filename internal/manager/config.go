@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/samber/mo"
@@ -39,15 +40,15 @@ type Config struct {
 	// See flag definitions in FlagSet(...) for documentation of the fields defined here.
 
 	// Logging configurations
-	LogLevel            string
-	LogFormat           string
-	LogReduceRedundancy bool
+	LogLevel  string
+	LogFormat string
 
 	// Kong high-level controller manager configurations
 	KongAdminAPIConfig                adminapi.HTTPClientOpts
 	KongAdminInitializationRetries    uint
 	KongAdminInitializationRetryDelay time.Duration
 	KongAdminToken                    string
+	KongAdminTokenPath                string
 	KongWorkspace                     string
 	AnonymousReports                  bool
 	EnableReverseSync                 bool
@@ -83,11 +84,11 @@ type Config struct {
 	GatewayAPIControllerName string
 	Impersonate              string
 
-	// Ingress status
-	PublishServiceUDP       OptionalNamespacedName
-	PublishService          OptionalNamespacedName
-	PublishStatusAddress    []string
-	PublishStatusAddressUDP []string
+	// Ingress status.
+	IngressServiceUDP   OptionalNamespacedName
+	IngressService      OptionalNamespacedName
+	IngressAddresses    []string
+	IngressAddressesUDP []string
 
 	UpdateStatus                bool
 	UpdateStatusQueueBufferSize int
@@ -99,7 +100,6 @@ type Config struct {
 	UDPIngressEnabled             bool
 	TCPIngressEnabled             bool
 	KongIngressEnabled            bool
-	KnativeIngressEnabled         bool
 	KongClusterPluginEnabled      bool
 	KongPluginEnabled             bool
 	KongConsumerEnabled           bool
@@ -109,9 +109,10 @@ type Config struct {
 	AdmissionServer admission.ServerConfig
 
 	// Diagnostics and performance
-	EnableProfiling     bool
-	EnableConfigDumps   bool
-	DumpSensitiveConfig bool
+	EnableProfiling      bool
+	EnableConfigDumps    bool
+	DumpSensitiveConfig  bool
+	DiagnosticServerPort int
 
 	// Feature Gates
 	FeatureGates map[string]bool
@@ -141,10 +142,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)
 
 	// Logging configurations
-	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
+	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, and error.`)
 	flagSet.StringVar(&c.LogFormat, "log-format", "text", `Format of logs of the controller. Allowed values are text and json.`)
-	flagSet.BoolVar(&c.LogReduceRedundancy, "debug-log-reduce-redundancy", false, `If enabled, repetitive log entries are suppressed. Built for testing environments - production use not recommended.`)
-	_ = flagSet.MarkHidden("debug-log-reduce-redundancy")
 
 	// Kong high-level controller manager configurations
 	flagSet.BoolVar(&c.KongAdminAPIConfig.TLSSkipVerify, "kong-admin-tls-skip-verify", false, "Disable verification of TLS certificate of Kong's Admin endpoint.")
@@ -156,6 +155,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.UintVar(&c.KongAdminInitializationRetries, "kong-admin-init-retries", 60, "Number of attempts that will be made initially on controller startup to connect to the Kong Admin API")
 	flagSet.DurationVar(&c.KongAdminInitializationRetryDelay, "kong-admin-init-retry-delay", time.Second*1, "The time delay between every attempt (on controller startup) to connect to the Kong Admin API")
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
+	flagSet.StringVar(&c.KongAdminTokenPath, "kong-admin-token-file", "", `Path to the Kong Enterprise RBAC token file used by the controller.`)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
@@ -201,16 +201,16 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
+	flagSet.Var(flags.NewValidatedValue(&c.IngressService, namespacedNameFromFlagValue, nnTypeNameOverride), "ingress-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
-		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
+	flagSet.StringSliceVar(&c.IngressAddresses, "ingress-address", []string{},
+		`User-provided address(es) in comma-separated string format (or specify this flag multiple times), for use in lieu of "publish-service" `+
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
-	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", `Service fronting UDP routing resources in `+
+	flagSet.Var(flags.NewValidatedValue(&c.IngressServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "ingress-service-udp", `Service fronting UDP routing resources in `+
 		`"namespace/name" format. The controller will update UDP route status information with this Service's `+
 		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
-	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},
-		`User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
+	flagSet.StringSliceVar(&c.IngressAddressesUDP, "ingress-address-udp", []string{},
+		`User-provided address(es) in comma-separated string format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
 
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
@@ -222,7 +222,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.IngressClassParametersEnabled, "enable-controller-ingress-class-parameters", true, "Enable the IngressClassParameters controller.")
 	flagSet.BoolVar(&c.UDPIngressEnabled, "enable-controller-udpingress", true, "Enable the UDPIngress controller.")
 	flagSet.BoolVar(&c.TCPIngressEnabled, "enable-controller-tcpingress", true, "Enable the TCPIngress controller.")
-	flagSet.BoolVar(&c.KnativeIngressEnabled, "enable-controller-knativeingress", true, "Enable the KnativeIngress controller.")
 	flagSet.BoolVar(&c.KongIngressEnabled, "enable-controller-kongingress", true, "Enable the KongIngress controller.")
 	flagSet.BoolVar(&c.KongClusterPluginEnabled, "enable-controller-kongclusterplugin", true, "Enable the KongClusterPlugin controller.")
 	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
@@ -256,11 +255,11 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller")
 
 	// Konnect
-	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of data plane configuration with a Konnect runtime group.")
+	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of data plane configuration with a Konnect control plane.")
 	flagSet.BoolVar(&c.Konnect.LicenseSynchronizationEnabled, "konnect-licensing-enabled", false, "Retrieve licenses from Konnect if available. Overrides licenses provided via the environment.")
 	flagSet.DurationVar(&c.Konnect.InitialLicensePollingPeriod, "konnect-initial-license-polling-period", license.DefaultInitialPollingPeriod, "Polling period to be used before the first license is retrieved.")
 	flagSet.DurationVar(&c.Konnect.LicensePollingPeriod, "konnect-license-polling-period", license.DefaultPollingPeriod, "Polling period to be used after the first license is retrieved.")
-	flagSet.StringVar(&c.Konnect.RuntimeGroupID, "konnect-runtime-group-id", "", "An ID of a runtime group that is to be synchronized with data plane configuration.")
+	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-control-plane-id", "", "An ID of a control plane that is to be synchronized with data plane configuration.")
 	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://us.kic.api.konghq.com", "Base address of Konnect API.")
 	flagSet.StringVar(&c.Konnect.TLSClient.Cert, "konnect-tls-client-cert", "", "Konnect TLS client certificate.")
 	flagSet.StringVar(&c.Konnect.TLSClient.CertFile, "konnect-tls-client-cert-file", "", "Konnect TLS client certificate file path.")
@@ -269,29 +268,32 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.DurationVar(&c.Konnect.RefreshNodePeriod, "konnect-refresh-node-period", konnect.DefaultRefreshNodePeriod, "Period of uploading status of KIC and controlled kong gateway instances")
 
 	// Deprecated flags
-	_ = flagSet.Float32("sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
-	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
+	flagSet.Var(flags.NewValidatedValue(&c.IngressService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service", "Use --ingress-service instead")
+	_ = flagSet.MarkDeprecated("publish-service", "Use --ingress-service instead")
+	flagSet.Var(flags.NewValidatedValue(&c.IngressServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", "Use --ingress-service-udp instead")
+	_ = flagSet.MarkDeprecated("publish-service-udp", "Use --ingress-service-udp instead")
+	flagSet.StringSliceVar(&c.IngressAddresses, "publish-status-address", []string{}, "")
+	_ = flagSet.MarkDeprecated("publish-status-address", "Use --ingress-address instead")
+	flagSet.StringSliceVar(&c.IngressAddressesUDP, "publish-status-address-udp", []string{}, "")
+	_ = flagSet.MarkDeprecated("publish-status-address-udp", "Use --ingress-address-udp instead")
 
-	_ = flagSet.Int("stderrthreshold", 0, "Has no effect and will be removed in future releases (see github issue #1297)")
-	_ = flagSet.MarkDeprecated("stderrthreshold", "Has no effect and will be removed in future releases (see github issue #1297)")
-
-	_ = flagSet.Bool("update-status-on-shutdown", false, "No longer has any effect and will be removed in a later release (see github issue #1304)")
-	_ = flagSet.MarkDeprecated("update-status-on-shutdown", "No longer has any effect and will be removed in a later release (see github issue #1304)")
-
-	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
-	_ = flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.")
-
-	_ = flagSet.Bool("leader-elect", false, "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
-	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
-
-	_ = flagSet.Bool("enable-controller-ingress-extensionsv1beta1", true, "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
-	_ = flagSet.MarkDeprecated("enable-controller-ingress-extensionsv1beta1", "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
-
-	_ = flagSet.Bool("enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
-	_ = flagSet.MarkDeprecated("enable-controller-ingress-networkingv1beta1", "Enable the networking.k8s.io/v1beta1 Ingress controller.")
+	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
+	_ = flagSet.MarkDeprecated("konnect-runtime-group-id", "Use --konnect-control-plane-id instead.")
 
 	c.flagSet = flagSet
 	return flagSet
+}
+
+// Resolve the Config item(s) value from file, when provided.
+func (c *Config) Resolve() error {
+	if c.KongAdminTokenPath != "" {
+		token, err := os.ReadFile(c.KongAdminTokenPath)
+		if err != nil {
+			return fmt.Errorf("failed to read --kong-admin-token-file from path '%s': %w", c.KongAdminTokenPath, err)
+		}
+		c.KongAdminToken = string(token)
+	}
+	return nil
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {

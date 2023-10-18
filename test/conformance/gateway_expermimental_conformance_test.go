@@ -43,6 +43,7 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 				SupportedFeatures: sets.New(
 					suite.SupportHTTPRouteMethodMatching,
 					suite.SupportHTTPResponseHeaderModification,
+					suite.SupportHTTPRouteQueryParamMatching,
 				),
 			},
 			ConformanceProfiles: sets.New(

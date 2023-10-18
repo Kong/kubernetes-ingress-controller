@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/zapr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -88,7 +89,7 @@ func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 	readinessChecker := &mockReadinessChecker{}
 	initialClient, err := adminapi.NewTestClient("https://localhost:8083")
 	require.NoError(t, err)
@@ -157,7 +158,7 @@ func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.
 }
 
 func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
-	_, err := clients.NewAdminAPIClientsManager(context.Background(), logrus.New(), nil, &mockReadinessChecker{})
+	_, err := clients.NewAdminAPIClientsManager(context.Background(), zapr.NewLogger(zap.NewNop()), nil, &mockReadinessChecker{})
 	require.ErrorContains(t, err, "at least one initial client must be provided")
 }
 
@@ -168,7 +169,7 @@ func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
 	require.NoError(t, err)
 	m, err := clients.NewAdminAPIClientsManager(
 		context.Background(),
-		logrus.New(),
+		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
 		&mockReadinessChecker{},
 	)
@@ -188,7 +189,7 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.NoError(t, err)
 	m, err := clients.NewAdminAPIClientsManager(
 		context.Background(),
-		logrus.New(),
+		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
 		&mockReadinessChecker{},
 	)
@@ -211,7 +212,7 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	m, err := clients.NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, readinessChecker)
+	m, err := clients.NewAdminAPIClientsManager(ctx, zapr.NewLogger(zap.NewNop()), []*adminapi.Client{testClient}, readinessChecker)
 	require.NoError(t, err)
 
 	t.Run("no notify loop running should return false when subscribing", func(t *testing.T) {
@@ -296,7 +297,7 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	m, err := clients.NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, readinessChecker)
+	m, err := clients.NewAdminAPIClientsManager(ctx, zapr.NewLogger(zap.NewNop()), []*adminapi.Client{testClient}, readinessChecker)
 	require.NoError(t, err)
 	m.Run()
 
@@ -330,7 +331,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	readinessChecker := &mockReadinessChecker{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	m, err := clients.NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, readinessChecker)
+	m, err := clients.NewAdminAPIClientsManager(ctx, zapr.NewLogger(zap.NewNop()), []*adminapi.Client{testClient}, readinessChecker)
 	require.NoError(t, err)
 
 	m.Run()
@@ -427,7 +428,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	defer cancel()
 	m, err := clients.NewAdminAPIClientsManager(
 		ctx,
-		logrus.New(),
+		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
 		readinessChecker,
 		clients.WithReadinessReconciliationTicker(readinessTicker),

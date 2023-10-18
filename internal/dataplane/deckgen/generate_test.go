@@ -4,28 +4,19 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func TestToDeckContent(t *testing.T) {
-	defaultTestParams := func() deckgen.GenerateDeckContentParams {
-		return deckgen.GenerateDeckContentParams{
-			FormatVersion: "3.0",
-		}
-	}
-	modifiedDefaultTestParams := func(fn func(p *deckgen.GenerateDeckContentParams)) deckgen.GenerateDeckContentParams {
-		p := defaultTestParams()
-		fn(&p)
-		return p
-	}
-
 	testCases := []struct {
 		name     string
 		params   deckgen.GenerateDeckContentParams
@@ -34,20 +25,20 @@ func TestToDeckContent(t *testing.T) {
 	}{
 		{
 			name:   "empty",
-			params: defaultTestParams(),
+			params: deckgen.GenerateDeckContentParams{},
 			input:  &kongstate.KongState{},
 			expected: &file.Content{
-				FormatVersion: "3.0",
+				FormatVersion: versions.DeckFileFormatVersion,
 			},
 		},
 		{
 			name: "empty, generate stub entity",
-			params: modifiedDefaultTestParams(func(p *deckgen.GenerateDeckContentParams) {
-				p.AppendStubEntityWhenConfigEmpty = true
-			}),
+			params: deckgen.GenerateDeckContentParams{
+				AppendStubEntityWhenConfigEmpty: true,
+			},
 			input: &kongstate.KongState{},
 			expected: &file.Content{
-				FormatVersion: "3.0",
+				FormatVersion: versions.DeckFileFormatVersion,
 				Upstreams: []file.FUpstream{
 					{
 						Upstream: kong.Upstream{
@@ -61,7 +52,7 @@ func TestToDeckContent(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := deckgen.ToDeckContent(context.Background(), logrus.New(), tc.input, tc.params)
+			result := deckgen.ToDeckContent(context.Background(), zapr.NewLogger(zap.NewNop()), tc.input, tc.params)
 			require.Equal(t, tc.expected, result)
 		})
 	}

@@ -15,6 +15,7 @@ linters:
   - dogsled
   - durationcheck
   - errcheck
+  - errname
   - errorlint
   - exhaustive
   - exportloopref
@@ -84,6 +85,7 @@ linters-settings:
   forbidigo:
     exclude-godoc-examples: false
     forbid:
+      - 'gatewayv1alpha2|gatewayv1beta1(# use internal/gatewayapi aliases instead)?'
       - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
       - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
   gomodguard:
@@ -108,6 +110,13 @@ linters-settings:
       - k8s.io/utils/pointer:
           recommendations:
           - github.com/samber/lo
+      - github.com/sirupsen/logrus:
+          recommendations:
+          - go.uber.org/zap
+      - github.com/bombsimon/logrusr/v4:
+          recommendations:
+          - github.com/go-logr/zapr
+          - github.com/go-logr/logr
   tenv:
     all: true
   loggercheck:
@@ -129,3 +138,14 @@ issues:
       - gosec
     text: "Potential HTTP request made with variable url"
     path: test\.go
+  # Allow using SchemeGroupVersion, GroupVersion, GroupName, AddToScheme, and Install from gatewayv1alpha2 and
+  # gatewayv1beta1 as their values are different between versions, and we can't alias them in internal/gatewayapi/aliases.go.
+  - linters:
+      - forbidigo
+    text: "use of `(gatewayv1alpha2|gatewayv1beta1)\\.(SchemeGroupVersion|GroupVersion|GroupName|AddToScheme|Install)"
+  # Allow gatewayv1alpha2 and gatewayv1beta1 types references in internal/gatewayapi/aliases.go as that
+  # should be the only place where we use them.
+  - linters:
+      - forbidigo
+    text: "use of `(gatewayv1alpha2|gatewayv1beta1)"
+    path: internal/gatewayapi/aliases.go

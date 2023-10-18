@@ -8,10 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -29,9 +28,9 @@ var grpcRouteTypeMeta = metav1.TypeMeta{
 func makeTestGRPCRoute(
 	name string, namespace string, annotations map[string]string,
 	hostnames []string,
-	rules []gatewayv1alpha2.GRPCRouteRule,
-) *gatewayv1alpha2.GRPCRoute {
-	return &gatewayv1alpha2.GRPCRoute{
+	rules []gatewayapi.GRPCRouteRule,
+) *gatewayapi.GRPCRoute {
+	return &gatewayapi.GRPCRoute{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "GRPCRoute",
 			APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -41,9 +40,9 @@ func makeTestGRPCRoute(
 			Namespace:   namespace,
 			Annotations: annotations,
 		},
-		Spec: gatewayv1alpha2.GRPCRouteSpec{
-			Hostnames: lo.Map(hostnames, func(h string, _ int) gatewayv1beta1.Hostname {
-				return gatewayv1beta1.Hostname(h)
+		Spec: gatewayapi.GRPCRouteSpec{
+			Hostnames: lo.Map(hostnames, func(h string, _ int) gatewayapi.Hostname {
+				return gatewayapi.Hostname(h)
 			}),
 			Rules: rules,
 		},
@@ -52,35 +51,33 @@ func makeTestGRPCRoute(
 
 func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 	testCases := []struct {
-		name               string
-		objectName         string
-		annotations        map[string]string
-		hostnames          []string
-		rule               gatewayv1alpha2.GRPCRouteRule
-		prependRegexPrefix bool
-		expectedRoutes     []kongstate.Route
+		name           string
+		objectName     string
+		annotations    map[string]string
+		hostnames      []string
+		rule           gatewayapi.GRPCRouteRule
+		expectedRoutes []kongstate.Route
 	}{
 		{
 			name:        "single match without hostname",
 			objectName:  "single-match",
 			annotations: map[string]string{},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("service0"),
 							Method:  nil,
 						},
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
-								Name:  gatewayv1alpha2.GRPCHeaderName("X-Foo"),
+								Name:  gatewayapi.GRPCHeaderName("X-Foo"),
 								Value: "Bar",
 							},
 						},
 					},
 				},
 			},
-			prependRegexPrefix: true,
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -105,17 +102,16 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			objectName:  "single-match-with-hostname",
 			annotations: map[string]string{},
 			hostnames:   []string{"foo.com", "*.foo.com"},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("service0"),
 							Method:  lo.ToPtr("method0"),
 						},
 					},
 				},
 			},
-			prependRegexPrefix: true,
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -138,14 +134,14 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 		{
 			name:       "multuple matches without hostname",
 			objectName: "multiple-matches",
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: nil,
 							Method:  lo.ToPtr("method0"),
 						},
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
 								Name:  "Version",
 								Value: "2",
@@ -157,14 +153,13 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						},
 					},
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+						Method: &gatewayapi.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
 							Service: lo.ToPtr("v[012]"),
 						},
 					},
 				},
 			},
-			prependRegexPrefix: true,
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -198,80 +193,11 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			},
 		},
 		{
-			name:        "multiple matches with hostname, prependRegexPrefix off",
-			objectName:  "multiple-matches-with-hostname",
+			name:        "single hostname, no matches",
+			objectName:  "hostname-only",
 			annotations: map[string]string{},
-			hostnames:   []string{"foo.com", "*.foo.com"},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
-					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Service: nil,
-							Method:  lo.ToPtr("method0"),
-						},
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
-							{
-								Name:  "Version",
-								Value: "2",
-							},
-							{
-								Name:  "Client",
-								Value: "kong-test",
-							},
-						},
-					},
-					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
-							Service: lo.ToPtr("v[012]"),
-						},
-					},
-				},
-			},
-			prependRegexPrefix: false,
-			expectedRoutes: []kongstate.Route{
-				{
-					Ingress: util.K8sObjectInfo{
-						Name:             "multiple-matches-with-hostname",
-						Namespace:        "default",
-						Annotations:      map[string]string{},
-						GroupVersionKind: grpcRouteGVK,
-					},
-					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.multiple-matches-with-hostname.0.0"),
-						Protocols: kong.StringSlice("grpc", "grpcs"),
-						Paths:     kong.StringSlice("/.+/method0"),
-						Hosts:     kong.StringSlice("foo.com", "*.foo.com"),
-						Headers: map[string][]string{
-							"Version": {"2"},
-							"Client":  {"kong-test"},
-						},
-					},
-				},
-				{
-					Ingress: util.K8sObjectInfo{
-						Name:             "multiple-matches-with-hostname",
-						Namespace:        "default",
-						Annotations:      map[string]string{},
-						GroupVersionKind: grpcRouteGVK,
-					},
-					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.multiple-matches-with-hostname.0.1"),
-						Protocols: kong.StringSlice("grpc", "grpcs"),
-						Paths:     kong.StringSlice("/v[012]/.+"),
-						Hosts:     kong.StringSlice("foo.com", "*.foo.com"),
-						Headers:   map[string][]string{},
-					},
-				},
-			},
-		},
-		{
-			name:               "single hostname, no matches",
-			objectName:         "hostname-only",
-			annotations:        map[string]string{},
-			hostnames:          []string{"foo.com"},
-			rule:               gatewayv1alpha2.GRPCRouteRule{},
-			prependRegexPrefix: true,
+			hostnames:   []string{"foo.com"},
+			rule:        gatewayapi.GRPCRouteRule{},
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -293,8 +219,8 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayv1alpha2.GRPCRouteRule{tc.rule})
-			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, tc.prependRegexPrefix)
+			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule})
+			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
 	}

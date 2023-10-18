@@ -61,6 +61,9 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("can't set both --kong-admin-svc and --kong-admin-url")
 		}
 	}
+	if c.KongAdminToken != "" && c.KongAdminTokenPath != "" {
+		return errors.New("both admin token and admin token file specified, only one allowed")
+	}
 
 	if err := c.validateKonnect(); err != nil {
 		return fmt.Errorf("invalid konnect configuration: %w", err)
@@ -84,8 +87,8 @@ func (c *Config) validateKonnect() error {
 	if konnect.Address == "" {
 		return errors.New("address not specified")
 	}
-	if konnect.RuntimeGroupID == "" {
-		return errors.New("runtime group not specified")
+	if konnect.ControlPlaneID == "" {
+		return errors.New("control plane not specified")
 	}
 	if konnect.TLSClient.IsZero() {
 		return fmt.Errorf("missing TLS client configuration")

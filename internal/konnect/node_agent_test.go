@@ -15,14 +15,17 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 const (
-	testKicVersion  = "2.9.0"
-	testKongVersion = "3.2.0.0"
-	testHostname    = "ingress-0"
+	testKicVersion = "2.9.0"
+	testHostname   = "ingress-0"
 )
+
+// testKongVersion matches enterprise version format.
+var testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
 
 type mockGatewayInstanceGetter struct {
 	gatewayInstances []konnect.GatewayInstance
@@ -283,7 +286,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				// Notify gateway clients changes.
 				gatewayClientsChangesNotifier.Notify()
 
-				// Check number of nodes in RG.
+				// Check number of nodes in CP.
 				ns := nodeClient.MustAllNodes()
 				if len(ns) != tc.numNodes {
 					t.Logf("expected %d nodes, got %d", tc.numNodes, len(ns))

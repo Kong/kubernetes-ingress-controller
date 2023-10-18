@@ -21,12 +21,12 @@ import (
 // Client interacts with the Konnect license API.
 type Client struct {
 	address        string
-	runtimeGroupID string
+	controlPlaneID string
 	httpClient     *http.Client
 }
 
 // KICLicenseAPIPathPattern is the path pattern for KIC license operations.
-var KICLicenseAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/licenses"
+var KICLicenseAPIPathPattern = "%s/kic/api/control-planes/%s/v1/licenses"
 
 // NewClient creates a License API Konnect client.
 func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
@@ -48,13 +48,13 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 
 	return &Client{
 		address:        cfg.Address,
-		runtimeGroupID: cfg.RuntimeGroupID,
+		controlPlaneID: cfg.ControlPlaneID,
 		httpClient:     c,
 	}, nil
 }
 
 func (c *Client) kicLicenseAPIEndpoint() string {
-	return fmt.Sprintf(KICLicenseAPIPathPattern, c.address, c.runtimeGroupID)
+	return fmt.Sprintf(KICLicenseAPIPathPattern, c.address, c.controlPlaneID)
 }
 
 func (c *Client) Get(ctx context.Context) (mo.Option[license.KonnectLicense], error) {

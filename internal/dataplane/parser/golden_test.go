@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blang/semver/v4"
+	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
 
@@ -28,9 +28,6 @@ var (
 	// updateGolden tells whether to update golden files using the current output of the parser.
 	updateGolden = flag.Bool("update", false, "update golden files")
 
-	// defaultKongVersion is the default Kong version to use in tests. Can be overridden in a test case.
-	defaultKongVersion = semver.MustParse("3.4.0")
-
 	// defaultFeatureFlags is the default set of feature flags to use in tests. Can be overridden in a test case.
 	defaultFeatureFlags = func() parser.FeatureFlags {
 		return parser.FeatureFlags{
@@ -38,13 +35,8 @@ var (
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			CombinedServiceRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.CombinedRoutesFeature],
-			CombinedServices:      featuregates.GetFeatureGatesDefaults()[featuregates.CombinedServicesFeature],
-			ExpressionRoutes:      featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
-			FillIDs:               featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
-
-			// RegexPathPrefix depends on the Kong version and is enabled by default for Kong >= 3.0.0.
-			RegexPathPrefix: true,
+			ExpressionRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
+			FillIDs:          featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
 		}
 	}
 )
@@ -103,7 +95,6 @@ func TestParser_GoldenTests(t *testing.T) {
 				k8sConfigFile: filepath.Join(testCaseDirPath, inFileName),
 				goldenFile:    filepath.Join(testCaseDirPath, fmt.Sprintf("%s%s", parserSettings.name, goldenFileSuffix)),
 				featureFlags:  parserSettings.featureFlags,
-				kongVersion:   parserSettings.kongVersion,
 			})
 		}
 	}
@@ -146,7 +137,6 @@ func resolveSetsOfParserSettingsForTestCaseDir(t *testing.T, path string) []pars
 		{
 			name:         "default",
 			featureFlags: defaultFeatureFlags(),
-			kongVersion:  defaultKongVersion,
 		},
 	}
 
@@ -173,7 +163,6 @@ func resolveSetsOfParserSettingsForTestCaseDir(t *testing.T, path string) []pars
 type parserSettings struct {
 	name         string
 	featureFlags parser.FeatureFlags
-	kongVersion  semver.Version
 }
 
 // unmarshalSettingsFile unmarshals a settings file and returns a parserSettings struct.
@@ -183,7 +172,6 @@ func unmarshalSettingsFile(t *testing.T, path string) parserSettings {
 	// package respects only json tags: "Unmarshal converts YAML to JSON then uses JSON to unmarshal into an object".
 	type settingsFile struct {
 		FeatureFlags map[string]bool `json:"feature_flags"`
-		KongVersion  string          `json:"kong_version"`
 	}
 
 	b, err := os.ReadFile(path)
@@ -207,17 +195,9 @@ func unmarshalSettingsFile(t *testing.T, path string) parserSettings {
 		field.SetBool(featureFlagValue)
 	}
 
-	kongVersion := defaultKongVersion
-	// Override the Kong version if specified in the settings file.
-	if settings.KongVersion != "" {
-		kongVersion, err = semver.Parse(settings.KongVersion)
-		require.NoErrorf(t, err, "failed to parse Kong version %s from %s", settings.KongVersion, path)
-	}
-
 	return parserSettings{
 		name:         settingsName,
 		featureFlags: featureFlags,
-		kongVersion:  kongVersion,
 	}
 }
 
@@ -227,11 +207,10 @@ type parserGoldenTestCase struct {
 	k8sConfigFile string
 	goldenFile    string
 	featureFlags  parser.FeatureFlags
-	kongVersion   semver.Version
 }
 
 func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
-	logger := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 
 	// Load the K8s objects from the YAML file.
 	objects := extractObjectsFromYAML(t, tc.k8sConfigFile)
@@ -243,7 +222,7 @@ func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
 
 	// Create the parser.
 	s := store.New(cacheStores, "kong", logger)
-	p, err := parser.NewParser(logger, s, tc.featureFlags, tc.kongVersion)
+	p, err := parser.NewParser(logger, s, tc.featureFlags)
 	require.NoError(t, err, "failed creating parser")
 
 	// Build the Kong configuration.
@@ -252,7 +231,6 @@ func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
 		logger,
 		result.KongState,
 		deckgen.GenerateDeckContentParams{
-			FormatVersion:    "3.0",
 			ExpressionRoutes: tc.featureFlags.ExpressionRoutes,
 			PluginSchemas:    pluginsSchemaStoreStub{},
 		},

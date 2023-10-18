@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -33,25 +33,53 @@ type ConfigErrorFields struct{}
 
 // FlatEntityError represents a single Kong entity with one or more invalid fields.
 type FlatEntityError struct {
-	Name   string           `json:"entity_name,omitempty" yaml:"entity_name,omitempty"`
-	ID     string           `json:"entity_id,omitempty" yaml:"entity_id,omitempty"`
-	Tags   []string         `json:"entity_tags,omitempty" yaml:"entity_tags,omitempty"`
-	Errors []FlatFieldError `json:"errors,omitempty" yaml:"errors,omitempty"`
+	// Name is the name of the Kong entity.
+	Name string `json:"entity_name,omitempty" yaml:"entity_name,omitempty"`
+
+	// ID is the ID of the Kong entity.
+	ID string `json:"entity_id,omitempty" yaml:"entity_id,omitempty"`
+
+	// Tags are the tags of the Kong entity.
+	Tags []string `json:"entity_tags,omitempty" yaml:"entity_tags,omitempty"`
+
+	// Type is the type of the Kong entity.
+	Type string `json:"entity_type,omitempty" yaml:"entity_type,omitempty"`
+
+	// Errors are the errors associated with the Kong entity.
+	Errors []FlatError `json:"errors,omitempty" yaml:"errors,omitempty"`
 }
 
-// FlatFieldError represents an error for a single field within a Kong entity.
-type FlatFieldError struct {
+// FlatErrorType tells whether a FlatError is associated with a single field or a whole entity.
+type FlatErrorType string
+
+const (
+	// FlatErrorTypeField is an error associated with a single field.
+	FlatErrorTypeField FlatErrorType = "field"
+
+	// FlatErrorTypeEntity is an error associated with a whole entity.
+	FlatErrorTypeEntity FlatErrorType = "entity"
+)
+
+// FlatError represents an error for a single field within a Kong entity or a whole entity.
+type FlatError struct {
+	// Field is the name of the entity's field that has an error.
+	// Optional: Field can be empty if the error is associated with the whole entity.
 	Field string `json:"field,omitempty" yaml:"field,omitempty"`
-	// Message is the error associated with Field for single-value fields.
+
+	// Message is the error associated with Field (for single-value fields) or with a whole entity when Type is "entity".
 	Message string `json:"message,omitempty" yaml:"message,omitempty"`
+
 	// Messages are the errors associated with Field for multi-value fields. The array index in Messages matches the
 	// array index in the input.
 	Messages []string `json:"messages,omitempty" yaml:"messages,omitempty"`
+
+	// Type tells whether the error is associated with a single field or a whole entity.
+	Type FlatErrorType `json:"type,omitempty" yaml:"type,omitempty"`
 }
 
 // parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened_errors" value
 // into errors associated with Kubernetes resources.
-func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
+func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, error) {
 	// Directly return here to avoid the misleading "could not unmarshal config" message appear in logs.
 	if len(body) == 0 {
 		return nil, nil
@@ -73,15 +101,19 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 		}
 		for _, p := range ee.Errors {
 			if len(p.Message) > 0 && len(p.Messages) > 0 {
-				log.WithFields(logrus.Fields{
-					"name":  ee.Name,
-					"field": p.Field,
-				}).Error("entity has both single and array errors for field")
-
+				logger.Error(nil, "entity has both single and array errors for field",
+					"name", ee.Name, "field", p.Field)
 				continue
 			}
 			if len(p.Message) > 0 {
-				raw.Problems[p.Field] = p.Message
+				switch p.Type {
+				case FlatErrorTypeField:
+					// If the error is associated with a single field, store it in the map under the field name.
+					raw.Problems[p.Field] = p.Message
+				case FlatErrorTypeEntity:
+					// If the error is associated with a whole entity, store it in the map under the entity type and name.
+					raw.Problems[fmt.Sprintf("%s:%s", ee.Type, ee.Name)] = p.Message
+				}
 			}
 			if len(p.Messages) > 0 {
 				for i, message := range p.Messages {
@@ -93,7 +125,7 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 		}
 		parsed, err := parseRawResourceError(raw)
 		if err != nil {
-			log.WithError(err).WithField("name", ee.Name).Error("entity tags missing fields")
+			logger.Error(err, "entity tags missing fields", "name", ee.Name)
 			continue
 		}
 		resourceErrors = append(resourceErrors, parsed)

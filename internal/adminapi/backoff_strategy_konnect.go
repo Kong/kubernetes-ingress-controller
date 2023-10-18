@@ -34,7 +34,7 @@ type Clock interface {
 //
 // It's important to note that KonnectBackoffStrategy can use the latter (config hash)
 // because of the nature of the one-directional integration where KIC is the only
-// component responsible for populating configuration of Konnect's Runtime Group.
+// component responsible for populating configuration of Konnect's Control Plane.
 // In case that changes in the future (e.g. manual modifications to parts of the
 // configuration are allowed on Konnect side for some reason), we might have to
 // drop this part of the backoff strategy.

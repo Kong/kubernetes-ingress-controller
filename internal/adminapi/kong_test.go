@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
@@ -109,6 +110,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 	testCases := []struct {
 		name            string
 		adminAPIReady   bool
+		adminAPIVersion string
 		workspaceExists bool
 		expectError     error
 	}{
@@ -127,6 +129,34 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			adminAPIReady: false,
 			expectError:   adminapi.KongClientNotReadyError{},
 		},
+		{
+			name:            "admin api is in too old version",
+			adminAPIReady:   true,
+			adminAPIVersion: "3.4.0",
+			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
+		},
+		{
+			name:            "admin api is in supported OSS version",
+			adminAPIReady:   true,
+			adminAPIVersion: versions.KICv3VersionCutoff.String(),
+		},
+		{
+			name:            "admin api has malformed version",
+			adminAPIReady:   true,
+			adminAPIVersion: "3-malformed-version",
+			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
+		},
+		{
+			name:            "admin api has enterprise version",
+			adminAPIReady:   true,
+			adminAPIVersion: "3.4.1.2",
+		},
+		{
+			name:            "admin api has too old enterprise version",
+			adminAPIReady:   true,
+			adminAPIVersion: "3.4.0.2",
+			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -135,6 +165,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 				t,
 				mocks.WithWorkspaceExists(tc.workspaceExists),
 				mocks.WithReady(tc.adminAPIReady),
+				mocks.WithVersion(tc.adminAPIVersion),
 			)
 			adminAPIServer := httptest.NewServer(adminAPIHandler)
 			t.Cleanup(func() { adminAPIServer.Close() })

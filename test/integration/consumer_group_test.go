@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -31,7 +31,6 @@ import (
 func TestConsumerGroup(t *testing.T) {
 	t.Parallel()
 
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ConsumerGroupsVersionCutoff))
 	RunWhenKongEnterprise(t)
 
 	ctx := context.Background()
@@ -131,10 +130,10 @@ func TestConsumerGroup(t *testing.T) {
 	t.Log("checking if consumer has plugin configured correctly based on consumer group membership")
 	for _, consumer := range consumers {
 		require.Eventually(t, func() bool {
-			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL, "/", map[string]string{
+			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, "/", map[string]string{
 				"apikey": consumer.Name,
 			})
-			resp, err := helpers.DefaultHTTPClient().Do(req)
+			resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 			if err != nil {
 				t.Logf("WARNING: consumer %q failed to make a request: %v", consumer.Name, err)
 				return false
@@ -196,10 +195,10 @@ func deployMinimalSvcWithKeyAuth(
 
 	t.Logf("creating an ingress for service %q with plugin %q attached", service.Name, pluginKeyAuthName)
 	ingress := generators.NewIngressForService("/", map[string]string{
-		annotations.IngressClassKey:                             consts.IngressClass,
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.PluginsKey:   pluginKeyAuthName,
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace, ingress))
 	return deployment, service, ingress, pluginKeyAuth
 }

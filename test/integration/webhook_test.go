@@ -28,6 +28,7 @@ import (
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -645,7 +646,7 @@ func ensureWebhookService(ctx context.Context, t *testing.T, name string) {
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
 			{
-				Addresses: []string{testutils.AdmissionWebhookListenHost},
+				Addresses: []string{testutils.GetAdmissionWebhookListenHost()},
 			},
 		},
 		Ports: builder.NewEndpointPort(testutils.AdmissionWebhookListenPort).WithName("default").WithProtocol(corev1.ProtocolTCP).IntoSlice(),
@@ -669,7 +670,7 @@ func ensureWebhookServiceIsConnective(ctx context.Context, t *testing.T, configR
 	defer cancel()
 	require.NoError(
 		t,
-		networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), consts.ControllerNamespace, svcName, svcPort, 10*time.Second),
+		networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), consts.ControllerNamespace, svcName, svcPort, test.RequestTimeout),
 	)
 }
 

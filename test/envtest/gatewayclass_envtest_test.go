@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/conditions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
@@ -31,7 +32,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 	const (
 		// unsupportedControllerName is the name of the controller used for those
 		// gateways that are not supported by an actual controller (i.e., they won't be scheduled).
-		unsupportedControllerName gatewayv1beta1.GatewayController = "example.com/unsupported-gateway-controller"
+		unsupportedControllerName gatewayapi.GatewayController = "example.com/unsupported-gateway-controller"
 	)
 
 	scheme := Scheme(t, WithGatewayAPI)
@@ -44,29 +45,29 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 	testcases := []struct {
 		Name         string
-		GatewayClass gatewayv1beta1.GatewayClass
-		Gateway      gatewayv1beta1.Gateway
+		GatewayClass gatewayapi.GatewayClass
+		Gateway      gatewayapi.Gateway
 		Test         func(
 			ctx context.Context,
 			t *testing.T,
 			gwClient gatewayclientv1beta1.GatewayInterface,
-			gwc gatewayv1beta1.GatewayClass,
-			gw gatewayv1beta1.Gateway,
+			gwc gatewayapi.GatewayClass,
+			gw gatewayapi.Gateway,
 		)
 	}{
 		{
 			Name: "unsupported gateway class",
-			GatewayClass: gatewayv1beta1.GatewayClass{
-				Spec: gatewayv1beta1.GatewayClassSpec{
+			GatewayClass: gatewayapi.GatewayClass{
+				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: unsupportedControllerName,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "unsupported-gateway-class",
 				},
 			},
-			Gateway: gatewayv1beta1.Gateway{
-				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName("unsupported-gateway-class"),
+			Gateway: gatewayapi.Gateway{
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: gatewayapi.ObjectName("unsupported-gateway-class"),
 					Listeners: builder.NewListener("http").
 						HTTP().
 						WithPort(80).
@@ -81,8 +82,8 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				ctx context.Context,
 				t *testing.T,
 				gwClient gatewayclientv1beta1.GatewayInterface,
-				gwc gatewayv1beta1.GatewayClass,
-				gw gatewayv1beta1.Gateway,
+				gwc gatewayapi.GatewayClass,
+				gw gatewayapi.Gateway,
 			) {
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
@@ -112,17 +113,17 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		},
 		{
 			Name: "managed gateway class",
-			GatewayClass: gatewayv1beta1.GatewayClass{
-				Spec: gatewayv1beta1.GatewayClassSpec{
+			GatewayClass: gatewayapi.GatewayClass{
+				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: gateway.GetControllerName(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "managed-gateway-class",
 				},
 			},
-			Gateway: gatewayv1beta1.Gateway{
-				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName("managed-gateway-class"),
+			Gateway: gatewayapi.Gateway{
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: gatewayapi.ObjectName("managed-gateway-class"),
 					Listeners: builder.NewListener("http").
 						HTTP().
 						WithPort(80).
@@ -137,8 +138,8 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				ctx context.Context,
 				t *testing.T,
 				gwClient gatewayclientv1beta1.GatewayInterface,
-				gwc gatewayv1beta1.GatewayClass,
-				gw gatewayv1beta1.Gateway,
+				gwc gatewayapi.GatewayClass,
+				gw gatewayapi.Gateway,
 			) {
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -183,20 +184,20 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		},
 		{
 			Name: "unmanaged gateway class",
-			GatewayClass: gatewayv1beta1.GatewayClass{
-				Spec: gatewayv1beta1.GatewayClassSpec{
+			GatewayClass: gatewayapi.GatewayClass{
+				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: gateway.GetControllerName(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "unmanaged-gateway-class",
 					Annotations: map[string]string{
-						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+						annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 					},
 				},
 			},
-			Gateway: gatewayv1beta1.Gateway{
-				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName("unmanaged-gateway-class"),
+			Gateway: gatewayapi.Gateway{
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: gatewayapi.ObjectName("unmanaged-gateway-class"),
 					Listeners: builder.NewListener("http").
 						HTTP().
 						WithPort(80).
@@ -211,8 +212,8 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				ctx context.Context,
 				t *testing.T,
 				gwClient gatewayclientv1beta1.GatewayInterface,
-				gwc gatewayv1beta1.GatewayClass,
-				gw gatewayv1beta1.Gateway,
+				gwc gatewayapi.GatewayClass,
+				gw gatewayapi.Gateway,
 			) {
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -260,7 +261,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 						t.Logf("expected to find an Accepted and Programmed conditions with Status True, got %#v", gateway.Status.Conditions)
 						t.Fatalf("context got cancelled: %v", ctx.Err())
 					case event := <-w.ResultChan():
-						gateway, ok := event.Object.(*gatewayv1beta1.Gateway)
+						gateway, ok := event.Object.(*gatewayapi.Gateway)
 						require.True(t, ok)
 
 						if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.WithStatus(metav1.ConditionTrue)) {
@@ -316,7 +317,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			// start the former.
 			gwReconciler := &gateway.GatewayReconciler{
 				Client: client,
-				PublishServiceRef: k8stypes.NamespacedName{
+				IngressServiceRef: k8stypes.NamespacedName{
 					Namespace: ns.Name,
 					Name:      svc.Name,
 				},

@@ -23,7 +23,7 @@ type Client struct {
 	adminAPIClient      *kong.Client
 	pluginSchemaStore   *util.PluginSchemaStore
 	isKonnect           bool
-	konnectRuntimeGroup string
+	konnectControlPlane string
 	lastConfigSHA       []byte
 
 	// podRef (optional) describes the Pod that the Client communicates with.
@@ -53,13 +53,13 @@ type KonnectClient struct {
 	backoffStrategy UpdateBackoffStrategy
 }
 
-// NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
-func NewKonnectClient(c *kong.Client, runtimeGroup string) *KonnectClient {
+// NewKonnectClient creates an Admin API client that is to be used with a Konnect Control Plane Admin API.
+func NewKonnectClient(c *kong.Client, controlPlane string) *KonnectClient {
 	return &KonnectClient{
 		Client: Client{
 			adminAPIClient:      c,
 			isKonnect:           true,
-			konnectRuntimeGroup: runtimeGroup,
+			konnectControlPlane: controlPlane,
 			pluginSchemaStore:   util.NewPluginSchemaStore(c),
 		},
 		backoffStrategy: NewKonnectBackoffStrategy(clock.System{}),
@@ -139,19 +139,19 @@ func (c *Client) PluginSchemaStore() *util.PluginSchemaStore {
 	return c.pluginSchemaStore
 }
 
-// IsKonnect tells if a client is used for communication with Konnect Runtime Group Admin API.
+// IsKonnect tells if a client is used for communication with Konnect Control Plane Admin API.
 func (c *Client) IsKonnect() bool {
 	return c.isKonnect
 }
 
-// KonnectRuntimeGroup gets a unique identifier of a Konnect's Runtime Group that config should
+// KonnectControlPlane gets a unique identifier of a Konnect's Control Plane that config should
 // be synchronised with. Empty in case of non-Konnect clients.
-func (c *Client) KonnectRuntimeGroup() string {
+func (c *Client) KonnectControlPlane() string {
 	if !c.isKonnect {
 		return ""
 	}
 
-	return c.konnectRuntimeGroup
+	return c.konnectControlPlane
 }
 
 // SetLastConfigSHA overrides last config SHA.

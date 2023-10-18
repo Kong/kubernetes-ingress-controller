@@ -1,4 +1,4 @@
-//go:build integration_tests && !knative
+//go:build integration_tests
 
 package integration
 

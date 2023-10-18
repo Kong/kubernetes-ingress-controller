@@ -60,14 +60,14 @@ func newMockRolesServer(t *testing.T) *httptest.Server {
 		           "id": "24ac168d-4ffb-46ec-8dd6-5a26b5ec6f0b",
 		           "role_name": "Admin",
 		           "entity_region": "us",
-		           "entity_type_name": "Runtime Groups",
+		           "entity_type_name": "Control Planes",
 		           "entity_id": "e3f155ec-1786-4017-98d0-b0a0f5e179c3"
 		       },
 		       {
 		           "id": "7edaf68b-8f07-4827-b540-fce06e45429e",
 		           "role_name": "Admin",
 		           "entity_region": "us",
-		           "entity_type_name": "Runtime Groups",
+		           "entity_type_name": "Control Planes",
 		           "entity_id": "c486f518-9fc8-461f-af0a-2bc85b70e492"
 		       }
 		   ]
@@ -87,7 +87,7 @@ func TestRolesClient(t *testing.T) {
 	server := newMockRolesServer(t)
 	c := roles.NewClient(&http.Client{}, server.URL, testToken)
 
-	rgRoles, err := c.ListRuntimeGroupsRoles(ctx)
+	rgRoles, err := c.ListControlPlanesRoles(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(rgRoles))
 	role := rgRoles[0]

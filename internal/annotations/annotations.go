@@ -33,9 +33,7 @@ const (
 )
 
 const (
-	IngressClassKey                  = "kubernetes.io/ingress.class"
-	KnativeIngressClassKey           = "networking.knative.dev/ingress-class"
-	KnativeIngressClassDeprecatedKey = "networking.knative.dev/ingress.class"
+	IngressClassKey = "kubernetes.io/ingress.class"
 
 	AnnotationPrefix = "konghq.com"
 
@@ -71,7 +69,11 @@ const (
 	//
 	// NOTE: it's currently required that this annotation be present on all GatewayClass
 	// resources: "unmanaged" mode is the only supported mode at this time.
-	GatewayClassUnmanagedAnnotationSuffix = "gatewayclass-unmanaged"
+	GatewayClassUnmanagedKey = "/gatewayclass-unmanaged"
+
+	// GatewayPublishServiceKey is an annotation suffix used to indicate the Service(s) a Gateway's routes are
+	// published to.
+	GatewayPublishServiceKey = "/publish-service"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -84,7 +86,7 @@ const (
 
 // GatewayClassUnmanagedAnnotation is the complete annotations for unmanaged mode made by the konhq.com prefix
 // followed by the gatewayclass-unmanaged GatewayClass suffix.
-var GatewayClassUnmanagedAnnotation = fmt.Sprintf("%s/%s", AnnotationPrefix, GatewayClassUnmanagedAnnotationSuffix)
+var GatewayClassUnmanagedAnnotation = fmt.Sprintf("%s%s", AnnotationPrefix, GatewayClassUnmanagedKey)
 
 func validIngress(ingressAnnotationValue, ingressClass string, handling ClassMatching) bool {
 	switch handling {
@@ -344,6 +346,23 @@ func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
 // UpdateUnmanagedAnnotation updates the value of the annotation konghq.com/gatewayclass-unmanaged.
 func UpdateUnmanagedAnnotation(anns map[string]string, annotationValue string) {
 	anns[GatewayClassUnmanagedAnnotation] = annotationValue
+}
+
+// ExtractGatewayPublishService extracts the value of the gateway publish service annotation.
+func ExtractGatewayPublishService(anns map[string]string) []string {
+	if anns == nil {
+		return []string{}
+	}
+	publish, ok := anns[AnnotationPrefix+GatewayPublishServiceKey]
+	if !ok {
+		return []string{}
+	}
+	return strings.Split(publish, ",")
+}
+
+// UpdateGatewayPublishService updates the value of the annotation konghq.com/gatewayclass-unmanaged.
+func UpdateGatewayPublishService(anns map[string]string, services []string) {
+	anns[AnnotationPrefix+GatewayPublishServiceKey] = strings.Join(services, ",")
 }
 
 // ExtractUserTags extracts a set of tags from a comma-separated string.

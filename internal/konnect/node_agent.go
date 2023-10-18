@@ -43,7 +43,7 @@ type ManagerInstanceIDProvider interface {
 	GetID() uuid.UUID
 }
 
-// NodeClient is the interface to Konnect Runtime Group Node API.
+// NodeClient is the interface to Konnect Control Plane Node API.
 type NodeClient interface {
 	CreateNode(ctx context.Context, req *nodes.CreateNodeRequest) (*nodes.CreateNodeResponse, error)
 	UpdateNode(ctx context.Context, nodeID string, req *nodes.UpdateNodeRequest) (*nodes.UpdateNodeResponse, error)
@@ -237,7 +237,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 			// save all nodes with same name as current KIC node, update the latest one and delete others.
 			nodesWithSameName = append(nodesWithSameName, node)
 		} else {
-			// delete the nodes with different name of the current node, since only on KIC node is allowed in the runtime group.
+			// delete the nodes with different name of the current node, since only on KIC node is allowed in the control plane.
 			a.logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 			err := a.nodeClient.DeleteNode(ctx, node.ID)
 			if err != nil {

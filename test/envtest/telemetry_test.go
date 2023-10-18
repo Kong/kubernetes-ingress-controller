@@ -25,16 +25,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
 
 func TestTelemetry(t *testing.T) {
+	t.Parallel()
+
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert := certificate.MustGenerateSelfSignedCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
@@ -62,11 +63,11 @@ func TestTelemetry(t *testing.T) {
 
 	t.Log("starting the controller manager")
 	go func() {
-		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, io.Discard)
+		logger, err := manager.SetupLoggers(&cfg, io.Discard)
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, deprecatedLogger)
+		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 
@@ -80,14 +81,14 @@ func TestTelemetry(t *testing.T) {
 		waitTime = 3 * time.Second
 		tickTime = 10 * time.Millisecond
 	)
-	require.Eventually(t, func() bool {
+	require.Eventuallyf(t, func() bool {
 		select {
 		case report := <-reportChan:
 			return verifyTelemetryReport(t, k8sVersion, string(report))
 		case <-time.After(tickTime):
 			return false
 		}
-	}, waitTime, tickTime)
+	}, waitTime, tickTime, "telemetry report never matched expected value")
 }
 
 func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) manager.Config {
@@ -125,9 +126,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	for i := 0; i < 2; i++ {
 		_, err = gcl.GatewayV1beta1().GatewayClasses().Create(
 			ctx,
-			&gatewayv1beta1.GatewayClass{
+			&gatewayapi.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-				Spec: gatewayv1beta1.GatewayClassSpec{
+				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: "test.com/gateway-controller",
 				},
 			},
@@ -177,11 +178,11 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1beta1().Gateways(namespace).Create(
 				ctx,
-				&gatewayv1beta1.Gateway{
+				&gatewayapi.Gateway{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec: gatewayv1beta1.GatewaySpec{
-						GatewayClassName: gatewayv1beta1.ObjectName("test"),
-						Listeners: []gatewayv1beta1.Listener{
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayapi.ObjectName("test"),
+						Listeners: []gatewayapi.Listener{
 							{
 								Name:     "test",
 								Port:     443,
@@ -196,9 +197,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1beta1().HTTPRoutes(namespace).Create(
 				ctx,
-				&gatewayv1beta1.HTTPRoute{
+				&gatewayapi.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec:       gatewayv1beta1.HTTPRouteSpec{},
+					Spec:       gatewayapi.HTTPRouteSpec{},
 				},
 				metav1.CreateOptions{},
 			)
@@ -206,9 +207,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1alpha2().GRPCRoutes(namespace).Create(
 				ctx,
-				&gatewayv1alpha2.GRPCRoute{
+				&gatewayapi.GRPCRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec:       gatewayv1alpha2.GRPCRouteSpec{},
+					Spec:       gatewayapi.GRPCRouteSpec{},
 				},
 				metav1.CreateOptions{},
 			)
@@ -216,10 +217,10 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1alpha2().TCPRoutes(namespace).Create(
 				ctx,
-				&gatewayv1alpha2.TCPRoute{
+				&gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec: gatewayv1alpha2.TCPRouteSpec{
-						Rules: []gatewayv1alpha2.TCPRouteRule{{}},
+					Spec: gatewayapi.TCPRouteSpec{
+						Rules: []gatewayapi.TCPRouteRule{{}},
 					},
 				},
 				metav1.CreateOptions{},
@@ -228,10 +229,10 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1alpha2().UDPRoutes(namespace).Create(
 				ctx,
-				&gatewayv1alpha2.UDPRoute{
+				&gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{{}},
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{{}},
 					},
 				},
 				metav1.CreateOptions{},
@@ -240,10 +241,10 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1alpha2().TLSRoutes(namespace).Create(
 				ctx,
-				&gatewayv1alpha2.TLSRoute{
+				&gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec: gatewayv1alpha2.TLSRouteSpec{
-						Rules: []gatewayv1alpha2.TLSRouteRule{{}},
+					Spec: gatewayapi.TLSRouteSpec{
+						Rules: []gatewayapi.TLSRouteRule{{}},
 					},
 				},
 				metav1.CreateOptions{},
@@ -252,16 +253,16 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1beta1().ReferenceGrants(namespace).Create(
 				ctx,
-				&gatewayv1beta1.ReferenceGrant{
+				&gatewayapi.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
 							{
 								Kind:      "test",
 								Namespace: metav1.NamespaceDefault,
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gatewayapi.ReferenceGrantTo{
 							{
 								Kind: "test",
 							},
@@ -341,7 +342,8 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 	for _, s := range []string{"id", "uptime"} {
 		report, err = removeStanzaFromReport(report, s)
 		if err != nil {
-			t.Logf("failed to remove stanza %q from report: %s", s, err)
+			// this normally happens during shutdown, when the report is an empty string
+			// no point in proceeding if so
 			return false
 		}
 	}
@@ -353,18 +355,16 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		"<14>"+
 			"signal=kic-ping;"+
 			"db=off;"+
-			"feature-combinedroutes=true;"+
-			"feature-combinedservices=true;"+
 			"feature-expressionroutes=false;"+
-			"feature-fillids=false;"+
+			"feature-fillids=true;"+
 			"feature-gateway-service-discovery=false;"+
 			"feature-gateway=false;"+
 			"feature-gatewayalpha=false;"+
-			"feature-knative=false;"+
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
 			"hn=%s;"+
-			"kv=3.3.0;"+
+			"kv=3.4.1;"+
+			"rf=traditional;"+
 			"v=NOT_SET;"+
 			"k8s_arch=%s;"+
 			"k8s_provider=UNKNOWN;"+

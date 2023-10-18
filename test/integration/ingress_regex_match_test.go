@@ -17,15 +17,12 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -134,19 +131,17 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected to match")
 			for _, path := range tc.matchPaths {
-				helpers.EventuallyGETPath(t, proxyURL, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+				helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, path, ingressWait, waitTick, nil)
+				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, proxyURL.Host, path, ingressWait, waitTick, nil)
 			}
 		})
 	}
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -233,6 +228,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
+					proxyURL.Host,
 					"/",
 					http.StatusOK,
 					"<title>httpbin.org</title>",
@@ -247,6 +243,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 				helpers.EventuallyExpectHTTP404WithNoRoute(
 					t,
 					proxyURL,
+					proxyURL.Host,
 					"/",
 					ingressWait,
 					waitTick,

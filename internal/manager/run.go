@@ -13,12 +13,10 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
@@ -27,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
@@ -39,7 +38,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -47,12 +45,17 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, deprecatedLogger logrus.FieldLogger) error {
+func Run(
+	ctx context.Context,
+	c *Config,
+	diagnostic util.ConfigDumpDiagnostic,
+	logger logr.Logger,
+) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
-	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
+	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := featuregates.New(setupLog, c.FeatureGates)
@@ -74,6 +77,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...), c.GatewayDiscoveryDNSStrategy)
 	if err != nil {
 		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
+	}
+
+	err = c.Resolve()
+	if err != nil {
+		return fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
@@ -111,24 +119,23 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:               kongSemVersion,
-		InMemory:              dataplaneutil.IsDBLessMode(dbMode),
-		Concurrency:           c.Concurrency,
-		FilterTags:            c.FilterTags,
-		SkipCACertificates:    c.SkipCACertificates,
-		EnableReverseSync:     c.EnableReverseSync,
-		ExpressionRoutes:      featureGates.Enabled(featuregates.ExpressionRoutesFeature),
-		DeckFileFormatVersion: versions.DeckFileFormat(kongSemVersion),
+		Version:            kongSemVersion,
+		InMemory:           dataplaneutil.IsDBLessMode(dbMode),
+		Concurrency:        c.Concurrency,
+		FilterTags:         c.FilterTags,
+		SkipCACertificates: c.SkipCACertificates,
+		EnableReverseSync:  c.EnableReverseSync,
+		ExpressionRoutes:   featureGates.Enabled(featuregates.ExpressionRoutesFeature),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(ctx, setupLog, c, dbMode, featureGates)
+	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)
 	if err != nil {
-		return fmt.Errorf("unable to setup controller options: %w", err)
+		return fmt.Errorf("unable to setup manager options: %w", err)
 	}
 
-	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
+	mgr, err := ctrl.NewManager(kubeconfig, managerOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create controller manager: %w", err)
 	}
@@ -143,7 +150,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
-		deprecatedLogger,
+		logger,
 		initialKongClients,
 		readinessChecker,
 	)
@@ -156,34 +163,32 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	parserFeatureFlags := parser.NewFeatureFlags(
-		deprecatedLogger,
+		logger,
 		featureGates,
-		kongSemVersion,
 		routerFlavor,
 		c.UpdateStatus,
 	)
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger, parserFeatureFlags, kongSemVersion); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, parserFeatureFlags); err != nil {
 		return err
 	}
 
 	cache := store.NewCacheStores()
 	configParser, err := parser.NewParser(
-		deprecatedLogger,
-		store.New(cache, c.IngressClassName, deprecatedLogger),
+		logger,
+		store.New(cache, c.IngressClassName, logger),
 		parserFeatureFlags,
-		kongSemVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create parser: %w", err)
 	}
 
-	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
-	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(deprecatedLogger)
+	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
+	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(parserFeatureFlags.FillIDs)
 	dataplaneClient, err := dataplane.NewKongClient(
-		deprecatedLogger,
+		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
 		diagnostic,
@@ -202,7 +207,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
-	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
+	synchronizer, err := setupDataplaneSynchronizer(logger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
 	if err != nil {
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
@@ -302,6 +307,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.AnonymousReports {
 		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
 			ctx,
+			logger.WithName("telemetry"),
 			kubeconfig,
 			clientsManager,
 			telemetry.ReportConfig{
@@ -309,7 +315,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
 				TelemetryPeriod:                  c.TelemetryPeriod,
 				ReportValues: telemetry.ReportValues{
-					PublishServiceNN:               c.PublishService.OrEmpty(),
+					IngressServiceNN:               c.IngressService.OrEmpty(),
 					FeatureGates:                   featureGates,
 					MeshDetection:                  len(c.WatchNamespaces) == 0,
 					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
@@ -424,9 +430,9 @@ func setupKonnectAdminAPIClientWithClientsMgr(
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) {
-	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(config)
+	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectControlPlane(config)
 	if err != nil {
-		logger.Error(err, "Failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		logger.Error(err, "Failed creating Konnect Control Plane Admin API client, skipping synchronisation")
 		return
 	}
 	if err := adminapi.EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), logger); err != nil {

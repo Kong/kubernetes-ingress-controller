@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -34,13 +34,13 @@ type AdminAPIClient interface {
 	PluginSchemaStore() *util.PluginSchemaStore
 
 	IsKonnect() bool
-	KonnectRuntimeGroup() string
+	KonnectControlPlane() string
 }
 
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(
 	ctx context.Context,
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	client AdminAPIClient,
 	config Config,
 	targetContent *file.Content,
@@ -62,16 +62,16 @@ func PerformUpdate(
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
-				log.Debug("no configuration change, skipping sync to Konnect")
+				logger.V(util.DebugLevel).Info("no configuration change, skipping sync to Konnect")
 			} else {
-				log.Debug("no configuration change, skipping sync to Kong")
+				logger.V(util.DebugLevel).Info("no configuration change, skipping sync to Kong")
 			}
 			return oldSHA, []failures.ResourceFailure{}, nil
 		}
 	}
 
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
-	log = log.WithField("update_strategy", updateStrategy.Type())
+	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
 	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
 		Content: targetContent,
@@ -86,7 +86,7 @@ func PerformUpdate(
 			return nil, []failures.ResourceFailure{}, err
 		}
 
-		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, log)
+		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, logger)
 		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(resourceFailures), err)
 		return nil, resourceFailures, err
 	}
@@ -94,9 +94,9 @@ func PerformUpdate(
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
 
 	if client.IsKonnect() {
-		log.Info("successfully synced configuration to Konnect")
+		logger.V(util.InfoLevel).Info("successfully synced configuration to Konnect")
 	} else {
-		log.Info("successfully synced configuration to Kong")
+		logger.V(util.InfoLevel).Info("successfully synced configuration to Kong")
 	}
 
 	return newSHA, nil, nil
@@ -108,9 +108,9 @@ func PerformUpdate(
 
 // resourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.
 // In case of parseErr being not nil, it just returns a nil slice.
-func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr error, log logrus.FieldLogger) []failures.ResourceFailure {
+func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr error, logger logr.Logger) []failures.ResourceFailure {
 	if parseErr != nil {
-		log.WithError(parseErr).Error("failed parsing resource errors")
+		logger.Error(parseErr, "failed parsing resource errors")
 		return nil
 	}
 
@@ -127,14 +127,14 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr e
 				UID:       k8stypes.UID(ee.UID),
 			},
 		}
-		for field, problem := range ee.Problems {
-			log.Debug(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem))
+		for problemSource, problem := range ee.Problems {
+			logger.V(util.DebugLevel).Info("adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
 			resourceFailure, failureCreateErr := failures.NewResourceFailure(
-				fmt.Sprintf("invalid %s: %s", field, problem),
+				fmt.Sprintf("invalid %s: %s", problemSource, problem),
 				&obj,
 			)
 			if failureCreateErr != nil {
-				log.WithError(failureCreateErr).Error("could create resource failure event")
+				logger.Error(failureCreateErr, "could not create resource failure event")
 			} else {
 				out = append(out, resourceFailure)
 			}

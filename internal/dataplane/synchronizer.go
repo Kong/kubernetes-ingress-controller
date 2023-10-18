@@ -7,9 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 )
@@ -76,9 +74,9 @@ func WithInitCacheSyncDuration(period time.Duration) SynchronizerOption {
 // stagger time for data-plane updates to occur. Note that this starts some
 // background goroutines and the caller is resonsible for marking the provided
 // context.Context as "Done()" to shut down the background routines.
-func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
+func NewSynchronizer(logger logr.Logger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
-		logger:          logrusr.New(logger),
+		logger:          logger,
 		stagger:         time.Duration(DefaultSyncSeconds),
 		initWaitPeriod:  DefaultCacheSyncWaitDuration,
 		dataplaneClient: client,
@@ -104,7 +102,7 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 // To stop the server, the provided context must be Done().
 func (p *Synchronizer) Start(ctx context.Context) error {
 	select {
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2249
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2315
 	// This is a temporary mitigation to allow some time for controllers to
 	// populate their dataplaneClient cache.
 	case <-time.After(p.initWaitPeriod):

@@ -10,12 +10,9 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -303,79 +300,6 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 	assert.Len(ings, 1)
 }
 
-func TestFakeStoreListKnativeIngress(t *testing.T) {
-	assert := assert.New(t)
-	require := require.New(t)
-
-	ingresses := []*knative.Ingress{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"networking.knative.dev/ingress-class": annotations.DefaultIngressClass,
-				},
-			},
-			Spec: knative.IngressSpec{
-				Rules: []knative.IngressRule{
-					{
-						Hosts: []string{"example.com"},
-						HTTP: &knative.HTTPIngressRuleValue{
-							Paths: []knative.HTTPIngressPath{
-								{
-									Path: "/",
-									Splits: []knative.IngressBackendSplit{
-										{
-											IngressBackend: knative.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "i-dont-get-processed-because-i-have-no-class-annotation",
-				Namespace: "default",
-			},
-			Spec: knative.IngressSpec{
-				Rules: []knative.IngressRule{
-					{
-						Hosts: []string{"example.com"},
-						HTTP: &knative.HTTPIngressRuleValue{
-							Paths: []knative.HTTPIngressPath{
-								{
-									Path: "/",
-									Splits: []knative.IngressBackendSplit{
-										{
-											IngressBackend: knative.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	store, err := NewFakeStore(FakeObjects{KnativeIngresses: ingresses})
-	require.Nil(err)
-	require.NotNil(store)
-	ings, err := store.ListKnativeIngresses()
-	assert.Len(ings, 1)
-	assert.Nil(err)
-}
-
 func TestFakeStoreService(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
@@ -397,7 +321,7 @@ func TestFakeStoreService(t *testing.T) {
 
 	service, err = store.GetService("default", "does-not-exists")
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 	assert.Nil(service)
 }
 
@@ -451,7 +375,7 @@ func TestFakeStoreEndpointSlice(t *testing.T) {
 
 	t.Run("Get EndpointSlices for non-existing Service", func(t *testing.T) {
 		c, err := store.GetEndpointSlicesForService("default", "does-not-exist")
-		require.ErrorAs(t, err, &ErrNotFound{})
+		require.ErrorAs(t, err, &NotFoundError{})
 		require.Nil(t, c)
 	})
 }
@@ -482,7 +406,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 	c, err = store.GetKongConsumer("default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeStoreConsumerGroup(t *testing.T) {
@@ -511,7 +435,7 @@ func TestFakeStoreConsumerGroup(t *testing.T) {
 	c, err = store.GetKongConsumerGroup("default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeStorePlugins(t *testing.T) {
@@ -541,14 +465,12 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{KongPlugins: plugins})
 	require.Nil(err)
 	require.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins()
-	assert.NoError(err)
-	assert.Len(plugins, 0)
+	plugins = store.ListKongPlugins()
+	assert.Len(plugins, 1)
 
 	plugin, err := store.GetKongPlugin("default", "does-not-exist")
-	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
-	assert.Nil(plugin)
+	require.ErrorAs(err, &NotFoundError{})
+	require.Nil(plugin)
 }
 
 func TestFakeStoreClusterPlugins(t *testing.T) {
@@ -609,7 +531,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 	plugin, err = store.GetKongClusterPlugin("does-not-exist")
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 	assert.Nil(plugin)
 }
 
@@ -635,7 +557,7 @@ func TestFakeStoreSecret(t *testing.T) {
 	secret, err = store.GetSecret("default", "does-not-exist")
 	assert.Nil(secret)
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeKongIngress(t *testing.T) {
@@ -660,7 +582,7 @@ func TestFakeKongIngress(t *testing.T) {
 	kingress, err = store.GetKongIngress("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.Nil(kingress)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeStore_ListCACerts(t *testing.T) {
@@ -720,18 +642,18 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1beta1.HTTPRoute{
+	classes := []*gatewayapi.HTTPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{},
+			Spec: gatewayapi.HTTPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{},
+			Spec: gatewayapi.HTTPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
@@ -746,18 +668,18 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1alpha2.UDPRoute{
+	classes := []*gatewayapi.UDPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.UDPRouteSpec{},
+			Spec: gatewayapi.UDPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.UDPRouteSpec{},
+			Spec: gatewayapi.UDPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
@@ -772,18 +694,18 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1alpha2.TCPRoute{
+	classes := []*gatewayapi.TCPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.TCPRouteSpec{},
+			Spec: gatewayapi.TCPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.TCPRouteSpec{},
+			Spec: gatewayapi.TCPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
@@ -798,18 +720,18 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1alpha2.TLSRoute{
+	classes := []*gatewayapi.TLSRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.TLSRouteSpec{},
+			Spec: gatewayapi.TLSRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.TLSRouteSpec{},
+			Spec: gatewayapi.TLSRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
@@ -824,18 +746,18 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1beta1.ReferenceGrant{
+	grants := []*gatewayapi.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{},
+			Spec: gatewayapi.ReferenceGrantSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{},
+			Spec: gatewayapi.ReferenceGrantSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})
@@ -850,18 +772,18 @@ func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1beta1.Gateway{
+	grants := []*gatewayapi.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.GatewaySpec{},
+			Spec: gatewayapi.GatewaySpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.GatewaySpec{},
+			Spec: gatewayapi.GatewaySpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})

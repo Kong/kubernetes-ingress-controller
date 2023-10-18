@@ -10,11 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
@@ -24,8 +25,6 @@ var commonSkippedTests = []string{
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563
 	tests.GatewayWithAttachedRoutesWithPort8080.ShortName,
 	tests.HTTPRouteRedirectPortAndScheme.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
-	tests.HTTPRouteQueryParamMatching.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
 	tests.HTTPRouteRedirectPort.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
@@ -61,6 +60,8 @@ var (
 		// cannot support the path > method > header precedence,
 		// but no way to omit individual cases.
 		tests.HTTPRouteMethodMatching.ShortName,
+		// only expression router supports query param matches
+		tests.HTTPRouteQueryParamMatching.ShortName,
 	)
 )
 
@@ -96,25 +97,25 @@ func TestGatewayConformance(t *testing.T) {
 	// test order execution.
 	go require.Eventually(t, func() bool {
 		return ensureTestGatewayClassIsUnmanaged(ctx, k8sClient)
-	}, 10*time.Minute, 10*time.Second)
+	}, 10*time.Minute, test.RequestTimeout)
 
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//
-	//cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
+	// cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
 	cSuite.Run(t, tests.ConformanceTests)
 }
 
 func ensureTestGatewayClassIsUnmanaged(ctx context.Context, k8sClient client.Client) bool {
 	gwcNamespacedName := k8stypes.NamespacedName{Name: "gatewayclass-observed-generation-bump"}
-	gwc := &gatewayv1beta1.GatewayClass{}
+	gwc := &gatewayapi.GatewayClass{}
 	if err := k8sClient.Get(ctx, gwcNamespacedName, gwc); err != nil {
 		return false
 	}
 	if gwc.Annotations == nil {
 		gwc.Annotations = map[string]string{}
 	}
-	gwc.Annotations[annotations.GatewayClassUnmanagedAnnotation] = annotations.GatewayClassUnmanagedAnnotationValuePlaceholder
+	gwc.Annotations[annotations.AnnotationPrefix+annotations.GatewayClassUnmanagedKey] = annotations.GatewayClassUnmanagedAnnotationValuePlaceholder
 	if err := k8sClient.Update(ctx, gwc); err != nil {
 		return false
 	}

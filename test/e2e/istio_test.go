@@ -14,9 +14,10 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	kongaddon "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -61,14 +62,14 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	require.NoError(t, err, "failed to configure logger")
 	if logOutput != "" {
 		t.Logf("INFO: writing manager logs to %s", logOutput)
 	}
 
 	t.Log("configuring cluster addons for the testing environment")
-	kongBuilder := kong.NewBuilder().
+	kongBuilder := kongaddon.NewBuilder().
 		WithControllerDisabled().
 		WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
@@ -111,7 +112,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("starting the controller manager")
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, deprecatedLogger, logger, env.Cluster(), "--log-level=debug"))
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), "--log-level=debug"))
 
 	t.Log("creating a new mesh-enabled namespace for testing http traffic")
 	namespace := &corev1.Namespace{
@@ -138,9 +139,9 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 
 	t.Logf("creating an ingress resource for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := generators.NewIngressForService("/httpbin", map[string]string{
-		annotations.IngressClassKey: ingressClass,
-		"konghq.com/strip-path":     "true",
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace.Name, ingress))
 
 	t.Log("retrieving the kong proxy URL")

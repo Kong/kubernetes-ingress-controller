@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -21,6 +21,8 @@ import (
 // TestManagerDoesntStartUntilKubernetesAPIReachable ensures that the manager and its Runnables are not start until the
 // Kubernetes API server is reachable.
 func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 
@@ -41,9 +43,9 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 	t.Log("Replacing Kubernetes API server address with the proxy address")
 	envcfg.Host = fmt.Sprintf("https://%s", apiServerProxy.Address())
 
-	loggerHook := RunManager(ctx, t, envcfg)
+	loggerHook := RunManager(ctx, t, envcfg, AdminAPIOptFns())
 	hasLog := func(expectedLog string) bool {
-		return lo.ContainsBy(loggerHook.AllEntries(), func(entry *logrus.Entry) bool {
+		return lo.ContainsBy(loggerHook.All(), func(entry observer.LoggedEntry) bool {
 			return strings.Contains(entry.Message, expectedLog)
 		})
 	}

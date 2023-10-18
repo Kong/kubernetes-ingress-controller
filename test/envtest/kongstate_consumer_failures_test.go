@@ -102,7 +102,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		"consumer-no-username": `no username or custom_id specified`,
 	}
 
-	RunManager(ctx, t, cfg)
+	RunManager(ctx, t, cfg, AdminAPIOptFns())
 
 	require.Eventually(t, func() bool {
 		events := &corev1.EventList{}

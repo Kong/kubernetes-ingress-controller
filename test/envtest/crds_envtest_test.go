@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bombsimon/logrusr/v4"
+	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,12 +30,18 @@ import (
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the
 // cluster, specific controllers are not started until the CRDs are installed.
 func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled, WithPublishService("ns"))
+	loggerHook := RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithGatewayFeatureEnabled,
+		WithIngressService("ns"),
+	)
 
 	controllers := []string{
 		"Gateway",
@@ -50,12 +56,8 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 	requireLogForAllControllers := func(expectedLog string) {
 		require.Eventually(t, func() bool {
 			for _, controller := range controllers {
-				if !lo.ContainsBy(loggerHook.AllEntries(), func(entry *logrus.Entry) bool {
-					loggerName, ok := entry.Data["logger"].(string)
-					if !ok {
-						return false
-					}
-					return strings.Contains(loggerName, controller) && strings.Contains(entry.Message, expectedLog)
+				if !lo.ContainsBy(loggerHook.All(), func(entry observer.LoggedEntry) bool {
+					return strings.Contains(entry.LoggerName, controller) && strings.Contains(entry.Message, expectedLog)
 				}) {
 					t.Logf("expected log not found for %s controller", controller)
 					return false
@@ -83,6 +85,8 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 // TestNoKongCRDsInstalledIsFatal ensures that in case of missing Kong CRDs installation, the manager Run() eventually
 // returns an error due to cache synchronisation timeout.
 func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t)
 	envcfg := Setup(t, scheme, WithInstallKongCRDs(false))
 
@@ -90,17 +94,18 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 	defer cancel()
 	cfg := ConfigForEnvConfig(t, envcfg)
 
-	logrusLogger, _ := test.NewNullLogger()
-	logger := logrusr.New(logrusLogger)
+	logger := zapr.NewLogger(zap.NewNop())
 	ctrl.SetLogger(logger)
 
 	// Reducing the cache sync timeout to speed up the test.
 	cfg.CacheSyncTimeout = time.Millisecond * 500
-	err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
+	err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
 	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 
 func TestCRDValidations(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)

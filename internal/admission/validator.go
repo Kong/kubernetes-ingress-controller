@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver/v4"
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,7 +20,8 @@ import (
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -33,8 +33,8 @@ type KongValidator interface {
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
-	ValidateGateway(ctx context.Context, gateway gatewaycontroller.Gateway) (bool, string, error)
-	ValidateHTTPRoute(ctx context.Context, httproute gatewaycontroller.HTTPRoute) (bool, string, error)
+	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
+	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
 }
 
@@ -51,12 +51,11 @@ type AdminAPIServicesProvider interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	Logger                   logrus.FieldLogger
+	Logger                   logr.Logger
 	SecretGetter             kongstate.SecretGetter
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
 	ParserFeatures           parser.FeatureFlags
-	KongVersion              semver.Version
 
 	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
@@ -67,12 +66,11 @@ type KongHTTPValidator struct {
 // such as consumer credentials secrets. If you do not pass a cached client
 // here, the performance of this validator can get very poor at high scales.
 func NewKongHTTPValidator(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	managerClient client.Client,
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
 	parserFeatures parser.FeatureFlags,
-	kongVersion semver.Version,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
@@ -80,7 +78,6 @@ func NewKongHTTPValidator(
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
 		ParserFeatures:           parserFeatures,
-		KongVersion:              kongVersion,
 
 		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
@@ -184,22 +181,20 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return true, "", nil
 	}
 
-	// Consumer groups work only for Kong Enterprise >=3.4.
 	infoSvc, ok := validator.AdminAPIServicesProvider.GetInfoService()
 	if !ok {
 		return true, "", nil
 	}
 	info, err := infoSvc.Get(ctx)
 	if err != nil {
-		validator.Logger.Debugf("failed to fetch Kong info: %v", err)
+		validator.Logger.V(util.DebugLevel).Info("failed to fetch Kong info", "error", err)
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.Debugf("failed to parse Kong version: %v", err)
+		validator.Logger.V(util.DebugLevel).Info("failed to parse Kong version", "error", err)
 	} else {
-		kongVer := semver.Version{Major: version.Major(), Minor: version.Minor()}
-		if !version.IsKongGatewayEnterprise() || !kongVer.GTE(versions.ConsumerGroupsVersionCutoff) {
+		if !version.IsKongGatewayEnterprise() {
 			return false, ErrTextConsumerGroupUnsupported, nil
 		}
 	}
@@ -359,7 +354,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 }
 
 func (validator KongHTTPValidator) ValidateGateway(
-	ctx context.Context, gateway gatewaycontroller.Gateway,
+	ctx context.Context, gateway gatewayapi.Gateway,
 ) (bool, string, error) {
 	// check if the gateway declares a gateway class
 	if gateway.Spec.GatewayClassName == "" {
@@ -367,7 +362,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 	}
 
 	// validate the gatewayclass reference
-	gwc := gatewaycontroller.GatewayClass{}
+	gwc := gatewayapi.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return true, "", nil // not managed by this controller
@@ -385,11 +380,11 @@ func (validator KongHTTPValidator) ValidateGateway(
 }
 
 func (validator KongHTTPValidator) ValidateHTTPRoute(
-	ctx context.Context, httproute gatewaycontroller.HTTPRoute,
+	ctx context.Context, httproute gatewayapi.HTTPRoute,
 ) (bool, string, error) {
 	// in order to be sure whether or not an HTTPRoute resource is managed by this
 	// controller we disallow references to Gateway resources that do not exist.
-	var managedGateways []*gatewaycontroller.Gateway
+	var managedGateways []*gatewayapi.Gateway
 	for _, parentRef := range httproute.Spec.ParentRefs {
 		// determine the namespace of the gateway referenced via parentRef. If no
 		// explicit namespace is provided, assume the namespace of the route.
@@ -400,7 +395,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 
 		// gather the Gateway resource referenced by parentRef and fail validation
 		// if there is no such Gateway resource.
-		gateway := gatewaycontroller.Gateway{}
+		gateway := gatewayapi.Gateway{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      string(parentRef.Name),
@@ -409,7 +404,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		}
 
 		// pull the referenced GatewayClass object from the Gateway
-		gatewayClass := gatewaycontroller.GatewayClass{}
+		gatewayClass := gatewayapi.GatewayClass{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			return false, fmt.Sprintf("couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
 		}
@@ -432,7 +427,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		routeValidator = routesSvc
 	}
 	return gatewayvalidation.ValidateHTTPRoute(
-		ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
+		ctx, routeValidator, validator.ParserFeatures, &httproute, managedGateways...,
 	)
 }
 
@@ -449,7 +444,7 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &ingress)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, &ingress)
 }
 
 type routeValidator interface {
@@ -497,7 +492,7 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 		c, err := consumerSvc.Get(ctx, &username)
 		if err != nil {
 			if !kong.IsNotFoundErr(err) {
-				validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
+				validator.Logger.Error(err, "failed to fetch consumer from kong")
 				return ErrTextConsumerUnretrievable, err
 			}
 		}

@@ -38,15 +38,7 @@ const (
 	// API admin password.
 	adminPasswordSecretName = "kong-enterprise-superuser-password"
 
-	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
-	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
-)
-
-var (
-	// gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.
-	gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
-	// statusReadyProbeMinimalKongVersion is the minimal version of kong gateway version that enables /status/ready probe.
-	statusReadyProbeMinimalKongVersion = semver.Version{Major: 3, Minor: 3} // 3.3.0
+	dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
 )
 
 func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
@@ -161,20 +153,6 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			return manifestsReader
 		}
 
-		if testenv.KongImageTag() != "" {
-			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
-			kongVersion, err := getKongVersionFromOverrideTag()
-			// If we could not get version from kong image, assume they are latest.
-			// So we do not patch the readiness probe path to the legacy path `/status`.
-			if err == nil && patchReadinessProbeRange(kongVersion) {
-				manifestsReader, err = patchReadinessProbePath(manifestsReader, deployments.ProxyNN, "/status")
-				if err != nil {
-					t.Logf("failed patching controller readiness (%v), using default manifest %v", err, baseManifestPath)
-					return manifestsReader
-				}
-			}
-		}
-
 	}
 
 	return manifestsReader
@@ -183,7 +161,7 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 // extractVersionFromImage extracts semver of image from image tag. If tag is not given,
 // or is not in a semver format, it returns an error.
 // for example: kong/kubernetes-ingress-controller:2.9.3 => semver.Version{Major:2,Minor:9,Patch:3}.
-func extractVersionFromImage(imageName string) (semver.Version, error) {
+func extractVersionFromImage(imageName string) (semver.Version, error) { //nolint:unused
 	split := strings.Split(imageName, ":")
 	if len(split) < 2 {
 		return semver.Version{}, fmt.Errorf("could not parse override image '%s', expected <repo>:<tag> format", imageName)
@@ -201,7 +179,7 @@ func extractVersionFromImage(imageName string) (semver.Version, error) {
 // below the minVersion.
 // if the override KIC image is not set, it assumes that the latest image is used, so it never skips
 // the test if override image is not given.
-func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
+func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) { //nolint:unused
 	if testenv.ControllerImageTag() == "" {
 		return
 	}
@@ -217,33 +195,7 @@ func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
 	}
 }
 
-// getDBLessTestManifestByControllerImageEnv gets the proper manifest for dbless deployment.
-// It takes into account the TEST_CONTROLLER_IMAGE and TEST_CONTROLLER_TAG environment variables.
-// This is needed because KIC does not support Gateway Discovery in versions below 2.9,
-// and hence we need to use the legacy manifest for those versions.
-func getDBLessTestManifestByControllerImageEnv(t *testing.T) string {
-	t.Helper()
-
-	// if no version specified, we assume that we are using the latest version of KIC.
-	if testenv.ControllerImageTag() == "" {
-		return dblessPath
-	}
-
-	v, err := extractVersionFromImage(testenv.ControllerImageTag())
-	// assume using latest version if failed to extract version from image tag.
-	if err != nil {
-		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
-		return dblessPath
-	}
-	// If KIC version is lower than the minimum version that enables gateway discovery, use the legacy manifest.
-	if v.LE(gatewayDiscoveryMinimalVersion) {
-		return dblessLegacyPath
-	}
-	return dblessPath
-}
-
 // patchGatewayImageFromEnv will optionally replace a default controller image in manifests with env overrides.
-// if it's set.
 func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
@@ -279,7 +231,7 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 
 // getKongVersionFromOverrideTag parses Kong version from env effective version or override tag. The effective version
 // takes precedence.
-func getKongVersionFromOverrideTag() (kong.Version, error) {
+func getKongVersionFromOverrideTag() (kong.Version, error) { //nolint:unused
 	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
 		return kong.ParseSemanticVersion(kongEffectiveVersion)
 	}
@@ -304,7 +256,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	switch svc.Spec.Type { //nolint: exhaustive
+	switch svc.Spec.Type { //nolint:exhaustive
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
 	case corev1.ServiceTypeNodePort:

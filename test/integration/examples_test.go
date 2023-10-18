@@ -20,9 +20,9 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -57,7 +57,7 @@ func TestHTTPRouteExample(t *testing.T) {
 		}
 
 		for _, addr := range obj.Status.Addresses {
-			if addr.Type != nil && *addr.Type == gatewayv1beta1.IPAddressType {
+			if addr.Type != nil && *addr.Type == gatewayapi.IPAddressType {
 				gatewayAddr = addr.Value
 				return true
 			}
@@ -102,7 +102,7 @@ func TestHTTPRouteExample(t *testing.T) {
 }
 
 func TestUDPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
+	RunWhenKongExpressionRouter(t)
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	t.Cleanup(func() {
@@ -150,7 +150,7 @@ func TestUDPRouteExample(t *testing.T) {
 }
 
 func TestTCPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
+	RunWhenKongExpressionRouter(t)
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {
@@ -172,13 +172,11 @@ func TestTCPRouteExample(t *testing.T) {
 
 	t.Log("verifying that TCPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responds, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
-		return err == nil && responds
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest") == nil
 	}, ingressWait, waitTick)
 }
 
 func TestTLSRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -200,9 +198,8 @@ func TestTLSRouteExample(t *testing.T) {
 
 	t.Log("verifying that TLSRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
-			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true)
-		return err == nil && responded
+		return tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
+			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true) == nil
 	}, ingressWait, waitTick)
 }
 
@@ -281,7 +278,6 @@ func TestIngressExample(t *testing.T) {
 }
 
 func TestUDPIngressExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	t.Cleanup(func() {

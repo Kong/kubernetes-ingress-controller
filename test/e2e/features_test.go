@@ -24,9 +24,10 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -85,8 +86,8 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("building test cluster and environment")
 	clusterBuilder := kind.NewBuilder()
 	clusterBuilder.WithConfigReader(strings.NewReader(webhookKINDConfig))
-	if testenv.ClusterVersion() != "" {
-		clusterVersion, err := semver.ParseTolerant(testenv.ClusterVersion())
+	if v := testenv.ClusterVersion(); v != "" {
+		clusterVersion, err := semver.ParseTolerant(v)
 		require.NoError(t, err)
 		t.Logf("k8s cluster version is set to %v", clusterVersion)
 		clusterBuilder.WithClusterVersion(clusterVersion)
@@ -99,7 +100,7 @@ func TestWebhookUpdate(t *testing.T) {
 		if b, err := loadimage.NewBuilder().WithImage(testenv.ControllerImageTag()); err == nil {
 			addons = append(addons, b.Build())
 		} else {
-			requite.NoError(t, err)
+			require.NoError(t, err)
 		}
 	}
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
@@ -114,8 +115,7 @@ func TestWebhookUpdate(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
 	const firstCertificateCommonName = "first.example"
 	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
@@ -239,8 +239,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	deployments := ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 	controllerDeploymentNN := deployments.ControllerNN
 	controllerDeploymentListOptions := metav1.ListOptions{
 		LabelSelector: "app=" + controllerDeploymentNN.Name,
@@ -291,15 +290,15 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
-		gatewayv1beta1.Listener{
+		gatewayapi.Listener{
 			Name:     "badhttp",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(9999),
+			Protocol: gatewayapi.HTTPProtocolType,
+			Port:     gatewayapi.PortNumber(9999),
 		},
-		gatewayv1beta1.Listener{
+		gatewayapi.Listener{
 			Name:     "badudp",
-			Protocol: gatewayv1beta1.UDPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
+			Protocol: gatewayapi.UDPProtocolType,
+			Port:     gatewayapi.PortNumber(80),
 		},
 	)
 
@@ -313,8 +312,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badhttp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
-					util.ConditionReason(gatewayv1beta1.ListenerReasonPortUnavailable),
+					util.ConditionType(gatewayapi.ListenerConditionAccepted),
+					util.ConditionReason(gatewayapi.ListenerReasonPortUnavailable),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -323,8 +322,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
-					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayapi.ListenerConditionAccepted),
+					util.ConditionReason(gatewayapi.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -334,8 +333,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badudp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
-					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayapi.ListenerConditionAccepted),
+					util.ConditionReason(gatewayapi.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -390,8 +389,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
@@ -437,8 +435,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	deployments := ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 	kongDeployment := deployments.ControllerNN
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -454,7 +451,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	ingress := generators.NewIngressForService("/abbosiysaltanati", map[string]string{
-		"konghq.com/strip-path": "true",
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 

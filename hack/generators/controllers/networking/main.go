@@ -114,8 +114,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongplugins",
 		CacheType:                         "Plugin",
 		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
-		ProgrammedConditionUpdatesEnabled: false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		ConfigStatusNotificationsEnabled:  false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		ProgrammedConditionUpdatesEnabled: false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
@@ -397,7 +397,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -550,11 +549,6 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Kind}})
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: {{.PackageImportAlias}}.SchemeGroupVersion.String(),
-		Kind: "{{.Kind}}",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {

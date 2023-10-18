@@ -11,7 +11,7 @@ on:
         type: string
         # TODO: Consider changing to "kong:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.4"
+        default: "<from_test_dependencies.yaml>"
         required: false
       kong-oss-effective-version:
         # specifies effective semver of Kong gateway OSS when tag is not a valid semver (like 'nightly').
@@ -26,7 +26,7 @@ on:
         type: string
         # TODO: Consider changing to "kong/kong-gateway:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.4"
+        default: "<from_test_dependencies.yaml>"
         required: false
       kong-enterprise-effective-version:
         # specifies effective semver of Kong gateway enterprise when tag is not a valid semver (like 'nightly').
@@ -35,12 +35,35 @@ on:
         required: false
 
 jobs:
+  dependencies-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.set-versions.outputs.kind }}
+      kong-ee: ${{ steps.set-versions.outputs.kong-ee }}
+      kong-oss: ${{ steps.set-versions.outputs.kong-oss }}
+      helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: set-versions
+        name: Set versions
+        run: |
+          echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+
   integration-tests:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    needs: dependencies-versions
     env:
-      KONG_CLUSTER_VERSION: 'v1.28.0'
+      KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
       TEST_KONG_ROUTER_FLAVOR: 'traditional'
+      TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
     strategy:
       fail-fast: false
       matrix:
@@ -49,13 +72,6 @@ jobs:
             test: dbless
           - name: postgres
             test: postgres
-          - name: feature-gates
-            test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedRoutes=false,CombinedServices=false"
-          - name: dbless-knative
-            test: dbless.knative
-          - name: postgres-knative
-            test: postgres.knative
           - name: enterprise-postgres
             test: enterprise.postgres
             enterprise: true
@@ -72,18 +88,22 @@ jobs:
             test: dbless
             feature_gates: "ExpressionRoutes=true,GatewayAlpha=true"
             router-flavor: "expressions"
-          - name: dbless-fill-ids
+          - name: dbless-gateway-alpha
             test: dbless
-            feature_gates: "GatewayAlpha=true,FillIDs=true"
-          - name: postgres-fill-ids
+            feature_gates: "GatewayAlpha=true"
+          - name: postgres-gateway-alpha
             test: postgres
-            feature_gates: "GatewayAlpha=true,FillIDs=true"
+            feature_gates: "GatewayAlpha=true"
           - name: dbless-rewrite-uris
             test: dbless
             feature_gates: "GatewayAlpha=true,RewriteURIs=true"
           - name: postgres-rewrite-uris
             test: postgres
             feature_gates: "GatewayAlpha=true,RewriteURIs=true"
+          - name: dbless-invalid-config
+            test: dbless
+            run_invalid_config: "true"
+            go_test_flags: -run=TestIngressRecoverFromInvalidPath
 
     steps:
       - uses: Kong/kong-license@master
@@ -94,13 +114,22 @@ jobs:
       - name: Set image of Kong
         id: set_kong_image
         run: |
+          kong_ee_tag="${{ inputs.kong-enterprise-container-tag }}"
+          if [ "${{ inputs.kong-enterprise-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+            kong_ee_tag=${{ needs.dependencies-versions.outputs.kong-ee }}
+          fi
+          kong_oss_tag="${{ inputs.kong-container-tag }}"
+          if [ "${{ inputs.kong-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+              kong_oss_tag=${{ needs.dependencies-versions.outputs.kong-oss }}
+          fi
+
           if [ "${{ matrix.enterprise }}" == "true" ]; then
             echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${{ inputs.kong-enterprise-container-tag }}" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=${kong_ee_tag}" >> $GITHUB_ENV
             echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}" >> $GITHUB_ENV
           else
             echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${{ inputs.kong-container-tag }}" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=${kong_oss_tag}" >> $GITHUB_ENV
             echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}" >> $GITHUB_ENV
           fi
 
@@ -120,18 +149,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          JUNIT_REPORT: "integration-tests-${{ matrix.name }}.xml"
+          JUNIT_REPORT: integration-tests-${{ matrix.name }}.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
-
-      - name: run ${{ matrix.name }} - invalid config
-        run: make test.integration.${{ matrix.test }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          JUNIT_REPORT: "integration-tests-invalid-config-${{ matrix.name }}.xml"
-          GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
-          TEST_RUN_INVALID_CONFIG_CASES: "true"
+          TEST_RUN_INVALID_CONFIG_CASES: ${{ matrix.run_invalid_config }}
+          GOTESTFLAGS: "${{ matrix.go_test_flags }}"
 
       - name: collect test coverage
         if: ${{ !cancelled() }}

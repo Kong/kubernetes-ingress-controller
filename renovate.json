@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "configMigration": true,
+  "enabledManagers": ["regex"],
+  "automerge": false,
+  "separateMinorPatch": true,
+  "labels": ["dependencies"],
+  "schedule": "before 5am every weekday",
+  "registryAliases": {
+    "kong": "https://charts.konghq.com"
+  },
+  "customManagers": [
+    {
+      "description": "Match dependencies in .github/test_dependencies.yaml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [registryUrl={}] versioning={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "^.github/test_dependencies.yaml$"
+      ],
+      "matchStrings": [
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
+      ]
+    }
+  ],
+  "customDatasources": {
+    "gke-rapid": {
+      "defaultRegistryUrlTemplate": "https://raw.githubusercontent.com/kong/gke-renovate-datasource/main/static/rapid.json",
+      "format": "json"
+    }
+  },
+  "packageRules": [
+    {
+      "description": "Ignore minor updates if depName has `@only-patch` suffix.",
+      "matchUpdateTypes": ["minor"],
+      "matchDepPatterns": [".*@only-patch"],
+      "enabled": false
+    }
+  ]
+}

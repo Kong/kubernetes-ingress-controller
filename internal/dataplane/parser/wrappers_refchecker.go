@@ -1,18 +1,16 @@
 package parser
 
 import (
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // refChecker is a wrapper type that facilitates checking whether a backenRef is allowed
 // by a referenceGrantTo set.
-type refChecker[T types.BackendRefT] struct {
+type refChecker[T gatewayapi.BackendRefT] struct {
 	backendRef T
 }
 
-func newRefChecker[T types.BackendRefT](ref T) refChecker[T] {
+func newRefChecker[T gatewayapi.BackendRefT](ref T) refChecker[T] {
 	return refChecker[T]{
 		backendRef: ref,
 	}
@@ -23,10 +21,10 @@ func newRefChecker[T types.BackendRefT](ref T) refChecker[T] {
 // allowedRefs is assumed to contain Tos that only match the backendRef's parent's From, as returned by
 // getPermittedForReferenceGrantFrom.
 func (rc refChecker[T]) IsRefAllowedByGrant(
-	allowedRefs map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
+	allowedRefs map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo,
 ) bool {
 	switch br := (interface{})(rc.backendRef).(type) {
-	case gatewayv1beta1.BackendRef:
+	case gatewayapi.BackendRef:
 		if br.Namespace == nil {
 			return true
 		}
@@ -39,7 +37,7 @@ func (rc refChecker[T]) IsRefAllowedByGrant(
 			allowedRefs,
 		)
 
-	case gatewayv1beta1.SecretObjectReference:
+	case gatewayapi.SecretObjectReference:
 		if br.Namespace == nil {
 			return true
 		}
@@ -64,13 +62,13 @@ func isRefAllowedByGrant(
 	name string,
 	group string,
 	kind string,
-	allowed map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
+	allowed map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo,
 ) bool {
 	if namespace == nil {
 		// local references are always fine
 		return true
 	}
-	for _, to := range allowed[gatewayv1beta1.Namespace(*namespace)] {
+	for _, to := range allowed[gatewayapi.Namespace(*namespace)] {
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {

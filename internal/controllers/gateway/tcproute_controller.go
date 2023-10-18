@@ -25,6 +25,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
@@ -63,7 +64,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -80,7 +81,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 	); err != nil {
 		return err
@@ -105,7 +106,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an TCPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1alpha2.TCPRoute{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.TCPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -122,14 +123,14 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // the cached manager client to avoid API overhead.
 func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
+	gwc, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1beta1.GatewayList{}
+	gatewayList := gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -153,7 +154,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 	}
 
 	// map all TCPRoute objects
-	tcprouteList := gatewayv1alpha2.TCPRouteList{}
+	tcprouteList := gatewayapi.TCPRouteList{}
 	if err := r.Client.List(ctx, &tcprouteList); err != nil {
 		r.Log.Error(err, "failed to list tcproute objects from the cached client")
 		return nil
@@ -207,14 +208,14 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 // this kind of problem without having to enqueue extra objects.
 func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1beta1.Gateway)
+	gw, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all TCPRoute objects
-	tcprouteList := gatewayv1alpha2.TCPRouteList{}
+	tcprouteList := gatewayapi.TCPRouteList{}
 	if err := r.Client.List(ctx, &tcprouteList); err != nil {
 		r.Log.Error(err, "failed to list tcproute objects from the cached client")
 		return nil
@@ -254,7 +255,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj cl
 func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Alpha2TCPRoute", req.NamespacedName)
 
-	tcproute := new(gatewayv1alpha2.TCPRoute)
+	tcproute := new(gatewayapi.TCPRoute)
 	if err := r.Get(ctx, req.NamespacedName, tcproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
@@ -268,6 +269,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
 	debug(log, tcproute, "processing tcproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
@@ -433,7 +435,7 @@ var tcprouteParentKind = "Gateway"
 // for the TCPRoute is updated appropriately.
 func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	ctx context.Context,
-	tcproute *gatewayv1alpha2.TCPRoute,
+	tcproute *gatewayapi.TCPRoute,
 	gateways ...supportedGatewayWithCondition,
 ) (bool, error) {
 	// map the existing parentStatues to avoid duplications
@@ -444,20 +446,20 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	for _, gateway := range gateways {
 		gateway := gateway
 		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
-			ParentRef: gatewayv1alpha2.ParentReference{
-				Group:     (*gatewayv1alpha2.Group)(&gatewayv1beta1.GroupVersion.Group),
+		gatewayParentStatus := &gatewayapi.RouteParentStatus{
+			ParentRef: gatewayapi.ParentReference{
+				Group:     (*gatewayapi.Group)(&gatewayv1beta1.GroupVersion.Group),
 				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
-				Name:      (gatewayv1alpha2.ObjectName)(gateway.gateway.Name),
+				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
+				Name:      (gatewayapi.ObjectName)(gateway.gateway.Name),
 			},
 			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1beta1.RouteConditionAccepted),
+				Type:               string(gatewayapi.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: tcproute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.RouteReasonAccepted),
+				Reason:             string(gatewayapi.RouteReasonAccepted),
 			}},
 		}
 
@@ -503,7 +505,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	}
 
 	// update the tcproute status with the new status references
-	tcproute.Status.Parents = make([]gatewayv1alpha2.RouteParentStatus, 0, len(parentStatuses))
+	tcproute.Status.Parents = make([]gatewayapi.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
 		tcproute.Status.Parents = append(tcproute.Status.Parents, *parent)
 	}
@@ -520,9 +522,9 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 // ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
 // implementation to prune status references to Gateways supported by this controller
 // in the provided TCPRoute object.
-func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, tcproute *gatewayv1alpha2.TCPRoute) (bool, error) {
+func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, tcproute *gatewayapi.TCPRoute) (bool, error) {
 	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
+	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
 	for _, status := range tcproute.Status.Parents {
 		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)

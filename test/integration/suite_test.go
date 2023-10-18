@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -49,7 +50,7 @@ func TestMain(m *testing.M) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	if err != nil {
 		exitOnErrWithCode(ctx, fmt.Errorf("failed to setup loggers: %w", err), consts.ExitCodeCantCreateLogger)
 	}
@@ -65,7 +66,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Pin the Helm chart version.
-	kongbuilder.WithHelmChartVersion(consts.KongHelmChartVersion)
+	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
 
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
@@ -101,8 +102,7 @@ func TestMain(m *testing.M) {
 		builder.WithAddons(metallb.New())
 
 		if testenv.ClusterVersion() != "" {
-			var err error
-			clusterVersion, err = semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
+			clusterVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
 			exitOnErr(ctx, err)
 
 			fmt.Printf("INFO: build a new KIND cluster with version %s\n", clusterVersion.String())
@@ -120,9 +120,6 @@ func TestMain(m *testing.M) {
 			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
 		}
 	}()
-
-	clusterVersion, err = env.Cluster().Version()
-	exitOnErr(ctx, err)
 
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
@@ -142,11 +139,13 @@ func TestMain(m *testing.M) {
 		ctx,
 		retry.Do(
 			func() error {
-				version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
 				if err != nil {
 					return err
 				}
-				fmt.Printf("INFO: using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
+				fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, proxyAdminURL)
 				return nil
 			},
 			retry.OnRetry(
@@ -154,7 +153,9 @@ func TestMain(m *testing.M) {
 					fmt.Printf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
 				},
 			),
-			retry.LastErrorOnly(true),
+			retry.LastErrorOnly(true), retry.RetryIf(func(err error) bool {
+				return !errors.As(err, &helpers.TooOldKongGatewayError{})
+			}),
 		))
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
@@ -179,14 +180,13 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
-			"--log-level=trace",             // not used, as controller logger is configured separately
-			"--debug-log-reduce-redundancy", // not used, as controller logger is configured separately
+			"--log-level=trace", // not used, as controller logger is configured separately
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		exitOnErr(ctx, testutils.DeployControllerManagerForCluster(ctx, deprecatedLogger, logger, env.Cluster(), allControllerArgs...))
+		exitOnErr(ctx, testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), allControllerArgs...))
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -230,6 +230,9 @@ func TestMain(m *testing.M) {
 		fmt.Println("WARN: should run these cases separately to prevent config being affected by invalid cases")
 		runInvalidConfigTests = true
 	}
+
+	clusterVersion, err := env.Cluster().Version()
+	exitOnErr(ctx, err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()

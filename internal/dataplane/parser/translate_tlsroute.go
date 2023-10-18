@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
@@ -23,17 +23,12 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 
 	tlsRouteList, err := p.storer.ListTLSRoutes()
 	if err != nil {
-		p.logger.WithError(err).Error("failed to list TLSRoutes")
+		p.logger.Error(err, "failed to list TLSRoutes")
 		return result
 	}
 
 	var errs []error
 	for _, tlsroute := range tlsRouteList {
-		if p.featureFlags.ExpressionRoutes {
-			p.registerResourceFailureNotSupportedForExpressionRoutes(tlsroute)
-			continue
-		}
-
 		if err := p.ingressRulesFromTLSRoute(&result, tlsroute); err != nil {
 			err = fmt.Errorf("TLSRoute %s/%s can't be routed: %w", tlsroute.Namespace, tlsroute.Name, err)
 			errs = append(errs, err)
@@ -44,16 +39,20 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 		}
 	}
 
+	if p.featureFlags.ExpressionRoutes {
+		applyExpressionToIngressRules(&result)
+	}
+
 	if len(errs) > 0 {
 		for _, err := range errs {
-			p.logger.Errorf(err.Error())
+			p.logger.Error(err, "could not generate route from TLSRoute")
 		}
 	}
 
 	return result
 }
 
-func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayv1alpha2.TLSRoute) error {
+func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayapi.TLSRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := tlsroute.Spec
 
@@ -102,7 +101,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 // isTLSRoutePassthrough returns true if we need to configure TLS passthrough to kong
 // for the tlsroute object.
 // returns a non-nil error if we failed to get the supported gateway.
-func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool, error) {
+func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool, error) {
 	// reconcile loop will push TLSRoute object with updated status when
 	// gateway is ready and TLSRoute object becomes stable.
 	// so we get the supported gateways from status.parents.
@@ -124,10 +123,13 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 
 		gateway, err := p.storer.GetGateway(gatewayNamespace, string(parentRef.Name))
 		if err != nil {
-			if errors.As(err, &store.ErrNotFound{}) {
+			if errors.As(err, &store.NotFoundError{}) {
 				// log an error if the gateway expected to support the TLSRoute is not found in our cache.
-				p.logger.WithError(err).Errorf("gateway %s/%s not found for TLSRoute %s/%s",
-					gatewayNamespace, parentRef.Name, tlsroute.Namespace, tlsroute.Name)
+				p.logger.Error(err, "Gateway not found for TLSRoute",
+					"gateway_namespace", gatewayNamespace,
+					"gateway_name", parentRef.Name,
+					"tlsroute_namesapce", tlsroute.Namespace,
+					"tlsroute_name", tlsroute.Name)
 				continue
 			}
 			return false, err
@@ -138,7 +140,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 		for _, listener := range gateway.Spec.Listeners {
 			if parentRef.SectionName == nil || listener.Name == *parentRef.SectionName {
 				if listener.TLS != nil && listener.TLS.Mode != nil &&
-					*listener.TLS.Mode == gatewayv1beta1.TLSModePassthrough {
+					*listener.TLS.Mode == gatewayapi.TLSModePassthrough {
 					return true, nil
 				}
 			}

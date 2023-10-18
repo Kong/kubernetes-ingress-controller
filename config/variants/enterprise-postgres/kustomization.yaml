@@ -1,8 +1,10 @@
 resources:
 - ../postgres
 - enterprise-resources.yaml
-patchesStrategicMerge:
-- kong-enterprise.yaml
+
+patches:
+- path: kong-enterprise.yaml
+- path: kong-enterprise-job.yaml
 
 components:
   - ../../image/enterprise/

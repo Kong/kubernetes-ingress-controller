@@ -1,21 +1,16 @@
 package featuregates
 
 import (
-	"bytes"
 	"testing"
 
-	"github.com/bombsimon/logrusr/v4"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestFeatureGates(t *testing.T) {
 	t.Log("setting up configurations and logging for feature gates testing")
-	out := new(bytes.Buffer)
-	baseLogger := logrus.New()
-	baseLogger.SetOutput(out)
-	baseLogger.SetLevel(logrus.DebugLevel)
-	setupLog := logrusr.New(baseLogger)
+	setupLog := zapr.NewLogger(zap.NewNop())
 
 	t.Log("verifying feature gates setup defaults when no feature gates are configured")
 	fgs, err := New(setupLog, nil)

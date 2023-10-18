@@ -29,9 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.
@@ -58,7 +58,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.ReferenceGrant{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -70,7 +70,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // move the current state of the cluster closer to the desired state.
 func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Alpha2ReferenceGrant", req.NamespacedName)
-	grant := new(gatewayv1beta1.ReferenceGrant)
+	grant := new(gatewayapi.ReferenceGrant)
 	if err := r.Get(ctx, req.NamespacedName, grant); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
@@ -84,6 +84,7 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
 	debug(log, grant, "processing referencegrant")
 
 	debug(log, grant, "checking deletion timestamp")

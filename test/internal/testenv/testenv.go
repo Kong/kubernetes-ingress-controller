@@ -74,6 +74,16 @@ func KongEffectiveVersion() string {
 	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
 }
 
+// KongHelmChartVersion is the 'kong' helm chart version to use in tests.
+func KongHelmChartVersion() string {
+	v := os.Getenv("TEST_KONG_HELM_CHART_VERSION")
+	if v == "" {
+		fmt.Println("ERROR: missing required TEST_KONG_HELM_CHART_VERSION")
+		os.Exit(1)
+	}
+	return v
+}
+
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
 // - `traditional`
 // - `traditional_compatible`.
@@ -103,8 +113,12 @@ func KongEnterpriseEnabled() bool {
 	return os.Getenv("TEST_KONG_ENTERPRISE") == "true"
 }
 
-// ClusterVersion indicates the version of Kubernetes to use for the tests
-// (if the cluster was not provided by the caller).
+// ClusterVersion indicates the Kubernetes cluster version to use when
+// generating a testing environment (if the cluster was not provided by the
+// caller). and allows the caller to provide a specific version.
+//
+// If no version is provided the default version for the cluster provisioner in
+// the testing framework will be used.
 func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
 }

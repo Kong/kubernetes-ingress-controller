@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,12 +20,9 @@ import (
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {
-	skipTestForExpressionRouter(t)
+	skipTestForNonKindCluster(t)
+	skipTestForRouterFlavors(t, expressions)
 	ctx := context.Background()
-
-	if env.Cluster().Type() != kind.KindClusterType {
-		t.Skip("webhook tests are only available on KIND clusters currently")
-	}
 
 	ns, _ := helpers.Setup(ctx, t, env)
 
@@ -79,8 +75,8 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 		assert.NoError(t, result.Error())
 		require.Len(t, result.Warnings(), 2)
 		expectedWarnings := []string{
-			"'route' is DEPRECATED. Use Ingress' annotations instead.",
-			"'proxy' is DEPRECATED. Use Service's annotations instead.",
+			"'route' is DEPRECATED. It will have no effect. Use Ingress' annotations instead.",
+			"'proxy' is DEPRECATED. It will have no effect. Use Service's annotations instead.",
 		}
 		receivedWarnings := lo.Map(result.Warnings(), func(item net.WarningHeader, index int) string {
 			return item.Text

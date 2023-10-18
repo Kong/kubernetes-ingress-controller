@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bombsimon/logrusr/v4"
+	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
-	"github.com/sirupsen/logrus"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -33,15 +32,19 @@ type Payload = types.ProviderReport
 type ReportValues struct {
 	FeatureGates                   map[string]bool
 	MeshDetection                  bool
-	PublishServiceNN               k8stypes.NamespacedName
+	IngressServiceNN               k8stypes.NamespacedName
 	KonnectSyncEnabled             bool
 	GatewayServiceDiscoveryEnabled bool
 }
 
 // CreateManager creates telemetry manager using the provided rest.Config.
-func CreateManager(restConfig *rest.Config, gatewaysCounter workflows.DiscoveredGatewaysCounter, fixedPayload Payload, reportCfg ReportConfig) (telemetry.Manager, error) {
-	logger := logrusr.New(logrus.New())
-
+func CreateManager(
+	logger logr.Logger,
+	restConfig *rest.Config,
+	gatewaysCounter workflows.DiscoveredGatewaysCounter,
+	fixedPayload Payload,
+	reportCfg ReportConfig,
+) (telemetry.Manager, error) {
 	k, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client-go kubernetes client: %w", err)
@@ -120,7 +123,7 @@ func createManager(
 			// part responsible for detecting the mesh that current pod is running
 			// gets disabled.
 			if err == nil {
-				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.PublishServiceNN)
+				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.IngressServiceNN)
 				if err != nil {
 					return nil, fmt.Errorf("failed to create mesh detect workflow: %w", err)
 				}

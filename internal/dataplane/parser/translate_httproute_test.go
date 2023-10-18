@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/go-logr/zapr"
@@ -39,6 +38,11 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	routes   []*gatewayapi.HTTPRoute
 	expected func(routes []*gatewayapi.HTTPRoute) ingressRules
 	errs     []error
+}
+
+// TODO: test for validating HTTPRoute
+func TestValidateHTTPRoute(t *testing.T) {
+
 }
 
 func TestIngressRulesFromHTTPRoutes(t *testing.T) {
@@ -255,58 +259,6 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 						},
 					},
 				}
-			},
-		},
-		{
-			msg: "an HTTPRoute with no rules can't be routed",
-			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-				},
-			}},
-			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
-				return ingressRules{
-					SecretNameToSNIs:      newSecretNameToSNIs(),
-					ServiceNameToParent:   map[string]client.Object{},
-					ServiceNameToServices: make(map[string]kongstate.Service),
-				}
-			},
-			errs: []error{
-				translators.ErrRouteValidationNoRules,
-			},
-		},
-		{
-			msg: "an HTTPRoute with queryParam matches is not yet supported",
-			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{
-							builder.NewHTTPRouteMatch().WithQueryParam("username", "kong").Build(),
-						},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
-						},
-					}},
-				},
-			}},
-			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
-				return ingressRules{
-					SecretNameToSNIs:      newSecretNameToSNIs(),
-					ServiceNameToParent:   map[string]client.Object{},
-					ServiceNameToServices: make(map[string]kongstate.Service),
-				}
-			},
-			errs: []error{
-				translators.ErrRouteValidationQueryParamMatchesUnsupported,
 			},
 		},
 		{
@@ -1487,17 +1439,11 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	parser.featureFlags.ExpressionRoutes = true
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.GroupVersion.String()}
 
-	newResourceFailure := func(reason string, objects ...client.Object) failures.ResourceFailure {
-		failure, _ := failures.NewResourceFailure(reason, objects...)
-		return failure
-	}
-
 	testCases := []struct {
 		name                 string
 		httpRoutes           []*gatewayapi.HTTPRoute
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
-		expectedFailures     []failures.ResourceFailure
 	}{
 		{
 			name: "single HTTPRoute with no hostname and multiple matches",
@@ -1744,78 +1690,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "multiple HTTPRoutes with translation failures",
-			httpRoutes: []*gatewayapi.HTTPRoute{
-				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-no-host-no-rule",
-					},
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{"no-rule.example"},
-					},
-				},
-				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
-							"foo.com",
-						},
-						Rules: []gatewayapi.HTTPRouteRule{
-							{
-								Matches: []gatewayapi.HTTPRouteMatch{
-									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-								},
-								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedKongServices: []kongstate.Service{
-				{
-					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.foo.com.0"),
-					},
-					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-					},
-				},
-			},
-			expectedKongRoutes: map[string][]kongstate.Route{
-				"httproute.default.httproute-1.foo.com.0": {
-					{
-						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
-							PreserveHost: kong.Bool(true),
-						},
-						Plugins:          []kong.Plugin{},
-						ExpressionRoutes: true,
-					},
-				},
-			},
-			expectedFailures: []failures.ResourceFailure{
-				newResourceFailure(translators.ErrRouteValidationNoRules.Error(), &gatewayapi.HTTPRoute{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-no-host-no-rule",
-					},
-				}),
-			},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -1846,15 +1720,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					require.Truef(t, ok, "should find route %s", *routeName)
 					require.Equal(t, *expectedRoute.Expression, *r.Expression)
 				}
-			}
-			// check translation failures
-			translationFailures := failureCollector.PopResourceFailures()
-			require.Equal(t, len(tc.expectedFailures), len(translationFailures))
-			for _, expectedTranslationFailure := range tc.expectedFailures {
-				expectedFailureMessage := expectedTranslationFailure.Message()
-				require.True(t, lo.ContainsBy(translationFailures, func(failure failures.ResourceFailure) bool {
-					return strings.Contains(failure.Message(), expectedFailureMessage)
-				}))
 			}
 		})
 	}

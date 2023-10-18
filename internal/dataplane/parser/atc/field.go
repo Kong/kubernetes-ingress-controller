@@ -81,8 +81,7 @@ func (f HTTPHeaderField) String() string {
 	return "http.headers." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
 }
 
-// HTTPQueryField extracts the value of an HTTP query string from the request.
-// available since Kong 3.4.1.
+// HTTPQueryField extracts the value of an HTTP query parameter from the query string of the request.
 type HTTPQueryField struct {
 	QueryParamName string
 }

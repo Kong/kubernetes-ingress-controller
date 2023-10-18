@@ -232,7 +232,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	// Kong starts to support query parameter match since 3.4.1 with expression router.
+	// Kong supports query parameter match only with expression router.
 	// This function is only called for Kong with traditional/traditional compatible router,
 	// so we do not support query parameter match here.
 	if len(matches[0].QueryParams) > 0 {

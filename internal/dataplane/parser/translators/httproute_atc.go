@@ -226,7 +226,7 @@ func queryParamMatcherFromHTTPQueryParamMatch(queryParamMatch gatewayapi.HTTPQue
 }
 
 func queryParamMatcherFromHTTPQueryParamMatches(queryParamMatches []gatewayapi.HTTPQueryParamMatch) atc.Matcher {
-	// sort queryParamMatches by names to generate a stable output.
+	// Sort queryParamMatches by names to generate a stable output.
 	sort.Slice(queryParamMatches, func(i, j int) bool {
 		return string(queryParamMatches[i].Name) < string(queryParamMatches[j].Name)
 	})

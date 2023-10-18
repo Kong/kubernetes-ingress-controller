@@ -141,7 +141,6 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestGatewayListenerConflicts(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	var gw *gatewayapi.Gateway
@@ -334,7 +333,6 @@ func TestGatewayListenerConflicts(t *testing.T) {
 }
 
 func TestGatewayFilters(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)

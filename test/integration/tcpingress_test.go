@@ -303,11 +303,6 @@ func TestTCPIngressTLS(t *testing.T) {
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
 	t.Parallel()
-	skipTestForExpressionRouter(t)
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4540
-	// Kong does not currently recognize these requests even though the expression looks correct. This should be enabled
-	// after determining why the gateway is discarding these requests and applying any necessary fixes.
-	// RunWhenKongExpressionRouter(t)
 
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()

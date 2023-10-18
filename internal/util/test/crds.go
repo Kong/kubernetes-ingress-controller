@@ -3,8 +3,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"sync"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
@@ -19,27 +17,7 @@ import (
 // Testing Utility Functions - CRDs
 // -----------------------------------------------------------------------------
 
-var (
-	kongCRDsKustomize = "config/crd/"
-	crdsOnce          sync.Once
-)
-
 func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
-	var err error
-	crdsOnce.Do(func() {
-		var dir string
-		// We need the repo root directory to be able to run this  from anywhere in the repository.
-		dir, err = getRepoRoot()
-		if err != nil {
-			panic(err)
-		}
-
-		kongCRDsKustomize = filepath.Join(dir, kongCRDsKustomize)
-	})
-	if err != nil {
-		return err
-	}
-
 	apiextClient, err := apiextclient.NewForConfig(cluster.Config())
 	if err != nil {
 		return err

@@ -86,8 +86,12 @@ func KongEnterpriseEnabled() bool {
 	return os.Getenv("TEST_KONG_ENTERPRISE") == "true"
 }
 
-// ClusterVersion indicates the version of Kubernetes to use for the tests
-// (if the cluster was not provided by the caller).
+// ClusterVersion indicates the Kubernetes cluster version to use when
+// generating a testing environment (if the cluster was not provided by the
+// caller). and allows the caller to provide a specific version.
+//
+// If no version is provided the default version for the cluster provisioner in
+// the testing framework will be used.
 func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
 }

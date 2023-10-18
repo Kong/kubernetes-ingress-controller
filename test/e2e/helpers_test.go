@@ -133,7 +133,7 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	}
 
 	clusterType, clusterName := clusterParts[0], clusterParts[1]
-	if clusterVersionStr != "" {
+	if testenv.ClusterVersion() != "" {
 		return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
 	}
 
@@ -166,8 +166,8 @@ kubeadmConfigPatches:
 
 func createKINDBuilder(t *testing.T) *environments.Builder {
 	clusterBuilder := kind.NewBuilder().WithConfigReader(strings.NewReader(kindConfig))
-	if clusterVersionStr != "" {
-		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
+	if v := testenv.ClusterVersion(); v != "" {
+		clusterVersion := semver.MustParse(strings.TrimPrefix(v, "v"))
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
 	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
@@ -219,14 +219,14 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		WithCreateSubnet(true).
 		WithLabels(gkeTestClusterLabels())
 
-	if clusterVersionStr != "" {
-		k8sVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
+	if v := testenv.ClusterVersion(); v != "" {
+		k8sVersion, err := semver.Parse(strings.TrimPrefix(v, "v"))
 		if err != nil {
 			return nil, err
 		}
 
 		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
-		clusterBuilder = clusterBuilder.WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
+		clusterBuilder.WithClusterVersion(k8sVersion)
 	}
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil

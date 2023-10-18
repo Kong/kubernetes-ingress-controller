@@ -197,3 +197,13 @@ func NewPredicateTLSSNI(op BinaryOperator, value string) Predicate {
 		value: StringLiteral(value),
 	}
 }
+
+func NewPredicateHTTPQuery(key string, op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: HTTPQueryField{
+			QueryParamName: key,
+		},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}

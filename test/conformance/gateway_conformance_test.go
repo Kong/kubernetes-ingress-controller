@@ -25,8 +25,6 @@ var commonSkippedTests = []string{
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563
 	tests.GatewayWithAttachedRoutesWithPort8080.ShortName,
 	tests.HTTPRouteRedirectPortAndScheme.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
-	tests.HTTPRouteQueryParamMatching.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
 	tests.HTTPRouteRedirectPort.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
@@ -62,6 +60,8 @@ var (
 		// cannot support the path > method > header precedence,
 		// but no way to omit individual cases.
 		tests.HTTPRouteMethodMatching.ShortName,
+		// only expression router supports query param matches
+		tests.HTTPRouteQueryParamMatching.ShortName,
 	)
 )
 

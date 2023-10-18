@@ -202,7 +202,7 @@ func GenerateKongRouteFromTranslation(
 	)
 }
 
-// generateKongRoutesFromHTTPRouteMatches converts an HTTPRouteMatches to a slice of Kong Route objects.
+// generateKongRoutesFromHTTPRouteMatches converts an HTTPRouteMatches to a slice of Kong Route objects with traditional routes.
 // This function assumes that the HTTPRouteMatches share the query params, headers and methods.
 func generateKongRoutesFromHTTPRouteMatches(
 	routeName string,
@@ -232,7 +232,9 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
+	// Kong supports query parameter match only with expression router.
+	// This function is only called for Kong with traditional/traditional compatible router,
+	// so we do not support query parameter match here.
 	if len(matches[0].QueryParams) > 0 {
 		return []kongstate.Route{}, translators.ErrRouteValidationQueryParamMatchesUnsupported
 	}

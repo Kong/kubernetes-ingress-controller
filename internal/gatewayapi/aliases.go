@@ -140,6 +140,8 @@ const (
 	PathMatchExact                        = gatewayv1beta1.PathMatchExact
 	PathMatchPathPrefix                   = gatewayv1beta1.PathMatchPathPrefix
 	PathMatchRegularExpression            = gatewayv1beta1.PathMatchRegularExpression
+	QueryParamMatchExact                  = gatewayv1beta1.QueryParamMatchExact
+	QueryParamMatchRegularExpression      = gatewayv1beta1.QueryParamMatchRegularExpression
 	RouteConditionAccepted                = gatewayv1beta1.RouteConditionAccepted
 	RouteConditionResolvedRefs            = gatewayv1beta1.RouteConditionResolvedRefs
 	RouteReasonAccepted                   = gatewayv1beta1.RouteReasonAccepted

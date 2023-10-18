@@ -33,7 +33,7 @@ func ValidateHTTPRoute(
 	attachedGateways ...*gatewayapi.Gateway,
 ) (bool, string, error) {
 	// validate that no unsupported features are in use
-	if err := validateHTTPRouteFeatures(httproute); err != nil {
+	if err := validateHTTPRouteFeatures(httproute, parserFeatures); err != nil {
 		return false, "httproute spec did not pass validation", err
 	}
 
@@ -95,13 +95,14 @@ func validateHTTPRouteListener(listener *gatewayapi.Listener) error {
 // validateHTTPRouteFeatures checks for features that are not supported by this
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
-func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute) error {
+func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, parserFeatures parser.FeatureFlags) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
-			// We don't support query parameters matching rules yet
-			// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+			// We support query parameters matching rules only with expression router.
 			if len(match.QueryParams) != 0 {
-				return fmt.Errorf("queryparam matching is not yet supported for httproute")
+				if !parserFeatures.ExpressionRoutes {
+					return fmt.Errorf("queryparam matching is supported with expression router only")
+				}
 			}
 		}
 		// We don't support any backendRef types except Kubernetes Services.

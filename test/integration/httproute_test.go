@@ -13,6 +13,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -194,6 +195,28 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 		t.Log("verifying HTTPRoute header match")
 		helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
+	})
+
+	t.Run("HTTPRoute query param match", func(t *testing.T) {
+		RunWhenKongExpressionRouter(t) //nolint:contextcheck
+
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayapi.HTTPRouteMatch{
+			QueryParams: []gatewayapi.HTTPQueryParamMatch{
+				{
+					Type:  lo.ToPtr(gatewayapi.QueryParamMatchExact),
+					Name:  "foo",
+					Value: "bar",
+				},
+			},
+		})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		t.Log("verifying HTTPRoute query param match")
+		helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/?foo=bar", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 	})
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True'")

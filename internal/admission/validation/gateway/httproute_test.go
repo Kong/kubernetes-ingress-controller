@@ -204,7 +204,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			err:           fmt.Errorf("HTTPRoute not supported by listener http-alternate"),
 		},
 		{
-			msg: "if an HTTPRoute is using queryparams matching it fails validation due to lack of support",
+			msg: "if an HTTPRoute is using queryparams matching it fails validation due to only supporting expression router",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
@@ -254,7 +254,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			}},
 			valid:         false,
 			validationMsg: "httproute spec did not pass validation",
-			err:           fmt.Errorf("queryparam matching is not yet supported for httproute"),
+			err:           fmt.Errorf("queryparam matching is supported with expression router only"),
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",

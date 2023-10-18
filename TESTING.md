@@ -191,7 +191,7 @@ There are a couple of key differences between isolated and regular integration t
   ...
   ```
 
-- In regular integration tests each test gets it's own Kubernetes namespace through
+- In regular integration tests each test gets its own Kubernetes namespace through
   manual creation via helper functions like:
 
   ```go
@@ -209,7 +209,7 @@ There are a couple of key differences between isolated and regular integration t
 
 #### Room for improvement
 
-- Eventually the whole integration suite could be migrate to use this setup.
+- Eventually the whole integration suite could be migrated to use this setup.
   When that happens, we can add logic into setup which would make tests that don't 
   need this level of separation to reuse a common installation of Kong (e.g. to
   its default - `kong` - namespace).

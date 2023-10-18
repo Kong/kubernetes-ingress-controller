@@ -3,12 +3,6 @@ package e2e
 import "os"
 
 var (
-	// clusterVersionStr indicates the Kubernetes cluster version to use when
-	// generating a testing environment and allows the caller to provide a specific
-	// version. If no version is provided the default version for the cluster
-	// provisioner in the testing framework will be used.
-	clusterVersionStr = os.Getenv("KONG_CLUSTER_VERSION")
-
 	// controllerImageOverride is the controller image to use in lieu of the default.
 	controllerImageOverride = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
 

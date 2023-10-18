@@ -226,7 +226,7 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		}
 
 		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
-		clusterBuilder = clusterBuilder.WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
+		clusterBuilder.WithClusterVersion(k8sVersion)
 	}
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil

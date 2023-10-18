@@ -29,9 +29,9 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	crdsOnce.Do(func() {
 		var dir string
 		// We need the repo root directory to be able to run this  from anywhere in the repository.
-		dir, err = getRepoRoot(ctx)
+		dir, err = getRepoRoot()
 		if err != nil {
-			return
+			panic(err)
 		}
 
 		kongCRDsKustomize = filepath.Join(dir, kongCRDsKustomize)

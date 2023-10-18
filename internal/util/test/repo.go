@@ -1,17 +1,13 @@
 package test
 
 import (
-	"context"
-	"os/exec"
+	"path"
 	"path/filepath"
-	"strings"
+	"runtime"
 )
 
-func getRepoRoot(ctx context.Context) (string, error) {
-	out, err := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return "", err
-	}
-	dir := strings.TrimSpace(filepath.Clean(string(out)))
-	return dir, nil
+func getRepoRoot() (string, error) {
+	_, b, _, _ := runtime.Caller(0)
+	d := filepath.Dir(path.Join(path.Dir(b), "../../")) // Number of ../ depends on the path of this file.
+	return filepath.Abs(d)
 }

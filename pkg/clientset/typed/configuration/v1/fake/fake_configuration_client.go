@@ -44,10 +44,6 @@ func (c *FakeConfigurationV1) KongPlugins(namespace string) v1.KongPluginInterfa
 	return &FakeKongPlugins{c, namespace}
 }
 
-func (c *FakeConfigurationV1) KongUpstreamPolicies(namespace string) v1.KongUpstreamPolicyInterface {
-	return &FakeKongUpstreamPolicies{c, namespace}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeConfigurationV1) RESTClient() rest.Interface {

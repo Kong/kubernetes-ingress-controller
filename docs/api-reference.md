@@ -14,7 +14,6 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group.
 - [KongConsumer](#kongconsumer)
 - [KongIngress](#kongingress)
 - [KongPlugin](#kongplugin)
-- [KongUpstreamPolicy](#kongupstreampolicy)
 
 ### KongClusterPlugin
 
@@ -105,26 +104,6 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
-
-
-
-
-### KongUpstreamPolicy
-
-
-
-KongUpstreamPolicy allows attaching Kong Upstream Policies to Gateway API resources: - HTTPRoute, - TCPRoute, - UDPRoute, - GRPCRoute. 
- It allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. 
- In the case of Gateway API *Routes, the KongUpstreamPolicy will affect all of Kong Upstreams associated with the Gateway API *Route.
-
-<!-- kong_upstream_policy description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1`
-| `kind` _string_ | `KongUpstreamPolicy`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
 
 
 
@@ -242,66 +221,6 @@ _Appears in:_
 - [KongIngressRoute](#kongingressroute)
 - [KongPlugin](#kongplugin)
 
-### KongUpstreamHash
-
-
-
-KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm. One of the fields must be set.
-
-
-
-| Field | Description |
-| --- | --- |
-| `header` _string_ | Header is the name of the header to use as hash input. |
-| `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
-| `query_arg` _string_ | QueryArg is the name of the query argument to use as hash input. |
-| `uri_capture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
-
-
-_Appears in:_
-- [KongUpstreamPolicyConfig](#kongupstreampolicyconfig)
-
-### KongUpstreamPolicyConfig
-
-
-
-KongUpstreamPolicyConfig contains the configuration parameters for Kong upstream.
-
-
-
-| Field | Description |
-| --- | --- |
-| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
-| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
-| `hash_on` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. |
-| `hash_on_fallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. |
-| `healthchecks` _[Healthcheck](#healthcheck)_ | Healthchecks defines the health check configurations in Kong. REVIEW: I think we should not depend on go-kong types here. |
-| `host_header` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. REVIEW: this could be achieved with Gateway API HTTPHeaderFilter, do we need that? |
-
-
-_Appears in:_
-- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
-
-### KongUpstreamPolicySpec
-
-
-
-KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
-
-
-
-| Field | Description |
-| --- | --- |
-| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef identifies an API object to apply policy to (supported: HTTPRoute, TCPRoute, UDPRoute, GRPCRoute). |
-| `override` _[KongUpstreamPolicyConfig](#kongupstreampolicyconfig)_ | Override defines policy configuration that should override policy configuration attached below the targeted resource in the hierarchy. |
-| `default` _[KongUpstreamPolicyConfig](#kongupstreampolicyconfig)_ | Default defines default policy configuration for the targeted resource. |
-
-
-_Appears in:_
-- [KongUpstreamPolicy](#kongupstreampolicy)
-
-
-
 ### NamespacedConfigSource
 
 
@@ -401,6 +320,7 @@ _Appears in:_
 Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
 
 - [KongConsumerGroup](#kongconsumergroup)
+- [KongUpstreamPolicy](#kongupstreampolicy)
 - [TCPIngress](#tcpingress)
 - [UDPIngress](#udpingress)
 
@@ -417,6 +337,24 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `KongConsumerGroup`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+
+
+
+### KongUpstreamPolicy
+
+
+
+KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. <br /><br /> Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object), and it is applied to Kong Upstream objects created by the controller. <br /><br /> It can be attached to Services and Gateway API *Routes. <br /><br /> When attached to a Gateway API *Route, it will affect all of Kong Upstreams created for the Gateway API *Route. If you want to use different Upstream settings for each of the *Route's individual rules, you should create a separate *Route for each of the rules. <br /><br /> When attached to a Service, it will affect all Kong Upstreams created for the Service. <br /><br /> When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services must be configured with the same KongUpstreamPolicy (effectively two separate KongUpstreamPolicies with the same configuration). Otherwise, the controller will ignore the KongUpstreamPolicy.
+
+<!-- kong_upstream_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `KongUpstreamPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
 
 
 
@@ -512,6 +450,182 @@ _Appears in:_
 
 
 
+### KongUpstreamActiveHealthcheck
+
+
+
+KongUpstreamActiveHealthcheck configures active health check probing.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type determines how active health checks are collected. |
+| `concurrency` _integer_ | Concurrency is the number of targets to check concurrently. |
+| `healthy` _[KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
+| `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy for an upstream. |
+| `http_path` _string_ | HTTPPath is the path to use in GET HTTP request to run as a probe. |
+| `https_sni` _string_ | HTTPSSni is the SNI to use in GET HTTPS request to run as a probe. |
+| `https_verify_certificate` _boolean_ | HTTPSVerifyCertificate is a boolean value that indicates if the certificate should be verified. |
+| `timeout` _integer_ | Timeout is the probe timeout in seconds. |
+| `headers` _object (keys:string, values:string array)_ | Headers is a list of HTTP headers to add to the probe request. |
+
+
+_Appears in:_
+- [KongUpstreamHealthcheck](#kongupstreamhealthcheck)
+
+### KongUpstreamHash
+
+
+
+KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm. Only one of the fields must be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `header` _string_ | Header is the name of the header to use as hash input. |
+| `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
+| `query_arg` _string_ | QueryArg is the name of the query argument to use as hash input. |
+| `uri_capture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
+
+
+_Appears in:_
+- [KongUpstreamPolicyConfig](#kongupstreampolicyconfig)
+
+### KongUpstreamHealthcheck
+
+
+
+KongUpstreamHealthcheck represents a health-check config of an Upstream in Kong.
+
+
+
+| Field | Description |
+| --- | --- |
+| `active` _[KongUpstreamActiveHealthcheck](#kongupstreamactivehealthcheck)_ | Active configures active health check probing. |
+| `passive` _[KongUpstreamPassiveHealthcheck](#kongupstreampassivehealthcheck)_ | Passive configures passive health check probing. |
+| `threshold` _integer_ | Threshold is the minimum percentage of the upstream’s targets’ weight that must be available for the whole upstream to be considered healthy. |
+
+
+_Appears in:_
+- [KongUpstreamPolicyConfig](#kongupstreampolicyconfig)
+
+### KongUpstreamHealthcheckHealthy
+
+
+
+KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to mark targets healthy for an upstream.
+
+
+
+| Field | Description |
+| --- | --- |
+| `http_statuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
+| `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
+| `successes` _integer_ | Successes is the number of successes to consider a target healthy. |
+
+
+_Appears in:_
+- [KongUpstreamActiveHealthcheck](#kongupstreamactivehealthcheck)
+- [KongUpstreamPassiveHealthcheck](#kongupstreampassivehealthcheck)
+
+### KongUpstreamHealthcheckUnhealthy
+
+
+
+KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to mark targets unhealthy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `http_failures` _integer_ | HTTPFailures is the number of failures to consider a target unhealthy. |
+| `http_statuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
+| `tcp_failures` _integer_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
+| `timeouts` _integer_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
+| `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |
+
+
+_Appears in:_
+- [KongUpstreamActiveHealthcheck](#kongupstreamactivehealthcheck)
+- [KongUpstreamPassiveHealthcheck](#kongupstreampassivehealthcheck)
+
+### KongUpstreamPassiveHealthcheck
+
+
+
+KongUpstreamPassiveHealthcheck configures passive checks around passive health checks.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type determines whether to perform passive health checks interpreting HTTP/HTTPS statuses, or just check for TCP connection success. Accepted values are "http", "https", "tcp", "grpc", "grpcs". |
+| `healthy` _[KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
+| `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy. |
+
+
+_Appears in:_
+- [KongUpstreamHealthcheck](#kongupstreamhealthcheck)
+
+### KongUpstreamPolicyConfig
+
+
+
+KongUpstreamPolicyConfig contains the configuration parameters for Kong upstream.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
+| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
+| `hash_on` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `hash_on_fallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
+
+
+_Appears in:_
+- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
+
+### KongUpstreamPolicySpec
+
+
+
+KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef identifies an API object to apply policy to. |
+| `config` _[KongUpstreamPolicyConfig](#kongupstreampolicyconfig)_ | Upstream defines configuration to be applied to Kong Upstreams associated with TargetRef. |
+
+
+_Appears in:_
+- [KongUpstreamPolicy](#kongupstreampolicy)
+
+### PolicyAncestorStatus
+
+
+
+PolicyAncestorStatus describes the status of a route with respect to an associated Ancestor. <br /><br /> Ancestors refer to objects that are either the Target of a policy or above it in terms of object hierarchy. For example, if a policy targets a Service, the Policy's Ancestors are, in order, the Service, the HTTPRoute, the Gateway, and the GatewayClass. Almost always, in this hierarchy, the Gateway will be the most useful object to place Policy status on, so we recommend that implementations SHOULD use Gateway as the PolicyAncestorStatus object unless the designers have a _very_ good reason otherwise. <br /><br /> In the context of policy attachment, the Ancestor is used to distinguish which resource results in a distinct application of this policy. For example, if a policy targets a Service, it may have a distinct result per attached Gateway. <br /><br /> Policies targeting the same resource may have different effects depending on the ancestors of those resources. For example, different Gateways targeting the same Service may have different capabilities, especially if they have different underlying implementations. <br /><br /> For example, in BackendTLSPolicy, the Policy attaches to a Service that is used as a backend in a HTTPRoute that is itself attached to a Gateway. In this case, the relevant object for status is the Gateway, and that is the ancestor object referred to in this status. <br /><br /> Note that a parent is also an ancestor, so for objects where the parent is the relevant object for status, this struct SHOULD still be used. <br /><br /> This struct is intended to be used in a slice that's effectively a map, with a composite key made up of the AncestorRef and the ControllerName.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ancestorRef` _[ParentReference](#parentreference)_ | AncestorRef corresponds with a ParentRef in the spec that this PolicyAncestorStatus struct describes the status of. |
+| `controllerName` _GatewayController_ | ControllerName is a domain/path string that indicates the name of the controller that wrote this status. This corresponds with the controllerName field on GatewayClass. <br /><br /> Example: "example.net/gateway-controller". <br /><br /> The format of this field is DOMAIN "/" PATH, where DOMAIN and PATH are valid Kubernetes names (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names). <br /><br /> Controllers MUST populate this field when writing status. Controllers should ensure that entries to status populated with their ControllerName are cleaned up when they are no longer necessary. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta) array_ | Conditions describes the status of the Policy with respect to the given Ancestor. |
+
+
+_Appears in:_
+- [PolicyStatus](#policystatus)
+
+
+
 ### TCPIngressSpec
 
 
@@ -563,6 +677,3 @@ UDPIngressSpec defines the desired state of UDPIngress.
 
 _Appears in:_
 - [UDPIngress](#udpingress)
-
-
-

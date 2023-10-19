@@ -25,5 +25,3 @@ type KongConsumerExpansion interface{}
 type KongIngressExpansion interface{}
 
 type KongPluginExpansion interface{}
-
-type KongUpstreamPolicyExpansion interface{}

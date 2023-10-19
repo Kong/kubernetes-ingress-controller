@@ -237,8 +237,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 	secret corev1.Secret,
 ) (bool, string, error) {
 	// If the secret doesn't contain a type key it's not a credentials secret.
-	_, ok := secret.Data[credsvalidation.TypeKey]
-	if !ok {
+	if _, s := util.ExtractKongCredentialType(&secret); s == util.CredentialTypeAbsent {
 		return true, "", nil
 	}
 

@@ -9,7 +9,9 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -565,3 +567,60 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 }
 
 func fakeClassMatcher(*metav1.ObjectMeta, string, annotations.ClassMatching) bool { return true }
+
+func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
+	testCases := []struct {
+		name            string
+		secret          corev1.Secret
+		wantOK          bool
+		wantMessage     string
+		wantErrContains string
+	}{
+		{
+			name: "valid key-auth credential with no consumers gets accepted",
+			secret: corev1.Secret{
+				Data: map[string][]byte{
+					"kongCredType": []byte("key-auth"),
+					"key":          []byte("my-key"),
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "invalid key-auth credential with no consumers gets rejected",
+			secret: corev1.Secret{
+				Data: map[string][]byte{
+					"kongCredType": []byte("key-auth"),
+					// missing key
+				},
+			},
+			wantOK:      false,
+			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "invalid credentials secret, no data present"),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			validator := KongHTTPValidator{
+				ConsumerGetter:           fakeConsumerGetter{},
+				AdminAPIServicesProvider: fakeServicesProvider{},
+				ingressClassMatcher:      fakeClassMatcher,
+				Logger:                   logrus.New(),
+			}
+
+			ok, msg, err := validator.ValidateCredential(context.Background(), tc.secret)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantMessage, msg)
+		})
+	}
+}
+
+type fakeConsumerGetter struct {
+	consumers []kongv1.KongConsumer
+}
+
+func (f fakeConsumerGetter) ListAllConsumers(context.Context) ([]kongv1.KongConsumer, error) {
+	return f.consumers, nil
+}

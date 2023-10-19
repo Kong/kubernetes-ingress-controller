@@ -246,13 +246,8 @@ func (h RequestHandler) handleSecret(
 		return responseBuilder.Allowed(true).Build(), nil
 	}
 
-	// secrets are only validated on update because they must be referenced by a
-	// managed consumer in order for us to validate them, and because credentials
-	// validation also happens at the consumer side of the reference so a
-	// credentials secret can not be referenced without being validated.
-
 	switch request.Operation { //nolint:exhaustive
-	case admissionv1.Update:
+	case admissionv1.Update, admissionv1.Create:
 		ok, message, err := h.Validator.ValidateCredential(ctx, secret)
 		if err != nil {
 			return nil, err

@@ -65,7 +65,8 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 
 	// configure the general manager options
 	managerOpts := ctrl.Options{
-		Scheme: scheme,
+		GracefulShutdownTimeout: c.GracefulShutdownTimeout,
+		Scheme:                  scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: c.MetricsAddr,
 		},

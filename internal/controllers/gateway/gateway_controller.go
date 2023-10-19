@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -36,7 +37,9 @@ import (
 // Vars & Consts
 // -----------------------------------------------------------------------------
 
-var gatewayV1beta1Group = gatewayapi.Group(gatewayv1beta1.GroupName)
+var (
+	gatewayV1Group = gatewayapi.Group(gatewayv1.GroupName)
+)
 
 // -----------------------------------------------------------------------------
 // Gateway Controller - GatewayReconciler
@@ -646,8 +649,8 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	addresses := make([]gatewayapi.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayapi.Listener, 0, len(svc.Spec.Ports))
 	protocolToRouteGroupKind := map[corev1.Protocol]gatewayapi.RouteGroupKind{
-		corev1.ProtocolTCP: {Group: &gatewayV1beta1Group, Kind: gatewayapi.Kind("TCPRoute")},
-		corev1.ProtocolUDP: {Group: &gatewayV1beta1Group, Kind: gatewayapi.Kind("UDPRoute")},
+		corev1.ProtocolTCP: {Group: &gatewayV1Group, Kind: gatewayapi.Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: &gatewayV1Group, Kind: gatewayapi.Kind("UDPRoute")},
 	}
 
 	for _, port := range svc.Spec.Ports {
@@ -742,7 +745,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 				listener.Protocol = gatewayapi.TLSProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: &gatewayV1beta1Group, Kind: (gatewayapi.Kind)("TLSRoute")},
+						{Group: &gatewayV1Group, Kind: (gatewayapi.Kind)("TLSRoute")},
 					},
 				}
 			}
@@ -752,14 +755,14 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 				listener.Protocol = gatewayapi.HTTPSProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: &gatewayV1beta1Group, Kind: (gatewayapi.Kind)("HTTPRoute")},
+						{Group: &gatewayV1Group, Kind: (gatewayapi.Kind)("HTTPRoute")},
 					},
 				}
 			} else {
 				listener.Protocol = gatewayapi.HTTPProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: &gatewayV1beta1Group, Kind: (gatewayapi.Kind)("HTTPRoute")},
+						{Group: &gatewayV1Group, Kind: (gatewayapi.Kind)("HTTPRoute")},
 					},
 				}
 			}

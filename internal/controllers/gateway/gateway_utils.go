@@ -530,7 +530,7 @@ func getReferenceGrantConditionReason(
 		}
 		for _, from := range grant.Spec.From {
 			// we are interested only in grants for gateways that want to reference secrets
-			if from.Group != gatewayV1beta1Group || from.Kind != "Gateway" {
+			if from.Group != gatewayV1Group || from.Kind != "Gateway" {
 				continue
 			}
 			if from.Namespace == gatewayapi.Namespace(gatewayNamespace) {
@@ -659,7 +659,7 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.
 	for _, routeParentStatus := range parentStatuses {
 		gatewayNamespace := routeNamespace
 		parentRef := routeParentStatus.ParentRef
-		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
+		if (parentRef.Group != nil && *parentRef.Group != gatewayV1Group) ||
 			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
 			continue
 		}

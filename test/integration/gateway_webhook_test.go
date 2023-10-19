@@ -86,7 +86,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			_, gotCreateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
+			_, gotCreateErr := gatewayClient.GatewayV1().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
 			if tt.wantCreateErr {
 				require.Error(t, gotCreateErr)
 				require.Contains(t, gotCreateErr.Error(), tt.wantCreateErrSubstring)
@@ -95,7 +95,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 			}
 
 			if len(tt.patch) > 0 {
-				_, gotUpdateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, k8stypes.MergePatchType, tt.patch, metav1.PatchOptions{})
+				_, gotUpdateErr := gatewayClient.GatewayV1().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, k8stypes.MergePatchType, tt.patch, metav1.PatchOptions{})
 				if tt.wantPatchErr {
 					require.Error(t, gotUpdateErr)
 					require.Contains(t, gotUpdateErr.Error(), tt.wantPatchErrSubstring)
@@ -104,7 +104,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 				}
 			}
 
-			if err := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			if err := gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		})

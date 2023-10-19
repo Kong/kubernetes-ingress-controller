@@ -49,7 +49,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 			ControllerName: gateway.GetControllerName(),
 		},
 	}
-	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	supportedGatewayClass, err = gc.GatewayV1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
@@ -66,7 +66,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 			}},
 		},
 	}
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
 	require.NoError(t, err)
 	return gw
 }
@@ -78,7 +78,7 @@ func verifyGateway(ctx context.Context, t *testing.T, env environments.Environme
 
 	t.Log("verifying that the gateway receives a final programmed condition once reconciliation completes")
 	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if ready := util.CheckCondition(
 			gw.Status.Conditions,
@@ -113,7 +113,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 			ControllerName: gateway.GetControllerName(),
 		},
 	}
-	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
+	supportedGatewayClass, err = gc.GatewayV1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
@@ -137,16 +137,16 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 			},
 		},
 	}
-	_, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	_, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	if err == nil {
 		t.Logf("gateway %s exists, delete and re-create it", gw.Name)
-		err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Delete(ctx, gw.Name, metav1.DeleteOptions{})
+		err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Delete(ctx, gw.Name, metav1.DeleteOptions{})
 		require.NoError(t, err)
-		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
+		gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
 		require.NoError(t, err)
 	} else {
 		require.True(t, apierrors.IsNotFound(err))
-		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
+		gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
 		require.NoError(t, err)
 	}
 	return gw
@@ -203,7 +203,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 			}},
 		},
 	}
-	_, err = gc.GatewayV1beta1().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
+	_, err = gc.GatewayV1().HTTPRoutes(corev1.NamespaceDefault).Create(ctx, httproute, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 

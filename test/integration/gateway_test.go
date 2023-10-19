@@ -65,9 +65,9 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway service ref gets provisioned when placeholder is used")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gw.Annotations[annotations.AnnotationPrefix+annotations.GatewayPublishServiceKey] == strings.Join(
+		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == strings.Join(
 			[]string{
 				fmt.Sprintf("%s/%s", pubsvc.Namespace, pubsvc.Name),
 				fmt.Sprintf("%s/%s", pubsvcUDP.Namespace, pubsvcUDP.Name),
@@ -78,7 +78,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway address is populated from the ingress service")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
 		for _, ing := range pubsvc.Status.LoadBalancer.Ingress {
@@ -102,14 +102,14 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway status gets updated to match the ingress service")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway receives a final programmed condition once reconciliation completes")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ready := util.CheckCondition(
 			gw.Status.Conditions,
@@ -123,7 +123,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	t.Log("verifying that the gateway listeners reach the programmed condition")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			if listenerReady := util.CheckCondition(
@@ -177,7 +177,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 	t.Log("verifying that the gateway listeners reach the programmed condition")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			ready := util.CheckCondition(
@@ -203,14 +203,14 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		},
 	)
 
-	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
-	gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming existing listen becomes unready and conflicted, new UDP listen has proto conflict")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		var badudpReady, badudpConflicted, httpReady, httpConflicted bool
 		for _, lstatus := range gw.Status.Listeners {
@@ -288,14 +288,14 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		},
 	}
 
-	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
-	gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming existing listen remains ready and new listens become ready")
 	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		var httpReady, tlsReady, httpsReady, httphostReady bool
 		for _, lstatus := range gw.Status.Listeners {
@@ -410,7 +410,7 @@ func TestGatewayFilters(t *testing.T) {
 		}
 	}
 
-	gatewayClient := gwClientSet.GatewayV1beta1()
+	gatewayClient := gwClientSet.GatewayV1()
 
 	httpRoute, err := gatewayClient.HTTPRoutes(ns.Name).Create(ctx, HTTPRoute(), metav1.CreateOptions{})
 	require.NoError(t, err)

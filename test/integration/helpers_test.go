@@ -44,7 +44,7 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gatewayClassName,
 			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 			},
 		},
 		Spec: gatewayapi.GatewayClassSpec{
@@ -56,13 +56,13 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 		opt(gwc)
 	}
 
-	result, err := client.GatewayV1beta1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	result, err := client.GatewayV1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
+		err = client.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return result, err
 		}
-		result, err = client.GatewayV1beta1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+		result, err = client.GatewayV1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	}
 	return result, err
 }
@@ -92,13 +92,13 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 		opt(gw)
 	}
 
-	result, err := client.GatewayV1beta1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+	result, err := client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1beta1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
+		err = client.GatewayV1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return result, err
 		}
-		result, err = client.GatewayV1beta1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+		result, err = client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
 	}
 	return result, err
 }
@@ -123,7 +123,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 		case <-tick:
 			tick = nil
 			ch <- func() bool {
-				gw, err := client.GatewayV1beta1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
+				gw, err := client.GatewayV1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
 				exitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,
@@ -155,7 +155,7 @@ func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, 
 
 func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayapi.HTTPRoute, accepted bool, reason gatewayapi.RouteConditionReason) bool {
 	var err error
-	httpRoute, err = c.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(context.Background(), httpRoute.Name, metav1.GetOptions{})
+	httpRoute, err = c.GatewayV1().HTTPRoutes(httpRoute.Namespace).Get(context.Background(), httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	if len(httpRoute.Status.Parents) <= 0 {
@@ -183,7 +183,7 @@ func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset,
 // each listener's name.
 func ListenersHaveNAttachedRoutesCallback(t *testing.T, c *gatewayclient.Clientset, namespace, gatewayName string, attachedRoutesByListener map[string]int32) func() bool {
 	return func() bool {
-		gateway, err := c.GatewayV1beta1().Gateways(namespace).Get(context.Background(), gatewayName, metav1.GetOptions{})
+		gateway, err := c.GatewayV1().Gateways(namespace).Get(context.Background(), gatewayName, metav1.GetOptions{})
 		assert.NoError(t, err)
 
 		for _, listenerStatus := range gateway.Status.Listeners {
@@ -264,7 +264,7 @@ func gatewayLinkStatusMatches(
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayapi.HTTPProtocolType:
-		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
@@ -348,7 +348,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayapi.HTTPProtocolType:
-		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)

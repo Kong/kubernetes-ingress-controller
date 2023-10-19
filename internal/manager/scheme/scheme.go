@@ -4,6 +4,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -39,6 +40,10 @@ func Get() (*runtime.Scheme, error) {
 	}
 
 	if err := gatewayv1beta1.Install(scheme); err != nil {
+		return nil, err
+	}
+
+	if err := gatewayv1.Install(scheme); err != nil {
 		return nil, err
 	}
 

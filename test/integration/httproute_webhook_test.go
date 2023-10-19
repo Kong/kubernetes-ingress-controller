@@ -270,7 +270,7 @@ func testHTTPRouteValidationWebhook(
 ) {
 	for _, tC := range testCases {
 		t.Run(tC.Name, func(t *testing.T) {
-			_, err := gatewayClient.GatewayV1beta1().HTTPRoutes(namespace).Create(ctx, tC.Route, metav1.CreateOptions{})
+			_, err := gatewayClient.GatewayV1().HTTPRoutes(namespace).Create(ctx, tC.Route, metav1.CreateOptions{})
 			if tC.WantCreateErrSubstring != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tC.WantCreateErrSubstring)

@@ -83,6 +83,9 @@ Adding a new version? You'll need three changes:
   [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
 - Removed feature gate `CombinedRoutes`. The feature is enabled and it can't be changed.
   [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
+- Removed featuregate `ExpressionRoutes`. The feature is enabled and it can't be changed.
+  KIC now translates to expression based Kong routes when Kong's router flavor `expressions`.
+  [#4892](https://github.com/Kong/kubernetes-ingress-controller/pull/4892)
 - Removed Knative support.
   [#4748](https://github.com/Kong/kubernetes-ingress-controller/pull/4748)
 - Removed support for the `debug-log-reduce-redundancy` CLI flag.
@@ -150,8 +153,7 @@ Adding a new version? You'll need three changes:
 ### Added
 
 - Added support for expression-based Kong routes for `TLSRoute`. This requires
-  the `ExpressionRoutes` feature gate and a Kong installed with
-  `KONG_ROUTER_FLAVOR=expressions` set in the environment.
+  Kong installed with `KONG_ROUTER_FLAVOR=expressions` set in the environment.
   [#4574](https://github.com/Kong/kubernetes-ingress-controller/pull/4574).
 - The `FillIDs` feature gate is now enabled by default.
   [#4746](https://github.com/Kong/kubernetes-ingress-controller/pull/4746)

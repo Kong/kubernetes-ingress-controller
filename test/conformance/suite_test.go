@@ -117,9 +117,6 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
-	if testenv.ExpressionRoutesEnabled() {
-		featureGateFlag = fmt.Sprintf("--feature-gates=%s", consts.ConformanceExpressionRoutesTestsFeatureGates)
-	}
 
 	t.Log("starting the controller manager")
 	cert, key := certificate.GetKongSystemSelfSignedCerts()

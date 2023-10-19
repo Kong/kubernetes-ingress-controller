@@ -72,7 +72,7 @@ func NewFeatureFlags(
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		ExpressionRoutes:                  shouldEnableParserExpressionRoutes(logger, featureGates, routerFlavor),
+		ExpressionRoutes:                  shouldEnableParserExpressionRoutes(logger, routerFlavor),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 	}
@@ -80,14 +80,10 @@ func NewFeatureFlags(
 
 func shouldEnableParserExpressionRoutes(
 	logger logr.Logger,
-	featureGates featuregates.FeatureGates,
 	routerFlavor string,
 ) bool {
-	if !featureGates.Enabled(featuregates.ExpressionRoutesFeature) {
-		return false
-	}
 	if routerFlavor != kongRouterFlavorExpressions {
-		logger.V(util.InfoLevel).Info("ExpressionRoutes feature gate enabled but Gateway is running with incompatible router flavor, using that instead", "flavor", routerFlavor)
+		logger.V(util.InfoLevel).Info("Gateway is running with non-expression router flavor", "flavor", routerFlavor)
 		return false
 	}
 	logger.V(util.InfoLevel).Info("expression routes mode enabled")

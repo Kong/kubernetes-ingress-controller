@@ -27,7 +27,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
@@ -4522,24 +4521,12 @@ func TestNewFeatureFlags(t *testing.T) {
 			},
 		},
 		{
-			name: "expression routes feature gate enabled and router flavor matches",
-			featureGates: map[string]bool{
-				featuregates.ExpressionRoutesFeature: true,
-			},
+			name:         "expression routes feature gate enabled and router flavor matches",
 			routerFlavor: kongRouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
 				ExpressionRoutes: true,
 			},
 			expectInfoLog: "expression routes mode enabled",
-		},
-		{
-			name: "expression routes feature gate enabled and router flavor does not match",
-			featureGates: map[string]bool{
-				featuregates.ExpressionRoutesFeature: true,
-			},
-			routerFlavor:         "any_other_router_mode",
-			expectedFeatureFlags: FeatureFlags{},
-			expectInfoLog:        "ExpressionRoutes feature gate enabled but Gateway is running with incompatible router flavor, using that instead",
 		},
 	}
 

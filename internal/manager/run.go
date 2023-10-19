@@ -125,7 +125,7 @@ func Run(
 		FilterTags:         c.FilterTags,
 		SkipCACertificates: c.SkipCACertificates,
 		EnableReverseSync:  c.EnableReverseSync,
-		ExpressionRoutes:   featureGates.Enabled(featuregates.ExpressionRoutesFeature),
+		// ExpressionRoutes:   featureGates.Enabled(featuregates.ExpressionRoutesFeature),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 

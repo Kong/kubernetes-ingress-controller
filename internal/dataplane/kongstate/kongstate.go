@@ -59,6 +59,7 @@ func (ks *KongState) SanitizedCopy() *KongState {
 }
 
 func (ks *KongState) FillConsumersAndCredentials(
+	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
@@ -102,6 +103,19 @@ func (ks *KongState) FillConsumersAndCredentials(
 				continue
 			}
 			credConfig := map[string]interface{}{}
+			// try the label first. if it's present, no need to check the field
+			credType, credTypeSource := util.ExtractKongCredentialType(secret)
+			if credTypeSource == util.CredentialTypeFromField {
+				logger.Error(nil,
+					fmt.Sprintf("Secret uses deprecated kongCredType field, needs konghq.com/credential=%s label", credType),
+					"namesapce", secret.Namespace, "name", secret.Name)
+			}
+			if !credentials.SupportedTypes.Has(credType) {
+				pushCredentialResourceFailures(
+					fmt.Sprintf("failed to provision credential: unsupported credential type: %q", credType),
+				)
+				continue
+			}
 			for k, v := range secret.Data {
 				// TODO populate these based on schema from Kong
 				// and remove this workaround
@@ -132,7 +146,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 					if err != nil {
 						// add a translation error here to tell that parsing TTL failed.
 						pushCredentialResourceFailures(
-							fmt.Sprintf("faield to parse ttl to int: %v, skipfilling the fiedl", err),
+							fmt.Sprintf("failed to parse ttl to int: %v, skipfilling the field", err),
 						)
 					} else {
 						credConfig[k] = intVal
@@ -140,25 +154,6 @@ func (ks *KongState) FillConsumersAndCredentials(
 					continue
 				}
 				credConfig[k] = string(v)
-			}
-			credType, ok := credConfig["kongCredType"].(string)
-			if !ok {
-				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: invalid kongCredType: type '%T' not string", credType),
-				)
-				continue
-			}
-			if !credentials.SupportedTypes.Has(credType) {
-				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", credType),
-				)
-				continue
-			}
-			if len(credConfig) <= 1 { // 1 key of credType itself
-				pushCredentialResourceFailures(
-					"failed to provision credential: empty secret",
-				)
-				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
 			if err := c.SetCredential(credType, credConfig, credTags); err != nil {

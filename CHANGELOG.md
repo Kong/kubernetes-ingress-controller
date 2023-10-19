@@ -121,6 +121,13 @@ Adding a new version? You'll need three changes:
   It's nearly identical to `deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml`
   which is used in the official docs.
   [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873)
+- Credentials now use a `konghq.com/credential` label to indicate
+  credential type instead of the `kongCredType` field. This allows controller
+  compontents to avoid caching unnecessary Secrets. The `kongCredType` field is
+  still supported but is now deprecated. A script to generate commands to
+  update Secrets is available at https://github.com/Kong/kubernetes-ingress-controller/issues/2502#issuecomment-1758213596
+  [#4825](https://github.com/Kong/kubernetes-ingress-controller/pull/4825)
+
 
 ### Fixed
 

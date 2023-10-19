@@ -14,6 +14,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -242,7 +243,11 @@ func (h RequestHandler) handleSecret(
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := secret.Data["kongCredType"]; !ok {
+	// TODO so long as we still handle the deprecated field, this has to remain
+	// once the deprecated field is removed, we must replace this with a label filter in the webhook itself
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4853
+
+	if _, credentialTypeSource := util.ExtractKongCredentialType(&secret); credentialTypeSource == util.CredentialTypeAbsent {
 		// secret does not look like a credential resource in Kong
 		return responseBuilder.Allowed(true).Build(), nil
 	}

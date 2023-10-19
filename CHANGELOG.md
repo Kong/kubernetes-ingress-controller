@@ -141,10 +141,6 @@ Adding a new version? You'll need three changes:
   [#4813](https://github.com/Kong/kubernetes-ingress-controller/pull/4813)
 - Fixed an incorrect watch, set in UDPRoute controller watching UDProute status updates.
   [#4835](https://github.com/Kong/kubernetes-ingress-controller/pull/4835)
-- Credentials Secrets that are not referenced by any KongConsumer but violate the KongConsumer
-  basic level validation (invalid credential type or missing required fields) are now rejected
-  by the admission webhook.
-  [#4887](https://github.com/Kong/kubernetes-ingress-controller/pull/4887)
 
 ### Changed
 
@@ -174,6 +170,18 @@ Adding a new version? You'll need three changes:
   [#4780](https://github.com/Kong/kubernetes-ingress-controller/pull/4780)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
+
+## 2.12.1
+
+> Release date: TBD
+
+### Fixed
+
+- Credentials Secrets that are not referenced by any KongConsumer but violate the KongConsumer
+  basic level validation (invalid credential type or missing required fields) are now rejected
+  by the admission webhook.
+  [#4887](https://github.com/Kong/kubernetes-ingress-controller/pull/4887)
+
 
 ## 2.12.0
 

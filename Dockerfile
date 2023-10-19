@@ -77,7 +77,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.f
 FROM gcr.io/distroless/static:nonroot AS distroless-fips
 WORKDIR /
 COPY --from=builder-fips /workspace/manager .
-USER 65532:65532
+USER 1000:1000
 
 ENTRYPOINT ["/manager"]
 
@@ -100,6 +100,6 @@ LABEL name="Kong Ingress Controller" \
 
 WORKDIR /
 COPY --from=builder /workspace/bin/manager .
-USER 65532:65532
+USER 1000:1000
 
 ENTRYPOINT ["/manager"]

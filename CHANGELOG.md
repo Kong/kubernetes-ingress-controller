@@ -145,7 +145,10 @@ Adding a new version? You'll need three changes:
 ### Changed
 
 - Update paths of Konnect APIs from `runtime_groups/*` to `control-planes/*`.
-[#4566](https://github.com/Kong/kubernetes-ingress-controller/pull/4566)
+  [#4566](https://github.com/Kong/kubernetes-ingress-controller/pull/4566)
+- Docker images now use UID and GID 1000 to match Kong images. This should have
+  no user-facing effect.
+  [#4911](https://github.com/Kong/kubernetes-ingress-controller/pull/4911)
 
 ### Added
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "configMigration": true,
-  "enabledManagers": ["regex"],
+  "enabledManagers": ["regex", "kustomize"],
   "automerge": false,
   "separateMinorPatch": true,
   "labels": ["dependencies"],

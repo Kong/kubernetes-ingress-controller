@@ -101,7 +101,7 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 	}
 
 	// Kong supports query parameter match only with expression router,
-	// so we return error query param match is specified and expression router is not enabled in the parser.
+	// so we return error when query param match is specified and expression router is not enabled in the parser.
 	if !featureFlags.ExpressionRoutes {
 		for _, rule := range spec.Rules {
 			for _, match := range rule.Matches {

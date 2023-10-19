@@ -40,9 +40,118 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	errs     []error
 }
 
-// TODO: test for validating HTTPRoute
 func TestValidateHTTPRoute(t *testing.T) {
+	testCases := []struct {
+		name             string
+		httpRoute        *gatewayapi.HTTPRoute
+		expressionRoutes bool
+		expectedError    error
+	}{
+		{
+			name: "valid HTTPRoute should pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+					Hostnames: []gatewayapi.Hostname{
+						"konghq.com",
+						"www.konghq.com",
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
+					}},
+				},
+			},
+			expressionRoutes: false,
+			expectedError:    nil,
+		},
+		{
+			name: "HTTPRoute with no rules should not pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-no-rule",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+					Hostnames: []gatewayapi.Hostname{
+						"konghq.com",
+						"www.konghq.com",
+					},
+				},
+			},
+			expressionRoutes: false,
+			expectedError:    translators.ErrRouteValidationNoRules,
+		},
+		{
+			name: "HTTPRoute with query param match should pass validation with expression routes",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-query-param-match",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+					Hostnames: []gatewayapi.Hostname{
+						"konghq.com",
+						"www.konghq.com",
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
+						Matches: builder.NewHTTPRouteMatch().WithQueryParam("foo", "bar").ToSlice(),
+					}},
+				},
+			},
+			expressionRoutes: true,
+			expectedError:    nil,
+		},
+		{
+			name: "HTTPRoute with query param match should not pass validation when expression routes disabled",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-query-param-match",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+					Hostnames: []gatewayapi.Hostname{
+						"konghq.com",
+						"www.konghq.com",
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
+						Matches: builder.NewHTTPRouteMatch().WithQueryParam("foo", "bar").ToSlice(),
+					}},
+				},
+			},
+			expressionRoutes: false,
+			expectedError:    translators.ErrRouteValidationQueryParamMatchesUnsupported,
+		},
+	}
 
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			featureFlags := FeatureFlags{
+				ExpressionRoutes: tc.expressionRoutes,
+			}
+			err := validateHTTPRoute(tc.httpRoute, featureFlags)
+			if tc.expectedError == nil {
+				require.NoError(t, err, "should pass the validation")
+			} else {
+				require.ErrorIs(t, err, tc.expectedError, "should return expected error")
+			}
+		})
+	}
 }
 
 func TestIngressRulesFromHTTPRoutes(t *testing.T) {

@@ -75,7 +75,7 @@ func TestValidationWebhook(t *testing.T) {
 					APIVersions: []string{"v1"},
 					Resources:   []string{"secrets"},
 				},
-				Operations: []admregv1.OperationType{admregv1.Update},
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
 			},
 			{
 				Rule: admregv1.Rule{
@@ -304,36 +304,6 @@ func TestValidationWebhook(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "a consumer with an invalid credential type should fail validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "junklawnmower",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"junklawnmowercreds",
-				},
-			},
-			credentials: []*corev1.Secret{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "junklawnmowercreds",
-					},
-					StringData: map[string]string{
-						"kongCredType": "invalid-auth",
-						"username":     "junklawnmower",
-						"password":     "testpass",
-					},
-				},
-			},
-			wantErr:        true,
-			wantPartialErr: "invalid credential type",
-		},
-		{
 			name: "a consumer referencing credentials secrets which do not yet exist should fail validation",
 			consumer: &kongv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
@@ -451,31 +421,6 @@ func TestValidationWebhook(t *testing.T) {
 			wantErr:        true,
 			wantPartialErr: "unique key constraint violated for username",
 		},
-		{
-			name: "secret with missing fields",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "missingpassword",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"basic-auth-with-missing-fields",
-				},
-			},
-			credentials: []*corev1.Secret{
-				{
-					TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-					ObjectMeta: metav1.ObjectMeta{Name: "basic-auth-with-missing-fields"},
-					StringData: map[string]string{"kongCredType": "basic-auth", "username": "foo"},
-				},
-			},
-			wantErr:        true,
-			wantPartialErr: "missing required field(s): password",
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, credential := range tt.credentials {
@@ -510,29 +455,35 @@ func TestValidationWebhook(t *testing.T) {
 		})
 	}
 
-	t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer is not validated")
+	t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer fails validation")
 	invalidCredential := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "brokenfence",
 		},
 		StringData: map[string]string{
-			"kongCredType": "invalid-auth", // not a valid credential type, but wont be validated until referenced by consumer
+			"kongCredType": "invalid-auth", // not a valid credential type
 			"username":     "brokenfence",
 			"password":     "testpass",
 		},
 	}
-	invalidCredential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidCredential, metav1.CreateOptions{})
-	require.NoError(t, err)
-	defer func() {
-		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, invalidCredential.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidCredential, metav1.CreateOptions{})
+	require.ErrorContains(t, err, "invalid credential type")
 
-	t.Log("an existing invalid credential that becomes referenced by a consumer fails consumer validation")
-	validConsumerLinkedToInvalidCredentials := &kongv1.KongConsumer{
+	t.Log("creating a valid credential secret to be referenced by a KongConsumer")
+	validCredential, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "brokenfence",
+		},
+		StringData: map[string]string{
+			"kongCredType": "basic-auth",
+			"username":     "brokenfence",
+			"password":     "testpass",
+		},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that valid credentials assigned to a consumer pass validation")
+	validConsumerLinkedToValidCredentials := &kongv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
@@ -545,25 +496,15 @@ func TestValidationWebhook(t *testing.T) {
 			"brokenfence",
 		},
 	}
-	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToInvalidCredentials, metav1.CreateOptions{})
-	require.Error(t, err, "a consumer that references an invalid credential can not be created")
-	require.Contains(t, err.Error(), "invalid credential type")
+	validConsumerLinkedToValidCredentials, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToValidCredentials, metav1.CreateOptions{})
+	require.NoError(t, err)
 	defer func() {
-		if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToInvalidCredentials.Name, metav1.DeleteOptions{}); err != nil {
+		if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}); err != nil {
 			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
 	}()
-
-	t.Log("fixing the invalid credentials")
-	invalidCredential.Data["kongCredType"] = []byte("basic-auth")
-	validCredential, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, invalidCredential, metav1.UpdateOptions{})
-	require.NoError(t, err)
-
-	t.Log("verifying that now that the credentials are fixed the consumer passes validation")
-	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToInvalidCredentials, metav1.CreateOptions{})
-	require.NoError(t, err)
 
 	t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
 	validCredential.Data["value"] = []byte("newpassword")
@@ -576,10 +517,10 @@ func TestValidationWebhook(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid credential type")
 
-	t.Log("verifying that if the referent consumer goes away the validation passes for updates that would make the credential invalid")
-	require.NoError(t, kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToInvalidCredentials.Name, metav1.DeleteOptions{}))
+	t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
+	require.NoError(t, kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}))
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.ErrorContains(t, err, "invalid credential type")
 
 	t.Log("verifying that a JWT credential which has keys with missing values fails validation")
 	invalidJWTName := uuid.NewString()
@@ -596,23 +537,7 @@ func TestValidationWebhook(t *testing.T) {
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidJWT, metav1.CreateOptions{})
-	require.NoError(t, err)
-	jwtConsumer := &kongv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Username: "bad-jwt-consumer",
-		CustomID: uuid.NewString(),
-		Credentials: []string{
-			invalidJWTName,
-		},
-	}
-	_, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, jwtConsumer, metav1.CreateOptions{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
+	require.ErrorContains(t, err, "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
 func ensureWebhookService(ctx context.Context, t *testing.T, name string) {

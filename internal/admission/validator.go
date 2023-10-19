@@ -48,11 +48,17 @@ type AdminAPIServicesProvider interface {
 	GetRoutesService() (kong.AbstractRouteService, bool)
 }
 
+// ConsumerGetter is an interface for retrieving KongConsumers.
+type ConsumerGetter interface {
+	ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error)
+}
+
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
 	Logger                   logrus.FieldLogger
 	SecretGetter             kongstate.SecretGetter
+	ConsumerGetter           ConsumerGetter
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
 	ParserFeatures           parser.FeatureFlags
@@ -77,6 +83,7 @@ func NewKongHTTPValidator(
 	return KongHTTPValidator{
 		Logger:                   logger,
 		SecretGetter:             &managerClientSecretGetter{managerClient: managerClient},
+		ConsumerGetter:           &managerClientConsumerGetter{managerClient: managerClient},
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
 		ParserFeatures:           parserFeatures,
@@ -234,48 +241,46 @@ func (validator KongHTTPValidator) ValidateCredential(
 	ctx context.Context,
 	secret corev1.Secret,
 ) (bool, string, error) {
-	// if the secret doesn't contain a type key it's not a credentials secret
+	// If the secret doesn't contain a type key it's not a credentials secret.
 	_, ok := secret.Data[credsvalidation.TypeKey]
 	if !ok {
 		return true, "", nil
 	}
 
-	// credentials are only validated if they are referenced by a managed consumer
-	// in the namespace, as such we pull a list of all consumers from the cached
-	// client to determine if the credentials are referenced.
+	// If we know it's a credentials secret, we can ensure its base-level validity.
+	if err := credsvalidation.ValidateCredentials(&secret); err != nil {
+		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
+	}
+
+	// Credentials are validated further for unique key constraints only if they are referenced by a managed consumer
+	// in the namespace, as such we pull a list of all consumers from the cached client to determine
+	// if the credentials are referenced.
 	managedConsumers, err := validator.listManagedConsumers(ctx)
 	if err != nil {
 		return false, ErrTextConsumerUnretrievable, err
 	}
 
-	// verify whether this secret is referenced by any managed consumer
+	// Verify whether this secret is referenced by any managed consumer.
 	managedConsumersWithReferences := listManagedConsumersReferencingCredentialsSecret(secret, managedConsumers)
 	if len(managedConsumersWithReferences) == 0 {
-		// if no managed consumers reference this secret, its considered
-		// unmanaged and we don't validate it unless it becomes referenced
-		// by a managed consumer at a later time.
+		// If no managed consumers reference this secret, its considered unmanaged, and we don't validate it
+		// unless it becomes referenced by a managed consumer at a later time.
 		return true, "", nil
 	}
 
-	// now that we know at least one managed consumer is referencing this
-	// secret we perform the base-level credentials secret validation.
-	if err := credsvalidation.ValidateCredentials(&secret); err != nil {
-		return false, ErrTextConsumerCredentialValidationFailed, err
-	}
-
-	// if base-level validation passes we move on to create an index of
-	// all managed credentials so that we can verify that the updates to
-	// this secret are not in violation of any unique key constraints.
+	// If base-level validation passed and the credential is referenced by a consumer,
+	// we move on to create an index of all managed credentials so that we can verify that
+	// the updates to this secret are not in violation of any unique key constraints.
 	ignoreSecrets := map[string]map[string]struct{}{secret.Namespace: {secret.Name: {}}}
 	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoreSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
 
-	// the index is built, now validate that the newly updated secret
+	// The index is built, now validate that the newly updated secret
 	// is not in violation of any constraints.
 	if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(&secret); err != nil {
-		return false, ErrTextConsumerCredentialValidationFailed, err
+		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
 	}
 
 	return true, "", nil
@@ -467,17 +472,15 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 // -----------------------------------------------------------------------------
 
 func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]*kongv1.KongConsumer, error) {
-	// gather a list of all consumers from the cached client
-	consumers := &kongv1.KongConsumerList{}
-	if err := validator.ManagerClient.List(ctx, consumers, &client.ListOptions{
-		Namespace: corev1.NamespaceAll,
-	}); err != nil {
-		return nil, err
+	// Gather a list of all consumers from the cached client.
+	consumers, err := validator.ConsumerGetter.ListAllConsumers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list consumers: %w", err)
 	}
 
-	// reduce the consumer set to consumers managed by this controller
+	// Reduce the consumer set to consumers managed by this controller.
 	managedConsumers := make([]*kongv1.KongConsumer, 0)
-	for _, consumer := range consumers.Items {
+	for _, consumer := range consumers {
 		consumer := consumer
 		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey,
 			annotations.ExactClassMatch) {
@@ -526,10 +529,6 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	return "", nil
 }
 
-// -----------------------------------------------------------------------------
-// Private - Manager Client Secret Getter
-// -----------------------------------------------------------------------------
-
 type managerClientSecretGetter struct {
 	managerClient client.Client
 }
@@ -540,4 +539,18 @@ func (m *managerClientSecretGetter) GetSecret(namespace, name string) (*corev1.S
 		Namespace: namespace,
 		Name:      name,
 	}, secret)
+}
+
+type managerClientConsumerGetter struct {
+	managerClient client.Client
+}
+
+func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error) {
+	consumers := &kongv1.KongConsumerList{}
+	if err := m.managerClient.List(ctx, consumers, &client.ListOptions{
+		Namespace: corev1.NamespaceAll,
+	}); err != nil {
+		return nil, err
+	}
+	return consumers.Items, nil
 }

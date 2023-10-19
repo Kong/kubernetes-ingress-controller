@@ -58,6 +58,7 @@ webhooks:
     apiVersions:
     - 'v1'
     operations:
+    - CREATE
     - UPDATE
     resources:
     - secrets

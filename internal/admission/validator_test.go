@@ -568,6 +568,35 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 		wantErrContains string
 	}{
 		{
+			name: "labeled valid key-auth credential with no consumers gets accepted",
+			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
+				Data: map[string][]byte{
+					"key": []byte("my-key"),
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "labeled invalid key-auth credential with no consumers gets rejected",
+			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
+				Data: map[string][]byte{
+					// missing key
+				},
+			},
+			wantOK:      false,
+			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "missing required field(s): key"),
+		},
+		{
 			name: "valid key-auth credential with no consumers gets accepted",
 			secret: corev1.Secret{
 				Data: map[string][]byte{
@@ -586,7 +615,7 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "invalid credentials secret, no data present"),
+			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "missing required field(s): key"),
 		},
 	}
 

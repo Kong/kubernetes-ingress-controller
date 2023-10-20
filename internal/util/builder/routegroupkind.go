@@ -2,7 +2,7 @@ package builder
 
 import (
 	"github.com/samber/lo"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
@@ -17,7 +17,7 @@ type RouteGroupKindBuilder struct {
 func NewRouteGroupKind() *RouteGroupKindBuilder {
 	return &RouteGroupKindBuilder{
 		routeGroupKind: gatewayapi.RouteGroupKind{
-			Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupVersion.Group)),
+			Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
 		},
 	}
 }

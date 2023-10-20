@@ -11,6 +11,7 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -26,8 +27,8 @@ import (
 )
 
 const (
-	// IngressServiceName is the name of the ingress service used in Gateway API tests.
-	IngressServiceName = "ingress-svc"
+	// PublishServiceName is the name of the publish service used in Gateway API tests.
+	PublishServiceName = "publish-svc"
 )
 
 // ConfigForEnvConfig prepares a manager.Config for use in tests
@@ -80,11 +81,11 @@ func WithGatewayFeatureEnabled(cfg *manager.Config) {
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
 }
 
-func WithIngressService(namespace string) func(cfg *manager.Config) {
+func WithPublishService(namespace string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.IngressAddresses = []string{"127.0.0.1"}
-		cfg.IngressService = mo.Some(k8stypes.NamespacedName{
-			Name:      IngressServiceName,
+		cfg.PublishStatusAddress = []string{"127.0.0.1"}
+		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
+			Name:      PublishServiceName,
 			Namespace: namespace,
 		})
 	}
@@ -92,7 +93,7 @@ func WithIngressService(namespace string) func(cfg *manager.Config) {
 
 func WithIngressAddress(address string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.IngressAddresses = []string{address}
+		cfg.PublishStatusAddress = []string{address}
 	}
 }
 
@@ -184,9 +185,14 @@ func RunManager(
 	t.Cleanup(func() {
 		wg.Wait()
 		if t.Failed() {
+			encoder, err := util.GetZapEncoding("text")
+			require.NoError(t, err)
+
 			t.Logf("manager logs:")
 			for _, entry := range logs.All() {
-				t.Logf("%s - %s", entry.Time, entry.Message)
+				b, err := encoder.EncodeEntry(entry.Entry, entry.Context)
+				assert.NoError(t, err)
+				t.Logf("%s", b.String())
 			}
 		}
 	})

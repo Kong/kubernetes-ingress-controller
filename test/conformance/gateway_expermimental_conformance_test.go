@@ -41,9 +41,9 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 				CleanupBaseResources: !testenv.IsCI(),
 				BaseManifests:        conformanceTestsBaseManifests,
 				SupportedFeatures: sets.New(
-					suite.SupportHTTPRouteMethodMatching,
-					suite.SupportHTTPResponseHeaderModification,
 					suite.SupportHTTPRouteQueryParamMatching,
+					suite.SupportHTTPRouteMethodMatching,
+					suite.SupportHTTPRouteResponseHeaderModification,
 				),
 			},
 			ConformanceProfiles: sets.New(

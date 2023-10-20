@@ -18,7 +18,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
@@ -150,7 +150,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 				},
 				SupportedKinds: []gatewayapi.RouteGroupKind{
 					{
-						Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupVersion.Group)),
+						Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -209,7 +209,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{
-					Group:     gatewayapi.Group(gatewayv1beta1.GroupVersion.Group),
+					Group:     gatewayapi.Group(gatewayv1.GroupVersion.Group),
 					Kind:      "HTTPRoute",
 					Namespace: gatewayapi.Namespace(nsRoute.Name),
 				},

@@ -51,7 +51,7 @@ func MakeLogger(level string, formatter string, output io.Writer) (*zap.Logger, 
 		return lvl >= logLevel
 	})
 
-	encoder, err := getZapEncoding(formatter)
+	encoder, err := GetZapEncoding(formatter)
 	if err != nil {
 		return nil, fmt.Errorf("setting log formatter failed: %w", err)
 	}
@@ -68,7 +68,7 @@ func getZapLevel(level string) (zapcore.Level, error) {
 	return res, nil
 }
 
-func getZapEncoding(typ string) (zapcore.Encoder, error) {
+func GetZapEncoding(typ string) (zapcore.Encoder, error) {
 	switch typ {
 	case "text", "console":
 		return zapcore.NewConsoleEncoder(zapcore.EncoderConfig{

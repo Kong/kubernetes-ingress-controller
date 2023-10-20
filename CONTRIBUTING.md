@@ -157,7 +157,7 @@ export POD_NAMESPACE=kong
 
 go run -tags gcp ./internal/cmd/main.go \
 --kubeconfig ~/.kube/config \
---ingress-service=kong/kong-proxy \
+--publish-service=kong/kong-proxy \
 --apiserver-host=http://localhost:8002 \
 --kong-admin-url https://localhost:8444 \
 --kong-admin-tls-skip-verify true

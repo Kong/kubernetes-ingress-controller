@@ -467,10 +467,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's TCPRoute",
 			route: &gatewayapi.TCPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TCPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
-				},
+				TypeMeta: gatewayapi.TCPRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "muntaxabi-jugrofiyai-umumiy",
 					Namespace: "behbudiy",
@@ -492,10 +489,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's UDPRoute",
 			route: &gatewayapi.UDPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "UDPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
-				},
+				TypeMeta: gatewayapi.UDPRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "muntaxabi-jugrofiyai-umumiy",
 					Namespace: "behbudiy",

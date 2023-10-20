@@ -418,7 +418,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
-								Group:     gatewayV1beta1Group,
+								Group:     gatewayV1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -468,7 +468,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							},
 							// good entry
 							{
-								Group:     gatewayV1beta1Group,
+								Group:     gatewayV1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -500,7 +500,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
-								Group:     gatewayV1beta1Group,
+								Group:     gatewayV1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},

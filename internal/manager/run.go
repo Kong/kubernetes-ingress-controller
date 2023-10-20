@@ -125,7 +125,7 @@ func Run(
 		FilterTags:         c.FilterTags,
 		SkipCACertificates: c.SkipCACertificates,
 		EnableReverseSync:  c.EnableReverseSync,
-		ExpressionRoutes:   featureGates.Enabled(featuregates.ExpressionRoutesFeature),
+		ExpressionRoutes:   routerFlavor == "expressions",
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
@@ -315,7 +315,7 @@ func Run(
 				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
 				TelemetryPeriod:                  c.TelemetryPeriod,
 				ReportValues: telemetry.ReportValues{
-					IngressServiceNN:               c.IngressService.OrEmpty(),
+					PublishServiceNN:               c.PublishService.OrEmpty(),
 					FeatureGates:                   featureGates,
 					MeshDetection:                  len(c.WatchNamespaces) == 0,
 					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
@@ -108,7 +108,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool, err
 	for _, parentStatus := range tlsroute.Status.Parents {
 		parentRef := parentStatus.ParentRef
 
-		if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1beta1.GroupName {
+		if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1.GroupName {
 			continue
 		}
 

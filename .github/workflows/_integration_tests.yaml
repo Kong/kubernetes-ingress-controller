@@ -86,7 +86,7 @@ jobs:
             router-flavor: 'traditional_compatible'
           - name: dbless-expression-router
             test: dbless
-            feature_gates: "ExpressionRoutes=true,GatewayAlpha=true"
+            feature_gates: "GatewayAlpha=true"
             router-flavor: "expressions"
           - name: dbless-gateway-alpha
             test: dbless

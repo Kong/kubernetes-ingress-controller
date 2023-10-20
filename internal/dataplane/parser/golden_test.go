@@ -35,8 +35,7 @@ var (
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			ExpressionRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
-			FillIDs:          featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
+			FillIDs: featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
 		}
 	}
 )

@@ -86,8 +86,8 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("building test cluster and environment")
 	clusterBuilder := kind.NewBuilder()
 	clusterBuilder.WithConfigReader(strings.NewReader(webhookKINDConfig))
-	if v := testenv.ClusterVersion(); v != "" {
-		clusterVersion, err := semver.ParseTolerant(v)
+	if testenv.ClusterVersion() != "" {
+		clusterVersion, err := semver.ParseTolerant(testenv.ClusterVersion())
 		require.NoError(t, err)
 		t.Logf("k8s cluster version is set to %v", clusterVersion)
 		clusterBuilder.WithClusterVersion(clusterVersion)
@@ -285,7 +285,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
 		gatewayapi.Listener{
@@ -301,10 +301,10 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	)
 
 	t.Log("verifying that unsupported listeners indicate correct status")
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 		var http, udp bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badhttp" {
@@ -343,7 +343,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		return http == udp == true
 	}, time.Minute*2, time.Second*5)
 
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)

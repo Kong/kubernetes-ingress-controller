@@ -77,7 +77,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		AdminAPIOptFns(
 			mocks.WithConfigPostError(formatErrBody(t, ns.Name, ingress, service)),
 		),
-		WithIngressService(ns.Name),
+		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithProxySyncSeconds(0.1),
 	)

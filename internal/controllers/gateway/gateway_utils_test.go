@@ -11,14 +11,14 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
 func init() {
-	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
+	if err := gatewayv1.Install(scheme.Scheme); err != nil {
 		panic(err)
 	}
 }
@@ -84,7 +84,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 							Kind:  gatewayapi.Kind("UnknownKind"),
 						},
 						{
-							Group: &gatewayV1beta1Group,
+							Group: &gatewayV1Group,
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -92,7 +92,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 			},
 			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
 				{
-					Group: &gatewayV1beta1Group,
+					Group: &gatewayV1Group,
 					Kind:  gatewayapi.Kind("HTTPRoute"),
 				},
 			},

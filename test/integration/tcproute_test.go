@@ -111,7 +111,9 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(service1)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
-	const service2Port = 8080 // Use a different port that listening on the Gateway for TCP.
+	// Configure service to expose a different port than Gateway's TCP listener port (ktfkong.DefaultTCPServicePort)
+	// to check whether traffic will be routed correctly.
+	const service2Port = 8080
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
 	service2.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tcp",

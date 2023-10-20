@@ -206,7 +206,9 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
-	const service2Port = 8443 // Use a different port that listening on the Gateway for TLS.
+	// Configure service to expose a different port than Gateway's TLS listener port (ktfkong.DefaultTLSServicePort)
+	// to check whether traffic will be routed correctly.
+	const service2Port = 8443
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
 	service2.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tls",

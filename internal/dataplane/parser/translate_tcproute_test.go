@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -24,25 +25,53 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
+		gateways             []*gatewayapi.Gateway
 		tcpRoutes            []*gatewayapi.TCPRoute
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
 	}{
 		{
-			name: "tcproute with single rule and single backendref",
+			name: "TCPRoute with single rule, single backendref and Gateway in the same namespace",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
+							builder.NewListener("udp80").WithPort(80).UDP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
 						Name:      "tcproute-1",
+						Namespace: "default",
 					},
 					Spec: gatewayapi.TCPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name: "gateway-1",
+								},
+							},
+						},
 						Rules: []gatewayapi.TCPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
-									builder.NewBackendRef("service1").WithPort(80).Build(),
+									builder.NewBackendRef("service1").WithPort(8080).Build(),
 								},
 							},
 						},
@@ -57,7 +86,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					Backends: []kongstate.ServiceBackend{
 						{
 							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
 						},
 					},
 				},
@@ -77,15 +106,43 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 		},
 		{
-			name: "tcproute with single rule and multiple backendrefs",
+			name: "TCPRoute with single rule, multiple backendrefs and Gateway in the different namespace",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
+							builder.NewListener("tcp443").WithPort(443).TCP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+				},
+			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
 						Name:      "tcproute-1",
+						Namespace: "default",
 					},
 					Spec: gatewayapi.TCPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:      "gateway-1",
+									Namespace: lo.ToPtr(gatewayapi.Namespace("test-1")),
+								},
+							},
+						},
 						Rules: []gatewayapi.TCPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
@@ -129,15 +186,60 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 		},
 		{
-			name: "tcproute with multiple rules",
+			name: "TCPRoute with multiple rules and multiple Gateways with multiple listeners and sectionName for Gateway specified",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "tcp80",
+								Port:     80,
+								Protocol: gatewayapi.TCPProtocolType,
+							},
+							{
+								Name:     "tcp443",
+								Port:     443,
+								Protocol: gatewayapi.TCPProtocolType,
+							},
+							{
+								Name:     "tcp8080",
+								Port:     8080,
+								Protocol: gatewayapi.TCPProtocolType,
+							},
+							{
+								Name:     "tcp8443",
+								Port:     8443,
+								Protocol: gatewayapi.TCPProtocolType,
+							},
+						},
+					},
+				},
+			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
 						Name:      "tcproute-1",
+						Namespace: "default",
 					},
 					Spec: gatewayapi.TCPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp80")),
+								},
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp443")),
+								},
+							},
+						},
+
 						Rules: []gatewayapi.TCPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
@@ -145,6 +247,30 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewBackendRef("service2").WithPort(443).Build(),
 								},
 							},
+						},
+					},
+				},
+				{
+					TypeMeta: tcpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tcproute-2",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.TCPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp8080")),
+								},
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp8443")),
+								},
+							},
+						},
+
+						Rules: []gatewayapi.TCPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service3").WithPort(8080).Build(),
@@ -173,7 +299,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name: kong.String("tcproute.default.tcproute-1.1"),
+						Name: kong.String("tcproute.default.tcproute-2.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						{
@@ -199,10 +325,10 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 						ExpressionRoutes: true,
 					},
 				},
-				"tcproute.default.tcproute-1.1": {
+				"tcproute.default.tcproute-2.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tcproute.default.tcproute-1.1.0"),
+							Name:         kong.String("tcproute.default.tcproute-2.0.0"),
 							Expression:   kong.String(`(net.dst.port == 8080) || (net.dst.port == 8443)`),
 							PreserveHost: kong.Bool(true),
 							Protocols:    kong.StringSlice("tcp"),
@@ -217,7 +343,10 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			fakeStore, err := store.NewFakeStore(store.FakeObjects{TCPRoutes: tc.tcpRoutes})
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
+				Gateways:  tc.gateways,
+				TCPRoutes: tc.tcpRoutes,
+			})
 			require.NoError(t, err)
 			parser := mustNewParser(t, fakeStore)
 			parser.featureFlags.ExpressionRoutes = true
@@ -244,7 +373,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					routeName := expectedRoute.Name
 					r, ok := kongRouteNameToRoute[*routeName]
 					require.Truef(t, ok, "should find route %s", *routeName)
-					require.Equal(t, expectedRoute.Expression, r.Expression)
+					require.Equalf(t, expectedRoute.Expression, r.Expression, fmt.Sprintf("expected >> %s, actual >> %s", *expectedRoute.Expression, *r.Expression))
 					require.Equal(t, expectedRoute.Protocols, r.Protocols)
 				}
 			}

@@ -3,7 +3,6 @@ package parser
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -15,9 +14,10 @@ import (
 )
 
 func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
-	testcases := []struct {
+	testCases := []struct {
 		name      string
 		route     *gatewayapi.TCPRoute
+		gwPorts   []gatewayapi.PortNumber
 		routeRule gatewayapi.TCPRouteRule
 		expected  []kongstate.Route
 	}{
@@ -29,6 +29,7 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 					Namespace: "mynamespace",
 				},
 			},
+			gwPorts: []gatewayapi.PortNumber{8080},
 			routeRule: gatewayapi.TCPRouteRule{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
@@ -48,7 +49,57 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Name: lo.ToPtr("tcproute.mynamespace.mytcproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: lo.ToPtr(1234),
+								Port: lo.ToPtr(8080),
+							},
+						},
+						Protocols: []*string{
+							lo.ToPtr("tcp"),
+						},
+						Tags: []*string{
+							kong.String("k8s-name:mytcproute-name"),
+							kong.String("k8s-namespace:mynamespace"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "TCPRoute with multiple backends and different Gateway port get translated correctly to kong.Route",
+			route: &gatewayapi.TCPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "mytcproute-name",
+					Namespace: "mynamespace",
+				},
+			},
+			routeRule: gatewayapi.TCPRouteRule{
+				BackendRefs: []gatewayapi.BackendRef{
+					{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+						},
+					},
+					{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Port: lo.ToPtr(gatewayapi.PortNumber(5678)),
+						},
+					},
+				},
+			},
+			gwPorts: []gatewayapi.PortNumber{8080, 8888},
+			expected: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:      "mytcproute-name",
+						Namespace: "mynamespace",
+					},
+					Route: kong.Route{
+						Name: lo.ToPtr("tcproute.mynamespace.mytcproute-name.0.0"),
+						Destinations: []*kong.CIDRPort{
+							{
+								Port: lo.ToPtr(8080),
+							},
+							{
+								Port: lo.ToPtr(8888),
 							},
 						},
 						Protocols: []*string{
@@ -64,24 +115,22 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, 0, tc.routeRule)
+			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, tc.gwPorts, 0, tc.routeRule)
 			require.NoError(t, err)
 			require.NotNil(t, kongRoutes)
-			if !cmp.Equal(tc.expected, kongRoutes) {
-				t.Logf("actual []kongstate.Route differs from expected\n%s", cmp.Diff(tc.expected, kongRoutes))
-				t.Fail()
-			}
+			require.Equal(t, tc.expected, kongRoutes)
 		})
 	}
 }
 
 func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
-	testcases := []struct {
+	testCases := []struct {
 		name      string
 		route     *gatewayapi.UDPRoute
+		gwPorts   []gatewayapi.PortNumber
 		routeRule gatewayapi.UDPRouteRule
 		expected  []kongstate.Route
 	}{
@@ -102,6 +151,7 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 					},
 				},
 			},
+			gwPorts: []gatewayapi.PortNumber{8080},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -112,7 +162,57 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Name: lo.ToPtr("udproute.mynamespace.myudproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: lo.ToPtr(1234),
+								Port: lo.ToPtr(8080),
+							},
+						},
+						Protocols: []*string{
+							lo.ToPtr("udp"),
+						},
+						Tags: []*string{
+							kong.String("k8s-name:myudproute-name"),
+							kong.String("k8s-namespace:mynamespace"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "UDPRoute with multiple backends and multiple Gateway ports gets translated correctly to kong.Route",
+			route: &gatewayapi.UDPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "myudproute-name",
+					Namespace: "mynamespace",
+				},
+			},
+			routeRule: gatewayapi.UDPRouteRule{
+				BackendRefs: []gatewayapi.BackendRef{
+					{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+						},
+					},
+					{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Port: lo.ToPtr(gatewayapi.PortNumber(5678)),
+						},
+					},
+				},
+			},
+			gwPorts: []gatewayapi.PortNumber{8080, 8888},
+			expected: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:      "myudproute-name",
+						Namespace: "mynamespace",
+					},
+					Route: kong.Route{
+						Name: lo.ToPtr("udproute.mynamespace.myudproute-name.0.0"),
+						Destinations: []*kong.CIDRPort{
+							{
+								Port: lo.ToPtr(8080),
+							},
+							{
+								Port: lo.ToPtr(8888),
 							},
 						},
 						Protocols: []*string{
@@ -128,16 +228,13 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, 0, tc.routeRule)
+			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, tc.gwPorts, 0, tc.routeRule)
 			require.NoError(t, err)
 			require.NotNil(t, kongRoutes)
-			if !cmp.Equal(tc.expected, kongRoutes) {
-				t.Logf("actual []kongstate.Route differs from expected\n%s", cmp.Diff(tc.expected, kongRoutes))
-				t.Fail()
-			}
+			require.Equal(t, tc.expected, kongRoutes)
 		})
 	}
 }
@@ -222,13 +319,11 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, 0, tc.routeRule)
+			// TLSRoute matches based on hostname with Gateway listener thus passing gwPorts is pointless.
+			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, nil, 0, tc.routeRule)
 			require.NoError(t, err)
 			require.NotNil(t, kongRoutes)
-			if !cmp.Equal(tc.expected, kongRoutes) {
-				t.Logf("actual []kongstate.Route differs from expected\n%s", cmp.Diff(tc.expected, kongRoutes))
-				t.Fail()
-			}
+			require.Equal(t, tc.expected, kongRoutes)
 		})
 	}
 }

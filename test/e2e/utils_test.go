@@ -163,7 +163,7 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 // for example: kong/kubernetes-ingress-controller:2.9.3 => semver.Version{Major:2,Minor:9,Patch:3}.
 //
 //lint:ignore U1000 retained for future use
-func extractVersionFromImage(imageName string) (semver.Version, error) { //nolint:unused
+func extractVersionFromImage(imageName string) (semver.Version, error) {
 	split := strings.Split(imageName, ":")
 	if len(split) < 2 {
 		return semver.Version{}, fmt.Errorf("could not parse override image '%s', expected <repo>:<tag> format", imageName)
@@ -183,7 +183,7 @@ func extractVersionFromImage(imageName string) (semver.Version, error) { //nolin
 // the test if override image is not given.
 //
 //lint:ignore U1000 retained for future use
-func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) { //nolint:unused
+func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
 	if testenv.ControllerImageTag() == "" {
 		return
 	}
@@ -237,7 +237,7 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 // takes precedence.
 //
 //lint:ignore U1000 retained for future use
-func getKongVersionFromOverrideTag() (kong.Version, error) { //nolint:unused
+func getKongVersionFromOverrideTag() (kong.Version, error) {
 	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
 		return kong.ParseSemanticVersion(kongEffectiveVersion)
 	}

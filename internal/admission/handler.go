@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -91,16 +90,6 @@ var (
 		Version:  corev1.SchemeGroupVersion.Version,
 		Resource: "secrets",
 	}
-	gatewayGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "gateways",
-	}
-	httprouteGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "httproutes",
-	}
 	ingressGVResource = metav1.GroupVersionResource{
 		Group:    netv1.SchemeGroupVersion.Group,
 		Version:  netv1.SchemeGroupVersion.Version,
@@ -124,9 +113,9 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleKongClusterPlugin(ctx, request, responseBuilder)
 	case secretGVResource:
 		return h.handleSecret(ctx, request, responseBuilder)
-	case gatewayGVResource:
+	case gatewayapi.V1GatewayGVResource, gatewayapi.V1beta1GatewayGVResource:
 		return h.handleGateway(ctx, request, responseBuilder)
-	case httprouteGVResource:
+	case gatewayapi.V1HTTPRouteGVResource, gatewayapi.V1beta1HTTPRouteGVResource:
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
 	case kongIngressGVResource:
 		return h.handleKongIngress(ctx, request, responseBuilder)

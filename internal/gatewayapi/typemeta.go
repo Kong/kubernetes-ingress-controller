@@ -61,3 +61,26 @@ var UDPRouteTypeMeta = metav1.TypeMeta{
 	APIVersion: gatewayv1alpha2.GroupVersion.String(),
 	Kind:       "UDPRoute",
 }
+
+var (
+	V1GatewayGVResource = metav1.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "gateways",
+	}
+	V1HTTPRouteGVResource = metav1.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "httproutes",
+	}
+	V1beta1GatewayGVResource = metav1.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "gateways",
+	}
+	V1beta1HTTPRouteGVResource = metav1.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "httproutes",
+	}
+)

@@ -33,6 +33,11 @@
       "matchUpdateTypes": ["minor"],
       "matchDepPatterns": [".*@only-patch"],
       "enabled": false
+    },
+    {
+      "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files to trigger regenerate_on_deps_bump.yaml workflow.",
+      "matchManagers": ["kustomize"],
+      "addLabels": ["renovate/auto-regenerate"]
     }
   ]
 }

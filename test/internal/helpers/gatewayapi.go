@@ -39,13 +39,13 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 		opt(gwc)
 	}
 
-	result, err := client.GatewayV1beta1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+	result, err := client.GatewayV1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
+		err = client.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return result, err
 		}
-		result, err = client.GatewayV1beta1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
+		result, err = client.GatewayV1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
 	}
 	return result, err
 }
@@ -75,13 +75,13 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 		opt(gw)
 	}
 
-	result, err := client.GatewayV1beta1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+	result, err := client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1beta1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
+		err = client.GatewayV1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return result, err
 		}
-		result, err = client.GatewayV1beta1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+		result, err = client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
 	}
 	return result, err
 }
@@ -116,7 +116,7 @@ func gatewayLinkStatusMatches(
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType {
 	case gatewayapi.HTTPProtocolType:
-		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
@@ -211,7 +211,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType {
 	case gatewayapi.HTTPProtocolType:
-		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)

@@ -258,7 +258,7 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 
 		t.Logf("configuring feature gates")
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4849
-		featureGates := consts.ConformanceExpressionRoutesTestsFeatureGates
+		featureGates := consts.DefaultFeatureGates
 		t.Logf("feature gates enabled: %s", featureGates)
 
 		t.Logf("starting the controller manager")

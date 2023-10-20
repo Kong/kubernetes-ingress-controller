@@ -12,27 +12,25 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
-func CreateIngressClass(ctx context.Context, ingressClass string, client *kubernetes.Clientset) error {
-	create := func() *netv1.IngressClass {
-		return &netv1.IngressClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ingressClass,
-			},
-			Spec: netv1.IngressClassSpec{
-				Controller: store.IngressClassKongController,
-			},
-		}
+func CreateIngressClass(ctx context.Context, ingressClassName string, client *kubernetes.Clientset) error {
+	ingressClass := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ingressClassName,
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
 	}
 	ingClasses := client.NetworkingV1().IngressClasses()
 
-	if _, err := ingClasses.Create(ctx, create(), metav1.CreateOptions{}); apierrors.IsAlreadyExists(err) {
+	if _, err := ingClasses.Create(ctx, ingressClass, metav1.CreateOptions{}); apierrors.IsAlreadyExists(err) {
 		// If for some reason the ingress class is already in the cluster don't
 		// fail the whole test suite but recreate it and continue.
-		if err := ingClasses.Delete(ctx, ingressClass, metav1.DeleteOptions{}); err != nil {
+		if err := ingClasses.Delete(ctx, ingressClassName, metav1.DeleteOptions{}); err != nil {
 			return fmt.Errorf("failed to delete ingress class %s: %w", ingressClass, err)
 		}
 
-		if _, err := ingClasses.Create(ctx, create(), metav1.CreateOptions{}); err != nil {
+		if _, err := ingClasses.Create(ctx, ingressClass, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("failed to create ingress class %s: %w", ingressClass, err)
 		}
 	}

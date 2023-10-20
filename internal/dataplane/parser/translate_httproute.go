@@ -30,12 +30,22 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		return result
 	}
 
+	httpRoutesToTranslate := make([]*gatewayapi.HTTPRoute, 0, len(httpRouteList))
+	for _, httproute := range httpRouteList {
+		// Validate each HTTPRoute before translating and register translation failures if an HTTPRoute is invalid.
+		if err := validateHTTPRoute(httproute, p.featureFlags); err != nil {
+			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %v", err), httproute)
+			continue
+		}
+		httpRoutesToTranslate = append(httpRoutesToTranslate, httproute)
+	}
+
 	if p.featureFlags.ExpressionRoutes {
-		p.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRouteList, &result)
+		p.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutesToTranslate, &result)
 		return result
 	}
 
-	for _, httproute := range httpRouteList {
+	for _, httproute := range httpRoutesToTranslate {
 		if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
 			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
 		} else {
@@ -51,9 +61,6 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 // ingressRulesFromHTTPRoute validates and generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayapi.HTTPRoute) error {
-	if err := validateHTTPRoute(httproute); err != nil {
-		return fmt.Errorf("validation failed : %w", err)
-	}
 	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
 		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
@@ -82,7 +89,7 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 	return nil
 }
 
-func validateHTTPRoute(httproute *gatewayapi.HTTPRoute) error {
+func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlags) error {
 	spec := httproute.Spec
 
 	// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
@@ -91,6 +98,18 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute) error {
 	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
 		return translators.ErrRouteValidationNoRules
+	}
+
+	// Kong supports query parameter match only with expression router,
+	// so we return error when query param match is specified and expression router is not enabled in the parser.
+	if !featureFlags.ExpressionRoutes {
+		for _, rule := range spec.Rules {
+			for _, match := range rule.Matches {
+				if len(match.QueryParams) > 0 {
+					return translators.ErrRouteValidationQueryParamMatchesUnsupported
+				}
+			}
+		}
 	}
 
 	return nil
@@ -105,10 +124,6 @@ func (p *Parser) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*g
 	// first, split HTTPRoutes by hostnames and matches.
 	splitHTTPRouteMatches := []translators.SplitHTTPRouteMatch{}
 	for _, httproute := range httpRoutes {
-		if err := validateHTTPRoute(httproute); err != nil {
-			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
-			continue
-		}
 		splitHTTPRouteMatches = append(splitHTTPRouteMatches, translators.SplitHTTPRoute(httproute)...)
 	}
 	// assign priorities to split HTTPRoutes.
@@ -230,13 +245,6 @@ func generateKongRoutesFromHTTPRouteMatches(
 		r.Hosts = append(r.Hosts, hostnames...)
 
 		return []kongstate.Route{r}, nil
-	}
-
-	// Kong supports query parameter match only with expression router.
-	// This function is only called for Kong with traditional/traditional compatible router,
-	// so we do not support query parameter match here.
-	if len(matches[0].QueryParams) > 0 {
-		return []kongstate.Route{}, translators.ErrRouteValidationQueryParamMatchesUnsupported
 	}
 
 	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)

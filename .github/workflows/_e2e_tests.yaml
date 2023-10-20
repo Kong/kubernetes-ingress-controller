@@ -294,9 +294,9 @@ jobs:
       - name: run Istio tests
         run: make test.istio
         env:
-          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
+          TEST_CONTROLLER_IMAGE: ${{ inputs.kic-image }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
-          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kind }}
           ISTIO_VERSION: ${{ matrix.istio }}

@@ -130,6 +130,10 @@ Adding a new version? You'll need three changes:
   still supported but is now deprecated. A script to generate commands to
   update Secrets is available at https://github.com/Kong/kubernetes-ingress-controller/issues/2502#issuecomment-1758213596
   [#4825](https://github.com/Kong/kubernetes-ingress-controller/pull/4825)
+- The `expressions` router is now the default. This is not expected to
+  functionally affect routing, but is listed in this section to highlight that
+  it has changed and may break routing configurations not covered by tests.
+  [#4934](https://github.com/Kong/kubernetes-ingress-controller/pull/4934)
 
 
 ### Fixed

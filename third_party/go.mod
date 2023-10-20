@@ -9,7 +9,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.0.9
 	github.com/go-delve/delve v1.21.1
 	github.com/golangci/golangci-lint v1.54.2
-	github.com/jstemmer/go-junit-report/v2 v2.0.0
+	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/kyoh86/looppointer v0.2.1
 	gotest.tools/gotestsum v1.11.0
 	honnef.co/go/tools v0.4.6

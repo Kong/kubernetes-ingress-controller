@@ -18,7 +18,7 @@ spec:
     shortNames:
     - kup
     singular: kongupstreampolicy
-  scope: Namespace
+  scope: Namespaced
   versions:
   - name: v1beta1
     schema:

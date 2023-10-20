@@ -80,14 +80,13 @@ spec:
                   number: 8080 # Note: it's a different port than the previous Ingress uses.
 ---
 # This policy will be applied to every Upstream that is created for
-# the httpbin-deployment Service. In this case Kong Upstreams:
+# the httpbin-deployment Service. In this case those would be following Kong Upstreams:
 # - default.httpbin-deployment.80
 # - default.httpbin-deployment.8080
 apiVersion: configuration.konghq.com/v1beta1
 kind: KongUpstreamPolicy
 metadata:
   name: httpbin-upstream-policy
-  namespace: kong-system
 spec:
   algorithm: consistent-hashing
   slots: 100

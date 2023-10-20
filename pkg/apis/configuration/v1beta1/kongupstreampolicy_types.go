@@ -1,10 +1,10 @@
 package v1beta1
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	v1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 // KongUpstreamPolicyCondition is the condition type for KongUpstreamPolicy.
@@ -15,14 +15,14 @@ type KongUpstreamPolicyStatus string
 
 const (
 	// KongUpstreamPolicyConditionAccepted describes the status of a KongUpstreamPolicy with respect to its ancestor.
-	KongUpstreamPolicyConditionAccepted KongUpstreamPolicyCondition = KongUpstreamPolicyCondition(v1alpha2.PolicyConditionAccepted)
+	KongUpstreamPolicyConditionAccepted KongUpstreamPolicyCondition = KongUpstreamPolicyCondition(gatewayv1alpha2.PolicyConditionAccepted)
 
 	// KongUpstreamPolicyStatusAccepted means that the policy is successfully attached to the ancestor.
-	KongUpstreamPolicyStatusAccepted KongUpstreamPolicyStatus = KongUpstreamPolicyStatus(v1alpha2.PolicyReasonAccepted)
+	KongUpstreamPolicyStatusAccepted KongUpstreamPolicyStatus = KongUpstreamPolicyStatus(gatewayv1alpha2.PolicyReasonAccepted)
 
 	// KongUpstreamPolicyStatusConflicted means that the policy couldn't be attached to the ancestor because of a conflict.
 	// The conflict might be e.g. attaching KongUpstreamPolicy to a Service and a Gateway API *Route that uses the Service.
-	KongUpstreamPolicyStatusConflicted KongUpstreamPolicyStatus = KongUpstreamPolicyStatus(v1alpha2.PolicyReasonConflicted)
+	KongUpstreamPolicyStatusConflicted KongUpstreamPolicyStatus = KongUpstreamPolicyStatus(gatewayv1alpha2.PolicyReasonConflicted)
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 )
 
 func init() {
-	v1.SchemeBuilder.Register(&KongUpstreamPolicy{}, &KongUpstreamPolicyList{})
+	SchemeBuilder.Register(&KongUpstreamPolicy{}, &KongUpstreamPolicyList{})
 }
 
 // KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
@@ -66,7 +66,7 @@ func init() {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespace,shortName=kup,categories=kong-ingress-controller
+// +kubebuilder:resource:scope=Namespaced,shortName=kup,categories=kong-ingress-controller
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct

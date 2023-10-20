@@ -2,10 +2,11 @@ package v1beta1
 
 // Types defined in this file are copied directly from https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/policy_types.go#L151.
 // TODO: Remove this once we bump to a version of Gateway API that includes this type.
+// https://github.com/Kong/kubernetes-ingress-controller/issues/4933
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // PolicyStatus defines the common attributes that all Policies should include within
@@ -78,7 +79,7 @@ type PolicyStatus struct {
 type PolicyAncestorStatus struct {
 	// AncestorRef corresponds with a ParentRef in the spec that this
 	// PolicyAncestorStatus struct describes the status of.
-	AncestorRef v1beta1.ParentReference `json:"ancestorRef"`
+	gatewayv1beta1.ParentReference `json:"ancestorRef"`
 
 	// ControllerName is a domain/path string that indicates the name of the
 	// controller that wrote this status. This corresponds with the
@@ -93,7 +94,7 @@ type PolicyAncestorStatus struct {
 	// Controllers MUST populate this field when writing status. Controllers should ensure that
 	// entries to status populated with their ControllerName are cleaned up when they are no
 	// longer necessary.
-	ControllerName v1beta1.GatewayController `json:"controllerName"`
+	ControllerName gatewayv1beta1.GatewayController `json:"controllerName"`
 
 	// Conditions describes the status of the Policy with respect to the given Ancestor.
 	//

@@ -161,6 +161,8 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 // extractVersionFromImage extracts semver of image from image tag. If tag is not given,
 // or is not in a semver format, it returns an error.
 // for example: kong/kubernetes-ingress-controller:2.9.3 => semver.Version{Major:2,Minor:9,Patch:3}.
+//
+//lint:ignore U1000 retained for future use
 func extractVersionFromImage(imageName string) (semver.Version, error) { //nolint:unused
 	split := strings.Split(imageName, ":")
 	if len(split) < 2 {
@@ -179,6 +181,8 @@ func extractVersionFromImage(imageName string) (semver.Version, error) { //nolin
 // below the minVersion.
 // if the override KIC image is not set, it assumes that the latest image is used, so it never skips
 // the test if override image is not given.
+//
+//lint:ignore U1000 retained for future use
 func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) { //nolint:unused
 	if testenv.ControllerImageTag() == "" {
 		return
@@ -231,6 +235,8 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 
 // getKongVersionFromOverrideTag parses Kong version from env effective version or override tag. The effective version
 // takes precedence.
+//
+//lint:ignore U1000 retained for future use
 func getKongVersionFromOverrideTag() (kong.Version, error) { //nolint:unused
 	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
 		return kong.ParseSemanticVersion(kongEffectiveVersion)

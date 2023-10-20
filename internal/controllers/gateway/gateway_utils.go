@@ -466,7 +466,7 @@ func getListenerStatus(
 		if len(conflictReason) > 0 {
 			for _, cond := range statuses[listener.Name].Conditions {
 				// shut up linter, there's a default
-				switch gatewayapi.ListenerConditionType(cond.Type) { //nolint:exhaustive
+				switch gatewayapi.ListenerConditionType(cond.Type) {
 				case gatewayapi.ListenerConditionProgrammed, gatewayapi.ListenerConditionConflicted:
 					continue
 				default:

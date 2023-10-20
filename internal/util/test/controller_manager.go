@@ -44,12 +44,12 @@ func PrepareClusterForRunningControllerManager(
 		}
 	}
 
-	// deploy all RBACs required for testing to the cluster
+	// Deploy all RBACs required for testing to the cluster.
 	if err := DeployRBACsForCluster(ctx, cluster); err != nil {
 		return fmt.Errorf("failed to deploy RBACs: %w", err)
 	}
 
-	// deploy all CRDs required for testing to the cluster
+	// Deploy all CRDs required for testing to the cluster.
 	if err := DeployCRDsForCluster(ctx, cluster); err != nil {
 		return fmt.Errorf("failed to deploy CRDs: %w", err)
 	}
@@ -74,7 +74,7 @@ func DeployControllerManagerForCluster(
 	additionalFlags ...string,
 ) (func(), error) {
 	if kongAddon == nil {
-		// ensure that the provided test cluster has a kongAddon deployed to it
+		// Ensure that the provided test cluster has a kongAddon deployed to it.
 		for _, addon := range cluster.ListAddons() {
 			a, ok := addon.(*ktfkong.Addon)
 			if ok {

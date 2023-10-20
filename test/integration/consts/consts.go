@@ -7,5 +7,5 @@ const (
 	WaitTick = 250 * time.Millisecond
 
 	// IngressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	IngressWait = time.Minute * 3
+	IngressWait = 3 * time.Minute
 )

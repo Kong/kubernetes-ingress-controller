@@ -25,17 +25,14 @@ func CreateIngressClass(ctx context.Context, ingressClass string, client *kubern
 	}
 	ingClasses := client.NetworkingV1().IngressClasses()
 
-	_, err := ingClasses.Create(ctx, create(), metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
+	if _, err := ingClasses.Create(ctx, create(), metav1.CreateOptions{}); apierrors.IsAlreadyExists(err) {
 		// If for some reason the ingress class is already in the cluster don't
 		// fail the whole test suite but recreate it and continue.
-		err = ingClasses.Delete(ctx, ingressClass, metav1.DeleteOptions{})
-		if err != nil {
+		if err := ingClasses.Delete(ctx, ingressClass, metav1.DeleteOptions{}); err != nil {
 			return fmt.Errorf("failed to delete ingress class %s: %w", ingressClass, err)
 		}
 
-		_, err = ingClasses.Create(ctx, create(), metav1.CreateOptions{})
-		if err != nil {
+		if _, err := ingClasses.Create(ctx, create(), metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("failed to create ingress class %s: %w", ingressClass, err)
 		}
 	}

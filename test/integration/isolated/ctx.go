@@ -16,12 +16,12 @@ type CtxKey[R any] string
 func getCtxKey[R any](t *testing.T) CtxKey[R] {
 	t.Helper()
 
-	// When we pass t.Name() from inside an `assess` step, the name is in the form TestName/Features/Assess
+	// When we pass t.Name() from inside an `assess` step, the name is in the form TestName/Features/Assess.
 	if strings.Contains(t.Name(), "/") {
 		return CtxKey[R](strings.Split(t.Name(), "/")[0])
 	}
 
-	// When pass t.Name() from inside a `testenv.BeforeEachTest` function, the name is just TestName
+	// When we pass t.Name() from inside a `testenv.BeforeEachTest` function, the name is just TestName.
 	return CtxKey[R](t.Name())
 }
 
@@ -40,7 +40,6 @@ func GetFromCtxForT[R any](ctx context.Context, t *testing.T) R {
 		var r R
 		t.Fatalf("required %T to be stored in context but found: %s (of type %T)", r, raw, raw)
 	}
-
 	return result
 }
 

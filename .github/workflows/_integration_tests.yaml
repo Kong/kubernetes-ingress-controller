@@ -107,7 +107,7 @@ jobs:
             test: dbless
             run_invalid_config: "true"
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
-          #
+          # Experimental tests, in the future all integration tests will be migrated to them.
           - name: isolated-dbless
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"

@@ -345,7 +345,7 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 
 
 
-KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. <br /><br /> Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object), and it is applied to Kong Upstream objects created by the controller. <br /><br /> It can be attached to Services and Gateway API *Routes. <br /><br /> When attached to a Gateway API *Route, it will affect all of Kong Upstreams created for the Gateway API *Route. If you want to use different Upstream settings for each of the *Route's individual rules, you should create a separate *Route for each of the rules. <br /><br /> When attached to a Service, it will affect all Kong Upstreams created for the Service. <br /><br /> When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services must be configured with the same KongUpstreamPolicy (effectively two separate KongUpstreamPolicies with the same configuration). Otherwise, the controller will ignore the KongUpstreamPolicy.
+KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. <br /><br /> Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object), and it is applied to Kong Upstream objects created by the controller. <br /><br /> It can be attached to Services and Gateway API *Routes. To attach it to an object, the object must be annotated with `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy object in the same namespace as the object. <br /><br /> If attached to multiple objects (ancestors), the controller will populate the status of the KongUpstreamPolicy with a separate status entry for each of the ancestors. <br /><br /> When attached to a Gateway API *Route, it will affect all of Kong Upstreams created for the Gateway API *Route. If you want to use different Upstream settings for each of the *Route's individual rules, you should create a separate *Route for each of the rules. <br /><br /> When attached to a Service, it will affect all Kong Upstreams created for the Service. <br /><br /> When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy. <br /><br /> When attached to a Service used in a Gateway API *Route that has another KongUpstreamPolicy attached to it, the controller will *ignore* the KongUpstreamPolicy attached to the Service. <br /><br /> Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly. In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
 
 <!-- kong_upstream_policy description placeholder -->
 
@@ -460,13 +460,13 @@ KongUpstreamActiveHealthcheck configures active health check probing.
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | Type determines how active health checks are collected. |
+| `type` _string_ | Type determines whether to perform active health checks using HTTP or HTTPS, or just attempt a TCP connection. Accepted values are "http", "https", "tcp", "grpc", "grpcs". |
 | `concurrency` _integer_ | Concurrency is the number of targets to check concurrently. |
 | `healthy` _[KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
 | `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy for an upstream. |
-| `http_path` _string_ | HTTPPath is the path to use in GET HTTP request to run as a probe. |
-| `https_sni` _string_ | HTTPSSni is the SNI to use in GET HTTPS request to run as a probe. |
-| `https_verify_certificate` _boolean_ | HTTPSVerifyCertificate is a boolean value that indicates if the certificate should be verified. |
+| `httpPath` _string_ | HTTPPath is the path to use in GET HTTP request to run as a probe. |
+| `httpsSni` _string_ | HTTPSSNI is the SNI to use in GET HTTPS request to run as a probe. |
+| `httpsVerifyCertificate` _boolean_ | HTTPSVerifyCertificate is a boolean value that indicates if the certificate should be verified. |
 | `timeout` _integer_ | Timeout is the probe timeout in seconds. |
 | `headers` _object (keys:string, values:string array)_ | Headers is a list of HTTP headers to add to the probe request. |
 
@@ -486,12 +486,12 @@ KongUpstreamHash defines how to calculate hash for consistent-hashing load balan
 | --- | --- |
 | `header` _string_ | Header is the name of the header to use as hash input. |
 | `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
-| `query_arg` _string_ | QueryArg is the name of the query argument to use as hash input. |
-| `uri_capture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
+| `queryArg` _string_ | QueryArg is the name of the query argument to use as hash input. |
+| `uriCapture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
 
 
 _Appears in:_
-- [KongUpstreamPolicyConfig](#kongupstreampolicyconfig)
+- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
 
 ### KongUpstreamHealthcheck
 
@@ -509,7 +509,7 @@ KongUpstreamHealthcheck represents a health-check config of an Upstream in Kong.
 
 
 _Appears in:_
-- [KongUpstreamPolicyConfig](#kongupstreampolicyconfig)
+- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
 
 ### KongUpstreamHealthcheckHealthy
 
@@ -521,7 +521,7 @@ KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to ma
 
 | Field | Description |
 | --- | --- |
-| `http_statuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
+| `httpStatuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
 | `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
 | `successes` _integer_ | Successes is the number of successes to consider a target healthy. |
 
@@ -540,9 +540,9 @@ KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to 
 
 | Field | Description |
 | --- | --- |
-| `http_failures` _integer_ | HTTPFailures is the number of failures to consider a target unhealthy. |
-| `http_statuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
-| `tcp_failures` _integer_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
+| `httpFailures` _integer_ | HTTPFailures is the number of failures to consider a target unhealthy. |
+| `httpStatuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
+| `tcpFailures` _integer_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
 | `timeouts` _integer_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
 | `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |
 
@@ -569,26 +569,6 @@ KongUpstreamPassiveHealthcheck configures passive checks around passive health c
 _Appears in:_
 - [KongUpstreamHealthcheck](#kongupstreamhealthcheck)
 
-### KongUpstreamPolicyConfig
-
-
-
-KongUpstreamPolicyConfig contains the configuration parameters for Kong upstream.
-
-
-
-| Field | Description |
-| --- | --- |
-| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
-| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
-| `hash_on` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. Algorithm must be set to "consistent-hashing" for this field to have effect. |
-| `hash_on_fallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
-| `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
-
-
-_Appears in:_
-- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
-
 ### KongUpstreamPolicySpec
 
 
@@ -599,8 +579,11 @@ KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
 
 | Field | Description |
 | --- | --- |
-| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef identifies an API object to apply policy to. |
-| `config` _[KongUpstreamPolicyConfig](#kongupstreampolicyconfig)_ | Upstream defines configuration to be applied to Kong Upstreams associated with TargetRef. |
+| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
+| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
+| `hashOn` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
 
 
 _Appears in:_
@@ -677,3 +660,6 @@ UDPIngressSpec defines the desired state of UDPIngress.
 
 _Appears in:_
 - [UDPIngress](#udpingress)
+
+
+

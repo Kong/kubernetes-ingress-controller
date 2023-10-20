@@ -28,16 +28,26 @@ spec:
           allows configuring health checks for Kong Upstream's Targets. \n Its configuration
           is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
           and it is applied to Kong Upstream objects created by the controller. \n
-          It can be attached to Services and Gateway API *Routes. \n When attached
-          to Gateway API *Routes, it will affect all of Kong Upstreams associated
-          with the Gateway API *Route. If you want to use different Upstream settings
-          for each of the *Route individual rules, you should create a separate *Route
-          separating the rules. \n When attached to Service, it will affect all Kong
-          Upstreams associated with the Service. \n When attached to Service used
-          in Gateway API *Route rule with multiple BackendRefs, all of its Services
-          must be configured with the same KongUpstreamPolicy (effectively two separate
-          KongUpstreamPolicies with the same configuration). Otherwise, the controller
-          will ignore the KongUpstreamPolicy."
+          It can be attached to Services and Gateway API *Routes. To attach it to
+          an object, the object must be annotated with `konghq.com/upstream-policy:
+          <name>`, where `<name>` is the name of the KongUpstreamPolicy object in
+          the same namespace as the object. \n If attached to multiple objects (ancestors),
+          the controller will populate the status of the KongUpstreamPolicy with a
+          separate status entry for each of the ancestors. \n When attached to a Gateway
+          API *Route, it will affect all of Kong Upstreams created for the Gateway
+          API *Route. If you want to use different Upstream settings for each of the
+          *Route's individual rules, you should create a separate *Route for each
+          of the rules. \n When attached to a Service, it will affect all Kong Upstreams
+          created for the Service. \n When attached to a Service used in a Gateway
+          API *Route rule with multiple BackendRefs, all of its Services MUST be configured
+          with the same KongUpstreamPolicy. Otherwise, the controller will *ignore*
+          the KongUpstreamPolicy. \n When attached to a Service used in a Gateway
+          API *Route that has another KongUpstreamPolicy attached to it, the controller
+          will *ignore* the KongUpstreamPolicy attached to the Service. \n Note: KongUpstreamPolicy
+          doesn't implement Gateway API's GEP-713 strictly. In particular, it doesn't
+          use the TargetRef for attaching to Services and Gateway API *Routes - annotations
+          are used instead. This is to allow reusing the same KongUpstreamPolicy for
+          multiple Services and Gateway API *Routes."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -54,283 +64,241 @@ spec:
           spec:
             description: Spec contains the configuration of the Kong upstream.
             properties:
-              config:
-                description: Upstream defines configuration to be applied to Kong
-                  Upstreams associated with TargetRef.
+              algorithm:
+                description: 'Algorithm is the load balancing algorithm to use. Accepted
+                  values are: "round-robin", "consistent-hashing", "least-connections",
+                  "latency".'
+                enum:
+                - round-robin
+                - consistent-hashing
+                - least-connections
+                - latency
+                type: string
+              hashOn:
+                description: HashOn defines how to calculate hash for consistent-hashing
+                  load balancing algorithm. Algorithm must be set to "consistent-hashing"
+                  for this field to have effect.
                 properties:
-                  algorithm:
-                    description: 'Algorithm is the load balancing algorithm to use.
-                      Accepted values are: "round-robin", "consistent-hashing", "least-connections",
-                      "latency".'
-                    enum:
-                    - round-robin
-                    - consistent-hashing
-                    - least-connections
-                    - latency
+                  cookie:
+                    description: Cookie is the name of the cookie to use as hash input.
                     type: string
-                  hash_on:
-                    description: HashOn defines how to calculate hash for consistent-hashing
-                      load balancing algorithm. Algorithm must be set to "consistent-hashing"
-                      for this field to have effect.
+                  header:
+                    description: Header is the name of the header to use as hash input.
+                    type: string
+                  queryArg:
+                    description: QueryArg is the name of the query argument to use
+                      as hash input.
+                    type: string
+                  uriCapture:
+                    description: URICapture is the name of the URI capture group to
+                      use as hash input.
+                    type: string
+                type: object
+              hashOnFallback:
+                description: HasOnFallback defines how to calculate hash for consistent-hashing
+                  load balancing algorithm if the primary hash function fails. Algorithm
+                  must be set to "consistent-hashing" for this field to have effect.
+                properties:
+                  cookie:
+                    description: Cookie is the name of the cookie to use as hash input.
+                    type: string
+                  header:
+                    description: Header is the name of the header to use as hash input.
+                    type: string
+                  queryArg:
+                    description: QueryArg is the name of the query argument to use
+                      as hash input.
+                    type: string
+                  uriCapture:
+                    description: URICapture is the name of the URI capture group to
+                      use as hash input.
+                    type: string
+                type: object
+              healthchecks:
+                description: Healthchecks defines the health check configurations
+                  in Kong.
+                properties:
+                  active:
+                    description: Active configures active health check probing.
                     properties:
-                      cookie:
-                        description: Cookie is the name of the cookie to use as hash
-                          input.
-                        type: string
-                      header:
-                        description: Header is the name of the header to use as hash
-                          input.
-                        type: string
-                      query_arg:
-                        description: QueryArg is the name of the query argument to
-                          use as hash input.
-                        type: string
-                      uri_capture:
-                        description: URICapture is the name of the URI capture group
-                          to use as hash input.
-                        type: string
-                    type: object
-                  hash_on_fallback:
-                    description: HasOnFallback defines how to calculate hash for consistent-hashing
-                      load balancing algorithm if the primary hash function fails.
-                      Algorithm must be set to "consistent-hashing" for this field
-                      to have effect.
-                    properties:
-                      cookie:
-                        description: Cookie is the name of the cookie to use as hash
-                          input.
-                        type: string
-                      header:
-                        description: Header is the name of the header to use as hash
-                          input.
-                        type: string
-                      query_arg:
-                        description: QueryArg is the name of the query argument to
-                          use as hash input.
-                        type: string
-                      uri_capture:
-                        description: URICapture is the name of the URI capture group
-                          to use as hash input.
-                        type: string
-                    type: object
-                  healthchecks:
-                    description: Healthchecks defines the health check configurations
-                      in Kong.
-                    properties:
-                      active:
-                        description: Active configures active health check probing.
+                      concurrency:
+                        description: Concurrency is the number of targets to check
+                          concurrently.
+                        minimum: 1
+                        type: integer
+                      headers:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        description: Headers is a list of HTTP headers to add to the
+                          probe request.
+                        type: object
+                      healthy:
+                        description: Healthy configures thresholds and HTTP status
+                          codes to mark targets healthy for an upstream.
                         properties:
-                          concurrency:
-                            description: Concurrency is the number of targets to check
-                              concurrently.
-                            minimum: 1
-                            type: integer
-                          headers:
-                            additionalProperties:
-                              items:
-                                type: string
-                              type: array
-                            description: Headers is a list of HTTP headers to add
-                              to the probe request.
-                            type: object
-                          healthy:
-                            description: Healthy configures thresholds and HTTP status
-                              codes to mark targets healthy for an upstream.
-                            properties:
-                              http_statuses:
-                                description: HTTPStatuses is a list of HTTP status
-                                  codes that Kong considers a success.
-                                items:
-                                  type: integer
-                                type: array
-                              interval:
-                                description: Interval is the interval between active
-                                  health checks for an upstream in seconds when in
-                                  a healthy state.
-                                minimum: 0
-                                type: integer
-                              successes:
-                                description: Successes is the number of successes
-                                  to consider a target healthy.
-                                minimum: 0
-                                type: integer
-                            type: object
-                          http_path:
-                            description: HTTPPath is the path to use in GET HTTP request
-                              to run as a probe.
-                            pattern: ^/.*$
-                            type: string
-                          https_sni:
-                            description: HTTPSSni is the SNI to use in GET HTTPS request
-                              to run as a probe.
-                            type: string
-                          https_verify_certificate:
-                            description: HTTPSVerifyCertificate is a boolean value
-                              that indicates if the certificate should be verified.
-                            type: boolean
-                          timeout:
-                            description: Timeout is the probe timeout in seconds.
+                          httpStatuses:
+                            description: HTTPStatuses is a list of HTTP status codes
+                              that Kong considers a success.
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            description: Interval is the interval between active health
+                              checks for an upstream in seconds when in a healthy
+                              state.
                             minimum: 0
                             type: integer
-                          type:
-                            description: Type determines how active health checks
-                              are collected.
-                            type: string
-                          unhealthy:
-                            description: Unhealthy configures thresholds and HTTP
-                              status codes to mark targets unhealthy for an upstream.
-                            properties:
-                              http_failures:
-                                description: HTTPFailures is the number of failures
-                                  to consider a target unhealthy.
-                                minimum: 0
-                                type: integer
-                              http_statuses:
-                                description: HTTPStatuses is a list of HTTP status
-                                  codes that Kong considers a failure.
-                                items:
-                                  type: integer
-                                type: array
-                              interval:
-                                description: Interval is the interval between active
-                                  health checks for an upstream in seconds when in
-                                  an unhealthy state.
-                                minimum: 0
-                                type: integer
-                              tcp_failures:
-                                description: TCPFailures is the number of TCP failures
-                                  in a row to consider a target unhealthy.
-                                minimum: 0
-                                type: integer
-                              timeouts:
-                                description: Timeouts is the number of timeouts in
-                                  a row to consider a target unhealthy.
-                                minimum: 0
-                                type: integer
-                            type: object
+                          successes:
+                            description: Successes is the number of successes to consider
+                              a target healthy.
+                            minimum: 0
+                            type: integer
                         type: object
-                      passive:
-                        description: Passive configures passive health check probing.
-                        properties:
-                          healthy:
-                            description: Healthy configures thresholds and HTTP status
-                              codes to mark targets healthy for an upstream.
-                            properties:
-                              http_statuses:
-                                description: HTTPStatuses is a list of HTTP status
-                                  codes that Kong considers a success.
-                                items:
-                                  type: integer
-                                type: array
-                              interval:
-                                description: Interval is the interval between active
-                                  health checks for an upstream in seconds when in
-                                  a healthy state.
-                                minimum: 0
-                                type: integer
-                              successes:
-                                description: Successes is the number of successes
-                                  to consider a target healthy.
-                                minimum: 0
-                                type: integer
-                            type: object
-                          type:
-                            description: Type determines whether to perform passive
-                              health checks interpreting HTTP/HTTPS statuses, or just
-                              check for TCP connection success. Accepted values are
-                              "http", "https", "tcp", "grpc", "grpcs".
-                            enum:
-                            - http
-                            - https
-                            - tcp
-                            - grpc
-                            - grpcs
-                            type: string
-                          unhealthy:
-                            description: Unhealthy configures thresholds and HTTP
-                              status codes to mark targets unhealthy.
-                            properties:
-                              http_failures:
-                                description: HTTPFailures is the number of failures
-                                  to consider a target unhealthy.
-                                minimum: 0
-                                type: integer
-                              http_statuses:
-                                description: HTTPStatuses is a list of HTTP status
-                                  codes that Kong considers a failure.
-                                items:
-                                  type: integer
-                                type: array
-                              interval:
-                                description: Interval is the interval between active
-                                  health checks for an upstream in seconds when in
-                                  an unhealthy state.
-                                minimum: 0
-                                type: integer
-                              tcp_failures:
-                                description: TCPFailures is the number of TCP failures
-                                  in a row to consider a target unhealthy.
-                                minimum: 0
-                                type: integer
-                              timeouts:
-                                description: Timeouts is the number of timeouts in
-                                  a row to consider a target unhealthy.
-                                minimum: 0
-                                type: integer
-                            type: object
-                        type: object
-                      threshold:
-                        description: Threshold is the minimum percentage of the upstream’s
-                          targets’ weight that must be available for the whole upstream
-                          to be considered healthy.
+                      httpPath:
+                        description: HTTPPath is the path to use in GET HTTP request
+                          to run as a probe.
+                        pattern: ^/.*$
+                        type: string
+                      httpsSni:
+                        description: HTTPSSNI is the SNI to use in GET HTTPS request
+                          to run as a probe.
+                        type: string
+                      httpsVerifyCertificate:
+                        description: HTTPSVerifyCertificate is a boolean value that
+                          indicates if the certificate should be verified.
+                        type: boolean
+                      timeout:
+                        description: Timeout is the probe timeout in seconds.
+                        minimum: 0
                         type: integer
+                      type:
+                        description: Type determines whether to perform active health
+                          checks using HTTP or HTTPS, or just attempt a TCP connection.
+                          Accepted values are "http", "https", "tcp", "grpc", "grpcs".
+                        enum:
+                        - http
+                        - https
+                        - tcp
+                        - grpc
+                        - grpcs
+                        type: string
+                      unhealthy:
+                        description: Unhealthy configures thresholds and HTTP status
+                          codes to mark targets unhealthy for an upstream.
+                        properties:
+                          httpFailures:
+                            description: HTTPFailures is the number of failures to
+                              consider a target unhealthy.
+                            minimum: 0
+                            type: integer
+                          httpStatuses:
+                            description: HTTPStatuses is a list of HTTP status codes
+                              that Kong considers a failure.
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            description: Interval is the interval between active health
+                              checks for an upstream in seconds when in an unhealthy
+                              state.
+                            minimum: 0
+                            type: integer
+                          tcpFailures:
+                            description: TCPFailures is the number of TCP failures
+                              in a row to consider a target unhealthy.
+                            minimum: 0
+                            type: integer
+                          timeouts:
+                            description: Timeouts is the number of timeouts in a row
+                              to consider a target unhealthy.
+                            minimum: 0
+                            type: integer
+                        type: object
                     type: object
-                  host_header:
-                    description: 'HostHeader is the hostname to be used as Host header
-                      when proxying requests through Kong. REVIEW: this could be achieved
-                      with Gateway API HTTPHeaderFilter, do we need that?'
-                    type: string
-                  slots:
-                    description: Slots is the number of slots in the load balancer
-                      algorithm. If not set, the default value in Kong for the algorithm
-                      is used.
-                    maximum: 65536
-                    minimum: 10
+                  passive:
+                    description: Passive configures passive health check probing.
+                    properties:
+                      healthy:
+                        description: Healthy configures thresholds and HTTP status
+                          codes to mark targets healthy for an upstream.
+                        properties:
+                          httpStatuses:
+                            description: HTTPStatuses is a list of HTTP status codes
+                              that Kong considers a success.
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            description: Interval is the interval between active health
+                              checks for an upstream in seconds when in a healthy
+                              state.
+                            minimum: 0
+                            type: integer
+                          successes:
+                            description: Successes is the number of successes to consider
+                              a target healthy.
+                            minimum: 0
+                            type: integer
+                        type: object
+                      type:
+                        description: Type determines whether to perform passive health
+                          checks interpreting HTTP/HTTPS statuses, or just check for
+                          TCP connection success. Accepted values are "http", "https",
+                          "tcp", "grpc", "grpcs".
+                        enum:
+                        - http
+                        - https
+                        - tcp
+                        - grpc
+                        - grpcs
+                        type: string
+                      unhealthy:
+                        description: Unhealthy configures thresholds and HTTP status
+                          codes to mark targets unhealthy.
+                        properties:
+                          httpFailures:
+                            description: HTTPFailures is the number of failures to
+                              consider a target unhealthy.
+                            minimum: 0
+                            type: integer
+                          httpStatuses:
+                            description: HTTPStatuses is a list of HTTP status codes
+                              that Kong considers a failure.
+                            items:
+                              type: integer
+                            type: array
+                          interval:
+                            description: Interval is the interval between active health
+                              checks for an upstream in seconds when in an unhealthy
+                              state.
+                            minimum: 0
+                            type: integer
+                          tcpFailures:
+                            description: TCPFailures is the number of TCP failures
+                              in a row to consider a target unhealthy.
+                            minimum: 0
+                            type: integer
+                          timeouts:
+                            description: Timeouts is the number of timeouts in a row
+                              to consider a target unhealthy.
+                            minimum: 0
+                            type: integer
+                        type: object
+                    type: object
+                  threshold:
+                    description: Threshold is the minimum percentage of the upstream’s
+                      targets’ weight that must be available for the whole upstream
+                      to be considered healthy.
                     type: integer
                 type: object
-              targetRef:
-                description: TargetRef identifies an API object to apply policy to.
-                properties:
-                  group:
-                    description: Group is the group of the target resource.
-                    maxLength: 253
-                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                    type: string
-                  kind:
-                    description: Kind is kind of the target resource.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                    type: string
-                  name:
-                    description: Name is the name of the target resource.
-                    maxLength: 253
-                    minLength: 1
-                    type: string
-                  namespace:
-                    description: Namespace is the namespace of the referent. When
-                      unspecified, the local namespace is inferred. Even when policy
-                      targets a resource in a different namespace, it MUST only apply
-                      to traffic originating from the same namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
-                required:
-                - group
-                - kind
-                - name
-                type: object
+              slots:
+                description: Slots is the number of slots in the load balancer algorithm.
+                  If not set, the default value in Kong for the algorithm is used.
+                maximum: 65536
+                minimum: 10
+                type: integer
             type: object
           status:
             description: Status represents the current status of the KongUpstreamPolicy

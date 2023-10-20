@@ -11,6 +11,7 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -184,9 +185,14 @@ func RunManager(
 	t.Cleanup(func() {
 		wg.Wait()
 		if t.Failed() {
+			encoder, err := util.GetZapEncoding("text")
+			require.NoError(t, err)
+
 			t.Logf("manager logs:")
 			for _, entry := range logs.All() {
-				t.Logf("%s - %s", entry.Time, entry.Message)
+				b, err := encoder.EncodeEntry(entry.Entry, entry.Context)
+				assert.NoError(t, err)
+				t.Logf("%s", b.String())
 			}
 		}
 	})

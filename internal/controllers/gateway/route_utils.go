@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -481,8 +481,8 @@ func existsMatchingReadyListenerInStatus[T gatewayapi.RouteT](route T, listener 
 			switch any(route).(type) {
 			case *gatewayapi.HTTPRoute:
 				gvk = schema.GroupVersionKind{
-					Group:   gatewayv1beta1.GroupVersion.Group,
-					Version: gatewayv1beta1.GroupVersion.Version,
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
 					Kind:    "HTTPRoute",
 				}
 			default:
@@ -656,7 +656,7 @@ func isHTTPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef 
 		backendRefKind = *backendRef.Kind
 	}
 	for _, from := range grantSpec.From {
-		if from.Group != gatewayv1beta1.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
+		if from.Group != gatewayv1.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
 			continue
 		}
 
@@ -753,7 +753,7 @@ func ensureParentsProgrammedCondition[
 					Namespace: lo.ToPtr(gatewayapi.Namespace(gateway.Namespace)),
 					Name:      gatewayapi.ObjectName(gateway.Name),
 					Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-					Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+					Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 					SectionName: func() *gatewayapi.SectionName {
 						// We don't need to check whether the listener matches route's spec
 						// because that should already be done via getSupportedGatewayForRoute
@@ -865,7 +865,7 @@ func isParentRefEqualToParent[
 	parentRef gatewayapi.ParentReference,
 	parent parentT,
 ) bool {
-	if *parentRef.Group != gatewayv1beta1.GroupName {
+	if *parentRef.Group != gatewayv1.GroupName {
 		return false
 	}
 	if *parentRef.Kind != "Gateway" {

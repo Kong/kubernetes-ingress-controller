@@ -252,7 +252,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Run("removing GatewayClass", func(t *testing.T) {
 		t.Log("deleting the GatewayClass")
-		require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+		require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 		t.Log("verifying that the Gateway gets unlinked from the route via status")
 		callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, ns.Name, udpRoute.Name)
@@ -282,7 +282,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Run("removing Gateway", func(t *testing.T) {
 		t.Log("deleting the Gateway")
-		require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+		require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 		t.Log("verifying that the Gateway gets unlinked from the route via status")
 		callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, ns.Name, udpRoute.Name)
@@ -318,8 +318,8 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 	t.Run("removing Gateway and GatewayClass simultaneously", func(t *testing.T) {
 		t.Log("deleting both GatewayClass and Gateway")
-		require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
-		require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+		require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+		require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 		t.Log("verifying that the Gateway gets unlinked from the route via status")
 		callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, ns.Name, udpRoute.Name)

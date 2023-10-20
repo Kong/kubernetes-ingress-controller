@@ -122,7 +122,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(service2)
 
 				httpRoute := httpRouteWithBackends(gatewayName, service1, service2)
-				httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
+				httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(httpRoute)
 

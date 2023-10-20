@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -115,6 +116,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, err)
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
+	require.NoError(t, gatewayv1.AddToScheme(client.Scheme()))
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
 

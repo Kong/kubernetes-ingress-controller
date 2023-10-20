@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/tools/cache"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -241,13 +242,13 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
 		reflect.TypeOf(&netv1.Ingress{}):                       netv1.SchemeGroupVersion.WithKind("Ingress"),
 		reflect.TypeOf(&netv1.IngressClass{}):                  netv1.SchemeGroupVersion.WithKind("IngressClass"),
-		reflect.TypeOf(&gatewayapi.HTTPRoute{}):                gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"),
+		reflect.TypeOf(&gatewayapi.HTTPRoute{}):                gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"),
 		reflect.TypeOf(&gatewayapi.UDPRoute{}):                 gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
 		reflect.TypeOf(&gatewayapi.TCPRoute{}):                 gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
 		reflect.TypeOf(&gatewayapi.TLSRoute{}):                 gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
 		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"),
 		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):           gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
-		reflect.TypeOf(&gatewayapi.Gateway{}):                  gatewayv1beta1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&gatewayapi.Gateway{}):                  gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
 		reflect.TypeOf(&kongv1beta1.TCPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
 		reflect.TypeOf(&kongv1beta1.UDPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
 		reflect.TypeOf(&kongv1alpha1.IngressClassParameters{}): kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),

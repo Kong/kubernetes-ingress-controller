@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
@@ -530,7 +530,7 @@ func getReferenceGrantConditionReason(
 		}
 		for _, from := range grant.Spec.From {
 			// we are interested only in grants for gateways that want to reference secrets
-			if from.Group != gatewayV1beta1Group || from.Kind != "Gateway" {
+			if from.Group != gatewayV1Group || from.Kind != "Gateway" {
 				continue
 			}
 			if from.Namespace == gatewayapi.Namespace(gatewayNamespace) {
@@ -617,7 +617,7 @@ func getListenerSupportedRouteKinds(l gatewayapi.Listener) ([]gatewayapi.RouteGr
 		reason       = gatewayapi.ListenerReasonResolvedRefs
 	)
 	for _, gk := range l.AllowedRoutes.Kinds {
-		if gk.Group != nil && *gk.Group == gatewayv1beta1.GroupName {
+		if gk.Group != nil && *gk.Group == gatewayv1.GroupName {
 			_, ok := lo.Find(supportedKinds, func(k gatewayapi.Kind) bool {
 				return gk.Kind == k
 			})
@@ -659,7 +659,7 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.
 	for _, routeParentStatus := range parentStatuses {
 		gatewayNamespace := routeNamespace
 		parentRef := routeParentStatus.ParentRef
-		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
+		if (parentRef.Group != nil && *parentRef.Group != gatewayV1Group) ||
 			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
 			continue
 		}

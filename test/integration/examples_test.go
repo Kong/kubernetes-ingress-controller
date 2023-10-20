@@ -51,7 +51,7 @@ func TestHTTPRouteExample(t *testing.T) {
 	t.Logf("verifying that the Gateway receives listen addresses")
 	var gatewayAddr string
 	require.Eventually(t, func() bool {
-		obj, err := gwc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
+		obj, err := gwc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
 		if err != nil {
 			return false
 		}

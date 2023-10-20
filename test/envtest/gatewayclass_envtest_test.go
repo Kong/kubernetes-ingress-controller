@@ -13,9 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
-	gatewayclientv1beta1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1beta1"
+	gatewayclientv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -50,7 +50,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		Test         func(
 			ctx context.Context,
 			t *testing.T,
-			gwClient gatewayclientv1beta1.GatewayInterface,
+			gwClient gatewayclientv1.GatewayInterface,
 			gwc gatewayapi.GatewayClass,
 			gw gatewayapi.Gateway,
 		)
@@ -81,7 +81,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			Test: func(
 				ctx context.Context,
 				t *testing.T,
-				gwClient gatewayclientv1beta1.GatewayInterface,
+				gwClient gatewayclientv1.GatewayInterface,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
 			) {
@@ -137,7 +137,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			Test: func(
 				ctx context.Context,
 				t *testing.T,
-				gwClient gatewayclientv1beta1.GatewayInterface,
+				gwClient gatewayclientv1.GatewayInterface,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
 			) {
@@ -211,7 +211,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			Test: func(
 				ctx context.Context,
 				t *testing.T,
-				gwClient gatewayclientv1beta1.GatewayInterface,
+				gwClient gatewayclientv1.GatewayInterface,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
 			) {
@@ -245,7 +245,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				w, err := gwClient.Watch(ctx, metav1.ListOptions{
 					FieldSelector: "metadata.name=" + gw.Name,
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: gatewayv1beta1.GroupVersion.String(),
+						APIVersion: gatewayv1.GroupVersion.String(),
 						Kind:       "Gateway",
 					},
 				})
@@ -331,7 +331,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			require.NoError(t, client.Create(ctx, &tc.Gateway))
 			t.Cleanup(func() { _ = client.Delete(ctx, &tc.Gateway) })
 
-			gwClient := gatewayClient.GatewayV1beta1().Gateways(ns.Name)
+			gwClient := gatewayClient.GatewayV1().Gateways(ns.Name)
 			tc.Test(ctx, t, gwClient, tc.GatewayClass, tc.Gateway)
 		})
 	}

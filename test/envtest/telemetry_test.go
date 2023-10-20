@@ -124,7 +124,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	require.NoError(t, err)
 
 	for i := 0; i < 2; i++ {
-		_, err = gcl.GatewayV1beta1().GatewayClasses().Create(
+		_, err = gcl.GatewayV1().GatewayClasses().Create(
 			ctx,
 			&gatewayapi.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
@@ -176,7 +176,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			)
 			require.NoError(t, err)
 
-			_, err = gcl.GatewayV1beta1().Gateways(namespace).Create(
+			_, err = gcl.GatewayV1().Gateways(namespace).Create(
 				ctx,
 				&gatewayapi.Gateway{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
@@ -195,7 +195,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			)
 			require.NoError(t, err)
 
-			_, err = gcl.GatewayV1beta1().HTTPRoutes(namespace).Create(
+			_, err = gcl.GatewayV1().HTTPRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},

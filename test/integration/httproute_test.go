@@ -142,7 +142,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			}},
 		},
 	}
-	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
 
@@ -178,7 +178,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Run("header regex match", func(t *testing.T) {
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayapi.HTTPRouteMatch{
@@ -190,7 +190,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				},
 			},
 		})
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		t.Log("verifying HTTPRoute header match")
@@ -200,7 +200,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Run("HTTPRoute query param match", func(t *testing.T) {
 		RunWhenKongExpressionRouter(t) //nolint:contextcheck
 
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayapi.HTTPRouteMatch{
@@ -212,7 +212,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				},
 			},
 		})
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		t.Log("verifying HTTPRoute query param match")
@@ -232,10 +232,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		httpRoute.Spec.ParentRefs = nil
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
@@ -248,10 +248,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		httpRoute.Spec.ParentRefs = oldParentRefs
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
@@ -263,7 +263,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
@@ -284,7 +284,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
-	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
@@ -307,8 +307,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
-	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
@@ -329,11 +329,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	// Set the Port in ParentRef which does not have a matching listener in Gateway.
 	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		port81 := gatewayapi.PortNumber(81)
 		httpRoute.Spec.ParentRefs[0].Port = &port81
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
@@ -484,7 +484,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 			},
 		},
 	}
-	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
 
@@ -596,7 +596,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			}},
 		},
 	}
-	hClient := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name)
+	hClient := gatewayClient.GatewayV1().HTTPRoutes(ns.Name)
 	httpRoute, err = hClient.Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)

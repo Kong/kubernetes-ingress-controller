@@ -35,6 +35,7 @@ import (
 	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -985,7 +986,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"):
+	case gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"):
 		return &gatewayapi.HTTPRoute{}, nil
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"):
 		return &gatewayapi.GRPCRoute{}, nil

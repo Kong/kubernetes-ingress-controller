@@ -21,13 +21,13 @@ services:
     - k8s-namespace:default
     - k8s-kind:HTTPRoute
     - k8s-group:gateway.networking.k8s.io
-    - k8s-version:v1beta1
+    - k8s-version:v1
   tags:
   - k8s-name:httproute-testing
   - k8s-namespace:default
   - k8s-kind:HTTPRoute
   - k8s-group:gateway.networking.k8s.io
-  - k8s-version:v1beta1
+  - k8s-version:v1
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
@@ -37,4 +37,4 @@ upstreams:
   - k8s-namespace:default
   - k8s-kind:HTTPRoute
   - k8s-group:gateway.networking.k8s.io
-  - k8s-version:v1beta1
+  - k8s-version:v1

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
@@ -118,8 +119,8 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.StatusQueue != nil {
 		if err := c.Watch(
 			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   gatewayv1beta1.GroupVersion.Group,
-				Version: gatewayv1beta1.GroupVersion.Version,
+				Group:   gatewayv1.GroupVersion.Group,
+				Version: gatewayv1.GroupVersion.Version,
 				Kind:    "HTTPRoute",
 			})},
 			&handler.EnqueueRequestForObject{},
@@ -330,7 +331,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1Beta1HTTPRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1HTTPRoute", req.NamespacedName)
 
 	httproute := new(gatewayapi.HTTPRoute)
 	if err := r.Get(ctx, req.NamespacedName, httproute); err != nil {
@@ -518,7 +519,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayapi.RouteParentStatus{
 			ParentRef: gatewayapi.ParentReference{
-				Group:     (*gatewayapi.Group)(&gatewayv1beta1.GroupVersion.Group),
+				Group:     (*gatewayapi.Group)(&gatewayv1.GroupVersion.Group),
 				Kind:      util.StringToGatewayAPIKindPtr(httprouteParentKind),
 				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayapi.ObjectName(gateway.gateway.Name),

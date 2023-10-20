@@ -238,7 +238,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
-	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
@@ -271,8 +271,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
-	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
@@ -347,8 +347,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
-	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)

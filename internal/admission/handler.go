@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -92,13 +92,13 @@ var (
 		Resource: "secrets",
 	}
 	gatewayGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1beta1.GroupVersion.Group,
-		Version:  gatewayv1beta1.GroupVersion.Version,
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "gateways",
 	}
 	httprouteGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1beta1.GroupVersion.Group,
-		Version:  gatewayv1beta1.GroupVersion.Version,
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "httproutes",
 	}
 	ingressGVResource = metav1.GroupVersionResource{

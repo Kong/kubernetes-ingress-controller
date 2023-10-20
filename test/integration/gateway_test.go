@@ -73,7 +73,6 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 			annotations.ExtractGatewayPublishService(gw.Annotations),
 			fmt.Sprintf("%s/%s", pubsvcUDP.Namespace, pubsvcUDP.Name),
 		)
-
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway address is populated from the ingress service")

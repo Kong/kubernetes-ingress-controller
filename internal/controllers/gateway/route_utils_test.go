@@ -17,8 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -254,7 +252,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		listenerName string
 	}
 
-	goodGroup := gatewayapi.Group(gatewayv1alpha2.GroupName)
+	goodGroup := gatewayapi.Group(gatewayv1.GroupName)
 	goodKind := gatewayapi.Kind("Gateway")
 	basicHTTPRoute := func() *gatewayapi.HTTPRoute {
 		return &gatewayapi.HTTPRoute{
@@ -1256,7 +1254,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
@@ -1276,7 +1274,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									{
 										ParentRef: gatewayapi.ParentReference{
 											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
@@ -1312,7 +1310,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
@@ -1359,7 +1357,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
@@ -1379,7 +1377,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									{
 										ParentRef: gatewayapi.ParentReference{
 											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
@@ -1407,7 +1405,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
@@ -1454,7 +1452,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:        "test-gateway",
 										SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
@@ -1475,7 +1473,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									{
 										ParentRef: gatewayapi.ParentReference{
 											Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:        gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 											SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
@@ -1495,7 +1493,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 									SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
@@ -1538,13 +1536,13 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:        gatewayapi.ObjectName(gateway1.Name),
 										SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
 									},
 									{
-										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:        gatewayapi.ObjectName(gateway2.Name),
 										SectionName: lo.ToPtr(gatewayapi.SectionName("http-1")),
@@ -1569,7 +1567,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 									SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
@@ -1589,7 +1587,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:        gatewayapi.ObjectName(gatewayNN2.Name),
 									Namespace:   (*gatewayapi.Namespace)(&gatewayNN2.Namespace),
 									SectionName: lo.ToPtr(gatewayapi.SectionName("http-1")),
@@ -1636,7 +1634,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
@@ -1659,7 +1657,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
@@ -1698,7 +1696,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
@@ -1718,7 +1716,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									{
 										ParentRef: gatewayapi.ParentReference{
 											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},

@@ -48,92 +48,13 @@ func TestConfigValidatedVars(t *testing.T) {
 			{
 				Input: "namespace/servicename",
 				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressService
-				},
-				ExpectedValue:              mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
-				ExpectedUsageAdditionalMsg: "Flag --publish-service has been deprecated, Use --ingress-service instead\n",
-			},
-			{
-				Input:                 "servicename",
-				ExpectedErrorContains: "the expected format is namespace/name",
-			},
-		},
-		"--ingress-service": {
-			{
-				Input: "namespace/servicename",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressService
+					return c.PublishService
 				},
 				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
 			},
 			{
 				Input:                 "servicename",
 				ExpectedErrorContains: "the expected format is namespace/name",
-			},
-		},
-		"--publish-status-address": {
-			{
-				Input: "192.0.2.42,some-dns-name,192.0.2.43",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressAddresses
-				},
-				ExpectedValue:              []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
-				ExpectedUsageAdditionalMsg: "Flag --publish-status-address has been deprecated, Use --ingress-address instead\n",
-			},
-		},
-		"--ingress-address": {
-			{
-				Input: "192.0.2.42,some-dns-name,192.0.2.43",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressAddresses
-				},
-				ExpectedValue: []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
-			},
-		},
-		"--publish-service-udp": {
-			{
-				Input: "namespace/servicename",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressServiceUDP
-				},
-				ExpectedValue:              mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
-				ExpectedUsageAdditionalMsg: "Flag --publish-service-udp has been deprecated, Use --ingress-service-udp instead\n",
-			},
-			{
-				Input:                 "servicename",
-				ExpectedErrorContains: "the expected format is namespace/name",
-			},
-		},
-		"--ingress-service-udp": {
-			{
-				Input: "namespace/servicename",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressServiceUDP
-				},
-				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
-			},
-			{
-				Input:                 "servicename",
-				ExpectedErrorContains: "the expected format is namespace/name",
-			},
-		},
-		"--publish-status-address-udp": {
-			{
-				Input: "192.0.2.42,some-dns-name,192.0.2.43",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressAddressesUDP
-				},
-				ExpectedValue:              []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
-				ExpectedUsageAdditionalMsg: "Flag --publish-status-address-udp has been deprecated, Use --ingress-address-udp instead\n",
-			},
-		},
-		"--ingress-address-udp": {
-			{
-				Input: "192.0.2.42,some-dns-name,192.0.2.43",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.IngressAddressesUDP
-				},
-				ExpectedValue: []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
 			},
 		},
 		"--kong-admin-svc": {
@@ -192,6 +113,7 @@ func TestConfigValidatedVars(t *testing.T) {
 					require.ErrorContains(t, err, tc.ExpectedErrorContains)
 					return
 				}
+
 				require.NoError(t, err)
 				require.Equal(t, tc.ExpectedValue, tc.ExtractValueFn(c))
 				require.Equal(t, tc.ExpectedUsageAdditionalMsg, usageAdditionalMsg.String())

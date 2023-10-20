@@ -40,7 +40,7 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 	loggerHook := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithGatewayFeatureEnabled,
-		WithIngressService("ns"),
+		WithPublishService("ns"),
 	)
 
 	controllers := []string{

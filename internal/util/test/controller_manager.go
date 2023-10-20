@@ -78,8 +78,8 @@ func DeployControllerManagerForCluster(
 		fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
-		fmt.Sprintf("--ingress-service=%s/ingress-controller-kong-proxy", consts.ControllerNamespace),
-		fmt.Sprintf("--ingress-service-udp=%s/ingress-controller-kong-udp-proxy", consts.ControllerNamespace),
+		fmt.Sprintf("--publish-service=%s/ingress-controller-kong-proxy", consts.ControllerNamespace),
+		fmt.Sprintf("--publish-service-udp=%s/ingress-controller-kong-udp-proxy", consts.ControllerNamespace),
 		"--log-format=text",
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)

@@ -56,8 +56,8 @@ type GatewayReconciler struct { //nolint:revive
 
 	ReferenceIndexers ctrlref.CacheIndexers
 
-	IngressServiceRef    k8stypes.NamespacedName
-	IngressServiceUDPRef mo.Option[k8stypes.NamespacedName]
+	PublishServiceRef    k8stypes.NamespacedName
+	PublishServiceUDPRef mo.Option[k8stypes.NamespacedName]
 
 	// If enableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
@@ -67,9 +67,9 @@ type GatewayReconciler struct { //nolint:revive
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Verify that the Ingress Service was configured properly.
-	if r.IngressServiceRef.Name == "" || r.IngressServiceRef.Namespace == "" {
-		return fmt.Errorf("ingress service must be configured")
+	// verify that the PublishService was configured properly
+	if r.PublishServiceRef.Name == "" || r.PublishServiceRef.Namespace == "" {
+		return fmt.Errorf("publish service must be configured")
 	}
 
 	// We're verifying whether ReferenceGrant CRD is installed at setup of the GatewayReconciler
@@ -298,13 +298,13 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj clie
 }
 
 // isGatewayService is a watch predicate that filters out events for objects that aren't
-// the gateway service referenced by --ingress-service or --ingress-service-udp.
+// the gateway service referenced by --publish-service or --publish-service-udp.
 func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
-	isIngressService := fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.IngressServiceRef.String()
-	isIngressServiceUDP := r.IngressServiceUDPRef.IsPresent() &&
-		fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.IngressServiceUDPRef.MustGet().String()
+	isPublishService := fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceRef.String()
+	isUDPPublishService := r.PublishServiceUDPRef.IsPresent() &&
+		fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceUDPRef.MustGet().String()
 
-	return isIngressService || isIngressServiceUDP
+	return isPublishService || isUDPPublishService
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
@@ -441,10 +441,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// enforce the service reference as the annotation value for the key UnmanagedGateway.
 	debug(log, gateway, "initializing admin service annotation if unset")
 	if len(annotations.ExtractGatewayPublishService(gateway.Annotations)) == 0 {
-		services := []string{r.IngressServiceRef.String()}
+		services := []string{r.PublishServiceRef.String()}
 
 		// UDP service is optional.
-		if udpRef, ok := r.IngressServiceUDPRef.Get(); ok {
+		if udpRef, ok := r.PublishServiceUDPRef.Get(); ok {
 			services = append(services, udpRef.String())
 		}
 
@@ -459,7 +459,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	serviceRefs := annotations.ExtractGatewayPublishService(gateway.Annotations)
 	// Validation check of the Gateway to ensure that the ingress service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
-	debug(log, gateway, "gathering the gateway ingress service") // This will also be done by the validating webhook, this is a fallback.
+	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
 	var gatewayServices []*corev1.Service
 	for _, ref := range serviceRefs {
 		r.Log.V(util.DebugLevel).Info("determining service for ref", "ref", ref)
@@ -503,7 +503,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// from the Kubernetes Service which will also give us all the L4 information about the proxy. From there
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's metadata.
-	debug(log, gateway, "determining listener configurations from ingress services")
+	debug(log, gateway, "determining listener configurations from publish services")
 	var combinedAddresses []gatewayapi.GatewayAddress
 	var combinedListeners []gatewayapi.Listener
 	for _, svc := range gatewayServices {
@@ -596,22 +596,22 @@ func init() {
 	}
 }
 
-// determineServiceForGateway provides the "ingress service" (aka the proxy Service) object which
+// determineServiceForGateway provides the "publish service" (aka the proxy Service) object which
 // will be used to populate unmanaged gateways.
 func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref string) (*corev1.Service, error) {
-	// Currently the gateway controller ONLY supports service references that correspond with the --ingress-service
+	// currently the gateway controller ONLY supports service references that correspond with the --publish-service
 	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
 	// be loosened in later iterations if there is need.
 
 	var name k8stypes.NamespacedName
 	switch {
-	case ref == r.IngressServiceRef.String():
-		name = r.IngressServiceRef
-	case r.IngressServiceUDPRef.IsPresent() && ref == r.IngressServiceUDPRef.MustGet().String():
-		name = r.IngressServiceUDPRef.MustGet()
+	case ref == r.PublishServiceRef.String():
+		name = r.PublishServiceRef
+	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
+		name = r.PublishServiceUDPRef.MustGet()
 	default:
 		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s or %s",
-			ref, r.IngressServiceRef.String(), r.IngressServiceUDPRef.OrEmpty())
+			ref, r.PublishServiceRef.String(), r.PublishServiceUDPRef.OrEmpty())
 	}
 
 	// retrieve the service for the kong gateway

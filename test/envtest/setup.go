@@ -174,7 +174,7 @@ func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) 
 	publishSvc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      IngressServiceName,
+			Name:      PublishServiceName,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: builder.NewServicePort().

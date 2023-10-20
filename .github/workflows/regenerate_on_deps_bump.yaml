@@ -1,0 +1,29 @@
+# This workflow will regenerate the manifests, commit&push them on a PR labeled with `renovate/auto-regenerate`.
+# It's to make sure that Renovate-created PRs that update kustomize dependencies also update the manifests.
+name: Regenerate on deps bump
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+jobs:
+  regenerate:
+    if: contains(github.event.*.labels.*.name, 'renovate/auto-regenerate')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: regenerate
+        run: make manifests
+
+      - uses: EndBug/add-and-commit@v9
+        with:
+          default_author: github_actions

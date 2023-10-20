@@ -37,36 +37,6 @@ func init() {
 	}
 }
 
-var gatewayTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1.GroupVersion.String(),
-	Kind:       "Gateway",
-}
-
-var gatewayClassTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1.GroupVersion.String(),
-	Kind:       "GatewayClass",
-}
-
-var httpRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1.GroupVersion.String(),
-	Kind:       "HTTPRoute",
-}
-
-var tcpRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
-	Kind:       "TCPRoute",
-}
-
-var tlsRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
-	Kind:       "TLSRoute",
-}
-
-var udpRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
-	Kind:       "UDPRoute",
-}
-
 func TestFilterHostnames(t *testing.T) {
 	commonGateway := &gatewayapi.Gateway{
 		Spec: gatewayapi.GatewaySpec{
@@ -288,7 +258,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	goodKind := gatewayapi.Kind("Gateway")
 	basicHTTPRoute := func() *gatewayapi.HTTPRoute {
 		return &gatewayapi.HTTPRoute{
-			TypeMeta: httpRouteTypeMeta,
+			TypeMeta: gatewayapi.V1GatewayTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "basic-httproute",
 				Namespace: "test-namespace",
@@ -316,7 +286,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("HTTPRoute", func(t *testing.T) {
 		gatewayWithHTTP80Ready := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayTypeMeta,
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "test-namespace",
@@ -590,7 +560,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("TCPRoute", func(t *testing.T) {
 		basicTCPRoute := func() *gatewayapi.TCPRoute {
 			return &gatewayapi.TCPRoute{
-				TypeMeta: tcpRouteTypeMeta,
+				TypeMeta: gatewayapi.TCPRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-tcproute",
 					Namespace: "test-namespace",
@@ -610,7 +580,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		gatewayWithTCP80Ready := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayTypeMeta,
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "test-namespace",
@@ -791,7 +761,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("UDPRoute", func(t *testing.T) {
 		basicUDPRoute := func() *gatewayapi.UDPRoute {
 			return &gatewayapi.UDPRoute{
-				TypeMeta: udpRouteTypeMeta,
+				TypeMeta: gatewayapi.UDPRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-udproute",
 					Namespace: "test-namespace",
@@ -811,7 +781,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		gatewayWithUDP53Ready := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayTypeMeta,
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "test-namespace",
@@ -972,7 +942,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("TLSRoute", func(t *testing.T) {
 		basicTLSRoute := func() *gatewayapi.TLSRoute {
 			return &gatewayapi.TLSRoute{
-				TypeMeta: tlsRouteTypeMeta,
+				TypeMeta: gatewayapi.TLSRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-tlsroute",
 					Namespace: "test-namespace",
@@ -992,7 +962,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		gatewayWithTLS443PassthroughReady := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayTypeMeta,
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "test-namespace",
@@ -1216,7 +1186,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 func TestEnsureParentsProgrammedCondition(t *testing.T) {
 	createGateway := func(nn k8stypes.NamespacedName) *gatewayapi.Gateway {
 		return &gatewayapi.Gateway{
-			TypeMeta: gatewayTypeMeta,
+			TypeMeta: gatewayapi.V1GatewayTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nn.Name,
 				Namespace: nn.Namespace,
@@ -1276,7 +1246,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when parent status is already set in route",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
+						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       "basic-httproute",
 							Namespace:  gatewayNN1.Namespace,
@@ -1379,7 +1349,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
+						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       "basic-httproute",
 							Namespace:  gatewayNN1.Namespace,
@@ -1474,7 +1444,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status and Parent Section is specified",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
+						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       "basic-httproute",
 							Namespace:  gatewayNN1.Namespace,
@@ -1558,7 +1528,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when route's parent status is not set and Parent Section is specified with 2 gateways both with section name specified",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
+						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       "basic-httproute",
 							Namespace:  gatewayNN1.Namespace,
@@ -1656,7 +1626,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly added to route's parents status when no status for that parent is present yet",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
+						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       "basic-httproute",
 							Namespace:  gatewayNN1.Namespace,
@@ -1718,7 +1688,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "no update is being done when an expected Programmed condition is already in place",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
+						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       "basic-httproute",
 							Namespace:  gatewayNN1.Namespace,

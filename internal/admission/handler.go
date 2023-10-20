@@ -140,7 +140,7 @@ func (h RequestHandler) handleKongConsumer(
 		return nil, err
 	}
 
-	switch request.Operation { //nolint:exhaustive
+	switch request.Operation {
 	case admissionv1.Create:
 		ok, msg, err := h.Validator.ValidateConsumer(ctx, consumer)
 		if err != nil {
@@ -241,7 +241,7 @@ func (h RequestHandler) handleSecret(
 		return responseBuilder.Allowed(true).Build(), nil
 	}
 
-	switch request.Operation { //nolint:exhaustive
+	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
 		ok, message, err := h.Validator.ValidateCredential(ctx, secret)
 		if err != nil {

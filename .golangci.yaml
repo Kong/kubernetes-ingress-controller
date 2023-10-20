@@ -47,6 +47,8 @@ linters:
   - unused
   - wastedassign
 linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true
   gci:
     sections:
     - standard

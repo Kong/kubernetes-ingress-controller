@@ -262,7 +262,7 @@ func gatewayLinkStatusMatches(
 	namespace, name string,
 ) bool {
 	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType { //nolint:exhaustive
+	switch protocolType {
 	case gatewayapi.HTTPProtocolType:
 		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -346,7 +346,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	ctx := context.Background()
 
 	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType { //nolint:exhaustive
+	switch protocolType {
 	case gatewayapi.HTTPProtocolType:
 		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})

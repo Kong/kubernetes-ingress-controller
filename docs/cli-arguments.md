@@ -33,11 +33,7 @@
 | `--gateway-api-controller-name` | `string` | The controller name to match on Gateway API resources. | `konghq.com/kic-gateway-controller` |
 | `--gateway-discovery-dns-strategy` | `dns-strategy` | DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod. | `"ip"` |
 | `--health-probe-bind-address` | `string` | The address the probe endpoint binds to. | `:10254` |
-| `--ingress-address` | `stringSlice` | User-provided address(es) in comma-separated string format (or specify this flag multiple times), for use in lieu of "publish-service" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
-| `--ingress-address-udp` | `stringSlice` | User-provided address(es) in comma-separated string format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information. | `[]` |
 | `--ingress-class` | `string` | Name of the ingress class to route through this controller. | `kong` |
-| `--ingress-service` | `namespacedName` | Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints. |  |
-| `--ingress-service-udp` | `namespacedName` | Service fronting UDP routing resources in "namespace/name" format. The controller will update UDP route status information with this Service's endpoints. If omitted, the same Service will be used for both TCP and UDP routes. |  |
 | `--kong-admin-ca-cert` | `string` | PEM-encoded CA certificate to verify Kong's Admin SSL certificate. |  |
 | `--kong-admin-ca-cert-file` | `string` | Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate. |  |
 | `--kong-admin-concurrency` | `int` | Max number of concurrent requests sent to Kong's Admin API. | `10` |
@@ -75,6 +71,10 @@
 | `--profiling` | `bool` | Enable profiling via web interface host:10256/debug/pprof/. | `false` |
 | `--proxy-sync-seconds` | `float32` | Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. | `3` |
 | `--proxy-timeout-seconds` | `float32` | Sets the timeout (in seconds) for all requests to Kong's Admin API. | `30` |
+| `--publish-service` | `namespacedName` | Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints. |  |
+| `--publish-service-udp` | `namespacedName` | Service fronting UDP routing resources in "namespace/name" format. The controller will update UDP route status information with this Service's endpoints. If omitted, the same Service will be used for both TCP and UDP routes. |  |
+| `--publish-status-address` | `stringSlice` | User-provided addresses in comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
+| `--publish-status-address-udp` | `stringSlice` | User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information. | `[]` |
 | `--skip-ca-certificates` | `bool` | Disable syncing CA certificate syncing (for use with multi-workspace environments). | `false` |
 | `--sync-period` | `duration` | Relist and confirm cloud resources this often. | `48h0m0s` |
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller. | `0s` |

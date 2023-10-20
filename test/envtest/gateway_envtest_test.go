@@ -36,7 +36,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	gw := deployGateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
-		WithIngressService(gw.Namespace),
+		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
 	)
 

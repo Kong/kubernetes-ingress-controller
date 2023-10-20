@@ -31,7 +31,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	gw := deployGateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
-		WithIngressService(gw.Namespace),
+		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
 		func(cfg *manager.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to
@@ -125,7 +125,7 @@ func Test_WatchNamespaces(t *testing.T) {
 	hidden := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
-		WithIngressService(gw.Namespace),
+		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
 		func(cfg *manager.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to

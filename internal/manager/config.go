@@ -85,11 +85,11 @@ type Config struct {
 	GatewayAPIControllerName string
 	Impersonate              string
 
-	// Ingress status.
-	IngressServiceUDP   OptionalNamespacedName
-	IngressService      OptionalNamespacedName
-	IngressAddresses    []string
-	IngressAddressesUDP []string
+	// Ingress status
+	PublishServiceUDP       OptionalNamespacedName
+	PublishService          OptionalNamespacedName
+	PublishStatusAddress    []string
+	PublishStatusAddressUDP []string
 
 	UpdateStatus                bool
 	UpdateStatusQueueBufferSize int
@@ -202,16 +202,16 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.Var(flags.NewValidatedValue(&c.IngressService, namespacedNameFromFlagValue, nnTypeNameOverride), "ingress-service",
+	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringSliceVar(&c.IngressAddresses, "ingress-address", []string{},
-		`User-provided address(es) in comma-separated string format (or specify this flag multiple times), for use in lieu of "publish-service" `+
+	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
+		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
-	flagSet.Var(flags.NewValidatedValue(&c.IngressServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "ingress-service-udp", `Service fronting UDP routing resources in `+
+	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", `Service fronting UDP routing resources in `+
 		`"namespace/name" format. The controller will update UDP route status information with this Service's `+
 		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
-	flagSet.StringSliceVar(&c.IngressAddressesUDP, "ingress-address-udp", []string{},
-		`User-provided address(es) in comma-separated string format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},
+		`User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
 
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
@@ -269,17 +269,29 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.DurationVar(&c.Konnect.RefreshNodePeriod, "konnect-refresh-node-period", konnect.DefaultRefreshNodePeriod, "Period of uploading status of KIC and controlled kong gateway instances")
 
 	// Deprecated flags
-	flagSet.Var(flags.NewValidatedValue(&c.IngressService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service", "Use --ingress-service instead")
-	_ = flagSet.MarkDeprecated("publish-service", "Use --ingress-service instead")
-	flagSet.Var(flags.NewValidatedValue(&c.IngressServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", "Use --ingress-service-udp instead")
-	_ = flagSet.MarkDeprecated("publish-service-udp", "Use --ingress-service-udp instead")
-	flagSet.StringSliceVar(&c.IngressAddresses, "publish-status-address", []string{}, "")
-	_ = flagSet.MarkDeprecated("publish-status-address", "Use --ingress-address instead")
-	flagSet.StringSliceVar(&c.IngressAddressesUDP, "publish-status-address-udp", []string{}, "")
-	_ = flagSet.MarkDeprecated("publish-status-address-udp", "Use --ingress-address-udp instead")
-
 	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
 	_ = flagSet.MarkDeprecated("konnect-runtime-group-id", "Use --konnect-control-plane-id instead.")
+
+	_ = flagSet.Float32("sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
+	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
+
+	_ = flagSet.Int("stderrthreshold", 0, "Has no effect and will be removed in future releases (see github issue #1297)")
+	_ = flagSet.MarkDeprecated("stderrthreshold", "Has no effect and will be removed in future releases (see github issue #1297)")
+
+	_ = flagSet.Bool("update-status-on-shutdown", false, "No longer has any effect and will be removed in a later release (see github issue #1304)")
+	_ = flagSet.MarkDeprecated("update-status-on-shutdown", "No longer has any effect and will be removed in a later release (see github issue #1304)")
+
+	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
+	_ = flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.")
+
+	_ = flagSet.Bool("leader-elect", false, "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
+	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
+
+	_ = flagSet.Bool("enable-controller-ingress-extensionsv1beta1", true, "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
+	_ = flagSet.MarkDeprecated("enable-controller-ingress-extensionsv1beta1", "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
+
+	_ = flagSet.Bool("enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
+	_ = flagSet.MarkDeprecated("enable-controller-ingress-networkingv1beta1", "Enable the networking.k8s.io/v1beta1 Ingress controller.")
 
 	c.flagSet = flagSet
 	return flagSet

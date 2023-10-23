@@ -6,7 +6,7 @@
 
 {{ if $type.IsAlias }}_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType  }}`{{ end }}
 
-{{ $type.Doc }}
+{{ $type.Doc | replace "\n" "<br /><br />" }}
 
 {{ if $type.GVK -}}
 <!-- {{ snakecase $type.Name }} description placeholder -->

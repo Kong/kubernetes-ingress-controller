@@ -29,6 +29,7 @@ import (
 type ConfigurationV1beta1Interface interface {
 	RESTClient() rest.Interface
 	KongConsumerGroupsGetter
+	KongUpstreamPoliciesGetter
 	TCPIngressesGetter
 	UDPIngressesGetter
 }
@@ -40,6 +41,10 @@ type ConfigurationV1beta1Client struct {
 
 func (c *ConfigurationV1beta1Client) KongConsumerGroups(namespace string) KongConsumerGroupInterface {
 	return newKongConsumerGroups(c, namespace)
+}
+
+func (c *ConfigurationV1beta1Client) KongUpstreamPolicies(namespace string) KongUpstreamPolicyInterface {
+	return newKongUpstreamPolicies(c, namespace)
 }
 
 func (c *ConfigurationV1beta1Client) TCPIngresses(namespace string) TCPIngressInterface {

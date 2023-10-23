@@ -150,4 +150,4 @@ issues:
   - linters:
       - forbidigo
     text: "use of `(gatewayv1alpha2|gatewayv1beta1)"
-    path: internal/gatewayapi/aliases.go
+    path: (internal/gatewayapi/aliases.go|pkg/apis/.*/.*\.go)

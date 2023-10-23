@@ -12,4 +12,5 @@ ${CRD_REF_DOCS_BIN} \
     --config="${SCRIPT_ROOT}/scripts/apidocs-gen/config.yaml" \
     --templates-dir="${SCRIPT_ROOT}/scripts/apidocs-gen/template" \
     --renderer=markdown \
-    --output-path="${SCRIPT_ROOT}/docs/api-reference.md"
+    --output-path="${SCRIPT_ROOT}/docs/api-reference.md" \
+    --max-depth=10

@@ -1,6 +1,7 @@
 package translators
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -17,6 +18,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		path                      string
 		expectedPlugins           []kong.Plugin
 		expectedPluginsAnnotation string
+		expectedErr               error
 	}{
 		{
 			name:            "no filters",
@@ -24,7 +26,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			expectedPlugins: []kong.Plugin{},
 		},
 		{
-			name: "request header modifier",
+			name: "request header modifier filter",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
@@ -74,7 +76,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "request redirect modifier",
+			name: "request redirect modifier filter",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
@@ -105,7 +107,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "response header modifier",
+			name: "response header modifier filter",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterResponseHeaderModifier,
@@ -155,12 +157,12 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "extension-refs",
+			name: "valid extensionrefs filters",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
 					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com/v1"),
+						Group: gatewayapi.Group("configuration.konghq.com"),
 						Kind:  gatewayapi.Kind("KongPlugin"),
 						Name:  "plugin1",
 					},
@@ -168,7 +170,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
 					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com/v1"),
+						Group: gatewayapi.Group("configuration.konghq.com"),
 						Kind:  gatewayapi.Kind("KongPlugin"),
 						Name:  "plugin2",
 					},
@@ -177,12 +179,43 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			expectedPluginsAnnotation: "plugin1,plugin2",
 			expectedPlugins:           []kong.Plugin{},
 		},
+		{
+			name: "invalid extensionrefs filter group",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gatewayapi.LocalObjectReference{
+						Group: gatewayapi.Group("wrong.group"),
+						Kind:  gatewayapi.Kind("KongPlugin"),
+						Name:  "plugin1",
+					},
+				},
+			},
+			expectedPluginsAnnotation: "",
+			expectedErr:               errors.New("plugin wrong.group/KongPlugin unsupported"),
+		},
+		{
+			name: "invalid extensionrefs filter kind",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gatewayapi.LocalObjectReference{
+						Group: gatewayapi.Group("configuration.konghq.com"),
+						Kind:  gatewayapi.Kind("WrongKind"),
+						Name:  "plugin1",
+					},
+				},
+			},
+			expectedPluginsAnnotation: "",
+			expectedErr:               errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			plugins, pluginsAnnotation := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
+			plugins, pluginsAnnotation, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
+			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, plugins)
 			require.Equal(t, tc.expectedPluginsAnnotation, pluginsAnnotation)
 		})

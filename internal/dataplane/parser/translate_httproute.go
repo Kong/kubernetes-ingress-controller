@@ -266,11 +266,16 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
 	})
 
-	routes := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter)
+	routes, err := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter)
+	if err != nil {
+		return nil, err
+	}
 
 	// if the redirect filter has not been set, we still need to set the route plugins
 	if !hasRedirectFilter {
-		translators.ConvertFiltersToPlugins(&r, filters, "", tags)
+		if err := translators.SetRoutePlugins(&r, filters, "", tags); err != nil {
+			return nil, err
+		}
 		routes = []kongstate.Route{r}
 	}
 
@@ -284,7 +289,7 @@ func getRoutesFromMatches(
 	filters []gatewayapi.HTTPRouteFilter,
 	tags []*string,
 	hasRedirectFilter bool,
-) []kongstate.Route {
+) ([]kongstate.Route, error) {
 	seenMethods := make(map[string]struct{})
 	routes := make([]kongstate.Route, 0)
 
@@ -319,7 +324,9 @@ func getRoutesFromMatches(
 			}
 
 			// generate kong plugins from rule.filters
-			translators.ConvertFiltersToPlugins(matchRoute, filters, path, tags)
+			if err := translators.SetRoutePlugins(matchRoute, filters, path, tags); err != nil {
+				return nil, err
+			}
 
 			routes = append(routes, *route)
 		} else {
@@ -342,7 +349,7 @@ func getRoutesFromMatches(
 			}
 		}
 	}
-	return routes
+	return routes, nil
 }
 
 func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []string {
@@ -426,9 +433,14 @@ func (p *Parser) ingressRulesFromSplitHTTPRouteMatchWithPriority(
 		return err
 	}
 
+	additionalRoutes, err := translators.KongExpressionRouteFromHTTPRouteMatchWithPriority(httpRouteMatchWithPriority)
+	if err != nil {
+		return err
+	}
+
 	kongService.Routes = append(
 		kongService.Routes,
-		translators.KongExpressionRouteFromHTTPRouteMatchWithPriority(httpRouteMatchWithPriority),
+		*additionalRoutes,
 	)
 	// cache the service to avoid duplicates in further loop iterations
 	rules.ServiceNameToServices[serviceName] = kongService

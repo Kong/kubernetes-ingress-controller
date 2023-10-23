@@ -66,7 +66,9 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	ConvertFiltersToPlugins(&r, translation.Filters, "", tags)
+	if err := SetRoutePlugins(&r, translation.Filters, "", tags); err != nil {
+		return nil, err
+	}
 	return []kongstate.Route{r}, nil
 }
 
@@ -103,7 +105,9 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 		if match.Path != nil && match.Path.Value != nil {
 			path = *match.Path.Value
 		}
-		ConvertFiltersToPlugins(&matchRoute, translation.Filters, path, tags)
+		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags); err != nil {
+			return nil, err
+		}
 		routes = append(routes, matchRoute)
 	}
 	return routes, nil
@@ -537,7 +541,7 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 // based kong route with assigned priority.
 func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
-) kongstate.Route {
+) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
 	httproute := httpRouteMatchWithPriority.Match.Source
 	tags := util.GenerateTagsForObject(httproute)
@@ -556,7 +560,7 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 		match.MatchIndex,
 	)
 
-	r := kongstate.Route{
+	r := &kongstate.Route{
 		Route: kong.Route{
 			Name:         kong.String(routeName),
 			PreserveHost: kong.Bool(true),
@@ -590,10 +594,12 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 			path = *match.Match.Path.Value
 		}
 
-		ConvertFiltersToPlugins(&r, rule.Filters, path, tags)
+		if err := SetRoutePlugins(r, rule.Filters, path, tags); err != nil {
+			return nil, err
+		}
 	}
 
-	return r
+	return r, nil
 }
 
 // KongServiceNameFromSplitHTTPRouteMatch generates service name from split HTTPRoute match.

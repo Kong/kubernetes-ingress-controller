@@ -41,6 +41,33 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
+// KongImageTag is the combined Kong image and tag if both are set, or empty string if not.
+func KongImageTag() string {
+	if KongImage() != "" && KongTag() != "" {
+		return fmt.Sprintf("%s:%s", KongImage(), KongTag())
+	}
+	return ""
+}
+
+// ControllerImage is the Kong image to use in lieu of the default.
+func ControllerImage() string {
+	return os.Getenv("TEST_CONTROLLER_IMAGE")
+}
+
+// ControllerTag is the Kong image tag to use in tests.
+func ControllerTag() string {
+	return os.Getenv("TEST_CONTROLLER_TAG")
+}
+
+// ControllerImageTag is the combined Controller image and tag if both are set, or empty string if not.
+func ControllerImageTag() string {
+	if ControllerImage() != "" && ControllerTag() != "" {
+		return fmt.Sprintf("%s:%s", ControllerImage(), ControllerTag())
+	}
+	return ""
+}
+
+// KongEffectiveVersion is the effective semver of kong gateway.
 // KongEffectiveVersion is the effective semver of kong gateway.
 // When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
 func KongEffectiveVersion() string {
@@ -94,6 +121,33 @@ func KongEnterpriseEnabled() bool {
 // the testing framework will be used.
 func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
+}
+
+// ClusterProvider indicates the Kubernetes cluster provider.
+func ClusterProvider() string {
+	return os.Getenv("KONG_CLUSTER_PROVIDER")
+}
+
+// ClusterLoadImages loads images into test clusters when set.
+func ClusterLoadImages() string {
+	return os.Getenv("TEST_KONG_LOAD_IMAGES")
+}
+
+// See: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+
+// GithubServerURL returns a Github server URL from a Github Actions environment.
+func GithubServerURL() string {
+	return os.Getenv("GITHUB_SERVER_URL")
+}
+
+// GithubRepo returns a Github repository from a Github Actions environment.
+func GithubRepo() string {
+	return os.Getenv("GITHUB_REPOSITORY")
+}
+
+// GithubRunID returns a Github run ID from a Github Actions environment.
+func GithubRunID() string {
+	return os.Getenv("GITHUB_RUN_ID")
 }
 
 // ControllerFeatureGates contains the feature gates that should be enabled

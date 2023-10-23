@@ -5,6 +5,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -16,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/phayes/freeport"
@@ -26,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -147,27 +152,62 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
 			return manifestsReader
 		}
+
 	}
 
 	return manifestsReader
 }
 
-// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with `kongImageOverride`
-// if it's set.
+// extractVersionFromImage extracts semver of image from image tag. If tag is not given,
+// or is not in a semver format, it returns an error.
+// for example: kong/kubernetes-ingress-controller:2.9.3 => semver.Version{Major:2,Minor:9,Patch:3}.
+//
+//lint:ignore U1000 retained for future use
+func extractVersionFromImage(imageName string) (semver.Version, error) {
+	split := strings.Split(imageName, ":")
+	if len(split) < 2 {
+		return semver.Version{}, fmt.Errorf("could not parse override image '%s', expected <repo>:<tag> format", imageName)
+	}
+	// parse version from image tag, like kong/kubernetes-ingress-controller:2.9.3 => 2.9.3
+	tag := split[len(split)-1]
+	v, err := semver.ParseTolerant(tag)
+	if err != nil {
+		return semver.Version{}, fmt.Errorf("failed to parse version from image tag %s: %w", tag, err)
+	}
+	return v, nil
+}
+
+// skipTestIfControllerVersionBelow skips the test case if version of override KIC image is
+// below the minVersion.
+// if the override KIC image is not set, it assumes that the latest image is used, so it never skips
+// the test if override image is not given.
+//
+//lint:ignore U1000 retained for future use
+func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
+	if testenv.ControllerImageTag() == "" {
+		return
+	}
+	v, err := extractVersionFromImage(testenv.ControllerImageTag())
+	// assume using latest version if failed to extract version from image tag.
+	if err != nil {
+		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
+		return
+	}
+	if v.LE(minVersion) {
+		t.Skipf("skipped the test because version of KIC %s is below the minimum version %s",
+			v.String(), minVersion.String())
+	}
+}
+
+// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with env overrides.
 func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if kongImageOverride != "" {
-		t.Logf("replace kong image with %s", kongImageOverride)
-		split := strings.Split(kongImageOverride, ":")
-		if len(split) < 2 {
-			return nil, fmt.Errorf("invalid image name '%s', expected <repo>:<tag> format", kongImageOverride)
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err := patchKongImage(manifestsReader, repo, tag)
+	if testenv.KongImageTag() != "" {
+		t.Logf("replace kong image with %s", testenv.KongImageTag())
+		manifestsReader, err := patchKongImage(manifestsReader, testenv.KongImage(), testenv.KongTag())
 		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v'", kongImageOverride)
+			return nil, fmt.Errorf("failed patching override image '%v'", testenv.KongImageTag())
 		}
 		return manifestsReader, nil
 	}
@@ -176,36 +216,37 @@ func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reade
 	return manifestsReader, nil
 }
 
-// splitImageRepoTag splits repo and tag from given image name, like kong:3.4.0 => kong, 3.4.0.
-func splitImageRepoTag(image string) (string, string, error) {
-	split := strings.Split(image, ":")
-	if len(split) < 2 {
-		return "", "", fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", image)
-	}
-	repo := strings.Join(split[0:len(split)-1], ":")
-	tag := split[len(split)-1]
-	return repo, tag, nil
-}
-
-// patchControllerImageFromEnv will optionally replace a default controller image in manifests with `controllerImageOverride`
+// patchControllerImageFromEnv will optionally replace a default controller image in manifests with env override
 // if it's set.
 func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if controllerImageOverride != "" {
-		repo, tag, err := splitImageRepoTag(controllerImageOverride)
+	if testenv.ControllerImageTag() != "" {
+		manifestReader, err := patchControllerImage(manifestReader, testenv.ControllerImage(), testenv.ControllerTag())
 		if err != nil {
-			return nil, err
-		}
-		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
-		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v': %w", controllerImageOverride, err)
+			return nil, fmt.Errorf("failed patching override image '%v': %w", testenv.ControllerImageTag(), err)
 		}
 		return manifestReader, nil
 	}
 
 	t.Log("controller image override undefined, using defaults")
 	return manifestReader, nil
+}
+
+// getKongVersionFromOverrideTag parses Kong version from env effective version or override tag. The effective version
+// takes precedence.
+//
+//lint:ignore U1000 retained for future use
+func getKongVersionFromOverrideTag() (kong.Version, error) {
+	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
+		return kong.ParseSemanticVersion(kongEffectiveVersion)
+	}
+
+	if testenv.KongImageTag() == "" {
+		return kong.Version{}, errors.New("No Kong tag provided")
+	}
+
+	return kong.ParseSemanticVersion(testenv.KongTag())
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.

@@ -35,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -176,9 +177,9 @@ func generateTestKonnectControlPlaneDescription(t *testing.T) string {
 	t.Helper()
 
 	desc := fmt.Sprintf("control plane for test %s", t.Name())
-	if githubServerURL != "" && githubRepo != "" && githubRunID != "" {
+	if testenv.GithubServerURL() != "" && testenv.GithubRepo() != "" && testenv.GithubRunID() != "" {
 		githubRunURL := fmt.Sprintf("%s/%s/actions/runs/%s",
-			githubServerURL, githubRepo, githubRunID)
+			testenv.GithubServerURL(), testenv.GithubRepo(), testenv.GithubRunID())
 		desc += ", github workflow run " + githubRunURL
 	}
 

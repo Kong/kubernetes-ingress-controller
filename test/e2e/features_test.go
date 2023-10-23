@@ -96,9 +96,11 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if shouldLoadImages() {
-		if b, err := loadimage.NewBuilder().WithImage(controllerImageOverride); err == nil {
+	if testenv.ClusterLoadImages() == "true" {
+		if b, err := loadimage.NewBuilder().WithImage(testenv.ControllerImageTag()); err == nil {
 			addons = append(addons, b.Build())
+		} else {
+			require.NoError(t, err)
 		}
 	}
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)

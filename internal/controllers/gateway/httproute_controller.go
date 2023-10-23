@@ -410,7 +410,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// if there is no matched hosts in listeners for the httproute, the httproute should not be accepted
 	// and have an "Accepted" condition with status false.
-	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRoute
 	filteredHTTPRoute, err := filterHostnames(gateways, httproute.DeepCopy())
 	// perform operations on the kong store only if the route is in accepted status and there is hostname matching
 	if isRouteAccepted(gateways) && err == nil {

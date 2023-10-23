@@ -167,7 +167,7 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayapi.HTTPPathMatch) atc.Match
 			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
 		}
 		// if path ends with /, we should remove the trailing / because it should be ignored:
-		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.PathMatchType
+		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.PathMatchType
 		path = strings.TrimSuffix(path, "/")
 		return atc.Or(
 			atc.NewPredicateHTTPPath(atc.OpEqual, path),

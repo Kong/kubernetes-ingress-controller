@@ -152,6 +152,9 @@ Adding a new version? You'll need three changes:
 - Bump version of gateway API to `1.0.0-rc1` and support `Gateway`, `GatewayClass`
   and `HTTPRoute` in API version `gateway.networking.k8s.io/v1`.
 [#4893](https://github.com/Kong/kubernetes-ingress-controller/pull/4893)
+- Update `Gateway`s, `GatewayClass`es and `HTTPRoute`s in examples to API
+  version `gateway.networking.k8s.io/v1`.
+[#4935](https://github.com/Kong/kubernetes-ingress-controller/pull/4935)
 
 ### Added
 

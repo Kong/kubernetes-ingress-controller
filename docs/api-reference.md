@@ -345,7 +345,7 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 
 
 
-KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. <br /><br /> Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object), and it is applied to Kong Upstream objects created by the controller. <br /><br /> It can be attached to Services and Gateway API *Routes. To attach it to an object, the object must be annotated with `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy object in the same namespace as the object. <br /><br /> If attached to multiple objects (ancestors), the controller will populate the status of the KongUpstreamPolicy with a separate status entry for each of the ancestors. <br /><br /> When attached to a Gateway API *Route, it will affect all of Kong Upstreams created for the Gateway API *Route. If you want to use different Upstream settings for each of the *Route's individual rules, you should create a separate *Route for each of the rules. <br /><br /> When attached to a Service, it will affect all Kong Upstreams created for the Service. <br /><br /> When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy. <br /><br /> When attached to a Service used in a Gateway API *Route that has another KongUpstreamPolicy attached to it, the controller will *ignore* the KongUpstreamPolicy attached to the Service. <br /><br /> Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly. In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
+KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. <br /><br /> Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object), and it is applied to Kong Upstream objects created by the controller. <br /><br /> It can be attached to Services. To attach it to a Service, it has to be annotated with `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy object in the same namespace as the Service. <br /><br /> When attached to a Service, it will affect all Kong Upstreams created for the Service. <br /><br /> When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy. <br /><br /> Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly. In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
 
 <!-- kong_upstream_policy description placeholder -->
 
@@ -584,30 +584,11 @@ KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
 | `hashOn` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. Algorithm must be set to "consistent-hashing" for this field to have effect. |
 | `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
 | `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
+| `host_header` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. |
 
 
 _Appears in:_
 - [KongUpstreamPolicy](#kongupstreampolicy)
-
-### PolicyAncestorStatus
-
-
-
-PolicyAncestorStatus describes the status of a route with respect to an associated Ancestor. <br /><br /> Ancestors refer to objects that are either the Target of a policy or above it in terms of object hierarchy. For example, if a policy targets a Service, the Policy's Ancestors are, in order, the Service, the HTTPRoute, the Gateway, and the GatewayClass. Almost always, in this hierarchy, the Gateway will be the most useful object to place Policy status on, so we recommend that implementations SHOULD use Gateway as the PolicyAncestorStatus object unless the designers have a _very_ good reason otherwise. <br /><br /> In the context of policy attachment, the Ancestor is used to distinguish which resource results in a distinct application of this policy. For example, if a policy targets a Service, it may have a distinct result per attached Gateway. <br /><br /> Policies targeting the same resource may have different effects depending on the ancestors of those resources. For example, different Gateways targeting the same Service may have different capabilities, especially if they have different underlying implementations. <br /><br /> For example, in BackendTLSPolicy, the Policy attaches to a Service that is used as a backend in a HTTPRoute that is itself attached to a Gateway. In this case, the relevant object for status is the Gateway, and that is the ancestor object referred to in this status. <br /><br /> Note that a parent is also an ancestor, so for objects where the parent is the relevant object for status, this struct SHOULD still be used. <br /><br /> This struct is intended to be used in a slice that's effectively a map, with a composite key made up of the AncestorRef and the ControllerName.
-
-
-
-| Field | Description |
-| --- | --- |
-| `ancestorRef` _[ParentReference](#parentreference)_ | AncestorRef corresponds with a ParentRef in the spec that this PolicyAncestorStatus struct describes the status of. |
-| `controllerName` _GatewayController_ | ControllerName is a domain/path string that indicates the name of the controller that wrote this status. This corresponds with the controllerName field on GatewayClass. <br /><br /> Example: "example.net/gateway-controller". <br /><br /> The format of this field is DOMAIN "/" PATH, where DOMAIN and PATH are valid Kubernetes names (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names). <br /><br /> Controllers MUST populate this field when writing status. Controllers should ensure that entries to status populated with their ControllerName are cleaned up when they are no longer necessary. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta) array_ | Conditions describes the status of the Policy with respect to the given Ancestor. |
-
-
-_Appears in:_
-- [PolicyStatus](#policystatus)
-
-
 
 ### TCPIngressSpec
 

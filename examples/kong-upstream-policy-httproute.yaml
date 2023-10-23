@@ -69,6 +69,8 @@ metadata:
   labels:
     app: httpbin-prod
   name: httpbin-prod
+  annotations:
+    konghq.com/upstream-policy: httpbin-httproute
 spec:
   ports:
     - port: 80
@@ -85,7 +87,7 @@ metadata:
     app: httpbin-test
   name: httpbin-test
   annotations:
-    konghq.com/upstream-policy: httpbin-upstream-policy-service
+    konghq.com/upstream-policy: httpbin-httproute
 spec:
   ports:
     - port: 80
@@ -101,7 +103,6 @@ metadata:
   name: httpbin
   annotations:
     konghq.com/strip-path: "true"
-    konghq.com/upstream-policy: httpbin-upstream-policy
 spec:
   parentRefs:
     - name: kong
@@ -128,7 +129,7 @@ spec:
           kind: Service
           port: 80
 ---
-# This policy will be applied to all Upstreams generated from the HTTPRoute above:
+# This policy will be applied to all Upstreams generated for the annotated Services:
 # - httproute.default.httpbin.0
 # - httproute.default.httpbin.1
 apiVersion: configuration.konghq.com/v1beta1
@@ -159,12 +160,3 @@ spec:
       unhealthy:
         timeouts: 10
         interval: 10
----
-# This policy is attached to a Service that's used in an HTTPRoute attached to another policy.
-# This will result in ignoring `httpbin-service` and using `httpbin-httproute` instead.
-apiVersion: configuration.konghq.com/v1beta1
-kind: KongUpstreamPolicy
-metadata:
-  name: httpbin-service
-spec:
-  algorithm: least-connections

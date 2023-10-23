@@ -2,32 +2,6 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-)
-
-// KongUpstreamPolicyCondition is the condition type for KongUpstreamPolicy.
-type KongUpstreamPolicyCondition string
-
-// KongUpstreamPolicyStatus is the status type for KongUpstreamPolicy conditions.
-type KongUpstreamPolicyStatus string
-
-const (
-	// KongUpstreamPolicyConditionAccepted describes the status of a KongUpstreamPolicy with respect to its ancestor.
-	KongUpstreamPolicyConditionAccepted KongUpstreamPolicyCondition = KongUpstreamPolicyCondition(gatewayv1alpha2.PolicyConditionAccepted)
-
-	// KongUpstreamPolicyStatusAccepted means that the policy is successfully attached to the ancestor.
-	KongUpstreamPolicyStatusAccepted KongUpstreamPolicyStatus = KongUpstreamPolicyStatus(gatewayv1alpha2.PolicyReasonAccepted)
-
-	// KongUpstreamPolicyStatusConflicted means that the policy couldn't be attached to the ancestor because of a conflict.
-	// The conflict might be e.g. attaching KongUpstreamPolicy to a Service and a Gateway API *Route that uses the Service.
-	KongUpstreamPolicyStatusConflicted KongUpstreamPolicyStatus = KongUpstreamPolicyStatus(gatewayv1alpha2.PolicyReasonConflicted)
-)
-
-const (
-	// KongUpstreamPolicyAnnotationKey is the key used to attach KongUpstreamPolicy to Services and Gateway API *Routes.
-	KongUpstreamPolicyAnnotationKey = annotations.AnnotationPrefix + "/upstream-policy"
 )
 
 func init() {
@@ -40,24 +14,14 @@ func init() {
 // Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
 // and it is applied to Kong Upstream objects created by the controller.
 //
-// It can be attached to Services and Gateway API *Routes. To attach it to an object, the object must be annotated with
-// `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy object in the same namespace
-// as the object.
-//
-// If attached to multiple objects (ancestors), the controller will populate the status of the KongUpstreamPolicy with
-// a separate status entry for each of the ancestors.
-//
-// When attached to a Gateway API *Route, it will affect all of Kong Upstreams created for
-// the Gateway API *Route. If you want to use different Upstream settings for each of the *Route's individual rules,
-// you should create a separate *Route for each of the rules.
+// It can be attached to Services. To attach it to a Service, it has to be annotated with
+// `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy
+// object in the same namespace as the Service.
 //
 // When attached to a Service, it will affect all Kong Upstreams created for the Service.
 //
 // When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST
 // be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy.
-//
-// When attached to a Service used in a Gateway API *Route that has another KongUpstreamPolicy attached to it,
-// the controller will *ignore* the KongUpstreamPolicy attached to the Service.
 //
 // Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly.
 // In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are
@@ -77,8 +41,8 @@ type KongUpstreamPolicy struct {
 	// Spec contains the configuration of the Kong upstream.
 	Spec KongUpstreamPolicySpec `json:"spec,omitempty"`
 
-	// Status represents the current status of the KongUpstreamPolicy resource.
-	Status PolicyStatus `json:"status,omitempty"`
+	// TODO: Add support for PolicyStatus.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4932
 }
 
 // KongUpstreamPolicyList contains a list of KongUpstreamPolicy.
@@ -113,6 +77,9 @@ type KongUpstreamPolicySpec struct {
 
 	// Healthchecks defines the health check configurations in Kong.
 	Healthchecks *KongUpstreamHealthcheck `json:"healthchecks,omitempty"`
+
+	// HostHeader is the hostname to be used as Host header when proxying requests through Kong.
+	HostHeader *string `json:"host_header,omitempty"`
 }
 
 // KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm.

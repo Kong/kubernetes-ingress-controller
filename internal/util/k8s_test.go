@@ -255,7 +255,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 		lo.ToPtr(K8sKindTagPrefix + "HTTPRoute"),
 		lo.ToPtr(K8sUIDTagPrefix + "buryani"),
 		lo.ToPtr(K8sGroupTagPrefix + "gateway.networking.k8s.io"),
-		lo.ToPtr(K8sVersionTagPrefix + "v1beta1"),
+		lo.ToPtr(K8sVersionTagPrefix + "v1"),
 		lo.ToPtr("temir-jol"),
 		lo.ToPtr("snaryad-soqqısı"),
 	}
@@ -264,7 +264,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 	// Relevant kubernetes issue: https://github.com/kubernetes/kubernetes/issues/80609
 	testObj := &gatewayapi.HTTPRoute{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1beta1",
+			APIVersion: "gateway.networking.k8s.io/v1",
 			Kind:       "HTTPRoute",
 		},
 		ObjectMeta: metav1.ObjectMeta{

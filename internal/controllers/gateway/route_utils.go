@@ -205,9 +205,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 				)
 			} else if !ok {
 				continue
-			} else {
-				allowedByAllowedRoutes = true
 			}
+			allowedByAllowedRoutes = true
 
 			// Check the listeners statuses:
 			// - Check if a listener status exists with a matching type (via SupportedKinds).

@@ -91,7 +91,7 @@ spec:
                     type: string
                 type: object
               hashOnFallback:
-                description: HasOnFallback defines how to calculate hash for consistent-hashing
+                description: HashOnFallback defines how to calculate hash for consistent-hashing
                   load balancing algorithm if the primary hash function fails. Algorithm
                   must be set to "consistent-hashing" for this field to have effect.
                 properties:

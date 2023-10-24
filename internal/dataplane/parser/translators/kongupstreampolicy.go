@@ -34,7 +34,8 @@ func translateHashOn(hashOn *kongv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
-	// Only one of hashOn fields can be set.
+	// CRD validations will ensure only one of hashOn fields can be set, therefore the order doesn't matter.
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4951
 	switch {
 	case hashOn.Header != nil:
 		return lo.ToPtr("header")
@@ -49,11 +50,11 @@ func translateHashOn(hashOn *kongv1beta1.KongUpstreamHash) *string {
 	}
 }
 
-func translateHashOnHeader(hasOn *kongv1beta1.KongUpstreamHash) *string {
-	if hasOn == nil {
+func translateHashOnHeader(hashOn *kongv1beta1.KongUpstreamHash) *string {
+	if hashOn == nil {
 		return nil
 	}
-	return hasOn.Header
+	return hashOn.Header
 }
 
 func translateHashOnCookie(hashOn *kongv1beta1.KongUpstreamHash) *string {

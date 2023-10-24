@@ -70,7 +70,7 @@ type KongUpstreamPolicySpec struct {
 	// Algorithm must be set to "consistent-hashing" for this field to have effect.
 	HashOn *KongUpstreamHash `json:"hashOn,omitempty"`
 
-	// HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash
+	// HashOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash
 	// function fails.
 	// Algorithm must be set to "consistent-hashing" for this field to have effect.
 	HashOnFallback *KongUpstreamHash `json:"hashOnFallback,omitempty"`

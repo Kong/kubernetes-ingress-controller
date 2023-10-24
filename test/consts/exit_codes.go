@@ -29,7 +29,7 @@ const (
 	// problems setting up the testing environment and/or cluster.
 	ExitCodeEnvSetupFailed = 104
 
-	// ExitCodeCentCreateLogger is a POSIX compliant exit code for the test suite to indicate
+	// ExitCodeCantCreateLogger is a POSIX compliant exit code for the test suite to indicate
 	// that a failure occurred when trying to create a logger for the test suite.
 	ExitCodeCantCreateLogger = 105
 )

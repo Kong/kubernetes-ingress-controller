@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	// KongConfugurationApplySucceededEvnetReason defines an event reason to tell the updating of Kong configuration succeeded.
+	// KongConfigurationApplySucceededEventReason defines an event reason to tell the updating of Kong configuration succeeded.
 	KongConfigurationApplySucceededEventReason = "KongConfigurationSucceeded"
 	// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation resource failure events.
 	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"

@@ -2112,6 +2112,8 @@ spec:
           value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
         - name: KONG_ADMIN_LISTEN
           value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+        - name: KONG_ROUTER_FLAVOR
+          value: traditional_compatible
         - name: KONG_DATABASE
           value: postgres
         - name: KONG_PG_HOST
@@ -2135,8 +2137,6 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_ROUTER_FLAVOR
-          value: expressions
         image: kong/kong-gateway:3.4
         lifecycle:
           preStop:

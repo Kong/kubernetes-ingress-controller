@@ -436,8 +436,8 @@ github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25Kn
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/dustmop/soup v1.1.2-0.20190516214245-38228baa104e/go.mod h1:CgNC6SGbT+Xb8wGGvzilttZL1mc5sQ/5KkcxsZttMIk=
-github.com/elastic/crd-ref-docs v0.0.9 h1:fkkjFPQMIH2U75Ma5AxQkW7NIydxx2tY2uo/A4+xPO0=
-github.com/elastic/crd-ref-docs v0.0.9/go.mod h1:k7DCVDJCqaEozDFcnfhTQd/Foxd8Ip18qKNPAgMpzyo=
+github.com/elastic/crd-ref-docs v0.0.10 h1:FAc9oCxxY4+rMCLSLtTGrEaPyuxmp3LNlQ+dZfG9Ujc=
+github.com/elastic/crd-ref-docs v0.0.10/go.mod h1:zha4djxzWirfx+c4fl/Kmk9Rc7Fv7XBoOi9CL9kne+M=
 github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/elazarl/goproxy v0.0.0-20221015165544-a0805db90819 h1:RIB4cRk+lBqKK3Oy0r2gRX4ui7tuhiZq2SuTtTCi0/0=
 github.com/elazarl/goproxy v0.0.0-20221015165544-a0805db90819/go.mod h1:Ro8st/ElPeALwNFlcTpWmkr6IoMFfkjXAvTHpevnDsM=

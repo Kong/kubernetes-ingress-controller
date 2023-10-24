@@ -35,7 +35,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
 
 
@@ -104,6 +104,10 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+
+
+
+
 
 
 
@@ -188,7 +192,7 @@ KongIngressUpstream contains KongIngress upstream configuration. It contains the
 | `host_header` _string_ | HostHeader is The hostname to be used as Host header when proxying requests through Kong. |
 | `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
 | `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. |
-| `healthchecks` _Healthcheck_ | Healthchecks defines the health check configurations in Kong. |
+| `healthchecks` _[Healthcheck](#healthcheck)_ | Healthchecks defines the health check configurations in Kong. |
 | `hash_on` _string_ | HashOn defines what to use as hashing input. Accepted values are: "none", "consumer", "ip", "header", "cookie", "path", "query_arg", "uri_capture". |
 | `hash_fallback` _string_ | HashFallback defines What to use as hashing input if the primary hash_on does not return a hash. Accepted values are: "none", "consumer", "ip", "header", "cookie". |
 | `hash_on_header` _string_ | HashOnHeader defines the header name to take the value from as hash input. Only required when "hash_on" is set to "header". |

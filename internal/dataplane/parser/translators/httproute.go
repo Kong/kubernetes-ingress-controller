@@ -361,9 +361,7 @@ func SetRoutePlugins(route *kongstate.Route, filters []gatewayapi.HTTPRouteFilte
 	if err != nil {
 		return err
 	}
-	if len(plugins) > 0 {
-		route.Plugins = append(route.Plugins, plugins...)
-	}
+	route.Plugins = append(route.Plugins, plugins...)
 	if len(pluginAnnotation) > 0 {
 		if route.Ingress.Annotations == nil {
 			route.Ingress.Annotations = make(map[string]string)
@@ -409,7 +407,10 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 				return nil, "", err
 			}
 			if len(pluginsAnnotation.String()) > 0 {
-				fmt.Fprintf(&pluginsAnnotation, ",%s", plugin)
+				_, err := pluginsAnnotation.WriteString("," + plugin)
+				if err != nil {
+					return nil, "", err
+				}
 			} else {
 				pluginsAnnotation.WriteString(plugin)
 			}

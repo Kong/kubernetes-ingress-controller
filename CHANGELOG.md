@@ -177,7 +177,6 @@ Adding a new version? You'll need three changes:
   reference in the `HTTPRoute`s' `ExtensionRef` filter field.
   [#4838](https://github.com/Kong/kubernetes-ingress-controller/pull/4838)
 
-
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 
 ## 2.12.1

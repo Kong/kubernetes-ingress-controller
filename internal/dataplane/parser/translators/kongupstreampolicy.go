@@ -7,6 +7,13 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
+const (
+	KongHashOnTypeHeader     string = "header"
+	KongHashOnTypeCookie     string = "cookie"
+	KongHashOnTypeQueryArg   string = "query_arg"
+	KongHashOnTypeURICapture string = "uri_capture"
+)
+
 // TranslateKongUpstreamPolicy translates KongUpstreamPolicySpec to kong.Upstream. It makes assumption that
 // KongUpstreamPolicySpec has been validated on the API level.
 func TranslateKongUpstreamPolicy(policy kongv1beta1.KongUpstreamPolicySpec) *kong.Upstream {
@@ -35,16 +42,15 @@ func translateHashOn(hashOn *kongv1beta1.KongUpstreamHash) *string {
 		return nil
 	}
 	// CRD validations will ensure only one of hashOn fields can be set, therefore the order doesn't matter.
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4951
 	switch {
 	case hashOn.Header != nil:
-		return lo.ToPtr("header")
+		return lo.ToPtr(KongHashOnTypeHeader)
 	case hashOn.Cookie != nil:
-		return lo.ToPtr("cookie")
+		return lo.ToPtr(KongHashOnTypeCookie)
 	case hashOn.QueryArg != nil:
-		return lo.ToPtr("query_arg")
+		return lo.ToPtr(KongHashOnTypeQueryArg)
 	case hashOn.URICapture != nil:
-		return lo.ToPtr("uri_capture")
+		return lo.ToPtr(KongHashOnTypeURICapture)
 	default:
 		return nil
 	}
@@ -128,7 +134,7 @@ func translateHealthy(healthy *kongv1beta1.KongUpstreamHealthcheckHealthy) *kong
 		return nil
 	}
 	return &kong.Healthy{
-		HTTPStatuses: healthy.HTTPStatuses,
+		HTTPStatuses: translateHTTPStatuses(healthy.HTTPStatuses),
 		Interval:     healthy.Interval,
 		Successes:    healthy.Successes,
 	}
@@ -140,9 +146,18 @@ func translateUnhealthy(unhealthy *kongv1beta1.KongUpstreamHealthcheckUnhealthy)
 	}
 	return &kong.Unhealthy{
 		HTTPFailures: unhealthy.HTTPFailures,
-		HTTPStatuses: unhealthy.HTTPStatuses,
+		HTTPStatuses: translateHTTPStatuses(unhealthy.HTTPStatuses),
 		TCPFailures:  unhealthy.TCPFailures,
 		Timeouts:     unhealthy.Timeouts,
 		Interval:     unhealthy.Interval,
 	}
+}
+
+func translateHTTPStatuses(statuses []kongv1beta1.HTTPStatus) []int {
+	if statuses == nil {
+		return nil
+	}
+	// Using lo.Map only in case healthy.HTTPStatuses is not nil, because lo.Map creates a non-nil slice even
+	// if the input slice is nil.
+	return lo.Map(statuses, func(s kongv1beta1.HTTPStatus, _ int) int { return int(s) })
 }

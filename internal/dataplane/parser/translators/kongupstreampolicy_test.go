@@ -93,13 +93,13 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 						Type:        lo.ToPtr("http"),
 						Concurrency: lo.ToPtr(10),
 						Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
-							HTTPStatuses: []int{200},
+							HTTPStatuses: []kongv1beta1.HTTPStatus{200},
 							Interval:     lo.ToPtr(20),
 							Successes:    lo.ToPtr(30),
 						},
 						Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
 							HTTPFailures: lo.ToPtr(40),
-							HTTPStatuses: []int{500},
+							HTTPStatuses: []kongv1beta1.HTTPStatus{500},
 							Timeouts:     lo.ToPtr(60),
 							Interval:     lo.ToPtr(70),
 						},

@@ -34,6 +34,12 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? [has(self.spec.hashOn.cookie), has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true", message="Only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture), has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true", message="Only one of spec.hashOnFallback.(header|uriCapture|queryArg) can be set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath) : true", message="When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie) : true", message="When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie) : true", message="spec.hashOnFallback.cookie must not be set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookiePath) : true", message="spec.hashOnFallback.cookiePath must not be set."
 type KongUpstreamPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -165,10 +171,15 @@ type KongUpstreamPassiveHealthcheck struct {
 	Unhealthy *KongUpstreamHealthcheckUnhealthy `json:"unhealthy,omitempty"`
 }
 
+// HTTPStatus is an HTTP status code.
+// +kubebuilder:validation:Minimum=100
+// +kubebuilder:validation:Maximum=599
+type HTTPStatus int
+
 // KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to mark targets healthy for an upstream.
 type KongUpstreamHealthcheckHealthy struct {
 	// HTTPStatuses is a list of HTTP status codes that Kong considers a success.
-	HTTPStatuses []int `json:"httpStatuses,omitempty"`
+	HTTPStatuses []HTTPStatus `json:"httpStatuses,omitempty"`
 
 	// Interval is the interval between active health checks for an upstream in seconds when in a healthy state.
 	// +kubebuilder:validation:Minimum=0
@@ -186,7 +197,7 @@ type KongUpstreamHealthcheckUnhealthy struct {
 	HTTPFailures *int `json:"httpFailures,omitempty"`
 
 	// HTTPStatuses is a list of HTTP status codes that Kong considers a failure.
-	HTTPStatuses []int `json:"httpStatuses,omitempty"`
+	HTTPStatuses []HTTPStatus `json:"httpStatuses,omitempty"`
 
 	// TCPFailures is the number of TCP failures in a row to consider a target unhealthy.
 	// +kubebuilder:validation:Minimum=0

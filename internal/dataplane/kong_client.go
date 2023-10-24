@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"reflect"
 	"sort"
 	"sync"
@@ -463,44 +462,18 @@ func (c *KongClient) sendOutToGatewayClients(
 ) ([]string, error) {
 	gatewayClients := c.clientsProvider.GatewayClients()
 	previousSHAs := c.SHAs
-	gatewayClientURLs := []string{}
-	for _, cl := range gatewayClients {
-		gatewayClientURLs = append(gatewayClientURLs, cl.BaseRootURL())
+	gatewayClientURLs := lo.Map(gatewayClients, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
+	c.logger.V(util.DebugLevel).Info("sending configuration to gateway clients", "urls", gatewayClientURLs)
+
+	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
+		return c.sendToClient(ctx, *client, s, config)
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	if dataplaneutil.IsDBLessMode(c.dbmode) {
-		c.logger.V(util.DebugLevel).Info("sending configuration to gateway clients", "urls", gatewayClientURLs)
-		shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
-			return c.sendToClient(ctx, *client, s, config)
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		sort.Strings(shas)
-		c.SHAs = shas
-	} else {
-		// directly return if no gateway clients found.
-		if len(gatewayClients) == 0 {
-			c.logger.Info("no active gateway clients found, skip sending")
-			return previousSHAs, nil
-		}
-		// randomly choose one client.
-		// REVIEW: The order of GatewayClients() is random, could we just use the "first" client?
-		// TODO: if multiple gateway instances uses different DBs, choose one client for each DB:
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/4845
-		clientIndex := rand.Intn(len(gatewayClients)) //nolint:gosec
-		c.logger.V(util.DebugLevel).Info(
-			fmt.Sprintf("sending configuration to gateway client %d/%d", clientIndex+1, len(gatewayClients)),
-			"chosen_url", gatewayClientURLs[clientIndex],
-			"urls", gatewayClientURLs,
-		)
-		sha, err := c.sendToClient(ctx, gatewayClients[clientIndex], s, config)
-		if err != nil {
-			return nil, err
-		}
-		c.SHAs = []string{sha}
-	}
+	sort.Strings(shas)
+	c.SHAs = shas
 
 	c.kongConfigFetcher.StoreLastValidConfig(s)
 

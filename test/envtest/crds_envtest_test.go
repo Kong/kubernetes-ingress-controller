@@ -295,6 +295,36 @@ func TestCRDValidations(t *testing.T) {
 				require.ErrorContains(t, err, "should be greater than or equal to 100")
 			},
 		},
+		{
+			name: "KongUpstreamPolicy - healthchecks.passive.healthy.interval must not be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+						Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+							Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
+								Interval: lo.ToPtr(10),
+							},
+						},
+					},
+				})
+				require.ErrorContains(t, err, "spec.healthchecks.passive.healthy.interval must not be set.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthchecks.passive.unhealthy.interval must not be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+						Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+							Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
+								Interval: lo.ToPtr(10),
+							},
+						},
+					},
+				})
+				require.ErrorContains(t, err, "spec.healthchecks.passive.unhealthy.interval must not be set.")
+			},
+		},
 	}
 
 	for _, tc := range testCases {

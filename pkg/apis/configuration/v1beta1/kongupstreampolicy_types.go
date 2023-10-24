@@ -40,6 +40,8 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie) : true", message="When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie) : true", message="spec.hashOnFallback.cookie must not be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookiePath) : true", message="spec.hashOnFallback.cookiePath must not be set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.healthy) ? !has(self.spec.healthchecks.passive.healthy.interval) : true", message="spec.healthchecks.passive.healthy.interval must not be set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval) : true", message="spec.healthchecks.passive.unhealthy.interval must not be set."
 type KongUpstreamPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

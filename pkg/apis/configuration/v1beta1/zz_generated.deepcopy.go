@@ -302,7 +302,7 @@ func (in *KongUpstreamHealthcheckHealthy) DeepCopyInto(out *KongUpstreamHealthch
 	*out = *in
 	if in.HTTPStatuses != nil {
 		in, out := &in.HTTPStatuses, &out.HTTPStatuses
-		*out = make([]int, len(*in))
+		*out = make([]HTTPStatus, len(*in))
 		copy(*out, *in)
 	}
 	if in.Interval != nil {
@@ -337,7 +337,7 @@ func (in *KongUpstreamHealthcheckUnhealthy) DeepCopyInto(out *KongUpstreamHealth
 	}
 	if in.HTTPStatuses != nil {
 		in, out := &in.HTTPStatuses, &out.HTTPStatuses
-		*out = make([]int, len(*in))
+		*out = make([]HTTPStatus, len(*in))
 		copy(*out, *in)
 	}
 	if in.TCPFailures != nil {

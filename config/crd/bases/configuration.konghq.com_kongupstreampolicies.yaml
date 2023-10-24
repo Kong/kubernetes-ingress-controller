@@ -142,6 +142,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a success.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -197,6 +200,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a failure.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -228,6 +234,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a success.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -267,6 +276,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a failure.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -305,6 +317,29 @@ spec:
                 type: integer
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: Only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can
+            be set.
+          rule: 'has(self.spec.hashOn) ? [has(self.spec.hashOn.cookie), has(self.spec.hashOn.header),
+            has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet,
+            fieldSet == true).size() <= 1 : true'
+        - message: Only one of spec.hashOnFallback.(header|uriCapture|queryArg) can
+            be set.
+          rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.header),
+            has(self.spec.hashOnFallback.uriCapture), has(self.spec.hashOnFallback.queryArg)].filter(fieldSet,
+            fieldSet == true).size() <= 1 : true'
+        - message: When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.
+          rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath)
+            : true'
+        - message: When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required.
+          rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie)
+            : true'
+        - message: spec.hashOnFallback.cookie must not be set.
+          rule: 'has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie)
+            : true'
+        - message: spec.hashOnFallback.cookiePath must not be set.
+          rule: 'has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookiePath)
+            : true'
     served: true
     storage: true
     subresources:

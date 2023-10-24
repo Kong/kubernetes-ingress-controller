@@ -399,6 +399,20 @@ UDPIngress is the Schema for the udpingresses API.
 
 
 
+### HTTPStatus
+
+_Underlying type:_ `integer`
+
+HTTPStatus is an HTTP status code.
+
+
+
+
+
+_Appears in:_
+- [KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)
+- [KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)
+
 ### IngressBackend
 
 
@@ -526,7 +540,7 @@ KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to ma
 
 | Field | Description |
 | --- | --- |
-| `httpStatuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
+| `httpStatuses` _[HTTPStatus](#httpstatus) array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
 | `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
 | `successes` _integer_ | Successes is the number of successes to consider a target healthy. |
 
@@ -546,7 +560,7 @@ KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to 
 | Field | Description |
 | --- | --- |
 | `httpFailures` _integer_ | HTTPFailures is the number of failures to consider a target unhealthy. |
-| `httpStatuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
+| `httpStatuses` _[HTTPStatus](#httpstatus) array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
 | `tcpFailures` _integer_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
 | `timeouts` _integer_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
 | `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |

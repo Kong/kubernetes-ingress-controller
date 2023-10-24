@@ -5,3 +5,29 @@ resources:
 components:
 - ./wait/
 - ../../image/oss/
+
+#replacements:
+#- source:
+#    kind: Secret
+#    name: my-secret
+#  targets:
+#  - select:
+#      name: ingress-kong
+#      kind: Deployment
+#    fieldPaths:
+#    - spec.template.spec.containers.[name=proxy].env.[name=KONG_ROUTER_FLAVOR].value
+patches:
+- patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ingress-kong
+      namespace: kong
+    spec:
+      template:
+        spec:
+          containers:
+          - name: proxy
+            env:
+            - name: KONG_ROUTER_FLAVOR
+              value: traditional_compatible

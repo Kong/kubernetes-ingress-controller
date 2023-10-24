@@ -154,10 +154,14 @@ Adding a new version? You'll need three changes:
   [#4911](https://github.com/Kong/kubernetes-ingress-controller/pull/4911)
 - Bump version of gateway API to `1.0.0-rc1` and support `Gateway`, `GatewayClass`
   and `HTTPRoute` in API version `gateway.networking.k8s.io/v1`.
-[#4893](https://github.com/Kong/kubernetes-ingress-controller/pull/4893)
+  [#4893](https://github.com/Kong/kubernetes-ingress-controller/pull/4893)
 - Update `Gateway`s, `GatewayClass`es and `HTTPRoute`s in examples to API
   version `gateway.networking.k8s.io/v1`.
-[#4935](https://github.com/Kong/kubernetes-ingress-controller/pull/4935)
+  [#4935](https://github.com/Kong/kubernetes-ingress-controller/pull/4935)
+- Controller to admin API communications are exempted from mesh proxies when
+  the controller resides in a separate Deployment. This allows the controller
+  to manage its own mTLS negotiation.
+  [#4942](https://github.com/Kong/kubernetes-ingress-controller/pull/4942)
 
 
 ### Added

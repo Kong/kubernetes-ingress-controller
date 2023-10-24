@@ -147,12 +147,14 @@ func Run(
 		ctx,
 		logger,
 		initialKongClients,
+		adminAPIClientsFactory,
 		readinessChecker,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
 	if c.KongAdminSvc.IsPresent() {
+		clients.WithAdminAPIServiceName(c.KongAdminSvc.MustGet())(clientsManager)
 		setupLog.Info("Running AdminAPIClientsManager loop")
 		clientsManager.Run()
 	}

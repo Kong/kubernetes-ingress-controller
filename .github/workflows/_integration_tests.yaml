@@ -72,22 +72,23 @@ jobs:
             test: dbless
           - name: postgres
             test: postgres
+            router-flavor: 'traditional_compatible'
           - name: enterprise-postgres
             test: enterprise.postgres
             enterprise: true
+            router-flavor: 'traditional_compatible'
           - name: enterprise-dbless
             test: enterprise.dbless
             enterprise: true
           - name: dbless-traditional-compatible
             test: dbless
             router-flavor: 'traditional_compatible'
-          - name: postgres-traditional-compatible
+          - name: postgres-traditional
             test: postgres
-            router-flavor: 'traditional_compatible'
-          - name: dbless-expression-router
+            router-flavor: 'traditional'
+          - name: dbless-traditional
             test: dbless
-            feature_gates: "GatewayAlpha=true"
-            router-flavor: "expressions"
+            router-flavor: "traditional"
           - name: dbless-gateway-alpha
             test: dbless
             feature_gates: "GatewayAlpha=true"

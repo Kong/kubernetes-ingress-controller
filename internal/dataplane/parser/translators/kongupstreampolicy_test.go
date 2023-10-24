@@ -112,13 +112,11 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 					Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
 						Type: lo.ToPtr("tcp"),
 						Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
-							Interval:  lo.ToPtr(90),
 							Successes: lo.ToPtr(100),
 						},
 						Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
 							TCPFailures: lo.ToPtr(110),
 							Timeouts:    lo.ToPtr(120),
-							Interval:    lo.ToPtr(130),
 						},
 					},
 					Threshold: lo.ToPtr(140),
@@ -149,13 +147,11 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 					Passive: &kong.PassiveHealthcheck{
 						Type: lo.ToPtr("tcp"),
 						Healthy: &kong.Healthy{
-							Interval:  lo.ToPtr(90),
 							Successes: lo.ToPtr(100),
 						},
 						Unhealthy: &kong.Unhealthy{
 							TCPFailures: lo.ToPtr(110),
 							Timeouts:    lo.ToPtr(120),
-							Interval:    lo.ToPtr(130),
 						},
 					},
 				},

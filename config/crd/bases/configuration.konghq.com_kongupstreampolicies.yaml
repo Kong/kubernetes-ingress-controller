@@ -340,6 +340,14 @@ spec:
         - message: spec.hashOnFallback.cookiePath must not be set.
           rule: 'has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookiePath)
             : true'
+        - message: spec.healthchecks.passive.healthy.interval must not be set.
+          rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive)
+            && has(self.spec.healthchecks.passive.healthy) ? !has(self.spec.healthchecks.passive.healthy.interval)
+            : true'
+        - message: spec.healthchecks.passive.unhealthy.interval must not be set.
+          rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive)
+            && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval)
+            : true'
     served: true
     storage: true
     subresources:

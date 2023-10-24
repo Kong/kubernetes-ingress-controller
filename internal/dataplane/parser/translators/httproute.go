@@ -362,20 +362,18 @@ func SetRoutePlugins(route *kongstate.Route, filters []gatewayapi.HTTPRouteFilte
 		return err
 	}
 	if len(plugins) > 0 {
-		if route.Plugins == nil {
-			route.Plugins = make([]kong.Plugin, 0)
-		}
 		route.Plugins = append(route.Plugins, plugins...)
 	}
 	if len(pluginAnnotation) > 0 {
 		if route.Ingress.Annotations == nil {
 			route.Ingress.Annotations = make(map[string]string)
 		}
-		if _, ok := route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey]; !ok {
-			route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = pluginAnnotation
+		const pluginAnnotationKey = annotations.AnnotationPrefix + annotations.PluginsKey
+		if _, ok := route.Ingress.Annotations[pluginAnnotationKey]; !ok {
+			route.Ingress.Annotations[pluginAnnotationKey] = pluginAnnotation
 		} else {
-			route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = fmt.Sprintf("%s,%s",
-				route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey],
+			route.Ingress.Annotations[pluginAnnotationKey] = fmt.Sprintf("%s,%s",
+				route.Ingress.Annotations[pluginAnnotationKey],
 				pluginAnnotation)
 		}
 	}

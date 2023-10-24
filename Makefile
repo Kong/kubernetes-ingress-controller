@@ -62,8 +62,8 @@ client-gen: ## Download client-gen locally if necessary.
 	@$(MAKE) _download_tool TOOL=client-gen
 
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
-.PHONY: golangci-lint
-golangci-lint: ## Download golangci-lint locally if necessary.
+.PHONY: golangci-lint.download
+golangci-lint.download: ## Download golangci-lint locally if necessary.
 	@$(MAKE) _download_tool TOOL=golangci-lint
 
 GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
@@ -157,6 +157,9 @@ fmt:
 
 .PHONY: lint
 lint: verify.tidy golangci-lint staticcheck looppointer
+
+.PHONY: golangci-lint
+golangci-lint: golangci-lint.download
 	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml
 
 .PHONY: staticcheck

@@ -63,7 +63,7 @@ const (
 	UserTagKey           = "/tags"
 	RewriteURIKey        = "/rewrite"
 
-	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
+	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
 	// mode.
 	//
@@ -79,7 +79,7 @@ const (
 	// by Kong's ingress controller.
 	DefaultIngressClass = "kong"
 
-	// GatewayClassUnmanagedAnnotationPlaceholder is intended to be used as placeholder value for the
+	// GatewayClassUnmanagedAnnotationValuePlaceholder is intended to be used as placeholder value for the
 	// GatewayClassUnmanagedAnnotation annotation.
 	GatewayClassUnmanagedAnnotationValuePlaceholder = "true"
 )

@@ -240,6 +240,11 @@ func (in *KongUpstreamHash) DeepCopyInto(out *KongUpstreamHash) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.CookiePath != nil {
+		in, out := &in.CookiePath, &out.CookiePath
+		*out = new(string)
+		**out = **in
+	}
 	if in.QueryArg != nil {
 		in, out := &in.QueryArg, &out.QueryArg
 		*out = new(string)

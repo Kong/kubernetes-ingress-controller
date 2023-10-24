@@ -490,6 +490,7 @@ KongUpstreamHash defines how to calculate hash for consistent-hashing load balan
 | --- | --- |
 | `header` _string_ | Header is the name of the header to use as hash input. |
 | `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
+| `cookiePath` _string_ | CookiePath is cookie path to set in the response headers. |
 | `queryArg` _string_ | QueryArg is the name of the query argument to use as hash input. |
 | `uriCapture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
 
@@ -586,9 +587,9 @@ KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
 | `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
 | `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
 | `hashOn` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. Algorithm must be set to "consistent-hashing" for this field to have effect. |
-| `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HashOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
 | `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
-| `host_header` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. |
+| `hostHeader` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. |
 
 
 _Appears in:_

@@ -163,7 +163,6 @@ Adding a new version? You'll need three changes:
   to manage its own mTLS negotiation.
   [#4942](https://github.com/Kong/kubernetes-ingress-controller/pull/4942)
 
-
 ### Added
 
 - Added support for expression-based Kong routes for `TLSRoute`. This requires
@@ -178,6 +177,9 @@ Adding a new version? You'll need three changes:
   [#4762](https://github.com/Kong/kubernetes-ingress-controller/pull/4762)
 - Support Query Parameter matching of `HTTPRoute` when expression router enabled.
   [#4780](https://github.com/Kong/kubernetes-ingress-controller/pull/4780)
+- Support `ExtensionRef` HTTPRoute filter. It is now possibile to set a KongPlugin
+  reference in the `HTTPRoute`s' `ExtensionRef` filter field.
+  [#4838](https://github.com/Kong/kubernetes-ingress-controller/pull/4838)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 

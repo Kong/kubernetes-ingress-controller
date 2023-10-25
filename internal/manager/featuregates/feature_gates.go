@@ -11,9 +11,6 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// GatewayFeature is the name of the feature-gate for enabling/disabling GatewayFeature APIs.
-	GatewayFeature = "Gateway"
-
 	// GatewayAlphaFeature is the name of the feature-gate for enabling or
 	// disabling the Alpha maturity APIs and relevant features for Gateway API.
 	GatewayAlphaFeature = "GatewayAlpha"
@@ -60,7 +57,6 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		GatewayFeature:      true,
 		GatewayAlphaFeature: false,
 		FillIDsFeature:      true,
 		RewriteURIsFeature:  false,

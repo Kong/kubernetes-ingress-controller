@@ -66,7 +66,6 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.Konnect.LicenseSynchronizationEnabled = false
 	cfg.AnonymousReports = false
 	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
-	cfg.FeatureGates[featuregates.GatewayFeature] = false
 
 	// Extend the graceful shutdown timeout to prevent flakiness on CI.
 	cfg.GracefulShutdownTimeout = lo.ToPtr(time.Minute)
@@ -82,7 +81,6 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 type ModifyManagerConfigFn func(cfg *manager.Config)
 
 func WithGatewayFeatureEnabled(cfg *manager.Config) {
-	cfg.FeatureGates[featuregates.GatewayFeature] = true
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
 }
 

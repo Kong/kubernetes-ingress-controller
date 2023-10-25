@@ -114,9 +114,6 @@ Adding a new version? You'll need three changes:
 - Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
   if the version is lower, also won't discover such Kong Gateways.
   [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
-- Added `--kong-admin-token-file` flag to provide the Kong admin token via file
-  [Providing Kong admin token via file](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
-  [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
 - `deploy/single/all-in-one-dbless-legacy.yaml` manifest is removed.
   It was already deprecated in 2.9
   [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
@@ -180,6 +177,11 @@ Adding a new version? You'll need three changes:
 - Support `ExtensionRef` HTTPRoute filter. It is now possibile to set a KongPlugin
   reference in the `HTTPRoute`s' `ExtensionRef` filter field.
   [#4838](https://github.com/Kong/kubernetes-ingress-controller/pull/4838)
+- Added `--kong-admin-token-file` flag to provide the Kong admin token via a
+  file. This is an alternative to the existing `--kong-admin-token` for users
+  that prefer to mount a file over binding a Secret to an environment variable
+  value. Only one of the two options can be used.
+  [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 

@@ -252,7 +252,7 @@ func setupControllers(
 			},
 		},
 		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Beta APIs
+		// Gateway API Controllers
 		// ---------------------------------------------------------------------------
 		{
 			Enabled: c.GatewayAPIGatewayController && featureGates[featuregates.GatewayFeature],

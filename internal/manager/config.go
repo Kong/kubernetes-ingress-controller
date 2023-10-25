@@ -105,7 +105,7 @@ type Config struct {
 	KongPluginEnabled             bool
 	KongConsumerEnabled           bool
 	ServiceEnabled                bool
-	// Gateway API toggling
+	// Gateway API toggling.
 	GatewayAPIGatewayController        bool
 	GatewayAPIHTTPRouteController      bool
 	GatewayAPIReferenceGrantController bool

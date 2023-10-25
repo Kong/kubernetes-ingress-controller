@@ -595,7 +595,7 @@ func (p *Parser) getGatewayListeningPorts(
 ) []gatewayapi.PortNumber {
 	var gwPorts []gatewayapi.PortNumber
 	for _, pr := range prs {
-		// When namespace is is explicitly specified in the parentRef,
+		// When namespace is explicitly specified in the parentRef,
 		// it should be used instead of namespace of the whole Route.
 		ns := string(lo.FromPtr(pr.Namespace))
 		if ns == "" {
@@ -610,7 +610,7 @@ func (p *Parser) getGatewayListeningPorts(
 		// If no sectionName is specified, all ports are used (according to the specification
 		// "When unspecified (empty string), this will reference the entire resource." - see
 		// https://github.com/kubernetes-sigs/gateway-api/blob/ebe9f31ef27819c3b29f698a3e9b91d279453c59/apis/v1/shared_types.go#L107).
-		gwPorts = append(gwPorts, lo.FilterMap(gw.Spec.Listeners, func(l gatewayapi.Listener, i int) (gatewayapi.PortNumber, bool) {
+		gwPorts = append(gwPorts, lo.FilterMap(gw.Spec.Listeners, func(l gatewayapi.Listener, _ int) (gatewayapi.PortNumber, bool) {
 			if (pr.SectionName == nil || *pr.SectionName == l.Name) && protocol == l.Protocol {
 				return l.Port, true
 			}

@@ -38,7 +38,7 @@ const (
 	// API admin password.
 	adminPasswordSecretName = "kong-enterprise-superuser-password"
 
-	dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
+	dblessPath = "manifests/all-in-one-dbless.yaml"
 )
 
 func generateAdminPasswordSecret() (string, *corev1.Secret, error) {

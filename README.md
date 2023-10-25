@@ -44,15 +44,11 @@ a hosted Kubernetes service like [GKE](https://cloud.google.com/kubernetes-engin
 Setting up Kong for Kubernetes is as simple as:
 
 ```shell
-# using YAMLs
-$ kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/latest/deploy/single/all-in-one-dbless.yaml
+# Using Helm
+helm repo add kong https://charts.konghq.com
+helm repo update
 
-# or using Helm
-$ helm repo add kong https://charts.konghq.com
-$ helm repo update
-
-# Helm 3
-$ helm install kong/kong --generate-name --set ingressController.installCRDs=false
+helm install kong/kong --generate-name --set ingressController.installCRDs=false
 ```
 
 Once installed, please follow the [Getting Started guide][docs-konghq-getting-started-guide]

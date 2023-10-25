@@ -117,10 +117,9 @@ Adding a new version? You'll need three changes:
 - `deploy/single/all-in-one-dbless-legacy.yaml` manifest is removed.
   It was already deprecated in 2.9
   [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
-- `deploy/single/all-in-one-dbless-enterprise.yaml` manifest is removed.
-  It's nearly identical to `deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml`
-  which is used in the official docs.
-  [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873)
+- All manifests from `deploy/single` are no longer supported as installation
+  method and were removed, please use Helm chart or Kong Gateway Operator instead.
+  [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866), [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873), [#4970](https://github.com/Kong/kubernetes-ingress-controller/pull/4970), 
 - Credentials now use a `konghq.com/credential` label to indicate
   credential type instead of the `kongCredType` field. This allows controller
   compontents to avoid caching unnecessary Secrets. The `kongCredType` field is

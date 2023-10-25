@@ -85,7 +85,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	cert, key := createClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
-	manifestFile := "../../deploy/single/all-in-one-dbless-konnect-enterprise.yaml"
+	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
 	ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 
 	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
@@ -167,7 +167,7 @@ func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
 // deployAllInOneKonnectManifest deploys all-in-one-dbless-konnect.yaml manifest, replacing the controller image
 // if specified by environment variables.
 func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env environment.Environment) Deployments {
-	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
+	const manifestFile = "manifests/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
 	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)

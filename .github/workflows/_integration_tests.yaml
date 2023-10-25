@@ -66,6 +66,8 @@ jobs:
       TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
     strategy:
       fail-fast: false
+      # DB modes override to traditional or traditional_compatible only pending upstream gateway changes
+      # to expression mode when used with a database https://github.com/Kong/kubernetes-ingress-controller/issues/4966
       matrix:
         include:
           - name: dbless

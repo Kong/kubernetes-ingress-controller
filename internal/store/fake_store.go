@@ -61,6 +61,7 @@ type FakeObjects struct {
 	KongIngresses                  []*kongv1.KongIngress
 	KongConsumers                  []*kongv1.KongConsumer
 	KongConsumerGroups             []*kongv1beta1.KongConsumerGroup
+	KongUpstreamPolicies           []*kongv1beta1.KongUpstreamPolicy
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -201,6 +202,13 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	kongUpstreamPolicyStore := cache.NewStore(keyFunc)
+	for _, p := range objects.KongUpstreamPolicies {
+		err := kongUpstreamPolicyStore.Add(p)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	s = Store{
 		stores: CacheStores{
@@ -224,6 +232,7 @@ func NewFakeStore(
 			ConsumerGroup:                  consumerGroupStore,
 			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
+			KongUpstreamPolicy:             kongUpstreamPolicyStore,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),

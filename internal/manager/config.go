@@ -105,6 +105,7 @@ type Config struct {
 	KongPluginEnabled             bool
 	KongConsumerEnabled           bool
 	ServiceEnabled                bool
+	KongUpstreamPolicyEnabled     bool
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -228,6 +229,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
 	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
 	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
+	flagSet.BoolVar(&c.KongUpstreamPolicyEnabled, "enable-controller-kong-upstream-policy", true, "Enable the KongUpstreamPolicy controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",

@@ -47,11 +47,6 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayapi.TCPRoute) error {
 	spec := tcproute.Spec
-
-	// Validation for TCPRoutes will happen at a higher layer, but in spite of that we run
-	// validation at this level as well as a fallback so that if routes are posted which
-	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
-	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
 		return translators.ErrRouteValidationNoRules
 	}

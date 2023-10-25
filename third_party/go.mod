@@ -8,7 +8,7 @@ require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.8.0
 	github.com/elastic/crd-ref-docs v0.0.10
 	github.com/go-delve/delve v1.21.1
-	github.com/golangci/golangci-lint v1.55.0
+	github.com/golangci/golangci-lint v1.55.1
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/kyoh86/looppointer v0.2.1
 	gotest.tools/gotestsum v1.11.0
@@ -196,10 +196,10 @@ require (
 	github.com/golangci/lint-1 v0.0.0-20191013205115-297bf364a8e0 // indirect
 	github.com/golangci/maligned v0.0.0-20180506175553-b1d89398deca // indirect
 	github.com/golangci/misspell v0.4.1 // indirect
-	github.com/golangci/revgrep v0.5.0 // indirect
+	github.com/golangci/revgrep v0.5.2 // indirect
 	github.com/golangci/unconvert v0.0.0-20180507085042-28b1c447d1f4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-containerregistry v0.16.1 // indirect
 	github.com/google/go-dap v0.9.1 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -321,7 +321,7 @@ require (
 	github.com/sanposhiho/wastedassign/v2 v2.0.7 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.24.0 // indirect
-	github.com/securego/gosec/v2 v2.18.1 // indirect
+	github.com/securego/gosec/v2 v2.18.2 // indirect
 	github.com/segmentio/encoding v0.2.7 // indirect
 	github.com/segmentio/textio v1.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect

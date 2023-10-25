@@ -22,7 +22,7 @@ import (
 var commonSkippedTests = []string{
 	// core conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4916
-	tests.GatewaySecretInvalidReferenceGrant.ShortName,
+	// tests.GatewaySecretInvalidReferenceGrant.ShortName,
 
 	// extended conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563

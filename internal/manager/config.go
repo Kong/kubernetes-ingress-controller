@@ -107,6 +107,11 @@ type Config struct {
 	ServiceEnabled                bool
 	KongUpstreamPolicyEnabled     bool
 
+	// Gateway API toggling.
+	GatewayAPIGatewayController        bool
+	GatewayAPIHTTPRouteController      bool
+	GatewayAPIReferenceGrantController bool
+
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
 
@@ -230,6 +235,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
 	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
 	flagSet.BoolVar(&c.KongUpstreamPolicyEnabled, "enable-controller-kong-upstream-policy", true, "Enable the KongUpstreamPolicy controller.")
+	flagSet.BoolVar(&c.GatewayAPIGatewayController, "enable-controller-gwapi-gateway", true, "Enable the Gateway API Gateway controller.")
+	flagSet.BoolVar(&c.GatewayAPIHTTPRouteController, "enable-controller-gwapi-httproute", true, "Enable the Gateway API HTTPRoute controller.")
+	flagSet.BoolVar(&c.GatewayAPIReferenceGrantController, "enable-controller-gwapi-reference-grant", true, "Enable the Gateway API ReferenceGrant controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
@@ -273,27 +281,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Deprecated flags
 	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
 	_ = flagSet.MarkDeprecated("konnect-runtime-group-id", "Use --konnect-control-plane-id instead.")
-
-	_ = flagSet.Float32("sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
-	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
-
-	_ = flagSet.Int("stderrthreshold", 0, "Has no effect and will be removed in future releases (see github issue #1297)")
-	_ = flagSet.MarkDeprecated("stderrthreshold", "Has no effect and will be removed in future releases (see github issue #1297)")
-
-	_ = flagSet.Bool("update-status-on-shutdown", false, "No longer has any effect and will be removed in a later release (see github issue #1304)")
-	_ = flagSet.MarkDeprecated("update-status-on-shutdown", "No longer has any effect and will be removed in a later release (see github issue #1304)")
-
-	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
-	_ = flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.")
-
-	_ = flagSet.Bool("leader-elect", false, "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
-	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
-
-	_ = flagSet.Bool("enable-controller-ingress-extensionsv1beta1", true, "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
-	_ = flagSet.MarkDeprecated("enable-controller-ingress-extensionsv1beta1", "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
-
-	_ = flagSet.Bool("enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
-	_ = flagSet.MarkDeprecated("enable-controller-ingress-networkingv1beta1", "Enable the networking.k8s.io/v1beta1 Ingress controller.")
 
 	c.flagSet = flagSet
 	return flagSet

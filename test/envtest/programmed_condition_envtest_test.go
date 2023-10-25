@@ -22,17 +22,19 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	ns := CreateNamespace(ctx, t, ctrlClient)
+
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithUpdateStatus(),
-		WithIngressAddress("http://localhost:8080"),
+		WithPublishService(ns.Name),
+		WithPublishStatusAddress("http://localhost:8080"),
 	)
-
-	ns := CreateNamespace(ctx, t, ctrlClient)
 
 	testCases := []struct {
 		name                        string

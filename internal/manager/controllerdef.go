@@ -262,10 +262,10 @@ func setupControllers(
 			},
 		},
 		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Beta APIs
+		// Gateway API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[featuregates.GatewayFeature],
+			Enabled: c.GatewayAPIGatewayController && featureGates[featuregates.GatewayFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/Gateway"),
@@ -285,7 +285,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayFeature],
+			Enabled: c.GatewayAPIHTTPRouteController && featureGates[featuregates.GatewayFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/HTTPRoute"),
@@ -306,7 +306,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayFeature],
+			Enabled: c.GatewayAPIReferenceGrantController && featureGates[featuregates.GatewayFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),

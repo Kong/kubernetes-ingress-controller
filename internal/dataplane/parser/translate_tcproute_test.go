@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -373,7 +372,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					routeName := expectedRoute.Name
 					r, ok := kongRouteNameToRoute[*routeName]
 					require.Truef(t, ok, "should find route %s", *routeName)
-					require.Equalf(t, expectedRoute.Expression, r.Expression, fmt.Sprintf("expected >> %s, actual >> %s", *expectedRoute.Expression, *r.Expression))
+					require.Equalf(t, expectedRoute.Expression, r.Expression, "route %s should have expected expression", *routeName)
 					require.Equal(t, expectedRoute.Protocols, r.Protocols)
 				}
 			}

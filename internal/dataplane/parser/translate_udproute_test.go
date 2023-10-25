@@ -942,7 +942,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					routeName := expectedRoute.Name
 					r, ok := kongRouteNameToRoute[*routeName]
 					require.Truef(t, ok, "should find route %s", *routeName)
-					require.Equalf(t, expectedRoute.Expression, r.Expression, "route %s should have expected expression >>> expected: %q >>> actual: %q", *routeName, *expectedRoute.Expression, *r.Expression)
+					require.Equalf(t, expectedRoute.Expression, r.Expression, "route %s should have expected expression", *routeName)
 					require.Equalf(t, expectedRoute.Protocols, r.Protocols, "route %s should have expected protocols", *routeName)
 				}
 			}

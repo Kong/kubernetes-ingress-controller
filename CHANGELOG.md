@@ -144,6 +144,10 @@ Adding a new version? You'll need three changes:
   [#4813](https://github.com/Kong/kubernetes-ingress-controller/pull/4813)
 - Fixed an incorrect watch, set in UDPRoute controller watching UDProute status updates.
   [#4835](https://github.com/Kong/kubernetes-ingress-controller/pull/4835)
+- Fixed setting proper destination port for TCPRoute and UDPRoute, now field `SectionName`
+  for `TCPRoute` and `UDPRoute` works as expected. It **breaks** some configurations that
+  relied on matching multiple Gateway's listener ports to ports of services automatically.
+  [#4928](https://github.com/Kong/kubernetes-ingress-controller/pull/4928)
 
 ### Changed
 

@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
+
+const gatewayTCPPortName = "tcp"
 
 func TestTCPRouteEssentials(t *testing.T) {
 	ctx := context.Background()
@@ -49,12 +52,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
-	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 8888")
+	t.Logf("deploying a gateway to the test cluster using unmanaged gateway mode and port %d", ktfkong.DefaultTCPServicePort)
 	gatewayName := uuid.NewString()
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
-			Name:     "tcp",
+			Name:     gatewayTCPPortName,
 			Protocol: gatewayapi.TCPProtocolType,
 			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
@@ -94,15 +97,13 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
 	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
-	// we have to override the ports so that we can map the default TCP port from
-	// the Kong Gateway deployment to the tcpecho port, as this is what will be
-	// used to route the traffic at the Gateway (at the time of writing, the
-	// Kong Gateway doesn't support an API for dynamically adding these ports. The
-	// ports must be added manually to the config or ENV).
+	// Use the same port as the default TCP port from the Kong Gateway deployment
+	// to the tcpecho port, as this is what will be used to route the traffic at the Gateway.
+	const service1Port = ktfkong.DefaultTCPServicePort
 	service1.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       ktfkong.DefaultTCPServicePort,
+		Port:       service1Port,
 		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
@@ -110,24 +111,21 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(service1)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
+	// Configure service to expose a different port than Gateway's TCP listener port (ktfkong.DefaultTCPServicePort)
+	// to check whether traffic will be routed correctly.
+	const service2Port = 8080
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
-	// we have to override the ports so that we can map the default TCP port from
-	// the Kong Gateway deployment to the tcpecho port, as this is what will be
-	// used to route the traffic at the Gateway (at the time of writing, the
-	// Kong Gateway doesn't support an API for dynamically adding these ports. The
-	// ports must be added manually to the config or ENV).
 	service2.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       ktfkong.DefaultTCPServicePort,
+		Port:       service2Port,
 		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service2, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	assert.NoError(t, err)
 	cleaner.Add(service2)
 
-	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
-	tcpPortDefault := gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort)
+	t.Logf("creating a TCPRoute to access deployment %s via kong", deployment1.Name)
 	tcpRoute := &gatewayapi.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -135,14 +133,15 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Spec: gatewayapi.TCPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
-					Name: gatewayapi.ObjectName(gatewayName),
+					Name:        gatewayapi.ObjectName(gatewayName),
+					SectionName: lo.ToPtr(gatewayapi.SectionName(gatewayTCPPortName)),
 				}},
 			},
 			Rules: []gatewayapi.TCPRouteRule{{
 				BackendRefs: []gatewayapi.BackendRef{{
 					BackendObjectReference: gatewayapi.BackendObjectReference{
 						Name: gatewayapi.ObjectName(service1.Name),
-						Port: &tcpPortDefault,
+						Port: lo.ToPtr(gatewayapi.PortNumber(service1Port)),
 					},
 				}},
 			}},
@@ -254,7 +253,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
-			Name:     "tcp",
+			Name:     gatewayTCPPortName,
 			Protocol: gatewayapi.TCPProtocolType,
 			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
@@ -292,7 +291,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
-			Name:     "tcp",
+			Name:     gatewayTCPPortName,
 			Protocol: gatewayapi.TCPProtocolType,
 			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
@@ -317,13 +316,13 @@ func TestTCPRouteEssentials(t *testing.T) {
 			{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
 					Name: gatewayapi.ObjectName(service1.Name),
-					Port: &tcpPortDefault,
+					Port: lo.ToPtr(gatewayapi.PortNumber(service1Port)),
 				},
 			},
 			{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
 					Name: gatewayapi.ObjectName(service2.Name),
-					Port: &tcpPortDefault,
+					Port: lo.ToPtr(gatewayapi.PortNumber(service2Port)),
 				},
 			},
 		}
@@ -365,7 +364,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
-			Name:     "tcp",
+			Name:     gatewayTCPPortName,
 			Protocol: gatewayapi.TCPProtocolType,
 			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
@@ -428,7 +427,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
-			Name:     "tcp",
+			Name:     gatewayTCPPortName,
 			Protocol: gatewayapi.TCPProtocolType,
 			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
@@ -468,15 +467,13 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
 	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
-	// we have to override the ports so that we can map the default TCP port from
-	// the Kong Gateway deployment to the tcpecho port, as this is what will be
-	// used to route the traffic at the Gateway (at the time of writing, the
-	// Kong Gateway doesn't support an API for dynamically adding these ports. The
-	// ports must be added manually to the config or ENV).
+	// Use the same port as the default TCP port from the Kong Gateway deployment
+	// to the tcpecho port, as this is what will be used to route the traffic at the Gateway.
+	const service1Port = ktfkong.DefaultTCPServicePort
 	service1.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       ktfkong.DefaultTCPServicePort,
+		Port:       service1Port,
 		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
@@ -484,11 +481,12 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(service1)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
+	const service2Port = 8080 // Use a different port that listening on the Gateway for TCP.
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
 	service2.Spec.Ports = []corev1.ServicePort{{
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       ktfkong.DefaultTCPServicePort,
+		Port:       service2Port,
 		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service2, err = env.Cluster().Client().CoreV1().Services(otherNs.Name).Create(ctx, service2, metav1.CreateOptions{})
@@ -496,7 +494,6 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(service2)
 
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
-	tcpPortDefault := gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort)
 	remoteNamespace := gatewayapi.Namespace(otherNs.Name)
 	tcproute := &gatewayapi.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -505,7 +502,8 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		Spec: gatewayapi.TCPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
-					Name: gatewayapi.ObjectName(gatewayName),
+					Name:        gatewayapi.ObjectName(gatewayName),
+					SectionName: lo.ToPtr(gatewayapi.SectionName(gatewayTCPPortName)),
 				}},
 			},
 			Rules: []gatewayapi.TCPRouteRule{{
@@ -513,14 +511,14 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service1.Name),
-							Port: &tcpPortDefault,
+							Port: lo.ToPtr(gatewayapi.PortNumber(service1Port)),
 						},
 					},
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name:      gatewayapi.ObjectName(service2.Name),
 							Namespace: &remoteNamespace,
-							Port:      &tcpPortDefault,
+							Port:      lo.ToPtr(gatewayapi.PortNumber(service2Port)),
 						},
 					},
 				},

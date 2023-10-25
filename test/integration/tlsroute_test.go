@@ -17,10 +17,12 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
@@ -204,7 +206,16 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
+	// Configure service to expose a different port than Gateway's TLS listener port (ktfkong.DefaultTLSServicePort)
+	// to check whether traffic will be routed correctly.
+	const service2Port = 8443
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	service2.Spec.Ports = []corev1.ServicePort{{
+		Name:       "tls",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       service2Port,
+		TargetPort: intstr.FromInt(tlsEchoPort),
+	}}
 	service2, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service2)
@@ -233,7 +244,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service2.Name),
-							Port: &backendTLSPort,
+							Port: lo.ToPtr(gatewayapi.PortNumber(service2Port)),
 						},
 					},
 				},

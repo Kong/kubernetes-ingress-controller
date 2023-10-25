@@ -43,17 +43,14 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 		applyExpressionToIngressRules(&result)
 	}
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			p.logger.Error(err, "could not generate route from TLSRoute")
-		}
+	for _, err := range errs {
+		p.logger.Error(err, "could not generate route from TLSRoute")
 	}
 
 	return result
 }
 
 func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayapi.TLSRoute) error {
-	// first we grab the spec and gather some metdata about the object
 	spec := tlsroute.Spec
 
 	if len(spec.Hostnames) == 0 {
@@ -68,12 +65,13 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 		return err
 	}
 
-	// each rule may represent a different set of backend services that will be accepting
+	// Each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
-		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromRouteRule(tlsroute, ruleNumber, rule)
-		// change protocols in route to tls_passthrough.
+		// Determine the routes needed to route traffic to services for this rule.
+		// TLSRoute matches based on hostname with Gateway listener thus passing gwPorts is pointless.
+		routes, err := generateKongRoutesFromRouteRule(tlsroute, nil, ruleNumber, rule)
+		// Change protocols in route to tls_passthrough.
 		if tlsPassthrough {
 			for i := range routes {
 				routes[i].Protocols = kong.StringSlice("tls_passthrough")

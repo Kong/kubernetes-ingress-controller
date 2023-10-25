@@ -38,39 +38,27 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 		applyExpressionToIngressRules(&result)
 	}
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			p.logger.Error(err, "could not generate route from TCPRoute")
-		}
+	for _, err := range errs {
+		p.logger.Error(err, "could not generate route from TCPRoute")
 	}
 
 	return result
 }
 
 func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayapi.TCPRoute) error {
-	// first we grab the spec and gather some metdata about the object
 	spec := tcproute.Spec
-
-	// validation for TCPRoutes will happen at a higher layer, but in spite of that we run
-	// validation at this level as well as a fallback so that if routes are posted which
-	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
-	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
 		return translators.ErrRouteValidationNoRules
 	}
 
-	// each rule may represent a different set of backend services that will be accepting
+	gwPorts := p.getGatewayListeningPorts(tcproute.Namespace, gatewayapi.TCPProtocolType, spec.CommonRouteSpec.ParentRefs)
+
+	// Each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
-		// TODO: add this to a generic TCPRoute validation, and then we should probably
-		//       simply be calling validation on each tcproute object at the begininning
-		//       of the topmost list.
-		if len(rule.BackendRefs) == 0 {
-			return fmt.Errorf("missing backendRef in rule")
-		}
 
-		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromRouteRule(tcproute, ruleNumber, rule)
+		// Determine the routes needed to route traffic to services for this rule.
+		routes, err := generateKongRoutesFromRouteRule(tcproute, gwPorts, ruleNumber, rule)
 		if err != nil {
 			return err
 		}

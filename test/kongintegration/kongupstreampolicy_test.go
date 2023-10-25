@@ -108,6 +108,23 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 			},
 		},
 		{
+			name: "KongUpstreamPolicySpec with predefined hash input",
+			policySpec: kongv1beta1.KongUpstreamPolicySpec{
+				Algorithm: lo.ToPtr("consistent-hashing"),
+				HashOn: &kongv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(kongv1beta1.HashInput("consumer")),
+				},
+				HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(kongv1beta1.HashInput("ip")),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				Algorithm:    lo.ToPtr("consistent-hashing"),
+				HashOn:       lo.ToPtr("consumer"),
+				HashFallback: lo.ToPtr("ip"),
+			},
+		},
+		{
 			name: "KongUpstreamPolicySpec with hash-on uri-capture",
 			policySpec: kongv1beta1.KongUpstreamPolicySpec{
 				Algorithm: lo.ToPtr("consistent-hashing"),

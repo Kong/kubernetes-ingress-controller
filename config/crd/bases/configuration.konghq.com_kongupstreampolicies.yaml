@@ -81,6 +81,15 @@ spec:
                   header:
                     description: Header is the name of the header to use as hash input.
                     type: string
+                  input:
+                    description: Input allows using one of the predefined inputs (ip,
+                      consumer, path). For other parametrized inputs, use one of the
+                      fields below.
+                    enum:
+                    - ip
+                    - consumer
+                    - path
+                    type: string
                   queryArg:
                     description: QueryArg is the name of the query argument to use
                       as hash input.
@@ -104,6 +113,15 @@ spec:
                     type: string
                   header:
                     description: Header is the name of the header to use as hash input.
+                    type: string
+                  input:
+                    description: Input allows using one of the predefined inputs (ip,
+                      consumer, path). For other parametrized inputs, use one of the
+                      fields below.
+                    enum:
+                    - ip
+                    - consumer
+                    - path
                     type: string
                   queryArg:
                     description: QueryArg is the name of the query argument to use
@@ -318,16 +336,17 @@ spec:
             type: object
         type: object
         x-kubernetes-validations:
-        - message: Only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can
-            be set.
-          rule: 'has(self.spec.hashOn) ? [has(self.spec.hashOn.cookie), has(self.spec.hashOn.header),
-            has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet,
+        - message: Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg)
+            can be set.
+          rule: 'has(self.spec.hashOn) ? [has(self.spec.hashOn.input), has(self.spec.hashOn.cookie),
+            has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet,
             fieldSet == true).size() <= 1 : true'
-        - message: Only one of spec.hashOnFallback.(header|uriCapture|queryArg) can
-            be set.
-          rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.header),
-            has(self.spec.hashOnFallback.uriCapture), has(self.spec.hashOnFallback.queryArg)].filter(fieldSet,
-            fieldSet == true).size() <= 1 : true'
+        - message: Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg)
+            can be set.
+          rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input),
+            has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture),
+            has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size()
+            <= 1 : true'
         - message: When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.
           rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath)
             : true'
@@ -348,6 +367,14 @@ spec:
           rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive)
             && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval)
             : true'
+        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOn
+            is set.
+          rule: 'has(self.spec.hashOn) ? has(self.spec.algorithm) && self.spec.algorithm
+            == "consistent-hashing" : true'
+        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback
+            is set.
+          rule: 'has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm
+            == "consistent-hashing" : true'
     served: true
     storage: true
     subresources:

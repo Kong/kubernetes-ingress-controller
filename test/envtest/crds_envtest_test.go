@@ -181,11 +181,11 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				for i, invalidHash := range generateInvalidHashs() {
-					invalidHash := invalidHash
-					t.Run(fmt.Sprintf("invalidHash[%d]", i), func(t *testing.T) {
+				for i, invalidHashOn := range generateInvalidHashOns() {
+					invalidHashOn := invalidHashOn
+					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-							HashOn: &invalidHash,
+							HashOn: &invalidHashOn,
 						})
 						require.ErrorContains(t, err, "Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set.")
 					})
@@ -195,15 +195,15 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - only one of spec.hashOnFallback.(header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				invalidHashs := lo.Reject(generateInvalidHashs(), func(hash kongv1beta1.KongUpstreamHash, _ int) bool {
+				invalidHashOns := lo.Reject(generateInvalidHashOns(), func(hashOn kongv1beta1.KongUpstreamHash, _ int) bool {
 					// Filter out Cookie which is not allowed in spec.hashOnFallback.
-					return hash.Cookie != nil
+					return hashOn.Cookie != nil
 				})
-				for i, invalidHash := range invalidHashs {
-					invalidHash := invalidHash
-					t.Run(fmt.Sprintf("invalidHash[%d]", i), func(t *testing.T) {
+				for i, invalidHashOn := range invalidHashOns {
+					invalidHashOn := invalidHashOn
+					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-							HashOnFallback: &invalidHash,
+							HashOnFallback: &invalidHashOn,
 						})
 						require.ErrorContains(t, err, "Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set.")
 					})
@@ -537,8 +537,8 @@ func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns stri
 	})
 }
 
-// generateInvalidHashs generates a list of KongUpstreamHash objects with all possible invalid fields pairs.
-func generateInvalidHashs() []kongv1beta1.KongUpstreamHash {
+// generateInvalidHashOns generates a list of KongUpstreamHash objects with all possible invalid fields pairs.
+func generateInvalidHashOns() []kongv1beta1.KongUpstreamHash {
 	fieldSetFns := []func(h *kongv1beta1.KongUpstreamHash){
 		func(h *kongv1beta1.KongUpstreamHash) {
 			h.Input = lo.ToPtr(kongv1beta1.HashInput("consumer"))
@@ -558,18 +558,18 @@ func generateInvalidHashs() []kongv1beta1.KongUpstreamHash {
 		},
 	}
 
-	var invalidHashs []kongv1beta1.KongUpstreamHash
+	var invalidHashOns []kongv1beta1.KongUpstreamHash
 	for outerIdx, fieldSetFn := range fieldSetFns {
-		hash := kongv1beta1.KongUpstreamHash{}
-		fieldSetFn(&hash)
+		hashOn := kongv1beta1.KongUpstreamHash{}
+		fieldSetFn(&hashOn)
 
 		for innerIdx, innerFieldSetFn := range fieldSetFns {
 			if outerIdx == innerIdx {
 				continue
 			}
-			invalidHash := hash.DeepCopy()
-			innerFieldSetFn(invalidHash)
-			invalidHashs = append(invalidHashs, *invalidHash)
+			invalidHashOn := hashOn.DeepCopy()
+			innerFieldSetFn(invalidHashOn)
+			invalidHashOns = append(invalidHashOns, *invalidHashOn)
 		}
 	}
 
@@ -579,7 +579,7 @@ func generateInvalidHashs() []kongv1beta1.KongUpstreamHash {
 		}
 		return *s
 	}
-	return lo.UniqBy(invalidHashs, func(h kongv1beta1.KongUpstreamHash) string {
+	return lo.UniqBy(invalidHashOns, func(h kongv1beta1.KongUpstreamHash) string {
 		return fmt.Sprintf("%s.%s.%s.%s", optStr(h.Cookie), optStr(h.Header), optStr(h.URICapture), optStr(h.QueryArg))
 	})
 }

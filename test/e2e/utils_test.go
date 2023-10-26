@@ -109,8 +109,9 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
 // In case of any failure while patching, the base manifest is returned.
 // If skipTestPatches is true, no patches are applied (useful when untouched manifest is needed, e.g. in upgrade tests).
-func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool) io.Reader {
+func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool, testPatches ...ManifestPatch) io.Reader {
 	t.Helper()
+	t.Logf("getting test manifest from %v", baseManifestPath)
 
 	var (
 		manifestsReader io.Reader
@@ -153,6 +154,13 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			return manifestsReader
 		}
 
+	}
+
+	for _, patch := range testPatches {
+		manifestsReader, err = patch(manifestsReader)
+		if err != nil {
+			t.Logf("failed patching manifest, using default manifest %v, err: %v", baseManifestPath, err)
+		}
 	}
 
 	return manifestsReader

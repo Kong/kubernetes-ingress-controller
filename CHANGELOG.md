@@ -152,9 +152,10 @@ Adding a new version? You'll need three changes:
 - Docker images now use UID and GID 1000 to match Kong images. This should have
   no user-facing effect.
   [#4911](https://github.com/Kong/kubernetes-ingress-controller/pull/4911)
-- Bump version of gateway API to `1.0.0-rc1` and support `Gateway`, `GatewayClass`
+- Bump version of gateway API to `1.0.0-rc2` and support `Gateway`, `GatewayClass`
   and `HTTPRoute` in API version `gateway.networking.k8s.io/v1`.
   [#4893](https://github.com/Kong/kubernetes-ingress-controller/pull/4893)
+  [#4981](https://github.com/Kong/kubernetes-ingress-controller/pull/4981)
 - Update `Gateway`s, `GatewayClass`es and `HTTPRoute`s in examples to API
   version `gateway.networking.k8s.io/v1`.
   [#4935](https://github.com/Kong/kubernetes-ingress-controller/pull/4935)

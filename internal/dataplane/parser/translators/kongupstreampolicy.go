@@ -43,6 +43,8 @@ func translateHashOn(hashOn *kongv1beta1.KongUpstreamHash) *string {
 	}
 	// CRD validations will ensure only one of hashOn fields can be set, therefore the order doesn't matter.
 	switch {
+	case hashOn.Input != nil:
+		return lo.ToPtr(string(*hashOn.Input))
 	case hashOn.Header != nil:
 		return lo.ToPtr(KongHashOnTypeHeader)
 	case hashOn.Cookie != nil:

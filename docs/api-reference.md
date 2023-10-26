@@ -413,6 +413,19 @@ _Appears in:_
 - [KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)
 - [KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)
 
+### HashInput
+
+_Underlying type:_ `string`
+
+HashInput is the input for consistent-hashing load balancing algorithm. Can be one of: "ip", "consumer", "path".
+
+
+
+
+
+_Appears in:_
+- [KongUpstreamHash](#kongupstreamhash)
+
 ### IngressBackend
 
 
@@ -502,6 +515,7 @@ KongUpstreamHash defines how to calculate hash for consistent-hashing load balan
 
 | Field | Description |
 | --- | --- |
+| `input` _[HashInput](#hashinput)_ | Input allows using one of the predefined inputs (ip, consumer, path). For other parametrized inputs, use one of the fields below. |
 | `header` _string_ | Header is the name of the header to use as hash input. |
 | `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
 | `cookiePath` _string_ | CookiePath is cookie path to set in the response headers. |

@@ -86,6 +86,21 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "KongUpstreamPolicySpec with predefined hash input",
+			policySpec: kongv1beta1.KongUpstreamPolicySpec{
+				HashOn: &kongv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(kongv1beta1.HashInput("consumer")),
+				},
+				HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(kongv1beta1.HashInput("ip")),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:       lo.ToPtr("consumer"),
+				HashFallback: lo.ToPtr("ip"),
+			},
+		},
+		{
 			name: "KongUpstreamPolicySpec with healthchecks",
 			policySpec: kongv1beta1.KongUpstreamPolicySpec{
 				Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{

@@ -1,7 +1,11 @@
 package v1beta1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+const (
+	// KongUpstreamPolicyAnnotationKey is the key used to attach KongUpstreamPolicy to Services.
+	// The value of the annotation is the name of the KongUpstreamPolicy object in the same namespace as the Service.
+	KongUpstreamPolicyAnnotationKey = "konghq.com/upstream-policy"
 )
 
 func init() {
@@ -44,6 +48,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval) : true", message="spec.healthchecks.passive.unhealthy.interval must not be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? has(self.spec.algorithm) && self.spec.algorithm == \"consistent-hashing\" : true", message="spec.algorithm must be set to \"consistent-hashing\" when spec.hashOn is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm == \"consistent-hashing\" : true", message="spec.algorithm must be set to \"consistent-hashing\" when spec.hashOnFallback is set."
+// TODO: add validation "hash_fallback - Not available if hash_on is set to cookie".
 type KongUpstreamPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -740,6 +740,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1beta1.KongConsumerGroup{}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
 		return &kongv1alpha1.IngressClassParameters{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("KongUpstreamPolicy"):
+		return &kongv1beta1.KongUpstreamPolicy{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

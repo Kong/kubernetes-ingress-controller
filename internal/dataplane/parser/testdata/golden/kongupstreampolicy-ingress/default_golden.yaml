@@ -1,0 +1,162 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: httpbin-deployment.default.8080.svc
+  id: 47865164-d8b1-5729-86bc-bfba3880819e
+  name: default.httpbin-deployment.8080
+  path: /
+  port: 8080
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: e8dddcdf-ebe3-5a2d-af0d-865da7881126
+    name: default.httpbin-ingress-1.httpbin-deployment..8080
+    path_handling: v0
+    paths:
+    - /internal/
+    - ~/internal$
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: true
+    tags:
+    - k8s-name:httpbin-ingress-1
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin-deployment
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httpbin-deployment.default.80.svc
+  id: 41e0df75-8715-5017-b56b-431e70ccd2ff
+  name: default.httpbin-deployment.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 94a0d72e-a19f-5269-a40c-6e52a6120d34
+    name: default.httpbin-ingress-1.httpbin-deployment..80
+    path_handling: v0
+    paths:
+    - /
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: true
+    tags:
+    - k8s-name:httpbin-ingress-1
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin-deployment
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: consistent-hashing
+  hash_fallback: consumer
+  hash_on: header
+  hash_on_header: session-id
+  healthchecks:
+    active:
+      concurrency: 20
+      headers:
+        X-Health-Check:
+        - kong
+        - dataplane
+      healthy:
+        http_statuses:
+        - 200
+        - 302
+        interval: 5
+        successes: 5
+      http_path: /status
+      https_sni: example.com
+      https_verify_certificate: false
+      timeout: 15
+      type: http
+      unhealthy:
+        http_failures: 5
+        http_statuses:
+        - 400
+        - 500
+        interval: 10
+        timeouts: 5
+    passive:
+      healthy:
+        successes: 5
+      type: tcp
+      unhealthy:
+        tcp_failures: 5
+        timeouts: 10
+  name: httpbin-deployment.default.8080.svc
+  slots: 100
+  tags:
+  - k8s-name:httpbin-deployment
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: consistent-hashing
+  hash_fallback: consumer
+  hash_on: header
+  hash_on_header: session-id
+  healthchecks:
+    active:
+      concurrency: 20
+      headers:
+        X-Health-Check:
+        - kong
+        - dataplane
+      healthy:
+        http_statuses:
+        - 200
+        - 302
+        interval: 5
+        successes: 5
+      http_path: /status
+      https_sni: example.com
+      https_verify_certificate: false
+      timeout: 15
+      type: http
+      unhealthy:
+        http_failures: 5
+        http_statuses:
+        - 400
+        - 500
+        interval: 10
+        timeouts: 5
+    passive:
+      healthy:
+        successes: 5
+      type: tcp
+      unhealthy:
+        tcp_failures: 5
+        timeouts: 10
+  name: httpbin-deployment.default.80.svc
+  slots: 100
+  tags:
+  - k8s-name:httpbin-deployment
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1

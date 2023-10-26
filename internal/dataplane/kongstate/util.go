@@ -4,21 +4,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func getKongIngressForServices(
 	s store.Storer,
-	services map[string]*corev1.Service,
+	services []*corev1.Service,
 ) (*kongv1.KongIngress, error) {
 	// loop through each service and retrieve the attached KongIngress resources.
 	// there can only be one KongIngress for a group of services: either one of
@@ -46,6 +50,48 @@ func getKongIngressForServices(
 
 	// there are no KongIngress resources for these services.
 	return nil, nil
+}
+
+// getKongUpstreamPolicyForServices scans all Services in the group to see if their KongUpstreamPolicy is consistent
+// and returns the KongUpstreamPolicy if it is.
+// We require either:
+// - all of them to be configured with the same KongUpstreamPolicy.
+// - none of them to be configured with a KongUpstreamPolicy.
+func getKongUpstreamPolicyForServices(
+	s store.Storer,
+	servicesGroup []*corev1.Service,
+) (*kongv1beta1.KongUpstreamPolicy, error) {
+	if len(servicesGroup) == 0 {
+		return nil, nil
+	}
+
+	servicesGroupedByUpstreamPolicy := lo.GroupBy(servicesGroup, func(svc *corev1.Service) mo.Option[string] {
+		policyName, ok := annotations.ExtractUpstreamPolicy(svc.Annotations)
+		if !ok {
+			return mo.None[string]()
+		}
+		return mo.Some(policyName)
+	})
+
+	// If there's more than one group, then there are services with different KongUpstreamPolicy configurations.
+	if len(servicesGroupedByUpstreamPolicy) > 1 {
+		return nil, fmt.Errorf("inconsistent KongUpstreamPolicy configuration for services %s",
+			PrettyPrintServiceList(servicesGroup))
+	}
+
+	// If there's one group (must be at least one, since we checked len(servicesGroup) == 0 above), then
+	// there's either one KongUpstreamPolicy for all services, or none.
+	upstreamPolicyName, ok := lo.Keys(servicesGroupedByUpstreamPolicy)[0].Get()
+	if !ok {
+		return nil, nil
+	}
+
+	policy, err := s.GetKongUpstreamPolicy(servicesGroup[0].Namespace, upstreamPolicyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching KongUpstreamPolicy: %w", err)
+	}
+
+	return policy, nil
 }
 
 func getKongIngressFromObjectMeta(
@@ -257,21 +303,14 @@ func SecretToConfiguration(
 	return config, nil
 }
 
-// PrettyPrintServiceList makes a clean printable list of a map of Kubernetes
+// PrettyPrintServiceList makes a clean printable list of Kubernetes
 // services for the purpose of logging (errors, info, e.t.c.).
-func PrettyPrintServiceList(services map[string]*corev1.Service) string {
-	var serviceList string
-	first := true
+func PrettyPrintServiceList(services []*corev1.Service) string {
+	var serviceList []string
 	for _, svc := range services {
-		if !first {
-			serviceList = serviceList + ", "
-		}
-		serviceList = serviceList + svc.Namespace + "/" + svc.Name
-		if first {
-			first = false
-		}
+		serviceList = append(serviceList, svc.Namespace+"/"+svc.Name)
 	}
-	return serviceList
+	return strings.Join(serviceList, ", ")
 }
 
 // plugin is a intermediate type to hold plugin related configuration.

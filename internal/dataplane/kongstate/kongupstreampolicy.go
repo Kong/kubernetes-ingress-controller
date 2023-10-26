@@ -1,4 +1,4 @@
-package translators
+package kongstate
 
 import (
 	"github.com/kong/go-kong/kong"

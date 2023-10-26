@@ -1,0 +1,157 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: httproute.default.httpbin.1
+  id: bbf738ea-19e7-5277-8a48-36d555e5ae94
+  name: httproute.default.httpbin.1
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: e148326c-f112-5b0d-9644-4219ccb43cb6
+    name: httproute.default.httpbin.1.0
+    path_handling: v0
+    paths:
+    - ~/httpbin-prod-only$
+    - /httpbin-prod-only/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httpbin
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin-prod
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httproute.default.httpbin.0
+  id: de4fffcc-97bc-59c6-9ccd-f1fb29b93beb
+  name: httproute.default.httpbin.0
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 668cce91-3da3-590f-82c9-8296c5bb28e5
+    name: httproute.default.httpbin.0.0
+    path_handling: v0
+    paths:
+    - ~/httpbin-with-test$
+    - /httpbin-with-test/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httpbin
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: consistent-hashing
+  hash_fallback: consumer
+  hash_on: header
+  hash_on_header: session-id
+  healthchecks:
+    active:
+      concurrency: 20
+      headers:
+        X-Health-Check:
+        - kong
+        - dataplane
+      healthy:
+        http_statuses:
+        - 200
+        - 302
+        interval: 5
+        successes: 5
+      http_path: /status
+      https_sni: example.com
+      https_verify_certificate: false
+      timeout: 15
+      type: http
+      unhealthy:
+        http_failures: 5
+        http_statuses:
+        - 400
+        - 500
+        interval: 10
+        timeouts: 5
+    passive:
+      healthy:
+        successes: 5
+      type: tcp
+      unhealthy:
+        tcp_failures: 5
+        timeouts: 10
+  name: httproute.default.httpbin.1
+  slots: 100
+  tags:
+  - k8s-name:httpbin-prod
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: consistent-hashing
+  hash_fallback: consumer
+  hash_on: header
+  hash_on_header: session-id
+  healthchecks:
+    active:
+      concurrency: 20
+      headers:
+        X-Health-Check:
+        - kong
+        - dataplane
+      healthy:
+        http_statuses:
+        - 200
+        - 302
+        interval: 5
+        successes: 5
+      http_path: /status
+      https_sni: example.com
+      https_verify_certificate: false
+      timeout: 15
+      type: http
+      unhealthy:
+        http_failures: 5
+        http_statuses:
+        - 400
+        - 500
+        interval: 10
+        timeouts: 5
+    passive:
+      healthy:
+        successes: 5
+      type: tcp
+      unhealthy:
+        tcp_failures: 5
+        timeouts: 10
+  name: httproute.default.httpbin.0
+  slots: 100
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1

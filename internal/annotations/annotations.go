@@ -22,6 +22,8 @@ import (
 
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 type ClassMatching int
@@ -379,5 +381,10 @@ func ExtractUserTags(anns map[string]string) []string {
 // ExtractRewriteURI extracts the rewrite annotation value.
 func ExtractRewriteURI(anns map[string]string) (string, bool) {
 	s, ok := anns[AnnotationPrefix+RewriteURIKey]
+	return s, ok
+}
+
+func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
+	s, ok := anns[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return s, ok
 }

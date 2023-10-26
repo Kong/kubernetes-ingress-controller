@@ -13,10 +13,10 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
 )
 
 // TestKongUpstreamPolicyTranslation ensures that the Upstream Policy CRD is translated to the Kong Upstream
@@ -222,7 +222,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			translatedUpstream := translators.TranslateKongUpstreamPolicy(tc.policySpec)
+			translatedUpstream := kongstate.TranslateKongUpstreamPolicy(tc.policySpec)
 			const upstreamName = "test-upstream"
 			translatedUpstream.Name = lo.ToPtr(upstreamName)
 			tc.expectedUpstream.Name = lo.ToPtr(upstreamName)

@@ -1,4 +1,4 @@
-package translators_test
+package kongstate_test
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func TestTranslateKongUpstreamPolicy(t *testing.T) {
@@ -175,7 +175,7 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualUpstream := translators.TranslateKongUpstreamPolicy(tc.policySpec)
+			actualUpstream := kongstate.TranslateKongUpstreamPolicy(tc.policySpec)
 			require.Equal(t, tc.expectedUpstream, actualUpstream)
 		})
 	}

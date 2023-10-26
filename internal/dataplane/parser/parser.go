@@ -186,7 +186,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// merge KongIngress with Routes, Services and Upstream
-	result.FillOverrides(p.logger, p.storer)
+	result.FillOverrides(p.logger, p.storer, p.failuresCollector)
 
 	// generate consumers and credentials
 	result.FillConsumersAndCredentials(p.logger, p.storer, p.failuresCollector)

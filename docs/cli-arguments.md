@@ -13,7 +13,7 @@
 | `--apiserver-burst` | `int` | The Kubernetes API RateLimiter maximum burst queries per second. | `300` |
 | `--apiserver-host` | `string` | The Kubernetes API server URL. If not set, the controller will use cluster config discovery. |  |
 | `--apiserver-qps` | `int` | The Kubernetes API RateLimiter maximum queries per second. | `100` |
-| `--cache-sync-timeout` | `duration` | The time limit set to wait for syncing controllers' caches. Leave this empty to use default from controller-runtime. | `2m0s` |
+| `--cache-sync-timeout` | `duration` | The time limit set to wait for syncing controllers' caches. Set to 0 to use default from controller-runtime. | `2m0s` |
 | `--dump-config` | `bool` | Enable config dumps via web interface host:10256/debug/config. | `false` |
 | `--dump-sensitive-config` | `bool` | Include credentials and TLS secrets in configs exposed with --dump-config flag. | `false` |
 | `--election-id` | `string` | Election id to use for status update. | `5b374a9e.konghq.com` |
@@ -80,7 +80,7 @@
 | `--publish-status-address` | `strings` | Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
 | `--publish-status-address-udp` | `strings` | Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
 | `--skip-ca-certificates` | `bool` | Disable syncing CA certificate syncing (for use with multi-workspace environments). | `false` |
-| `--sync-period` | `duration` | Determine the minimum frequency at which watched resources are reconciled. Leave this empty to use default from controller-runtime. | `10h0m0s` |
+| `--sync-period` | `duration` | Determine the minimum frequency at which watched resources are reconciled. Set to 0 to use default from controller-runtime. | `10h0m0s` |
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller. | `0s` |
 | `--update-status` | `bool` | Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, etc.). | `true` |
 | `--update-status-queue-buffer-size` | `int` | Buffer size of the underlying channels used to update the status of resources. | `8192` |

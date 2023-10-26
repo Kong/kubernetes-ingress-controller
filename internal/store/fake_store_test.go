@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -792,4 +793,26 @@ func TestFakeStoreGateway(t *testing.T) {
 	routes, err := store.ListGateways()
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two Gateways")
+}
+
+func TestFakeStore_KongUpstreamPolicy(t *testing.T) {
+	fakeObjects := FakeObjects{
+		KongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: kongv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("least-connections"),
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(fakeObjects)
+	require.NoError(t, err)
+
+	storedPolicy, err := store.GetKongUpstreamPolicy("default", "foo")
+	require.NoError(t, err)
+	require.Equal(t, fakeObjects.KongUpstreamPolicies[0], storedPolicy)
 }

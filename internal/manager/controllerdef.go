@@ -251,6 +251,16 @@ func setupControllers(
 				// StatusQueue:       kubernetesStatusQueue,
 			},
 		},
+		{
+			Enabled: c.KongUpstreamPolicyEnabled,
+			Controller: &configuration.KongV1beta1KongUpstreamPolicyReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Gateway API Controllers
 		// ---------------------------------------------------------------------------

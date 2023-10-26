@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func TestCacheStoresGet(t *testing.T) {
@@ -146,4 +149,30 @@ func TestGetIngressClassHandling(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStore_Getters(t *testing.T) {
+	t.Run("GetKongUpstreamPolicy", func(t *testing.T) {
+		cacheStores := NewCacheStores()
+		s := New(cacheStores, annotations.DefaultIngressClass, logr.Discard())
+
+		_, err := s.GetKongUpstreamPolicy("default", "kong-upstream-policy")
+		require.ErrorAs(t, err, &NotFoundError{})
+
+		upstreamPolicy := &kongv1beta1.KongUpstreamPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kong-upstream-policy",
+				Namespace: "default",
+			},
+			Spec: kongv1beta1.KongUpstreamPolicySpec{
+				Algorithm: lo.ToPtr("least-connections"),
+			},
+		}
+		err = cacheStores.Add(upstreamPolicy)
+		require.NoError(t, err)
+
+		storedObj, err := s.GetKongUpstreamPolicy("default", "kong-upstream-policy")
+		require.NoError(t, err)
+		require.Equal(t, upstreamPolicy, storedObj)
+	})
 }

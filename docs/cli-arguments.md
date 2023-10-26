@@ -24,6 +24,7 @@
 | `--enable-controller-ingress-class-networkingv1` | `bool` | Enable the networking.k8s.io/v1 IngressClass controller. | `true` |
 | `--enable-controller-ingress-class-parameters` | `bool` | Enable the IngressClassParameters controller. | `true` |
 | `--enable-controller-ingress-networkingv1` | `bool` | Enable the networking.k8s.io/v1 Ingress controller. | `true` |
+| `--enable-controller-kong-upstream-policy` | `bool` | Enable the KongUpstreamPolicy controller. | `true` |
 | `--enable-controller-kongclusterplugin` | `bool` | Enable the KongClusterPlugin controller. | `true` |
 | `--enable-controller-kongconsumer` | `bool` | Enable the KongConsumer controller. . | `true` |
 | `--enable-controller-kongingress` | `bool` | Enable the KongIngress controller. | `true` |

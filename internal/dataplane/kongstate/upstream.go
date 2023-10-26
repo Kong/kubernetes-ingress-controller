@@ -99,9 +99,6 @@ func (u *Upstream) overrideByKongUpstreamPolicy(policy *kongv1beta1.KongUpstream
 	}
 
 	kongUpstreamOverrides := TranslateKongUpstreamPolicy(policy.Spec)
-	if kongUpstreamOverrides.HostHeader != nil {
-		u.HostHeader = kongUpstreamOverrides.HostHeader
-	}
 	if kongUpstreamOverrides.Algorithm != nil {
 		u.Algorithm = kongUpstreamOverrides.Algorithm
 	}

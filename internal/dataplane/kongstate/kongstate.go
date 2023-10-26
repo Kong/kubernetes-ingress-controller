@@ -218,7 +218,7 @@ func (ks *KongState) FillOverrides(
 			ks.Upstreams[i].override(kongIngress, svc)
 		}
 
-		kongUpstreamPolicy, err := getKongUpstreamPolicyForServices(s, servicesGroup)
+		kongUpstreamPolicy, err := GetKongUpstreamPolicyForServices(s, servicesGroup)
 		if err != nil {
 			servicesAsObjects := lo.Map(servicesGroup, func(svc *corev1.Service, _ int) client.Object { return svc })
 			failuresCollector.PushResourceFailure(err.Error(), servicesAsObjects...)

@@ -1,8 +1,14 @@
 package kongstate
 
 import (
+	"fmt"
+
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
+	corev1 "k8s.io/api/core/v1"
 
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -13,6 +19,49 @@ const (
 	KongHashOnTypeQueryArg   string = "query_arg"
 	KongHashOnTypeURICapture string = "uri_capture"
 )
+
+// GetKongUpstreamPolicyForServices scans all Services in the group to see if their KongUpstreamPolicy is consistent
+// and returns a non-nil KongUpstreamPolicy if it is.
+//
+// We require either:
+// - all the Services to be configured with the same KongUpstreamPolicy.
+// - none of the Services to be configured with a KongUpstreamPolicy.
+//
+// If the KongUpstreamPolicy configuration is inconsistent or a configured KongUpstreamPolicy cannot be fetched from
+// the store, an error is returned.
+func GetKongUpstreamPolicyForServices(s store.Storer, servicesGroup []*corev1.Service) (*kongv1beta1.KongUpstreamPolicy, error) {
+	if len(servicesGroup) == 0 {
+		return nil, nil
+	}
+
+	servicesGroupedByUpstreamPolicy := lo.GroupBy(servicesGroup, func(svc *corev1.Service) mo.Option[string] {
+		policyName, ok := annotations.ExtractUpstreamPolicy(svc.Annotations)
+		if !ok {
+			return mo.None[string]()
+		}
+		return mo.Some(policyName)
+	})
+
+	// If there's more than one group, then there are services with different KongUpstreamPolicy configurations.
+	if len(servicesGroupedByUpstreamPolicy) > 1 {
+		return nil, fmt.Errorf("inconsistent KongUpstreamPolicy configuration for services %s",
+			PrettyPrintServiceList(servicesGroup))
+	}
+
+	// If there's one group (must be at least one, since we checked len(servicesGroup) == 0 above), then
+	// there's either one KongUpstreamPolicy for all services, or none.
+	upstreamPolicyName, ok := lo.Keys(servicesGroupedByUpstreamPolicy)[0].Get()
+	if !ok {
+		return nil, nil
+	}
+
+	policy, err := s.GetKongUpstreamPolicy(servicesGroup[0].Namespace, upstreamPolicyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching KongUpstreamPolicy: %w", err)
+	}
+
+	return policy, nil
+}
 
 // TranslateKongUpstreamPolicy translates KongUpstreamPolicySpec to kong.Upstream. It makes assumption that
 // KongUpstreamPolicySpec has been validated on the API level.

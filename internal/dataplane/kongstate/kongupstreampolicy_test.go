@@ -4,12 +4,138 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
+
+func TestGetKongUpstreamPolicyForServices(t *testing.T) {
+	testCases := []struct {
+		name          string
+		servicesGroup []*corev1.Service
+		policies      []*kongv1beta1.KongUpstreamPolicy
+		expectPolicy  bool
+		expectError   string
+	}{
+		{
+			name:         "no services in group gives no policy",
+			expectPolicy: false,
+		},
+		{
+			name: "no KongUpstreamPolicy in store while services are configured with one gives error",
+			servicesGroup: []*corev1.Service{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+					},
+				},
+			}},
+			expectError: "failed fetching KongUpstreamPolicy",
+		},
+		{
+			name: "all services configured with no KongUpstreamPolicy gives no policy and no error",
+			servicesGroup: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-2",
+						Namespace: "default",
+					},
+				},
+			},
+			expectPolicy: false,
+		},
+		{
+			name: "services in group with different KongUpstreamPolicy configurations gives error",
+			servicesGroup: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-2",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "other-upstream-policy",
+						},
+					},
+				},
+			},
+			expectError: "inconsistent KongUpstreamPolicy configuration for services",
+		},
+		{
+			name: "all the services configured with the same KongUpstreamPolicy gives the policy",
+			servicesGroup: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-2",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+						},
+					},
+				},
+			},
+			policies: []*kongv1beta1.KongUpstreamPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "upstream-policy",
+						Namespace: "default",
+					},
+				},
+			},
+			expectPolicy: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := store.NewFakeStore(store.FakeObjects{
+				Services:             tc.servicesGroup,
+				KongUpstreamPolicies: tc.policies,
+			})
+			require.NoError(t, err)
+
+			policy, err := kongstate.GetKongUpstreamPolicyForServices(s, tc.servicesGroup)
+			if tc.expectError != "" {
+				require.ErrorContains(t, err, tc.expectError)
+				return
+			}
+			if tc.expectPolicy {
+				require.NotNil(t, policy)
+			} else {
+				require.Nil(t, policy)
+			}
+		})
+	}
+}
 
 func TestTranslateKongUpstreamPolicy(t *testing.T) {
 	testCases := []struct {
@@ -20,14 +146,12 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "KongUpstreamPolicySpec with no hash-on or hash-fallback",
 			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HostHeader: lo.ToPtr("foo"),
-				Algorithm:  lo.ToPtr("least-connections"),
-				Slots:      lo.ToPtr(10),
+				Algorithm: lo.ToPtr("least-connections"),
+				Slots:     lo.ToPtr(10),
 			},
 			expectedUpstream: &kong.Upstream{
-				HostHeader: lo.ToPtr("foo"),
-				Algorithm:  lo.ToPtr("least-connections"),
-				Slots:      lo.ToPtr(10),
+				Algorithm: lo.ToPtr("least-connections"),
+				Slots:     lo.ToPtr(10),
 			},
 		},
 		{

@@ -44,8 +44,16 @@ Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will
 
 ### Feature gates for graduated or deprecated features
 
-| Feature                    | Default | Stage      | Since | Until |
-|----------------------------|---------|------------|-------|-------|
+| Feature          | Default | Stage | Since  | Until |
+|------------------|---------|-------|--------|-------|
+| Gateway          | `false` | Alpha | 2.2.0  | 2.6.0 |
+| Gateway          | `true`  | Beta  | 2.6.0  | 3.0.0 |
+| CombinedRoutes   | `false` | Alpha | 2.4.0  | 3.0.0 |
+| CombinedRoutes   | `true`  | Beta  | 2.8.0  | 3.0.0 |
+| CombinedServices | `false` | Alpha | 2.10.0 | 3.0.0 |
+| CombinedServices | `true`  | Beta  | 2.11.0 | 3.0.0 |
+| ExpressionRoutes | `false` | Alpha | 2.10.0 | 3.0.0 |
+| Knative          | `false` | Alpha | 0.8.0  | 3.0.0 |
 
 Features that reach GA and over time become stable will be removed from this table, they can be found in the main [KIC CRD Documentation][specs] and [Guides][guides].
 
@@ -54,20 +62,12 @@ Features that reach GA and over time become stable will be removed from this tab
 
 ### Feature gates for Alpha or Beta features
 
-| Feature          | Default | Stage | Since   | Until |
-|------------------|---------|-------|---------|-------|
-| Knative          | `false` | Alpha | 0.8.0   | 3.0.0 |
-| Gateway          | `false` | Alpha | 2.2.0   | TBD   |
-| Gateway          | `true`  | Beta  | 2.6.0   | TBD   |
-| CombinedRoutes   | `false` | Alpha | 2.4.0   | 3.0.0 |
-| CombinedRoutes   | `true`  | Beta  | 2.8.0   | 3.0.0 |
-| GatewayAlpha     | `false` | Alpha | 2.6.0   | TBD   |
-| ExpressionRoutes | `false` | Alpha | 2.10.0  | 3.0.0 |
-| CombinedServices | `false` | Alpha | 2.10.0  | 3.0.0 |
-| CombinedServices | `true`  | Beta  | 2.11.0  | 3.0.0 |
-| FillIDs          | `false` | Alpha | 2.10.0  | 3.0.0 |
-| FillIDs          | `true`  | Beta  | 3.0.0   | TBD   |
-| RewriteURIs      | `false` | Alpha | 2.12.0  | TBD   |
+| Feature      | Default | Stage | Since  | Until |
+|--------------|---------|-------|--------|-------|
+| GatewayAlpha | `false` | Alpha | 2.6.0  | TBD   |
+| FillIDs      | `false` | Alpha | 2.10.0 | 3.0.0 |
+| FillIDs      | `true`  | Beta  | 3.0.0  | TBD   |
+| RewriteURIs  | `false` | Alpha | 2.12.0 | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

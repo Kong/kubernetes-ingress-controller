@@ -127,7 +127,6 @@ Adding a new version? You'll need three changes:
   update Secrets is available at https://github.com/Kong/kubernetes-ingress-controller/issues/2502#issuecomment-1758213596
   [#4825](https://github.com/Kong/kubernetes-ingress-controller/pull/4825)
 
-
 ### Fixed
 
 - No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
@@ -163,6 +162,15 @@ Adding a new version? You'll need three changes:
   the controller resides in a separate Deployment. This allows the controller
   to manage its own mTLS negotiation.
   [#4942](https://github.com/Kong/kubernetes-ingress-controller/pull/4942)
+- Remove `Gateway` feature flag for Gateway API.
+  [#4968](https://github.com/Kong/kubernetes-ingress-controller/pull/4968)
+
+  It was enabled by default since 2.6.0 so the default behavior doesn't change.
+  If users want to disable related functionality, they still can by disabling
+  related Gateway API controllers via setting the following flags to `false`:
+  - `--enable-controller-gwapi-gateway`
+  - `--enable-controller-gwapi-httproute`
+  - `--enable-controller-gwapi-reference-grant`
 
 ### Added
 

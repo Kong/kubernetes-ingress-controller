@@ -351,6 +351,97 @@ func TestCRDValidations(t *testing.T) {
 				require.ErrorContains(t, err, `spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback is set.`)
 			},
 		},
+		{
+			name: "KongUpstreamPolicy - hashOn(Fallback).input enum is validated",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				validValues := []string{"ip", "consumer", "path"}
+				for _, validValue := range validValues {
+					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							Algorithm: lo.ToPtr("consistent-hashing"),
+							HashOn: &kongv1beta1.KongUpstreamHash{
+								Input: lo.ToPtr(kongv1beta1.HashInput(validValue)),
+							},
+							HashOnFallback: &kongv1beta1.KongUpstreamHash{
+								Input: lo.ToPtr(kongv1beta1.HashInput(validValue)),
+							},
+						})
+						require.NoError(t, err)
+					})
+				}
+
+				t.Run("invalid value", func(t *testing.T) {
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("consistent-hashing"),
+						HashOn: &kongv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(kongv1beta1.HashInput("unknown-input")),
+						},
+						HashOnFallback: &kongv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(kongv1beta1.HashInput("unknown-input-fallback")),
+						},
+					})
+					require.ErrorContains(t, err, `spec.hashOn.input: Unsupported value: "unknown-input": supported values: "ip", "consumer", "path"`)
+					require.ErrorContains(t, err, `spec.hashOnFallback.input: Unsupported value: "unknown-input-fallback": supported values: "ip", "consumer", "path"`)
+				})
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - algorithm enum is validated",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				validValues := []string{"consistent-hashing", "round-robin", "least-connections", "latency"}
+				for _, validValue := range validValues {
+					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							Algorithm: lo.ToPtr(validValue),
+						})
+						require.NoError(t, err)
+					})
+				}
+
+				t.Run("invalid value", func(t *testing.T) {
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("unknown-algorithm"),
+					})
+					require.ErrorContains(t, err, `spec.algorithm: Unsupported value: "unknown-algorithm": supported values: "round-robin", "consistent-hashing", "least-connections", "latency"`)
+				})
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthcheck.(active|passive).type enum is validated",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				validValues := []string{"http", "https", "tcp", "grpc", "grpcs"}
+				for _, validValue := range validValues {
+					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+								Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+									Type: lo.ToPtr(validValue),
+								},
+								Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+									Type: lo.ToPtr(validValue),
+								},
+							},
+						})
+						require.NoError(t, err)
+					})
+				}
+
+				t.Run("invalid value", func(t *testing.T) {
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+							Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+								Type: lo.ToPtr("unknown-type-active"),
+							},
+							Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+								Type: lo.ToPtr("unknown-type-passive"),
+							},
+						},
+					})
+					require.ErrorContains(t, err, `spec.healthchecks.active.type: Unsupported value: "unknown-type-active": supported values: "http", "https", "tcp", "grpc", "grpcs"`)
+					require.ErrorContains(t, err, `spec.healthchecks.passive.type: Unsupported value: "unknown-type-passive": supported values: "http", "https", "tcp", "grpc", "grpcs"`)
+				})
+			},
+		},
 	}
 
 	for _, tc := range testCases {

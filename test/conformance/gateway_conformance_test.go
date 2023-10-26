@@ -48,6 +48,9 @@ var commonSkippedTests = []string{
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4984
 	tests.HTTPRouteBackendProtocolWebSocket.ShortName,
 
+	tests.HTTPRouteBackendProtocolH2C.ShortName,
+	tests.HTTPRouteBackendProtocolWebSocket.ShortName,
+
 	// experimental conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
 	tests.HTTPRouteRedirectPath.ShortName,

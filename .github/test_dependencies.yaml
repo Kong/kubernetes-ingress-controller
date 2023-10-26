@@ -10,8 +10,6 @@ e2e:
     - 'v1.25.11'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.24.15'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.23.17'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.28.2'

@@ -39,8 +39,7 @@ spec:
           API's GEP-713 strictly. In particular, it doesn't use the TargetRef for
           attaching to Services and Gateway API *Routes - annotations are used instead.
           This is to allow reusing the same KongUpstreamPolicy for multiple Services
-          and Gateway API *Routes. \n TODO: add validation \"hash_fallback - Not available
-          if hash_on is set to cookie\""
+          and Gateway API *Routes."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

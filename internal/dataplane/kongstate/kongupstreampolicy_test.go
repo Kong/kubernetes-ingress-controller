@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 func TestGetKongUpstreamPolicyForServices(t *testing.T) {
@@ -76,6 +76,27 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: "other-upstream-policy",
 						},
+					},
+				},
+			},
+			expectError: "inconsistent KongUpstreamPolicy configuration for services",
+		},
+		{
+			name: "one service with and one without KongUpstreamPolicy configuration gives error",
+			servicesGroup: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-2",
+						Namespace: "default",
 					},
 				},
 			},

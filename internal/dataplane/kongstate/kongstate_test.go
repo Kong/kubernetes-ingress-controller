@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -956,6 +957,183 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			got := buildPlugins(log, store, nil, tt.pluginRels)
 			require.Len(t, got, 2)
 			require.Equal(t, tt.want, []string{*got[0].InstanceName, *got[1].InstanceName})
+		})
+	}
+}
+
+func TestKongState_FillUpstreamOverrides(t *testing.T) {
+	const (
+		kongIngressName        = "kongIngress"
+		kongUpstreamPolicyName = "policy"
+	)
+	serviceAnnotatedWithKongUpstreamPolicy := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service",
+			Namespace: "default",
+			Annotations: map[string]string{
+				kongv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
+			},
+		},
+	}
+	serviceAnnotatedWithKongUpstreamPolicyAndKongIngress := func() *corev1.Service {
+		s := serviceAnnotatedWithKongUpstreamPolicy.DeepCopy()
+		s.Annotations[annotations.AnnotationPrefix+annotations.ConfigurationKey] = kongIngressName
+		return s
+	}
+
+	testCases := []struct {
+		name                 string
+		upstream             Upstream
+		kongUpstreamPolicies []*kongv1beta1.KongUpstreamPolicy
+		kongIngresses        []*kongv1.KongIngress
+		expectedUpstream     kong.Upstream
+		expectedFailures     []failures.ResourceFailure
+	}{
+		{
+			name: "upstream with no overrides",
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name: kong.String("foo-upstream"),
+			},
+		},
+		{
+			name: "upstream backed by service annotated with KongUpstreamPolicy",
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+				Service: Service{
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy},
+				},
+			},
+			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      kongUpstreamPolicyName,
+						Namespace: "default",
+					},
+					Spec: kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("least-connections"),
+					},
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name:      kong.String("foo-upstream"),
+				Algorithm: kong.String("least-connections"),
+			},
+		},
+		{
+			name: "upstream backed by service annotated with KongUpstreamPolicy that doesn't exist",
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+				Service: Service{
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy},
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name: kong.String("foo-upstream"),
+			},
+			expectedFailures: []failures.ResourceFailure{
+				lo.Must(failures.NewResourceFailure(
+					"failed fetching KongUpstreamPolicy: KongUpstreamPolicy default/policy not found",
+					serviceAnnotatedWithKongUpstreamPolicy,
+				)),
+			},
+		},
+		{
+			name: "KongUpstreamPolicy is applied even if KongIngress is not found",
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+				Service: Service{
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicyAndKongIngress()},
+				},
+			},
+			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      kongUpstreamPolicyName,
+						Namespace: "default",
+					},
+					Spec: kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("least-connections"),
+					},
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name:      kong.String("foo-upstream"),
+				Algorithm: kong.String("least-connections"),
+			},
+			expectedFailures: []failures.ResourceFailure{
+				lo.Must(failures.NewResourceFailure(
+					"failed to get KongIngress: KongIngress kongIngress not found",
+					serviceAnnotatedWithKongUpstreamPolicyAndKongIngress(),
+				)),
+			},
+		},
+		{
+			name: "KongUpstreamPolicy overwrites KongIngress",
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+				Service: Service{
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicyAndKongIngress()},
+				},
+			},
+			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      kongUpstreamPolicyName,
+						Namespace: "default",
+					},
+					Spec: kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("least-connections"),
+					},
+				},
+			},
+			kongIngresses: []*kongv1.KongIngress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      kongIngressName,
+						Namespace: "default",
+					},
+					Upstream: &kongv1.KongIngressUpstream{
+						Algorithm: lo.ToPtr("round-robin"),
+					},
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name:      kong.String("foo-upstream"),
+				Algorithm: kong.String("least-connections"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := store.NewFakeStore(store.FakeObjects{
+				KongUpstreamPolicies: tc.kongUpstreamPolicies,
+				KongIngresses:        tc.kongIngresses,
+			})
+			require.NoError(t, err)
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+
+			kongState := KongState{Upstreams: []Upstream{tc.upstream}}
+			kongState.FillUpstreamOverrides(s, failuresCollector)
+			require.Equal(t, tc.expectedUpstream, kongState.Upstreams[0].Upstream)
+			require.ElementsMatch(t, tc.expectedFailures, failuresCollector.PopResourceFailures())
 		})
 	}
 }

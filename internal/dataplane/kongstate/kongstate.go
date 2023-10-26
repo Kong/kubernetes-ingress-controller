@@ -203,29 +203,30 @@ func (ks *KongState) FillOverrides(
 		}
 	}
 
-	// Upstreams
+	ks.FillUpstreamOverrides(s, failuresCollector)
+}
+
+func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *failures.ResourceFailuresCollector) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
+		servicesAsObjects := lo.Map(servicesGroup, func(svc *corev1.Service, _ int) client.Object { return svc })
 
 		kongIngress, err := getKongIngressForServices(s, servicesGroup)
 		if err != nil {
-			logger.Error(err, "failed to fetch KongIngress resource for Services",
-				"names", PrettyPrintServiceList(servicesGroup))
-			continue
-		}
-
-		for _, svc := range ks.Upstreams[i].Service.K8sServices {
-			ks.Upstreams[i].override(kongIngress, svc)
+			failuresCollector.PushResourceFailure(err.Error(), servicesAsObjects...)
+		} else {
+			for _, svc := range ks.Upstreams[i].Service.K8sServices {
+				ks.Upstreams[i].override(kongIngress, svc)
+			}
 		}
 
 		kongUpstreamPolicy, err := GetKongUpstreamPolicyForServices(s, servicesGroup)
 		if err != nil {
-			servicesAsObjects := lo.Map(servicesGroup, func(svc *corev1.Service, _ int) client.Object { return svc })
 			failuresCollector.PushResourceFailure(err.Error(), servicesAsObjects...)
-			continue
-		}
-		if kongUpstreamPolicy != nil {
-			ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
+		} else {
+			if kongUpstreamPolicy != nil {
+				ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
+			}
 		}
 	}
 }

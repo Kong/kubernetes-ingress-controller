@@ -21,7 +21,6 @@ func TranslateKongUpstreamPolicy(policy kongv1beta1.KongUpstreamPolicySpec) *kon
 		Algorithm:    policy.Algorithm,
 		Slots:        policy.Slots,
 		Healthchecks: translateHealthchecks(policy.Healthchecks),
-		HostHeader:   policy.HostHeader,
 
 		HashOn:           translateHashOn(policy.HashOn),
 		HashOnHeader:     translateHashOnHeader(policy.HashOn),

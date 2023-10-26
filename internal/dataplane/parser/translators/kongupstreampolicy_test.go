@@ -86,6 +86,21 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "KongUpstreamPolicySpec with predefined hash input",
+			policySpec: kongv1beta1.KongUpstreamPolicySpec{
+				HashOn: &kongv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(kongv1beta1.HashInput("consumer")),
+				},
+				HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(kongv1beta1.HashInput("ip")),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:       lo.ToPtr("consumer"),
+				HashFallback: lo.ToPtr("ip"),
+			},
+		},
+		{
 			name: "KongUpstreamPolicySpec with healthchecks",
 			policySpec: kongv1beta1.KongUpstreamPolicySpec{
 				Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
@@ -93,13 +108,13 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 						Type:        lo.ToPtr("http"),
 						Concurrency: lo.ToPtr(10),
 						Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
-							HTTPStatuses: []int{200},
+							HTTPStatuses: []kongv1beta1.HTTPStatus{200},
 							Interval:     lo.ToPtr(20),
 							Successes:    lo.ToPtr(30),
 						},
 						Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
 							HTTPFailures: lo.ToPtr(40),
-							HTTPStatuses: []int{500},
+							HTTPStatuses: []kongv1beta1.HTTPStatus{500},
 							Timeouts:     lo.ToPtr(60),
 							Interval:     lo.ToPtr(70),
 						},
@@ -112,13 +127,11 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 					Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
 						Type: lo.ToPtr("tcp"),
 						Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
-							Interval:  lo.ToPtr(90),
 							Successes: lo.ToPtr(100),
 						},
 						Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
 							TCPFailures: lo.ToPtr(110),
 							Timeouts:    lo.ToPtr(120),
-							Interval:    lo.ToPtr(130),
 						},
 					},
 					Threshold: lo.ToPtr(140),
@@ -149,13 +162,11 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 					Passive: &kong.PassiveHealthcheck{
 						Type: lo.ToPtr("tcp"),
 						Healthy: &kong.Healthy{
-							Interval:  lo.ToPtr(90),
 							Successes: lo.ToPtr(100),
 						},
 						Unhealthy: &kong.Unhealthy{
 							TCPFailures: lo.ToPtr(110),
 							Timeouts:    lo.ToPtr(120),
-							Interval:    lo.ToPtr(130),
 						},
 					},
 				},

@@ -53,14 +53,17 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 }
 
 func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayapi.UDPRoute) error {
-	// first we grab the spec and gather some metadata about the object
 	spec := udproute.Spec
+	if len(spec.Rules) == 0 {
+		return translators.ErrRouteValidationNoRules
+	}
 
-	// each rule may represent a different set of backend services that will be accepting
+	gwPorts := p.getGatewayListeningPorts(udproute.Namespace, gatewayapi.UDPProtocolType, spec.CommonRouteSpec.ParentRefs)
+	// Each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
-		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromRouteRule(udproute, ruleNumber, rule)
+		// Determine the routes needed to route traffic to services for this rule.
+		routes, err := generateKongRoutesFromRouteRule(udproute, gwPorts, ruleNumber, rule)
 		if err != nil {
 			return err
 		}

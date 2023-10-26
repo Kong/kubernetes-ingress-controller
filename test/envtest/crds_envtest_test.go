@@ -4,6 +4,7 @@ package envtest
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
@@ -37,9 +39,10 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	loggerHook := RunManager(ctx, t, envcfg,
+	_, loggerHook := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithGatewayFeatureEnabled,
+		WithGatewayAPIControllers(),
 		WithPublishService("ns"),
 	)
 
@@ -109,7 +112,7 @@ func TestCRDValidations(t *testing.T) {
 	ctx := context.Background()
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
-	client := NewControllerClient(t, scheme, envcfg)
+	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	testCases := []struct {
 		name     string
@@ -175,12 +178,276 @@ func TestCRDValidations(t *testing.T) {
 				require.ErrorContains(t, err, "spec.rules[0].port")
 			},
 		},
+		{
+			name: "KongUpstreamPolicy - only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				for i, invalidHashOn := range generateInvalidHashOns() {
+					invalidHashOn := invalidHashOn
+					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							HashOn: &invalidHashOn,
+						})
+						require.ErrorContains(t, err, "Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set.")
+					})
+				}
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - only one of spec.hashOnFallback.(header|uriCapture|queryArg) can be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				invalidHashOns := lo.Reject(generateInvalidHashOns(), func(hashOn kongv1beta1.KongUpstreamHash, _ int) bool {
+					// Filter out Cookie which is not allowed in spec.hashOnFallback.
+					return hashOn.Cookie != nil
+				})
+				for i, invalidHashOn := range invalidHashOns {
+					invalidHashOn := invalidHashOn
+					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							HashOnFallback: &invalidHashOn,
+						})
+						require.ErrorContains(t, err, "Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set.")
+					})
+				}
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOn.cookie and spec.hashOn.cookiePath are set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &kongv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name"),
+						CookiePath: lo.ToPtr("/"),
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOn.cookie is set, spec.hashOn.cookiePath is required",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &kongv1beta1.KongUpstreamHash{
+						Cookie: lo.ToPtr("cookie-name"),
+					},
+				})
+				require.ErrorContains(t, err, "When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOn.cookiePath is set, spec.hashOn.cookie is required",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &kongv1beta1.KongUpstreamHash{
+						CookiePath: lo.ToPtr("/"),
+					},
+				})
+				require.ErrorContains(t, err, "When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie must not be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+						CookiePath: lo.ToPtr("/"),
+					},
+				})
+				require.ErrorContains(t, err, "spec.hashOnFallback.cookiePath must not be set.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOnFallback.cookiePath must not be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+						CookiePath: lo.ToPtr("/"),
+					},
+				})
+				require.ErrorContains(t, err, "spec.hashOnFallback.cookiePath must not be set.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthchecks.active.healthy.httpStatuses contains invalid HTTP status code",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+						Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+							Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
+								HTTPStatuses: []kongv1beta1.HTTPStatus{600},
+							},
+						},
+					},
+				})
+				require.ErrorContains(t, err, "should be less than or equal to 599")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthchecks.active.unhealthy.httpStatuses contains invalid HTTP status code",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+						Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+							Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
+								HTTPStatuses: []kongv1beta1.HTTPStatus{99},
+							},
+						},
+					},
+				})
+				require.ErrorContains(t, err, "should be greater than or equal to 100")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthchecks.passive.healthy.interval must not be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+						Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+							Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
+								Interval: lo.ToPtr(10),
+							},
+						},
+					},
+				})
+				require.ErrorContains(t, err, "spec.healthchecks.passive.healthy.interval must not be set.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthchecks.passive.unhealthy.interval must not be set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+						Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+							Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
+								Interval: lo.ToPtr(10),
+							},
+						},
+					},
+				})
+				require.ErrorContains(t, err, "spec.healthchecks.passive.unhealthy.interval must not be set.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - hashOn can only be set when algorithm is set to consistent-hashing",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					HashOn: &kongv1beta1.KongUpstreamHash{
+						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
+					},
+				})
+				require.ErrorContains(t, err, `spec.algorithm must be set to "consistent-hashing" when spec.hashOn is set.`)
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - hashOnFallback can only be set when algorithm is set to consistent-hashing",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
+					},
+				})
+				require.ErrorContains(t, err, `spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback is set.`)
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - hashOn(Fallback).input enum is validated",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				validValues := []string{"ip", "consumer", "path"}
+				for _, validValue := range validValues {
+					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							Algorithm: lo.ToPtr("consistent-hashing"),
+							HashOn: &kongv1beta1.KongUpstreamHash{
+								Input: lo.ToPtr(kongv1beta1.HashInput(validValue)),
+							},
+							HashOnFallback: &kongv1beta1.KongUpstreamHash{
+								Input: lo.ToPtr(kongv1beta1.HashInput(validValue)),
+							},
+						})
+						require.NoError(t, err)
+					})
+				}
+
+				t.Run("invalid value", func(t *testing.T) {
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("consistent-hashing"),
+						HashOn: &kongv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(kongv1beta1.HashInput("unknown-input")),
+						},
+						HashOnFallback: &kongv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(kongv1beta1.HashInput("unknown-input-fallback")),
+						},
+					})
+					require.ErrorContains(t, err, `spec.hashOn.input: Unsupported value: "unknown-input": supported values: "ip", "consumer", "path"`)
+					require.ErrorContains(t, err, `spec.hashOnFallback.input: Unsupported value: "unknown-input-fallback": supported values: "ip", "consumer", "path"`)
+				})
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - algorithm enum is validated",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				validValues := []string{"consistent-hashing", "round-robin", "least-connections", "latency"}
+				for _, validValue := range validValues {
+					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							Algorithm: lo.ToPtr(validValue),
+						})
+						require.NoError(t, err)
+					})
+				}
+
+				t.Run("invalid value", func(t *testing.T) {
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("unknown-algorithm"),
+					})
+					require.ErrorContains(t, err, `spec.algorithm: Unsupported value: "unknown-algorithm": supported values: "round-robin", "consistent-hashing", "least-connections", "latency"`)
+				})
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - healthcheck.(active|passive).type enum is validated",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				validValues := []string{"http", "https", "tcp", "grpc", "grpcs"}
+				for _, validValue := range validValues {
+					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+							Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+								Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+									Type: lo.ToPtr(validValue),
+								},
+								Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+									Type: lo.ToPtr(validValue),
+								},
+							},
+						})
+						require.NoError(t, err)
+					})
+				}
+
+				t.Run("invalid value", func(t *testing.T) {
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
+							Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+								Type: lo.ToPtr("unknown-type-active"),
+							},
+							Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+								Type: lo.ToPtr("unknown-type-passive"),
+							},
+						},
+					})
+					require.ErrorContains(t, err, `spec.healthchecks.active.type: Unsupported value: "unknown-type-active": supported values: "http", "https", "tcp", "grpc", "grpcs"`)
+					require.ErrorContains(t, err, `spec.healthchecks.passive.type: Unsupported value: "unknown-type-passive": supported values: "http", "https", "tcp", "grpc", "grpcs"`)
+				})
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			ns := CreateNamespace(ctx, t, client)
+			ns := CreateNamespace(ctx, t, ctrlClient)
 			tc.scenario(ctx, t, ns.Name)
 		})
 	}
@@ -258,4 +525,61 @@ func validUDPIngress() *kongv1beta1.UDPIngress {
 			},
 		},
 	}
+}
+
+func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns string, spec kongv1beta1.KongUpstreamPolicySpec) error {
+	return client.Create(ctx, &kongv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-",
+			Namespace:    ns,
+		},
+		Spec: spec,
+	})
+}
+
+// generateInvalidHashOns generates a list of KongUpstreamHash objects with all possible invalid fields pairs.
+func generateInvalidHashOns() []kongv1beta1.KongUpstreamHash {
+	fieldSetFns := []func(h *kongv1beta1.KongUpstreamHash){
+		func(h *kongv1beta1.KongUpstreamHash) {
+			h.Input = lo.ToPtr(kongv1beta1.HashInput("consumer"))
+		},
+		func(h *kongv1beta1.KongUpstreamHash) {
+			h.Cookie = lo.ToPtr("cookie-name")
+			h.CookiePath = lo.ToPtr("/")
+		},
+		func(h *kongv1beta1.KongUpstreamHash) {
+			h.Header = lo.ToPtr("header-name")
+		},
+		func(h *kongv1beta1.KongUpstreamHash) {
+			h.URICapture = lo.ToPtr("uri-capture")
+		},
+		func(h *kongv1beta1.KongUpstreamHash) {
+			h.QueryArg = lo.ToPtr("query-arg")
+		},
+	}
+
+	var invalidHashOns []kongv1beta1.KongUpstreamHash
+	for outerIdx, fieldSetFn := range fieldSetFns {
+		hashOn := kongv1beta1.KongUpstreamHash{}
+		fieldSetFn(&hashOn)
+
+		for innerIdx, innerFieldSetFn := range fieldSetFns {
+			if outerIdx == innerIdx {
+				continue
+			}
+			invalidHashOn := hashOn.DeepCopy()
+			innerFieldSetFn(invalidHashOn)
+			invalidHashOns = append(invalidHashOns, *invalidHashOn)
+		}
+	}
+
+	optStr := func(s *string) string {
+		if s == nil {
+			return "<nil>"
+		}
+		return *s
+	}
+	return lo.UniqBy(invalidHashOns, func(h kongv1beta1.KongUpstreamHash) string {
+		return fmt.Sprintf("%s.%s.%s.%s", optStr(h.Cookie), optStr(h.Header), optStr(h.URICapture), optStr(h.QueryArg))
+	})
 }

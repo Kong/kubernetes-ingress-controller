@@ -36,10 +36,10 @@ import (
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
-
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
-	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
+	const entDBLESSPath = "manifests/all-in-one-dbless-k4k8s-enterprise.yaml"
+
+	t.Logf("configuring %s manifest test", entDBLESSPath)
 	if os.Getenv(kong.LicenseDataEnvVar) == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
@@ -73,7 +73,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	verifyEnterprise(ctx, t, env, adminPassword)
 }
 
-const postgresPath = "../../deploy/single/all-in-one-postgres.yaml"
+const postgresPath = "manifests/all-in-one-postgres.yaml"
 
 func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
@@ -215,7 +215,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	}, 2*time.Minute, time.Second)
 }
 
-const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml"
+const entPostgresPath = "manifests/all-in-one-postgres-enterprise.yaml"
 
 func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres-enterprise.yaml manifest test")
@@ -259,12 +259,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Parallel()
 
-	const (
-		manifestFileName = "all-in-one-dbless.yaml"
-		manifestFilePath = "../../deploy/single/" + manifestFileName
-	)
+	const manifestFilePath = "manifests/all-in-one-dbless.yaml"
 
-	t.Logf("configuring %s manifest test", manifestFileName)
+	t.Logf("configuring %s manifest test", manifestFilePath)
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")

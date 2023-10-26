@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	neturl "net/url"
-	"strconv"
 
 	"github.com/samber/lo"
 
@@ -134,27 +133,27 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 // ListAllNodes call ListNodes() repeatedly to get all nodes in a control plane.
 func (c *Client) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
 	nodes := []*NodeItem{}
-	pageNum := 0
+	var nextCursor string
 	for {
-		resp, err := c.listNodes(ctx, pageNum)
+		resp, err := c.listNodes(ctx, nextCursor)
 		if err != nil {
 			return nil, err
 		}
 		nodes = append(nodes, resp.Items...)
-		if resp.Page == nil || resp.Page.NextPageNum == 0 {
+		if resp.Page == nil || !resp.Page.HasNextPage {
 			return nodes, nil
 		}
-		// if konnect returns a non-0 NextPageNum, the node are not all listed
-		// and we should start listing from the returned NextPageNum.
-		pageNum = int(resp.Page.NextPageNum)
+		// if konnect returns that there is a next page, the nodes are not all
+		// listed and we should start listing from the returned NextCursor.
+		nextCursor = resp.Page.NextCursor
 	}
 }
 
-func (c *Client) listNodes(ctx context.Context, pageNumber int) (*ListNodeResponse, error) {
+func (c *Client) listNodes(ctx context.Context, nextCursor string) (*ListNodeResponse, error) {
 	url, _ := neturl.Parse(c.kicNodeAPIEndpoint())
-	if pageNumber != 0 {
+	if nextCursor != "" {
 		q := url.Query()
-		q.Set("page.number", strconv.Itoa(pageNumber))
+		q.Set("page.next_cursor", nextCursor)
 		url.RawQuery = q.Encode()
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)

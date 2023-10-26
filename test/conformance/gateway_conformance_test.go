@@ -21,8 +21,8 @@ import (
 
 var commonSkippedTests = []string{
 	// core conformance
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4916
-	tests.GatewaySecretInvalidReferenceGrant.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4982
+	tests.GatewayWithAttachedRoutes.ShortName,
 
 	// extended conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563
@@ -43,6 +43,10 @@ var commonSkippedTests = []string{
 	tests.HTTPRouteTimeoutBackendRequest.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4915
 	tests.HTTPRouteTimeoutRequest.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4983
+	tests.HTTPRouteBackendProtocolH2C.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4984
+	tests.HTTPRouteBackendProtocolWebSocket.ShortName,
 
 	// experimental conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684

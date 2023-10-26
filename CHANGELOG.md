@@ -114,16 +114,12 @@ Adding a new version? You'll need three changes:
 - Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
   if the version is lower, also won't discover such Kong Gateways.
   [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
-- Added `--kong-admin-token-file` flag to provide the Kong admin token via file
-  [Providing Kong admin token via file](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
-  [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
 - `deploy/single/all-in-one-dbless-legacy.yaml` manifest is removed.
   It was already deprecated in 2.9
   [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
-- `deploy/single/all-in-one-dbless-enterprise.yaml` manifest is removed.
-  It's nearly identical to `deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml`
-  which is used in the official docs.
-  [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873)
+- All manifests from `deploy/single` are no longer supported as installation
+  method and were removed, please use Helm chart or Kong Gateway Operator instead.
+  [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866), [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873), [#4970](https://github.com/Kong/kubernetes-ingress-controller/pull/4970), 
 - Credentials now use a `konghq.com/credential` label to indicate
   credential type instead of the `kongCredType` field. This allows controller
   compontents to avoid caching unnecessary Secrets. The `kongCredType` field is
@@ -134,7 +130,6 @@ Adding a new version? You'll need three changes:
   expected to functionally affect routing, but may affect performance for
   some configurations.
   [#4934](https://github.com/Kong/kubernetes-ingress-controller/pull/4934)
-
 
 ### Fixed
 
@@ -148,6 +143,10 @@ Adding a new version? You'll need three changes:
   [#4813](https://github.com/Kong/kubernetes-ingress-controller/pull/4813)
 - Fixed an incorrect watch, set in UDPRoute controller watching UDProute status updates.
   [#4835](https://github.com/Kong/kubernetes-ingress-controller/pull/4835)
+- Fixed setting proper destination port for TCPRoute and UDPRoute, now field `SectionName`
+  for `TCPRoute` and `UDPRoute` works as expected. It **breaks** some configurations that
+  relied on matching multiple Gateway's listener ports to ports of services automatically.
+  [#4928](https://github.com/Kong/kubernetes-ingress-controller/pull/4928)
 
 ### Changed
 
@@ -156,9 +155,10 @@ Adding a new version? You'll need three changes:
 - Docker images now use UID and GID 1000 to match Kong images. This should have
   no user-facing effect.
   [#4911](https://github.com/Kong/kubernetes-ingress-controller/pull/4911)
-- Bump version of gateway API to `1.0.0-rc1` and support `Gateway`, `GatewayClass`
+- Bump version of gateway API to `1.0.0-rc2` and support `Gateway`, `GatewayClass`
   and `HTTPRoute` in API version `gateway.networking.k8s.io/v1`.
   [#4893](https://github.com/Kong/kubernetes-ingress-controller/pull/4893)
+  [#4981](https://github.com/Kong/kubernetes-ingress-controller/pull/4981)
 - Update `Gateway`s, `GatewayClass`es and `HTTPRoute`s in examples to API
   version `gateway.networking.k8s.io/v1`.
   [#4935](https://github.com/Kong/kubernetes-ingress-controller/pull/4935)
@@ -166,7 +166,15 @@ Adding a new version? You'll need three changes:
   the controller resides in a separate Deployment. This allows the controller
   to manage its own mTLS negotiation.
   [#4942](https://github.com/Kong/kubernetes-ingress-controller/pull/4942)
+- Remove `Gateway` feature flag for Gateway API.
+  [#4968](https://github.com/Kong/kubernetes-ingress-controller/pull/4968)
 
+  It was enabled by default since 2.6.0 so the default behavior doesn't change.
+  If users want to disable related functionality, they still can by disabling
+  related Gateway API controllers via setting the following flags to `false`:
+  - `--enable-controller-gwapi-gateway`
+  - `--enable-controller-gwapi-httproute`
+  - `--enable-controller-gwapi-reference-grant`
 
 ### Added
 
@@ -182,6 +190,14 @@ Adding a new version? You'll need three changes:
   [#4762](https://github.com/Kong/kubernetes-ingress-controller/pull/4762)
 - Support Query Parameter matching of `HTTPRoute` when expression router enabled.
   [#4780](https://github.com/Kong/kubernetes-ingress-controller/pull/4780)
+- Support `ExtensionRef` HTTPRoute filter. It is now possibile to set a KongPlugin
+  reference in the `HTTPRoute`s' `ExtensionRef` filter field.
+  [#4838](https://github.com/Kong/kubernetes-ingress-controller/pull/4838)
+- Added `--kong-admin-token-file` flag to provide the Kong admin token via a
+  file. This is an alternative to the existing `--kong-admin-token` for users
+  that prefer to mount a file over binding a Secret to an environment variable
+  value. Only one of the two options can be used.
+  [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 

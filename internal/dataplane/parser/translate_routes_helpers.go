@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -31,8 +32,9 @@ type tRouteRule interface {
 	gatewayapi.UDPRouteRule | gatewayapi.TCPRouteRule | gatewayapi.TLSRouteRule
 }
 
-// getBackendRefs returns BackendRefs from TCPRouteRule, UDPRouteRule or TLSRouteRule.
-func getBackendRefs[TRouteRule tRouteRule](t TRouteRule) ([]gatewayapi.BackendRef, error) {
+// checkBackendRefs checks if BackendRefs are properly configured for
+// TCPRouteRule, UDPRouteRule or TLSRouteRule.
+func checkBackendRefs[TRouteRule tRouteRule](t TRouteRule) error {
 	// This is necessary because as of go1.18 (and go1.19) one cannot use common
 	// struct fields in generic code.
 	//
@@ -40,41 +42,33 @@ func getBackendRefs[TRouteRule tRouteRule](t TRouteRule) ([]gatewayapi.BackendRe
 	switch tt := any(t).(type) {
 	case gatewayapi.UDPRouteRule:
 		if len(tt.BackendRefs) == 0 {
-			return nil, errors.New("UDPRoute rules must include at least one backendRef")
+			return errors.New("UDPRoute rules must include at least one backendRef")
 		}
-		return tt.BackendRefs, nil
 	case gatewayapi.TCPRouteRule:
 		if len(tt.BackendRefs) == 0 {
-			return nil, errors.New("TCPRoute rules must include at least one backendRef")
+			return errors.New("TCPRoute rules must include at least one backendRef")
 		}
-		return tt.BackendRefs, nil
 	case gatewayapi.TLSRouteRule:
 		// TLSRoutes don't require BackendRefs.
-		return tt.BackendRefs, nil
 	}
-
-	// This should never happen because we use type constraints on what types
-	// are accepted.
-	return nil, nil
+	return nil
 }
 
 // generateKongRoutesFromRouteRule converts a Gateway Route (TCP, UDP or TLS) rule
 // to one or more Kong Route objects to route traffic to services.
 func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 	route T,
+	gwPorts []gatewayapi.PortNumber,
 	ruleNumber int,
 	rule TRule,
 ) ([]kongstate.Route, error) {
-	backendRefs, err := getBackendRefs(rule)
-	if err != nil {
+	if err := checkBackendRefs(rule); err != nil {
 		return []kongstate.Route{}, err
 	}
-
-	tags := util.GenerateTagsForObject(route)
 	return []kongstate.Route{
 		{
 			Ingress: util.FromK8sObject(route),
-			Route:   routeToKongRoute(route, backendRefs, ruleNumber, tags),
+			Route:   routeToKongRoute(route, gwPorts, ruleNumber, util.GenerateTagsForObject(route)),
 		},
 	}, nil
 }
@@ -82,16 +76,22 @@ func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 // routeToKongRoute converts Gateway Route to kong.Route.
 func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 	r TRoute,
-	backendRefs []gatewayapi.BackendRef,
+	gwPorts []gatewayapi.PortNumber,
 	ruleNumber int,
 	tags []*string,
 ) kong.Route {
+	destinations := lo.Map(gwPorts, func(p gatewayapi.PortNumber, _ int) *kong.CIDRPort {
+		return &kong.CIDRPort{
+			Port: kong.Int(int(p)),
+		}
+	})
+
 	var kr kong.Route
 	switch rr := any(r).(type) {
 	case *gatewayapi.UDPRoute:
-		kr = udpRouteToKongRoute(rr, backendRefs, ruleNumber)
+		kr = udpRouteToKongRoute(rr, destinations, ruleNumber)
 	case *gatewayapi.TCPRoute:
-		kr = tcpRouteToKongRoute(rr, backendRefs, ruleNumber)
+		kr = tcpRouteToKongRoute(rr, destinations, ruleNumber)
 	case *gatewayapi.TLSRoute:
 		kr = tlsRouteToKongRoute(rr, ruleNumber)
 	default:
@@ -104,44 +104,30 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 
 func udpRouteToKongRoute(
 	r *gatewayapi.UDPRoute,
-	backendRefs []gatewayapi.BackendRef,
+	destinations []*kong.CIDRPort,
 	ruleNumber int,
 ) kong.Route {
 	return kong.Route{
 		Name: kong.String(
-			generateRouteName(udpRouteType, r.Namespace, r.Name, ruleNumber)),
+			generateRouteName(udpRouteType, r.Namespace, r.Name, ruleNumber),
+		),
 		Protocols:    kong.StringSlice("udp"),
-		Destinations: backendRefsToKongCIDRPorts(backendRefs),
+		Destinations: destinations,
 	}
 }
 
 func tcpRouteToKongRoute(
 	r *gatewayapi.TCPRoute,
-	backendRefs []gatewayapi.BackendRef,
+	destinations []*kong.CIDRPort,
 	ruleNumber int,
 ) kong.Route {
 	return kong.Route{
 		Name: kong.String(
-			generateRouteName(tcpRouteType, r.Namespace, r.Name, ruleNumber)),
+			generateRouteName(tcpRouteType, r.Namespace, r.Name, ruleNumber),
+		),
 		Protocols:    kong.StringSlice("tcp"),
-		Destinations: backendRefsToKongCIDRPorts(backendRefs),
+		Destinations: destinations,
 	}
-}
-
-func backendRefsToKongCIDRPorts(backendRefs []gatewayapi.BackendRef) []*kong.CIDRPort {
-	destinations := make([]*kong.CIDRPort, 0, len(backendRefs))
-	for _, backendRef := range backendRefs {
-		if backendRef.Port == nil {
-			continue // Should we propagate the error?
-		}
-
-		destinations = append(destinations,
-			&kong.CIDRPort{
-				Port: kong.Int(int(*backendRef.Port)),
-			},
-		)
-	}
-	return destinations
 }
 
 func tlsRouteToKongRoute(r *gatewayapi.TLSRoute, ruleNumber int) kong.Route {

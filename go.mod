@@ -32,7 +32,7 @@ require (
 	github.com/kong/deck v1.27.1
 	github.com/kong/go-kong v0.47.0
 	github.com/kong/kubernetes-telemetry v0.1.1
-	github.com/kong/kubernetes-testing-framework v0.41.0
+	github.com/kong/kubernetes-testing-framework v0.41.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.56
 	github.com/mitchellh/mapstructure v1.5.0
@@ -56,10 +56,10 @@ require (
 	k8s.io/client-go v0.28.3
 	k8s.io/component-base v0.28.3
 	sigs.k8s.io/controller-runtime v0.16.3
-	sigs.k8s.io/gateway-api v1.0.0-rc1
+	sigs.k8s.io/gateway-api v1.0.0-rc2
 	sigs.k8s.io/kustomize/api v0.15.0
 	sigs.k8s.io/kustomize/kyaml v0.15.0
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (

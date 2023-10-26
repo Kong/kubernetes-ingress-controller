@@ -18,9 +18,13 @@
 | `--dump-sensitive-config` | `bool` | Include credentials and TLS secrets in configs exposed with --dump-config. | `false` |
 | `--election-id` | `string` | Election id to use for status update. | `5b374a9e.konghq.com` |
 | `--election-namespace` | `string` | Leader election namespace to use when running outside a cluster. |  |
+| `--enable-controller-gwapi-gateway` | `bool` | Enable the Gateway API Gateway controller. | `true` |
+| `--enable-controller-gwapi-httproute` | `bool` | Enable the Gateway API HTTPRoute controller. | `true` |
+| `--enable-controller-gwapi-reference-grant` | `bool` | Enable the Gateway API ReferenceGrant controller. | `true` |
 | `--enable-controller-ingress-class-networkingv1` | `bool` | Enable the networking.k8s.io/v1 IngressClass controller. | `true` |
 | `--enable-controller-ingress-class-parameters` | `bool` | Enable the IngressClassParameters controller. | `true` |
 | `--enable-controller-ingress-networkingv1` | `bool` | Enable the networking.k8s.io/v1 Ingress controller. | `true` |
+| `--enable-controller-kong-upstream-policy` | `bool` | Enable the KongUpstreamPolicy controller. | `true` |
 | `--enable-controller-kongclusterplugin` | `bool` | Enable the KongClusterPlugin controller. | `true` |
 | `--enable-controller-kongconsumer` | `bool` | Enable the KongConsumer controller. . | `true` |
 | `--enable-controller-kongingress` | `bool` | Enable the KongIngress controller. | `true` |

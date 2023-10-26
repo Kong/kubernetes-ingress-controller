@@ -377,6 +377,8 @@ test.golden.update:
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
 
+ENVTEST_TIMEOUT ?= 5m
+
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
 _test.envtest: gotestsum setup-envtest use-setup-envtest
@@ -386,6 +388,7 @@ _test.envtest: gotestsum setup-envtest use-setup-envtest
 		-race $(GOTESTFLAGS) \
 		-tags envtest \
 		-covermode=atomic \
+		-timeout $(ENVTEST_TIMEOUT) \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.envtest.out \
 		./test/envtest/...

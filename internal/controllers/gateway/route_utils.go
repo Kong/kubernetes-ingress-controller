@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
@@ -125,7 +126,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 // Gateway APIs route object (e.g. HTTPRoute, TCPRoute, e.t.c.) from the provided cached
 // client if they match this controller. If there are no gateways present for this route
 // OR the present gateways are references to missing objects, this will return a unsupportedGW error.
-func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc client.Client, route T) ([]supportedGatewayWithCondition, error) {
+func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logger logr.Logger, mgrc client.Client, route T) ([]supportedGatewayWithCondition, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(route)
 	if err != nil {
@@ -158,6 +159,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 			}
 			return nil, fmt.Errorf("failed to retrieve gateway for route: %w", err)
 		}
+		gwLogger := logger.WithValues("parentRef.gateway", fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name))
 
 		// pull the GatewayClass for the Gateway object from the cached client
 		gatewayClass := gatewayapi.GatewayClass{}
@@ -198,12 +200,14 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 		)
 
 		for _, listener := range gateway.Spec.Listeners {
+			listenerLogger := gwLogger.WithValues("listener", string(listener.Name))
 			// Check if the route matches listener's AllowedRoutes.
 			if ok, err := routeMatchesListenerAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
 				return nil, fmt.Errorf("failed matching listener %s to a route %s for gateway %s: %w",
 					listener.Name, route.GetName(), gateway.Name, err,
 				)
 			} else if !ok {
+				listenerLogger.V(util.DebugLevel).Info("route does not match listener's allowed routes")
 				continue
 			}
 			allowedByAllowedRoutes = true
@@ -211,8 +215,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 			// Check the listeners statuses:
 			// - Check if a listener status exists with a matching type (via SupportedKinds).
 			// - Check if it matches the requested listener by name (if specified).
-			// - And finally check if that listeners is marked as Ready.
-			if err := existsMatchingReadyListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
+			if err := existsMatchingListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
+				listenerLogger.V(util.DebugLevel).Info("listner does not support this route", "reason", err.Error())
 				continue
 			} else { //nolint:revive
 				allowedBySupportedKinds = true
@@ -221,6 +225,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 			// Check if listener name matches.
 			if parentRef.SectionName != nil {
 				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
+					listenerLogger.V(util.DebugLevel).Info("listner name does not match parentRef.SectionName")
 					continue
 				}
 				allowedByListenerName = true
@@ -231,12 +236,14 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 				if *parentRef.Port != listener.Port {
 					// This ParentRef has a port specified and it's different
 					// than current listener's port.
+					listenerLogger.V(util.DebugLevel).Info("listner name does not match parentRef.Port")
 					continue
 				}
 				portMatched = true
 			}
 
 			if !routeTypeMatchesListenerType(route, listener) {
+				listenerLogger.V(util.DebugLevel).Info("route type does not match listener type")
 				continue
 			}
 
@@ -246,6 +253,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 			} else {
 				condFalse := metav1.ConditionFalse
 				matchingHostname = &condFalse
+				listenerLogger.V(util.DebugLevel).Info("route hostname does not match listener hostname")
 				continue
 			}
 
@@ -452,19 +460,17 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 var (
 	errUnsupportedRouteKind  = errors.New("unsupported route kind")
 	errUnmatchedListenerName = errors.New("unmatched listener name")
-	errListenerNotProgrammed = errors.New("no Programmed condition found for listener")
-	errListenerNotReadyYet   = errors.New("listener not ready yet")
 )
 
 // existsMatchingReadyListenerInStatus checks if:
 // - If a listener status exists with a matching type (via SupportedKinds).
 // - If it matches the requested listener by name (if specified).
 // - And finally check if the provided listener is marked as Ready.
-func existsMatchingReadyListenerInStatus[T gatewayapi.RouteT](route T, listener gatewayapi.Listener, lss []gatewayapi.ListenerStatus) error {
+func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatewayapi.Listener, lss []gatewayapi.ListenerStatus) error {
 	listenerFound := false
 
 	// Find listener's status...
-	listenerStatus, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
+	_, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
 		if ls.Name != listener.Name {
 			return false
 		}
@@ -498,17 +504,6 @@ func existsMatchingReadyListenerInStatus[T gatewayapi.RouteT](route T, listener 
 
 	if !ok && listenerFound {
 		return errUnsupportedRouteKind // Listener(s) found but none with matching supported kinds.
-	}
-
-	// ... and verify if it's programmed.
-	lReadyCond, ok := lo.Find(listenerStatus.Conditions, func(c metav1.Condition) bool {
-		return c.Type == string(gatewayapi.ListenerConditionProgrammed)
-	})
-	if !ok {
-		return errListenerNotProgrammed
-	}
-	if lReadyCond.Status != "True" {
-		return errListenerNotReadyYet // Listener is not ready yet.
 	}
 
 	return nil
@@ -905,8 +900,7 @@ func isRouteAcceptedByListener[T gatewayapi.RouteT](ctx context.Context,
 	// Check the listeners statuses:
 	// - Check if a listener status exists with a matching type (via SupportedKinds).
 	// - Check if it matches the requested listener by name (if specified).
-	// - And finally check if that listeners is marked as Ready.
-	if err := existsMatchingReadyListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
+	if err := existsMatchingListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
 		// return no error here, as we don't care of the reason why this check failed.
 		return false, nil //nolint:nilerr
 	}

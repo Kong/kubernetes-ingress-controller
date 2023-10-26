@@ -368,7 +368,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we need to pull the Gateway parent objects for the HTTPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, httproute, "retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, httproute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, httproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
 			debug(log, httproute, "unsupported route found, processing to verify whether it was ever supported")

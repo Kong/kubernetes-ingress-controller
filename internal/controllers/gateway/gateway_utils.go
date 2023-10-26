@@ -406,13 +406,6 @@ func getListenerStatus(
 					Reason:             string(gatewayapi.ListenerReasonResolvedRefs),
 				},
 				metav1.Condition{
-					Type:               string(gatewayapi.ListenerConditionAccepted),
-					Status:             metav1.ConditionTrue,
-					ObservedGeneration: gateway.Generation,
-					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayapi.ListenerReasonAccepted),
-				},
-				metav1.Condition{
 					Type:               string(gatewayapi.ListenerConditionProgrammed),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
@@ -421,7 +414,7 @@ func getListenerStatus(
 				},
 			)
 		} else {
-			// any conditions we added above will prevent the Listener from becoming programmed
+			// Any conditions we added above will prevent the Listener from becoming programmed.
 			status.Conditions = append(status.Conditions,
 				metav1.Condition{
 					Type:               string(gatewayapi.ListenerConditionProgrammed),
@@ -429,7 +422,27 @@ func getListenerStatus(
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
 					Reason:             string(gatewayapi.ListenerReasonInvalid),
-				})
+				},
+			)
+		}
+
+		// If the we did not set "Accepted" status of listener previously,
+		// which means that there are no conflicts, we set `Accepted` condition to true.
+		// (while the listener can have other problems to prevent it being programmed)
+		if !lo.ContainsBy(status.Conditions,
+			func(condition metav1.Condition) bool {
+				return condition.Type == string(gatewayapi.ListenerConditionAccepted)
+			},
+		) {
+			status.Conditions = append(status.Conditions,
+				metav1.Condition{
+					Type:               string(gatewayapi.ListenerConditionAccepted),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayapi.ListenerReasonAccepted),
+				},
+			)
 		}
 
 		// consistent sort statuses to allow equality comparisons

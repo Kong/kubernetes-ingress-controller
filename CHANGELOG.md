@@ -200,8 +200,21 @@ Adding a new version? You'll need three changes:
   that prefer to mount a file over binding a Secret to an environment variable
   value. Only one of the two options can be used.
   [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
+- New `KongUpstreamPolicy` CRD superseding `KongIngress.Upstream` was introduced.
+  It allows overriding Kong Upstream settings generated for a specific `Service` used
+  in an `Ingress` or Gateway API `*Route`. A policy can be applied to a `Service` by
+  setting `konghq.com/upstream-policy: <policy-name>` annotation on the `Service` object.
+  Read more in [KIC CRDs reference].
+  [#4880](https://github.com/Kong/kubernetes-ingress-controller/pull/4880)
+  [#4943](https://github.com/Kong/kubernetes-ingress-controller/pull/4943)
+  [#4955](https://github.com/Kong/kubernetes-ingress-controller/pull/4955)
+  [#4957](https://github.com/Kong/kubernetes-ingress-controller/pull/4957)
+  [#4969](https://github.com/Kong/kubernetes-ingress-controller/pull/4969)
+  [#4979](https://github.com/Kong/kubernetes-ingress-controller/pull/4979)
+  [#4989](https://github.com/Kong/kubernetes-ingress-controller/pull/4989)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
+[KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 
 ## 2.12.1
 

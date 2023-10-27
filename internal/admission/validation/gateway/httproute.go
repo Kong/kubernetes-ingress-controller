@@ -45,19 +45,19 @@ func ValidateHTTPRoute(
 		// determine the parentRef for this gateway
 		parentRef, err := getParentRefForHTTPRouteGateway(httproute, gateway)
 		if err != nil {
-			return false, "couldn't determine parentRefs for httproute", err
+			return false, "Couldn't determine parentRefs for httproute", err
 		}
 
 		// gather the relevant gateway listeners for the httproute
 		listeners, err := getListenersForHTTPRouteValidation(parentRef.SectionName, gateway)
 		if err != nil {
-			return false, "couldn't find gateway listeners for httproute", err
+			return false, "Couldn't find gateway listeners for httproute", err
 		}
 
 		// perform validation of this route against it's linked gateway listeners
 		for _, listener := range listeners {
 			if err := validateHTTPRouteListener(listener); err != nil {
-				return false, "httproute linked gateway listeners did not pass validation", err
+				return false, "The httproute linked gateway listeners did not pass validation", err
 			}
 		}
 	}
@@ -101,7 +101,7 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, parserFeatures p
 			// We support query parameters matching rules only with expression router.
 			if len(match.QueryParams) != 0 {
 				if !parserFeatures.ExpressionRoutes {
-					return fmt.Errorf("queryparam matching is supported with expression router only")
+					return fmt.Errorf("The queryparam matching is supported with expression router only")
 				}
 			}
 		}
@@ -143,7 +143,7 @@ func getParentRefForHTTPRouteGateway(httproute *gatewayapi.HTTPRoute, gateway *g
 	}
 
 	// if no matches could be found then the input is invalid
-	return nil, fmt.Errorf("no parentRef matched gateway %s/%s", gateway.Namespace, gateway.Name)
+	return nil, fmt.Errorf("No parentRef matched gateway %s/%s", gateway.Namespace, gateway.Name)
 }
 
 // getListenersForHTTPRouteValidation determines if ALL http listeners should be used for validation
@@ -163,7 +163,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayapi.SectionName, gat
 		// if the sectionName isn't empty, we need to verify that we actually found
 		// a listener which matched it, otherwise the object is invalid.
 		if len(listenersForValidation) == 0 {
-			return nil, fmt.Errorf("sectionname referenced listener %s was not found on gateway %s/%s", *sectionName, gateway.Namespace, gateway.Name)
+			return nil, fmt.Errorf("Sectionname referenced listener %s was not found on gateway %s/%s", *sectionName, gateway.Namespace, gateway.Name)
 		}
 	} else {
 		// no specific listener was chosen, so we'll simply validate against
@@ -180,7 +180,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayapi.SectionName, gat
 	// if for some reason the gateway has no listeners (it may be under active provisioning)
 	// the HTTPRoute fails validation because it has no listeners that can be used.
 	if len(listenersForValidation) == 0 {
-		return nil, fmt.Errorf("no listeners could be found for gateway %s/%s", gateway.Namespace, gateway.Name)
+		return nil, fmt.Errorf("No listeners could be found for gateway %s/%s", gateway.Namespace, gateway.Name)
 	}
 
 	return listenersForValidation, nil
@@ -218,7 +218,7 @@ func validateWithKongGateway(
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
-			return false, fmt.Sprintf("unable to validate HTTPRoute schema: %s", err.Error()), nil
+			return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error()), nil
 		}
 		if !ok {
 			errMsgs = append(errMsgs, msg)

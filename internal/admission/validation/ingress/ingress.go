@@ -28,7 +28,7 @@ func ValidateIngress(
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
-			return false, fmt.Sprintf("unable to validate Ingress schema: %s", err.Error()), nil
+			return false, fmt.Sprintf("Unable to validate Ingress schema: %s", err.Error()), nil
 		}
 		if !ok {
 			errMsgs = append(errMsgs, msg)

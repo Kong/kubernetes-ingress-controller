@@ -59,8 +59,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "couldn't determine parentRefs for httproute",
-			err:           fmt.Errorf("no parentRef matched gateway default/testing-gateway"),
+			validationMsg: "Couldn't determine parentRefs for httproute",
+			err:           fmt.Errorf("No parentRef matched gateway default/testing-gateway"),
 		},
 		{
 			msg: "if you use sectionname to attach to a non-existent gateway listener, it fails validation",
@@ -98,8 +98,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "couldn't find gateway listeners for httproute",
-			err:           fmt.Errorf("sectionname referenced listener listener-that-doesnt-exist was not found on gateway default/testing-gateway"),
+			validationMsg: "Couldn't find gateway listeners for httproute",
+			err:           fmt.Errorf("Sectionname referenced listener listener-that-doesnt-exist was not found on gateway default/testing-gateway"),
 		},
 		{
 			msg: "if the provided gateway has NO listeners, the HTTPRoute fails validation",
@@ -126,8 +126,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "couldn't find gateway listeners for httproute",
-			err:           fmt.Errorf("no listeners could be found for gateway default/testing-gateway"),
+			validationMsg: "Couldn't find gateway listeners for httproute",
+			err:           fmt.Errorf("No listeners could be found for gateway default/testing-gateway"),
 		},
 		{
 			msg: "parentRefs which omit the namespace pass validation in the same namespace",
@@ -200,7 +200,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute linked gateway listeners did not pass validation",
+			validationMsg: "The httproute linked gateway listeners did not pass validation",
 			err:           fmt.Errorf("HTTPRoute not supported by listener http-alternate"),
 		},
 		{
@@ -254,7 +254,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			}},
 			valid:         false,
 			validationMsg: "The httproute spec did not pass validation",
-			err:           fmt.Errorf("queryparam matching is supported with expression router only"),
+			err:           fmt.Errorf("The queryparam matching is supported with expression router only"),
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",

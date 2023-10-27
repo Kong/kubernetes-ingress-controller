@@ -12,7 +12,7 @@ const (
 	ErrTextConsumerUsernameEmpty              = "username cannot be empty"
 	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API" //nolint:gosec
 	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
-	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"
+	ErrTextPluginConfigValidationFailed       = "Unable to validate plugin schema"
 	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
 	ErrTextPluginNameEmpty                    = "plugin name cannot be empty"
 	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"

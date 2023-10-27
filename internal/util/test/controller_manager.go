@@ -53,7 +53,7 @@ func DeployControllerManagerForCluster(
 	// determine the proxy admin URL for the Kong Gateway on this cluster:
 	proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
 	if err != nil {
-		return fmt.Errorf("couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
+		return fmt.Errorf("Couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
 	}
 
 	// deploy all RBACs required for testing to the cluster

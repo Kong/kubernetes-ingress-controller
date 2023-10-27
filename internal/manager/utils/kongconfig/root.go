@@ -116,7 +116,7 @@ func KongVersionFromRoot(r Root) (kong.Version, error) {
 	v := kong.VersionFromInfo(r)
 	kv, err := kong.ParseSemanticVersion(v)
 	if err != nil {
-		return kong.Version{}, fmt.Errorf("could not parse Kong version (%s): %w", v, err)
+		return kong.Version{}, fmt.Errorf("Could not parse Kong version (%s): %w", v, err)
 	}
 	return kv, nil
 }

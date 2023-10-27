@@ -76,7 +76,7 @@ func Run(
 
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...), c.GatewayDiscoveryDNSStrategy)
 	if err != nil {
-		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
+		return fmt.Errorf("Failed to create admin apis discoverer: %w", err)
 	}
 
 	err = c.Resolve()
@@ -100,7 +100,7 @@ func Run(
 	// Get Kong configuration root(s) to validate them and extract Kong's version.
 	kongRoots, err := kongconfig.GetRoots(ctx, setupLog, c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay, initialKongClients)
 	if err != nil {
-		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
+		return fmt.Errorf("Could not retrieve Kong admin root(s): %w", err)
 	}
 
 	kongStartUpConfig, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
@@ -155,7 +155,7 @@ func Run(
 		readinessChecker,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
+		return fmt.Errorf("Failed to create AdminAPIClientsManager: %w", err)
 	}
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")
@@ -181,7 +181,7 @@ func Run(
 		parserFeatureFlags,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create parser: %w", err)
+		return fmt.Errorf("Failed to create parser: %w", err)
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)

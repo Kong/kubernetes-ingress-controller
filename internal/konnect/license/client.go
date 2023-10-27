@@ -83,11 +83,11 @@ func (c *Client) listLicenses(ctx context.Context) (*ListLicenseResponse, error)
 	url, _ := neturl.Parse(c.kicLicenseAPIEndpoint())
 	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("Failed to create request: %w", err)
 	}
 	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %w", err)
+		return nil, fmt.Errorf("Failed to get response: %w", err)
 	}
 	defer httpResp.Body.Close()
 
@@ -107,7 +107,7 @@ func (c *Client) listLicenses(ctx context.Context) (*ListLicenseResponse, error)
 	resp := &ListLicenseResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse response body: %w", err)
+		return nil, fmt.Errorf("Failed to parse response body: %w", err)
 	}
 	return resp, nil
 }

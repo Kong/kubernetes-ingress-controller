@@ -66,7 +66,7 @@ func SetupAnonymousReports(
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3589
 	root, err := clientsProvider.GatewayClients()[0].AdminAPIClient().Root(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Kong root config data: %w", err)
+		return nil, fmt.Errorf("Failed to get Kong root config data: %w", err)
 	}
 
 	// Gather versioning information from the kong client
@@ -104,7 +104,7 @@ func SetupAnonymousReports(
 
 	tMgr, err := CreateManager(logger, kubeCfg, clientsProvider, fixedPayload, reportCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
+		return nil, fmt.Errorf("Failed to create anonymous reports manager: %w", err)
 	}
 
 	if err := tMgr.Start(); err != nil {

@@ -289,7 +289,7 @@ func (c *Config) adminAPIClients(
 	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
 		kubeClient, err := c.GetKubeClient()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
+			return nil, fmt.Errorf("Failed to get kubernetes client: %w", err)
 		}
 		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
 	}
@@ -349,7 +349,7 @@ func AdminAPIClientFromServiceDiscovery(
 		retry.OnRetry(func(_ uint, err error) {
 			// log the error if the error is NOT caused by 0 available gateway endpoints.
 			if !errors.As(err, &NoAvailableEndpointsError{}) {
-				logger.Error(err, "failed to create kong client(s)")
+				logger.Error(err, "Failed to create kong client(s)")
 			}
 		}),
 	}, retryOpts...)

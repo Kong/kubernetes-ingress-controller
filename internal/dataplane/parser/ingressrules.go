@@ -84,7 +84,7 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 				secret, err := s.GetSecret(k8sService.Namespace, secretName)
 				if err != nil {
 					failuresCollector.PushResourceFailure(
-						fmt.Sprintf("failed to fetch secret '%s': %v", secretKey, err), k8sService,
+						fmt.Sprintf("Failed to fetch secret '%s': %v", secretKey, err), k8sService,
 					)
 					continue
 				}
@@ -260,7 +260,7 @@ func getK8sServicesForBackends(
 		}
 		k8sService, err := storer.GetService(backendNamespace, backend.Name)
 		if err != nil {
-			log.Error(err, "failed to fetch service",
+			log.Error(err, "Failed to fetch service",
 				"service_name", backend.PortDef.Name,
 				"service_namespace", backendNamespace,
 			)

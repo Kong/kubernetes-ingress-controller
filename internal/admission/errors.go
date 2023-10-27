@@ -1,25 +1,25 @@
 package admission
 
 const (
-	ErrTextAdminAPIUnavailable                = "could not talk to Kong admin API"
-	ErrTextConsumerCredentialSecretNotFound   = "consumer referenced non-existent credentials secret"
-	ErrTextConsumerCredentialValidationFailed = "consumer credential failed validation"
-	ErrTextConsumerExists                     = "consumer already exists"
-	ErrTextConsumerUnretrievable              = "failed to fetch consumer from kong"
-	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise"
-	ErrTextConsumerGroupUnlicensed            = "consumer group support requires a valid Kong Enterprise license"
-	ErrTextConsumerGroupUnexpected            = "unexpected error during checking support for consumer group"
-	ErrTextConsumerUsernameEmpty              = "username cannot be empty"
-	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API" //nolint:gosec
-	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
+	ErrTextAdminAPIUnavailable                = "Could not talk to Kong admin API"
+	ErrTextConsumerCredentialSecretNotFound   = "Consumer referenced non-existent credentials secret"
+	ErrTextConsumerCredentialValidationFailed = "Consumer credential failed validation"
+	ErrTextConsumerExists                     = "Consumer already exists"
+	ErrTextConsumerUnretrievable              = "Failed to fetch consumer from kong"
+	ErrTextConsumerGroupUnsupported           = "Consumer group support requires Kong Enterprise"
+	ErrTextConsumerGroupUnlicensed            = "Consumer group support requires a valid Kong Enterprise license"
+	ErrTextConsumerGroupUnexpected            = "Unexpected error during checking support for consumer group"
+	ErrTextConsumerUsernameEmpty              = "Username cannot be empty"
+	ErrTextFailedToRetrieveSecret             = "Could not retrieve secrets from the kubernetes API" //nolint:gosec
+	ErrTextPluginConfigInvalid                = "Could not parse plugin configuration"
 	ErrTextPluginConfigValidationFailed       = "Unable to validate plugin schema"
-	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
-	ErrTextPluginNameEmpty                    = "plugin name cannot be empty"
-	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
-	ErrTextPluginUsesBothConfigTypes          = "plugin cannot use both Config and ConfigFrom"
+	ErrTextPluginConfigViolatesSchema         = "Plugin failed schema validation: %s"
+	ErrTextPluginNameEmpty                    = "Plugin name cannot be empty"
+	ErrTextPluginSecretConfigUnretrievable    = "Could not load secret plugin configuration"
+	ErrTextPluginUsesBothConfigTypes          = "Plugin cannot use both Config and ConfigFrom"
 )
 
 const (
-	ErrTextCantRetrieveGatewayClass    = "gatewayclass for this gateway could not be retrieved"
-	ErrTextInvalidGatewayConfiguration = "gateway metadata and/or spec are invalid"
+	ErrTextCantRetrieveGatewayClass    = "Gatewayclass for this gateway could not be retrieved"
+	ErrTextInvalidGatewayConfiguration = "Gateway metadata and/or spec are invalid"
 )

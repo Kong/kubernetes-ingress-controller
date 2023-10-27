@@ -74,7 +74,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, logger logr.
 		var err error
 		watcher, err = certwatcher.New(sc.CertPath, sc.KeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
+			return nil, fmt.Errorf("Failed to create CertWatcher: %w", err)
 		}
 
 	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
@@ -82,16 +82,16 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, logger logr.
 		var err error
 		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
+			return nil, fmt.Errorf("Failed to create CertWatcher: %w", err)
 		}
 
 	default:
-		return nil, fmt.Errorf("either cert/key files OR cert/key values must be provided, or none")
+		return nil, fmt.Errorf("Either cert/key files OR cert/key values must be provided, or none")
 	}
 
 	go func() {
 		if err := watcher.Start(ctx); err != nil {
-			logger.Error(err, "certificate watcher error")
+			logger.Error(err, "The certificate watcher error")
 		}
 	}()
 	return &tls.Config{

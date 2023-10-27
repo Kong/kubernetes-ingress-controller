@@ -427,7 +427,7 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 	case gatewayapi.NamespacesFromSelector:
 		namespace := corev1.Namespace{}
 		if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
-			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
+			return false, fmt.Errorf("Failed to get namespace %s: %w", route.GetNamespace(), err)
 		}
 
 		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)

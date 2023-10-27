@@ -47,11 +47,11 @@ func CreateManager(
 ) (telemetry.Manager, error) {
 	k, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client-go kubernetes client: %w", err)
+		return nil, fmt.Errorf("Failed to create client-go kubernetes client: %w", err)
 	}
 	cl, err := client.New(restConfig, client.Options{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create controller-runtime kubernetes client: %w", err)
+		return nil, fmt.Errorf("Failed to create controller-runtime kubernetes client: %w", err)
 	}
 	dyn := dynamic.New(k.Discovery().RESTClient())
 
@@ -67,7 +67,7 @@ func CreateManager(
 		c.InsecureSkipVerify = reportCfg.SplunkEndpointInsecureSkipVerify
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create telemetry TLSForwarder: %w", err)
+		return nil, fmt.Errorf("Failed to create telemetry TLSForwarder: %w", err)
 	}
 	serializer := serializers.NewSemicolonDelimited()
 	consumer := telemetry.NewConsumer(serializer, tf)
@@ -92,14 +92,14 @@ func createManager(
 		opts...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create telemetry manager: %w", err)
+		return nil, fmt.Errorf("Failed to create telemetry manager: %w", err)
 	}
 
 	// Add identify cluster workflow
 	{
 		w, err := telemetry.NewIdentifyPlatformWorkflow(k)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create identify platform workflow: %w", err)
+			return nil, fmt.Errorf("Failed to create identify platform workflow: %w", err)
 		}
 		m.AddWorkflow(w)
 	}
@@ -108,7 +108,7 @@ func createManager(
 	{
 		w, err := telemetry.NewClusterStateWorkflow(dyn, cl.RESTMapper())
 		if err != nil {
-			return nil, fmt.Errorf("failed to create cluster state workflow: %w", err)
+			return nil, fmt.Errorf("Failed to create cluster state workflow: %w", err)
 		}
 
 		m.AddWorkflow(w)
@@ -125,7 +125,7 @@ func createManager(
 			if err == nil {
 				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.PublishServiceNN)
 				if err != nil {
-					return nil, fmt.Errorf("failed to create mesh detect workflow: %w", err)
+					return nil, fmt.Errorf("Failed to create mesh detect workflow: %w", err)
 				}
 
 				m.AddWorkflow(w)
@@ -137,20 +137,20 @@ func createManager(
 	{
 		w, err := telemetry.NewStateWorkflow()
 		if err != nil {
-			return nil, fmt.Errorf("failed to create state workflow: %w", err)
+			return nil, fmt.Errorf("Failed to create state workflow: %w", err)
 		}
 
 		{
 			p, err := provider.NewFixedValueProvider("payload", fixedPayload)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create fixed value provider: %w", err)
+				return nil, fmt.Errorf("Failed to create fixed value provider: %w", err)
 			}
 			w.AddProvider(p)
 		}
 		{
 			p, err := provider.NewFixedValueProvider("feature-gates", featureGatesToTelemetryPayload(rv.FeatureGates))
 			if err != nil {
-				return nil, fmt.Errorf("failed to create fixed value provider: %w", err)
+				return nil, fmt.Errorf("Failed to create fixed value provider: %w", err)
 			}
 			w.AddProvider(p)
 		}
@@ -160,7 +160,7 @@ func createManager(
 				"feature-gateway-service-discovery": rv.GatewayServiceDiscoveryEnabled,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("failed to create fixed value provider: %w", err)
+				return nil, fmt.Errorf("Failed to create fixed value provider: %w", err)
 			}
 			w.AddProvider(p)
 		}
@@ -171,7 +171,7 @@ func createManager(
 	if rv.GatewayServiceDiscoveryEnabled {
 		w, err := workflows.NewGatewayDiscoveryWorkflow(gatewaysCounter)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create gateway discovery workflow: %w", err)
+			return nil, fmt.Errorf("Failed to create gateway discovery workflow: %w", err)
 		}
 		m.AddWorkflow(w)
 	}

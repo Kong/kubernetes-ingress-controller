@@ -60,7 +60,7 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 	}
 	x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
 	if err != nil {
-		return kong.CACertificate{}, errors.New("failed to parse certificate")
+		return kong.CACertificate{}, errors.New("Failed to parse certificate")
 	}
 	if !x509Cert.IsCA {
 		return kong.CACertificate{}, errors.New("certificate is missing the 'CA' basic constraint")

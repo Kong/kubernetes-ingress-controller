@@ -32,7 +32,7 @@ func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 		}),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create control planes client: %w", err)
+		return fmt.Errorf("Failed to create control planes client: %w", err)
 	}
 
 	orphanedCPs, err := findOrphanedControlPlanes(ctx, log, cpClient)

@@ -289,7 +289,7 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get listeners from %s: %w", cl.BaseRootURL(), err)
+				return fmt.Errorf("Failed to get listeners from %s: %w", cl.BaseRootURL(), err)
 			}
 			listenersCh <- listeners
 			streamListenersCh <- streamListeners
@@ -397,7 +397,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients()); err != nil {
 				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
-				c.logger.Error(err, "failed to fetch last good configuration from gateways")
+				c.logger.Error(err, "Failed to fetch last good configuration from gateways")
 			}
 		}
 	}

@@ -622,7 +622,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
-				{Namespace: "default", Name: "foo"}: "failed to fetch secret",
+				{Namespace: "default", Name: "foo"}: "Failed to fetch secret",
 			},
 		},
 		{

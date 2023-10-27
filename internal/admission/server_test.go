@@ -88,7 +88,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	assert.Nil(err)
 	handler.ServeHTTP(res, req)
 	assert.Equal(400, res.Code)
-	assert.Equal("admission review object is missing\n",
+	assert.Equal("Admission review object is missing\n",
 		res.Body.String())
 }
 
@@ -315,7 +315,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`),
 				validator:          KongFakeValidator{Result: false, Message: "consumer is not valid"},
 				wantRespCode:       http.StatusInternalServerError,
-				wantFailureMessage: "unknown resource type to validate: configuration.konghq.com/v1 kongunknown\n",
+				wantFailureMessage: "Unknown resource type to validate: configuration.konghq.com/v1 kongunknown\n",
 			},
 			{
 				name: "validate kong plugin",

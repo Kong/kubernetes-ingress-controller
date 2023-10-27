@@ -215,10 +215,10 @@ func createTestControlPlane(ctx context.Context, t *testing.T) string {
 			ClusterType: cp.ClusterTypeKubernetesIngressController,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create control plane: %w", err)
+			return fmt.Errorf("Failed to create control plane: %w", err)
 		}
 		if createRgResp.StatusCode() != http.StatusCreated {
-			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
+			return fmt.Errorf("Failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
 		}
 		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
 			return errors.New("No control plane ID in response")
@@ -467,7 +467,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 			require.Eventually(t, func() bool {
 				_, err := nodeAPIClient.GetNode(ctx, nodeIDInAdminAPI)
 				if err != nil {
-					t.Logf("failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
+					t.Logf("Failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
 					return false
 				}
 

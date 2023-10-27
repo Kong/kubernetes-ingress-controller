@@ -70,11 +70,11 @@ func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*Creat
 	url := c.kicNodeAPIEndpoint()
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, reqReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 
@@ -105,11 +105,11 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "PUT", url, reqReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 
@@ -159,12 +159,12 @@ func (c *Client) listNodes(ctx context.Context, pageNumber int) (*ListNodeRespon
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to create request for url %s: %w", url, err)
 	}
 
 	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to get response from url %s: %w", url, err)
 	}
 
 	defer httpResp.Body.Close()
@@ -190,11 +190,11 @@ func (c *Client) DeleteNode(ctx context.Context, nodeID string) error {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request for url %s: %w", url, err)
+		return fmt.Errorf("Failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("failed to get response from url %s: %w", url, err)
+		return fmt.Errorf("Failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 
@@ -209,11 +209,11 @@ func (c *Client) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) 
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 

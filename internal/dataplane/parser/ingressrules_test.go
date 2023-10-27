@@ -332,7 +332,7 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			}},
 			expectedAnnotations: map[string]string{},
 			expectedLogEntries: []string{
-				"failed to fetch service",
+				"Failed to fetch service",
 			},
 		},
 	} {

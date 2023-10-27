@@ -653,7 +653,7 @@ func getLicenseFromAdminAPI(ctx context.Context, env environments.Environment, a
 	// find the admin service
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	if err != nil {
-		return license, fmt.Errorf("could not retrieve admin service: %w", err)
+		return license, fmt.Errorf("Could not retrieve admin service: %w", err)
 	}
 	if len(service.Status.LoadBalancer.Ingress) == 0 {
 		return license, fmt.Errorf("service %s has no external IPs", service.Name)

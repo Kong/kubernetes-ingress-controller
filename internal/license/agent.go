@@ -118,7 +118,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	err := a.reconcileLicenseWithKonnect(ctx)
 	if err != nil {
 		// If that happens, GetLicense() will return no license until we retrieve a valid one in polling.
-		a.logger.Error(err, "could not retrieve license from upstream")
+		a.logger.Error(err, "Could not retrieve license from upstream")
 	}
 
 	return a.runPollingLoop(ctx)

@@ -49,7 +49,7 @@ func NewKeyAuth(config interface{}) (*KeyAuth, error) {
 	var res KeyAuth
 	err := decodeCredential(config, &res.KeyAuth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode key-auth credential: %w", err)
+		return nil, fmt.Errorf("Failed to decode key-auth credential: %w", err)
 	}
 
 	// TODO we perform these validity checks here because passing credentials without these fields will panic deck
@@ -68,7 +68,7 @@ func NewHMACAuth(config interface{}) (*HMACAuth, error) {
 	var res HMACAuth
 	err := decodeCredential(config, &res.HMACAuth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode hmac-auth credential: %w", err)
+		return nil, fmt.Errorf("Failed to decode hmac-auth credential: %w", err)
 	}
 	if res.Username == nil {
 		return nil, fmt.Errorf("hmac-auth is invalid: no username")
@@ -101,7 +101,7 @@ func NewBasicAuth(config interface{}) (*BasicAuth, error) {
 	var res BasicAuth
 	err := decodeCredential(config, &res.BasicAuth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode basic-auth credential: %w", err)
+		return nil, fmt.Errorf("Failed to decode basic-auth credential: %w", err)
 	}
 	if res.Username == nil {
 		return nil, fmt.Errorf("basic-auth is invalid: no username")
@@ -125,7 +125,7 @@ func NewOauth2Credential(config interface{}) (*Oauth2Credential, error) {
 	var res Oauth2Credential
 	err := decodeCredential(config, &res.Oauth2Credential)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode oauth2 credential: %w", err)
+		return nil, fmt.Errorf("Failed to decode oauth2 credential: %w", err)
 	}
 	if res.ClientID == nil {
 		return nil, fmt.Errorf("oauth2 is invalid: no client_id")
@@ -140,7 +140,7 @@ func NewMTLSAuth(config interface{}) (*MTLSAuth, error) {
 	var res MTLSAuth
 	err := decodeCredential(config, &res.MTLSAuth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode mTLS credential: %w", err)
+		return nil, fmt.Errorf("Failed to decode mTLS credential: %w", err)
 	}
 	if res.SubjectName == nil {
 		return nil, fmt.Errorf("mtls-auth is invalid: no subject_name")
@@ -230,11 +230,11 @@ func decodeCredential(credConfig interface{},
 			Result:  credStructPointer,
 		})
 	if err != nil {
-		return fmt.Errorf("failed to create a decoder: %w", err)
+		return fmt.Errorf("Failed to create a decoder: %w", err)
 	}
 	err = decoder.Decode(credConfig)
 	if err != nil {
-		return fmt.Errorf("failed to decode credential: %w", err)
+		return fmt.Errorf("Failed to decode credential: %w", err)
 	}
 	return nil
 }

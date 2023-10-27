@@ -26,7 +26,7 @@ func cleanupGKEClusters(ctx context.Context, log logr.Logger) error {
 	credsOpt := option.WithCredentialsJSON([]byte(gkeCreds))
 	mgrc, err := container.NewClusterManagerClient(ctx, credsOpt)
 	if err != nil {
-		return fmt.Errorf("failed to create cluster manager client: %w", err)
+		return fmt.Errorf("Failed to create cluster manager client: %w", err)
 	}
 	defer mgrc.Close()
 

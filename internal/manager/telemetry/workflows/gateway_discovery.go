@@ -22,7 +22,7 @@ func NewGatewayDiscoveryWorkflow(gatewaysCounter DiscoveredGatewaysCounter) (tel
 
 	discoveredGatewaysCountProvider, err := NewDiscoveredGatewaysCountProvider(gatewaysCounter)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create discovered gateways count provider: %w", err)
+		return nil, fmt.Errorf("Failed to create discovered gateways count provider: %w", err)
 	}
 	w.AddProvider(discoveredGatewaysCountProvider)
 

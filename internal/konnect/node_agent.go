@@ -282,7 +282,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 		}
 		resp, err := a.nodeClient.CreateNode(ctx, createNodeReq)
 		if err != nil {
-			return fmt.Errorf("failed to create KIC node, hostname %s: %w", a.hostname, err)
+			return fmt.Errorf("Failed to create KIC node, hostname %s: %w", a.hostname, err)
 		}
 		a.logger.Info("created KIC node", "node_id", resp.Item.ID, "hostname", a.hostname)
 		return nil
@@ -321,7 +321,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nodes.NodeItem) error {
 	gatewayInstances, err := a.gatewayInstanceGetter.GetGatewayInstances(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get controlled kong gateway pods: %w", err)
+		return fmt.Errorf("Failed to get controlled kong gateway pods: %w", err)
 	}
 	gatewayInstanceMap := make(map[string]struct{})
 
@@ -349,7 +349,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 			}
 			newNode, err := a.nodeClient.CreateNode(ctx, createNodeReq)
 			if err != nil {
-				a.logger.Error(err, "failed to create kong gateway node", "hostname", gateway.Hostname)
+				a.logger.Error(err, "Failed to create kong gateway node", "hostname", gateway.Hostname)
 			} else {
 				a.logger.Info("created kong gateway node", "hostname", gateway.Hostname, "node_id", newNode.Item.ID)
 			}
@@ -452,7 +452,7 @@ func (p *GatewayClientGetter) GetGatewayInstances(ctx context.Context) ([]Gatewa
 	if len(gatewayClients) != 0 {
 		v, err := gatewayClients[0].GetKongVersion(ctx)
 		if err != nil {
-			p.logger.Error(err, "failed to get kong version")
+			p.logger.Error(err, "Failed to get kong version")
 		} else {
 			kongVersion = v
 		}
@@ -468,7 +468,7 @@ func (p *GatewayClientGetter) GetGatewayInstances(ctx context.Context) ([]Gatewa
 			rootURL := client.BaseRootURL()
 			u, err := url.Parse(rootURL)
 			if err != nil {
-				p.logger.Error(err, "failed to parse URL of gateway admin API from raw URL, skipping", "url", rootURL)
+				p.logger.Error(err, "Failed to parse URL of gateway admin API from raw URL, skipping", "url", rootURL)
 				continue
 			}
 			// use "gateway_address" as hostname of konnect node.
@@ -477,7 +477,7 @@ func (p *GatewayClientGetter) GetGatewayInstances(ctx context.Context) ([]Gatewa
 
 		nodeID, err := client.NodeID(ctx)
 		if err != nil {
-			p.logger.Error(err, "failed to get node ID from gateway admin API, skipping", "url", client.BaseRootURL())
+			p.logger.Error(err, "Failed to get node ID from gateway admin API, skipping", "url", client.BaseRootURL())
 			continue
 		}
 

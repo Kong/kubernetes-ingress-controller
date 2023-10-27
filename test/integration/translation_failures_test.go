@@ -153,7 +153,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{service},
-					reasonContains: "failed to fetch secret",
+					reasonContains: "Failed to fetch secret",
 				}
 			},
 		},
@@ -214,7 +214,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{ingress},
-					reasonContains: "failed to fetch the secret",
+					reasonContains: "Failed to fetch the secret",
 				}
 			},
 		},

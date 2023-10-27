@@ -73,7 +73,7 @@ func TestLicenseClient(t *testing.T) {
 			status:   http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
 				_, err := c.Get(context.Background())
-				require.ErrorContains(t, err, "failed to parse response body")
+				require.ErrorContains(t, err, "Failed to parse response body")
 			},
 		},
 		{

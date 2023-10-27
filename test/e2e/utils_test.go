@@ -166,13 +166,13 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 func extractVersionFromImage(imageName string) (semver.Version, error) {
 	split := strings.Split(imageName, ":")
 	if len(split) < 2 {
-		return semver.Version{}, fmt.Errorf("could not parse override image '%s', expected <repo>:<tag> format", imageName)
+		return semver.Version{}, fmt.Errorf("Could not parse override image '%s', expected <repo>:<tag> format", imageName)
 	}
 	// parse version from image tag, like kong/kubernetes-ingress-controller:2.9.3 => 2.9.3
 	tag := split[len(split)-1]
 	v, err := semver.ParseTolerant(tag)
 	if err != nil {
-		return semver.Version{}, fmt.Errorf("failed to parse version from image tag %s: %w", tag, err)
+		return semver.Version{}, fmt.Errorf("Failed to parse version from image tag %s: %w", tag, err)
 	}
 	return v, nil
 }
@@ -376,13 +376,13 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 func httpGetResponseContains(t *testing.T, url string, client *http.Client, substring string) bool {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		t.Logf("failed to create request: %v", err)
+		t.Logf("Failed to create request: %v", err)
 		return false
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Logf("failed to get response: %v", err)
+		t.Logf("Failed to get response: %v", err)
 		return false
 	}
 

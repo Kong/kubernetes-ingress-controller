@@ -32,28 +32,28 @@ type RequestHandler struct {
 // with the validation result of the entity.
 func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
-		h.Logger.Error(nil, "received request with empty body")
-		http.Error(w, "admission review object is missing",
+		h.Logger.Error(nil, "Received request with empty body")
+		http.Error(w, "Admission review object is missing",
 			http.StatusBadRequest)
 		return
 	}
 
 	review := admissionv1.AdmissionReview{}
 	if err := json.NewDecoder(r.Body).Decode(&review); err != nil {
-		h.Logger.Error(err, "failed to decode admission review")
+		h.Logger.Error(err, "Failed to decode admission review")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	response, err := h.handleValidation(r.Context(), *review.Request)
 	if err != nil {
-		h.Logger.Error(err, "failed to run validation")
+		h.Logger.Error(err, "Failed to run validation")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	review.Response = response
 
 	if err := json.NewEncoder(w).Encode(&review); err != nil {
-		h.Logger.Error(err, "failed to encode response")
+		h.Logger.Error(err, "Failed to encode response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -122,7 +122,7 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 	case ingressGVResource:
 		return h.handleIngress(ctx, request, responseBuilder)
 	default:
-		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",
+		return nil, fmt.Errorf("Unknown resource type to validate: %s/%s %s",
 			request.Resource.Group, request.Resource.Version,
 			request.Resource.Resource)
 	}
@@ -163,7 +163,7 @@ func (h RequestHandler) handleKongConsumer(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 	default:
-		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
+		return nil, fmt.Errorf("Unknown operation %q", string(request.Operation))
 	}
 }
 
@@ -249,7 +249,7 @@ func (h RequestHandler) handleSecret(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 	default:
-		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
+		return nil, fmt.Errorf("Unknown operation %q", string(request.Operation))
 	}
 }
 

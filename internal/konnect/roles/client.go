@@ -54,13 +54,13 @@ func NewClient(httpClient *http.Client, baseURL string, personalAccessToken stri
 func (c *Client) ListControlPlanesRoles(ctx context.Context) ([]Role, error) {
 	currentUserID, err := c.getCurrentUserID(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current user ID: %w", err)
+		return nil, fmt.Errorf("Failed to get current user ID: %w", err)
 	}
 
 	listRolesURL := fmt.Sprintf(konnectUsersAssignedRolesURL, currentUserID)
 	req, err := c.newRequestWithAuth(ctx, http.MethodGet, listRolesURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("Failed to create request: %w", err)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -80,14 +80,14 @@ func (c *Client) ListControlPlanesRoles(ctx context.Context) ([]Role, error) {
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&rolesResponse); err != nil {
-		return nil, fmt.Errorf("failed to decode roles response: %w", err)
+		return nil, fmt.Errorf("Failed to decode roles response: %w", err)
 	}
 
 	var roles []Role
 	for _, role := range rolesResponse.Data {
 		r, err := NewRole(role.ID, role.EntityID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create role: %w", err)
+			return nil, fmt.Errorf("Failed to create role: %w", err)
 		}
 		roles = append(roles, r)
 	}
@@ -99,13 +99,13 @@ func (c *Client) ListControlPlanesRoles(ctx context.Context) ([]Role, error) {
 func (c *Client) DeleteRole(ctx context.Context, roleID string) error {
 	currentUserID, err := c.getCurrentUserID(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get current user ID: %w", err)
+		return fmt.Errorf("Failed to get current user ID: %w", err)
 	}
 
 	deleteRoleURL := fmt.Sprintf(konnectAssignedRoleURL, currentUserID, roleID)
 	req, err := c.newRequestWithAuth(ctx, http.MethodDelete, deleteRoleURL, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("Failed to create request: %w", err)
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -128,26 +128,26 @@ func (c *Client) getCurrentUserID(ctx context.Context) (string, error) {
 
 	meRequest, err := c.newRequestWithAuth(ctx, http.MethodGet, konnectUsersMeURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("Failed to create request: %w", err)
 	}
 	meResponse, err := c.httpClient.Do(meRequest)
 	if err != nil {
-		return "", fmt.Errorf("failed to get current user: %w", err)
+		return "", fmt.Errorf("Failed to get current user: %w", err)
 	}
 	defer meResponse.Body.Close()
 	if meResponse.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get current user, status: %s", meResponse.Status)
+		return "", fmt.Errorf("Failed to get current user, status: %s", meResponse.Status)
 	}
 
 	var meResponseData struct {
 		ID string `json:"id"`
 	}
 	if err := json.NewDecoder(meResponse.Body).Decode(&meResponseData); err != nil {
-		return "", fmt.Errorf("failed to decode current user response: %w", err)
+		return "", fmt.Errorf("Failed to decode current user response: %w", err)
 	}
 
 	if meResponseData.ID == "" {
-		return "", fmt.Errorf("failed to get current user, empty id")
+		return "", fmt.Errorf("Failed to get current user, empty id")
 	}
 
 	c.currentUserID = meResponseData.ID
@@ -157,7 +157,7 @@ func (c *Client) getCurrentUserID(ctx context.Context) (string, error) {
 func (c *Client) newRequestWithAuth(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+url, body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("Failed to create request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.personalAccessToken)
 	return req, nil

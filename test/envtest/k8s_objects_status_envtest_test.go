@@ -90,7 +90,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayapi.HTTPRoute) func() bool {
 	return func() bool {
 		if err := cl.Get(ctx, client.ObjectKeyFromObject(&httpRoute), &httpRoute); err != nil {
-			t.Logf("failed to get httpRoute: %v", err)
+			t.Logf("Failed to get httpRoute: %v", err)
 			return false
 		}
 		if len(httpRoute.Status.Parents) == 0 {

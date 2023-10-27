@@ -91,7 +91,7 @@ func DeployControllerManagerForCluster(
 	flags := config.FlagSet()
 	if err := flags.Parse(controllerManagerFlags); err != nil {
 		os.Remove(kubeconfig.Name())
-		return fmt.Errorf("failed to parse manager flags: %w", err)
+		return fmt.Errorf("Failed to parse manager flags: %w", err)
 	}
 
 	// run the controller in the background

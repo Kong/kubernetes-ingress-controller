@@ -115,7 +115,7 @@ func kongPluginFromK8SClusterPlugin(
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return Plugin{}, fmt.Errorf("could not parse KongPlugin %s/%s config: %w",
+		return Plugin{}, fmt.Errorf("Could not parse KongPlugin %s/%s config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom != nil && len(config) > 0 {
@@ -165,7 +165,7 @@ func kongPluginFromK8SPlugin(
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return Plugin{}, fmt.Errorf("could not parse KongPlugin %s/%s config: %w",
+		return Plugin{}, fmt.Errorf("Could not parse KongPlugin %s/%s config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom != nil && len(config) > 0 {

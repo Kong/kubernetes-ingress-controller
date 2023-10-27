@@ -79,7 +79,7 @@ func generateKongServiceFromBackendRefWithName(
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
 	grants, err := storer.ListReferenceGrants()
 	if err != nil {
-		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
+		return kongstate.Service{}, fmt.Errorf("Could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
 	allowed := getPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
 		Group:     gatewayapi.Group(route.GetObjectKind().GroupVersionKind().Group),

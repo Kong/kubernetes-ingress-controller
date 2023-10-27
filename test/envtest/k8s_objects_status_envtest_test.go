@@ -33,6 +33,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
+		WithGatewayAPIControllers(),
 		func(cfg *manager.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to
 			// ensure that the status update notifications do not block the
@@ -115,6 +116,11 @@ func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client
 func Test_WatchNamespaces(t *testing.T) {
 	t.Parallel()
 
+	const (
+		waitTime = 10 * time.Second
+		tickTime = 100 * time.Millisecond
+	)
+
 	scheme := Scheme(t, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -127,6 +133,7 @@ func Test_WatchNamespaces(t *testing.T) {
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
+		WithGatewayAPIControllers(),
 		func(cfg *manager.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to
 			// ensure that the status update notifications do not block the
@@ -194,7 +201,7 @@ func Test_WatchNamespaces(t *testing.T) {
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &hiddenRoute) })
 
 	require.Eventually(t, httpRouteGetsProgrammed(ctx, t, ctrlClient, httpRoute),
-		time.Second*10, time.Millisecond*50)
+		waitTime, tickTime)
 
 	require.Never(t, func() bool {
 		if err := ctrlClient.Get(ctx, client.ObjectKeyFromObject(&hiddenRoute), &hiddenRoute); err != nil {
@@ -205,5 +212,5 @@ func Test_WatchNamespaces(t *testing.T) {
 			return true
 		}
 		return false
-	}, time.Second*10, time.Second)
+	}, waitTime, tickTime)
 }

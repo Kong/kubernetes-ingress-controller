@@ -21,6 +21,11 @@ import (
 func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	t.Parallel()
 
+	const (
+		waitTime = 10 * time.Second
+		tickTime = 100 * time.Millisecond
+	)
+
 	scheme := Scheme(t, WithKong)
 	cfg := Setup(t, scheme)
 	client := NewControllerClient(t, scheme, cfg)
@@ -102,7 +107,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		"consumer-no-username": `no username or custom_id specified`,
 	}
 
-	RunManager(ctx, t, cfg, AdminAPIOptFns())
+	RunManager(ctx, t, cfg, AdminAPIOptFns(), WithProxySyncSeconds(0.5))
 
 	require.Eventually(t, func() bool {
 		events := &corev1.EventList{}
@@ -126,5 +131,5 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 			}
 		}
 		return true
-	}, time.Minute, time.Second)
+	}, waitTime, tickTime)
 }

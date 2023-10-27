@@ -74,8 +74,21 @@ spec:
                   cookie:
                     description: Cookie is the name of the cookie to use as hash input.
                     type: string
+                  cookiePath:
+                    description: CookiePath is cookie path to set in the response
+                      headers.
+                    type: string
                   header:
                     description: Header is the name of the header to use as hash input.
+                    type: string
+                  input:
+                    description: Input allows using one of the predefined inputs (ip,
+                      consumer, path). For other parametrized inputs, use one of the
+                      fields below.
+                    enum:
+                    - ip
+                    - consumer
+                    - path
                     type: string
                   queryArg:
                     description: QueryArg is the name of the query argument to use
@@ -87,15 +100,28 @@ spec:
                     type: string
                 type: object
               hashOnFallback:
-                description: HasOnFallback defines how to calculate hash for consistent-hashing
+                description: HashOnFallback defines how to calculate hash for consistent-hashing
                   load balancing algorithm if the primary hash function fails. Algorithm
                   must be set to "consistent-hashing" for this field to have effect.
                 properties:
                   cookie:
                     description: Cookie is the name of the cookie to use as hash input.
                     type: string
+                  cookiePath:
+                    description: CookiePath is cookie path to set in the response
+                      headers.
+                    type: string
                   header:
                     description: Header is the name of the header to use as hash input.
+                    type: string
+                  input:
+                    description: Input allows using one of the predefined inputs (ip,
+                      consumer, path). For other parametrized inputs, use one of the
+                      fields below.
+                    enum:
+                    - ip
+                    - consumer
+                    - path
                     type: string
                   queryArg:
                     description: QueryArg is the name of the query argument to use
@@ -134,6 +160,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a success.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -189,6 +218,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a failure.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -220,6 +252,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a success.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -259,6 +294,9 @@ spec:
                             description: HTTPStatuses is a list of HTTP status codes
                               that Kong considers a failure.
                             items:
+                              description: HTTPStatus is an HTTP status code.
+                              maximum: 599
+                              minimum: 100
                               type: integer
                             type: array
                           interval:
@@ -285,7 +323,7 @@ spec:
                       to be considered healthy.
                     type: integer
                 type: object
-              host_header:
+              hostHeader:
                 description: HostHeader is the hostname to be used as Host header
                   when proxying requests through Kong.
                 type: string
@@ -297,6 +335,46 @@ spec:
                 type: integer
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg)
+            can be set.
+          rule: 'has(self.spec.hashOn) ? [has(self.spec.hashOn.input), has(self.spec.hashOn.cookie),
+            has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet,
+            fieldSet == true).size() <= 1 : true'
+        - message: Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg)
+            can be set.
+          rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input),
+            has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture),
+            has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size()
+            <= 1 : true'
+        - message: When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.
+          rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath)
+            : true'
+        - message: When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required.
+          rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie)
+            : true'
+        - message: spec.hashOnFallback.cookie must not be set.
+          rule: 'has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie)
+            : true'
+        - message: spec.hashOnFallback.cookiePath must not be set.
+          rule: 'has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookiePath)
+            : true'
+        - message: spec.healthchecks.passive.healthy.interval must not be set.
+          rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive)
+            && has(self.spec.healthchecks.passive.healthy) ? !has(self.spec.healthchecks.passive.healthy.interval)
+            : true'
+        - message: spec.healthchecks.passive.unhealthy.interval must not be set.
+          rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive)
+            && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval)
+            : true'
+        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOn
+            is set.
+          rule: 'has(self.spec.hashOn) ? has(self.spec.algorithm) && self.spec.algorithm
+            == "consistent-hashing" : true'
+        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback
+            is set.
+          rule: 'has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm
+            == "consistent-hashing" : true'
     served: true
     storage: true
     subresources:

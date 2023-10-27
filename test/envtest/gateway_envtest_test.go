@@ -27,6 +27,11 @@ import (
 func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	t.Parallel()
 
+	const (
+		waitTime = time.Minute
+		tickTime = 500 * time.Millisecond
+	)
+
 	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -38,6 +43,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
+		WithGatewayAPIControllers(),
 	)
 
 	const numOfRoutes = 120
@@ -61,7 +67,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 			return false
 		}
 		return true
-	}, 3*time.Minute, time.Second, "failed to reconcile all HTTPRoutes")
+	}, waitTime, tickTime, "failed to reconcile all HTTPRoutes")
 }
 
 // createHTTPRoutes creates a number of dummy HTTPRoutes for the given Gateway.

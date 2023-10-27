@@ -13,9 +13,9 @@ const (
 	// PortModeImplicit means that the Ingress does not specify the Kubernetes Service port, and that KIC should expect
 	// the Service to have only one port defined.
 	PortModeImplicit PortMode = iota
-	// PortModeNumber means that the Ingress specifies the Service port by raw port number.
+	// PortModeByNumber means that the Ingress specifies the Service port by raw port number.
 	PortModeByNumber PortMode = iota
-	// PortModeNumber means that the Ingress specifies the Service port by its name field.
+	// PortModeByName means that the Ingress specifies the Service port by its name field.
 	PortModeByName PortMode = iota
 )
 

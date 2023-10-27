@@ -34,6 +34,26 @@ const (
 - op: replace
   path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
   value: %[3]d`
+
+	kongRouterFlavorPatch = `- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: KONG_ROUTER_FLAVOR
+    value: "%s"`
+
+	kongRouterFlavorPatchDelete = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+      - name: proxy
+        env:
+        - name: KONG_ROUTER_FLAVOR
+          $patch: delete`
 )
 
 // patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
@@ -94,6 +114,45 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 		},
 	}
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+func patchKongRouterFlavorFn(flavor string) func(io.Reader) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      "proxy-kong",
+						Namespace: "kong",
+					},
+				},
+				Patch: kongRouterFlavorPatchDelete,
+			},
+			{
+				Patch: fmt.Sprintf(kongRouterFlavorPatch, flavor),
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      "proxy-kong",
+						Namespace: "kong",
+					},
+				},
+			},
+		},
+	}
+
+	return func(baseManifestReader io.Reader) (io.Reader, error) {
+		return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+	}
 }
 
 // patchLivenessProbes patches the given deployment's liveness probe, replacing the initial delay, period, and failure

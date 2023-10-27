@@ -35,7 +35,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
 
 
@@ -104,6 +104,10 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+
+
+
+
 
 
 
@@ -188,7 +192,7 @@ KongIngressUpstream contains KongIngress upstream configuration. It contains the
 | `host_header` _string_ | HostHeader is The hostname to be used as Host header when proxying requests through Kong. |
 | `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
 | `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. |
-| `healthchecks` _Healthcheck_ | Healthchecks defines the health check configurations in Kong. |
+| `healthchecks` _[Healthcheck](#healthcheck)_ | Healthchecks defines the health check configurations in Kong. |
 | `hash_on` _string_ | HashOn defines what to use as hashing input. Accepted values are: "none", "consumer", "ip", "header", "cookie", "path", "query_arg", "uri_capture". |
 | `hash_fallback` _string_ | HashFallback defines What to use as hashing input if the primary hash_on does not return a hash. Accepted values are: "none", "consumer", "ip", "header", "cookie". |
 | `hash_on_header` _string_ | HashOnHeader defines the header name to take the value from as hash input. Only required when "hash_on" is set to "header". |
@@ -395,6 +399,33 @@ UDPIngress is the Schema for the udpingresses API.
 
 
 
+### HTTPStatus
+
+_Underlying type:_ `integer`
+
+HTTPStatus is an HTTP status code.
+
+
+
+
+
+_Appears in:_
+- [KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)
+- [KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)
+
+### HashInput
+
+_Underlying type:_ `string`
+
+HashInput is the input for consistent-hashing load balancing algorithm. Can be one of: "ip", "consumer", "path".
+
+
+
+
+
+_Appears in:_
+- [KongUpstreamHash](#kongupstreamhash)
+
 ### IngressBackend
 
 
@@ -484,8 +515,10 @@ KongUpstreamHash defines how to calculate hash for consistent-hashing load balan
 
 | Field | Description |
 | --- | --- |
+| `input` _[HashInput](#hashinput)_ | Input allows using one of the predefined inputs (ip, consumer, path). For other parametrized inputs, use one of the fields below. |
 | `header` _string_ | Header is the name of the header to use as hash input. |
 | `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
+| `cookiePath` _string_ | CookiePath is cookie path to set in the response headers. |
 | `queryArg` _string_ | QueryArg is the name of the query argument to use as hash input. |
 | `uriCapture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
 
@@ -521,7 +554,7 @@ KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to ma
 
 | Field | Description |
 | --- | --- |
-| `httpStatuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
+| `httpStatuses` _[HTTPStatus](#httpstatus) array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
 | `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
 | `successes` _integer_ | Successes is the number of successes to consider a target healthy. |
 
@@ -541,7 +574,7 @@ KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to 
 | Field | Description |
 | --- | --- |
 | `httpFailures` _integer_ | HTTPFailures is the number of failures to consider a target unhealthy. |
-| `httpStatuses` _integer array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
+| `httpStatuses` _[HTTPStatus](#httpstatus) array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
 | `tcpFailures` _integer_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
 | `timeouts` _integer_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
 | `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |
@@ -582,9 +615,9 @@ KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
 | `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
 | `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
 | `hashOn` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. Algorithm must be set to "consistent-hashing" for this field to have effect. |
-| `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HashOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
 | `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
-| `host_header` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. |
+| `hostHeader` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. |
 
 
 _Appears in:_

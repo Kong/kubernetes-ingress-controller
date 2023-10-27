@@ -140,6 +140,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - kongupstreampolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongupstreampolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - tcpingresses
   verbs:
   - get

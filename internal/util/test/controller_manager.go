@@ -99,7 +99,8 @@ func DeployControllerManagerForCluster(
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), config)
 		if err := rootcmd.RunWithLogger(ctx, &config, logger); err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "ERROR: Problems with Controller Manager: %s\n", err)
+			os.Exit(1)
 		}
 	}()
 

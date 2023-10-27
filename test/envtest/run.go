@@ -66,10 +66,14 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.Konnect.LicenseSynchronizationEnabled = false
 	cfg.AnonymousReports = false
 	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
-	cfg.FeatureGates[featuregates.GatewayFeature] = false
 
 	// Extend the graceful shutdown timeout to prevent flakiness on CI.
 	cfg.GracefulShutdownTimeout = lo.ToPtr(time.Minute)
+
+	// Disable Gateway API controllers, enable those only in tests that use them.
+	cfg.GatewayAPIGatewayController = false
+	cfg.GatewayAPIHTTPRouteController = false
+	cfg.GatewayAPIReferenceGrantController = false
 
 	return cfg
 }
@@ -77,8 +81,15 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 type ModifyManagerConfigFn func(cfg *manager.Config)
 
 func WithGatewayFeatureEnabled(cfg *manager.Config) {
-	cfg.FeatureGates[featuregates.GatewayFeature] = true
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
+}
+
+func WithGatewayAPIControllers() func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.GatewayAPIGatewayController = true
+		cfg.GatewayAPIHTTPRouteController = true
+		cfg.GatewayAPIReferenceGrantController = true
+	}
 }
 
 func WithPublishService(namespace string) func(cfg *manager.Config) {
@@ -91,7 +102,7 @@ func WithPublishService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
-func WithIngressAddress(address string) func(cfg *manager.Config) {
+func WithPublishStatusAddress(address string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
 		cfg.PublishStatusAddress = []string{address}
 	}
@@ -154,8 +165,8 @@ func RunManager(
 	envcfg *rest.Config,
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
 	modifyCfgFns ...func(cfg *manager.Config),
-) (loggerHook *observer.ObservedLogs) {
-	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
+) (cfg manager.Config, loggerHook *observer.ObservedLogs) {
+	cfg = ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
 
 	for _, modifyCfgFn := range modifyCfgFns {
 		modifyCfgFn(&cfg)
@@ -197,5 +208,5 @@ func RunManager(
 		}
 	})
 
-	return logs
+	return cfg, logs
 }

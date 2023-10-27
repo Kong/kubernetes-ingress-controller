@@ -10,8 +10,6 @@ e2e:
     - 'v1.25.11'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.24.15'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.23.17'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.28.2'
@@ -40,7 +38,7 @@ e2e:
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.29.0'
+    kong: '2.30.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.28.0'
   # renovate: datasource=docker depName=kong versioning=docker

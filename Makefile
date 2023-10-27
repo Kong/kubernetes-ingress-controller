@@ -62,8 +62,8 @@ client-gen: ## Download client-gen locally if necessary.
 	@$(MAKE) _download_tool TOOL=client-gen
 
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
-.PHONY: golangci-lint
-golangci-lint: ## Download golangci-lint locally if necessary.
+.PHONY: golangci-lint.download
+golangci-lint.download: ## Download golangci-lint locally if necessary.
 	@$(MAKE) _download_tool TOOL=golangci-lint
 
 GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
@@ -157,6 +157,9 @@ fmt:
 
 .PHONY: lint
 lint: verify.tidy golangci-lint staticcheck looppointer
+
+.PHONY: golangci-lint
+golangci-lint: golangci-lint.download
 	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml
 
 .PHONY: staticcheck
@@ -374,6 +377,8 @@ test.golden.update:
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
 
+ENVTEST_TIMEOUT ?= 5m
+
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
 _test.envtest: gotestsum setup-envtest use-setup-envtest
@@ -383,6 +388,7 @@ _test.envtest: gotestsum setup-envtest use-setup-envtest
 		-race $(GOTESTFLAGS) \
 		-tags envtest \
 		-covermode=atomic \
+		-timeout $(ENVTEST_TIMEOUT) \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.envtest.out \
 		./test/envtest/...

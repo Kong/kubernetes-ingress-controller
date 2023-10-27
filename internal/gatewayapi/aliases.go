@@ -40,6 +40,7 @@ type (
 	HTTPRouteList             = gatewayv1.HTTPRouteList
 	HTTPRouteMatch            = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule             = gatewayv1.HTTPRouteRule
+	LocalObjectReference      = gatewayv1.LocalObjectReference
 	HTTPRouteSpec             = gatewayv1.HTTPRouteSpec
 	HTTPRouteStatus           = gatewayv1.HTTPRouteStatus
 	Hostname                  = gatewayv1.Hostname

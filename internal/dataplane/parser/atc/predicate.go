@@ -48,6 +48,8 @@ type LiteralType int
 const (
 	LiteralTypeInt LiteralType = iota
 	LiteralTypeString
+	// LiteralTypeIP is a type that represents a literal of a single IP address or an IP CIDR.
+	//
 	// TODO: define subtypes of IP literals(IPv4/IPv6;single IP/IP CIDR).
 	LiteralTypeIP
 )

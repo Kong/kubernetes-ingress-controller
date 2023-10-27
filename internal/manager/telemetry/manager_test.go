@@ -50,7 +50,7 @@ func TestCreateManager(t *testing.T) {
 			"kv": "3.1.1",
 		}
 		featureGates = map[string]bool{
-			"gateway": true,
+			"gatewayalpha": true,
 		}
 		publishService = k8stypes.NamespacedName{
 			Namespace: "kong",
@@ -119,7 +119,7 @@ func TestCreateManager(t *testing.T) {
 						"signal=test-signal;"+
 						"db=off;"+
 						"feature-gateway-service-discovery=true;"+
-						"feature-gateway=true;"+
+						"feature-gatewayalpha=true;"+
 						"feature-konnect-sync=true;"+
 						"hn=%s;"+
 						"kv=3.1.1;"+

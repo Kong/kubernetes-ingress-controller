@@ -105,6 +105,18 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
+		Group:                  "configuration.konghq.com",
+		Version:                "v1beta1",
+		Kind:                   "KongUpstreamPolicy",
+		PackageImportAlias:     "kongv1beta1",
+		PackageAlias:           "KongV1beta1",
+		Package:                kongv1,
+		Plural:                 "kongupstreampolicies",
+		CacheType:              "KongUpstreamPolicy",
+		NeedsStatusPermissions: true,
+		RBACVerbs:              []string{"get", "list", "watch"},
+	},
+	typeNeeded{
 		Group:                             "configuration.konghq.com",
 		Version:                           "v1",
 		Kind:                              "KongPlugin",

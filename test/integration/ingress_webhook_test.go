@@ -129,6 +129,52 @@ func TestIngressValidationWebhookTraditionalRouterBeforeRequiringExplicitRegexPa
 	testIngressValidationWebhook(ctx, t, namespace, testCases)
 }
 
+func TestIngressValidationWebhookExpressionsRouter_Reproduce(t *testing.T) {
+	skipTestForNonKindCluster(t)
+	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
+	ctx := context.Background()
+	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)
+
+	testCases := []testCaseIngressValidation{
+		{
+			Name: "valid regex path passes validation",
+			Ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ingress-prefix",
+					Annotations: map[string]string{
+						"konghq.com/strip-path": "true",
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path:     "/",
+											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "httpbin-deployment",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	testIngressValidationWebhook(ctx, t, namespace, testCases)
+}
+
 func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
 	skipTestForRouterFlavors(t, traditional, traditionalCompatible)

@@ -44,6 +44,7 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 			t.Logf("waiting for Kong with %s router to start", rf)
 			ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, rf)
 			t.Logf("running ingress tests to verify that KIC with %s Kong router works", rf)
+			deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 			verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 		})
 	}

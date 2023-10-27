@@ -448,11 +448,17 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	deployment.Spec.Replicas = lo.ToPtr(int32(noReplicas))
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	})
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+	})
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := generators.NewIngressForService(echoPath, map[string]string{
@@ -461,6 +467,9 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+	t.Cleanup(func() {
+		assert.NoError(t, env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
+	})
 	return ingress
 }
 

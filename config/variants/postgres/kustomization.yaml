@@ -5,3 +5,19 @@ resources:
 components:
 - ./wait/
 - ../../image/oss/
+
+patches:
+- patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ingress-kong
+      namespace: kong
+    spec:
+      template:
+        spec:
+          containers:
+          - name: proxy
+            env:
+            - name: KONG_ROUTER_FLAVOR
+              value: traditional_compatible

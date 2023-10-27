@@ -232,6 +232,8 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }
 
+type ManifestPatch func(io.Reader) (io.Reader, error)
+
 type ManifestDeploy struct {
 	// Path is the path to the manifest to deploy.
 	Path string
@@ -242,6 +244,9 @@ type ManifestDeploy struct {
 
 	// AdditionalSecrets is a list of additional secrets to create before deploying the manifest.
 	AdditionalSecrets []*corev1.Secret
+
+	// Patches contain additionall patches that will be applied before deploying the manifest.
+	Patches []ManifestPatch
 }
 
 func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.Environment) Deployments {
@@ -268,7 +273,7 @@ func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.
 	}
 
 	t.Logf("deploying %s manifest to the cluster", d.Path)
-	manifest := getTestManifest(t, d.Path, d.SkipTestPatches)
+	manifest := getTestManifest(t, d.Path, d.SkipTestPatches, d.Patches...)
 	kubeconfigFilename := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdin = manifest
@@ -282,6 +287,29 @@ func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.
 	waitForDeploymentRollout(ctx, t, env, deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
 
 	return deployments
+}
+
+func (d ManifestDeploy) Delete(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
+	t.Log("waiting for testing environment to be ready")
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	require.NoError(t, <-env.WaitForReady(envReadyCtx))
+
+	t.Logf("deleting any supplemental secrets (found: %d)", len(d.AdditionalSecrets))
+	for _, secret := range d.AdditionalSecrets {
+		err := env.Cluster().Client().CoreV1().Secrets(namespace).Delete(ctx, secret.Name, metav1.DeleteOptions{})
+		require.NoError(t, err)
+	}
+
+	t.Logf("deleting %s manifest from the cluster", d.Path)
+	manifest := getTestManifest(t, d.Path, d.SkipTestPatches)
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "delete", "-f", "-")
+	cmd.Stdin = manifest
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
 }
 
 func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environments.Environment, namespace, name string) {

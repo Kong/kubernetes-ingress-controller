@@ -2462,6 +2462,8 @@ spec:
       automountServiceAccountToken: false
       containers:
       - env:
+        - name: KONG_ROUTER_FLAVOR
+          value: traditional_compatible
         - name: KONG_DATABASE
           value: postgres
         - name: KONG_PG_HOST
@@ -2487,8 +2489,6 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_ROUTER_FLAVOR
-          value: traditional
         image: kong:3.4
         lifecycle:
           preStop:

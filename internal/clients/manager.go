@@ -3,14 +3,12 @@ package clients
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"golang.org/x/exp/maps"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -52,12 +50,8 @@ type AdminAPIClientsManager struct {
 	// endpoints list that should be used for configuring the dataplane.
 	discoveredAdminAPIsNotifyChan    chan []adminapi.DiscoveredAdminAPI
 	gatewayClientsChangesSubscribers []chan struct{}
-	// adminAPIServiceName is the name of admin API service.
-	// When Kong gateway is running with DB, the manager will return the address of admin API service
-	// since KIC need only to send the requests to the admin API once with DB backed Kong gateway.
-	adminAPIServiceName k8stypes.NamespacedName
-	adminAPIServicePort int
-	dbMode              string
+
+	dbMode string
 
 	ctx                   context.Context
 	onceNotifyLoopRunning sync.Once
@@ -99,18 +93,6 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 	}
 }
 
-func WithAdminAPIServiceName(serviceNN k8stypes.NamespacedName) AdminAPIClientsManagerOption {
-	return func(m *AdminAPIClientsManager) {
-		m.adminAPIServiceName = serviceNN
-	}
-}
-
-func WithAdminAPIServicePort(port int) AdminAPIClientsManagerOption {
-	return func(m *AdminAPIClientsManager) {
-		m.adminAPIServicePort = port
-	}
-}
-
 // WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
 func WithDBMode(dbMode string) AdminAPIClientsManagerOption {
 	return func(m *AdminAPIClientsManager) {
@@ -137,7 +119,6 @@ func NewAdminAPIClientsManager(
 		readyGatewayClients:           readyClients,
 		pendingGatewayClients:         make(map[string]adminapi.DiscoveredAdminAPI),
 		clientFactory:                 clientFactory,
-		adminAPIServicePort:           DefaultAdminAPIServicePort,
 		readinessChecker:              readinessChecker,
 		readinessReconciliationTicker: clock.NewTicker(),
 		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
@@ -211,31 +192,12 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	if dataplaneutil.IsDBLessMode(c.dbMode) {
 		return readyGatewayClients
 	}
-	// if there are no ready gateway clients, we should return an empty list.
+	// When Kong gateway is DB backed, we return a random admin API client
+	// since KIC only need to send requests to one instance.
+	// If there are no ready gateway clients, we return an empty list.
 	if len(readyGatewayClients) == 0 {
 		return []*adminapi.Client{}
 	}
-	// return ONE client if Kong gateway is DB backed.
-	// if the name of admin API service is given, return the address of the service.
-	if c.adminAPIServiceName.Name != "" && c.adminAPIServiceName.Namespace != "" {
-		cl, err := c.clientFactory.CreateAdminAPIClient(c.ctx, adminapi.DiscoveredAdminAPI{
-			Address: fmt.Sprintf("https://%s.%s:%d",
-				c.adminAPIServiceName.Name,
-				c.adminAPIServiceName.Namespace,
-				c.adminAPIServicePort,
-			),
-		})
-		if err != nil {
-			// Fallback to choose a single instance if we failed to create a client from admin API service.
-			c.logger.Error(err, "failed to create admin API client from admin API service address",
-				"service_name", c.adminAPIServiceName.String(),
-				"service_port", c.adminAPIServicePort,
-			)
-		} else {
-			return []*adminapi.Client{cl}
-		}
-	}
-	// if no admin API service is given, choose one discovered client to send configurations.
 	return readyGatewayClients[:1]
 }
 

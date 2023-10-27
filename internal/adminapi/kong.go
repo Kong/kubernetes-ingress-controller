@@ -25,7 +25,7 @@ type KongClientNotReadyError struct {
 }
 
 func (e KongClientNotReadyError) Error() string {
-	return fmt.Sprintf("client not ready: %s", e.Err)
+	return fmt.Sprintf("Client not ready: %s", e.Err)
 }
 
 func (e KongClientNotReadyError) Unwrap() error {
@@ -50,7 +50,7 @@ func NewKongClientForWorkspace(
 	// Create the base client, and if no workspace was provided then return that.
 	client, err := kong.NewClient(kong.String(adminURL), httpClient)
 	if err != nil {
-		return nil, fmt.Errorf("creating Kong client: %w", err)
+		return nil, fmt.Errorf("Creating Kong client: %w", err)
 	}
 	if wsName == "" {
 		return NewClient(client), nil
@@ -64,7 +64,7 @@ func NewKongClientForWorkspace(
 	// If a workspace was provided, verify whether or not it exists.
 	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 	if err != nil {
-		return nil, fmt.Errorf("looking up workspace: %w", err)
+		return nil, fmt.Errorf("Looking up workspace: %w", err)
 	}
 
 	// If the provided workspace does not exist, for convenience we create it.
@@ -73,7 +73,7 @@ func NewKongClientForWorkspace(
 			Name: kong.String(wsName),
 		}
 		if _, err := client.Workspaces.Create(ctx, &workspace); err != nil {
-			return nil, fmt.Errorf("creating workspace: %w", err)
+			return nil, fmt.Errorf("Creating workspace: %w", err)
 		}
 	}
 
@@ -83,16 +83,16 @@ func NewKongClientForWorkspace(
 
 	fetchedKongVersion, err := cl.GetKongVersion(ctx)
 	if err != nil {
-		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("getting Kong version: %v", err)}
+		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("Getting Kong version: %v", err)}
 	}
 	kongVersion, err := kong.NewVersion(fetchedKongVersion)
 	if err != nil {
-		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("getting Kong version: %v", err)}
+		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("Getting Kong version: %v", err)}
 	}
 	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
 	if kongSemVersion.LT(versions.KICv3VersionCutoff) {
 		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf(
-			"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
+			"Version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
 			kongSemVersion, versions.KICv3VersionCutoff,
 		)}
 	}
@@ -133,14 +133,14 @@ func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, 
 	}
 
 	if opts.CACertPath != "" && opts.CACert != "" {
-		return nil, fmt.Errorf("both --kong-admin-ca-cert-file and --kong-admin-ca-cert are set; " +
+		return nil, fmt.Errorf("Both --kong-admin-ca-cert-file and --kong-admin-ca-cert are set; " +
 			"please remove one or the other")
 	}
 	if opts.CACert != "" {
 		certPool := x509.NewCertPool()
 		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))
 		if !ok {
-			return nil, errors.New("failed to load --kong-admin-ca-cert")
+			return nil, errors.New("Failed to load --kong-admin-ca-cert")
 		}
 		tlsConfig.RootCAs = certPool
 	}
@@ -149,11 +149,11 @@ func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, 
 		certPool := x509.NewCertPool()
 		cert, err := os.ReadFile(certPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read --kong-admin-ca-cert from path '%s': %w", certPath, err)
+			return nil, fmt.Errorf("Failed to read --kong-admin-ca-cert from path '%s': %w", certPath, err)
 		}
 		ok := certPool.AppendCertsFromPEM(cert)
 		if !ok {
-			return nil, fmt.Errorf("failed to load --kong-admin-ca-cert from path '%s'", certPath)
+			return nil, fmt.Errorf("Failed to load --kong-admin-ca-cert from path '%s'", certPath)
 		}
 		tlsConfig.RootCAs = certPool
 	}
@@ -161,7 +161,7 @@ func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, 
 	clientCertificate, err := tlsutil.ExtractClientCertificates(
 		[]byte(opts.TLSClient.Cert), opts.TLSClient.CertFile, []byte(opts.TLSClient.Key), opts.TLSClient.KeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
+		return nil, fmt.Errorf("Failed to extract client certificates: %w", err)
 	}
 	if clientCertificate != nil {
 		tlsConfig.Certificates = append(tlsConfig.Certificates, *clientCertificate)

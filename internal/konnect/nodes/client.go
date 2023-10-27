@@ -35,7 +35,7 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	}
 	cert, err := tlsutil.ExtractClientCertificates([]byte(cfg.TLSClient.Cert), cfg.TLSClient.CertFile, []byte(cfg.TLSClient.Key), cfg.TLSClient.KeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
+		return nil, fmt.Errorf("Failed to extract client certificates: %w", err)
 	}
 	if cert != nil {
 		tlsConfig.Certificates = append(tlsConfig.Certificates, *cert)
@@ -80,7 +80,7 @@ func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*Creat
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to read response body from url %s: %w", url, err)
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {
@@ -115,7 +115,7 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		err := fmt.Errorf("failed to read response body from url %s: %w", url, err)
+		err := fmt.Errorf("Failed to read response body from url %s: %w", url, err)
 		return nil, err
 	}
 
@@ -171,7 +171,7 @@ func (c *Client) listNodes(ctx context.Context, pageNumber int) (*ListNodeRespon
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to read response body from url %s: %w", url, err)
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {
@@ -219,7 +219,7 @@ func (c *Client) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) 
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from url %s: %w", url, err)
+		return nil, fmt.Errorf("Failed to read response body from url %s: %w", url, err)
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {

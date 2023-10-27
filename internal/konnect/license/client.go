@@ -35,7 +35,7 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	}
 	cert, err := tlsutil.ExtractClientCertificates([]byte(cfg.TLSClient.Cert), cfg.TLSClient.CertFile, []byte(cfg.TLSClient.Key), cfg.TLSClient.KeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
+		return nil, fmt.Errorf("Failed to extract client certificates: %w", err)
 	}
 	if cert != nil {
 		tlsConfig.Certificates = append(tlsConfig.Certificates, *cert)
@@ -93,7 +93,7 @@ func (c *Client) listLicenses(ctx context.Context) (*ListLicenseResponse, error)
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("Failed to read response body: %w", err)
 	}
 
 	if httpResp.StatusCode == http.StatusNotFound {

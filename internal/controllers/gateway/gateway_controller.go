@@ -462,10 +462,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
 	var gatewayServices []*corev1.Service
 	for _, ref := range serviceRefs {
-		r.Log.V(util.DebugLevel).Info("determining service for ref", "ref", ref)
+		r.Log.V(util.DebugLevel).Info("Determining service for ref", "ref", ref)
 		svc, err := r.determineServiceForGateway(ctx, ref)
 		if err != nil {
-			log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
+			log.Error(err, "Could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
 			return ctrl.Result{Requeue: true}, err
 		}
 		if svc != nil {
@@ -476,7 +476,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
 	if !isGatewayScheduled(gateway) {
-		info(log, gateway, "marking gateway as accepted")
+		info(log, gateway, "Marking gateway as accepted")
 		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayapi.GatewayConditionAccepted),
 			Status:             metav1.ConditionTrue,

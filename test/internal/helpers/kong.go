@@ -19,11 +19,11 @@ import (
 func GetKongRootConfig(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
 	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating specific HTTP client for Kong API URL: %q: %w", proxyAdminURL, err)
+		return nil, fmt.Errorf("Failed creating specific HTTP client for Kong API URL: %q: %w", proxyAdminURL, err)
 	}
 	kc, err := kong.NewClient(lo.ToPtr(proxyAdminURL.String()), httpClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
+		return nil, fmt.Errorf("Failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
 	}
 	return kc.Root(ctx)
 }
@@ -67,7 +67,7 @@ type TooOldKongGatewayError struct {
 
 func (e TooOldKongGatewayError) Error() string {
 	return fmt.Sprintf(
-		"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
+		"Version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
 		e.actualVersion, e.expectedVersion,
 	)
 }

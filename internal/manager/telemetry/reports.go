@@ -72,7 +72,7 @@ func SetupAnonymousReports(
 	// Gather versioning information from the kong client
 	kongVersion := kong.VersionFromInfo(root)
 	if kongVersion == "" {
-		return nil, fmt.Errorf("malformed Kong version found in Kong client root")
+		return nil, fmt.Errorf("Malformed Kong version found in Kong client root")
 	}
 	kongDB, err := kongconfig.DBModeFromRoot(root)
 	if err != nil {

@@ -249,6 +249,6 @@ func validate(
 	defer response.Body.Close()
 
 	data, err := io.ReadAll(response.Body)
-	require.NoError(t, err, "failed to read response body")
+	require.NoError(t, err, "Failed to read response body")
 	require.Equal(t, strings.TrimSpace(string(data)), successMessage, "unexpected content of response body")
 }

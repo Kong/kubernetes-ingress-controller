@@ -389,7 +389,7 @@ func httpGetResponseContains(t *testing.T, url string, client *http.Client, subs
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Logf("failed to read response body: %v", err)
+		t.Logf("Failed to read response body: %v", err)
 		return false
 	}
 

@@ -136,7 +136,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 			),
 			dnsStrategy: cfgtypes.ServiceScopedPodDNSStrategy,
-			expectedErr: errors.New("service name is empty for an endpoint with TargetRef ns/pod-1"),
+			expectedErr: errors.New("Service name is empty for an endpoint with TargetRef ns/pod-1"),
 		},
 		{
 			name: "basic with owner reference",

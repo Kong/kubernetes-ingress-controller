@@ -361,7 +361,7 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 			wantErr:        true,
-			wantPartialErr: "unique key constraint violated for username",
+			wantPartialErr: "Unique key constraint violated for username",
 		},
 		{
 			name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
@@ -420,7 +420,7 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 			wantErr:        true,
-			wantPartialErr: "unique key constraint violated for username",
+			wantPartialErr: "Unique key constraint violated for username",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -468,7 +468,7 @@ func TestValidationWebhook(t *testing.T) {
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidCredential, metav1.CreateOptions{})
-	require.ErrorContains(t, err, "invalid credential type")
+	require.ErrorContains(t, err, "Invalid credential type")
 
 	t.Log("creating a valid credential secret to be referenced by a KongConsumer")
 	validCredential, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, &corev1.Secret{
@@ -516,12 +516,12 @@ func TestValidationWebhook(t *testing.T) {
 	validCredential.Data["kongCredType"] = []byte("invalid-auth")
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid credential type")
+	require.Contains(t, err.Error(), "Invalid credential type")
 
 	t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
 	require.NoError(t, kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}))
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
-	require.ErrorContains(t, err, "invalid credential type")
+	require.ErrorContains(t, err, "Invalid credential type")
 
 	t.Log("verifying that a JWT credential which has keys with missing values fails validation")
 	invalidJWTName := uuid.NewString()
@@ -538,7 +538,7 @@ func TestValidationWebhook(t *testing.T) {
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidJWT, metav1.CreateOptions{})
-	require.ErrorContains(t, err, "some fields were invalid due to missing data: rsa_public_key, key, secret")
+	require.ErrorContains(t, err, "Some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
 func ensureWebhookService(ctx context.Context, t *testing.T, name string) {

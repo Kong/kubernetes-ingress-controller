@@ -119,7 +119,7 @@ func (c *Consumer) SetCredential(credType string, credConfig interface{}, tags [
 		cred.Tags = tags
 		c.MTLSAuths = append(c.MTLSAuths, cred)
 	default:
-		return fmt.Errorf("invalid credential type: '%v'", credType)
+		return fmt.Errorf("Invalid credential type: '%v'", credType)
 	}
 	return nil
 }

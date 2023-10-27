@@ -208,7 +208,7 @@ func countHTTPGetResponse(t *testing.T, req *http.Request, proxyURL *url.URL, ma
 
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Logf("failed to read response body: %v", err)
+		t.Logf("Failed to read response body: %v", err)
 	}
 
 	body := string(bytes)

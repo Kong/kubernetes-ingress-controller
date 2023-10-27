@@ -23,12 +23,12 @@ func ValidateCredentials(secret *corev1.Secret) error {
 	if credentialSource == util.CredentialTypeAbsent {
 		// this shouldn't occur, since we check this earlier in the admission controller's handleSecret function, but
 		// checking here also in case a refactor removes that
-		return fmt.Errorf("secret has no credential type, add a %s label", labels.LabelPrefix+labels.CredentialKey)
+		return fmt.Errorf("Secret has no credential type, add a %s label", labels.LabelPrefix+labels.CredentialKey)
 	}
 
 	// verify that the credential type provided is valid
 	if !SupportedTypes.Has(credentialType) {
-		return fmt.Errorf("invalid credential type %s", credentialType)
+		return fmt.Errorf("Invalid credential type %s", credentialType)
 	}
 
 	// verify that all required fields are present
@@ -50,12 +50,12 @@ func ValidateCredentials(secret *corev1.Secret) error {
 
 	// report on any required fields that were missing
 	if len(missingFields) > 0 {
-		return fmt.Errorf("missing required field(s): %s", strings.Join(missingFields, ", "))
+		return fmt.Errorf("Missing required field(s): %s", strings.Join(missingFields, ", "))
 	}
 
 	// report on any required fields that were present, but were missing actual data
 	if len(missingDataFields) > 0 {
-		return fmt.Errorf("some fields were invalid due to missing data: %s", strings.Join(missingDataFields, ", "))
+		return fmt.Errorf("Some fields were invalid due to missing data: %s", strings.Join(missingDataFields, ", "))
 	}
 
 	return nil
@@ -115,7 +115,7 @@ func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret
 	// the indication of credential type is required to be present on all credentials.
 	credentialTypeB, ok := secret.Data[TypeKey]
 	if !ok {
-		return fmt.Errorf("missing required key %s", TypeKey)
+		return fmt.Errorf("Missing required key %s", TypeKey)
 	}
 	credentialType := string(credentialTypeB)
 
@@ -152,7 +152,7 @@ func (cs Index) add(newCred Credential) error {
 	for _, constrainedKey := range constraints {
 		if newCred.Key == constrainedKey { // this key has constraints on it, we need to check for violations
 			if _, ok := cs[newCred.Type][newCred.Key][newCred.Value]; ok {
-				return fmt.Errorf("unique key constraint violated for %s", newCred.Key)
+				return fmt.Errorf("Unique key constraint violated for %s", newCred.Key)
 			}
 		}
 	}

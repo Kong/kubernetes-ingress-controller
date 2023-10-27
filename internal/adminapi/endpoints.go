@@ -36,10 +36,10 @@ func NewDiscoverer(
 	dnsStrategy cfgtypes.DNSStrategy,
 ) (*Discoverer, error) {
 	if adminAPIPortNames.Len() == 0 {
-		return nil, fmt.Errorf("no admin API port names provided")
+		return nil, fmt.Errorf("No admin API port names provided")
 	}
 	if err := dnsStrategy.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid dns strategy: %w", err)
+		return nil, fmt.Errorf("Invalid dns strategy: %w", err)
 	}
 
 	return &Discoverer{
@@ -174,7 +174,7 @@ func adminAPIFromEndpoint(
 	case cfgtypes.ServiceScopedPodDNSStrategy:
 		if service.Name == "" {
 			return DiscoveredAdminAPI{}, fmt.Errorf(
-				"service name is empty for an endpoint with TargetRef %s/%s",
+				"Service name is empty for an endpoint with TargetRef %s/%s",
 				endpoint.TargetRef.Namespace, endpoint.TargetRef.Name,
 			)
 		}

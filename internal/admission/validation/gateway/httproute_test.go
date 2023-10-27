@@ -253,7 +253,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
+			validationMsg: "The httproute spec did not pass validation",
 			err:           fmt.Errorf("queryparam matching is supported with expression router only"),
 		},
 		{
@@ -311,7 +311,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
+			validationMsg: "The httproute spec did not pass validation",
 			err:           fmt.Errorf("example is not a supported group for httproute backendRefs, only core is supported"),
 		},
 		{
@@ -368,7 +368,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
+			validationMsg: "The httproute spec did not pass validation",
 			err:           fmt.Errorf("Pod is not a supported kind for httproute backendRefs, only Service is supported"),
 		},
 	} {

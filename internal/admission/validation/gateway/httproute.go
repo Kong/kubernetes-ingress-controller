@@ -34,7 +34,7 @@ func ValidateHTTPRoute(
 ) (bool, string, error) {
 	// validate that no unsupported features are in use
 	if err := validateHTTPRouteFeatures(httproute, parserFeatures); err != nil {
-		return false, "httproute spec did not pass validation", err
+		return false, "The httproute spec did not pass validation", err
 	}
 
 	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)

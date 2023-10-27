@@ -594,7 +594,7 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "missing required field(s): key"),
+			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "Missing required field(s): key"),
 		},
 		{
 			name: "valid key-auth credential with no consumers gets accepted",
@@ -615,7 +615,7 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 				},
 			},
 			wantOK:      false,
-			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "missing required field(s): key"),
+			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, "Missing required field(s): key"),
 		},
 	}
 

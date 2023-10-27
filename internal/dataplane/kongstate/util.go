@@ -88,14 +88,14 @@ func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
 	plugin, pluginErr := s.GetKongPlugin(namespace, name)
 	if pluginErr != nil {
 		if !errors.As(pluginErr, &store.NotFoundError{}) {
-			return nil, nil, fmt.Errorf("failed fetching KongPlugin: %w", pluginErr)
+			return nil, nil, fmt.Errorf("Failed fetching KongPlugin: %w", pluginErr)
 		}
 
 		// If KongPlugin is not found, try to fetch KongClusterPlugin.
 		clusterPlugin, err := s.GetKongClusterPlugin(name)
 		if err != nil {
 			if !errors.As(err, &store.NotFoundError{}) {
-				return nil, nil, fmt.Errorf("failed fetching KongClusterPlugin: %w", err)
+				return nil, nil, fmt.Errorf("Failed fetching KongClusterPlugin: %w", err)
 			}
 
 			// Both KongPlugin and KongClusterPlugin are not found.

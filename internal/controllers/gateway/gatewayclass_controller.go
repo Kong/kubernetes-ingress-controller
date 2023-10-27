@@ -115,7 +115,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	gwc := new(gatewayapi.GatewayClass)
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("object enqueued no longer exists, skipping", "name", req.Name)
+			log.V(util.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err

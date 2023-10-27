@@ -63,7 +63,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashTwo)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")
-		assert.Equal(t, "next attempt allowed in 2s", whyNot)
+		assert.Equal(t, "Next attempt allowed in 2s", whyNot)
 
 		// Time moves by 5s (enough for the backoff next try).
 		clock.MoveBy(time.Second * 5)
@@ -81,7 +81,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "should not allow update for the same faulty hash")
-		assert.Equal(t, "config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error", whyNot)
+		assert.Equal(t, "Config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.True(t, canUpdate, "should allow update for another hash")
@@ -95,11 +95,11 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")
-		assert.Equal(t, "config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error, next attempt allowed in 3s", whyNot)
+		assert.Equal(t, "Config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error, Next attempt allowed in 3s", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")
-		assert.Equal(t, "next attempt allowed in 3s", whyNot)
+		assert.Equal(t, "Next attempt allowed in 3s", whyNot)
 
 		strategy.RegisterUpdateSuccess()
 
@@ -133,7 +133,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "shouldn't allow update due to a standard backoff time")
-		assert.Equal(t, "next attempt allowed in 3s", whyNot)
+		assert.Equal(t, "Next attempt allowed in 3s", whyNot)
 
 		clock.MoveBy(time.Second * 5)
 
@@ -157,11 +157,11 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "shouldn't allow update due to the suggested retry-after backoff")
-		assert.Equal(t, "next attempt allowed in 1m0s", whyNot)
+		assert.Equal(t, "Next attempt allowed in 1m0s", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.False(t, canUpdate, "shouldn't allow update due to the suggested retry-after backoff (different hash)")
-		assert.Equal(t, "next attempt allowed in 1m0s", whyNot)
+		assert.Equal(t, "Next attempt allowed in 1m0s", whyNot)
 
 		clock.MoveBy(time.Minute + time.Second)
 		canUpdate, whyNot = strategy.CanUpdate(hashOne)

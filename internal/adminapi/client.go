@@ -83,13 +83,13 @@ func (c *Client) BaseRootURL() string {
 func (c *Client) NodeID(ctx context.Context) (string, error) {
 	data, err := c.adminAPIClient.Root(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed fetching Kong client root: %w", err)
+		return "", fmt.Errorf("Failed fetching Kong client root: %w", err)
 	}
 
 	const nodeIDKey = "node_id"
 	nodeID, err := extractStringFromRoot(data, nodeIDKey)
 	if err != nil {
-		return "", fmt.Errorf("malformed node ID found in Kong client root: %w", err)
+		return "", fmt.Errorf("Malformed node ID found in Kong client root: %w", err)
 	}
 
 	return nodeID, nil
@@ -104,17 +104,17 @@ func (c *Client) IsReady(ctx context.Context) error {
 // GetKongVersion returns version of the kong gateway.
 func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
 	if c.isKonnect {
-		return "", errors.New("cannot get kong version from konnect")
+		return "", errors.New("Cannot get kong version from konnect")
 	}
 	rootConfig, err := c.adminAPIClient.Root(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed fetching Kong client root: %w", err)
+		return "", fmt.Errorf("Failed fetching Kong client root: %w", err)
 	}
 
 	versionKey := "version"
 	version, err := extractStringFromRoot(rootConfig, versionKey)
 	if err != nil {
-		return "", fmt.Errorf("malformed Kong version found in Kong client root: %w", err)
+		return "", fmt.Errorf("Malformed Kong version found in Kong client root: %w", err)
 	}
 
 	return version, nil

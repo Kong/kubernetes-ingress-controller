@@ -154,13 +154,13 @@ func (s *KonnectBackoffStrategy) whyCannotUpdate(
 
 	if isTheSameFaultyConfig {
 		reasons = append(reasons, fmt.Sprintf(
-			"config has to be changed: %q hash has already failed to be pushed with a client error",
+			"Config has to be changed: %q hash has already failed to be pushed with a client error",
 			hex.EncodeToString(s.lastFailedConfigHash),
 		))
 	}
 
 	if timeLeft > 0 {
-		reasons = append(reasons, fmt.Sprintf("next attempt allowed in %s", timeLeft))
+		reasons = append(reasons, fmt.Sprintf("Next attempt allowed in %s", timeLeft))
 	}
 
 	return strings.Join(reasons, ", ")

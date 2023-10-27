@@ -55,7 +55,7 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 	require.Eventually(t, func() bool { return hasLog(expectedKubernetesAPICheckErrorLog) }, time.Minute, time.Millisecond)
 
 	t.Log("Ensure manager hasn't been started yet and no config sync has happened")
-	const configurationSyncedToKongLog = "successfully synced configuration to Kong"
+	const configurationSyncedToKongLog = "Successfully synced configuration to Kong"
 	const startingManagerLog = "Starting manager"
 	require.False(t, hasLog(configurationSyncedToKongLog))
 	require.False(t, hasLog(startingManagerLog))

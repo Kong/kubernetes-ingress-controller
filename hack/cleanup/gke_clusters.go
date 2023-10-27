@@ -20,7 +20,7 @@ const timeUntilClusterOrphaned = time.Hour
 func cleanupGKEClusters(ctx context.Context, log logr.Logger) error {
 	var creds map[string]string
 	if err := json.Unmarshal([]byte(gkeCreds), &creds); err != nil {
-		return fmt.Errorf("invalid credentials: %w", err)
+		return fmt.Errorf("Invalid credentials: %w", err)
 	}
 
 	credsOpt := option.WithCredentialsJSON([]byte(gkeCreds))

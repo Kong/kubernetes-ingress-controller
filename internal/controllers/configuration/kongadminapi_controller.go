@@ -121,7 +121,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		return ctrl.Result{}, err
 	}
-	r.Log.Info("reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+	r.Log.Info("Reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 	if !endpoints.DeletionTimestamp.IsZero() {
 		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
@@ -145,7 +145,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		r.Cache[req.NamespacedName], err = r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf(
-				"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
+				"Failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
 			)
 		}
 		r.notify()
@@ -158,7 +158,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	addresses, err := r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf(
-			"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
+			"Failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
 		)
 	}
 	if cached.Equal(addresses) {

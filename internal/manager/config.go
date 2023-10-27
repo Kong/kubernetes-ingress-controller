@@ -302,7 +302,7 @@ func (c *Config) Resolve() error {
 	if c.KongAdminTokenPath != "" {
 		token, err := os.ReadFile(c.KongAdminTokenPath)
 		if err != nil {
-			return fmt.Errorf("failed to read --kong-admin-token-file from path '%s': %w", c.KongAdminTokenPath, err)
+			return fmt.Errorf("Failed to read --kong-admin-token-file from path '%s': %w", c.KongAdminTokenPath, err)
 		}
 		c.KongAdminToken = string(token)
 	}

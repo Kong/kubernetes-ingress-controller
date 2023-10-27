@@ -39,10 +39,10 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 		c.TLSClient.KeyFile,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
+		return nil, fmt.Errorf("Failed to extract client certificates: %w", err)
 	}
 	if clientCertificate == nil {
-		return nil, fmt.Errorf("client ceritficate is missing")
+		return nil, fmt.Errorf("Client ceritficate is missing")
 	}
 
 	tlsConfig := tls.Config{

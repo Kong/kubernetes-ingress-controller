@@ -22,7 +22,7 @@ func ExtractClientCertificates(cert []byte, certFile string, key []byte, keyFile
 	if len(clientCert) != 0 && len(clientKey) != 0 {
 		cert, err := tls.X509KeyPair(clientCert, clientKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load client certificate: %w", err)
+			return nil, fmt.Errorf("Failed to load client certificate: %w", err)
 		}
 		return &cert, nil
 	}

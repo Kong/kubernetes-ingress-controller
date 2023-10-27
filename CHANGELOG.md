@@ -147,6 +147,8 @@ Adding a new version? You'll need three changes:
   for `TCPRoute` and `UDPRoute` works as expected. It **breaks** some configurations that
   relied on matching multiple Gateway's listener ports to ports of services automatically.
   [#4928](https://github.com/Kong/kubernetes-ingress-controller/pull/4928)
+- Fixed a panic when receiving broken configuration from Kong Gateway.
+  [#5003](https://github.com/Kong/kubernetes-ingress-controller/pull/5003)
 
 ### Changed
 

@@ -10,13 +10,15 @@ const (
 	ErrTextConsumerGroupUnlicensed            = "Consumer group support requires a valid Kong Enterprise license"
 	ErrTextConsumerGroupUnexpected            = "Unexpected error during checking support for consumer group"
 	ErrTextConsumerUsernameEmpty              = "Username cannot be empty"
-	ErrTextFailedToRetrieveSecret             = "Could not retrieve secrets from the kubernetes API" //nolint:gosec
-	ErrTextPluginConfigInvalid                = "Could not parse plugin configuration"
-	ErrTextPluginConfigValidationFailed       = "Unable to validate plugin schema"
-	ErrTextPluginConfigViolatesSchema         = "Plugin failed schema validation: %s"
-	ErrTextPluginNameEmpty                    = "Plugin name cannot be empty"
-	ErrTextPluginSecretConfigUnretrievable    = "Could not load secret plugin configuration"
-	ErrTextPluginUsesBothConfigTypes          = "Plugin cannot use both Config and ConfigFrom"
+	//nolint:revive
+	ErrTextFailedToRetrieveSecret       = "Could not retrieve secrets from the kubernetes API" //nolint:gosec // Ignore G101 error
+	ErrTextPluginConfigInvalid          = "Could not parse plugin configuration"
+	ErrTextPluginConfigValidationFailed = "Unable to validate plugin schema"
+	ErrTextPluginConfigViolatesSchema   = "Plugin failed schema validation: %s"
+	ErrTextPluginNameEmpty              = "Plugin name cannot be empty"
+	//nolint:revive
+	ErrTextPluginSecretConfigUnretrievable = "Could not load secret plugin configuration" //nolint:gosec // Ignore G101 error
+	ErrTextPluginUsesBothConfigTypes       = "Plugin cannot use both Config and ConfigFrom"
 )
 
 const (

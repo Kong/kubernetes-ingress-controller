@@ -3,6 +3,7 @@ package configfetcher
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/utils"
@@ -69,6 +70,10 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient())
 		if err != nil {
 			errs = errors.Join(errs, err)
+		}
+		if rs == nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to fetch configuration from %q, got nil kong raw state", client.BaseRootURL()))
+			continue
 		}
 		status, err := cf.getKongStatus(ctx, client.AdminAPIClient())
 		if err != nil {

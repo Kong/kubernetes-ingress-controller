@@ -3,8 +3,10 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -72,15 +74,15 @@ func testManifestsUpgrade(
 	testParams manifestsUpgradeTestParams,
 ) {
 	httpClient := helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())
-	oldManifest, err := httpClient.Get(testParams.fromManifestURL)
+	oldManifestResp, err := httpClient.Get(testParams.fromManifestURL)
 	require.NoError(t, err)
-	defer oldManifest.Body.Close()
+	defer oldManifestResp.Body.Close()
 
 	t.Log("configuring upgrade manifests test")
 	ctx, env := setupE2ETest(t)
 
 	t.Logf("deploying previous kong manifests: %s", testParams.fromManifestURL)
-	oldManifestPath := dumpToTempFile(t, oldManifest.Body)
+	oldManifestPath := dumpToTempFile(t, oldManifestResp.Body)
 	ManifestDeploy{
 		Path:            oldManifestPath,
 		SkipTestPatches: true,
@@ -95,9 +97,23 @@ func testManifestsUpgrade(
 		hook(ctx, t, env)
 	}
 
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4973
+	// This router flavor substitution is a workaround for the fact that KIC doesn't
+	// support configuring Gateways of different router flavors at the same time.
+	// Since pre 3.0 the default router flavor was "traditional", use it here during
+	// the upgrade.
+	// When 4973 is fixed, this will go away as those new tests will use a different
+	// testing strategy.
+	// Using expressions router in earlier version (e.g. 2.12) was causing
+	// configuration translation errors.
+	newManifestB, err := os.ReadFile(testParams.toManifestPath)
+	require.NoError(t, err)
+	newManifestB = bytes.ReplaceAll(newManifestB, []byte("value: expressions"), []byte("value: traditional"))
+	newManifestPath := dumpToTempFile(t, bytes.NewReader(newManifestB))
+
 	t.Logf("deploying target version of kong manifests: %s", testParams.toManifestPath)
 	deployments := ManifestDeploy{
-		Path: testParams.toManifestPath,
+		Path: newManifestPath,
 		// Do not skip test patches - we want to verify that upgrade works with an image override in target manifest.
 		SkipTestPatches: false,
 	}.Run(ctx, t, env)

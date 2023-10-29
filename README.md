@@ -10,7 +10,7 @@
 
 Use [Kong][kong] for Kubernetes [Gateway API][gwapi] or [Ingress][ingress].
 Configure [plugins][docs-konghq-hub], health checking,
-load balancing, and more all using
+load balancing and more, all using
 Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
@@ -53,7 +53,7 @@ helm install kong/ingress --generate-name
 To learn more details about Helm chart follow the [Helm chart documentation](https://charts.konghq.com/).
 
 Once installed, please follow the [Getting Started guide][docs-konghq-getting-started-guide]
-to start using Kong your Kubernetes cluster.
+to start using Kong in your Kubernetes cluster.
 
 > Note: Kong Enterprise users, please follow along with our
 [enterprise guide][docs-konghq-k4k8s-enterprise-setup] to setup the enterprise version.

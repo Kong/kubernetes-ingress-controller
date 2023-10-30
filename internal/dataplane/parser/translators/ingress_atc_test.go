@@ -74,7 +74,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						Route: kong.Route{
 							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Expression: kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
-							Priority: kong.Int(IngressRoutePriorityTraits{
+							Priority: kong.Uint64(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
@@ -151,7 +151,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						Route: kong.Route{
 							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: kong.Int(IngressRoutePriorityTraits{
+							Priority: kong.Uint64(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
@@ -238,7 +238,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						Route: kong.Route{
 							Name:       kong.String("default.test-ingress-annotations.test-service.konghq.com.80"),
 							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
-							Priority: kong.Int(IngressRoutePriorityTraits{
+							Priority: kong.Uint64(IngressRoutePriorityTraits{
 								MatchFields:   4,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
@@ -420,7 +420,7 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 	testCases := []struct {
 		name             string
 		traits           IngressRoutePriorityTraits
-		expectedPriority int
+		expectedPriority RoutePriorityType
 	}{
 		{
 			name: "plain host true regex path false",

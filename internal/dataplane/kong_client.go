@@ -458,14 +458,14 @@ func (c *KongClient) sendOutToGatewayClients(
 	if len(gatewayClients) == 0 {
 		c.logger.Error(
 			errors.New("no ready gateway clients"),
-			"could not send configuration to gateways because no ready gateway clients",
+			"Could not send configuration to gateways",
 		)
 		// Should not store the configuration in last valid config because the configuration is not validated on Kong gateway.
 		return previousSHAs, nil
 	}
 
 	gatewayClientURLs := lo.Map(gatewayClients, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
-	c.logger.V(util.DebugLevel).Info("sending configuration to gateway clients", "urls", gatewayClientURLs)
+	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", gatewayClientURLs)
 
 	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, *client, s, config)

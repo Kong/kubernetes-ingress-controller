@@ -23,6 +23,7 @@ import (
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
@@ -325,6 +326,8 @@ func (c *Config) GetKubeconfig() (*rest.Config, error) {
 	if c.Impersonate != "" {
 		config.Impersonate.UserName = c.Impersonate
 	}
+
+	config.UserAgent = "kong-ingress-controller/" + metadata.Release
 
 	return config, err
 }

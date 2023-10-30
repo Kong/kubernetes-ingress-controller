@@ -45,8 +45,8 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	req := testcontainers.ContainerRequest{
 		Image: kongImageUnderTest(),
 		ExposedPorts: []string{
-			MappedLocalPort(kongAdminPort),
-			MappedLocalPort(kongProxyPort),
+			MappedLocalPort(t, kongAdminPort),
+			MappedLocalPort(t, kongProxyPort),
 		},
 		Env: map[string]string{
 			"KONG_DATABASE":      "off",

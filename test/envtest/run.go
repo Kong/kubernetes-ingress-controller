@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/zapr"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
@@ -23,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 

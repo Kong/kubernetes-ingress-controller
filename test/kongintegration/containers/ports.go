@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/docker/go-connections/nat"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 )
 

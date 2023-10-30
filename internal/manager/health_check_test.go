@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 )
 
 func TestHealthCheckServer(t *testing.T) {

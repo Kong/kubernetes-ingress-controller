@@ -1,6 +1,6 @@
 package labels
 
-import "github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+import "github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 
 const (
 	// LabelPrefix is the string used at the beginning of KIC-specific labels.

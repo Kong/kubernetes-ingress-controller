@@ -10,8 +10,8 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------

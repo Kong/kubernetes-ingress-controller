@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 func TestToDeckContent(t *testing.T) {

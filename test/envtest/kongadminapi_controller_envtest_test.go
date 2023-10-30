@@ -26,10 +26,10 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
 type notifier struct {

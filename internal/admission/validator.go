@@ -13,17 +13,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/consumers/credentials"
-	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/gateway"
-	ingressvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/ingress"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	credsvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
+	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/gateway"
+	ingressvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/ingress"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // KongValidator validates Kong entities.

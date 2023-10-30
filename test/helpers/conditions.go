@@ -11,11 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/net"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 // TODO: for now this can stay here but ideally we'd use a common package for this
-// and github.com/kong/kubernetes-ingress-controller/v2/test/interla/helpers.
+// and github.com/kong/kubernetes-ingress-controller/v3/test/interla/helpers.
 // At the moment we can't use the test/internal package in e.g. internal/controllers
 // package because of how the internal packages work.
 // This might require a separate PR that will reorder code and put it in a top

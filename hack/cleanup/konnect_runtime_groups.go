@@ -11,8 +11,8 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 	"github.com/samber/lo"
 
-	cp "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/controlplanes"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
+	cp "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
 )
 
 const (

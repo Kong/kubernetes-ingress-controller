@@ -10,9 +10,9 @@ import (
 	"github.com/kong/go-kong/kong"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.

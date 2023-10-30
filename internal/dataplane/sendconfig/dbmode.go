@@ -12,8 +12,8 @@ import (
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 // UpdateStrategyDBMode implements the UpdateStrategy interface. It updates Kong's data-plane

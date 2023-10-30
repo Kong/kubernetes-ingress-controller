@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/flags"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
 )
 
 func TestValidatedValue(t *testing.T) {

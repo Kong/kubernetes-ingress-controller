@@ -13,6 +13,7 @@ SHELL := bash
 MAKEFLAGS += --no-print-directory
 REPO_URL ?= github.com/kong/kubernetes-ingress-controller
 REPO_INFO ?= $(shell git config --get remote.origin.url)
+GO_MOD_MAJOR_VERSION ?= $(subst $(REPO_URL)/,,$(shell go list -m))
 TAG ?= $(shell git describe --tags)
 
 ifndef COMMIT
@@ -136,9 +137,9 @@ _build.fips:
 .PHONY: _build.template
 _build.template:
 	go build -o bin/manager -ldflags "-s -w \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
 
 .PHONY: _build.debug
 _build.debug:
@@ -147,9 +148,9 @@ _build.debug:
 .PHONY: _build.template.debug
 _build.template.debug:
 	go build -o bin/manager-debug -trimpath -gcflags=all="-N -l" -ldflags " \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
 
 .PHONY: fmt
 fmt:
@@ -244,12 +245,12 @@ generate.clientsets: client-gen
 		--go-header-file ./hack/boilerplate.go.txt \
 		--logtostderr \
 		--clientset-name clientset \
-		--input-base $(REPO_URL)/v2/pkg/apis/  \
+		--input-base $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/apis/ \
 		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1 \
 		--input-dirs $(REPO_URL)/pkg/apis/configuration/v1alpha1/,$(REPO_URL)/pkg/apis/configuration/v1beta1/,$(REPO_URL)/pkg/apis/configuration/v1/ \
 		--output-base pkg/ \
-		--output-package $(REPO_URL)/v2/pkg/ \
-		--trim-path-prefix pkg/$(REPO_URL)/v2/
+		--output-package $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/ \
+		--trim-path-prefix pkg/$(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/
 
 .PHONY: generate.docs
 generate.docs: generate.apidocs generate.cli-arguments-docs
@@ -331,9 +332,9 @@ test.conformance-experimental: _check.container.environment go-junit-report
 		TEST_EXPERIMENTAL_CONFORMANCE="true" \
 		go test \
 		-ldflags " \
-		-X $(REPO_URL)/v2/internal/manager/metadata.ProjectURL=$(REPO_URL) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.ProjectURL=$(REPO_URL) \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO)" \
 		-v \
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \

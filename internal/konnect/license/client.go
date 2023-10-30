@@ -13,9 +13,9 @@ import (
 
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
 // Client interacts with the Konnect license API.

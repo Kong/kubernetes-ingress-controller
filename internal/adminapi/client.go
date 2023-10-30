@@ -10,8 +10,8 @@ import (
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
 // Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and

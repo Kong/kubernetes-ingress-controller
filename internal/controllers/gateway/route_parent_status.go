@@ -6,7 +6,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 // getParentStatuses creates a parent status map for the provided route given the

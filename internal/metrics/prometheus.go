@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 )
 
 // descriptions of these metrics are found below, where their help text is set in NewCtrlFuncMetrics()

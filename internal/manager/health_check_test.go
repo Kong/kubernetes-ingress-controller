@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
 func TestHealthCheckServer(t *testing.T) {

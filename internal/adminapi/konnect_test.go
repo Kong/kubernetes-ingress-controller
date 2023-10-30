@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 func TestNewKongClientForKonnectControlPlane(t *testing.T) {

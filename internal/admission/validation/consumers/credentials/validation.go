@@ -7,8 +7,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // -----------------------------------------------------------------------------

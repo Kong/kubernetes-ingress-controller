@@ -22,14 +22,14 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 )
 
 // -----------------------------------------------------------------------------

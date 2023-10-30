@@ -3,7 +3,7 @@ package admission
 import (
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 // GatewayClientsProvider returns the most recent set of Gateway Admin API clients.

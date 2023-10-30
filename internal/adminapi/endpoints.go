@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 )
 
 // DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.

@@ -3,7 +3,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 // AdminAPIClientFactory is a mock implementation of adminapi.ClientFactory.

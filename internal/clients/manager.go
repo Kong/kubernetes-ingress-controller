@@ -10,9 +10,9 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/exp/maps"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
 // DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.

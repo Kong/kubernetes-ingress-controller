@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 func TestGatewayExperimentalConformance(t *testing.T) {

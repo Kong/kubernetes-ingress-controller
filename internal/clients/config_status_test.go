@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 )
 
 func TestChannelConfigNotifier(t *testing.T) {

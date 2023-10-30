@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
 )
 
 const (

@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 // refChecker is a wrapper type that facilitates checking whether a backenRef is allowed

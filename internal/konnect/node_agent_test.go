@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 const (

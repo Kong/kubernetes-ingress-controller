@@ -5,7 +5,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 // Consumer holds a Kong consumer and its plugins and credentials.

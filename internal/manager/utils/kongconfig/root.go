@@ -13,7 +13,7 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.

@@ -1134,7 +1134,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 
 			kongState := KongState{Upstreams: []Upstream{tc.upstream}}
-			kongState.FillUpstreamOverrides(s, logr.Discard(), failuresCollector)
+			kongState.FillUpstreamOverrides(s, failuresCollector)
 			require.Equal(t, tc.expectedUpstream, kongState.Upstreams[0].Upstream)
 			require.ElementsMatch(t, tc.expectedFailures, failuresCollector.PopResourceFailures())
 		})

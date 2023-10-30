@@ -19,7 +19,7 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 
 - **Gateway API support (beta, soon GA)**
   Use [Gateway API][gwapi] resources (official successor of [Ingress][ingress] resources) to configure Kong.
-  Native support for TCP, UDP, gRPC and HTTP/HTTPS traffic, reuse the same gateway for multiple protocols and namespaces.
+  Native support for TCP, UDP, TLS, gRPC and HTTP/HTTPS traffic, reuse the same gateway for multiple protocols and namespaces.
 - **Ingress support**
   Use [Ingress][ingress] resources to configure Kong.
 - **Declarative configuration for Kong**
@@ -43,7 +43,7 @@ Setting up Kong for Kubernetes is as simple as:
 
 ```shell
 # Install the Gateway API CRDs before installing Kong Ingress Controller.
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0-rc2/standard-install.yaml
 # Install the Kong Ingress Controller with Helm.
 helm repo add kong https://charts.konghq.com
 helm repo update

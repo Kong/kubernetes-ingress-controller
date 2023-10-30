@@ -211,6 +211,26 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
 	require.Equal(t, m.GatewayClientsCount(), 1, "konnect client should not be counted in GatewayClientsCount")
 	require.Equal(t, konnectTestClient, m.KonnectClient(), "konnect client should be returned from KonnectClient")
+
+	testClient2, err := adminapi.NewTestClient("localhost:8081")
+	initialClients := []*adminapi.Client{testClient, testClient2}
+	require.NoError(t, err)
+	clientManagerWithDB, err := clients.NewAdminAPIClientsManager(
+		context.Background(),
+		zapr.NewLogger(zap.NewNop()),
+		initialClients,
+		mocks.NewAdminAPIClientFactory(map[string]error{}),
+		&mockReadinessChecker{},
+	)
+	require.NoError(t, err)
+	clients.WithDBMode("postgres")(clientManagerWithDB)
+	clients := clientManagerWithDB.GatewayClients()
+	require.Len(t, clients, 1, "Expecting one client returned with DB mode")
+	require.Equal(t, clientManagerWithDB.GatewayClientsCount(), 2, "Expecting 2 initial clients")
+	require.Truef(t, lo.ContainsBy(initialClients, func(cl *adminapi.Client) bool {
+		return cl.BaseRootURL() == clients[0].BaseRootURL()
+	}), "Returned client root URL %s should in root URLs of initial clients")
+
 }
 
 func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {

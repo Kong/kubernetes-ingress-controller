@@ -20,8 +20,6 @@ import (
 // It's the same as the default interval of a Kubernetes container's readiness probe.
 const DefaultReadinessReconciliationInterval = 10 * time.Second
 
-const DefaultAdminAPIServicePort = 8444
-
 // ClientFactory is responsible for creating Admin API clients.
 type ClientFactory interface {
 	CreateAdminAPIClient(ctx context.Context, address adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)

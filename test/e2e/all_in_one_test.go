@@ -259,12 +259,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 func TestDeployAllInOnePostgresGatewayDiscovery(t *testing.T) {
 	t.Parallel()
 
-	const (
-		manifestFileName = "all-in-one-postgres-multiple-gateways.yaml"
-		manifestFilePath = "../../deploy/single/" + manifestFileName
-	)
+	const manifestFilePath = "manifests/all-in-one-postgres-multiple-gateways.yaml"
 
-	t.Logf("configuring %s manifest test", manifestFileName)
+	t.Logf("configuring %s manifest test", manifestFilePath)
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")

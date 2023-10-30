@@ -90,7 +90,7 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 	gatewayClass, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			fmt.Errorf("Unexpected object type"),
 			"gatewayclass watch predicate received unexpected object type",
 			"expected", "*gatewayapi.GatewayClass", "found", reflect.TypeOf(obj),
 		)
@@ -121,7 +121,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	log.V(util.DebugLevel).Info("processing gatewayclass", "name", req.Name)
+	log.V(util.DebugLevel).Info("Processing gatewayclass", "name", req.Name)
 
 	if isGatewayClassControlledAndUnmanaged(gwc) {
 		alreadyAccepted := util.CheckCondition(

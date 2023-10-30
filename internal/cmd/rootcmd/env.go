@@ -30,7 +30,7 @@ func bindEnvVars(cmd *cobra.Command, _ []string) (err error) {
 	var envKey string
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("environment binding failed for variable %s: %v", envKey, r)
+			err = fmt.Errorf("The environment binding failed for variable %s: %v", envKey, r)
 		}
 	}()
 

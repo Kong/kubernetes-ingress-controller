@@ -27,22 +27,22 @@ func NewResourceFailure(reason string, causingObjects ...client.Object) (Resourc
 		reason = ResourceFailureReasonUnknown
 	}
 	if len(causingObjects) < 1 {
-		return ResourceFailure{}, fmt.Errorf("no causing objects specified, message: %s", reason)
+		return ResourceFailure{}, fmt.Errorf("No causing objects specified, message: %s", reason)
 	}
 
 	for _, obj := range causingObjects {
 		if obj == nil {
-			return ResourceFailure{}, errors.New("one of causing objects is nil")
+			return ResourceFailure{}, errors.New("One of causing objects is nil")
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Empty() {
-			return ResourceFailure{}, errors.New("one of causing objects has an empty GVK")
+			return ResourceFailure{}, errors.New("One of causing objects has an empty GVK")
 		}
 		if obj.GetName() == "" {
-			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no name", gvk.String())
+			return ResourceFailure{}, fmt.Errorf("One of causing objects (%s) has no name", gvk.String())
 		}
 		if obj.GetNamespace() == "" {
-			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no namespace", gvk.String())
+			return ResourceFailure{}, fmt.Errorf("One of causing objects (%s) has no namespace", gvk.String())
 		}
 	}
 
@@ -87,7 +87,7 @@ func (c *ResourceFailuresCollector) PushResourceFailure(reason string, causingOb
 // logResourceFailure logs an error with a resource processing failure message for each causing object.
 func (c *ResourceFailuresCollector) logResourceFailure(reason string, causingObjects ...client.Object) {
 	for _, obj := range causingObjects {
-		c.logger.Error(fmt.Errorf("resource processing failed"), reason,
+		c.logger.Error(fmt.Errorf("Resource processing failed"), reason,
 			"name", obj.GetName(),
 			"namespace", obj.GetNamespace(),
 			"GVK", obj.GetObjectKind().GroupVersionKind().String())

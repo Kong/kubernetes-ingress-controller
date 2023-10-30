@@ -150,7 +150,7 @@ func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(ctx context.Contex
 	grant, ok := obj.(*gatewayapi.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			fmt.Errorf("Unexpected object type"),
 			"referencegrant watch predicate received unexpected object type",
 			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
@@ -202,7 +202,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 	// verify that the object is a GatewayClass
 	gwc, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("Invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
@@ -287,7 +287,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("Invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
 

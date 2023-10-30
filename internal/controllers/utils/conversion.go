@@ -20,7 +20,7 @@ func UpdateLoadBalancerIngress(
 	// Convert to netv1 so that we can compare it with newAddresses.
 	oldAddresses, err := ingressToNetV1LoadBalancerIngressStatus(ingress)
 	if err != nil {
-		return false, fmt.Errorf("failed to convert ingress to netv1.Ingress: %w", err)
+		return false, fmt.Errorf("Failed to convert ingress to netv1.Ingress: %w", err)
 	}
 
 	updateNeeded = len(oldAddresses) != len(newAddresses) || !reflect.DeepEqual(oldAddresses, newAddresses)
@@ -36,7 +36,7 @@ func UpdateLoadBalancerIngress(
 	case *kongv1beta1.UDPIngress:
 		obj.Status.LoadBalancer.Ingress = netV1ToCoreV1LoadBalancerIngress(newAddresses)
 	default:
-		return false, fmt.Errorf("unsupported ingress type: %T", obj)
+		return false, fmt.Errorf("Unsupported ingress type: %T", obj)
 	}
 
 	return true, nil

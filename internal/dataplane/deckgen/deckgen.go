@@ -15,7 +15,7 @@ import (
 func GenerateSHA(targetContent *file.Content) ([]byte, error) {
 	jsonConfig, err := gojson.Marshal(targetContent)
 	if err != nil {
-		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
+		return nil, fmt.Errorf("Marshaling Kong declarative configuration to JSON: %w", err)
 	}
 
 	shaSum := sha256.Sum256(jsonConfig)

@@ -51,7 +51,7 @@ func ToDeckContent(
 				Plugin: *p.DeepCopy(),
 			}
 			if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-				logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
+				logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -68,7 +68,7 @@ func ToDeckContent(
 					Plugin: *p.DeepCopy(),
 				}
 				if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-					logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
+					logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -91,7 +91,7 @@ func ToDeckContent(
 			Plugin: plugin.Plugin,
 		}
 		if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-			logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
+			logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
@@ -157,7 +157,7 @@ func ToDeckContent(
 		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
 		// stopping all updates to the Kong Admin API.
 		if consumer.Username == nil {
-			logger.Error(nil, "invalid consumer received (username was empty)")
+			logger.Error(nil, "Invalid consumer received (username was empty)")
 			continue
 		}
 
@@ -237,21 +237,21 @@ func fillUpstream(upstream *kong.Upstream) {
 
 func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas PluginSchemaStore) error {
 	if plugin == nil {
-		return fmt.Errorf("plugin is nil")
+		return fmt.Errorf("Plugin is nil")
 	}
 	if plugin.Name == nil || *plugin.Name == "" {
-		return fmt.Errorf("plugin doesn't have a name")
+		return fmt.Errorf("Plugin doesn't have a name")
 	}
 	schema, err := schemas.Schema(ctx, *plugin.Name)
 	if err != nil {
-		return fmt.Errorf("error retrieveing schema for plugin %s: %w", *plugin.Name, err)
+		return fmt.Errorf("Error retrieveing schema for plugin %s: %w", *plugin.Name, err)
 	}
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)
 	}
 	err = kong.FillPluginsDefaults(&plugin.Plugin, schema)
 	if err != nil {
-		return fmt.Errorf("error filling in default for plugin %s: %w", *plugin.Name, err)
+		return fmt.Errorf("Error filling in default for plugin %s: %w", *plugin.Name, err)
 	}
 	if plugin.RunOn == nil {
 		plugin.RunOn = kong.String("first")

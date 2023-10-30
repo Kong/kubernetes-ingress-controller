@@ -54,7 +54,7 @@ func GetVersionCmd() *cobra.Command {
 				Commit:  metadata.Commit,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to print version information: %w", err)
+				return fmt.Errorf("Failed to print version information: %w", err)
 			}
 			fmt.Printf("%s\n", out)
 			return nil

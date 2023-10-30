@@ -69,7 +69,7 @@ type GatewayReconciler struct { //nolint:revive
 func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// verify that the PublishService was configured properly
 	if r.PublishServiceRef.Name == "" || r.PublishServiceRef.Namespace == "" {
-		return fmt.Errorf("publish service must be configured")
+		return fmt.Errorf("The publish service must be configured")
 	}
 
 	// We're verifying whether ReferenceGrant CRD is installed at setup of the GatewayReconciler
@@ -172,7 +172,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 	gateway, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			fmt.Errorf("Unexpected object type"),
 			"gateway watch predicate received unexpected object type",
 			"expected", "*gatewayapi.Gateway", "found", reflect.TypeOf(obj),
 		)
@@ -192,7 +192,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 	gatewayClass, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			fmt.Errorf("Unexpected object type"),
 			"gatewayclass watch predicate received unexpected object type",
 			"expected", "*gatewayapi.GatewayClass", "found", reflect.TypeOf(obj),
 		)
@@ -219,7 +219,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 	grant, ok := obj.(*gatewayapi.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			fmt.Errorf("Unexpected object type"),
 			"referencegrant watch predicate received unexpected object type",
 			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
@@ -261,7 +261,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayapi.GatewayClass{}
 		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
-			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
+			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
 		if isGatewayClassControlledAndUnmanaged(gatewayClass) {
@@ -281,7 +281,7 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj clie
 	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			fmt.Errorf("Unexpected object type"),
 			"httproute watch predicate received unexpected object type",
 			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
 		)
@@ -636,7 +636,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	// if there are no clusterIPs available yet then this service
 	// is still being provisioned so we will need to wait.
 	if len(svc.Spec.ClusterIPs) < 1 {
-		return nil, nil, fmt.Errorf("gateway service %s/%s is not yet ready (no cluster IPs provisioned)", svc.Namespace, svc.Name)
+		return nil, nil, fmt.Errorf("Gateway service %s/%s is not yet ready (no cluster IPs provisioned)", svc.Namespace, svc.Name)
 	}
 
 	// take var copies of the address types so we can take pointers to them
@@ -669,7 +669,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		// if the loadbalancer IPs/Hosts haven't been provisioned yet
 		// the service is not ready and we'll need to wait.
 		if len(svc.Status.LoadBalancer.Ingress) < 1 {
-			info(log, svc, "gateway service is type LoadBalancer but has not yet been provisioned: LoadBalancer IPs can not be added to the Gateway's addresses until this is resolved")
+			info(log, svc, "Gateway service is type LoadBalancer but has not yet been provisioned: LoadBalancer IPs can not be added to the Gateway's addresses until this is resolved")
 			return addresses, listeners, nil
 		}
 
@@ -716,7 +716,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 	// Service in Kubernetes).
 	proxyListeners, streamListeners, err := r.DataplaneClient.Listeners(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve listeners from the data-plane: %w", err)
+		return nil, fmt.Errorf("Unable to retrieve listeners from the data-plane: %w", err)
 	}
 	proxyListenersMap := make(map[int]kong.ProxyListener)
 	for _, listener := range proxyListeners {

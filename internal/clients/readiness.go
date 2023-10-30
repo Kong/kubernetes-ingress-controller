@@ -95,7 +95,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 ) (client *adminapi.Client) {
 	defer func() {
 		c.logger.V(util.DebugLevel).
-			Info(fmt.Sprintf("checking readiness of pending client for %q", pendingClient.Address),
+			Info(fmt.Sprintf("Checking readiness of pending client for %q", pendingClient.Address),
 				"ok", client != nil,
 			)
 	}()
@@ -105,7 +105,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Error(err, fmt.Sprintf("pending client for %q is not ready yet", pendingClient.Address))
+		c.logger.V(util.DebugLevel).Error(err, fmt.Sprintf("Pending client for %q is not ready yet", pendingClient.Address))
 		return nil
 	}
 
@@ -122,7 +122,7 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 			if !ok {
 				// This should never happen, but if it does, we want to log it.
 				c.logger.Error(
-					errors.New("missing pod reference"),
+					errors.New("Missing pod reference"),
 					fmt.Sprintf("Failed to get PodReference for client %q", client.BaseRootURL()),
 				)
 				continue
@@ -139,7 +139,7 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, client AlreadyCreatedClient) (ready bool) {
 	defer func() {
 		c.logger.V(util.DebugLevel).Info(
-			fmt.Sprintf("checking readiness of already created client for %q", client.BaseRootURL()),
+			fmt.Sprintf("Checking readiness of already created client for %q", client.BaseRootURL()),
 			"ok", ready,
 		)
 	}()
@@ -150,7 +150,7 @@ func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, 
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
 		c.logger.V(util.DebugLevel).Error(
 			err,
-			fmt.Sprintf("already created client for %q is not ready, moving to pending", client.BaseRootURL()),
+			fmt.Sprintf("Already created client for %q is not ready, moving to pending", client.BaseRootURL()),
 		)
 		return false
 	}

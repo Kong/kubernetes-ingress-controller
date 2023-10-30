@@ -26,7 +26,7 @@ var (
 func SetupSignalHandler(ctx context.Context, cfg *manager.Config, logger logr.Logger) (context.Context, error) {
 	// This will prevent multiple signal handlers from being created
 	if ok := mutex.TryLock(); !ok {
-		return nil, errors.New("signal handler can only be setup once")
+		return nil, errors.New("Signal handler can only be setup once")
 	}
 
 	var cancel func()

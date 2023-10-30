@@ -124,7 +124,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 	// verify that the object is a GatewayClass
 	gwc, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("Invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
@@ -209,7 +209,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("Invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
 

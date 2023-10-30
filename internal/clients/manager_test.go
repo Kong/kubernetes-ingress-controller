@@ -159,7 +159,7 @@ func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.
 
 func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
 	_, err := clients.NewAdminAPIClientsManager(context.Background(), zapr.NewLogger(zap.NewNop()), nil, &mockReadinessChecker{})
-	require.ErrorContains(t, err, "at least one initial client must be provided")
+	require.ErrorContains(t, err, "At least one initial client must be provided")
 }
 
 func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {

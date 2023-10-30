@@ -20,7 +20,7 @@ const (
 // ErrTypeNotObjectReference is the error returned to caller to tell that type of the object stored
 // in indexer is not ObjectReference.
 // It should not happen in normal use, because only ObjectReference should be added to the indexer.
-var ErrTypeNotObjectReference = fmt.Errorf("type of object in indexer is not ObjectReference")
+var ErrTypeNotObjectReference = fmt.Errorf("Type of object in indexer is not ObjectReference")
 
 type ObjectReference struct {
 	Referrer client.Object
@@ -37,15 +37,15 @@ func objectKeyFunc(obj client.Object) (string, error) {
 	o := obj.DeepCopyObject()
 	metaObj, ok := o.(client.Object)
 	if !ok {
-		return "", fmt.Errorf("could not convert %s/%s back to client Object", obj.GetNamespace(), obj.GetName())
+		return "", fmt.Errorf("Could not convert %s/%s back to client Object", obj.GetNamespace(), obj.GetName())
 	}
 	s, err := scheme.Get()
 	if err != nil {
-		return "", fmt.Errorf("could not get scheme for %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
+		return "", fmt.Errorf("Could not get scheme for %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 	err = util.PopulateTypeMeta(o, s)
 	if err != nil {
-		return "", fmt.Errorf("could not populate %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
+		return "", fmt.Errorf("Could not populate %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 	return metaObj.GetObjectKind().GroupVersionKind().String() + "/" +
 		metaObj.GetNamespace() + "/" + metaObj.GetName(), nil

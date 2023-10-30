@@ -15,7 +15,7 @@ import (
 func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
 	logger, err := manager.SetupLoggers(c, output)
 	if err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
+		return fmt.Errorf("Failed to initialize logger: %w", err)
 	}
 	ctx = ctrl.LoggerInto(ctx, logger)
 
@@ -26,7 +26,7 @@ func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
 func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) error {
 	ctx, err := SetupSignalHandler(ctx, c, logger)
 	if err != nil {
-		return fmt.Errorf("failed to setup signal handler: %w", err)
+		return fmt.Errorf("Failed to setup signal handler: %w", err)
 	}
 
 	if err := c.Validate(); err != nil {
@@ -35,7 +35,7 @@ func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) e
 
 	diag, err := StartDiagnosticsServer(ctx, c.DiagnosticServerPort, c, logger)
 	if err != nil {
-		return fmt.Errorf("failed to start diagnostics server: %w", err)
+		return fmt.Errorf("Failed to start diagnostics server: %w", err)
 	}
 
 	return manager.Run(ctx, c, diag.ConfigDumps, logger)

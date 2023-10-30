@@ -28,10 +28,10 @@ func StartDiagnosticsServer(
 	logger logr.Logger,
 ) (diagnostics.Server, error) {
 	if !c.EnableProfiling && !c.EnableConfigDumps {
-		logger.Info("diagnostics server disabled")
+		logger.Info("Diagnostics server disabled")
 		return diagnostics.Server{}, nil
 	}
-	logger.Info("starting diagnostics server")
+	logger.Info("Starting diagnostics server")
 
 	s := diagnostics.Server{
 		Logger:           logger,

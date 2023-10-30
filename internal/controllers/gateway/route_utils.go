@@ -97,11 +97,11 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 	case *gatewayapi.GRPCRoute:
 		refs = r.Spec.ParentRefs
 	default:
-		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
+		return nil, fmt.Errorf("Can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
 	for _, ref := range refs {
 		if string(*ref.Group) != gatewayv1alpha2.GroupName || string(*ref.Kind) != "Gateway" {
-			return nil, fmt.Errorf("unsupported parent kind %s/%s", string(*ref.Group), string(*ref.Kind))
+			return nil, fmt.Errorf("Unsupported parent kind %s/%s", string(*ref.Group), string(*ref.Kind))
 		}
 	}
 
@@ -117,7 +117,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 	case *gatewayapi.GRPCRoute:
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	default:
-		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
+		return nil, fmt.Errorf("Can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
 }
 
@@ -156,7 +156,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 				// that there's another gateway, so keep searching through the list.
 				continue
 			}
-			return nil, fmt.Errorf("failed to retrieve gateway for route: %w", err)
+			return nil, fmt.Errorf("Failed to retrieve gateway for route: %w", err)
 		}
 
 		// pull the GatewayClass for the Gateway object from the cached client
@@ -170,7 +170,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 				// so keep searching through the list.
 				continue
 			}
-			return nil, fmt.Errorf("failed to retrieve gatewayclass for gateway: %w", err)
+			return nil, fmt.Errorf("Failed to retrieve gatewayclass for gateway: %w", err)
 		}
 
 		// If the GatewayClass does not match this controller then skip it
@@ -200,7 +200,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 		for _, listener := range gateway.Spec.Listeners {
 			// Check if the route matches listener's AllowedRoutes.
 			if ok, err := routeMatchesListenerAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
-				return nil, fmt.Errorf("failed matching listener %s to a route %s for gateway %s: %w",
+				return nil, fmt.Errorf("Failed matching listener %s to a route %s for gateway %s: %w",
 					listener.Name, route.GetName(), gateway.Name, err,
 				)
 			} else if !ok {
@@ -433,7 +433,7 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 		if err != nil {
 			return false, fmt.Errorf(
-				"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
+				"Failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
 				listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
 			)
 		}
@@ -443,17 +443,17 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 
 	default:
 		return false, fmt.Errorf(
-			"unknown listener.AllowedRoutes.Namespaces.From value: %s for listener %s",
+			"Unknown listener.AllowedRoutes.Namespaces.From value: %s for listener %s",
 			*listener.AllowedRoutes.Namespaces.From, listener.Name,
 		)
 	}
 }
 
 var (
-	errUnsupportedRouteKind  = errors.New("unsupported route kind")
-	errUnmatchedListenerName = errors.New("unmatched listener name")
-	errListenerNotProgrammed = errors.New("no Programmed condition found for listener")
-	errListenerNotReadyYet   = errors.New("listener not ready yet")
+	errUnsupportedRouteKind  = errors.New("Unsupported route kind")
+	errUnmatchedListenerName = errors.New("Unmatched listener name")
+	errListenerNotProgrammed = errors.New("No Programmed condition found for listener")
+	errListenerNotReadyYet   = errors.New("Listener not ready yet")
 )
 
 // existsMatchingReadyListenerInStatus checks if:

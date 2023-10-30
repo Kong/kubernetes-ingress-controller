@@ -26,7 +26,7 @@ func TestParsersGoldenTestsOutputs(t *testing.T) {
 
 	const (
 		timeout = 5 * time.Second
-		tick    = time.Millisecond * 100
+		tick    = 100* time.Millisecond
 	)
 
 	ctx := context.Background()

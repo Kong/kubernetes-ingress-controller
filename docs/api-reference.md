@@ -66,7 +66,7 @@ KongConsumer is the Schema for the kongconsumers API.
 
 
 
-KongIngress is the Schema for the kongingresses API.
+KongIngress is the Schema for the kongingresses API. Deprecated: use Service's annotations, Ingress's annotations, or KongUpstreamPolicy instead.
 
 <!-- kong_ingress description placeholder -->
 
@@ -183,7 +183,7 @@ _Appears in:_
 
 
 
-KongIngressUpstream contains KongIngress upstream configuration. It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
+KongIngressUpstream contains KongIngress upstream configuration. It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`. Deprecated: use KongUpstreamPolicy instead.
 
 
 

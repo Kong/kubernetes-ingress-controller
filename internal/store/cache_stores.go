@@ -43,7 +43,6 @@ type CacheStores struct {
 	ClusterPlugin                  cache.Store
 	Consumer                       cache.Store
 	ConsumerGroup                  cache.Store
-	KongIngress                    cache.Store
 	TCPIngress                     cache.Store
 	UDPIngress                     cache.Store
 	KongUpstreamPolicy             cache.Store
@@ -74,7 +73,6 @@ func NewCacheStores() CacheStores {
 		ClusterPlugin:                  cache.NewStore(clusterResourceKeyFunc),
 		Consumer:                       cache.NewStore(keyFunc),
 		ConsumerGroup:                  cache.NewStore(keyFunc),
-		KongIngress:                    cache.NewStore(keyFunc),
 		TCPIngress:                     cache.NewStore(keyFunc),
 		UDPIngress:                     cache.NewStore(keyFunc),
 		KongUpstreamPolicy:             cache.NewStore(keyFunc),
@@ -173,8 +171,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.Consumer.Get(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Get(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Get(obj)
 	case *kongv1beta1.TCPIngress:
 		return c.TCPIngress.Get(obj)
 	case *kongv1beta1.UDPIngress:
@@ -235,8 +231,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Consumer.Add(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Add(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Add(obj)
 	case *kongv1beta1.TCPIngress:
 		return c.TCPIngress.Add(obj)
 	case *kongv1beta1.UDPIngress:
@@ -298,8 +292,6 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Consumer.Delete(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Delete(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Delete(obj)
 	case *kongv1beta1.TCPIngress:
 		return c.TCPIngress.Delete(obj)
 	case *kongv1beta1.UDPIngress:

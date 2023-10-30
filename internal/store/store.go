@@ -57,7 +57,6 @@ type Storer interface {
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
-	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
@@ -434,19 +433,6 @@ func (s Store) GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, err
 	return p.(*kongv1.KongClusterPlugin), nil
 }
 
-// GetKongIngress returns the 'name' KongIngress resource in namespace.
-func (s Store) GetKongIngress(namespace, name string) (*kongv1.KongIngress, error) {
-	key := fmt.Sprintf("%v/%v", namespace, name)
-	p, exists, err := s.stores.KongIngress.GetByKey(key)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, NotFoundError{fmt.Sprintf("KongIngress %v not found", name)}
-	}
-	return p.(*kongv1.KongIngress), nil
-}
-
 // GetKongConsumer returns the 'name' KongConsumer resource in namespace.
 func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
@@ -724,8 +710,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
-	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
-		return &kongv1.KongIngress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
 		return &kongv1beta1.UDPIngress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):

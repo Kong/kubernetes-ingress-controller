@@ -561,31 +561,6 @@ func TestFakeStoreSecret(t *testing.T) {
 	assert.True(errors.As(err, &NotFoundError{}))
 }
 
-func TestFakeKongIngress(t *testing.T) {
-	assert := assert.New(t)
-	require := require.New(t)
-
-	kongIngresses := []*kongv1.KongIngress{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-			},
-		},
-	}
-	store, err := NewFakeStore(FakeObjects{KongIngresses: kongIngresses})
-	require.Nil(err)
-	require.NotNil(store)
-	kingress, err := store.GetKongIngress("default", "foo")
-	assert.Nil(err)
-	assert.NotNil(kingress)
-
-	kingress, err = store.GetKongIngress("default", "does-not-exist")
-	assert.NotNil(err)
-	assert.Nil(kingress)
-	assert.True(errors.As(err, &NotFoundError{}))
-}
-
 func TestFakeStore_ListCACerts(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)

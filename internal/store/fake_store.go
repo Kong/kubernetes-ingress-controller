@@ -58,7 +58,6 @@ type FakeObjects struct {
 	Secrets                        []*corev1.Secret
 	KongPlugins                    []*kongv1.KongPlugin
 	KongClusterPlugins             []*kongv1.KongClusterPlugin
-	KongIngresses                  []*kongv1.KongIngress
 	KongConsumers                  []*kongv1.KongConsumer
 	KongConsumerGroups             []*kongv1beta1.KongConsumerGroup
 	KongUpstreamPolicies           []*kongv1beta1.KongUpstreamPolicy
@@ -167,13 +166,6 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	kongIngressStore := cache.NewStore(keyFunc)
-	for _, k := range objects.KongIngresses {
-		err := kongIngressStore.Add(k)
-		if err != nil {
-			return nil, err
-		}
-	}
 	consumerStore := cache.NewStore(keyFunc)
 	for _, c := range objects.KongConsumers {
 		err := consumerStore.Add(c)
@@ -230,7 +222,6 @@ func NewFakeStore(
 			ClusterPlugin:                  kongClusterPluginsStore,
 			Consumer:                       consumerStore,
 			ConsumerGroup:                  consumerGroupStore,
-			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 			KongUpstreamPolicy:             kongUpstreamPolicyStore,
 		},
@@ -266,7 +257,6 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&corev1.Secret{}):                       corev1.SchemeGroupVersion.WithKind("Secret"),
 		reflect.TypeOf(&kongv1.KongPlugin{}):                   kongv1.SchemeGroupVersion.WithKind("KongPlugin"),
 		reflect.TypeOf(&kongv1.KongClusterPlugin{}):            kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"),
-		reflect.TypeOf(&kongv1.KongIngress{}):                  kongv1.SchemeGroupVersion.WithKind("KongIngress"),
 		reflect.TypeOf(&kongv1.KongConsumer{}):                 kongv1.SchemeGroupVersion.WithKind("KongConsumer"),
 		reflect.TypeOf(&kongv1beta1.KongConsumerGroup{}):       kongv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
 	}
@@ -308,7 +298,6 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Secrets)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongPlugins)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongClusterPlugins)...)
-	allObjects = append(allObjects, lo.ToAnySlice(objects.KongIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumerGroups)...)
 

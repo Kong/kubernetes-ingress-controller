@@ -7,18 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func TestOverrideUpstream(t *testing.T) {
-	assert := assert.New(t)
-
 	testTable := []struct {
-		inUpstream     Upstream
-		inKongIngresss *kongv1.KongIngress
-		outUpstream    Upstream
-		svc            *corev1.Service
+		inUpstream  Upstream
+		outUpstream Upstream
+		svc         *corev1.Service
 	}{
 		{
 			inUpstream: Upstream{
@@ -26,7 +21,6 @@ func TestOverrideUpstream(t *testing.T) {
 					Name: kong.String("foo.com"),
 				},
 			},
-			inKongIngresss: nil,
 			outUpstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo.com"),
@@ -37,38 +31,6 @@ func TestOverrideUpstream(t *testing.T) {
 			inUpstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo.com"),
-				},
-			},
-			inKongIngresss: &kongv1.KongIngress{
-				Upstream: &kongv1.KongIngressUpstream{
-					HashOn:                 kong.String("HashOn"),
-					HashOnCookie:           kong.String("HashOnCookie"),
-					HashOnCookiePath:       kong.String("HashOnCookiePath"),
-					HashOnHeader:           kong.String("HashOnHeader"),
-					HashFallback:           kong.String("HashFallback"),
-					HashFallbackHeader:     kong.String("HashFallbackHeader"),
-					HashOnQueryArg:         kong.String("HashOnQueryArg"),
-					HashFallbackQueryArg:   kong.String("HashFallbackQueryArg"),
-					HashOnURICapture:       kong.String("HashOnURICapture"),
-					HashFallbackURICapture: kong.String("HashFallbackURICapture"),
-					Slots:                  kong.Int(42),
-				},
-			},
-			outUpstream: Upstream{
-				Upstream: kong.Upstream{
-					Name:                   kong.String("foo.com"),
-					HashOn:                 kong.String("HashOn"),
-					HashOnCookie:           kong.String("HashOnCookie"),
-					HashOnCookiePath:       kong.String("HashOnCookiePath"),
-					HashOnHeader:           kong.String("HashOnHeader"),
-					HashFallback:           kong.String("HashFallback"),
-					HashFallbackHeader:     kong.String("HashFallbackHeader"),
-					HostHeader:             kong.String("foo.com"),
-					HashOnQueryArg:         kong.String("HashOnQueryArg"),
-					HashFallbackQueryArg:   kong.String("HashFallbackQueryArg"),
-					HashOnURICapture:       kong.String("HashOnURICapture"),
-					HashFallbackURICapture: kong.String("HashFallbackURICapture"),
-					Slots:                  kong.Int(42),
 				},
 			},
 			svc: &corev1.Service{
@@ -78,16 +40,22 @@ func TestOverrideUpstream(t *testing.T) {
 					},
 				},
 			},
+			outUpstream: Upstream{
+				Upstream: kong.Upstream{
+					Name:       kong.String("foo.com"),
+					HostHeader: kong.String("foo.com"),
+				},
+			},
 		},
 	}
 
 	for _, testcase := range testTable {
-		testcase.inUpstream.override(testcase.inKongIngresss, testcase.svc)
-		assert.Equal(testcase.inUpstream, testcase.outUpstream)
+		testcase.inUpstream.override(testcase.svc)
+		assert.Equal(t, testcase.inUpstream, testcase.outUpstream)
 	}
 
-	assert.NotPanics(func() {
+	assert.NotPanics(t, func() {
 		var nilUpstream *Upstream
-		nilUpstream.override(nil, nil)
+		nilUpstream.override(nil)
 	})
 }

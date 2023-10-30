@@ -623,7 +623,9 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: KongIngress is the Schema for the kongingresses API.
+        description: 'KongIngress is the Schema for the kongingresses API. Deprecated:
+          use Service''s annotations, Ingress''s annotations, or KongUpstreamPolicy
+          instead.'
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -953,6 +955,13 @@ spec:
                 type: integer
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: '''proxy'' field is no longer supported, use Service''s annotations
+            instead'
+          rule: '!has(self.proxy)'
+        - message: '''route'' field is no longer supported, use Ingress'' annotations
+            instead'
+          rule: '!has(self.route)'
     served: true
     storage: true
     subresources:
@@ -2070,22 +2079,6 @@ rules:
   - configuration.konghq.com
   resources:
   - kongconsumers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongingresses/status
   verbs:
   - get
   - patch

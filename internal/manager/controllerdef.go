@@ -176,16 +176,6 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongIngressEnabled,
-			Controller: &configuration.KongV1KongIngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongIngress"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				CacheSyncTimeout: c.CacheSyncTimeout,
-			},
-		},
-		{
 			Enabled: c.IngressClassParametersEnabled,
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
 				Client:           mgr.GetClient(),

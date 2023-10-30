@@ -157,34 +157,6 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 	}
 }
 
-func TestExtractConfigurationName(t *testing.T) {
-	type args struct {
-		anns map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			name: "non-empty",
-			args: args{
-				anns: map[string]string{
-					"konghq.com/override": "foo",
-				},
-			},
-			want: "foo",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ExtractConfigurationName(tt.args.anns); got != tt.want {
-				t.Errorf("ExtractConfigurationName() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestExtractProtocolName(t *testing.T) {
 	type args struct {
 		anns map[string]string

@@ -151,12 +151,6 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 	return kongPluginCRs
 }
 
-// ExtractConfigurationName extracts the name of the KongIngress object that holds
-// information about the configuration to use in Routes, Services and Upstreams.
-func ExtractConfigurationName(anns map[string]string) string {
-	return anns[AnnotationPrefix+ConfigurationKey]
-}
-
 // ExtractProtocolName extracts the protocol supplied in the annotation.
 func ExtractProtocolName(anns map[string]string) string {
 	return anns[AnnotationPrefix+ProtocolKey]

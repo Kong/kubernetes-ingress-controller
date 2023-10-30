@@ -299,15 +299,13 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	// KongIngress is always allowed.
 	responseBuilder = responseBuilder.Allowed(true)
 
-	if kongIngress.Proxy != nil {
-		const warning = "'proxy' is DEPRECATED. It will have no effect. Use Service's annotations instead."
+	if kongIngress.Upstream != nil {
+		const warning = "'upstream' is DEPRECATED. It will have no effect. Use KongUpstreamPolicy instead."
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 
-	if kongIngress.Route != nil {
-		const warning = "'route' is DEPRECATED. It will have no effect. Use Ingress' annotations instead."
-		responseBuilder = responseBuilder.WithWarning(warning)
-	}
+	// Both Service and Route are required to be absent on the API server CRD validations level so we don't need to
+	// check for them here.
 
 	return responseBuilder.Build(), nil
 }

@@ -130,6 +130,11 @@ Adding a new version? You'll need three changes:
   expected to functionally affect routing, but may affect performance for
   some configurations.
   [#4934](https://github.com/Kong/kubernetes-ingress-controller/pull/4934)
+- `KongIngress` resource is entirely deprecated. Its fields that were previously
+  deprecated (`Proxy`, `Route`) are now not allowed to be set. `Upstream` field
+  is deprecated and setting it will have no effect. Please use the superseding
+  `KongUpstreamPolicy` instead. 
+  [#5015](https://github.com/Kong/kubernetes-ingress-controller/pull/5015)
 
 ### Fixed
 

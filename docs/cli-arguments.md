@@ -27,7 +27,6 @@
 | `--enable-controller-kong-upstream-policy` | `bool` | Enable the KongUpstreamPolicy controller. | `true` |
 | `--enable-controller-kongclusterplugin` | `bool` | Enable the KongClusterPlugin controller. | `true` |
 | `--enable-controller-kongconsumer` | `bool` | Enable the KongConsumer controller. | `true` |
-| `--enable-controller-kongingress` | `bool` | Enable the KongIngress controller. | `true` |
 | `--enable-controller-kongplugin` | `bool` | Enable the KongPlugin controller. | `true` |
 | `--enable-controller-service` | `bool` | Enable the Service controller. | `true` |
 | `--enable-controller-tcpingress` | `bool` | Enable the TCPIngress controller. | `true` |

@@ -10,73 +10,10 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
-
-func getKongIngressForServices(
-	s store.Storer,
-	services map[string]*corev1.Service,
-) (*kongv1.KongIngress, error) {
-	// loop through each service and retrieve the attached KongIngress resources.
-	// there can only be one KongIngress for a group of services: either one of
-	// them is configured with a KongIngress and this configures the Kong Service
-	// or Upstream OR all of them can be configured but they must be configured
-	// with the same KongIngress.
-	for _, svc := range services {
-		// check if the service is even configured with a KongIngress
-		confName := annotations.ExtractConfigurationName(svc.Annotations)
-		if confName == "" {
-			continue // some other service in the group may yet have a KongIngress attachment
-		}
-
-		// retrieve the attached KongIngress for the service
-		kongIngress, err := s.GetKongIngress(svc.Namespace, confName)
-		if err != nil {
-			return nil, err
-		}
-
-		// we found the KongIngress for these services. We don't have to check any
-		// further services as validation is expected to ensure all these Services
-		// already are annotated with the exact same overrides.
-		return kongIngress, nil
-	}
-
-	// there are no KongIngress resources for these services.
-	return nil, nil
-}
-
-func getKongIngressFromObjectMeta(
-	s store.Storer,
-	obj util.K8sObjectInfo,
-) (
-	*kongv1.KongIngress, error,
-) {
-	return getKongIngressFromObjAnnotations(s, obj)
-}
-
-func getKongIngressFromObjAnnotations(
-	s store.Storer,
-	obj util.K8sObjectInfo,
-) (
-	*kongv1.KongIngress, error,
-) {
-	confName := annotations.ExtractConfigurationName(obj.Annotations)
-	if confName != "" {
-		ki, err := s.GetKongIngress(obj.Namespace, confName)
-		if err == nil {
-			return ki, nil
-		}
-	}
-
-	ki, err := s.GetKongIngress(obj.Namespace, obj.Name)
-	if err == nil {
-		return ki, nil
-	}
-	return nil, nil
-}
 
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
 // If both are not found, an error is returned.

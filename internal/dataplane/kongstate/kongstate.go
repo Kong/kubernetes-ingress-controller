@@ -185,7 +185,7 @@ func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
 	}
 }
 
-func (ks *KongState) FillOverrides(logger logr.Logger, s store.Storer) {
+func (ks *KongState) FillOverrides(logger logr.Logger) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
 		ks.Services[i].override()
@@ -198,15 +198,8 @@ func (ks *KongState) FillOverrides(logger logr.Logger, s store.Storer) {
 
 	// Upstreams
 	for i := 0; i < len(ks.Upstreams); i++ {
-		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
-		if err != nil {
-			logger.Error(err, "failed to fetch KongIngress resource for Services",
-				"names", PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices))
-			continue
-		}
-
 		for _, svc := range ks.Upstreams[i].Service.K8sServices {
-			ks.Upstreams[i].override(kongIngress, svc)
+			ks.Upstreams[i].override(svc)
 		}
 	}
 }

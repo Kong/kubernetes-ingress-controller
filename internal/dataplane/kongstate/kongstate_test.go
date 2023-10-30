@@ -966,21 +966,24 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 		kongIngressName        = "kongIngress"
 		kongUpstreamPolicyName = "policy"
 	)
-	serviceAnnotatedWithKongUpstreamPolicy := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service",
-			Namespace: "default",
-			Annotations: map[string]string{
-				kongv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
+	serviceAnnotatedWithKongUpstreamPolicy := func() *corev1.Service {
+		return &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Service",
+				APIVersion: "v1",
 			},
-		},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service",
+				Namespace: "default",
+				Annotations: map[string]string{
+					kongv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
+				},
+			},
+		}
 	}
+
 	serviceAnnotatedWithKongUpstreamPolicyAndKongIngress := func() *corev1.Service {
-		s := serviceAnnotatedWithKongUpstreamPolicy.DeepCopy()
+		s := serviceAnnotatedWithKongUpstreamPolicy()
 		s.Annotations[annotations.AnnotationPrefix+annotations.ConfigurationKey] = kongIngressName
 		return s
 	}
@@ -1011,7 +1014,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 					Name: kong.String("foo-upstream"),
 				},
 				Service: Service{
-					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy},
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
 				},
 			},
 			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
@@ -1037,7 +1040,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 					Name: kong.String("foo-upstream"),
 				},
 				Service: Service{
-					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy},
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
 				},
 			},
 			expectedUpstream: kong.Upstream{
@@ -1046,7 +1049,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			expectedFailures: []failures.ResourceFailure{
 				lo.Must(failures.NewResourceFailure(
 					"failed fetching KongUpstreamPolicy: KongUpstreamPolicy default/policy not found",
-					serviceAnnotatedWithKongUpstreamPolicy,
+					serviceAnnotatedWithKongUpstreamPolicy(),
 				)),
 			},
 		},

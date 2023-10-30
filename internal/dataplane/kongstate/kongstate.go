@@ -209,11 +209,11 @@ func (ks *KongState) FillOverrides(
 func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *failures.ResourceFailuresCollector) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
-		servicesAsObjects := lo.Map(servicesGroup, func(svc *corev1.Service, _ int) client.Object { return svc })
+		servicesAsObjects := func(svc *corev1.Service, _ int) client.Object { return svc }
 
 		kongIngress, err := getKongIngressForServices(s, servicesGroup)
 		if err != nil {
-			failuresCollector.PushResourceFailure(err.Error(), servicesAsObjects...)
+			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
 		} else {
 			for _, svc := range ks.Upstreams[i].Service.K8sServices {
 				ks.Upstreams[i].override(kongIngress, svc)
@@ -222,7 +222,7 @@ func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *fa
 
 		kongUpstreamPolicy, err := GetKongUpstreamPolicyForServices(s, servicesGroup)
 		if err != nil {
-			failuresCollector.PushResourceFailure(err.Error(), servicesAsObjects...)
+			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
 		} else {
 			if kongUpstreamPolicy != nil {
 				ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)

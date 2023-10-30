@@ -14,8 +14,8 @@ import (
 	gojson "github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/kong/deck/file"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/phayes/freeport"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -45,8 +45,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	ingressClassName := "kongenvtest"
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
-	diagPort, err := freeport.GetFreePort()
-	require.NoError(t, err)
+	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),

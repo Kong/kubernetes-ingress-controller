@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/phayes/freeport"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -26,9 +25,8 @@ func TestDebugEndpoints(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ports, err := freeport.GetFreePorts(2)
-	require.NoError(t, err)
-	diagPort, healthPort := ports[0], ports[1]
+	diagPort := helpers.GetFreePort(t)
+	healthPort := helpers.GetFreePort(t)
 	envcfg := Setup(t, scheme.Scheme)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),

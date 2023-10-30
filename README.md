@@ -45,10 +45,7 @@ Setting up Kong for Kubernetes is as simple as:
 
 ```shell
 # Using Helm
-helm repo add kong https://charts.konghq.com
-helm repo update
-
-helm install kong/kong --generate-name --set ingressController.installCRDs=false
+helm install kong --generate-name -n kong --create-namespace --repo https://charts.konghq.com
 ```
 
 Once installed, please follow the [Getting Started guide][docs-konghq-getting-started-guide]

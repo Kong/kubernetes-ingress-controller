@@ -10,9 +10,9 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.

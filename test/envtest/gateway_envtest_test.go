@@ -16,8 +16,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // TestGatewayReconciliation_MoreThan100Routes verifies that if we create more

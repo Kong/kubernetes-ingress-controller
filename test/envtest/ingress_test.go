@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/deck/file"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/phayes/freeport"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -23,8 +22,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
 func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
@@ -45,8 +45,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	ingressClassName := "kongenvtest"
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
-	diagPort, err := freeport.GetFreePort()
-	require.NoError(t, err)
+	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),

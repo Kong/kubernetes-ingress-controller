@@ -23,15 +23,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // extraWebhookNamespace is an additional namespace used by tests when needing

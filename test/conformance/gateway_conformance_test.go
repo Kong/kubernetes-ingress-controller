@@ -13,10 +13,10 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 var commonSkippedTests = []string{

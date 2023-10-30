@@ -10,11 +10,11 @@ import (
 	"github.com/kong/go-kong/kong"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/consumers/credentials"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // KongState holds the configuration that should be applied to Kong.

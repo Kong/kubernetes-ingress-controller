@@ -11,7 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
 )
 
 // HTTPBin represents a docker container running the `kong/httpbin`.
@@ -25,7 +25,7 @@ func NewHTTPBin(ctx context.Context, t *testing.T) HTTPBin {
 	require.NoError(t, err)
 	req := testcontainers.ContainerRequest{
 		Image:        test.HTTPBinImage,
-		ExposedPorts: []string{port.Port()},
+		ExposedPorts: []string{MappedLocalPort(t, port)},
 		WaitingFor:   wait.ForListeningPort(port),
 	}
 	httpBinC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{

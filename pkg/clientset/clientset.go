@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"net/http"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

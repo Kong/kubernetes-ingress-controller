@@ -16,9 +16,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
 func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {

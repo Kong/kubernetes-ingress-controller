@@ -53,7 +53,7 @@ linters-settings:
     sections:
     - standard
     - default
-    - prefix(github.com/kong/kubernetes-ingress-controller/v2)
+    - prefix(github.com/kong/kubernetes-ingress-controller/v3)
   importas:
     no-unaliased: true
     alias:
@@ -119,6 +119,9 @@ linters-settings:
           recommendations:
           - github.com/go-logr/zapr
           - github.com/go-logr/logr
+      - github.com/kong/kubernetes-ingress-controller/v2:
+          recommendations:
+          - github.com/kong/kubernetes-ingress-controller/v3
   tenv:
     all: true
   loggercheck:

@@ -13,7 +13,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
 type KonnectConfig struct {

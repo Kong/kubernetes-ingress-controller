@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 // Config gathers parameters that are needed for sending configuration to Kong Admin APIs.

@@ -4,7 +4,7 @@ import (
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
 
 // -----------------------------------------------------------------------------

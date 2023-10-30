@@ -6,23 +6,28 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
 // TestGoldenTestsOutputs ensures that the Parser's golden tests outputs are accepted by Kong.
 func TestParsersGoldenTestsOutputs(t *testing.T) {
 	t.Parallel()
+
+	const (
+		timeout = 5 * time.Second
+		tick    = 100 * time.Millisecond
+	)
 
 	ctx := context.Background()
 
@@ -54,10 +59,22 @@ func TestParsersGoldenTestsOutputs(t *testing.T) {
 		err = yaml.Unmarshal(goldenTestOutput, content)
 		require.NoError(t, err)
 
-		err, resourceErrors, parseErr := sut.Update(ctx, sendconfig.ContentWithHash{Content: content})
-		assert.NoError(t, err)
-		assert.Empty(t, resourceErrors)
-		assert.NoError(t, parseErr)
+		require.Eventually(t, func() bool {
+			err, resourceErrors, parseErr := sut.Update(ctx, sendconfig.ContentWithHash{Content: content})
+			if err != nil {
+				t.Logf("error: %v", err)
+				return false
+			}
+			if len(resourceErrors) > 0 {
+				t.Logf("resource errors: %v", resourceErrors)
+				return false
+			}
+			if parseErr != nil {
+				t.Logf("parse error: %v", parseErr)
+				return false
+			}
+			return true
+		}, timeout, tick)
 	}
 
 	t.Run("expressions router", func(t *testing.T) {

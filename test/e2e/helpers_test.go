@@ -40,10 +40,10 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 const (

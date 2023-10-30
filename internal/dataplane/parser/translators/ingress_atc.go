@@ -9,10 +9,10 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/atc"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 var (

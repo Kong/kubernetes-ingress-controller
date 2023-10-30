@@ -7,8 +7,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 func TestTranslateKongUpstreamPolicy(t *testing.T) {

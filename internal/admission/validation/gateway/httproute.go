@@ -7,9 +7,9 @@ import (
 
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 type routeValidator interface {

@@ -23,10 +23,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 func TestHTTPSRedirect(t *testing.T) {

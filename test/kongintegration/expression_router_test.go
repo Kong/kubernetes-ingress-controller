@@ -15,10 +15,10 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/atc"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
 func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {

@@ -18,10 +18,10 @@ import (
 	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
 
 var (

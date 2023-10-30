@@ -13,10 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/net"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {

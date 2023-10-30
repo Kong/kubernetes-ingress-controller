@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 )
 
 // Execute is the entry point to the controller manager.

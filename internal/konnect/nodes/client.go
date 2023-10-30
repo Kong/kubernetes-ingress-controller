@@ -12,8 +12,8 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
 // Client is used for sending requests to Konnect Node API.

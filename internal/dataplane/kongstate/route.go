@@ -8,8 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress

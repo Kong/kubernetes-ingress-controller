@@ -13,8 +13,8 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and

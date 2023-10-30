@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
 func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {

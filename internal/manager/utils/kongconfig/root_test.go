@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 func TestRoot(t *testing.T) {

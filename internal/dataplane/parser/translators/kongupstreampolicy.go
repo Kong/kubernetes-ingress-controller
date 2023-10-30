@@ -4,7 +4,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 const (

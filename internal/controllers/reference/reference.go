@@ -9,7 +9,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 )
 
 const (

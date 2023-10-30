@@ -21,12 +21,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the

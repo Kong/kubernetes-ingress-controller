@@ -11,7 +11,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
 type SelfSignedCertificateOptions struct {

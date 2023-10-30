@@ -3,8 +3,8 @@ package translators
 import (
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/atc"
 )
 
 // ApplyExpressionToL4KongRoute convert route flavor from traditional to expressions

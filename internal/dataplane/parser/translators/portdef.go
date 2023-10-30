@@ -3,7 +3,7 @@ package translators
 import (
 	netv1 "k8s.io/api/networking/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
 
 func PortDefFromServiceBackendPort(sbp *netv1.ServiceBackendPort) kongstate.PortDef {

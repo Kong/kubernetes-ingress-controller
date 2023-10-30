@@ -13,7 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // Server is an HTTP server running exposing the pprof profiling tool, and processing diagnostic dumps of Kong configurations.

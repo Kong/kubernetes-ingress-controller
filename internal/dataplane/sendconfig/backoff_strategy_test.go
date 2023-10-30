@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 type mockUpdateStrategy struct {

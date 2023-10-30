@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 // -----------------------------------------------------------------------------

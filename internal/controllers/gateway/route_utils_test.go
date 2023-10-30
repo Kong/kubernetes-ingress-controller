@@ -18,10 +18,10 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
 )
 
 func init() {

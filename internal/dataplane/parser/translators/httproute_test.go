@@ -8,7 +8,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {

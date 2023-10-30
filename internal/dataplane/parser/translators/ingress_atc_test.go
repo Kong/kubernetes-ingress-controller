@@ -11,9 +11,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 func TestTranslateIngressATC(t *testing.T) {

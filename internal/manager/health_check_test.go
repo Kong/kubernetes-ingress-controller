@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 )
 
 func TestHealthCheckServer(t *testing.T) {
@@ -80,8 +81,7 @@ func TestHealthCheckServer_Start(t *testing.T) {
 	h.setHealthzCheck(healthz.Ping)
 
 	// Get free local port.
-	port, err := freeport.GetFreePort()
-	require.NoError(t, err)
+	port := helpers.GetFreePort(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	addr := fmt.Sprintf("localhost:%d", port)

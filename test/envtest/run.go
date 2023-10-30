@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/zapr"
-	"github.com/phayes/freeport"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
@@ -23,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
@@ -57,8 +57,7 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.ProxySyncSeconds = 0.1
 	cfg.InitCacheSyncDuration = 0
 
-	p, err := freeport.GetFreePort()
-	require.NoError(t, err)
+	p := helpers.GetFreePort(t)
 	cfg.MetricsAddr = fmt.Sprintf("localhost:%d", p)
 
 	// And other settings which are irrelevant here.

@@ -130,10 +130,6 @@ Adding a new version? You'll need three changes:
   expected to functionally affect routing, but may affect performance for
   some configurations.
   [#4934](https://github.com/Kong/kubernetes-ingress-controller/pull/4934)
-- KongIngress is deprecated and will be removed in a future release. Settings
-  previously managed by KongIngress must be migrated to annotations and the new
-  KongUpstreamPolicy resource.
-  [#4989](https://github.com/Kong/kubernetes-ingress-controller/pull/4989)
 
 ### Fixed
 

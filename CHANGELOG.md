@@ -202,7 +202,7 @@ Adding a new version? You'll need three changes:
   [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
 - New `KongUpstreamPolicy` CRD superseding `KongIngress.Upstream` was introduced.
   It allows overriding Kong Upstream settings generated for a specific `Service` used
-  in an `Ingress` or Gateway API `*Route`. A policy can be applied to a `Service` by
+  in an `Ingress` or Gateway API `Route`. A policy can be applied to a `Service` by
   setting `konghq.com/upstream-policy: <policy-name>` annotation on the `Service` object.
   Read more in [KIC CRDs reference].
   [#4880](https://github.com/Kong/kubernetes-ingress-controller/pull/4880)

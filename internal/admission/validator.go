@@ -469,7 +469,7 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	// Gather a list of all consumers from the cached client.
 	consumers, err := validator.ConsumerGetter.ListAllConsumers(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list consumers: %w", err)
+		return nil, fmt.Errorf("Failed to list consumers: %w", err)
 	}
 
 	// Reduce the consumer set to consumers managed by this controller.

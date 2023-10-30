@@ -411,7 +411,7 @@ func (a *NodeAgent) updateNodes(ctx context.Context) error {
 
 	existingNodes, err := a.nodeClient.ListAllNodes(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to list existing nodes: %w", err)
+		return fmt.Errorf("Failed to list existing nodes: %w", err)
 	}
 
 	err = a.updateKICNode(ctx, existingNodes)

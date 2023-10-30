@@ -65,12 +65,12 @@ func (c *Client) ListControlPlanesRoles(ctx context.Context) ([]Role, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list roles: %w", err)
+		return nil, fmt.Errorf("Failed to list roles: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to list roles, status: %s", resp.Status)
+		return nil, fmt.Errorf("Failed to list roles, status: %s", resp.Status)
 	}
 
 	var rolesResponse struct {

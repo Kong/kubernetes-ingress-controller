@@ -302,7 +302,7 @@ func findTranslationFailureEventsForObject(
 		),
 	})
 	if err != nil {
-		t.Logf("failed to list events: %v", err)
+		t.Logf("Failed to list events: %v", err)
 		return []corev1.Event{}, false
 	}
 	if len(relatedEvents.Items) == 0 {

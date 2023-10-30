@@ -248,7 +248,7 @@ func createTestControlPlane(ctx context.Context, t *testing.T) string {
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
 		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
-		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
+		require.NoErrorf(t, err, "Failed to list control plane roles for cleanup: %q", rgID)
 		for _, role := range rgRoles {
 			if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
 				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)

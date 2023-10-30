@@ -61,7 +61,7 @@ func (c *Client) Get(ctx context.Context) (mo.Option[license.KonnectLicense], er
 	// Make a request to the Konnect license API to list all licenses.
 	response, err := c.listLicenses(ctx)
 	if err != nil {
-		return mo.None[license.KonnectLicense](), fmt.Errorf("failed to list licenses: %w", err)
+		return mo.None[license.KonnectLicense](), fmt.Errorf("Failed to list licenses: %w", err)
 	}
 
 	// Convert the response to a KonnectLicense - we're expecting only one license.

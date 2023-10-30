@@ -207,7 +207,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gatewayClass client.Object) []reconcile.Request {
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
+		r.Log.Error(err, "Failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
 		return nil
 	}
 	return reconcileGatewaysIfClassMatches(gatewayClass, gateways.Items)
@@ -227,7 +227,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 	}
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "failed to list gateways in watch", "referencegrant", grant.Name)
+		r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
 		return nil
 	}
 	recs := []reconcile.Request{}
@@ -255,7 +255,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc client.Object) (recs []reconcile.Request) {
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service", svc)
+		r.Log.Error(err, "Failed to list gateways for service in watch predicates", "service", svc)
 		return
 	}
 	for _, gateway := range gateways.Items {

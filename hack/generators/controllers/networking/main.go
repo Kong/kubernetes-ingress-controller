@@ -527,7 +527,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &{{.PackageImportAlias}}.{{.Kind}}List{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless {{.Plural}}")
+		r.Log.Error(err, "Failed to list classless {{.Plural}}")
 		return nil
 	}
 	var recs []reconcile.Request

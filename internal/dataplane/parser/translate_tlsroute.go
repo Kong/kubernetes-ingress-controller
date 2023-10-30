@@ -23,7 +23,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 
 	tlsRouteList, err := p.storer.ListTLSRoutes()
 	if err != nil {
-		p.logger.Error(err, "failed to list TLSRoutes")
+		p.logger.Error(err, "Failed to list TLSRoutes")
 		return result
 	}
 

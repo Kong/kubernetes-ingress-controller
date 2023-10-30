@@ -310,7 +310,7 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *NetV1IngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &netv1.IngressList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless ingresses")
+		r.Log.Error(err, "Failed to list classless ingresses")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -857,7 +857,7 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 func (r *KongV1KongClusterPluginReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongClusterPluginList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless kongclusterplugins")
+		r.Log.Error(err, "Failed to list classless kongclusterplugins")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1033,7 +1033,7 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 func (r *KongV1KongConsumerReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongConsumerList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless kongconsumers")
+		r.Log.Error(err, "Failed to list classless kongconsumers")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1220,7 +1220,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manag
 func (r *KongV1Beta1KongConsumerGroupReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.KongConsumerGroupList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless kongconsumergroups")
+		r.Log.Error(err, "Failed to list classless kongconsumergroups")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1409,7 +1409,7 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *KongV1Beta1TCPIngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.TCPIngressList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless tcpingresses")
+		r.Log.Error(err, "Failed to list classless tcpingresses")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1611,7 +1611,7 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *KongV1Beta1UDPIngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.UDPIngressList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless udpingresses")
+		r.Log.Error(err, "Failed to list classless udpingresses")
 		return nil
 	}
 	var recs []reconcile.Request

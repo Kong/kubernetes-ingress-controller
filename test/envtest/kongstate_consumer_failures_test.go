@@ -115,7 +115,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 			Namespace: ns.Name,
 		})
 		if err != nil {
-			t.Logf("failed to list events in namespace %s: %v", ns.Name, err)
+			t.Logf("Failed to list events in namespace %s: %v", ns.Name, err)
 			return false
 		}
 

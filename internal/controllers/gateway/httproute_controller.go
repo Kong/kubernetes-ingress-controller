@@ -158,7 +158,7 @@ func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(ctx context.Contex
 	}
 	httproutes := &gatewayapi.HTTPRouteList{}
 	if err := r.Client.List(ctx, httproutes); err != nil {
-		r.Log.Error(err, "failed to list httproutes in watch", "referencegrant", grant.Name)
+		r.Log.Error(err, "Failed to list httproutes in watch", "referencegrant", grant.Name)
 		return nil
 	}
 	recs := []reconcile.Request{}
@@ -209,7 +209,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 	// map all Gateway objects
 	gatewayList := gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
-		r.Log.Error(err, "failed to list gateway objects from the cached client")
+		r.Log.Error(err, "Failed to list gateway objects from the cached client")
 		return nil
 	}
 
@@ -233,7 +233,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 	// map all HTTPRoute objects
 	httprouteList := gatewayapi.HTTPRouteList{}
 	if err := r.Client.List(ctx, &httprouteList); err != nil {
-		r.Log.Error(err, "failed to list httproute objects from the cached client")
+		r.Log.Error(err, "Failed to list httproute objects from the cached client")
 		return nil
 	}
 
@@ -294,7 +294,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 	// map all HTTPRoute objects
 	httprouteList := gatewayapi.HTTPRouteList{}
 	if err := r.Client.List(ctx, &httprouteList); err != nil {
-		r.Log.Error(err, "failed to list httproute objects from the cached client")
+		r.Log.Error(err, "Failed to list httproute objects from the cached client")
 		return nil
 	}
 

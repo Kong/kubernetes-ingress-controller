@@ -466,7 +466,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 	certs := []certWrapper{}
 	gateways, err := s.ListGateways()
 	if err != nil {
-		logger.Error(err, "failed to list Gateways")
+		logger.Error(err, "Failed to list Gateways")
 		return certs
 	}
 	for _, gateway := range gateways {

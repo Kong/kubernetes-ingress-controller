@@ -53,7 +53,7 @@ func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 	rolesClient := roles.NewClient(&http.Client{}, konnectRolesBaseURL, konnectAccessToken)
 	rolesToDelete, err := findOrphanedRolesToDelete(ctx, log, orphanedCPs, rolesClient)
 	if err != nil {
-		return fmt.Errorf("failed to list control plane roles to delete: %w", err)
+		return fmt.Errorf("Failed to list control plane roles to delete: %w", err)
 	}
 	if err := deleteRoles(ctx, log, rolesToDelete, rolesClient); err != nil {
 		return fmt.Errorf("failed to delete control plane roles: %w", err)
@@ -68,10 +68,10 @@ func findOrphanedControlPlanes(ctx context.Context, log logr.Logger, c *cp.Clien
 		PageSize: lo.ToPtr(konnectControlPlanesLimit),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list control planes: %w", err)
+		return nil, fmt.Errorf("Failed to list control planes: %w", err)
 	}
 	if response.JSON200 == nil {
-		return nil, fmt.Errorf("failed to list control planes, status: %s, body: %s", response.Status(), string(response.Body))
+		return nil, fmt.Errorf("Failed to list control planes, status: %s, body: %s", response.Status(), string(response.Body))
 	}
 	if response.JSON200 == nil || response.JSON200.Data == nil {
 		return nil, fmt.Errorf("no data in the response, status: %s, body: %s", response.Status(), string(response.Body))
@@ -123,7 +123,7 @@ func findOrphanedRolesToDelete(ctx context.Context, log logr.Logger, orphanedCPs
 
 	existingRoles, err := rolesClient.ListControlPlanesRoles(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list control plane roles: %w", err)
+		return nil, fmt.Errorf("Failed to list control plane roles: %w", err)
 	}
 
 	var rolesIDsToDelete []string

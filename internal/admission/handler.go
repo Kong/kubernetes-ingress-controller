@@ -12,6 +12,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -95,6 +96,11 @@ var (
 		Version:  netv1.SchemeGroupVersion.Version,
 		Resource: "ingresses",
 	}
+	serviceGVResource = metav1.GroupVersionResource{
+		Group:    corev1.SchemeGroupVersion.Group,
+		Version:  corev1.SchemeGroupVersion.Version,
+		Resource: "services",
+	}
 )
 
 func (h RequestHandler) handleValidation(ctx context.Context, request admissionv1.AdmissionRequest) (
@@ -119,6 +125,8 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
 	case kongIngressGVResource:
 		return h.handleKongIngress(ctx, request, responseBuilder)
+	case serviceGVResource:
+		return h.handleService(ctx, request, responseBuilder)
 	case ingressGVResource:
 		return h.handleIngress(ctx, request, responseBuilder)
 	default:
@@ -289,6 +297,12 @@ func (h RequestHandler) handleHTTPRoute(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
+const (
+	proxyWarning    = "Support for 'proxy' was removed in 3.0. It will have no effect. Use Service's annotations instead."
+	routeWarning    = "Support for 'route' was removed in 3.0. It will have no effect. Use Ingress' annotations instead."
+	upstreamWarning = "'upstream' is DEPRECATED and will be removed in a future version. Use a KongUpstreamPolicy resource instead."
+)
+
 func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongIngress := kongv1.KongIngress{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongIngress)
@@ -300,12 +314,39 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	responseBuilder = responseBuilder.Allowed(true)
 
 	if kongIngress.Proxy != nil {
-		const warning = "'proxy' is DEPRECATED. It will have no effect. Use Service's annotations instead."
-		responseBuilder = responseBuilder.WithWarning(warning)
+		responseBuilder = responseBuilder.WithWarning(proxyWarning)
 	}
 
 	if kongIngress.Route != nil {
-		const warning = "'route' is DEPRECATED. It will have no effect. Use Ingress' annotations instead."
+		responseBuilder = responseBuilder.WithWarning(routeWarning)
+	}
+
+	if kongIngress.Upstream != nil {
+		responseBuilder = responseBuilder.WithWarning(upstreamWarning)
+	}
+
+	return responseBuilder.Build(), nil
+}
+
+const (
+	serviceWarning = "%s is deprecated and will be removed in a future release. Use Service annotations " +
+		"for the 'proxy' section and %s with a KongUpstreamPolicy resource instead."
+)
+
+func (h RequestHandler) handleService(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	service := corev1.Service{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &service)
+	if err != nil {
+		return nil, err
+	}
+
+	// Service is always allowed.
+	responseBuilder = responseBuilder.Allowed(true)
+
+	if annotations.ExtractConfigurationName(service.Annotations) != "" {
+		warning := fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
+			annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey)
+
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 

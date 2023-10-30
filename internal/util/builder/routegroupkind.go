@@ -4,7 +4,7 @@ import (
 	"github.com/samber/lo"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 // RouteGroupKindBuilder is a builder for gateway api RouteGroupKind.

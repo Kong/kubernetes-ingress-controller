@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest/observer"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // TestManagerDoesntStartUntilKubernetesAPIReachable ensures that the manager and its Runnables are not start until the

@@ -6,7 +6,7 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
 // MappedLocalPort returns a port mapping for a container port that can be used to access the

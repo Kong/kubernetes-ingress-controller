@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
 )
 
 func TestObjectsCollector(t *testing.T) {

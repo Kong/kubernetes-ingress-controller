@@ -6,9 +6,9 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type UpdateSkippedDueToBackoffStrategyError struct {

@@ -15,9 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
 // TestGoldenTestsOutputs ensures that the Parser's golden tests outputs are accepted by Kong.

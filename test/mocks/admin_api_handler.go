@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // AdminAPIHandler is a mock implementation of the Admin API. It only implements the endpoints that are

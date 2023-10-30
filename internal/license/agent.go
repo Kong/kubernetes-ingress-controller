@@ -10,8 +10,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
 const (

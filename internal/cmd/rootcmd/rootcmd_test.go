@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 )
 
 func TestRootCmd(t *testing.T) {

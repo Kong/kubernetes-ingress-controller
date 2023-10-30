@@ -3,7 +3,7 @@ package builder
 import (
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
 
 // KongstateServiceBackendBuilder is a builder for KongstateServiceBackend.

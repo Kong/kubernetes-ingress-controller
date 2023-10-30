@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
 
 func TestKongRawStateToKongState(t *testing.T) {

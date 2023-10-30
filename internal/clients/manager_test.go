@@ -16,9 +16,9 @@ import (
 	"golang.org/x/exp/slices"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 type readinessCheckCall struct {

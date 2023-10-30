@@ -12,7 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"google.golang.org/api/option"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/e2e"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/e2e"
 )
 
 const timeUntilClusterOrphaned = time.Hour

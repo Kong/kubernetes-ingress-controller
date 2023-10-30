@@ -24,14 +24,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 var (

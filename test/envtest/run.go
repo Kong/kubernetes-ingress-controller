@@ -18,12 +18,12 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 const (

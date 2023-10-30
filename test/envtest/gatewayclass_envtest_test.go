@@ -17,13 +17,13 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	gatewayclientv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/conditions"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/conditions"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func TestGatewayWithGatewayClassReconciliation(t *testing.T) {

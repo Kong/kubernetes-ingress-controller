@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 type ConfigService interface {

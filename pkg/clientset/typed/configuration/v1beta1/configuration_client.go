@@ -21,8 +21,8 @@ package v1beta1
 import (
 	"net/http"
 
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

@@ -19,13 +19,13 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1"
-	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1/fake"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1"
-	fakeconfigurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1/fake"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1"
-	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1/fake"
+	clientset "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1"
+	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1/fake"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1"
+	fakeconfigurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1/fake"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1"
+	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

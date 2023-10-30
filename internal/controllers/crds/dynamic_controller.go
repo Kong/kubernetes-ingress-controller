@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=list;watch

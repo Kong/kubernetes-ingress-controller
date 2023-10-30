@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func int64Ptr(i int64) *int64 {

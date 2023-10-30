@@ -8,8 +8,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 type routeValidator interface {

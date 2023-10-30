@@ -27,15 +27,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
-	cp "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/controlplanes"
-	cpc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/controlplanesconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	cp "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
+	cpc "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanesconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 const (

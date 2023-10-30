@@ -13,10 +13,10 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
 // TestKongUpstreamPolicyTranslation ensures that the Upstream Policy CRD is translated to the Kong Upstream

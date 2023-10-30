@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 )
 
 // -----------------------------------------------------------------------------

@@ -13,7 +13,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 func TestMetricsAreServed(t *testing.T) {

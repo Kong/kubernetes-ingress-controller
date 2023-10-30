@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 // AdminAPIDiscoverer is a mock implementation of adminapi.Discoverer.

@@ -8,8 +8,8 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 // ContentWithHash encapsulates file.Content along with its precalculated hash.

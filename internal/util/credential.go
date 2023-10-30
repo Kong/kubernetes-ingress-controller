@@ -3,7 +3,7 @@ package util
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 )
 
 // TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 remove field handling when no longer supported.

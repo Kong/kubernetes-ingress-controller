@@ -13,17 +13,17 @@ import (
 	cliflag "k8s.io/component-base/cli/flag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/flags"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]

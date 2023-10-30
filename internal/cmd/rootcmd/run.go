@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 )
 
 // Run sets up a default stderr logger and starts the controller manager.

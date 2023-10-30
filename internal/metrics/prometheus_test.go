@@ -12,7 +12,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 )
 
 func TestNewCtrlFuncMetricsDoesNotPanicWhenCalledTwice(t *testing.T) {

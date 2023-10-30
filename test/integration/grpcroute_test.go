@@ -23,11 +23,11 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 func grpcbinClient(ctx context.Context, url, hostname string) (pb.GRPCBinClient, func() error, error) {

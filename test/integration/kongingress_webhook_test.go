@@ -75,8 +75,8 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 		assert.NoError(t, result.Error())
 		require.Len(t, result.Warnings(), 2)
 		expectedWarnings := []string{
-			"'route' is DEPRECATED. It will have no effect. Use Ingress' annotations instead.",
-			"'proxy' is DEPRECATED. It will have no effect. Use Service's annotations instead.",
+			"Support for 'proxy' was removed in 3.0. It will have no effect. Use Service's annotations instead.",
+			"Support for 'route' was removed in 3.0. It will have no effect. Use Ingress' annotations instead.",
 		}
 		receivedWarnings := lo.Map(result.Warnings(), func(item net.WarningHeader, index int) string {
 			return item.Text

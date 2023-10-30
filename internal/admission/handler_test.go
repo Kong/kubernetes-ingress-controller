@@ -7,15 +7,16 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 func TestHandleKongIngress(t *testing.T) {
@@ -56,13 +57,14 @@ func TestHandleKongIngress(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		resource := tt.resource
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{}
 			raw, err := json.Marshal(tt.resource)
 			require.NoError(t, err)
 			request := admissionv1.AdmissionRequest{
 				Object: runtime.RawExtension{
-					Object: &tt.resource,
+					Object: &resource,
 					Raw:    raw,
 				},
 			}
@@ -117,13 +119,14 @@ func TestHandleService(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		resource := tt.resource
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{}
 			raw, err := json.Marshal(tt.resource)
 			require.NoError(t, err)
 			request := admissionv1.AdmissionRequest{
 				Object: runtime.RawExtension{
-					Object: &tt.resource,
+					Object: &resource,
 					Raw:    raw,
 				},
 			}

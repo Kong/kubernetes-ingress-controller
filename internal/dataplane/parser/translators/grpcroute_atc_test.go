@@ -613,7 +613,7 @@ func TestGRPCRouteTraitsEncodeToPriority(t *testing.T) {
 				HostnameLength:  15,
 				ServiceLength:   7,
 			},
-			exprectedPriority: (1 << 50) | (1 << 49) | (15 << 41) | (7 << 30),
+			exprectedPriority: (1 << 44) | (1 << 43) | (15 << 35) | (7 << 24),
 		},
 		{
 			name: "non precise hostname",
@@ -624,7 +624,7 @@ func TestGRPCRouteTraitsEncodeToPriority(t *testing.T) {
 				MethodLength:    7,
 				HeaderCount:     3,
 			},
-			exprectedPriority: (1 << 50) | (15 << 41) | (7 << 30) | (7 << 19) | (3 << 14),
+			exprectedPriority: (1 << 44) | (15 << 35) | (7 << 24) | (7 << 13) | (3 << 8),
 		},
 	}
 
@@ -647,7 +647,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 		matchIndex int
 	}
 	now := time.Now()
-	const maxRelativeOrderPriorityBits = (1 << 14) - 1
+	const maxRelativeOrderPriorityBits = (1 << 8) - 1
 
 	testCases := []struct {
 		name                  string

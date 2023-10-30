@@ -15,7 +15,7 @@ services:
     id: 45f1e9e4-8096-5cf7-b8e0-c42f8b9b81a0
     name: foo-namespace.regex-prefix.foo-svc.example.com.80
     preserve_host: true
-    priority: 3382102062071818
+    priority: 57178899677194
     request_buffering: true
     response_buffering: true
     strip_path: false

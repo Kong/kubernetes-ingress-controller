@@ -15,7 +15,7 @@ services:
     id: 3eee2c18-8fcc-5661-8f84-5c89adfa404f
     name: foo-namespace.foo.foo-svc.example.com.80
     preserve_host: true
-    priority: 3382102062071809
+    priority: 57178899677185
     request_buffering: true
     response_buffering: true
     strip_path: false

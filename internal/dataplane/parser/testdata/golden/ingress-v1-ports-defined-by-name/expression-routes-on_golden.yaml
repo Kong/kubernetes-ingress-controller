@@ -15,7 +15,7 @@ services:
     id: 0673ae1f-4318-59dc-96e7-fc17c218022f
     name: foo-namespace.regex-prefix.foo-svc.example.com.http
     preserve_host: true
-    priority: 3382102062006273
+    priority: 57178899611649
     request_buffering: true
     response_buffering: true
     strip_path: false

@@ -14,7 +14,7 @@ services:
     id: 91833860-2041-5eea-abf8-a1e85b7c64cf
     name: httproute.default.httproute-testing._.0.0
     preserve_host: true
-    priority: 2251808940752895
+    priority: 35184514699263
     strip_path: true
     tags:
     - k8s-name:httproute-testing

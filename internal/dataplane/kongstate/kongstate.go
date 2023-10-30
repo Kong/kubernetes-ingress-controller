@@ -222,6 +222,11 @@ func (ks *KongState) FillUpstreamOverrides(
 		} else {
 			for _, svc := range ks.Upstreams[i].Service.K8sServices {
 				ks.Upstreams[i].override(kongIngress, svc)
+				logger.Error(nil, fmt.Sprintf(
+					"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
+					annotations.AnnotationPrefix+annotations.ConfigurationKey,
+					annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey),
+					"namespace", svc.Namespace, "name", svc.Name)
 			}
 		}
 

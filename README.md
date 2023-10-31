@@ -4,7 +4,7 @@
 [![Codecov](https://codecov.io/gh/Kong/kubernetes-ingress-controller/branch/main/graph/badge.svg?token=S1aqcXiGEo)](https://codecov.io/gh/Kong/kubernetes-ingress-controller)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
-[![Conformance](https://img.shields.io/badge/Gateway%20API%20Conformance%20v0.8.1-Kong%20Ingress%20Controller%202.12-green)](https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/reports/v0.8.1/kong-kubernetes-ingress-controller.yaml)
+[![Conformance](https://img.shields.io/badge/Gateway%20API%20Conformance%20v1.0.0-Kong%20Ingress%20Controller%203.0-green)](https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/reports/v1.0.0/kong-kubernetes-ingress-controller.yaml)
 
 # Kong Ingress Controller for Kubernetes (KIC)
 
@@ -17,7 +17,7 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 
 ## Features
 
-- **Gateway API support (beta, soon GA)**
+- **Gateway API support**
   Use [Gateway API][gwapi] resources (official successor of [Ingress][ingress] resources) to configure Kong.
   Native support for TCP, UDP, TLS, gRPC and HTTP/HTTPS traffic, reuse the same gateway for multiple protocols and namespaces.
 - **Ingress support**
@@ -43,7 +43,7 @@ Setting up Kong for Kubernetes is as simple as:
 
 ```shell
 # Install the Gateway API CRDs before installing Kong Ingress Controller.
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0-rc2/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 # Install the Kong Ingress Controller with Helm.
 helm install kong --namespace kong --create-namespace --repo https://charts.konghq.com ingress
 ```

@@ -315,6 +315,7 @@ test.all: test.unit test.envtest test.integration test.conformance
 .PHONY: test.conformance
 test.conformance: _check.container.environment go-junit-report
 	@TEST_DATABASE_MODE="off" \
+		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		GOFLAGS="-tags=conformance_tests" \
 		go test \
 		-v \
@@ -327,6 +328,7 @@ test.conformance: _check.container.environment go-junit-report
 .PHONY: test.conformance-experimental
 test.conformance-experimental: _check.container.environment go-junit-report
 	@TEST_DATABASE_MODE="off" \
+		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		GOFLAGS="-tags=conformance_tests" \
 		KONG_TEST_EXPRESSION_ROUTES="true" \
 		TEST_EXPERIMENTAL_CONFORMANCE="true" \

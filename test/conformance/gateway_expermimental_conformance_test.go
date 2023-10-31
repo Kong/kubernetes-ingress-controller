@@ -63,6 +63,9 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("starting the gateway conformance test suite")
 	cSuite.Setup(t)
+
+	go patchGatewayClassToPassTestGatewayClassObservedGenerationBump(ctx, t, client)
+
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//

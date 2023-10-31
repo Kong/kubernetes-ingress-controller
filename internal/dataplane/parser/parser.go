@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -36,10 +37,6 @@ import (
 
 const (
 	KindGateway = gatewayapi.Kind("Gateway")
-
-	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
-	// to enable expression based router of kong.
-	kongRouterFlavorExpressions = "expressions"
 )
 
 // -----------------------------------------------------------------------------
@@ -67,7 +64,7 @@ type FeatureFlags struct {
 func NewFeatureFlags(
 	logger logr.Logger,
 	featureGates featuregates.FeatureGates,
-	routerFlavor string,
+	routerFlavor configuration.RouterFlavor,
 	updateStatusFlag bool,
 ) FeatureFlags {
 	return FeatureFlags{
@@ -80,9 +77,9 @@ func NewFeatureFlags(
 
 func shouldEnableParserExpressionRoutes(
 	logger logr.Logger,
-	routerFlavor string,
+	routerFlavor configuration.RouterFlavor,
 ) bool {
-	if routerFlavor != kongRouterFlavorExpressions {
+	if routerFlavor != configuration.RouterFlavorExpressions {
 		logger.V(util.InfoLevel).Info("Gateway is running with non-expression router flavor", "flavor", routerFlavor)
 		return false
 	}

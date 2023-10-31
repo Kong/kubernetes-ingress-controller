@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -4505,7 +4506,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		name string
 
 		featureGates     map[string]bool
-		routerFlavor     string
+		routerFlavor     configuration.RouterFlavor
 		updateStatusFlag bool
 
 		expectedFeatureFlags FeatureFlags
@@ -4514,7 +4515,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		{
 			name:             "default",
 			featureGates:     map[string]bool{},
-			routerFlavor:     "traditional",
+			routerFlavor:     configuration.RouterFlavorTraditional,
 			updateStatusFlag: true,
 			expectedFeatureFlags: FeatureFlags{
 				ReportConfiguredKubernetesObjects: true,
@@ -4522,7 +4523,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		},
 		{
 			name:         "expression routes feature gate enabled and router flavor matches",
-			routerFlavor: kongRouterFlavorExpressions,
+			routerFlavor: configuration.RouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
 				ExpressionRoutes: true,
 			},

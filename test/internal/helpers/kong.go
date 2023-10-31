@@ -11,6 +11,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
@@ -86,7 +87,7 @@ func GetKongDBMode(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword
 }
 
 // GetKongRouterFlavor gets router flavor of Kong using the provided Admin API URL.
-func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
+func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (configuration.RouterFlavor, error) {
 	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err

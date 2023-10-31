@@ -679,16 +679,13 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.
 		if parentRef.Namespace != nil {
 			gatewayNamespace = string(*parentRef.Namespace)
 		}
-		if lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
-			return condition.Type == string(gatewayapi.RouteConditionAccepted) &&
-				condition.Status == metav1.ConditionTrue
-		}) {
-			gateways = append(gateways,
-				k8stypes.NamespacedName{
-					Namespace: gatewayNamespace,
-					Name:      string(parentRef.Name),
-				})
-		}
+
+		gateways = append(gateways,
+			k8stypes.NamespacedName{
+				Namespace: gatewayNamespace,
+				Name:      string(parentRef.Name),
+			},
+		)
 	}
 	return gateways
 }
@@ -697,7 +694,7 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.
 // to the provided Gateway.
 //
 // NOTE: At this point we take into account HTTPRoutes only, as they are the
-// only routes in beta.
+// only routes in GA.
 func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gateway gatewayapi.Gateway, listenerIndex int) (int32, error) {
 	httpRouteList := gatewayapi.HTTPRouteList{}
 	if err := mgrc.List(ctx, &httpRouteList); err != nil {
@@ -707,14 +704,20 @@ func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gatew
 	var attachedRoutes int32
 	for _, route := range httpRouteList.Items {
 		route := route
-		acceptedByGateway := func() bool {
-			for _, g := range routeAcceptedByGateways(route.Namespace, route.Status.Parents) {
-				if gateway.Namespace == g.Namespace && gateway.Name == g.Name {
-					return true
-				}
+		acceptedByGateway := lo.ContainsBy(route.Status.Parents, func(parentStatus gatewayapi.RouteParentStatus) bool {
+			parentRef := parentStatus.ParentRef
+			if parentRef.Group != nil && *parentRef.Group != gatewayV1Group {
+				return false
 			}
-			return false
-		}()
+			if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
+				return false
+			}
+			gatewayNamespace := route.Namespace
+			if parentRef.Namespace != nil {
+				gatewayNamespace = string(*parentRef.Namespace)
+			}
+			return gateway.Namespace == gatewayNamespace && gateway.Name == string(parentRef.Name)
+		})
 		if !acceptedByGateway {
 			continue
 		}

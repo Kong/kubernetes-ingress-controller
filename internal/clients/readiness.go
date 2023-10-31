@@ -105,7 +105,10 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Info(fmt.Sprintf("pending client for %q is not ready yet", pendingClient.Address), "reason", err.Error())
+		c.logger.V(util.DebugLevel).Info("pending client is not ready yet",
+			"reason", err.Error(),
+			"address", pendingClient.Address,
+		)
 		return nil
 	}
 
@@ -123,7 +126,8 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 				// This should never happen, but if it does, we want to log it.
 				c.logger.Error(
 					errors.New("missing pod reference"),
-					fmt.Sprintf("failed to get PodReference for client %q", client.BaseRootURL()),
+					"failed to get PodReference for client",
+					"address", client.BaseRootURL(),
 				)
 				continue
 			}
@@ -149,7 +153,8 @@ func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, 
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
 		c.logger.V(util.DebugLevel).Info(
-			fmt.Sprintf("already created client for %q is not ready, moving to pending", client.BaseRootURL()),
+			"already created client is not ready, moving to pending",
+			"address", client.BaseRootURL(),
 			"reason", err.Error(),
 		)
 		return false

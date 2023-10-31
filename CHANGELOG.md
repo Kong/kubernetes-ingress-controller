@@ -134,7 +134,7 @@ Adding a new version? You'll need three changes:
   Its fields that were previously deprecated (`proxy` and `route`) are now not allowed to be set.
   They must be migrated to annotations. `upstream` field is deprecated - it's recommended
   to migrate its settings to the new `KongUpstreamPolicy` resource.
-  [#5029](https://github.com/Kong/kubernetes-ingress-controller/pull/5029)
+  [#5022](https://github.com/Kong/kubernetes-ingress-controller/pull/5022)
 
 ### Fixed
 

@@ -26,11 +26,11 @@ require (
 	github.com/bombsimon/logrusr/v4 v4.0.0
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-json v0.10.2
-	github.com/google/go-cmp v0.5.9
-	github.com/google/uuid v1.3.1
+	github.com/google/go-cmp v0.6.0
+	github.com/google/uuid v1.4.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.26.1
-	github.com/kong/go-kong v0.47.0
+	github.com/kong/go-kong v0.48.0
 	github.com/kong/kubernetes-telemetry v0.1.1
 	github.com/kong/kubernetes-testing-framework v0.39.1
 	github.com/lithammer/dedent v1.1.0
@@ -60,7 +60,7 @@ require (
 	sigs.k8s.io/gateway-api v0.8.1
 	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -169,7 +169,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
-	github.com/tidwall/gjson v1.16.0 // indirect
+	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect

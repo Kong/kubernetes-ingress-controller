@@ -5,7 +5,7 @@ import (
 )
 
 // ApplyExpression sets a Matcher as a Kong route's expression and assigns the route the given priority.
-func ApplyExpression(r *kong.Route, m Matcher, priority int) {
+func ApplyExpression(r *kong.Route, m Matcher, priority uint64) {
 	r.Expression = kong.String(m.Expression())
-	r.Priority = kong.Int(priority)
+	r.Priority = kong.Uint64(priority)
 }

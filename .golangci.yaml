@@ -129,3 +129,8 @@ issues:
       - gosec
     text: "Potential HTTP request made with variable url"
     path: test\.go
+
+  - linters:
+      - revive
+    text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
+    path: \.go

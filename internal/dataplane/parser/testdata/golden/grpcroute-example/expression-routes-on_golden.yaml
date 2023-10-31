@@ -18,7 +18,7 @@ services:
     id: b23f135f-8d7e-54cb-96eb-f2579ef1608b
     name: grpcroute.default.grpcbin.example.com.0.0
     preserve_host: true
-    priority: 1713055227461631
+    priority: 26766487929087
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default

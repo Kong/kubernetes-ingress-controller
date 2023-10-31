@@ -15,7 +15,7 @@ services:
     id: 2bd1c902-4d3c-50ed-9a78-f698cfa0cf37
     name: foo-namespace.foo.foo-svc.example.net.8000
     preserve_host: true
-    priority: 3382102062006273
+    priority: 57178899611649
     request_buffering: true
     response_buffering: true
     strip_path: false
@@ -48,7 +48,7 @@ services:
     id: 3eee2c18-8fcc-5661-8f84-5c89adfa404f
     name: foo-namespace.foo.foo-svc.example.com.80
     preserve_host: true
-    priority: 3382102062006273
+    priority: 57178899611649
     request_buffering: true
     response_buffering: true
     strip_path: false

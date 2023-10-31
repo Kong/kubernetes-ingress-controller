@@ -149,6 +149,15 @@ Adding a new version? You'll need three changes:
   [#4928](https://github.com/Kong/kubernetes-ingress-controller/pull/4928)
 - Fixed a panic when receiving broken configuration from Kong Gateway.
   [#5003](https://github.com/Kong/kubernetes-ingress-controller/pull/5003)
+- Use 46 bits in values of priorities of generated Kong routes when expression
+  rotuer is enabled to limit the priorities to be less than `1e14`. This
+  prevents them to be encoded into scientific notation when dumping 
+  configurations from admin API that brings precision loss and type 
+  inconsistency in decoding JSON/YAML data to `uint64`. 
+  This change will limit number of `HTTPRoute`s that can be 
+  deterministically sorted by their creation timestamps, names and internal
+  rule orders to `2^12=4096` and number of `GRPCRoutes` can be sorted to `2^8=256`.
+  [#5024](https://github.com/Kong/kubernetes-ingress-controller/pull/5024)
 
 ### Changed
 

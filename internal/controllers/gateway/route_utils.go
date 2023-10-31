@@ -533,7 +533,6 @@ func listenerProgrammedInStatus(listenerName gatewayapi.SectionName, lss []gatew
 	listenerStatus, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
 		return ls.Name == listenerName
 	})
-
 	if !ok {
 		return errUnmatchedListenerName // Matching Listener's not found.
 	}
@@ -541,7 +540,6 @@ func listenerProgrammedInStatus(listenerName gatewayapi.SectionName, lss []gatew
 	programmedStatus, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
 		return condition.Type == string(gatewayapi.ListenerConditionProgrammed)
 	})
-
 	if !ok {
 		return errListenerNoProgrammedCondition // "Programmed" condition not found in conditions of listener's conditions.
 	}

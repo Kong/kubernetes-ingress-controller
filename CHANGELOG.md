@@ -158,6 +158,9 @@ Adding a new version? You'll need three changes:
   deterministically sorted by their creation timestamps, names and internal
   rule orders to `2^12=4096` and number of `GRPCRoutes` can be sorted to `2^8=256`.
   [#5024](https://github.com/Kong/kubernetes-ingress-controller/pull/5024)
+- Error logs emitted from Gateway Discovery readiness checker that should be
+  logged at `debug` level are now logged at that level.
+  [#5029](https://github.com/Kong/kubernetes-ingress-controller/pull/5029)
 
 ### Changed
 

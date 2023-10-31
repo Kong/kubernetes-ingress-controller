@@ -105,7 +105,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Error(err, fmt.Sprintf("pending client for %q is not ready yet", pendingClient.Address))
+		c.logger.V(util.DebugLevel).Info(fmt.Sprintf("pending client for %q is not ready yet", pendingClient.Address), "reason", err.Error())
 		return nil
 	}
 
@@ -148,9 +148,9 @@ func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, 
 	defer cancel()
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Error(
-			err,
+		c.logger.V(util.DebugLevel).Info(
 			fmt.Sprintf("already created client for %q is not ready, moving to pending", client.BaseRootURL()),
+			"reason", err.Error(),
 		)
 		return false
 	}

@@ -128,10 +128,11 @@ func TestGetListenerStatus(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		gateway                  *gatewayapi.Gateway
+		kongListens              []gatewayapi.Listener
 		expectedListenerStatuses []gatewayapi.ListenerStatus
 	}{
 		{
-			name: "only one listener with no TLS",
+			name: "only one listener",
 			gateway: &gatewayv1.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
@@ -143,9 +144,15 @@ func TestGetListenerStatus(t *testing.T) {
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: "TCP",
+							Protocol: gatewayv1.TCPProtocolType,
 						},
 					},
+				},
+			},
+			kongListens: []gatewayapi.Listener{
+				{
+					Port:     80,
+					Protocol: gatewayv1.TCPProtocolType,
 				},
 			},
 			expectedListenerStatuses: []gatewayapi.ListenerStatus{
@@ -160,12 +167,98 @@ func TestGetListenerStatus(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "only one listener without a matching protocol or port",
+			gateway: &gatewayv1.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "single-listener",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "kong",
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:     "tcp-80",
+							Port:     80,
+							Protocol: gatewayv1.TLSProtocolType,
+						},
+					},
+				},
+			},
+			kongListens: []gatewayapi.Listener{
+				{
+					Port:     80,
+					Protocol: gatewayv1.TCPProtocolType,
+				},
+			},
+			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+				{
+					Name: gatewayapi.SectionName("tcp-80"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionFalse,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "2 listeners, 1 with a matching protocol",
+			gateway: &gatewayv1.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "single-listener",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "kong",
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:     "tls-443",
+							Port:     443,
+							Protocol: gatewayv1.TLSProtocolType,
+						},
+						{
+							Name:     "tcp-80",
+							Port:     80,
+							Protocol: gatewayv1.TCPProtocolType,
+						},
+					},
+				},
+			},
+			kongListens: []gatewayapi.Listener{
+				{
+					Port:     80,
+					Protocol: gatewayv1.TCPProtocolType,
+				},
+			},
+			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+				{
+					Name: gatewayapi.SectionName("tcp-80"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+				{
+					Name: gatewayapi.SectionName("tls-443"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionFalse,
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			statuses, err := getListenerStatus(ctx, tc.gateway, nil, nil, client)
+			statuses, err := getListenerStatus(ctx, tc.gateway, tc.kongListens, nil, client)
 			require.NoError(t, err)
 			require.Len(t, statuses, len(tc.expectedListenerStatuses), "should return expected number of listener statused")
 			for _, expectedListenerStatus := range tc.expectedListenerStatuses {
@@ -175,11 +268,13 @@ func TestGetListenerStatus(t *testing.T) {
 				require.Truef(t, ok, "should find listener status of listener %s", expectedListenerStatus.Name)
 				assertOnlyOneConditionForType(t, listenerStatus.Conditions)
 				for _, expectedCondition := range expectedListenerStatus.Conditions {
-					require.Truef(t, lo.ContainsBy(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-						return condition.Type == expectedCondition.Type &&
-							condition.Status == expectedCondition.Status
-					}), "Condition %s should be %s: conditions %v",
-						expectedCondition.Type, expectedCondition.Status, listenerStatus.Conditions)
+					assert.Truef(t,
+						lo.ContainsBy(listenerStatus.Conditions, func(c metav1.Condition) bool {
+							return c.Type == expectedCondition.Type && c.Status == expectedCondition.Status
+						}),
+						"Condition %q should have Status %q: found listener conditions:\n%#v",
+						expectedCondition.Type, expectedCondition.Status, listenerStatus.Conditions,
+					)
 				}
 			}
 		})

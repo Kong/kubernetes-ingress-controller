@@ -1177,7 +1177,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			Build()
 
 		_, err := getSupportedGatewayForRoute(context.Background(), fakeClient, bustedParentHTTPRoute)
-		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
+		require.Equal(t, fmt.Errorf("Unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
 	})
 }
 

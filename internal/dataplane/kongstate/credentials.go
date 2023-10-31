@@ -59,7 +59,7 @@ func NewKeyAuth(config interface{}) (*KeyAuth, error) {
 	// See https://github.com/Kong/deck/pull/223 and https://github.com/Kong/kubernetes-ingress-controller/issues/532
 	// for more discussion.
 	if res.Key == nil {
-		return nil, fmt.Errorf("Key-auth is invalid: no key")
+		return nil, fmt.Errorf("key-auth is invalid: no key")
 	}
 	return &res, nil
 }

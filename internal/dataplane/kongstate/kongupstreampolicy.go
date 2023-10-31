@@ -45,7 +45,7 @@ func GetKongUpstreamPolicyForServices(s store.Storer, servicesGroup []*corev1.Se
 	// If there's more than one group, then there are services with different KongUpstreamPolicy configurations.
 	if len(servicesGroupedByUpstreamPolicy) > 1 {
 		return nil, fmt.Errorf("inconsistent KongUpstreamPolicy configuration for services %s",
-			PrettyPrintServiceList(servicesGroup))
+			prettyPrintServiceList(servicesGroup))
 	}
 
 	// If there's one group (must be at least one, since we checked len(servicesGroup) == 0 above), then

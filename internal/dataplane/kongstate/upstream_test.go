@@ -5,7 +5,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,10 +83,10 @@ func TestOverrideUpstream(t *testing.T) {
 
 	for _, testcase := range testTable {
 		testcase.inUpstream.override(testcase.inKongIngresss, testcase.svc)
-		assert.Equal(t, testcase.inUpstream, testcase.outUpstream)
+		require.Equal(t, testcase.inUpstream, testcase.outUpstream)
 	}
 
-	assert.NotPanics(t, func() {
+	require.NotPanics(t, func() {
 		var nilUpstream *Upstream
 		nilUpstream.override(nil, nil)
 	})

@@ -258,9 +258,9 @@ func SecretToConfiguration(
 	return config, nil
 }
 
-// PrettyPrintServiceList makes a clean printable list of Kubernetes
-// services for the purpose of logging (errors, info, e.t.c.).
-func PrettyPrintServiceList(services []*corev1.Service) string {
+// prettyPrintServiceList makes a clean printable list of Kubernetes
+// services for the purpose of logging (errors, info, etc.).
+func prettyPrintServiceList(services []*corev1.Service) string {
 	serviceList := make([]string, 0, len(services))
 	for _, svc := range services {
 		serviceList = append(serviceList, svc.Namespace+"/"+svc.Name)

@@ -447,10 +447,10 @@ func TestGetKongIngressForServices(t *testing.T) {
 
 			kongIngress, err := getKongIngressForServices(storer, tt.services)
 			if tt.expectedError == nil {
-				assert.Equal(t, tt.expectedKongIngress, kongIngress)
+				require.Equal(t, tt.expectedKongIngress, kongIngress)
 			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError.Error())
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedError.Error())
 			}
 		})
 	}
@@ -627,7 +627,7 @@ func TestPrettyPrintServiceList(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			re := regexp.MustCompile(tt.expected)
-			assert.True(t, re.MatchString(PrettyPrintServiceList(tt.services)))
+			require.True(t, re.MatchString(prettyPrintServiceList(tt.services)))
 		})
 	}
 }

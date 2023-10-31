@@ -347,11 +347,11 @@ func CalculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRouteP
 
 // EncodeToPriority turns HTTPRoute priority traits into the integer expressed priority.
 //
-//					   4                   3                   2                   1
-//	 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-//	+-+---------------+-+-+-------------------+-+---------+---------+-----------------------------------+
-//	|P| host len      |E|R|  Path length      |M|Header No|Query No.| relative order                    |
-//	+-+---------------+-+-+-------------------+-+---------+-------- +-----------------------------------+
+//		   4                   3                   2                   1
+//	 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+//	+-+---------------+-+-+-------------------+-+---------+---------+-----------------------+
+//	|P| host len      |E|R|  Path length      |M|Header No|Query No.| relative order        |
+//	+-+---------------+-+-+-------------------+-+---------+-------- +-----------------------+
 //
 // Where:
 // P: set to 1 if the hostname is non-wildcard.
@@ -365,23 +365,23 @@ func CalculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRouteP
 // relative order: relative order of creation timestamp, namespace and name and internal rule/match order between different (split) HTTPRoutes.
 func (t HTTPRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	const (
-		// PreciseHostnameShiftBits assigns bit 49 for marking if the hostname is non-wildcard.
-		PreciseHostnameShiftBits = 49
-		// HostnameLengthShiftBits assigns bits 41-48 for the length of hostname.
-		HostnameLengthShiftBits = 41
-		// ExactPathShiftBits assigns bit 40 to mark if the match is exact path match.
-		ExactPathShiftBits = 40
-		// RegularExpressionPathShiftBits assigns bit 39 to mark if the match is regex path match.
-		RegularExpressionPathShiftBits = 39
-		// PathLengthShiftBits assigns bits 29-38 to path length. (max length = 1024, but must start with /)
-		PathLengthShiftBits = 29
-		// MethodMatchShiftBits assigns bit 28 to mark if method is specified.
-		MethodMatchShiftBits = 28
-		// HeaderNumberShiftBits assign bits 23-27 to number of headers. (max number of headers = 16)
-		HeaderNumberShiftBits = 23
-		// QueryParamNumberShiftBits makes bits 18-22 used for number of query params (max number of query params = 16)
-		QueryParamNumberShiftBits = 18
-		// bits 0-17 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
+		// PreciseHostnameShiftBits assigns bit 43 for marking if the hostname is non-wildcard.
+		PreciseHostnameShiftBits = 43
+		// HostnameLengthShiftBits assigns bits 35-42 for the length of hostname.
+		HostnameLengthShiftBits = 35
+		// ExactPathShiftBits assigns bit 34 to mark if the match is exact path match.
+		ExactPathShiftBits = 34
+		// RegularExpressionPathShiftBits assigns bit 33 to mark if the match is regex path match.
+		RegularExpressionPathShiftBits = 33
+		// PathLengthShiftBits assigns bits 23-32 to path length. (max length = 1024, but must start with /)
+		PathLengthShiftBits = 23
+		// MethodMatchShiftBits assigns bit 22 to mark if method is specified.
+		MethodMatchShiftBits = 22
+		// HeaderNumberShiftBits assign bits 17-21 to number of headers. (max number of headers = 16)
+		HeaderNumberShiftBits = 17
+		// QueryParamNumberShiftBits makes bits 12-16 used for number of query params (max number of query params = 16)
+		QueryParamNumberShiftBits = 12
+		// bits 0-11 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
 		// the bits are calculated by sorting HTTPRoutes with the same priority calculated from the fields above
 		// and start from all 1s, then decrease by one for each HTTPRoute.
 	)
@@ -434,11 +434,11 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 
 	httpRouteMatchesToPriorities := make([]SplitHTTPRouteMatchToKongRoutePriority, 0, len(splitHTTPRouteMatches))
 
-	// Bits 0-17 (18 bits) are assigned for relative order of matches.
+	// Bits 0-11 (12 bits) are assigned for relative order of matches.
 	// If multiple matches are assigned to the same priority in the previous step,
-	// sort them then starts with 2^18 -1 and decrease by one for each HTTPRoute;
+	// sort them then starts with 2^12 -1 and decrease by one for each HTTPRoute;
 	// If only one match occupies the priority, fill the relative order bits with all 1s.
-	const RelativeOrderAssignedBits = 18
+	const RelativeOrderAssignedBits = 12
 	const defaultRelativeOrderPriorityBits = (uint64(1) << RelativeOrderAssignedBits) - 1
 	for priority, matches := range priorityToSplitHTTPRouteMatches {
 		if len(matches) == 1 {
@@ -455,7 +455,7 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 
 		for i, match := range matches {
 			relativeOrderBits := defaultRelativeOrderPriorityBits - RoutePriorityType(i)
-			// Although it is very unlikely that there are 2^18 = 262144 HTTPRoutes
+			// Although it is very unlikely that there are 2^12 = 4096 HTTPRoutes
 			// should be given priority by their relative order, here we limit the
 			// relativeOrderBits to be at least 0.
 			if relativeOrderBits <= 0 {
@@ -466,10 +466,10 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 				Priority: priority + relativeOrderBits,
 			})
 		}
-		// Just in case, log a very unlikely scenario where we have more than 2^18 matches with the same base
+		// Just in case, log a very unlikely scenario where we have more than 2^12 matches with the same base
 		// priority and we have no bit space for them to be deterministically ordered.
-		if len(matches) > (1 << 18) {
-			logger.V(util.WarnLevel).Info("Too many HTTPRoute matches to be deterministically ordered", "match_number", len(matches))
+		if len(matches) > (1 << 12) {
+			logger.Error(nil, "Too many HTTPRoute matches to be deterministically ordered", "match_number", len(matches))
 		}
 	}
 

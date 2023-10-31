@@ -7,7 +7,7 @@ toolchain go1.21.0
 require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.8.0
 	github.com/elastic/crd-ref-docs v0.0.10
-	github.com/go-delve/delve v1.21.1
+	github.com/go-delve/delve v1.21.2
 	github.com/golangci/golangci-lint v1.55.1
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/kyoh86/looppointer v0.2.1

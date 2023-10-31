@@ -241,6 +241,9 @@ Adding a new version? You'll need three changes:
   basic level validation (invalid credential type or missing required fields) are now rejected
   by the admission webhook.
   [#4887](https://github.com/Kong/kubernetes-ingress-controller/pull/4887)
+- Error logs emitted from Gateway Discovery readiness checker that should be
+  logged at `debug` level are now logged at that level.
+  [#5030](https://github.com/Kong/kubernetes-ingress-controller/pull/5030)
 
 
 ## 2.12.0

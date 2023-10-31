@@ -68,6 +68,7 @@ webhooks:
     - UPDATE
     resources:
     - secrets
+    - services
   - apiGroups:
     - networking.k8s.io
     apiVersions:

@@ -351,6 +351,13 @@ spec:
                 type: integer
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: '''proxy'' field is no longer supported, use Service''s annotations
+            instead'
+          rule: '!has(self.proxy)'
+        - message: '''route'' field is no longer supported, use Ingress'' annotations
+            instead'
+          rule: '!has(self.route)'
     served: true
     storage: true
     subresources:

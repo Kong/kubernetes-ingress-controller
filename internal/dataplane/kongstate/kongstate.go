@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -203,10 +204,14 @@ func (ks *KongState) FillOverrides(
 		}
 	}
 
-	ks.FillUpstreamOverrides(s, failuresCollector)
+	ks.FillUpstreamOverrides(s, logger, failuresCollector)
 }
 
-func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *failures.ResourceFailuresCollector) {
+func (ks *KongState) FillUpstreamOverrides(
+	s store.Storer,
+	logger logr.Logger,
+	failuresCollector *failures.ResourceFailuresCollector,
+) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
 		servicesAsObjects := func(svc *corev1.Service, _ int) client.Object { return svc }
@@ -217,6 +222,11 @@ func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *fa
 		} else {
 			for _, svc := range ks.Upstreams[i].Service.K8sServices {
 				ks.Upstreams[i].override(kongIngress, svc)
+				logger.Error(nil, fmt.Sprintf(
+					"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
+					annotations.AnnotationPrefix+annotations.ConfigurationKey,
+					kongv1beta1.KongUpstreamPolicyAnnotationKey),
+					"namespace", svc.Namespace, "name", svc.Name)
 			}
 		}
 
@@ -225,6 +235,18 @@ func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *fa
 			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
 		} else {
 			if kongUpstreamPolicy != nil {
+				if kongIngress != nil {
+					for _, svc := range servicesGroup {
+						logger.Error(nil,
+							fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
+								"from %s will take precedence",
+								annotations.AnnotationPrefix+annotations.ConfigurationKey,
+								kongv1beta1.KongUpstreamPolicyAnnotationKey,
+								kongv1beta1.KongUpstreamPolicyAnnotationKey,
+								kongv1beta1.KongUpstreamPolicyAnnotationKey),
+							"namespace", svc.Namespace, "name", svc.Name)
+					}
+				}
 				ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
 			}
 		}

@@ -289,7 +289,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the UDPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, udproute, "retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, udproute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, udproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
 			debug(log, udproute, "unsupported route found, processing to verify whether it was ever supported")

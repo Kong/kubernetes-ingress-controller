@@ -20,10 +20,6 @@ import (
 )
 
 var commonSkippedTests = []string{
-	// core conformance
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4982
-	tests.GatewayWithAttachedRoutes.ShortName,
-
 	// extended conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563
 	tests.GatewayWithAttachedRoutesWithPort8080.ShortName,

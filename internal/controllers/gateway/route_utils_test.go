@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -541,7 +542,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -743,7 +744,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -924,7 +925,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1146,7 +1147,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -1176,7 +1177,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			WithScheme(scheme.Scheme).
 			Build()
 
-		_, err := getSupportedGatewayForRoute(context.Background(), fakeClient, bustedParentHTTPRoute)
+		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute)
 		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
 	})
 }
@@ -1912,7 +1913,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 			expectedValue: true,
 		},
 		{
-			name: "not accepted, listener not ready",
+			name: "route accepted but listener not programmed",
 			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
@@ -1957,6 +1958,60 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 								{
 									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionFalse,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: true,
+		},
+		{
+			name: "not accepted, not in listener's supportedKinds",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayapi.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayapi.HTTPProtocolType,
+						},
+					},
+				},
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
+						{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Kind:  "GRPCRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Status: metav1.ConditionTrue,
 								},
 							},
 						},

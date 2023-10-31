@@ -121,25 +121,164 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	}
 }
 
-func TestGetListenerStatus_no_duplicated_condition(t *testing.T) {
+func TestGetListenerStatus(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewClientBuilder().Build()
 
-	statuses, err := getListenerStatus(ctx, &gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: "kong",
-			Listeners: []gatewayapi.Listener{
+	testCases := []struct {
+		name                     string
+		gateway                  *gatewayapi.Gateway
+		kongListens              []gatewayapi.Listener
+		expectedListenerStatuses []gatewayapi.ListenerStatus
+	}{
+		{
+			name: "only one listener",
+			gateway: &gatewayv1.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "single-listener",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "kong",
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:     "tcp-80",
+							Port:     80,
+							Protocol: gatewayv1.TCPProtocolType,
+						},
+					},
+				},
+			},
+			kongListens: []gatewayapi.Listener{
 				{
 					Port:     80,
-					Protocol: "TCP",
+					Protocol: gatewayv1.TCPProtocolType,
+				},
+			},
+			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+				{
+					Name: gatewayapi.SectionName("tcp-80"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionTrue,
+						},
+					},
 				},
 			},
 		},
-	}, nil, nil, client)
-	require.NoError(t, err)
-	require.Len(t, statuses, 1, "only one listener status expected as only one listener was defined")
-	listenerStatus := statuses[0]
-	assertOnlyOneConditionForType(t, listenerStatus.Conditions)
+		{
+			name: "only one listener without a matching protocol or port",
+			gateway: &gatewayv1.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "single-listener",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "kong",
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:     "tcp-80",
+							Port:     80,
+							Protocol: gatewayv1.TLSProtocolType,
+						},
+					},
+				},
+			},
+			kongListens: []gatewayapi.Listener{
+				{
+					Port:     80,
+					Protocol: gatewayv1.TCPProtocolType,
+				},
+			},
+			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+				{
+					Name: gatewayapi.SectionName("tcp-80"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionFalse,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "2 listeners, 1 with a matching protocol",
+			gateway: &gatewayv1.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "single-listener",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "kong",
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:     "tls-443",
+							Port:     443,
+							Protocol: gatewayv1.TLSProtocolType,
+						},
+						{
+							Name:     "tcp-80",
+							Port:     80,
+							Protocol: gatewayv1.TCPProtocolType,
+						},
+					},
+				},
+			},
+			kongListens: []gatewayapi.Listener{
+				{
+					Port:     80,
+					Protocol: gatewayv1.TCPProtocolType,
+				},
+			},
+			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+				{
+					Name: gatewayapi.SectionName("tcp-80"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+				{
+					Name: gatewayapi.SectionName("tls-443"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionFalse,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			statuses, err := getListenerStatus(ctx, tc.gateway, tc.kongListens, nil, client)
+			require.NoError(t, err)
+			require.Len(t, statuses, len(tc.expectedListenerStatuses), "should return expected number of listener statused")
+			for _, expectedListenerStatus := range tc.expectedListenerStatuses {
+				listenerStatus, ok := lo.Find(statuses, func(ls gatewayapi.ListenerStatus) bool {
+					return ls.Name == expectedListenerStatus.Name
+				})
+				require.Truef(t, ok, "should find listener status of listener %s", expectedListenerStatus.Name)
+				assertOnlyOneConditionForType(t, listenerStatus.Conditions)
+				for _, expectedCondition := range expectedListenerStatus.Conditions {
+					assert.Truef(t,
+						lo.ContainsBy(listenerStatus.Conditions, func(c metav1.Condition) bool {
+							return c.Type == expectedCondition.Type && c.Status == expectedCondition.Status
+						}),
+						"Condition %q should have Status %q: found listener conditions:\n%#v",
+						expectedCondition.Type, expectedCondition.Status, listenerStatus.Conditions,
+					)
+				}
+			}
+		})
+	}
 }
 
 func assertOnlyOneConditionForType(t *testing.T, conditions []metav1.Condition) {
@@ -168,7 +307,13 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 					},
 				},
 			},
-			gateways: []k8stypes.NamespacedName{},
+			gateways: []k8stypes.NamespacedName{
+				// Gateways should be included even when route is not accepted.
+				{
+					Namespace: "default",
+					Name:      "gateway-1",
+				},
+			},
 		},
 		{
 			name:           "a subset of parentStatus with correct params",
@@ -225,6 +370,11 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 				{
 					Namespace: "default",
 					Name:      "gateway-3",
+				},
+				// Gateways should be included even when route is not accepted.
+				{
+					Namespace: "default",
+					Name:      "gateway-4",
 				},
 			},
 		},

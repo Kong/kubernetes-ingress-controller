@@ -189,6 +189,9 @@ Adding a new version? You'll need three changes:
   - `--enable-controller-gwapi-gateway`
   - `--enable-controller-gwapi-httproute`
   - `--enable-controller-gwapi-reference-grant`
+- Count `HTTPRoute` to gateway's number of attached route if the gateway is
+  present in its `status.parents`, even if the gateway has unresolved refs.
+  [#4987](https://github.com/Kong/kubernetes-ingress-controller/pull/4987)
 
 ### Added
 

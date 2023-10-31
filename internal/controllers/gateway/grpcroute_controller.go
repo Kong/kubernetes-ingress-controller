@@ -293,7 +293,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we need to pull the Gateway parent objects for the grpcroute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, grpcroute, "retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, grpcroute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, grpcroute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
 			debug(log, grpcroute, "unsupported route found, processing to verify whether it was ever supported")

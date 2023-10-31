@@ -289,7 +289,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the TLSRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, tlsroute, "retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, tlsroute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tlsroute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
 			debug(log, tlsroute, "unsupported route found, processing to verify whether it was ever supported")

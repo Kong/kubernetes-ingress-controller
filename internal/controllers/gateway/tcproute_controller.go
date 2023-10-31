@@ -290,7 +290,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the TCPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, tcproute, "retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, r.Client, tcproute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tcproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
 			debug(log, tcproute, "unsupported route found, processing to verify whether it was ever supported")

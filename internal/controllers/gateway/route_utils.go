@@ -248,8 +248,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 					// than current listener's port.
 					listenerLogger.V(util.DebugLevel).Info(
 						"Listener port does not match parentRef.Port",
-						"listener_port", listener.Port,	"parentRef_port", parentRef.Port,
-						)
+						"listener_port", listener.Port, "parentRef_port", parentRef.Port,
+					)
 					continue
 				}
 				portMatched = true

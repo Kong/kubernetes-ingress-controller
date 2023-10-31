@@ -613,7 +613,7 @@ func TestGRPCRouteTraitsEncodeToPriority(t *testing.T) {
 				HostnameLength:  15,
 				ServiceLength:   7,
 			},
-			exprectedPriority: (1 << 50) | (1 << 49) | (15 << 41) | (7 << 30),
+			exprectedPriority: (1 << 44) | (1 << 43) | (15 << 35) | (7 << 24),
 		},
 		{
 			name: "non precise hostname",
@@ -624,7 +624,7 @@ func TestGRPCRouteTraitsEncodeToPriority(t *testing.T) {
 				MethodLength:    7,
 				HeaderCount:     3,
 			},
-			exprectedPriority: (1 << 50) | (15 << 41) | (7 << 30) | (7 << 19) | (3 << 14),
+			exprectedPriority: (1 << 44) | (15 << 35) | (7 << 24) | (7 << 13) | (3 << 8),
 		},
 	}
 
@@ -647,7 +647,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 		matchIndex int
 	}
 	now := time.Now()
-	const maxRelativeOrderPriorityBits = (1 << 14) - 1
+	const maxRelativeOrderPriorityBits = (1 << 8) - 1
 
 	testCases := []struct {
 		name                  string
@@ -1123,14 +1123,14 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
-				Priority: 1024,
+				Priority: 1 << 14,
 			},
 			expectedRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("grpcroute.default.no-hostname-exact-method._.0.0"),
 					PreserveHost: kong.Bool(true),
 					Expression:   kong.String(`http.path == "/pets/list"`),
-					Priority:     kong.Uint64(1024),
+					Priority:     kong.Uint64(1 << 14),
 				},
 				ExpressionRoutes: true,
 			},
@@ -1175,14 +1175,14 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
-				Priority: 1024,
+				Priority: (1 << 31) + 1,
 			},
 			expectedRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("grpcroute.default.precise-hostname-regex-method.foo.com.0.0"),
 					Expression:   kong.String(`(http.path ~ "^/name/[a-z0-9]+") && (http.host == "foo.com")`),
 					PreserveHost: kong.Bool(true),
-					Priority:     kong.Uint64(1024),
+					Priority:     kong.Uint64((1 << 31) + 1),
 				},
 				ExpressionRoutes: true,
 			},
@@ -1244,14 +1244,14 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 					RuleIndex:  0,
 					MatchIndex: 1,
 				},
-				Priority: 1024,
+				Priority: (1 << 42) + 1,
 			},
 			expectedRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("grpcroute.default.wildcard-hostname-header-match._.foo.com.0.1"),
 					Expression:   kong.String(`(http.path ^= "/name/") && (http.headers.foo == "bar") && (http.host =^ ".foo.com")`),
 					PreserveHost: kong.Bool(true),
-					Priority:     kong.Uint64(1024),
+					Priority:     kong.Uint64((1 << 42) + 1),
 				},
 				ExpressionRoutes: true,
 			},

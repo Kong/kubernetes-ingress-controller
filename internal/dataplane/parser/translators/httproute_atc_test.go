@@ -483,7 +483,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 				PathType:        gatewayapi.PathMatchExact,
 				PathLength:      4,
 			},
-			expectedPriority: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29),
+			expectedPriority: (2 << 44) | (1 << 43) | (7 << 35) | (1 << 34) | (3 << 23),
 		},
 		{
 			name: "wildcard hostname and prefix path",
@@ -493,7 +493,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 				PathType:        gatewayapi.PathMatchPathPrefix,
 				PathLength:      5,
 			},
-			expectedPriority: (2 << 50) | (7 << 41) | (4 << 29),
+			expectedPriority: (2 << 44) | (7 << 35) | (4 << 23),
 		},
 		{
 			name: "no hostname and regex path, with header matches",
@@ -502,7 +502,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 				PathLength:  5,
 				HeaderCount: 2,
 			},
-			expectedPriority: (2 << 50) | (1 << 39) | (4 << 29) | (2 << 23),
+			expectedPriority: (2 << 44) | (1 << 33) | (4 << 23) | (2 << 17),
 		},
 		{
 			name: "no hostname and exact path, with method match and query parameter matches",
@@ -512,7 +512,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 				HasMethodMatch:  true,
 				QueryParamCount: 1,
 			},
-			expectedPriority: (2 << 50) | (1 << 40) | (4 << 29) | (1 << 28) | (1 << 18),
+			expectedPriority: (2 << 44) | (1 << 34) | (4 << 23) | (1 << 22) | (1 << 12),
 		},
 	}
 
@@ -733,7 +733,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 		matchIndex int
 	}
 	now := time.Now()
-	const maxRelativeOrderPriorityBits = (1 << 18) - 1
+	const maxRelativeOrderPriorityBits = (1 << 12) - 1
 
 	testCases := []struct {
 		name    string

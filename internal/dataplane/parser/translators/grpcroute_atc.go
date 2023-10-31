@@ -285,11 +285,11 @@ func CalculateGRCPRouteMatchPriorityTraits(match SplitGRPCRouteMatch) GRPCRouteP
 
 // EncodeToPriority turns GRPCRoute priority traits into the integer expressed priority.
 //
-//					   4                   3                   2                   1
-//	 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-//	+-+---------------+---------------------+---------------------+---------+---------------------------+
-//	|P| host len      | GRPC service length | GRPC method length  |Header No| relative order            |
-//	+-+---------------+---------------------+---------------------+---------+---------------------------+
+//		   4                   3                   2                   1
+//	 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+//	+-+---------------+---------------------+---------------------+---------+----------------+
+//	|P| host len      | GRPC service length | GRPC method length  |Header No| relative order |
+//	+-+---------------+---------------------+---------------------+---------+----------------+
 //
 // Where:
 // P: set to 1 if the hostname is non-wildcard.
@@ -303,17 +303,17 @@ func CalculateGRCPRouteMatchPriorityTraits(match SplitGRPCRouteMatch) GRPCRouteP
 // to assign higher priority for method match with `Exact` match?
 func (t GRPCRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	const (
-		// PreciseHostnameShiftBits assigns bit 49 for marking if the hostname is non-wildcard.
-		PreciseHostnameShiftBits = 49
-		// HostnameLengthShiftBits assigns bits 41-48 for the length of hostname.
-		HostnameLengthShiftBits = 41
-		// ServiceLengthShiftBits assigns bits 30-40 for the length of `Service` in method match.
-		ServiceLengthShiftBits = 30
-		// MethodLengthShiftBits assigns bits 19-29 for the length of `Method` in method match.
-		MethodLengthShiftBits = 19
-		// HeaderCountShiftBits assigns bits 14-18 for the number of header matches.
-		HeaderCountShiftBits = 14
-		// bits 0-13 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
+		// PreciseHostnameShiftBits assigns bit 43 for marking if the hostname is non-wildcard.
+		PreciseHostnameShiftBits = 43
+		// HostnameLengthShiftBits assigns bits 35-42 for the length of hostname.
+		HostnameLengthShiftBits = 35
+		// ServiceLengthShiftBits assigns bits 24-34 for the length of `Service` in method match.
+		ServiceLengthShiftBits = 24
+		// MethodLengthShiftBits assigns bits 13-23 for the length of `Method` in method match.
+		MethodLengthShiftBits = 13
+		// HeaderCountShiftBits assigns bits 8-12 for the number of header matches.
+		HeaderCountShiftBits = 8
+		// bits 0-7 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
 		// the bits are calculated by sorting GRPCRoutes with the same priority calculated from the fields above
 		// and start from all 1s, then decrease by one for each GRPCRoute.
 	)
@@ -365,11 +365,11 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 
 	splitGRPCRoutesToPriority := make([]SplitGRPCRouteMatchToPriority, 0, len(splitGRPCouteMatches))
 
-	// Bits 0-13 (14 bits) are assigned for relative order of GRPCRoutes.
+	// Bits 0-7 (8 bits) are assigned for relative order of GRPCRoutes.
 	// If multiple GRPCRoutes are assigned to the same priority in the previous step,
-	// sort them then starts with 2^14 -1 and decrease by one for each GRPCRoute;
+	// sort them then starts with 2^8 -1 and decrease by one for each GRPCRoute;
 	// If only one GRPCRoute occupies the priority, fill the relative order bits with all 1s.
-	const relativeOrderAssignedBits = 14
+	const relativeOrderAssignedBits = 8
 	const defaultRelativeOrderPriorityBits RoutePriorityType = (1 << relativeOrderAssignedBits) - 1
 
 	for priority, matches := range priorityToSplitGRPCRouteMatches {
@@ -388,7 +388,7 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 
 		for i, match := range matches {
 			relativeOrderBits := defaultRelativeOrderPriorityBits - RoutePriorityType(i)
-			// Although it is very unlikely that there are 2^14 = 16384 GRPCRoutes
+			// Although it is very unlikely that there are 2^8 = 256 GRPCRoutes
 			// should be given priority by their relative order, here we limit the
 			// relativeOrderBits to be at least 0.
 			if relativeOrderBits <= 0 {
@@ -400,9 +400,9 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 			})
 		}
 
-		// Just in case, log a very unlikely scenario where we have more than 2^14 routes with the same base
+		// Just in case, log a very unlikely scenario where we have more than 2^8 routes with the same base
 		// priority and we have no bit space for them to be deterministically ordered.
-		if len(matches) > (1 << 14) {
+		if len(matches) > (1 << 8) {
 			logger.Error(nil, "Too many GRPCRoute matches to be deterministically ordered", "grpcroute_number", len(matches))
 		}
 	}

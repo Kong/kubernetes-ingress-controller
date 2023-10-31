@@ -82,7 +82,7 @@ services:
     id: fc9a8135-0253-5631-b1e0-8712f796a4e2
     name: bar-namespace.ing-with-tls.foo-svc.example.com.80
     preserve_host: true
-    priority: 3382102062071809
+    priority: 57178899677185
     request_buffering: true
     response_buffering: true
     strip_path: false

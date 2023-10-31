@@ -15,7 +15,7 @@ services:
     id: bba23c8e-3f3c-55dc-bfca-2fe19de118d1
     name: foo-namespace.foo.cert-manager-solver-pod.example.com.80
     preserve_host: true
-    priority: 3382102062006304
+    priority: 57178899611680
     request_buffering: true
     response_buffering: true
     strip_path: false

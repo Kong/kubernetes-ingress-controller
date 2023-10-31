@@ -426,7 +426,7 @@ func getListenerStatus(
 			)
 		}
 
-		// If the we did not set "Accepted" status of listener previously,
+		// If the we did not set the "Accepted" status of the listener previously,
 		// which means that there are no conflicts, we set `Accepted` condition to true.
 		// (while the listener can have other problems to prevent it being programmed)
 		if !lo.ContainsBy(status.Conditions,

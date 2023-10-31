@@ -1913,7 +1913,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 			expectedValue: true,
 		},
 		{
-			name: "accepted, listener not ready",
+			name: "route accepted but listener not programmed",
 			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",

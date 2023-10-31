@@ -121,25 +121,69 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	}
 }
 
-func TestGetListenerStatus_no_duplicated_condition(t *testing.T) {
+func TestGetListenerStatus(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewClientBuilder().Build()
 
-	statuses, err := getListenerStatus(ctx, &gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: "kong",
-			Listeners: []gatewayapi.Listener{
+	testCases := []struct {
+		name                     string
+		gateway                  *gatewayapi.Gateway
+		expectedListenerStatuses []gatewayapi.ListenerStatus
+	}{
+		{
+			name: "only one listener with no TLS",
+			gateway: &gatewayv1.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "single-listener",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "kong",
+					Listeners: []gatewayapi.Listener{
+						{
+							Name:     "tcp-80",
+							Port:     80,
+							Protocol: "TCP",
+						},
+					},
+				},
+			},
+			expectedListenerStatuses: []gatewayapi.ListenerStatus{
 				{
-					Port:     80,
-					Protocol: "TCP",
+					Name: gatewayapi.SectionName("tcp-80"),
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Status: metav1.ConditionTrue,
+						},
+					},
 				},
 			},
 		},
-	}, nil, nil, client)
-	require.NoError(t, err)
-	require.Len(t, statuses, 1, "only one listener status expected as only one listener was defined")
-	listenerStatus := statuses[0]
-	assertOnlyOneConditionForType(t, listenerStatus.Conditions)
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			statuses, err := getListenerStatus(ctx, tc.gateway, nil, nil, client)
+			require.NoError(t, err)
+			require.Len(t, statuses, len(tc.expectedListenerStatuses), "should return expected number of listener statused")
+			for _, expectedListenerStatus := range tc.expectedListenerStatuses {
+				listenerStatus, ok := lo.Find(statuses, func(ls gatewayapi.ListenerStatus) bool {
+					return ls.Name == expectedListenerStatus.Name
+				})
+				require.Truef(t, ok, "should find listener status of listener %s", expectedListenerStatus.Name)
+				assertOnlyOneConditionForType(t, listenerStatus.Conditions)
+				for _, expectedCondition := range expectedListenerStatus.Conditions {
+					require.Truef(t, lo.ContainsBy(listenerStatus.Conditions, func(condition metav1.Condition) bool {
+						return condition.Type == expectedCondition.Type &&
+							condition.Status == expectedCondition.Status
+					}), "Condition %s should be %s: conditions %v",
+						expectedCondition.Type, expectedCondition.Status, listenerStatus.Conditions)
+				}
+			}
+		})
+	}
 }
 
 func assertOnlyOneConditionForType(t *testing.T, conditions []metav1.Condition) {

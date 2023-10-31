@@ -232,7 +232,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 			// Check if listener name matches.
 			if parentRef.SectionName != nil {
 				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
-					listenerLogger.V(util.DebugLevel).Info("Listner name does not match parentRef.SectionName")
+					listenerLogger.V(util.DebugLevel).Info("Listener name does not match parentRef.SectionName")
 					continue
 				}
 				allowedByListenerName = true
@@ -243,7 +243,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 				if *parentRef.Port != listener.Port {
 					// This ParentRef has a port specified and it's different
 					// than current listener's port.
-					listenerLogger.V(util.DebugLevel).Info("Listner name does not match parentRef.Port")
+					listenerLogger.V(util.DebugLevel).Info("Listener name does not match parentRef.Port")
 					continue
 				}
 				portMatched = true

@@ -45,9 +45,7 @@ Setting up Kong for Kubernetes is as simple as:
 # Install the Gateway API CRDs before installing Kong Ingress Controller.
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0-rc2/standard-install.yaml
 # Install the Kong Ingress Controller with Helm.
-helm repo add kong https://charts.konghq.com
-helm repo update
-helm install kong/ingress --generate-name
+helm install kong --namespace kong --create-namespace --repo https://charts.konghq.com ingress
 ```
 
 To learn more details about Helm chart follow the [Helm chart documentation](https://charts.konghq.com/).

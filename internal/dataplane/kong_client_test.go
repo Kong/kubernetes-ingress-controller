@@ -667,7 +667,6 @@ func setupTestKongClient(
 ) *KongClient {
 	logger := zapr.NewLogger(zap.NewNop())
 	timeout := time.Second
-	ingressClass := "kong"
 	diagnostic := util.ConfigDumpDiagnostic{}
 	config := sendconfig.Config{}
 	dbMode := "off"
@@ -679,7 +678,6 @@ func setupTestKongClient(
 	kongClient, err := NewKongClient(
 		logger,
 		timeout,
-		ingressClass,
 		diagnostic,
 		config,
 		eventRecorder,

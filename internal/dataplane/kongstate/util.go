@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +19,7 @@ import (
 
 func getKongIngressForServices(
 	s store.Storer,
-	services map[string]*corev1.Service,
+	services []*corev1.Service,
 ) (*kongv1.KongIngress, error) {
 	// loop through each service and retrieve the attached KongIngress resources.
 	// there can only be one KongIngress for a group of services: either one of
@@ -35,7 +36,7 @@ func getKongIngressForServices(
 		// retrieve the attached KongIngress for the service
 		kongIngress, err := s.GetKongIngress(svc.Namespace, confName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get KongIngress: %w", err)
 		}
 
 		// we found the KongIngress for these services. We don't have to check any
@@ -257,21 +258,14 @@ func SecretToConfiguration(
 	return config, nil
 }
 
-// PrettyPrintServiceList makes a clean printable list of a map of Kubernetes
-// services for the purpose of logging (errors, info, e.t.c.).
-func PrettyPrintServiceList(services map[string]*corev1.Service) string {
-	var serviceList string
-	first := true
+// prettyPrintServiceList makes a clean printable list of Kubernetes
+// services for the purpose of logging (errors, info, etc.).
+func prettyPrintServiceList(services []*corev1.Service) string {
+	serviceList := make([]string, 0, len(services))
 	for _, svc := range services {
-		if !first {
-			serviceList = serviceList + ", "
-		}
-		serviceList = serviceList + svc.Namespace + "/" + svc.Name
-		if first {
-			first = false
-		}
+		serviceList = append(serviceList, svc.Namespace+"/"+svc.Name)
 	}
-	return serviceList
+	return strings.Join(serviceList, ", ")
 }
 
 // plugin is a intermediate type to hold plugin related configuration.

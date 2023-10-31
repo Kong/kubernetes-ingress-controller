@@ -425,7 +425,6 @@ func TestCRDValidations(t *testing.T) {
 						require.NoError(t, err)
 					})
 				}
-
 				t.Run("invalid value", func(t *testing.T) {
 					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 						Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
@@ -440,6 +439,22 @@ func TestCRDValidations(t *testing.T) {
 					require.ErrorContains(t, err, `spec.healthchecks.active.type: Unsupported value: "unknown-type-active": supported values: "http", "https", "tcp", "grpc", "grpcs"`)
 					require.ErrorContains(t, err, `spec.healthchecks.passive.type: Unsupported value: "unknown-type-passive": supported values: "http", "https", "tcp", "grpc", "grpcs"`)
 				})
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - hashOnFallback must not be set when spec.hasOn.cookie is set",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &kongv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name"),
+						CookiePath: lo.ToPtr("/"),
+					},
+					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+						Header: lo.ToPtr("header-name"),
+					},
+				})
+				require.ErrorContains(t, err, `spec.hashOnFallback must not be set when spec.hashOn.cookie is set.`)
 			},
 		},
 	}

@@ -323,10 +323,6 @@ spec:
                       to be considered healthy.
                     type: integer
                 type: object
-              hostHeader:
-                description: HostHeader is the hostname to be used as Host header
-                  when proxying requests through Kong.
-                type: string
               slots:
                 description: Slots is the number of slots in the load balancer algorithm.
                   If not set, the default value in Kong for the algorithm is used.
@@ -341,18 +337,26 @@ spec:
           rule: 'has(self.spec.hashOn) ? [has(self.spec.hashOn.input), has(self.spec.hashOn.cookie),
             has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet,
             fieldSet == true).size() <= 1 : true'
-        - message: Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg)
-            can be set.
-          rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input),
-            has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture),
-            has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size()
-            <= 1 : true'
         - message: When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.
           rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath)
             : true'
         - message: When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required.
           rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie)
             : true'
+        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOn
+            is set.
+          rule: 'has(self.spec.hashOn) ? has(self.spec.algorithm) && self.spec.algorithm
+            == "consistent-hashing" : true'
+        - message: Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg)
+            can be set.
+          rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input),
+            has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture),
+            has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size()
+            <= 1 : true'
+        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback
+            is set.
+          rule: 'has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm
+            == "consistent-hashing" : true'
         - message: spec.hashOnFallback.cookie must not be set.
           rule: 'has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie)
             : true'
@@ -367,14 +371,10 @@ spec:
           rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive)
             && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval)
             : true'
-        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOn
-            is set.
-          rule: 'has(self.spec.hashOn) ? has(self.spec.algorithm) && self.spec.algorithm
-            == "consistent-hashing" : true'
-        - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback
-            is set.
-          rule: 'has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm
-            == "consistent-hashing" : true'
+        - message: spec.hashOnFallback must not be set when spec.hashOn.cookie is
+            set.
+          rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback)
+            : true'
     served: true
     storage: true
     subresources:

@@ -1,0 +1,44 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: httproute.default.httpbin.0
+  id: de4fffcc-97bc-59c6-9ccd-f1fb29b93beb
+  name: httproute.default.httpbin.0
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 668cce91-3da3-590f-82c9-8296c5bb28e5
+    name: httproute.default.httpbin.0.0
+    path_handling: v0
+    paths:
+    - ~/httpbin$
+    - /httpbin/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httpbin
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  host_header: httpbin.org
+  name: httproute.default.httpbin.0
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1

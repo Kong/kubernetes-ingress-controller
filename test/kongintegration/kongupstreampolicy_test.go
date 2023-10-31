@@ -13,7 +13,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
@@ -48,14 +48,12 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 		{
 			name: "KongUpstreamPolicySpec with no hash-on or hash-fallback",
 			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HostHeader: lo.ToPtr("foo"),
-				Algorithm:  lo.ToPtr("least-connections"),
-				Slots:      lo.ToPtr(20),
+				Algorithm: lo.ToPtr("least-connections"),
+				Slots:     lo.ToPtr(20),
 			},
 			expectedUpstream: &kong.Upstream{
-				HostHeader: lo.ToPtr("foo"),
-				Algorithm:  lo.ToPtr("least-connections"),
-				Slots:      lo.ToPtr(20),
+				Algorithm: lo.ToPtr("least-connections"),
+				Slots:     lo.ToPtr(20),
 			},
 		},
 		{
@@ -222,7 +220,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			translatedUpstream := translators.TranslateKongUpstreamPolicy(tc.policySpec)
+			translatedUpstream := kongstate.TranslateKongUpstreamPolicy(tc.policySpec)
 			const upstreamName = "test-upstream"
 			translatedUpstream.Name = lo.ToPtr(upstreamName)
 			tc.expectedUpstream.Name = lo.ToPtr(upstreamName)

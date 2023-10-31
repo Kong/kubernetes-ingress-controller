@@ -8,7 +8,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -185,7 +188,11 @@ func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
 	}
 }
 
-func (ks *KongState) FillOverrides(logger logr.Logger, s store.Storer) {
+func (ks *KongState) FillOverrides(
+	logger logr.Logger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
 		ks.Services[i].override()
@@ -196,17 +203,30 @@ func (ks *KongState) FillOverrides(logger logr.Logger, s store.Storer) {
 		}
 	}
 
-	// Upstreams
+	ks.FillUpstreamOverrides(s, failuresCollector)
+}
+
+func (ks *KongState) FillUpstreamOverrides(s store.Storer, failuresCollector *failures.ResourceFailuresCollector) {
 	for i := 0; i < len(ks.Upstreams); i++ {
-		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
+		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
+		servicesAsObjects := func(svc *corev1.Service, _ int) client.Object { return svc }
+
+		kongIngress, err := getKongIngressForServices(s, servicesGroup)
 		if err != nil {
-			logger.Error(err, "failed to fetch KongIngress resource for Services",
-				"names", PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices))
-			continue
+			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
+		} else {
+			for _, svc := range ks.Upstreams[i].Service.K8sServices {
+				ks.Upstreams[i].override(kongIngress, svc)
+			}
 		}
 
-		for _, svc := range ks.Upstreams[i].Service.K8sServices {
-			ks.Upstreams[i].override(kongIngress, svc)
+		kongUpstreamPolicy, err := GetKongUpstreamPolicyForServices(s, servicesGroup)
+		if err != nil {
+			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
+		} else {
+			if kongUpstreamPolicy != nil {
+				ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
+			}
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // Upstream is a wrapper around Upstream object in Kong.
@@ -89,6 +90,53 @@ func (u *Upstream) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
 	}
 	if k.HashFallbackURICapture != nil {
 		u.HashFallbackURICapture = kong.String(*k.HashFallbackURICapture)
+	}
+}
+
+func (u *Upstream) overrideByKongUpstreamPolicy(policy *kongv1beta1.KongUpstreamPolicy) {
+	if u == nil {
+		return
+	}
+
+	kongUpstreamOverrides := TranslateKongUpstreamPolicy(policy.Spec)
+	if kongUpstreamOverrides.Algorithm != nil {
+		u.Algorithm = kongUpstreamOverrides.Algorithm
+	}
+	if kongUpstreamOverrides.Slots != nil {
+		u.Slots = kongUpstreamOverrides.Slots
+	}
+	if kongUpstreamOverrides.Healthchecks != nil {
+		u.Healthchecks = kongUpstreamOverrides.Healthchecks
+	}
+	if kongUpstreamOverrides.HashOn != nil {
+		u.HashOn = kongUpstreamOverrides.HashOn
+	}
+	if kongUpstreamOverrides.HashFallback != nil {
+		u.HashFallback = kongUpstreamOverrides.HashFallback
+	}
+	if kongUpstreamOverrides.HashOnHeader != nil {
+		u.HashOnHeader = kongUpstreamOverrides.HashOnHeader
+	}
+	if kongUpstreamOverrides.HashFallbackHeader != nil {
+		u.HashFallbackHeader = kongUpstreamOverrides.HashFallbackHeader
+	}
+	if kongUpstreamOverrides.HashOnCookie != nil {
+		u.HashOnCookie = kongUpstreamOverrides.HashOnCookie
+	}
+	if kongUpstreamOverrides.HashOnCookiePath != nil {
+		u.HashOnCookiePath = kongUpstreamOverrides.HashOnCookiePath
+	}
+	if kongUpstreamOverrides.HashOnQueryArg != nil {
+		u.HashOnQueryArg = kongUpstreamOverrides.HashOnQueryArg
+	}
+	if kongUpstreamOverrides.HashFallbackQueryArg != nil {
+		u.HashFallbackQueryArg = kongUpstreamOverrides.HashFallbackQueryArg
+	}
+	if kongUpstreamOverrides.HashOnURICapture != nil {
+		u.HashOnURICapture = kongUpstreamOverrides.HashOnURICapture
+	}
+	if kongUpstreamOverrides.HashFallbackURICapture != nil {
+		u.HashFallbackURICapture = kongUpstreamOverrides.HashFallbackURICapture
 	}
 }
 

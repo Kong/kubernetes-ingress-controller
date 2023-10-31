@@ -303,7 +303,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 func TestGetKongIngressForServices(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
-		services            map[string]*corev1.Service
+		services            []*corev1.Service
 		kongIngresses       []*kongv1.KongIngress
 		expectedKongIngress *kongv1.KongIngress
 		expectedError       error
@@ -319,14 +319,14 @@ func TestGetKongIngressForServices(t *testing.T) {
 		},
 		{
 			name: "when none of the provided services have attached KongIngress resources, no KongIngress resources will be provided",
-			services: map[string]*corev1.Service{
-				"test-service1": {
+			services: []*corev1.Service{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
 					},
 				},
-				"test-service2": {
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service2",
 						Namespace: corev1.NamespaceDefault,
@@ -342,8 +342,8 @@ func TestGetKongIngressForServices(t *testing.T) {
 		},
 		{
 			name: "if at least one KongIngress resource is attached to a Service, it will be returned",
-			services: map[string]*corev1.Service{
-				"test-service1": {
+			services: []*corev1.Service{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
@@ -352,7 +352,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 						},
 					},
 				},
-				"test-service2": {
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service2",
 						Namespace: corev1.NamespaceDefault,
@@ -382,8 +382,8 @@ func TestGetKongIngressForServices(t *testing.T) {
 		},
 		{
 			name: "if multiple services have KongIngress resources this is accepted only if they're all attached to the same KongIngress",
-			services: map[string]*corev1.Service{
-				"test-service1": {
+			services: []*corev1.Service{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
@@ -392,7 +392,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 						},
 					},
 				},
-				"test-service2": {
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service2",
 						Namespace: corev1.NamespaceDefault,
@@ -401,7 +401,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 						},
 					},
 				},
-				"test-service3": {
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service3",
 						Namespace: corev1.NamespaceDefault,
@@ -447,10 +447,10 @@ func TestGetKongIngressForServices(t *testing.T) {
 
 			kongIngress, err := getKongIngressForServices(storer, tt.services)
 			if tt.expectedError == nil {
-				assert.Equal(t, tt.expectedKongIngress, kongIngress)
+				require.Equal(t, tt.expectedKongIngress, kongIngress)
 			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError.Error())
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedError.Error())
 			}
 		})
 	}
@@ -581,7 +581,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 func TestPrettyPrintServiceList(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		services map[string]*corev1.Service
+		services []*corev1.Service
 		expected string
 	}{
 		{
@@ -590,8 +590,8 @@ func TestPrettyPrintServiceList(t *testing.T) {
 		},
 		{
 			name: "a single service should just return the <namespace>/<name>",
-			services: map[string]*corev1.Service{
-				"test-service1": {
+			services: []*corev1.Service{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
@@ -602,20 +602,20 @@ func TestPrettyPrintServiceList(t *testing.T) {
 		},
 		{
 			name: "multiple services should be comma deliniated",
-			services: map[string]*corev1.Service{
-				"test-service1": {
+			services: []*corev1.Service{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
 					},
 				},
-				"test-service2": {
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service2",
 						Namespace: corev1.NamespaceDefault,
 					},
 				},
-				"test-service3": {
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service3",
 						Namespace: corev1.NamespaceDefault,
@@ -627,7 +627,7 @@ func TestPrettyPrintServiceList(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			re := regexp.MustCompile(tt.expected)
-			assert.True(t, re.MatchString(PrettyPrintServiceList(tt.services)))
+			require.True(t, re.MatchString(prettyPrintServiceList(tt.services)))
 		})
 	}
 }

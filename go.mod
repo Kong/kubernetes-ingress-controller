@@ -29,7 +29,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.4.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/deck v1.27.1
+	github.com/kong/deck v1.28.0
 	github.com/kong/go-kong v0.48.0
 	github.com/kong/kubernetes-telemetry v0.1.1
 	github.com/kong/kubernetes-testing-framework v0.41.1
@@ -74,8 +74,8 @@ require (
 	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/hashicorp/go-hclog v1.2.0 // indirect
-	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/hashicorp/go-hclog v1.5.0 // indirect
+	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
@@ -84,6 +84,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.5.1 // indirect
+	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	go4.org/netipx v0.0.0-20230728184502-ec4c8b891b28 // indirect

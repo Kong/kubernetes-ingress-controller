@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -20,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -234,4 +236,30 @@ func exitOnErr(err error) {
 
 func shouldRunExperimentalConformance() bool {
 	return os.Getenv("TEST_EXPERIMENTAL_CONFORMANCE") == "true"
+}
+
+// patchGatewayClassToPassTestGatewayClassObservedGenerationBump - wait for the GatewayClass
+// (call is blocking run in a goroutine)  created by the test GatewayClassObservedGenerationBump
+// and patch it with the unmanaged annotation to make it reconciled by the GatewayClass controller.
+// The timeout and the tick are pretty loose because of the nondeterministic test order execution.
+func patchGatewayClassToPassTestGatewayClassObservedGenerationBump(ctx context.Context, t *testing.T, k8sClient client.Client) {
+	ensureTestGatewayClassIsUnmanaged := func(ctx context.Context, k8sClient client.Client) bool {
+		gwcNamespacedName := k8stypes.NamespacedName{Name: "gatewayclass-observed-generation-bump"}
+		gwc := &gatewayapi.GatewayClass{}
+		if err := k8sClient.Get(ctx, gwcNamespacedName, gwc); err != nil {
+			return false
+		}
+		if gwc.Annotations == nil {
+			gwc.Annotations = map[string]string{}
+		}
+		gwc.Annotations[annotations.AnnotationPrefix+annotations.GatewayClassUnmanagedKey] = annotations.GatewayClassUnmanagedAnnotationValuePlaceholder
+		if err := k8sClient.Update(ctx, gwc); err != nil {
+			return false
+		}
+		return true
+	}
+
+	require.Eventually(t, func() bool {
+		return ensureTestGatewayClassIsUnmanaged(ctx, k8sClient)
+	}, 10*time.Minute, test.RequestTimeout)
 }

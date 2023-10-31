@@ -3,19 +3,11 @@
 package conformance
 
 import (
-	"context"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/require"
-	k8stypes "k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -101,33 +93,11 @@ func TestGatewayConformance(t *testing.T) {
 	t.Log("starting the gateway conformance test suite")
 	cSuite.Setup(t)
 
-	// We need to wait for the GatewayClass created by the test GatewayClassObservedGenerationBump
-	// and patch it with the unmanaged annotation to make it reconciled by the GatewayClass
-	// controller. The timeout and the tick are pretty loose because of the indeterministic
-	// test order execution.
-	go require.Eventually(t, func() bool {
-		return ensureTestGatewayClassIsUnmanaged(ctx, k8sClient)
-	}, 10*time.Minute, test.RequestTimeout)
+	go patchGatewayClassToPassTestGatewayClassObservedGenerationBump(ctx, t, k8sClient)
 
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//
 	// cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
 	cSuite.Run(t, tests.ConformanceTests)
-}
-
-func ensureTestGatewayClassIsUnmanaged(ctx context.Context, k8sClient client.Client) bool {
-	gwcNamespacedName := k8stypes.NamespacedName{Name: "gatewayclass-observed-generation-bump"}
-	gwc := &gatewayapi.GatewayClass{}
-	if err := k8sClient.Get(ctx, gwcNamespacedName, gwc); err != nil {
-		return false
-	}
-	if gwc.Annotations == nil {
-		gwc.Annotations = map[string]string{}
-	}
-	gwc.Annotations[annotations.AnnotationPrefix+annotations.GatewayClassUnmanagedKey] = annotations.GatewayClassUnmanagedAnnotationValuePlaceholder
-	if err := k8sClient.Update(ctx, gwc); err != nil {
-		return false
-	}
-	return true
 }

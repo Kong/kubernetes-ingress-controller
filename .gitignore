@@ -33,9 +33,9 @@ e2e-tests
 *.out
 *.out.*
 
-# for this repo only
+# For this repo only
 kong-ingress-controller
-conformance-tests-report.yaml
+kong-kubernetes-ingress-controller.yaml
 
 # ignore vendor tree
 vendor

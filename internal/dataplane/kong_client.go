@@ -63,11 +63,6 @@ type KongConfigBuilder interface {
 type KongClient struct {
 	logger logr.Logger
 
-	// ingressClass indicates the Kubernetes ingress class that should be
-	// used to qualify support for any given Kubernetes object to be parsed
-	// into data-plane configuration.
-	ingressClass string
-
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
 	requestTimeout time.Duration
@@ -152,7 +147,6 @@ type KongClient struct {
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	ingressClass string,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
@@ -166,7 +160,6 @@ func NewKongClient(
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                 logger,
-		ingressClass:           ingressClass,
 		requestTimeout:         timeout,
 		diagnostic:             diagnostic,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),

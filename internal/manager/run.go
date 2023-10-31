@@ -190,7 +190,6 @@ func Run(
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
-		c.IngressClassName,
 		diagnostic,
 		kongConfig,
 		eventRecorder,

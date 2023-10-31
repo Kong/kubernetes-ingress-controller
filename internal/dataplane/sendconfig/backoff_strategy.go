@@ -58,7 +58,7 @@ func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent Con
 
 	err, resourceErrors, resourceErrorsParseErr = s.decorated.Update(ctx, targetContent)
 	if err != nil {
-		s.logger.V(util.DebugLevel).Error(err, "Update failed, registering it for backoff strategy")
+		s.logger.V(util.DebugLevel).Info("Update failed, registering it for backoff strategy", "reason", err.Error())
 		s.backoffStrategy.RegisterUpdateFailure(err, targetContent.Hash)
 	} else {
 		s.backoffStrategy.RegisterUpdateSuccess()

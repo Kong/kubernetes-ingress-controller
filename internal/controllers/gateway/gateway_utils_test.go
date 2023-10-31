@@ -168,7 +168,13 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 					},
 				},
 			},
-			gateways: []k8stypes.NamespacedName{},
+			gateways: []k8stypes.NamespacedName{
+				// Gateways should be included even when route is not accepted.
+				{
+					Namespace: "default",
+					Name:      "gateway-1",
+				},
+			},
 		},
 		{
 			name:           "a subset of parentStatus with correct params",
@@ -225,6 +231,11 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 				{
 					Namespace: "default",
 					Name:      "gateway-3",
+				},
+				// Gateways should be included even when route is not accepted.
+				{
+					Namespace: "default",
+					Name:      "gateway-4",
 				},
 			},
 		},

@@ -57,7 +57,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(http.host == "foo.com") || (http.host =^ ".bar.com")`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					ExpressionRoutes: true,
 				},
@@ -77,7 +77,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(http.path == "/prefix") || (http.path ^= "/prefix/")`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					ExpressionRoutes: true,
 				},
@@ -98,7 +98,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`((http.path == "/prefix") || (http.path ^= "/prefix/")) || ((http.path == "/exact") && (http.method == "GET"))`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					ExpressionRoutes: true,
 				},
@@ -126,7 +126,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`http.path == "/exact/0"`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					Plugins: []kong.Plugin{
 						{
@@ -152,7 +152,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`http.path == "/exact/1"`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					Plugins: []kong.Plugin{
 						{
@@ -194,7 +194,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(http.path == "/exact/0") || (http.path ~ "^/regex/[a-z]+")`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					Plugins: []kong.Plugin{
 						{
@@ -240,7 +240,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`((http.path == "/prefix/0") || (http.path ^= "/prefix/0/")) && (http.host == "a.foo.com") && (tls.sni == "a.foo.com")`),
-						Priority:     kong.Int(1),
+						Priority:     kong.Uint64(1),
 					},
 					ExpressionRoutes: true,
 				},
@@ -473,7 +473,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 	testCases := []struct {
 		name             string
 		traits           HTTPRoutePriorityTraits
-		expectedPriority int
+		expectedPriority RoutePriorityType
 	}{
 		{
 			name: "precise hostname and exact path",
@@ -739,7 +739,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 		name    string
 		matches []SplitHTTPRouteMatch
 		// HTTPRoute index -> priority
-		priorities map[splitHTTPRouteIndex]int
+		priorities map[splitHTTPRouteIndex]RoutePriorityType
 	}{
 		{
 			name: "no dupelicated fixed priority",
@@ -787,7 +787,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 			},
-			priorities: map[splitHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]RoutePriorityType{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -864,7 +864,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 			},
-			priorities: map[splitHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]RoutePriorityType{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -937,7 +937,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 			},
-			priorities: map[splitHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]RoutePriorityType{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -1016,7 +1016,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 1,
 				},
 			},
-			priorities: map[splitHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]RoutePriorityType{
 				{
 					namespace:  "default",
 					name:       "httproute-1",

@@ -21,6 +21,11 @@ const (
 	ResourceKindBitsGRPCRoute = 1
 )
 
+type (
+	// RoutePriorityType is the type of priority field of Kong routes.
+	RoutePriorityType = uint64
+)
+
 const (
 	// CatchAllHTTPExpression is the expression to match all HTTP/HTTPS requests.
 	// For rules with no matches and no hostnames in its parent HTTPRoute or GRPCRoute,

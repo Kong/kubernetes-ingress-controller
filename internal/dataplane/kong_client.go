@@ -472,7 +472,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	}
 
 	gatewayClientURLs := lo.Map(gatewayClients, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
-	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", gatewayClientURLs)
+	c.logger.V(util.InfoLevel).Info("Sending configuration to gateway clients", "urls", gatewayClientURLs)
 
 	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, *client, s, config)

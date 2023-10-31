@@ -221,6 +221,9 @@ Adding a new version? You'll need three changes:
   [#4969](https://github.com/Kong/kubernetes-ingress-controller/pull/4969)
   [#4979](https://github.com/Kong/kubernetes-ingress-controller/pull/4979)
   [#4989](https://github.com/Kong/kubernetes-ingress-controller/pull/4989)
+- KIC now specifies its `UserAgent` when communicating with kube-apiserver
+  as `kong-ingress-controller/${VERSION}` where version is the version of KIC.
+  [#5019](https://github.com/Kong/kubernetes-ingress-controller/pull/5019)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/

@@ -313,10 +313,11 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	// KongIngress is always allowed.
 	responseBuilder = responseBuilder.Allowed(true)
 
+	// Proxy and Route fields are now disallowed to be set with the use of CEL rules in the CRD definition.
+	// We still warn about them here only just in case someone doesn't install new CRDs with CEL rules.
 	if kongIngress.Proxy != nil {
 		responseBuilder = responseBuilder.WithWarning(proxyWarning)
 	}
-
 	if kongIngress.Route != nil {
 		responseBuilder = responseBuilder.WithWarning(routeWarning)
 	}
@@ -345,7 +346,7 @@ func (h RequestHandler) handleService(_ context.Context, request admissionv1.Adm
 
 	if annotations.ExtractConfigurationName(service.Annotations) != "" {
 		warning := fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
-			annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey)
+			kongv1beta1.KongUpstreamPolicyAnnotationKey)
 
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}

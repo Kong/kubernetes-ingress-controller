@@ -28,6 +28,8 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=ki,categories=kong-ingress-controller
 // +kubebuilder:validation:Optional
+// +kubebuilder:validation:XValidation:rule="!has(self.proxy)", message="'proxy' field is no longer supported, use Service's annotations instead"
+// +kubebuilder:validation:XValidation:rule="!has(self.route)", message="'route' field is no longer supported, use Ingress' annotations instead"
 
 // KongIngress is the Schema for the kongingresses API.
 type KongIngress struct {
@@ -210,9 +212,6 @@ type KongIngressUpstream struct {
 
 	// HashFallbackURICapture is the "hash_fallback" version of HashOnURICapture.
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty" yaml:"hash_fallback_uri_capture,omitempty"`
-
-	// we need to check this one TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
-	// ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
 }
 
 func init() {

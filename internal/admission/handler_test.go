@@ -102,7 +102,7 @@ func TestHandleService(t *testing.T) {
 			},
 			wantWarnings: []string{
 				fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
-					annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey),
+					kongv1beta1.KongUpstreamPolicyAnnotationKey),
 			},
 		},
 		{

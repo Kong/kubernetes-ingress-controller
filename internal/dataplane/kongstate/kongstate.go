@@ -225,7 +225,7 @@ func (ks *KongState) FillUpstreamOverrides(
 				logger.Error(nil, fmt.Sprintf(
 					"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
 					annotations.AnnotationPrefix+annotations.ConfigurationKey,
-					annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey),
+					kongv1beta1.KongUpstreamPolicyAnnotationKey),
 					"namespace", svc.Namespace, "name", svc.Name)
 			}
 		}
@@ -241,9 +241,9 @@ func (ks *KongState) FillUpstreamOverrides(
 							fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
 								"from %s will take precedence",
 								annotations.AnnotationPrefix+annotations.ConfigurationKey,
-								annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey,
-								annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey,
-								annotations.AnnotationPrefix+kongv1beta1.KongUpstreamPolicyAnnotationKey),
+								kongv1beta1.KongUpstreamPolicyAnnotationKey,
+								kongv1beta1.KongUpstreamPolicyAnnotationKey,
+								kongv1beta1.KongUpstreamPolicyAnnotationKey),
 							"namespace", svc.Namespace, "name", svc.Name)
 					}
 				}

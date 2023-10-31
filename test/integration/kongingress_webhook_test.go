@@ -55,13 +55,9 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "kong-ingress-validation-",
 			},
-			// Proxy field is deprecated, expecting warning for it.
-			Proxy: &kongv1.KongIngressService{
-				Protocol: lo.ToPtr("tcp"),
-			},
-			// Route field is deprecated, expecting warning for it.
-			Route: &kongv1.KongIngressRoute{
-				Methods: []*string{lo.ToPtr("POST")},
+			// Upstream field is deprecated, expecting warning for it.
+			Upstream: &kongv1.KongIngressUpstream{
+				HashOn: lo.ToPtr("none"),
 			},
 		}
 
@@ -73,10 +69,8 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 			Do(ctx)
 
 		assert.NoError(t, result.Error())
-		require.Len(t, result.Warnings(), 2)
 		expectedWarnings := []string{
-			"Support for 'proxy' was removed in 3.0. It will have no effect. Use Service's annotations instead.",
-			"Support for 'route' was removed in 3.0. It will have no effect. Use Ingress' annotations instead.",
+			"'upstream' is DEPRECATED and will be removed in a future version. Use a KongUpstreamPolicy resource instead.",
 		}
 		receivedWarnings := lo.Map(result.Warnings(), func(item net.WarningHeader, index int) string {
 			return item.Text

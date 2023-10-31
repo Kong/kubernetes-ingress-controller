@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -457,6 +458,28 @@ func TestCRDValidations(t *testing.T) {
 				require.ErrorContains(t, err, `spec.hashOnFallback must not be set when spec.hashOn.cookie is set.`)
 			},
 		},
+		{
+			name: "KongIngress - proxy is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongIngress(ctx, ctrlClient, ns, &kongv1.KongIngress{
+					Proxy: &kongv1.KongIngressService{
+						Retries: lo.ToPtr(5),
+					},
+				})
+				require.ErrorContains(t, err, "'proxy' field is no longer supported, use Service's annotations instead")
+			},
+		},
+		{
+			name: "KongIngress - route is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongIngress(ctx, ctrlClient, ns, &kongv1.KongIngress{
+					Route: &kongv1.KongIngressRoute{
+						PreserveHost: lo.ToPtr(true),
+					},
+				})
+				require.ErrorContains(t, err, "'route' field is no longer supported, use Ingress' annotations instead")
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -597,4 +620,10 @@ func generateInvalidHashOns() []kongv1beta1.KongUpstreamHash {
 	return lo.UniqBy(invalidHashOns, func(h kongv1beta1.KongUpstreamHash) string {
 		return fmt.Sprintf("%s.%s.%s.%s", optStr(h.Cookie), optStr(h.Header), optStr(h.URICapture), optStr(h.QueryArg))
 	})
+}
+
+func createKongIngress(ctx context.Context, client client.Client, ns string, ingress *kongv1.KongIngress) error {
+	ingress.GenerateName = "test-"
+	ingress.Namespace = ns
+	return client.Create(ctx, ingress)
 }

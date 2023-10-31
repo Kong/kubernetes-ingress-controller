@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 )
@@ -291,7 +292,7 @@ func (c *Config) adminAPIClients(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
-		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
+		return c.AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -325,7 +326,7 @@ type AdminAPIClientFactory interface {
 	CreateAdminAPIClient(context.Context, adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
 }
 
-func AdminAPIClientFromServiceDiscovery(
+func (c *Config) AdminAPIClientFromServiceDiscovery(
 	ctx context.Context,
 	logger logr.Logger,
 	kongAdminSvcNN k8stypes.NamespacedName,
@@ -381,5 +382,65 @@ func AdminAPIClientFromServiceDiscovery(
 		clients = append(clients, cl)
 	}
 
+	// TODO 9999 get DB mode here?
+	kongRoots, err := kongconfig.GetRoots(ctx, logger, c.KongAdminInitializationRetries,
+		c.KongAdminInitializationRetryDelay, clients)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
+	}
+
+	kongStartUpConfig, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
+	if err != nil {
+		return nil, fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
+	}
+	dbMode := kongStartUpConfig.DBMode
+
+	if dbMode != "off" {
+		logger.Info("getting single client for DB mode", "mode", dbMode)
+		adminAPI, err := getAdminAPIForService(ctx, kubeClient, kongAdminSvcNN, sets.New(c.KongAdminSvcPortNames...))
+		if err != nil {
+			return nil, err
+		}
+		cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
+		if err != nil {
+			return nil, err
+		}
+		return []*adminapi.Client{cl}, nil
+	}
+	// TODO 9999 end new
+
+	logger.Info("DB-less mode, returning all clients", "mode", dbMode)
 	return clients, nil
+}
+
+func getAdminAPIForService(
+	ctx context.Context,
+	kubeClient client.Client,
+	serviceKey k8stypes.NamespacedName,
+	portNames sets.Set[string],
+) (adminapi.DiscoveredAdminAPI, error) {
+	var service corev1.Service
+	var api adminapi.DiscoveredAdminAPI
+	err := kubeClient.Get(ctx, serviceKey, &service, &client.GetOptions{})
+	if err != nil {
+		return api, err
+	}
+
+	for _, p := range service.Spec.Ports {
+		if p.Name == "" {
+			continue
+		}
+
+		if !portNames.Has(p.Name) {
+			continue
+		}
+
+		api = adminapi.DiscoveredAdminAPI{
+			Address: fmt.Sprintf("https://%s.%s.svc:%d", serviceKey.Name, serviceKey.Namespace, p.Port),
+			PodRef:  serviceKey,
+		}
+
+		break
+	}
+	return api, nil
 }

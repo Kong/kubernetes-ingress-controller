@@ -235,6 +235,11 @@ func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan stru
 func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
 	c.readinessReconciliationTicker.Reset(DefaultReadinessReconciliationInterval)
 	defer c.readinessReconciliationTicker.Stop()
+	// if using DB mode, we rely on the Service to route requests to ready instances and don't need to run our own
+	// readiness lookups
+	if !dataplaneutil.IsDBLessMode(c.dbMode) {
+		return
+	}
 
 	close(c.runningChan)
 	for {

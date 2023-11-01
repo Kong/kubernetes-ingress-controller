@@ -94,9 +94,9 @@ func PerformUpdate(
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
 
 	if client.IsKonnect() {
-		logger.V(util.InfoLevel).Info("successfully synced configuration to Konnect")
+		logger.V(util.InfoLevel).Info("Successfully synced configuration to Konnect")
 	} else {
-		logger.V(util.InfoLevel).Info("successfully synced configuration to Kong")
+		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
 	}
 
 	return newSHA, nil, nil

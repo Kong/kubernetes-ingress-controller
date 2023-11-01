@@ -105,7 +105,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Info("pending client is not ready yet",
+		c.logger.V(util.DebugLevel).Info("Pending client is not ready yet",
 			"reason", err.Error(),
 			"address", pendingClient.Address,
 		)

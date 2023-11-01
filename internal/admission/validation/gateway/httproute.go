@@ -34,7 +34,7 @@ func ValidateHTTPRoute(
 ) (bool, string, error) {
 	// validate that no unsupported features are in use
 	if err := validateHTTPRouteFeatures(httproute, parserFeatures); err != nil {
-		return false, "httproute spec did not pass validation", err
+		return false, "HTTPRoute spec did not pass validation", err
 	}
 
 	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)
@@ -45,19 +45,19 @@ func ValidateHTTPRoute(
 		// determine the parentRef for this gateway
 		parentRef, err := getParentRefForHTTPRouteGateway(httproute, gateway)
 		if err != nil {
-			return false, "couldn't determine parentRefs for httproute", err
+			return false, "Couldn't determine parentRefs for httproute", err
 		}
 
 		// gather the relevant gateway listeners for the httproute
 		listeners, err := getListenersForHTTPRouteValidation(parentRef.SectionName, gateway)
 		if err != nil {
-			return false, "couldn't find gateway listeners for httproute", err
+			return false, "Couldn't find gateway listeners for httproute", err
 		}
 
 		// perform validation of this route against it's linked gateway listeners
 		for _, listener := range listeners {
 			if err := validateHTTPRouteListener(listener); err != nil {
-				return false, "httproute linked gateway listeners did not pass validation", err
+				return false, "HTTPRoute linked Gateway listeners did not pass validation", err
 			}
 		}
 	}
@@ -218,7 +218,7 @@ func validateWithKongGateway(
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
-			return false, fmt.Sprintf("unable to validate HTTPRoute schema: %s", err.Error()), nil
+			return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error()), nil
 		}
 		if !ok {
 			errMsgs = append(errMsgs, msg)

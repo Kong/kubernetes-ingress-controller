@@ -59,7 +59,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "couldn't determine parentRefs for httproute",
+			validationMsg: "Couldn't determine parentRefs for httproute",
 			err:           fmt.Errorf("no parentRef matched gateway default/testing-gateway"),
 		},
 		{
@@ -98,7 +98,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "couldn't find gateway listeners for httproute",
+			validationMsg: "Couldn't find gateway listeners for httproute",
 			err:           fmt.Errorf("sectionname referenced listener listener-that-doesnt-exist was not found on gateway default/testing-gateway"),
 		},
 		{
@@ -126,7 +126,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "couldn't find gateway listeners for httproute",
+			validationMsg: "Couldn't find gateway listeners for httproute",
 			err:           fmt.Errorf("no listeners could be found for gateway default/testing-gateway"),
 		},
 		{
@@ -200,7 +200,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute linked gateway listeners did not pass validation",
+			validationMsg: "HTTPRoute linked Gateway listeners did not pass validation",
 			err:           fmt.Errorf("HTTPRoute not supported by listener http-alternate"),
 		},
 		{
@@ -253,7 +253,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
+			validationMsg: "HTTPRoute spec did not pass validation",
 			err:           fmt.Errorf("queryparam matching is supported with expression router only"),
 		},
 		{
@@ -311,7 +311,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
+			validationMsg: "HTTPRoute spec did not pass validation",
 			err:           fmt.Errorf("example is not a supported group for httproute backendRefs, only core is supported"),
 		},
 		{
@@ -368,7 +368,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "httproute spec did not pass validation",
+			validationMsg: "HTTPRoute spec did not pass validation",
 			err:           fmt.Errorf("Pod is not a supported kind for httproute backendRefs, only Service is supported"),
 		},
 	} {

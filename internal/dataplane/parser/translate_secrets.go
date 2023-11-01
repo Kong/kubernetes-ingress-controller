@@ -22,7 +22,7 @@ import (
 func (p *Parser) getCACerts() []kong.CACertificate {
 	caCertSecrets, err := p.storer.ListCACerts()
 	if err != nil {
-		p.logger.Error(err, "failed to list CA certs")
+		p.logger.Error(err, "Failed to list CA certs")
 		return nil
 	}
 

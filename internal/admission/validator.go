@@ -194,12 +194,12 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	}
 	info, err := infoSvc.Get(ctx)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("failed to fetch Kong info", "error", err)
+		validator.Logger.V(util.DebugLevel).Info("Failed to fetch Kong info", "error", err)
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("failed to parse Kong version", "error", err)
+		validator.Logger.V(util.DebugLevel).Info("Failed to parse Kong version", "error", err)
 	} else {
 		if !version.IsKongGatewayEnterprise() {
 			return false, ErrTextConsumerGroupUnsupported, nil
@@ -494,7 +494,7 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 		c, err := consumerSvc.Get(ctx, &username)
 		if err != nil {
 			if !kong.IsNotFoundErr(err) {
-				validator.Logger.Error(err, "failed to fetch consumer from kong")
+				validator.Logger.Error(err, "Failed to fetch consumer from kong")
 				return ErrTextConsumerUnretrievable, err
 			}
 		}

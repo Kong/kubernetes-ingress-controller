@@ -102,7 +102,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 			}
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				pushCredentialResourceFailures(fmt.Sprintf("failed to fetch secret: %v", err))
+				pushCredentialResourceFailures(fmt.Sprintf("Failed to fetch secret: %v", err))
 				continue
 			}
 			credConfig := map[string]interface{}{}
@@ -134,7 +134,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 					if err != nil {
 						// add a translation error here to tell that parsing hash_secret failed.
 						pushCredentialResourceFailures(
-							fmt.Sprintf("failed to parse hash_secret to bool: %v. defaulting to false", err),
+							fmt.Sprintf("Failed to parse hash_secret to bool: %v. defaulting to false", err),
 						)
 						credConfig[k] = false
 					} else {
@@ -149,7 +149,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 					if err != nil {
 						// add a translation error here to tell that parsing TTL failed.
 						pushCredentialResourceFailures(
-							fmt.Sprintf("failed to parse ttl to int: %v, skipfilling the field", err),
+							fmt.Sprintf("Failed to parse ttl to int: %v, skipfilling the field", err),
 						)
 					} else {
 						credConfig[k] = intVal
@@ -319,7 +319,7 @@ func buildPlugins(
 		namespace, kongPluginName := identifier[0], identifier[1]
 		k8sPlugin, k8sClusterPlugin, err := getKongPluginOrKongClusterPlugin(s, namespace, kongPluginName)
 		if err != nil {
-			logger.Error(err, "failed to fetch KongPlugin resource",
+			logger.Error(err, "Failed to fetch KongPlugin resource",
 				"kongplugin_name", kongPluginName,
 				"kongplugin_namespace", namespace)
 			continue
@@ -382,7 +382,7 @@ func buildPlugins(
 
 	gKCPs, err := globalKongClusterPlugins(logger, s)
 	if err != nil {
-		logger.Error(err, "failed to fetch global plugins")
+		logger.Error(err, "Failed to fetch global plugins")
 	}
 	// global plugins have no instance_name transform as they can only be applied once
 	plugins = append(plugins, gKCPs...)

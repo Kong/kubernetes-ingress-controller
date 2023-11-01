@@ -42,7 +42,7 @@ func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cl
 				require.NoError(t, err)
 				return false
 			}
-			t.Logf("failed to get HTTPRoute: %v", err)
+			t.Logf("Failed to get HTTPRoute: %v", err)
 			return false
 		}
 
@@ -82,7 +82,7 @@ func HTTPRouteEventuallyNotContainsConditions(ctx context.Context, t *testing.T,
 				require.NoError(t, err)
 				return false
 			}
-			t.Logf("failed to get HTTPRoute: %v", err)
+			t.Logf("Failed to get HTTPRoute: %v", err)
 			return false
 		}
 

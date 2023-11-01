@@ -18,7 +18,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 	tcpRouteList, err := p.storer.ListTCPRoutes()
 	if err != nil {
-		p.logger.Error(err, "failed to list TCPRoutes")
+		p.logger.Error(err, "Failed to list TCPRoutes")
 		return result
 	}
 

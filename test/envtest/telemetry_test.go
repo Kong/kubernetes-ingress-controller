@@ -326,12 +326,12 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 	t.Helper()
 	hostname, err := os.Hostname()
 	if err != nil {
-		t.Logf("failed to get hostname: %s", err)
+		t.Logf("Failed to get hostname: %s", err)
 		return false
 	}
 	semver, err := utilversion.ParseGeneric(k8sVersion.GitVersion)
 	if err != nil {
-		t.Logf("failed to parse k8s version: %s", err)
+		t.Logf("Failed to parse k8s version: %s", err)
 		return false
 	}
 

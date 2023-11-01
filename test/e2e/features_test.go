@@ -266,7 +266,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		for _, pod := range pods.Items {
 			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
 			if err != nil {
-				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
+				t.Logf("Failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false
 			}
 			if !strings.Contains(logs, expectedMsg) {

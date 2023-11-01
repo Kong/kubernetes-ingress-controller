@@ -126,7 +126,7 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 				// This should never happen, but if it does, we want to log it.
 				c.logger.Error(
 					errors.New("missing pod reference"),
-					"failed to get PodReference for client",
+					"Failed to get PodReference for client",
 					"address", client.BaseRootURL(),
 				)
 				continue

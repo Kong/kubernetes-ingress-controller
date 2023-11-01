@@ -527,7 +527,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &{{.PackageImportAlias}}.{{.Kind}}List{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless {{.Plural}}")
+		r.Log.Error(err, "Failed to list classless {{.Plural}}")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -576,7 +576,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -607,7 +607,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache

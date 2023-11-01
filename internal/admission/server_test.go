@@ -88,7 +88,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	assert.Nil(err)
 	handler.ServeHTTP(res, req)
 	assert.Equal(400, res.Code)
-	assert.Equal("admission review object is missing\n",
+	assert.Equal("Admission review object is missing\n",
 		res.Body.String())
 }
 

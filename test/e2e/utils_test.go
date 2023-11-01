@@ -383,13 +383,13 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 func httpGetResponseContains(t *testing.T, url string, client *http.Client, substring string) bool {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		t.Logf("failed to create request: %v", err)
+		t.Logf("Failed to create request: %v", err)
 		return false
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Logf("failed to get response: %v", err)
+		t.Logf("Failed to get response: %v", err)
 		return false
 	}
 

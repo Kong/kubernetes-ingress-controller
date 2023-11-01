@@ -114,7 +114,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -213,7 +213,7 @@ func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req 
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -310,7 +310,7 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *NetV1IngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &netv1.IngressList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless ingresses")
+		r.Log.Error(err, "Failed to list classless ingresses")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -356,7 +356,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -387,7 +387,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -500,7 +500,7 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -585,7 +585,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -670,7 +670,7 @@ func (r *KongV1beta1KongUpstreamPolicyReconciler) Reconcile(ctx context.Context,
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -761,7 +761,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -857,7 +857,7 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 func (r *KongV1KongClusterPluginReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongClusterPluginList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless kongclusterplugins")
+		r.Log.Error(err, "Failed to list classless kongclusterplugins")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -903,7 +903,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -934,7 +934,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1033,7 +1033,7 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 func (r *KongV1KongConsumerReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongConsumerList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless kongconsumers")
+		r.Log.Error(err, "Failed to list classless kongconsumers")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1079,7 +1079,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1110,7 +1110,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1220,7 +1220,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manag
 func (r *KongV1Beta1KongConsumerGroupReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.KongConsumerGroupList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless kongconsumergroups")
+		r.Log.Error(err, "Failed to list classless kongconsumergroups")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1266,7 +1266,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1297,7 +1297,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1409,7 +1409,7 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *KongV1Beta1TCPIngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.TCPIngressList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless tcpingresses")
+		r.Log.Error(err, "Failed to list classless tcpingresses")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1455,7 +1455,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1486,7 +1486,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1611,7 +1611,7 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *KongV1Beta1UDPIngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.UDPIngressList{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
-		r.Log.Error(err, "failed to list classless udpingresses")
+		r.Log.Error(err, "Failed to list classless udpingresses")
 		return nil
 	}
 	var recs []reconcile.Request
@@ -1652,7 +1652,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1678,7 +1678,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
@@ -1781,7 +1781,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {

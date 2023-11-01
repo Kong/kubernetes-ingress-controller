@@ -467,7 +467,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 			require.Eventually(t, func() bool {
 				_, err := nodeAPIClient.GetNode(ctx, nodeIDInAdminAPI)
 				if err != nil {
-					t.Logf("failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
+					t.Logf("Failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
 					return false
 				}
 

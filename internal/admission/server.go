@@ -91,7 +91,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, logger logr.
 
 	go func() {
 		if err := watcher.Start(ctx); err != nil {
-			logger.Error(err, "certificate watcher error")
+			logger.Error(err, "Certificate watcher error")
 		}
 	}()
 	return &tls.Config{

@@ -19,7 +19,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	grpcRouteList, err := p.storer.ListGRPCRoutes()
 	if err != nil {
-		p.logger.Error(err, "failed to list GRPCRoutes")
+		p.logger.Error(err, "Failed to list GRPCRoutes")
 		return result
 	}
 

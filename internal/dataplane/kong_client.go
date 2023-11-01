@@ -1,6 +1,7 @@
 package dataplane
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -549,6 +550,12 @@ func (c *KongClient) sendToClient(
 			logger.Error(nil, "exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
+	}
+	oldConfigSHA := client.LastConfigSHA()
+	if bytes.Equal(oldConfigSHA, newConfigSHA) {
+		logger.V(util.DebugLevel).Info("Skipped sending configuration to Kong because SHA not changed", "SHA", newConfigSHA)
+	} else {
+		logger.V(util.DebugLevel).Info("Sent configuration to Kong", "SHA", newConfigSHA, "old_SHA", oldConfigSHA)
 	}
 
 	// update the lastConfigSHA with the new updated checksum

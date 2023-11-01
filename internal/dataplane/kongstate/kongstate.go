@@ -72,6 +72,8 @@ func (ks *KongState) FillConsumersAndCredentials(
 	// build consumer index
 	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
+		// This is now enforce that the CRD level but we're keeping this just for those
+		// rare cases where the CRD Validation Expressions are disabled.
 		if consumer.Username == "" && consumer.CustomID == "" {
 			failuresCollector.PushResourceFailure("no username or custom_id specified", consumer)
 			continue

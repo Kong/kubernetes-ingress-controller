@@ -14,6 +14,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/conditions"
 )
 
@@ -28,10 +29,12 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ns := CreateNamespace(ctx, t, ctrlClient)
+	healthProbePort := helpers.GetFreePort(t)
 
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithUpdateStatus(),
+		WithHealthProbePort(healthProbePort),
 		WithPublishService(ns.Name),
 		WithPublishStatusAddress("http://localhost:8080"),
 	)

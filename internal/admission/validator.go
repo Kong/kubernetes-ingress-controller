@@ -105,11 +105,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		return true, "", nil
 	}
 
-	// a consumer without a username is not valid
-	if consumer.Username == "" {
-		return false, ErrTextConsumerUsernameEmpty, nil
-	}
-
 	errText, err := validator.ensureConsumerDoesNotExistInGateway(ctx, consumer.Username)
 	if err != nil || errText != "" {
 		return false, errText, err

@@ -382,14 +382,9 @@ use-setup-envtest:
 
 ENVTEST_TIMEOUT ?= 5m
 
-# TODO: remove when Gateway API v1 gets released and updated in go.mod
-.PHONY: go-get-gateway-api
-go-get-gateway-api:
-	go mod download -x $(GATEWAY_API_PACKAGE)@v1.0.0-rc2
-
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
-_test.envtest: gotestsum setup-envtest use-setup-envtest go-get-gateway-api
+_test.envtest: gotestsum setup-envtest use-setup-envtest
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \

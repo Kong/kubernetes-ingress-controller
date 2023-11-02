@@ -8,7 +8,7 @@ spec:
   selector:
     app: proxy-kong
   ports:
-  - name: admin
+  - name: admin-tls
     port: 8444
     targetPort: 8444
     protocol: TCP

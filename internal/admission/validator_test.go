@@ -16,6 +16,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	testk8sclient "k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -562,6 +565,7 @@ func fakeClassMatcher(*metav1.ObjectMeta, string, annotations.ClassMatching) boo
 func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 	testCases := []struct {
 		name            string
+		consumers       []kongv1.KongConsumer
 		secret          corev1.Secret
 		wantOK          bool
 		wantMessage     string
@@ -607,6 +611,29 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			wantOK: true,
 		},
 		{
+			name: "valid key-auth credential using only konghq.com/credential with a consumer gets accepted",
+			consumers: []kongv1.KongConsumer{
+				{
+					Username: "username",
+					Credentials: []string{
+						"username-key-auth-1",
+					},
+				},
+			},
+			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "username-key-auth-1",
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
+				Data: map[string][]byte{
+					"key": []byte("my-key"),
+				},
+			},
+			wantOK: true,
+		},
+		{
 			name: "invalid key-auth credential with no consumers gets rejected",
 			secret: corev1.Secret{
 				Data: map[string][]byte{
@@ -622,8 +649,16 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, testk8sclient.AddToScheme(scheme))
+			require.NoError(t, kongv1.AddToScheme(scheme))
+			b := fake.NewClientBuilder().WithScheme(scheme)
+
 			validator := KongHTTPValidator{
-				ConsumerGetter:           fakeConsumerGetter{},
+				ManagerClient: b.Build(),
+				ConsumerGetter: fakeConsumerGetter{
+					consumers: tc.consumers,
+				},
 				AdminAPIServicesProvider: fakeServicesProvider{},
 				ingressClassMatcher:      fakeClassMatcher,
 				Logger:                   logr.Discard(),

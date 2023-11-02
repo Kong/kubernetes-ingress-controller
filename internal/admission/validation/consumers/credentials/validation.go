@@ -112,12 +112,13 @@ type Index map[string]map[string]map[string]struct{}
 // and will validate it for both normal structure validation and for
 // unique key constraint violations.
 func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret) error {
-	// the indication of credential type is required to be present on all credentials.
-	credentialTypeB, ok := secret.Data[TypeKey]
-	if !ok {
-		return fmt.Errorf("missing required key %s", TypeKey)
+	credentialType, credentialSource := util.ExtractKongCredentialType(secret)
+	if credentialSource == util.CredentialTypeAbsent {
+		return fmt.Errorf(
+			"secret has no credential type, add a %s label",
+			labels.LabelPrefix+labels.CredentialKey,
+		)
 	}
-	credentialType := string(credentialTypeB)
 
 	// the additional key/values are optional, but must be validated
 	// for unique constraint violations. Using an index of credentials

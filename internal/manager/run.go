@@ -153,7 +153,7 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
-	clients.WithDBMode(dbMode)(clientsManager)
+	clientsManager = clientsManager.WithDBMode(dbMode)
 
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")

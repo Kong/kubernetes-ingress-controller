@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -465,14 +464,23 @@ func (c *KongClient) sendOutToGatewayClients(
 		return previousSHAs, nil
 	}
 
-	gatewayClientURLs := lo.Map(gatewayClients, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
-	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", gatewayClientURLs)
+	gatewayClientsToConfigure := c.clientsProvider.GatewayClientsToConfigure()
+	configureGatewayClientURLs := lo.Map(gatewayClientsToConfigure, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
+	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
 
-	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
+	shas, err := iter.MapErr(gatewayClientsToConfigure, func(client **adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, *client, s, config)
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// After succeeded to update configurations in DB mode, we should propagate the SHA from
+	// the chosen gateway client to other clients.
+	if !dataplaneutil.IsDBLessMode(c.dbmode) && len(shas) > 0 {
+		for _, client := range gatewayClients {
+			client.SetLastConfigSHA([]byte(shas[0]))
+		}
 	}
 
 	sort.Strings(shas)
@@ -550,12 +558,6 @@ func (c *KongClient) sendToClient(
 			logger.Error(nil, "exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
-	}
-	oldConfigSHA := client.LastConfigSHA()
-	if bytes.Equal(oldConfigSHA, newConfigSHA) {
-		logger.V(util.DebugLevel).Info("Skipped sending configuration to Kong because SHA not changed", "SHA", newConfigSHA)
-	} else {
-		logger.V(util.DebugLevel).Info("Sent configuration to Kong", "SHA", newConfigSHA, "old_SHA", oldConfigSHA)
 	}
 
 	// update the lastConfigSHA with the new updated checksum

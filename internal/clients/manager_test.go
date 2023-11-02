@@ -205,17 +205,24 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
 	require.Equal(t, m.GatewayClientsCount(), 1, "expecting one initial client")
+	require.Len(t, m.GatewayClientsToConfigure(), 1, "Expecting one initial client")
 
 	konnectTestClient := &adminapi.KonnectClient{}
 	m.SetKonnectClient(konnectTestClient)
 	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
 	require.Equal(t, m.GatewayClientsCount(), 1, "konnect client should not be counted in GatewayClientsCount")
 	require.Equal(t, konnectTestClient, m.KonnectClient(), "konnect client should be returned from KonnectClient")
+}
 
+func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
+	testClient, err := adminapi.NewTestClient("localhost:8080")
+	require.NoError(t, err)
 	testClient2, err := adminapi.NewTestClient("localhost:8081")
+	require.NoError(t, err)
 	initialClients := []*adminapi.Client{testClient, testClient2}
 	require.NoError(t, err)
-	clientManagerWithDB, err := clients.NewAdminAPIClientsManager(
+
+	m, err := clients.NewAdminAPIClientsManager(
 		context.Background(),
 		zapr.NewLogger(zap.NewNop()),
 		initialClients,
@@ -223,14 +230,18 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 		&mockReadinessChecker{},
 	)
 	require.NoError(t, err)
-	clients.WithDBMode("postgres")(clientManagerWithDB)
-	clients := clientManagerWithDB.GatewayClients()
-	require.Len(t, clients, 1, "Expecting one client returned with DB mode")
-	require.Equal(t, clientManagerWithDB.GatewayClientsCount(), 2, "Expecting 2 initial clients")
-	require.Truef(t, lo.ContainsBy(initialClients, func(cl *adminapi.Client) bool {
-		return cl.BaseRootURL() == clients[0].BaseRootURL()
-	}), "Returned client root URL %s should in root URLs of initial clients")
+	m = m.WithDBMode("postgres")
 
+	clients := m.GatewayClients()
+	require.Len(t, clients, 2, "Expecting 2 clients returned with DB mode")
+
+	configureClients := m.GatewayClientsToConfigure()
+	require.Len(t, configureClients, 1, "Expecting 1 client to configure")
+	require.Truef(t, lo.ContainsBy(initialClients, func(c *adminapi.Client) bool {
+		return c.BaseRootURL() == configureClients[0].BaseRootURL()
+	}), "Client's address %s should be in initial clients")
+
+	require.Equal(t, m.GatewayClientsCount(), 2, "Expecting 2 initial clients")
 }
 
 func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {

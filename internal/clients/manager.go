@@ -30,6 +30,7 @@ type ClientFactory interface {
 type AdminAPIClientsProvider interface {
 	KonnectClient() *adminapi.KonnectClient
 	GatewayClients() []*adminapi.Client
+	GatewayClientsToConfigure() []*adminapi.Client
 }
 
 // Ticker is an interface that allows to control a ticker.
@@ -92,10 +93,10 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 }
 
 // WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
-func WithDBMode(dbMode string) AdminAPIClientsManagerOption {
-	return func(m *AdminAPIClientsManager) {
-		m.dbMode = dbMode
-	}
+
+func (c *AdminAPIClientsManager) WithDBMode(dbMode string) *AdminAPIClientsManager {
+	c.dbMode = dbMode
+	return c
 }
 
 func NewAdminAPIClientsManager(
@@ -183,6 +184,12 @@ func (c *AdminAPIClientsManager) KonnectClient() *adminapi.KonnectClient {
 // GatewayClients returns a copy of current client's slice. Konnect client won't be included.
 // This method can be used when some actions need to be performed only against Kong Gateway clients.
 func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return lo.Values(c.readyGatewayClients)
+}
+
+func (c *AdminAPIClientsManager) GatewayClientsToConfigure() []*adminapi.Client {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	readyGatewayClients := lo.Values(c.readyGatewayClients)

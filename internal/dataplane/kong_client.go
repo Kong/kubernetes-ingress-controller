@@ -454,14 +454,13 @@ func (c *KongClient) sendOutToGatewayClients(
 	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
 ) ([]string, error) {
 	gatewayClients := c.clientsProvider.GatewayClients()
-	previousSHAs := c.SHAs
 	if len(gatewayClients) == 0 {
 		c.logger.Error(
 			errors.New("no ready gateway clients"),
 			"Could not send configuration to gateways",
 		)
 		// Should not store the configuration in last valid config because the configuration is not validated on Kong gateway.
-		return previousSHAs, nil
+		return c.SHAs, nil
 	}
 
 	gatewayClientsToConfigure := c.clientsProvider.GatewayClientsToConfigure()
@@ -483,6 +482,7 @@ func (c *KongClient) sendOutToGatewayClients(
 		}
 	}
 
+	previousSHAs := c.SHAs
 	sort.Strings(shas)
 	c.SHAs = shas
 

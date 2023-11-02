@@ -147,7 +147,6 @@ func Run(
 		ctx,
 		logger,
 		initialKongClients,
-		adminAPIClientsFactory,
 		readinessChecker,
 	)
 	if err != nil {

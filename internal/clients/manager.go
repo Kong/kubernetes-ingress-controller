@@ -64,9 +64,6 @@ type AdminAPIClientsManager struct {
 	// configured.
 	pendingGatewayClients map[string]adminapi.DiscoveredAdminAPI
 
-	// clientFactory is used to create admin API client pointing to the admin API service.
-	clientFactory ClientFactory
-
 	// readinessChecker is used to check readiness of the clients.
 	readinessChecker ReadinessChecker
 
@@ -103,7 +100,6 @@ func NewAdminAPIClientsManager(
 	ctx context.Context,
 	logger logr.Logger,
 	initialClients []*adminapi.Client,
-	clientFactory ClientFactory,
 	readinessChecker ReadinessChecker,
 	opts ...AdminAPIClientsManagerOption,
 ) (*AdminAPIClientsManager, error) {
@@ -117,7 +113,6 @@ func NewAdminAPIClientsManager(
 	c := &AdminAPIClientsManager{
 		readyGatewayClients:           readyClients,
 		pendingGatewayClients:         make(map[string]adminapi.DiscoveredAdminAPI),
-		clientFactory:                 clientFactory,
 		readinessChecker:              readinessChecker,
 		readinessReconciliationTicker: clock.NewTicker(),
 		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),

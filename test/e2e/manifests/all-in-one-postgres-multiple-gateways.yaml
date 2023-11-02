@@ -2490,8 +2490,6 @@ spec:
           value: "true"
         - name: CONTROLLER_PUBLISH_SERVICE
           value: kong/kong-proxy
-        - name: CONTROLLER_LOG_LEVEL
-          value: "debug"
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -2502,7 +2500,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:v2.12.0-213-g8c8938369
+        image: kong/kubernetes-ingress-controller:2.12
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

@@ -59,8 +59,8 @@ func (v KongFakeValidator) ValidateClusterPlugin(
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateCredential(_ context.Context, _ corev1.Secret) (bool, string, error) {
-	return v.Result, v.Message, v.Error
+func (v KongFakeValidator) ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string) {
+	return v.Result, v.Message
 }
 
 func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayapi.Gateway) (bool, string, error) {

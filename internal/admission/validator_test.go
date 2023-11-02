@@ -664,8 +664,7 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 				Logger:                   logr.Discard(),
 			}
 
-			ok, msg, err := validator.ValidateCredential(context.Background(), tc.secret)
-			require.NoError(t, err)
+			ok, msg := validator.ValidateCredential(context.Background(), tc.secret)
 			assert.Equal(t, tc.wantOK, ok)
 			assert.Equal(t, tc.wantMessage, msg)
 		})

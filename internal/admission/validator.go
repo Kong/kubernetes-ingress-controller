@@ -32,7 +32,7 @@ type KongValidator interface {
 	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
-	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
+	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string)
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
@@ -143,7 +143,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 
 		// do the basic credentials validation
 		if err := credsvalidation.ValidateCredentials(secret); err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
+			return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
 		}
 
 		// if valid, store it so we can index it for upcoming constraints validation
@@ -232,18 +232,15 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 // are present in it or not. If valid, it returns true with an empty string,
 // else it returns false with the error message. If an error happens during
 // validation, error is returned.
-func (validator KongHTTPValidator) ValidateCredential(
-	ctx context.Context,
-	secret corev1.Secret,
-) (bool, string, error) {
+func (validator KongHTTPValidator) ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string) {
 	// If the secret doesn't specify a credential type (either by label or the secret's key) it's not a credentials secret.
 	if _, s := util.ExtractKongCredentialType(&secret); s == util.CredentialTypeAbsent {
-		return true, "", nil
+		return true, ""
 	}
 
 	// If we know it's a credentials secret, we can ensure its base-level validity.
 	if err := credsvalidation.ValidateCredentials(&secret); err != nil {
-		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
+		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err)
 	}
 
 	// Credentials are validated further for unique key constraints only if they are referenced by a managed consumer
@@ -251,7 +248,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// if the credentials are referenced.
 	managedConsumers, err := validator.listManagedConsumers(ctx)
 	if err != nil {
-		return false, ErrTextConsumerUnretrievable, err
+		return false, fmt.Sprintf("failed to list managed KongConsumers: %s", err)
 	}
 
 	// Verify whether this secret is referenced by any managed consumer.
@@ -259,7 +256,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 	if len(managedConsumersWithReferences) == 0 {
 		// If no managed consumers reference this secret, its considered unmanaged, and we don't validate it
 		// unless it becomes referenced by a managed consumer at a later time.
-		return true, "", nil
+		return true, ""
 	}
 
 	// If base-level validation passed and the credential is referenced by a consumer,
@@ -268,16 +265,16 @@ func (validator KongHTTPValidator) ValidateCredential(
 	ignoreSecrets := map[string]map[string]struct{}{secret.Namespace: {secret.Name: {}}}
 	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoreSecrets)
 	if err != nil {
-		return false, ErrTextConsumerCredentialValidationFailed, err
+		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err)
 	}
 
 	// The index is built, now validate that the newly updated secret
 	// is not in violation of any constraints.
 	if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(&secret); err != nil {
-		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
+		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err)
 	}
 
-	return true, "", nil
+	return true, ""
 }
 
 // ValidatePlugin checks if k8sPlugin is valid. It does so by performing

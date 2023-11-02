@@ -46,7 +46,7 @@ func StartDiagnosticsServer(
 	}
 	go func() {
 		if err := s.Listen(ctx, port); err != nil {
-			logger.Error(err, "unable to start diagnostics server")
+			logger.Error(err, "Unable to start diagnostics server")
 		}
 	}()
 	return s, nil

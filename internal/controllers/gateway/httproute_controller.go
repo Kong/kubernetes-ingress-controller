@@ -338,7 +338,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			debug(log, httproute, "object does not exist, ensuring it is not present in the proxy cache")
+			debug(log, httproute, "Object does not exist, ensuring it is not present in the proxy cache")
 			httproute.Namespace = req.Namespace
 			httproute.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
@@ -348,30 +348,30 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	debug(log, httproute, "processing httproute")
+	debug(log, httproute, "Processing httproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
 	// not we can find a valid gateway as that gateway may now be deleted but we still
 	// need to ensure removal of the data-plane configuration.
-	debug(log, httproute, "checking deletion timestamp")
+	debug(log, httproute, "Checking deletion timestamp")
 	if httproute.DeletionTimestamp != nil {
-		debug(log, httproute, "httproute is being deleted, re-configuring data-plane")
+		debug(log, httproute, "HTTPRoute is being deleted, re-configuring data-plane")
 		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
-			debug(log, httproute, "failed to delete object from data-plane, requeuing")
+			debug(log, httproute, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, httproute, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, httproute, "Ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
 	}
 
 	// we need to pull the Gateway parent objects for the HTTPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
-	debug(log, httproute, "retrieving GatewayClass and Gateway for route")
+	debug(log, httproute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, httproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
-			debug(log, httproute, "unsupported route found, processing to verify whether it was ever supported")
+			debug(log, httproute, "Unsupported route found, processing to verify whether it was ever supported")
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
@@ -383,7 +383,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if statusUpdated {
 				// the status did in fact needed to be updated, so no need to requeue
 				// as the status update will trigger a requeue.
-				debug(log, httproute, "unsupported route was previously supported, status was updated")
+				debug(log, httproute, "Unsupported route was previously supported, status was updated")
 				return ctrl.Result{}, nil
 			}
 
@@ -391,7 +391,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
-			debug(log, httproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
+			debug(log, httproute, "Ensuring that dataplane is updated to remove unsupported route (if applicable)")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
 		}
 		return ctrl.Result{}, err
@@ -400,10 +400,10 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// the referenced gateway object(s) for the HTTPRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
-	debug(log, httproute, "checking if the httproute's gateways are ready")
+	debug(log, httproute, "Checking if the httproute's gateways are ready")
 	for _, gateway := range gateways {
 		if !isGatewayProgrammed(gateway.gateway) {
-			debug(log, httproute, "gateway for route was not ready, waiting")
+			debug(log, httproute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -417,13 +417,13 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// if the gateways are ready, and the HTTPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(filteredHTTPRoute); err != nil {
-			debug(log, httproute, "failed to update object in data-plane, requeueing")
+			debug(log, httproute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
-			debug(log, httproute, "failed to delete object in data-plane, requeueing")
+			debug(log, httproute, "Failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	}
@@ -431,7 +431,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// now that the object has been successfully configured for in the dataplane
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
-	debug(log, httproute, "ensuring status contains Gateway associations")
+	debug(log, httproute, "Ensuring status contains Gateway associations")
 	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
@@ -447,7 +447,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// if the HTTPRoute is not configured in the dataplane, leave it unchanged and requeue.
 	// if it is successfully configured, update its "Programmed" condition to True.
 	// if translation failure happens, update its "Programmed" condition to False.
-	debug(log, httproute, "ensuring status contains Programmed condition")
+	debug(log, httproute, "Ensuring status contains Programmed condition")
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		// if the dataplane client has reporting enabled (this is the default and is
 		// tied in with status updates being enabled in the controller manager) then
@@ -456,19 +456,19 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(httproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until httproute is configured.
-			debug(log, httproute, "httproute not configured,requeueing")
+			debug(log, httproute, "HTTPRoute not configured,requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			debug(log, httproute, "httproute configuration failed")
+			debug(log, httproute, "HTTPRoute configuration failed")
 			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), httproute, httproute.Status.Parents, gateways, metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(ConditionReasonTranslationError),
 			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
-				debug(log, httproute, "failed to update programmed condition")
+				debug(log, httproute, "Failed to update programmed condition")
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: !statusUpdated}, nil
@@ -480,19 +480,19 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
-			debug(log, httproute, "failed to update programmed condition")
+			debug(log, httproute, "Failed to update programmed condition")
 			return ctrl.Result{}, err
 		}
 		if statusUpdated {
 			// if the status was updated it will trigger a follow-up reconciliation
 			// so we don't need to do anything further here.
-			debug(log, httproute, "programmed condition updated")
+			debug(log, httproute, "Programmed condition updated")
 			return ctrl.Result{}, nil
 		}
 	}
 
 	// once the data-plane has accepted the HTTPRoute object, we're all set.
-	info(log, httproute, "httproute has been configured on the data-plane")
+	info(log, httproute, "HTTPRoute has been configured on the data-plane")
 
 	return ctrl.Result{}, nil
 }

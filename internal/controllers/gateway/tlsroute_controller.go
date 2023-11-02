@@ -259,7 +259,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			debug(log, tlsroute, "object does not exist, ensuring it is not present in the proxy cache")
+			debug(log, tlsroute, "Object does not exist, ensuring it is not present in the proxy cache")
 			tlsroute.Namespace = req.Namespace
 			tlsroute.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tlsroute)
@@ -269,30 +269,30 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	debug(log, tlsroute, "processing tlsroute")
+	debug(log, tlsroute, "Processing tlsroute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
 	// not we can find a valid gateway as that gateway may now be deleted but we still
 	// need to ensure removal of the data-plane configuration.
-	debug(log, tlsroute, "checking deletion timestamp")
+	debug(log, tlsroute, "Checking deletion timestamp")
 	if tlsroute.DeletionTimestamp != nil {
-		debug(log, tlsroute, "tlsroute is being deleted, re-configuring data-plane")
+		debug(log, tlsroute, "TLSRoute is being deleted, re-configuring data-plane")
 		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
-			debug(log, tlsroute, "failed to delete object from data-plane, requeuing")
+			debug(log, tlsroute, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, tlsroute, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, tlsroute, "Ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(tlsroute)
 	}
 
 	// we need to pull the Gateway parent objects for the TLSRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
-	debug(log, tlsroute, "retrieving GatewayClass and Gateway for route")
+	debug(log, tlsroute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tlsroute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
-			debug(log, tlsroute, "unsupported route found, processing to verify whether it was ever supported")
+			debug(log, tlsroute, "Unsupported route found, processing to verify whether it was ever supported")
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
@@ -304,7 +304,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if statusUpdated {
 				// the status did in fact needed to be updated, so no need to requeue
 				// as the status update will trigger a requeue.
-				debug(log, tlsroute, "unsupported route was previously supported, status was updated")
+				debug(log, tlsroute, "Unsupported route was previously supported, status was updated")
 				return ctrl.Result{}, nil
 			}
 
@@ -312,7 +312,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
-			debug(log, tlsroute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
+			debug(log, tlsroute, "Ensuring that dataplane is updated to remove unsupported route (if applicable)")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tlsroute)
 		}
 		return ctrl.Result{}, err
@@ -321,10 +321,10 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// the referenced gateway object(s) for the TLSRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
-	debug(log, tlsroute, "checking if the tlsroute's gateways are ready")
+	debug(log, tlsroute, "Checking if the tlsroute's gateways are ready")
 	for _, gateway := range gateways {
 		if !isGatewayProgrammed(gateway.gateway) {
-			debug(log, tlsroute, "gateway for route was not ready, waiting")
+			debug(log, tlsroute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -333,13 +333,13 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the gateways are ready, and the TLSRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(tlsroute); err != nil {
-			debug(log, tlsroute, "failed to update object in data-plane, requeueing")
+			debug(log, tlsroute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
-			debug(log, tlsroute, "failed to delete object in data-plane, requeueing")
+			debug(log, tlsroute, "Failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	}
@@ -347,7 +347,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// now that the object has been successfully configured for in the dataplane
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
-	debug(log, tlsroute, "ensuring status contains Gateway associations")
+	debug(log, tlsroute, "Ensuring status contains Gateway associations")
 	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, tlsroute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
@@ -371,19 +371,19 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tlsroute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until tlsroute is configured.
-			debug(log, tlsroute, "tlsroute not configured,requeueing")
+			debug(log, tlsroute, "TLSRoute not configured,requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			debug(log, tlsroute, "tlsroute configuration failed")
+			debug(log, tlsroute, "TLSRoute configuration failed")
 			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), tlsroute, tlsroute.Status.Parents, gateways, metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(ConditionReasonTranslationError),
 			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
-				debug(log, tlsroute, "failed to update programmed condition")
+				debug(log, tlsroute, "Failed to update programmed condition")
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: !statusUpdated}, nil
@@ -395,19 +395,19 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
-			debug(log, tlsroute, "failed to update programmed condition")
+			debug(log, tlsroute, "Failed to update programmed condition")
 			return ctrl.Result{}, err
 		}
 		if statusUpdated {
 			// if the status was updated it will trigger a follow-up reconciliation
 			// so we don't need to do anything further here.
-			debug(log, tlsroute, "programmed condition updated")
+			debug(log, tlsroute, "Programmed condition updated")
 			return ctrl.Result{}, nil
 		}
 	}
 
 	// once the data-plane has accepted the TLSRoute object, we're all set.
-	info(log, tlsroute, "tlsroute has been configured on the data-plane")
+	info(log, tlsroute, "TLSRoute has been configured on the data-plane")
 	return ctrl.Result{}, nil
 }
 

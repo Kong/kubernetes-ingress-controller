@@ -259,7 +259,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			debug(log, udproute, "object does not exist, ensuring it is not present in the proxy cache")
+			debug(log, udproute, "Object does not exist, ensuring it is not present in the proxy cache")
 			udproute.Namespace = req.Namespace
 			udproute.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(udproute)
@@ -269,30 +269,30 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	debug(log, udproute, "processing udproute")
+	debug(log, udproute, "Processing udproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
 	// not we can find a valid gateway as that gateway may now be deleted but we still
 	// need to ensure removal of the data-plane configuration.
-	debug(log, udproute, "checking deletion timestamp")
+	debug(log, udproute, "Checking deletion timestamp")
 	if udproute.DeletionTimestamp != nil {
 		debug(log, udproute, "udproute is being deleted, re-configuring data-plane")
 		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
-			debug(log, udproute, "failed to delete object from data-plane, requeuing")
+			debug(log, udproute, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, udproute, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, udproute, "Ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(udproute)
 	}
 
 	// we need to pull the Gateway parent objects for the UDPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
-	debug(log, udproute, "retrieving GatewayClass and Gateway for route")
+	debug(log, udproute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, udproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
-			debug(log, udproute, "unsupported route found, processing to verify whether it was ever supported")
+			debug(log, udproute, "Unsupported route found, processing to verify whether it was ever supported")
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
@@ -304,7 +304,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if statusUpdated {
 				// the status did in fact needed to be updated, so no need to requeue
 				// as the status update will trigger a requeue.
-				debug(log, udproute, "unsupported route was previously supported, status was updated")
+				debug(log, udproute, "Unsupported route was previously supported, status was updated")
 				return ctrl.Result{}, nil
 			}
 
@@ -312,7 +312,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
-			debug(log, udproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
+			debug(log, udproute, "Ensuring that dataplane is updated to remove unsupported route (if applicable)")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(udproute)
 		}
 		return ctrl.Result{}, err
@@ -321,10 +321,10 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// the referenced gateway object(s) for the UDPRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
-	debug(log, udproute, "checking if the udproute's gateways are ready")
+	debug(log, udproute, "Checking if the udproute's gateways are ready")
 	for _, gateway := range gateways {
 		if !isGatewayProgrammed(gateway.gateway) {
-			debug(log, udproute, "gateway for route was not ready, waiting")
+			debug(log, udproute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -333,7 +333,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the gateways are ready, and the UDPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(udproute); err != nil {
-			debug(log, udproute, "failed to update object in data-plane, requeueing")
+			debug(log, udproute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
@@ -348,7 +348,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
-			debug(log, udproute, "failed to delete object in data-plane, requeueing")
+			debug(log, udproute, "Failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	}
@@ -356,7 +356,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// now that the object has been successfully configured for in the dataplane
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
-	debug(log, udproute, "ensuring status contains Gateway associations")
+	debug(log, udproute, "Ensuring status contains Gateway associations")
 	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, udproute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
@@ -376,19 +376,19 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(udproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until udproute is configured.
-			debug(log, udproute, "udproute not configured,requeueing")
+			debug(log, udproute, "UDPRoute not configured,requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			debug(log, udproute, "udproute configuration failed")
+			debug(log, udproute, "UDPRoute configuration failed")
 			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), udproute, udproute.Status.Parents, gateways, metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(ConditionReasonTranslationError),
 			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
-				debug(log, udproute, "failed to update programmed condition")
+				debug(log, udproute, "Failed to update programmed condition")
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: !statusUpdated}, nil
@@ -400,19 +400,19 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
-			debug(log, udproute, "failed to update programmed condition")
+			debug(log, udproute, "Failed to update programmed condition")
 			return ctrl.Result{}, err
 		}
 		if statusUpdated {
 			// if the status was updated it will trigger a follow-up reconciliation
 			// so we don't need to do anything further here.
-			debug(log, udproute, "programmed condition updated")
+			debug(log, udproute, "Programmed condition updated")
 			return ctrl.Result{}, nil
 		}
 	}
 
 	// once the data-plane has accepted the UDPRoute object, we're all set.
-	info(log, udproute, "udproute has been configured on the data-plane")
+	info(log, udproute, "UDPRoute has been configured on the data-plane")
 	return ctrl.Result{}, nil
 }
 

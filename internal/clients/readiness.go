@@ -95,7 +95,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 ) (client *adminapi.Client) {
 	defer func() {
 		c.logger.V(util.DebugLevel).
-			Info(fmt.Sprintf("checking readiness of pending client for %q", pendingClient.Address),
+			Info(fmt.Sprintf("Checking readiness of pending client for %q", pendingClient.Address),
 				"ok", client != nil,
 			)
 	}()
@@ -143,7 +143,7 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, client AlreadyCreatedClient) (ready bool) {
 	defer func() {
 		c.logger.V(util.DebugLevel).Info(
-			fmt.Sprintf("checking readiness of already created client for %q", client.BaseRootURL()),
+			fmt.Sprintf("Checking readiness of already created client for %q", client.BaseRootURL()),
 			"ok", ready,
 		)
 	}()
@@ -153,7 +153,7 @@ func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, 
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
 		c.logger.V(util.DebugLevel).Info(
-			"already created client is not ready, moving to pending",
+			"Already created client is not ready, moving to pending",
 			"address", client.BaseRootURL(),
 			"reason", err.Error(),
 		)

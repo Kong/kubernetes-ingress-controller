@@ -324,7 +324,7 @@ func Run(
 			instanceIDProvider,
 		)
 		if err != nil {
-			setupLog.Error(err, "failed setting up anonymous reports")
+			setupLog.Error(err, "Failed setting up anonymous reports")
 		} else {
 			defer stopAnonymousReports()
 		}

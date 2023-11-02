@@ -244,8 +244,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.17.0 h1:Rnbp4K9EjcDuVuHtd0dgA4qNuv9yKDYKK1ulpJwgrqM=
 github.com/klauspost/compress v1.17.0/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
-github.com/kong/deck v1.28.0 h1:D3JeiKhgHi6GbnM/yybtw1w+NFHDC/UtOrBiZ0CDKa8=
-github.com/kong/deck v1.28.0/go.mod h1:SrJqHqLTBTSJpIjWsyDR4kC88w7Px1EQDOGt0joVvoE=
+github.com/kong/deck v1.28.1 h1:s5o3th/z5vzXxuyt+POd1P1mSjKCIBvDNk6RBQFGOoU=
+github.com/kong/deck v1.28.1/go.mod h1:87zwg1HgM/cGm/4ENlvAlq199ClP0xZ6VTdbZiefAO8=
 github.com/kong/go-kong v0.48.0 h1:vK1OpoxO50qlKdwPfmx9ChvkTKRsoCCB3b3iHo1umLc=
 github.com/kong/go-kong v0.48.0/go.mod h1:qH4CEFqT83ywmu1TlMZX09clQH4B8/dX88CtT/jdv/E=
 github.com/kong/kubernetes-telemetry v0.1.2 h1:fxKdEbFQ+aGrh+3x0LIEgRmyQ4wP/ZWv8QucqTI4Jcs=

@@ -141,7 +141,7 @@ func TestValidationWebhook(t *testing.T) {
 		assert.Eventually(t, func() bool {
 			_, err = kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Create(ctx, consumer, metav1.CreateOptions{})
 			if err != nil {
-				t.Logf("failed to create consumer, will retry: %s", err)
+				t.Logf("Failed to create consumer, will retry: %s", err)
 			}
 			return err == nil
 		}, time.Second*10, time.Second*1)

@@ -405,7 +405,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	require.Eventually(t, func() bool {
 		deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Get(ctx, deploymentName, metav1.GetOptions{})
 		if err != nil {
-			t.Logf("failed to get deployment %s/%s , error %v", ns.Name, deploymentName, err)
+			t.Logf("Failed to get deployment %s/%s , error %v", ns.Name, deploymentName, err)
 			return false
 		}
 		if deployment.Status.Replicas == deployment.Status.AvailableReplicas {

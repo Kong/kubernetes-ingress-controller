@@ -58,7 +58,7 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		panic(fmt.Sprintf("failed to generate RSA key: %s", err))
+		panic(fmt.Sprintf("Failed to generate RSA key: %s", err))
 	}
 
 	options := SelfSignedCertificateOptions{
@@ -97,7 +97,7 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create x509 certificate: %s", err))
+		panic(fmt.Sprintf("Failed to create x509 certificate: %s", err))
 	}
 
 	// Create a tls.Certificate from the generated private key and certificate.

@@ -52,7 +52,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	require.Eventually(t, func() bool {
 		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, &gw)
 		if err != nil {
-			t.Logf("failed to get gateway %s/%s: %v", gw.Namespace, gw.Name, err)
+			t.Logf("Failed to get gateway %s/%s: %v", gw.Namespace, gw.Name, err)
 			return false
 		}
 		httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gatewayapi.ListenerStatus) bool {

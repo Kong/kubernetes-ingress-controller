@@ -121,7 +121,7 @@ func removeOutdatedReferencesToSecret(
 func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient controllers.DataPlaneClient, referrer client.Object) error {
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
-		indexers.logger.Error(err, "failed to list referred objects",
+		indexers.logger.Error(err, "Failed to list referred objects",
 			"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
 			"referrer_namespace", referrer.GetNamespace(),
 			"referrer_name", referrer.GetName(),

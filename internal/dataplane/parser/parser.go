@@ -466,7 +466,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 	certs := []certWrapper{}
 	gateways, err := s.ListGateways()
 	if err != nil {
-		logger.Error(err, "failed to list Gateways")
+		logger.Error(err, "Failed to list Gateways")
 		return certs
 	}
 	for _, gateway := range gateways {
@@ -517,7 +517,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 					// retrieve the Secret and extract the PEM strings
 					secret, err := s.GetSecret(namespace, string(ref.Name))
 					if err != nil {
-						logger.Error(err, "failed to fetch secret",
+						logger.Error(err, "Failed to fetch secret",
 							"gateway", gateway.Name,
 							"listener", listener.Name,
 							"secret_name", string(ref.Name),
@@ -563,7 +563,7 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 		namespaceName := strings.Split(secretKey, "/")
 		secret, err := p.storer.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
-			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey), SNIs.Parents()...)
+			p.registerTranslationFailure(fmt.Sprintf("Failed to fetch the secret (%s)", secretKey), SNIs.Parents()...)
 			continue
 		}
 		cert, key, err := getCertFromSecret(secret)

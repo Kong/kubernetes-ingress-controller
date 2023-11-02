@@ -269,7 +269,7 @@ func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn
 	var route gatewayapi.HTTPRoute
 	err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: nn.Namespace, Name: nn.Name}, &route)
 	if err != nil {
-		return fmt.Sprintf("failed to get HTTPRoute %s/%s when trying to print its conditions", nn.Namespace, nn.Name)
+		return fmt.Sprintf("Failed to get HTTPRoute %s/%s when trying to print its conditions", nn.Namespace, nn.Name)
 	}
 
 	if len(route.Status.Parents) == 0 {

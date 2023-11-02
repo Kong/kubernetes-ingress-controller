@@ -18,7 +18,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	udpRouteList, err := p.storer.ListUDPRoutes()
 	if err != nil {
-		p.logger.Error(err, "failed to list UDPRoutes")
+		p.logger.Error(err, "Failed to list UDPRoutes")
 		return result
 	}
 

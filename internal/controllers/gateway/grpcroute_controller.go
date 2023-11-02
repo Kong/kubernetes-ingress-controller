@@ -135,7 +135,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(ctx context.Context,
 	// map all Gateway objects
 	gatewayList := gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
-		r.Log.Error(err, "failed to list gateway objects from the cached client")
+		r.Log.Error(err, "Failed to list gateway objects from the cached client")
 		return nil
 	}
 
@@ -159,7 +159,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(ctx context.Context,
 	// map all GRPCRoute objects
 	grpcrouteList := gatewayapi.GRPCRouteList{}
 	if err := r.Client.List(ctx, &grpcrouteList); err != nil {
-		r.Log.Error(err, "failed to list grpcroute objects from the cached client")
+		r.Log.Error(err, "Failed to list grpcroute objects from the cached client")
 		return nil
 	}
 
@@ -220,7 +220,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj 
 	// map all GRPCRoute objects
 	grpcrouteList := gatewayapi.GRPCRouteList{}
 	if err := r.Client.List(ctx, &grpcrouteList); err != nil {
-		r.Log.Error(err, "failed to list grpcroute objects from the cached client")
+		r.Log.Error(err, "Failed to list grpcroute objects from the cached client")
 		return nil
 	}
 

@@ -24,7 +24,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	if err != nil {
 		if !errors.As(err, &store.NotFoundError{}) {
 			// anything else is unexpected
-			p.logger.Error(err, "could not retrieve IngressClassParameters, using defaults")
+			p.logger.Error(err, "Could not retrieve IngressClassParameters, using defaults")
 		}
 	}
 

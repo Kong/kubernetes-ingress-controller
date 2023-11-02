@@ -60,7 +60,7 @@ func getHostType() hostType {
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 	if err != nil {
-		fmt.Printf("failed to run %q command %s\n%s\n", cmd.String(), err, output)
+		fmt.Printf("Failed to run %q command %s\n%s\n", cmd.String(), err, output)
 		return defaultDocker
 	}
 	switch {

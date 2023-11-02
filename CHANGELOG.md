@@ -198,6 +198,12 @@ Adding a new version? You'll need three changes:
 - Count `HTTPRoute` to gateway's number of attached route if the gateway is
   present in its `status.parents`, even if the gateway has unresolved refs.
   [#4987](https://github.com/Kong/kubernetes-ingress-controller/pull/4987)
+- The default value for `--kong-admin-svc-port-names` is now `"admin-tls,kong-admin-tls"`
+  instead of `"admin,admin-tls,kong-admin,kong-admin-tls"`. HTTP port names
+  have been removed as discovery does not support plaintext HTTP connections.
+  Instances configured with both HTTP and HTTPS admin ports resulted in
+  discovery unsuccessfully trying to use HTTPS to talk to HTTP ports.
+  [#5043](https://github.com/Kong/kubernetes-ingress-controller/pull/5043)
 
 ### Added
 

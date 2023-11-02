@@ -183,7 +183,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Kong Admin URL(s) in comma-separated format (or specify this flag multiple times) to connect to in the format "protocol://address:port".`)
 	flagSet.Var(flags.NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue, nnTypeNameOverride), "kong-admin-svc",
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
-	flagSet.StringSliceVar(&c.KongAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
+	flagSet.StringSliceVar(&c.KongAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin-tls", "kong-admin-tls"},
 		"Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery.")
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayDiscoveryDNSStrategy, dnsStrategyFromFlagValue, flags.WithDefault(cfgtypes.IPDNSStrategy), flags.WithTypeNameOverride[cfgtypes.DNSStrategy]("dns-strategy")),
 		"gateway-discovery-dns-strategy", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")

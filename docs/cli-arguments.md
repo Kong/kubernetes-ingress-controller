@@ -46,7 +46,7 @@
 | `--kong-admin-init-retries` | `uint` | Number of attempts that will be made initially on controller startup to connect to the Kong Admin API. | `60` |
 | `--kong-admin-init-retry-delay` | `duration` | The time delay between every attempt (on controller startup) to connect to the Kong Admin API. | `1s` |
 | `--kong-admin-svc` | `namespaced-name` | Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery. |  |
-| `--kong-admin-svc-port-names` | `strings` | Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery. | `[admin,admin-tls,kong-admin,kong-admin-tls]` |
+| `--kong-admin-svc-port-names` | `strings` | Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery. | `[admin-tls,kong-admin-tls]` |
 | `--kong-admin-tls-client-cert` | `string` | Mutual TLS (mTLS) client certificate for authentication. Mutually exclusive with --kong-admin-tls-client-cert-file. |  |
 | `--kong-admin-tls-client-cert-file` | `string` | Mutual TLS (mTLS) client certificate file for authentication. Mutually exclusive with --kong-admin-tls-client-cert. |  |
 | `--kong-admin-tls-client-key` | `string` | Mutual TLS (mTLS) client key for authentication. Mutually exclusive with --kong-admin-tls-client-key-file. |  |

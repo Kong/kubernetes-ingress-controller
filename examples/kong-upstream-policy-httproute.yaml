@@ -141,8 +141,7 @@ spec:
   slots: 100
   hashOn:
     cookie: session-id
-  hashOnFallback:
-    header: Authorization
+    cookiePath: cookie-path
   healthchecks:
     active:
       type: tcp
@@ -159,4 +158,3 @@ spec:
         successes: 5
       unhealthy:
         timeouts: 10
-        interval: 10

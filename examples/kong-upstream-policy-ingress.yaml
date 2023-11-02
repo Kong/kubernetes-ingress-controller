@@ -31,10 +31,12 @@ metadata:
     konghq.com/upstream-policy: httpbin-upstream-policy
 spec:
   ports:
-    - port: 80
+    - name: http1
+      port: 80
       protocol: TCP
       targetPort: 80
-    - port: 8080
+    - name: http2
+      port: 8080
       protocol: TCP
       targetPort: 8080
   selector:
@@ -92,8 +94,7 @@ spec:
   slots: 100
   hashOn:
     cookie: session-id
-  hashOnFallback:
-    header: Authorization
+    cookiePath: cookie-path
   healthchecks:
     active:
       type: tcp
@@ -110,4 +111,3 @@ spec:
         successes: 5
       unhealthy:
         timeouts: 10
-        interval: 10

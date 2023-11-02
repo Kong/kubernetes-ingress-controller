@@ -222,7 +222,6 @@ func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
 		context.Background(),
 		zapr.NewLogger(zap.NewNop()),
 		initialClients,
-
 		&mockReadinessChecker{},
 	)
 	require.NoError(t, err)
@@ -252,7 +251,6 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 		ctx,
 		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
-
 		readinessChecker)
 
 	require.NoError(t, err)
@@ -472,7 +470,6 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 		ctx,
 		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
-
 		readinessChecker,
 		clients.WithReadinessReconciliationTicker(readinessTicker),
 	)

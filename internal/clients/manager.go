@@ -188,12 +188,12 @@ func (c *AdminAPIClientsManager) GatewayClientsToConfigure() []*adminapi.Client 
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	readyGatewayClients := lo.Values(c.readyGatewayClients)
-	// With dbless mode, we should send configuration to ALL Kong gateway instances.
+	// With DB-less mode, we should send the configuration to ALL gateway instances.
 	if dataplaneutil.IsDBLessMode(c.dbMode) {
 		return readyGatewayClients
 	}
-	// When Kong gateway is DB backed, we return a random admin API client
-	// since KIC only need to send requests to one instance.
+	// When a gateway is DB-backed, we return a random client
+	// since KIC only needs to send requests to one instance.
 	// If there are no ready gateway clients, we return an empty list.
 	if len(readyGatewayClients) == 0 {
 		return []*adminapi.Client{}

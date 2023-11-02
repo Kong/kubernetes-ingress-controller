@@ -125,7 +125,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// credentials so that the consumers credentials references can be validated.
 	managedConsumers, err := validator.listManagedConsumers(ctx)
 	if err != nil {
-		return false, ErrTextConsumerUnretrievable, err
+		return false, fmt.Sprintf("failed to fetch managed KongConsumers from cache: %s", err), nil
 	}
 
 	// retrieve the consumer's credentials secrets to validate them with the index
@@ -136,7 +136,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		secret, err := validator.SecretGetter.GetSecret(consumer.Namespace, secretName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				return false, ErrTextConsumerCredentialSecretNotFound, err
+				return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialSecretNotFound, err), nil
 			}
 			return false, ErrTextFailedToRetrieveSecret, err
 		}
@@ -248,7 +248,7 @@ func (validator KongHTTPValidator) ValidateCredential(ctx context.Context, secre
 	// if the credentials are referenced.
 	managedConsumers, err := validator.listManagedConsumers(ctx)
 	if err != nil {
-		return false, fmt.Sprintf("failed to list managed KongConsumers: %s", err)
+		return false, fmt.Sprintf("failed to fetch managed KongConsumers from cache: %s", err)
 	}
 
 	// Verify whether this secret is referenced by any managed consumer.
@@ -402,7 +402,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 			Name:      string(parentRef.Name),
 		}, &gateway); err != nil {
 			if apierrors.IsNotFound(err) {
-				return false, fmt.Sprintf("Referenced gateway %s/%s not found", namespace, parentRef.Name), nil
+				return false, fmt.Sprintf("referenced gateway %s/%s not found", namespace, parentRef.Name), nil
 			}
 			return false, "", err
 		}
@@ -411,7 +411,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		gatewayClass := gatewayapi.GatewayClass{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			if apierrors.IsNotFound(err) {
-				return false, fmt.Sprintf("Referenced gatewayclass %s not found", gateway.Spec.GatewayClassName), nil
+				return false, fmt.Sprintf("referenced gatewayclass %s not found", gateway.Spec.GatewayClassName), nil
 			}
 			return false, "", err
 		}

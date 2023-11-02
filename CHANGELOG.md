@@ -175,8 +175,9 @@ Nothing yet.
   [#5029](https://github.com/Kong/kubernetes-ingress-controller/pull/5029)
 - Fixed `HTTPRoute` and `KongConsumer` admission webhook validators to properly
   signal validation failures, resulting in returning responses with `AdmissionResponse`
-  filled instead of 500 status codes. It will make them work as expected in cases where the 
-  `ValidatingWebhookConfiguration` is configured with `failurePolicy: Ignore`.
+  filled instead of 500 status codes. It will make them work as expected in cases where
+  the `ValidatingWebhookConfiguration` has `failurePolicy: Ignore`.
+  [#5063](https://github.com/Kong/kubernetes-ingress-controller/pull/5063)
 
 ### Changed
 

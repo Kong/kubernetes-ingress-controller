@@ -62,7 +62,7 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErrSubstring: `Referenced gateway a6587a40-b3c6-4433-9232-216f9acf833a/fake-gateway not found`,
+			WantCreateErrSubstring: `fake-gateway not found`,
 		},
 		{
 			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",

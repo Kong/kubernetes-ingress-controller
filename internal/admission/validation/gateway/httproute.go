@@ -34,7 +34,7 @@ func ValidateHTTPRoute(
 ) (bool, string, error) {
 	// validate that no unsupported features are in use
 	if err := validateHTTPRouteFeatures(httproute, parserFeatures); err != nil {
-		return false, "HTTPRoute spec did not pass validation", err
+		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
 	}
 
 	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)
@@ -45,24 +45,25 @@ func ValidateHTTPRoute(
 		// determine the parentRef for this gateway
 		parentRef, err := getParentRefForHTTPRouteGateway(httproute, gateway)
 		if err != nil {
-			return false, "Couldn't determine parentRefs for httproute", err
+			return false, fmt.Sprintf("Couldn't determine parentRefs for httproute: %s", err), nil
 		}
 
 		// gather the relevant gateway listeners for the httproute
 		listeners, err := getListenersForHTTPRouteValidation(parentRef.SectionName, gateway)
 		if err != nil {
-			return false, "Couldn't find gateway listeners for httproute", err
+			return false, fmt.Sprintf("Couldn't find gateway listeners for httproute: %s", err), nil
 		}
 
 		// perform validation of this route against it's linked gateway listeners
 		for _, listener := range listeners {
 			if err := validateHTTPRouteListener(listener); err != nil {
-				return false, "HTTPRoute linked Gateway listeners did not pass validation", err
+				return false, fmt.Sprintf("HTTPRoute linked Gateway listeners did not pass validation: %s", err), nil
 			}
 		}
 	}
 
-	return validateWithKongGateway(ctx, routesValidator, parserFeatures, httproute)
+	ok, msg := validateWithKongGateway(ctx, routesValidator, parserFeatures, httproute)
+	return ok, msg, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -188,7 +189,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayapi.SectionName, gat
 
 func validateWithKongGateway(
 	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, httproute *gatewayapi.HTTPRoute,
-) (bool, string, error) {
+) (bool, string) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Use KIC parser that works both for traditional and expressions based routes.
 	var kongRoutes []kong.Route
@@ -211,23 +212,23 @@ func validateWithKongGateway(
 		}
 	}
 	if len(errMsgs) > 0 {
-		return false, validationMsg(errMsgs), nil
+		return false, validationMsg(errMsgs)
 	}
 	// Validate by using feature of Kong Gateway.
 	for _, kg := range kongRoutes {
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
-			return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error()), nil
+			return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())
 		}
 		if !ok {
 			errMsgs = append(errMsgs, msg)
 		}
 	}
 	if len(errMsgs) > 0 {
-		return false, validationMsg(errMsgs), nil
+		return false, validationMsg(errMsgs)
 	}
-	return true, "", nil
+	return true, ""
 }
 
 func validationMsg(errMsgs []string) string {

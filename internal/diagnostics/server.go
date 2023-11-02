@@ -62,11 +62,11 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 		}
 	}()
 
-	s.Logger.Info("diagnostics server is starting to listen", "addr", port)
+	s.Logger.Info("Diagnostics server is starting to listen", "addr", port)
 
 	select {
 	case <-ctx.Done():
-		s.Logger.Info("shutting down diagnostics server")
+		s.Logger.Info("Shutting down diagnostics server")
 		return httpServer.Shutdown(context.Background()) //nolint:contextcheck
 	case err := <-errChan:
 		return err
@@ -87,10 +87,10 @@ func (s *Server) receiveConfig(ctx context.Context) {
 			s.ConfigLock.Unlock()
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
-				s.Logger.Error(err, "shutting down diagnostic config collection: context completed with error")
+				s.Logger.Error(err, "Shutting down diagnostic config collection: context completed with error")
 				return
 			}
-			s.Logger.V(util.InfoLevel).Info("shutting down diagnostic config collection: context completed")
+			s.Logger.V(util.InfoLevel).Info("Shutting down diagnostic config collection: context completed")
 			return
 		}
 	}

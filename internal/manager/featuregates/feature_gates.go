@@ -35,7 +35,7 @@ func New(setupLog logr.Logger, featureGates map[string]bool) (FeatureGates, erro
 
 	// override the default settings
 	for feature, enabled := range featureGates {
-		setupLog.Info("found configuration option for gated feature", "feature", feature, "enabled", enabled)
+		setupLog.Info("Found configuration option for gated feature", "feature", feature, "enabled", enabled)
 		_, ok := ctrlMap[feature]
 		if !ok {
 			return ctrlMap, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, DocsURL)

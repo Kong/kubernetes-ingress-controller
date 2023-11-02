@@ -128,7 +128,7 @@ func (a *Agent) Start(ctx context.Context) error {
 // as Kong will auto-populate these when adding the license to its config database.
 // It's optional because we may not have retrieved a license yet.
 func (a *Agent) GetLicense() mo.Option[kong.License] {
-	a.logger.V(util.DebugLevel).Info("retrieving license from cache")
+	a.logger.V(util.DebugLevel).Info("Retrieving license from cache")
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 
@@ -158,9 +158,9 @@ func (a *Agent) runPollingLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ch:
-			a.logger.V(util.DebugLevel).Info("retrieving license from external service")
+			a.logger.V(util.DebugLevel).Info("Retrieving license from external service")
 			if err := a.reconcileLicenseWithKonnect(ctx); err != nil {
-				a.logger.Error(err, "could not reconcile license with Konnect")
+				a.logger.Error(err, "Could not reconcile license with Konnect")
 			}
 			// Reset the ticker to run with the expected period which may change after we receive the license.
 			a.ticker.Reset(a.resolvePollingPeriod())
@@ -191,23 +191,23 @@ func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 	retrievedLicense, retrievedLicenseOk := retrievedLicenseOpt.Get()
 	if !retrievedLicenseOk {
 		// If we get no license from Konnect, we cannot do anything.
-		a.logger.V(util.DebugLevel).Info("no license found in Konnect")
+		a.logger.V(util.DebugLevel).Info("No license found in Konnect")
 		return nil
 	}
 
 	if a.cachedLicense.IsAbsent() {
-		a.logger.V(util.InfoLevel).Info("caching initial license retrieved from the upstream",
+		a.logger.V(util.InfoLevel).Info("Caching initial license retrieved from the upstream",
 			"updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
 	} else if cachedLicense, ok := a.cachedLicense.Get(); ok && retrievedLicense.UpdatedAt.After(cachedLicense.UpdatedAt) {
-		a.logger.V(util.InfoLevel).Info("caching license retrieved from the upstream as it is newer than the cached one",
+		a.logger.V(util.InfoLevel).Info("Caching license retrieved from the upstream as it is newer than the cached one",
 			"cached_updated_at", cachedLicense.UpdatedAt.String(),
 			"retrieved_updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
 	} else {
-		a.logger.V(util.DebugLevel).Info("license cache is up to date")
+		a.logger.V(util.DebugLevel).Info("License cache is up to date")
 	}
 
 	return nil

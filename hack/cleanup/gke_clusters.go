@@ -36,13 +36,13 @@ func cleanupGKEClusters(ctx context.Context, log logr.Logger) error {
 	}
 
 	if len(clusterNames) < 1 {
-		log.Info("no clusters to clean up")
+		log.Info("No clusters to clean up")
 		return nil
 	}
 
 	var errs []error
 	for _, clusterName := range clusterNames {
-		log.Info("cleaning up cluster", "name", clusterName)
+		log.Info("Cleaning up cluster", "name", clusterName)
 		err := deleteCluster(ctx, mgrc, gkeProject, gkeLocation, clusterName)
 		if err != nil {
 			errs = append(errs, err)
@@ -82,7 +82,7 @@ func findOrphanedClusters(ctx context.Context, log logr.Logger, mgrc *container.
 	var orphanedClusterNames []string
 	for _, cluster := range clusterListResp.Clusters {
 		if !e2e.IsGKETestCluster(cluster) {
-			log.Info("non test cluster found and skipped", "name", cluster.Name, "built_at", cluster.GetCreateTime())
+			log.Info("Non test cluster found and skipped", "name", cluster.Name, "built_at", cluster.GetCreateTime())
 			continue
 		}
 
@@ -95,7 +95,7 @@ func findOrphanedClusters(ctx context.Context, log logr.Logger, mgrc *container.
 		if time.Now().UTC().After(orphanTime) {
 			orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
 		} else {
-			log.Info("cluster skipped", "name", cluster.Name, "build_in_last", timeUntilClusterOrphaned)
+			log.Info("Cluster skipped", "name", cluster.Name, "build_in_last", timeUntilClusterOrphaned)
 		}
 	}
 

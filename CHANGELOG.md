@@ -204,6 +204,13 @@ Adding a new version? You'll need three changes:
   Instances configured with both HTTP and HTTPS admin ports resulted in
   discovery unsuccessfully trying to use HTTPS to talk to HTTP ports.
   [#5043](https://github.com/Kong/kubernetes-ingress-controller/pull/5043)
+- The log format has been standardized to start with uppercase letters.
+  [#5033](https://github.com/Kong/kubernetes-ingress-controller/pull/5033)
+  [#5035](https://github.com/Kong/kubernetes-ingress-controller/pull/5035)
+  [#5037](https://github.com/Kong/kubernetes-ingress-controller/pull/5037)
+  [#5038](https://github.com/Kong/kubernetes-ingress-controller/pull/5038)
+  [#5049](https://github.com/Kong/kubernetes-ingress-controller/pull/5049)
+  [#5050](https://github.com/Kong/kubernetes-ingress-controller/pull/5050)
 
 ### Added
 

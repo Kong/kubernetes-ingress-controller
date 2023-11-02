@@ -392,11 +392,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -416,20 +416,20 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -437,7 +437,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -939,11 +939,11 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1115,11 +1115,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1129,14 +1129,14 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
 		obj.Status.Conditions = conditions
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 	// update reference relationship from the KongConsumer to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -1302,11 +1302,11 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1316,14 +1316,14 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
 		obj.Status.Conditions = conditions
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 	// update reference relationship from the KongConsumerGroup to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -1491,11 +1491,11 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1515,20 +1515,20 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -1536,7 +1536,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -1683,11 +1683,11 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1697,20 +1697,20 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -1718,7 +1718,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil

@@ -263,7 +263,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			debug(log, grpcroute, "object does not exist, ensuring it is not present in the proxy cache")
+			debug(log, grpcroute, "Object does not exist, ensuring it is not present in the proxy cache")
 			grpcroute.Namespace = req.Namespace
 			grpcroute.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(grpcroute)
@@ -273,30 +273,30 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	debug(log, grpcroute, "processing grpcroute")
+	debug(log, grpcroute, "Processing grpcroute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
 	// not we can find a valid gateway as that gateway may now be deleted but we still
 	// need to ensure removal of the data-plane configuration.
-	debug(log, grpcroute, "checking deletion timestamp")
+	debug(log, grpcroute, "Checking deletion timestamp")
 	if grpcroute.DeletionTimestamp != nil {
 		debug(log, grpcroute, "grpcroute is being deleted, re-configuring data-plane")
 		if err := r.DataplaneClient.DeleteObject(grpcroute); err != nil {
-			debug(log, grpcroute, "failed to delete object from data-plane, requeuing")
+			debug(log, grpcroute, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, grpcroute, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, grpcroute, "Ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(grpcroute)
 	}
 
 	// we need to pull the Gateway parent objects for the grpcroute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
-	debug(log, grpcroute, "retrieving GatewayClass and Gateway for route")
+	debug(log, grpcroute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, grpcroute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
-			debug(log, grpcroute, "unsupported route found, processing to verify whether it was ever supported")
+			debug(log, grpcroute, "Unsupported route found, processing to verify whether it was ever supported")
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
@@ -308,7 +308,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if statusUpdated {
 				// the status did in fact needed to be updated, so no need to requeue
 				// as the status update will trigger a requeue.
-				debug(log, grpcroute, "unsupported route was previously supported, status was updated")
+				debug(log, grpcroute, "Unsupported route was previously supported, status was updated")
 				return ctrl.Result{}, nil
 			}
 
@@ -316,7 +316,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
-			debug(log, grpcroute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
+			debug(log, grpcroute, "Ensuring that dataplane is updated to remove unsupported route (if applicable)")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(grpcroute)
 		}
 		return ctrl.Result{}, err
@@ -325,10 +325,10 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// the referenced gateway object(s) for the grpcroute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
-	debug(log, grpcroute, "checking if the grpcroute's gateways are ready")
+	debug(log, grpcroute, "Checking if the grpcroute's gateways are ready")
 	for _, gateway := range gateways {
 		if !isGatewayProgrammed(gateway.gateway) {
-			debug(log, grpcroute, "gateway for route was not ready, waiting")
+			debug(log, grpcroute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -337,13 +337,13 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// if the gateways are ready, and the GRPCRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(grpcroute); err != nil {
-			debug(log, grpcroute, "failed to update object in data-plane, requeueing")
+			debug(log, grpcroute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(grpcroute); err != nil {
-			debug(log, grpcroute, "failed to delete object in data-plane, requeueing")
+			debug(log, grpcroute, "Failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	}
@@ -351,7 +351,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// now that the object has been successfully configured for in the dataplane
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
-	debug(log, grpcroute, "ensuring status contains Gateway associations")
+	debug(log, grpcroute, "Ensuring status contains Gateway associations")
 	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, grpcroute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
@@ -375,19 +375,19 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(grpcroute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until grpcroute is configured.
-			debug(log, grpcroute, "grpcroute not configured,requeueing")
+			debug(log, grpcroute, "GRPCRoute not configured,requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			debug(log, grpcroute, "grpcroute configuration failed")
+			debug(log, grpcroute, "GRPCRoute configuration failed")
 			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), grpcroute, grpcroute.Status.Parents, gateways, metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(ConditionReasonTranslationError),
 			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
-				debug(log, grpcroute, "failed to update programmed condition")
+				debug(log, grpcroute, "Failed to update programmed condition")
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: !statusUpdated}, nil
@@ -399,19 +399,19 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
-			debug(log, grpcroute, "failed to update programmed condition")
+			debug(log, grpcroute, "Failed to update programmed condition")
 			return ctrl.Result{}, err
 		}
 		if statusUpdated {
 			// if the status was updated it will trigger a follow-up reconciliation
 			// so we don't need to do anything further here.
-			debug(log, grpcroute, "programmed condition updated")
+			debug(log, grpcroute, "Programmed condition updated")
 			return ctrl.Result{}, nil
 		}
 	}
 
 	// once the data-plane has accepted the GRPCRoute object, we're all set.
-	info(log, grpcroute, "grpcroute has been configured on the data-plane")
+	info(log, grpcroute, "GRPCRoute has been configured on the data-plane")
 
 	return ctrl.Result{}, nil
 }

@@ -75,7 +75,7 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			debug(log, grant, "object does not exist, ensuring it is not present in the proxy cache")
+			debug(log, grant, "Object does not exist, ensuring it is not present in the proxy cache")
 			grant.Namespace = req.Namespace
 			grant.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(grant)
@@ -85,23 +85,23 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	debug(log, grant, "processing referencegrant")
+	debug(log, grant, "Processing referencegrant")
 
-	debug(log, grant, "checking deletion timestamp")
+	debug(log, grant, "Checking deletion timestamp")
 	if grant.DeletionTimestamp != nil {
-		debug(log, grant, "referencegrant is being deleted, re-configuring data-plane")
+		debug(log, grant, "Referencegrant is being deleted, re-configuring data-plane")
 		if err := r.DataplaneClient.DeleteObject(grant); err != nil {
 			debug(log, grant, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, grant, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, grant, "Ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(grant)
 	}
 
 	if err := r.DataplaneClient.UpdateObject(grant); err != nil {
-		debug(log, grant, "failed to update object in data-plane, requeueing")
+		debug(log, grant, "Failed to update object in data-plane, requeueing")
 		return ctrl.Result{}, err
 	}
-	info(log, grant, "referencegrant has been configured on the data-plane")
+	info(log, grant, "Referencegrant has been configured on the data-plane")
 	return ctrl.Result{}, nil
 }

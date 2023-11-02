@@ -261,7 +261,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayapi.GatewayClass{}
 		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
-			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
+			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
 		if isGatewayClassControlledAndUnmanaged(gatewayClass) {
@@ -366,7 +366,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
-			debug(log, gateway, "failed to delete object from data-plane, requeuing")
+			debug(log, gateway, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, gateway, "Ensured gateway was removed from the data-plane (if ever present)")
@@ -380,7 +380,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
-			debug(log, gateway, "failed to delete object from data-plane, requeuing")
+			debug(log, gateway, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, gateway, "Ensured gateway was removed from the data-plane (if ever present)")
@@ -392,7 +392,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// the object should be cleaned up by GC promptly.
 	debug(log, gateway, "Checking deletion timestamp")
 	if gateway.DeletionTimestamp != nil {
-		debug(log, gateway, "gateway is being deleted, ignoring")
+		debug(log, gateway, "Gateway is being deleted, ignoring")
 		return ctrl.Result{Requeue: false}, nil
 	}
 
@@ -411,7 +411,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// happen afterwards
 	if err == nil {
 		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
-			debug(log, gateway, "failed to update object in data-plane, requeueing")
+			debug(log, gateway, "Failed to update object in data-plane, requeueing")
 			return result, err
 		}
 

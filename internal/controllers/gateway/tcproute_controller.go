@@ -260,7 +260,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			debug(log, tcproute, "object does not exist, ensuring it is not present in the proxy cache")
+			debug(log, tcproute, "Object does not exist, ensuring it is not present in the proxy cache")
 			tcproute.Namespace = req.Namespace
 			tcproute.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tcproute)
@@ -270,30 +270,30 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	debug(log, tcproute, "processing tcproute")
+	debug(log, tcproute, "Processing tcproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache
 	// to drop all relevant routes from its configuration, regardless of whether or
 	// not we can find a valid gateway as that gateway may now be deleted but we still
 	// need to ensure removal of the data-plane configuration.
-	debug(log, tcproute, "checking deletion timestamp")
+	debug(log, tcproute, "Checking deletion timestamp")
 	if tcproute.DeletionTimestamp != nil {
-		debug(log, tcproute, "tcproute is being deleted, re-configuring data-plane")
+		debug(log, tcproute, "TCPRoute is being deleted, re-configuring data-plane")
 		if err := r.DataplaneClient.DeleteObject(tcproute); err != nil {
-			debug(log, tcproute, "failed to delete object from data-plane, requeuing")
+			debug(log, tcproute, "Failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, tcproute, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, tcproute, "Ensured object was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(tcproute)
 	}
 
 	// we need to pull the Gateway parent objects for the TCPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
-	debug(log, tcproute, "retrieving GatewayClass and Gateway for route")
+	debug(log, tcproute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tcproute)
 	if err != nil {
 		if err.Error() == unsupportedGW {
-			debug(log, tcproute, "unsupported route found, processing to verify whether it was ever supported")
+			debug(log, tcproute, "Unsupported route found, processing to verify whether it was ever supported")
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
@@ -305,7 +305,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if statusUpdated {
 				// the status did in fact needed to be updated, so no need to requeue
 				// as the status update will trigger a requeue.
-				debug(log, tcproute, "unsupported route was previously supported, status was updated")
+				debug(log, tcproute, "Unsupported route was previously supported, status was updated")
 				return ctrl.Result{}, nil
 			}
 
@@ -313,7 +313,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// it it's possible it became orphaned after becoming queued. In either case
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
-			debug(log, tcproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
+			debug(log, tcproute, "Ensuring that dataplane is updated to remove unsupported route (if applicable)")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tcproute)
 		}
 		return ctrl.Result{}, err
@@ -322,10 +322,10 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// the referenced gateway object(s) for the TCPRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
-	debug(log, tcproute, "checking if the tcproute's gateways are ready")
+	debug(log, tcproute, "Checking if the tcproute's gateways are ready")
 	for _, gateway := range gateways {
 		if !isGatewayProgrammed(gateway.gateway) {
-			debug(log, tcproute, "gateway for route was not ready, waiting")
+			debug(log, tcproute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -334,7 +334,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the gateways are ready, and the TCPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(tcproute); err != nil {
-			debug(log, tcproute, "failed to update object in data-plane, requeueing")
+			debug(log, tcproute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
@@ -349,7 +349,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(tcproute); err != nil {
-			debug(log, tcproute, "failed to delete object in data-plane, requeueing")
+			debug(log, tcproute, "Failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	}
@@ -357,7 +357,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// now that the object has been successfully configured for in the dataplane
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
-	debug(log, tcproute, "ensuring status contains Gateway associations")
+	debug(log, tcproute, "Ensuring status contains Gateway associations")
 	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, tcproute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
@@ -373,7 +373,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// if the TCPRoute is not configured in the dataplane, leave it unchanged and requeue.
 	// if it is successfully configured, update its "Programmed" condition to True.
 	// if translation failure happens, update its "Programmed" condition to False.
-	debug(log, tcproute, "ensuring status contains Programmed condition")
+	debug(log, tcproute, "Ensuring status contains Programmed condition")
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		// if the dataplane client has reporting enabled (this is the default and is
 		// tied in with status updates being enabled in the controller manager) then
@@ -382,19 +382,19 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tcproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until tcproute is configured.
-			debug(log, tcproute, "tcproute not configured,requeueing")
+			debug(log, tcproute, "TCPRoute not configured,requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			debug(log, tcproute, "tcproute configuration failed")
+			debug(log, tcproute, "TCPRoute configuration failed")
 			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), tcproute, tcproute.Status.Parents, gateways, metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(ConditionReasonTranslationError),
 			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
-				debug(log, tcproute, "failed to update programmed condition")
+				debug(log, tcproute, "Failed to update programmed condition")
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: !statusUpdated}, nil
@@ -406,19 +406,19 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
-			debug(log, tcproute, "failed to update programmed condition")
+			debug(log, tcproute, "Failed to update programmed condition")
 			return ctrl.Result{}, err
 		}
 		if statusUpdated {
 			// if the status was updated it will trigger a follow-up reconciliation
 			// so we don't need to do anything further here.
-			debug(log, tcproute, "programmed condition updated")
+			debug(log, tcproute, "Programmed condition updated")
 			return ctrl.Result{}, nil
 		}
 	}
 
 	// once the data-plane has accepted the TCPRoute object, we're all set.
-	info(log, tcproute, "tcproute has been configured on the data-plane")
+	info(log, tcproute, "TCPRoute has been configured on the data-plane")
 	return ctrl.Result{}, nil
 }
 

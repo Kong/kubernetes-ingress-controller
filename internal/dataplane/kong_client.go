@@ -454,15 +454,38 @@ func (c *KongClient) sendOutToGatewayClients(
 	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
 ) ([]string, error) {
 	gatewayClients := c.clientsProvider.GatewayClients()
-	c.logger.V(util.DebugLevel).Info("sending configuration to gateway clients", "count", len(gatewayClients))
-	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
+	if len(gatewayClients) == 0 {
+		c.logger.Error(
+			errors.New("no ready gateway clients"),
+			"Could not send configuration to gateways",
+		)
+		// Should not store the configuration in last valid config because the configuration is not validated on Kong gateway.
+		return c.SHAs, nil
+	}
+
+	gatewayClientsToConfigure := c.clientsProvider.GatewayClientsToConfigure()
+	configureGatewayClientURLs := lo.Map(gatewayClientsToConfigure, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
+	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
+
+	shas, err := iter.MapErr(gatewayClientsToConfigure, func(client **adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, *client, s, config)
 	})
 	if err != nil {
 		return nil, err
 	}
-	previousSHAs := c.SHAs
 
+	// After a successful configuration update in DB mode,
+	// since only ONE gateway client is chosen to send requests and store SHA of latest configurations,
+	// we should propagate the SHA from the chosen client to other clients
+	// as well as they will pick the configuration from the shared database.
+	if dataplaneutil.DBBacked(c.dbmode) &&
+		len(gatewayClients) > 1 {
+		for _, client := range gatewayClients {
+			client.SetLastConfigSHA([]byte(shas[0]))
+		}
+	}
+
+	previousSHAs := c.SHAs
 	sort.Strings(shas)
 	c.SHAs = shas
 

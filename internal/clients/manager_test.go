@@ -158,7 +158,12 @@ func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.
 }
 
 func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
-	_, err := clients.NewAdminAPIClientsManager(context.Background(), zapr.NewLogger(zap.NewNop()), nil, &mockReadinessChecker{})
+	_, err := clients.NewAdminAPIClientsManager(
+		context.Background(),
+		zapr.NewLogger(zap.NewNop()),
+		nil,
+		&mockReadinessChecker{},
+	)
 	require.ErrorContains(t, err, "at least one initial client must be provided")
 }
 
@@ -196,12 +201,42 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
 	require.Equal(t, m.GatewayClientsCount(), 1, "expecting one initial client")
+	require.Len(t, m.GatewayClientsToConfigure(), 1, "Expecting one initial client")
 
 	konnectTestClient := &adminapi.KonnectClient{}
 	m.SetKonnectClient(konnectTestClient)
 	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
 	require.Equal(t, m.GatewayClientsCount(), 1, "konnect client should not be counted in GatewayClientsCount")
 	require.Equal(t, konnectTestClient, m.KonnectClient(), "konnect client should be returned from KonnectClient")
+}
+
+func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
+	testClient, err := adminapi.NewTestClient("localhost:8080")
+	require.NoError(t, err)
+	testClient2, err := adminapi.NewTestClient("localhost:8081")
+	require.NoError(t, err)
+	initialClients := []*adminapi.Client{testClient, testClient2}
+	require.NoError(t, err)
+
+	m, err := clients.NewAdminAPIClientsManager(
+		context.Background(),
+		zapr.NewLogger(zap.NewNop()),
+		initialClients,
+		&mockReadinessChecker{},
+	)
+	require.NoError(t, err)
+	m = m.WithDBMode("postgres")
+
+	clients := m.GatewayClients()
+	require.Len(t, clients, 2, "Expecting 2 clients returned with DB mode")
+
+	configureClients := m.GatewayClientsToConfigure()
+	require.Len(t, configureClients, 1, "Expecting 1 client to configure")
+	require.Truef(t, lo.ContainsBy(initialClients, func(c *adminapi.Client) bool {
+		return c.BaseRootURL() == configureClients[0].BaseRootURL()
+	}), "Client's address %s should be in initial clients")
+
+	require.Equal(t, m.GatewayClientsCount(), 2, "Expecting 2 initial clients")
 }
 
 func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
@@ -212,7 +247,12 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	m, err := clients.NewAdminAPIClientsManager(ctx, zapr.NewLogger(zap.NewNop()), []*adminapi.Client{testClient}, readinessChecker)
+	m, err := clients.NewAdminAPIClientsManager(
+		ctx,
+		zapr.NewLogger(zap.NewNop()),
+		[]*adminapi.Client{testClient},
+		readinessChecker)
+
 	require.NoError(t, err)
 
 	t.Run("no notify loop running should return false when subscribing", func(t *testing.T) {

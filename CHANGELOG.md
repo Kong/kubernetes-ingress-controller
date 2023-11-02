@@ -249,6 +249,10 @@ Adding a new version? You'll need three changes:
 - KIC now specifies its `UserAgent` when communicating with kube-apiserver
   as `kong-ingress-controller/${VERSION}` where version is the version of KIC.
   [#5019](https://github.com/Kong/kubernetes-ingress-controller/pull/5019)
+- Allow Gateway Discovery with database backed Kong. KIC will send Kong 
+  configurations to one of the backend pods of the service specified by the
+  flag `--kong-admin-svc` if Kong gateway is DB backed.
+  [#4828](https://github.com/Kong/kubernetes-ingress-controller/pull/4828)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/

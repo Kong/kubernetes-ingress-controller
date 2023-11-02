@@ -111,11 +111,6 @@ func Run(
 	routerFlavor := kongStartUpConfig.RouterFlavor
 	v := kongStartUpConfig.Version
 
-	err = c.ValidateGatewayDiscovery(kongStartUpConfig.DBMode)
-	if err != nil {
-		return err
-	}
-
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
@@ -157,6 +152,8 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
+	clientsManager = clientsManager.WithDBMode(dbMode)
+
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")
 		clientsManager.Run()

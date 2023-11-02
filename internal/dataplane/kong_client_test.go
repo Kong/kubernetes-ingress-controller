@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -143,14 +144,25 @@ var (
 type mockGatewayClientsProvider struct {
 	gatewayClients []*adminapi.Client
 	konnectClient  *adminapi.KonnectClient
+	dbMode         string
 }
 
-func (f mockGatewayClientsProvider) KonnectClient() *adminapi.KonnectClient {
-	return f.konnectClient
+func (p mockGatewayClientsProvider) KonnectClient() *adminapi.KonnectClient {
+	return p.konnectClient
 }
 
-func (f mockGatewayClientsProvider) GatewayClients() []*adminapi.Client {
-	return f.gatewayClients
+func (p mockGatewayClientsProvider) GatewayClients() []*adminapi.Client {
+	return p.gatewayClients
+}
+
+func (p mockGatewayClientsProvider) GatewayClientsToConfigure() []*adminapi.Client {
+	if dataplaneutil.IsDBLessMode(p.dbMode) {
+		return p.gatewayClients
+	}
+	if len(p.gatewayClients) == 0 {
+		return []*adminapi.Client{}
+	}
+	return p.gatewayClients[:1]
 }
 
 // mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategyResolver.

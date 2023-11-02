@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 )
 
 // DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
@@ -29,6 +30,7 @@ type ClientFactory interface {
 type AdminAPIClientsProvider interface {
 	KonnectClient() *adminapi.KonnectClient
 	GatewayClients() []*adminapi.Client
+	GatewayClientsToConfigure() []*adminapi.Client
 }
 
 // Ticker is an interface that allows to control a ticker.
@@ -47,6 +49,8 @@ type AdminAPIClientsManager struct {
 	// endpoints list that should be used for configuring the dataplane.
 	discoveredAdminAPIsNotifyChan    chan []adminapi.DiscoveredAdminAPI
 	gatewayClientsChangesSubscribers []chan struct{}
+
+	dbMode string
 
 	ctx                   context.Context
 	onceNotifyLoopRunning sync.Once
@@ -83,6 +87,12 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 	return func(m *AdminAPIClientsManager) {
 		m.readinessReconciliationTicker = ticker
 	}
+}
+
+// WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
+func (c *AdminAPIClientsManager) WithDBMode(dbMode string) *AdminAPIClientsManager {
+	c.dbMode = dbMode
+	return c
 }
 
 func NewAdminAPIClientsManager(
@@ -171,6 +181,29 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return lo.Values(c.readyGatewayClients)
+}
+
+// GatewayClientsToConfigure returns the gateway clients which need to be configured with the new configuration.
+// In DBLess mode, it returns ALL gateway clients
+// because we need to update configurations of each gateway instance.
+// In DB-backed mode, it returns ONE random gateway client
+// because we only need to send configurations to one gateway instance
+// while others will be synced using the DB.
+func (c *AdminAPIClientsManager) GatewayClientsToConfigure() []*adminapi.Client {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	readyGatewayClients := lo.Values(c.readyGatewayClients)
+	// With DB-less mode, we should send the configuration to ALL gateway instances.
+	if dataplaneutil.IsDBLessMode(c.dbMode) {
+		return readyGatewayClients
+	}
+	// When a gateway is DB-backed, we return a random client
+	// since KIC only needs to send requests to one instance.
+	// If there are no ready gateway clients, we return an empty list.
+	if len(readyGatewayClients) == 0 {
+		return []*adminapi.Client{}
+	}
+	return readyGatewayClients[:1]
 }
 
 func (c *AdminAPIClientsManager) GatewayClientsCount() int {

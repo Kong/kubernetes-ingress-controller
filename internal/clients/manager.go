@@ -184,6 +184,12 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	return lo.Values(c.readyGatewayClients)
 }
 
+// GatewayClientsToConfigure returns the gateway clients need to be configured with the new configuration
+// in sending generated configurations.
+// In DBLess mode, it returns ALL gateway clients
+// because we need to update configurations of each gateway instance.
+// In DB-backed mode, it returns ONE random gateway client
+// because we only need to send configurations to one gateway instance, and other instances could be synced from DB.
 func (c *AdminAPIClientsManager) GatewayClientsToConfigure() []*adminapi.Client {
 	c.lock.RLock()
 	defer c.lock.RUnlock()

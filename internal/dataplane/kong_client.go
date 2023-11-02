@@ -474,9 +474,11 @@ func (c *KongClient) sendOutToGatewayClients(
 		return nil, err
 	}
 
-	// After a successful configuration update in DB mode, we should propagate the SHA from
-	// the chosen client to other clients as well as they will pick the configuration from the shared database.
-	if !dataplaneutil.IsDBLessMode(c.dbmode) &&
+	// After a successful configuration update in DB mode,
+	// since only ONE gateway client is chosen to send requests and store SHA of latest configurations,
+	// we should propagate the SHA from the chosen client to other clients
+	// as well as they will pick the configuration from the shared database.
+	if dataplaneutil.DBBacked(c.dbmode) &&
 		len(gatewayClients) > 1 {
 		for _, client := range gatewayClients {
 			client.SetLastConfigSHA([]byte(shas[0]))

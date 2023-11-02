@@ -216,39 +216,23 @@ func (ks *KongState) FillUpstreamOverrides(
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
 		servicesAsObjects := func(svc *corev1.Service, _ int) client.Object { return svc }
 
+		// In case `konghq.com/override` annotation is set on any of the services, we should log a deprecation error.
+		maybeLogKongIngressDeprecationError(logger, servicesGroup)
+
 		kongIngress, err := getKongIngressForServices(s, servicesGroup)
 		if err != nil {
 			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
 		} else {
-			for _, svc := range ks.Upstreams[i].Service.K8sServices {
+			for _, svc := range servicesGroup {
 				ks.Upstreams[i].override(kongIngress, svc)
-				logger.Error(nil, fmt.Sprintf(
-					"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
-					annotations.AnnotationPrefix+annotations.ConfigurationKey,
-					kongv1beta1.KongUpstreamPolicyAnnotationKey),
-					"namespace", svc.Namespace, "name", svc.Name)
 			}
 		}
 
 		kongUpstreamPolicy, err := GetKongUpstreamPolicyForServices(s, servicesGroup)
 		if err != nil {
 			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
-		} else {
-			if kongUpstreamPolicy != nil {
-				if kongIngress != nil {
-					for _, svc := range servicesGroup {
-						logger.Error(nil,
-							fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
-								"from %s will take precedence",
-								annotations.AnnotationPrefix+annotations.ConfigurationKey,
-								kongv1beta1.KongUpstreamPolicyAnnotationKey,
-								kongv1beta1.KongUpstreamPolicyAnnotationKey,
-								kongv1beta1.KongUpstreamPolicyAnnotationKey),
-							"namespace", svc.Namespace, "name", svc.Name)
-					}
-				}
-				ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
-			}
+		} else if kongUpstreamPolicy != nil {
+			ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
 		}
 	}
 }
@@ -499,6 +483,37 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 			logger.Error(err, "failed to fill ID for consumer group", "consumer_group_name", *consumerGroup.Name)
 		} else {
 			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup
+		}
+	}
+}
+
+// maybeLogKongIngressDeprecationError iterates over services and logs a deprecation error if a service
+// is annotated with `konghq.com/override` annotation.
+func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.Service) {
+	for _, svc := range services {
+		_, upstreamPolicyAnnotationSet := annotations.ExtractUpstreamPolicy(svc.Annotations)
+		kongOverrideAnnotationSet := annotations.ExtractConfigurationName(svc.Annotations) != ""
+
+		// If both `konghq.com/override` and `konghq.com/upstream-policy` are set, we should log a more specific error.
+		if kongOverrideAnnotationSet && upstreamPolicyAnnotationSet {
+			logger.Error(nil, fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
+				"from %s will take precedence",
+				annotations.AnnotationPrefix+annotations.ConfigurationKey,
+				kongv1beta1.KongUpstreamPolicyAnnotationKey,
+				kongv1beta1.KongUpstreamPolicyAnnotationKey,
+				kongv1beta1.KongUpstreamPolicyAnnotationKey),
+				"namespace", svc.Namespace, "name", svc.Name,
+			)
+		}
+
+		// In case it's just `konghq.com/override` set, we should log a deprecation error.
+		if kongOverrideAnnotationSet {
+			logger.Error(nil, fmt.Sprintf(
+				"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
+				annotations.AnnotationPrefix+annotations.ConfigurationKey,
+				kongv1beta1.KongUpstreamPolicyAnnotationKey),
+				"namespace", svc.Namespace, "name", svc.Name,
+			)
 		}
 	}
 }

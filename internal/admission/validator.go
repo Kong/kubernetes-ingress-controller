@@ -164,7 +164,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// testing them against themselves.
 	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoredSecrets)
 	if err != nil {
-		return false, ErrTextConsumerCredentialValidationFailed, err
+		return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
 	}
 
 	// validate the consumer's credentials against the index of all managed
@@ -172,7 +172,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	for _, secret := range credentials {
 		// do the unique constraints validation of the credentials using the credentials index
 		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(secret); err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
+			return false, fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err), nil
 		}
 	}
 

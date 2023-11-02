@@ -173,6 +173,10 @@ Nothing yet.
 - Error logs emitted from Gateway Discovery readiness checker that should be
   logged at `debug` level are now logged at that level.
   [#5029](https://github.com/Kong/kubernetes-ingress-controller/pull/5029)
+- Fixed `HTTPRoute` and `KongConsumer` admission webhook validators to properly
+  signal validation failures, resulting in returning responses with `AdmissionResponse`
+  filled instead of 500 status codes. It will make them work as expected in cases where the 
+  `ValidatingWebhookConfiguration` is configured with `failurePolicy: Ignore`.
 
 ### Changed
 

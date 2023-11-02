@@ -486,28 +486,6 @@ test.istio: gotestsum
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
-.PHONY: test.kongintegration
-test.kongintegration:
-	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
-
-.PHONY: test.kongintegration.pretty
-test.kongintegration.pretty:
-	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
-
-.PHONY: _test.kongintegration
-_test.kongintegration: gotestsum go-junit-report
-	# Disable testcontainer's reaper (Ryuk). It's needed because Ryuk requires
-	# privileged mode to run, which is not desired and could cause issues in CI.
-	TESTCONTAINERS_RYUK_DISABLED="true" \
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	$(GOTESTSUM) -- $(GOTESTFLAGS) \
-		-race \
-		-parallel $(NCPU) \
-		-coverpkg=$(PKG_LIST) \
-		-coverprofile=coverage.kongintegration.out \
-		./test/kongintegration | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
-
 # ------------------------------------------------------------------------------
 # Operations - Local Deployment
 # ------------------------------------------------------------------------------

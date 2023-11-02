@@ -401,13 +401,19 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 			Namespace: namespace,
 			Name:      string(parentRef.Name),
 		}, &gateway); err != nil {
-			return false, fmt.Sprintf("Couldn't retrieve referenced gateway %s/%s", namespace, parentRef.Name), err
+			if apierrors.IsNotFound(err) {
+				return false, fmt.Sprintf("Referenced gateway %s/%s not found", namespace, parentRef.Name), nil
+			}
+			return false, "", err
 		}
 
 		// pull the referenced GatewayClass object from the Gateway
 		gatewayClass := gatewayapi.GatewayClass{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
-			return false, fmt.Sprintf("Couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
+			if apierrors.IsNotFound(err) {
+				return false, fmt.Sprintf("Referenced gatewayclass %s not found", gateway.Spec.GatewayClassName), nil
+			}
+			return false, "", err
 		}
 
 		// determine ultimately whether the Gateway is managed by this controller implementation

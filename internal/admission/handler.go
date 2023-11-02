@@ -290,7 +290,6 @@ func (h RequestHandler) handleHTTPRoute(
 	if err != nil {
 		return nil, err
 	}
-
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 

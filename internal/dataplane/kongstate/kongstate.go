@@ -491,11 +491,11 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 // is annotated with `konghq.com/override` annotation.
 func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.Service) {
 	for _, svc := range services {
-		_, kongUpstreamPolicyAnnotated := annotations.ExtractUpstreamPolicy(svc.Annotations)
-		kongIngressAnnotated := annotations.ExtractConfigurationName(svc.Annotations) != ""
+		_, upstreamPolicyAnnotationSet := annotations.ExtractUpstreamPolicy(svc.Annotations)
+		kongOverrideAnnotationSet := annotations.ExtractConfigurationName(svc.Annotations) != ""
 
 		// If both `konghq.com/override` and `konghq.com/upstream-policy` are set, we should log a more specific error.
-		if kongIngressAnnotated && kongUpstreamPolicyAnnotated {
+		if kongOverrideAnnotationSet && upstreamPolicyAnnotationSet {
 			logger.Error(nil, fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
 				"from %s will take precedence",
 				annotations.AnnotationPrefix+annotations.ConfigurationKey,
@@ -507,7 +507,7 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 		}
 
 		// In case it's just `konghq.com/override` set, we should log a deprecation error.
-		if kongIngressAnnotated {
+		if kongOverrideAnnotationSet {
 			logger.Error(nil, fmt.Sprintf(
 				"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
 				annotations.AnnotationPrefix+annotations.ConfigurationKey,

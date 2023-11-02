@@ -166,9 +166,9 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			p.logger.Info("context done: shutting down the proxy update server")
+			p.logger.Info("Context done: shutting down the proxy update server")
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
-				p.logger.Error(err, "context completed with error")
+				p.logger.Error(err, "Context completed with error")
 			}
 			p.syncTicker.Stop()
 
@@ -181,7 +181,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 
 		case <-p.syncTicker.C:
 			if err := p.dataplaneClient.Update(ctx); err != nil {
-				p.logger.Error(err, "could not update kong admin")
+				p.logger.Error(err, "Could not update kong admin")
 				continue
 			}
 			initialConfig.Do(p.markConfigApplied)

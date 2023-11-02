@@ -89,7 +89,7 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 
 	referred, err := r.ReferenceIndexers.ObjectReferred(secret)
 	if err != nil {
-		r.Log.Error(err, "failed to check whether secret referred",
+		r.Log.Error(err, "Failed to check whether secret referred",
 			"namespace", secret.Namespace, "name", secret.Name)
 		return false
 	}
@@ -118,7 +118,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// clean the object up if it's being deleted
 	if !secret.DeletionTimestamp.IsZero() && time.Now().After(secret.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(secret)
 		if err != nil {
 			return ctrl.Result{}, err

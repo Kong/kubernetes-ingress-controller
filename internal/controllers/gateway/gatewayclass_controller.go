@@ -121,7 +121,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	log.V(util.DebugLevel).Info("processing gatewayclass", "name", req.Name)
+	log.V(util.DebugLevel).Info("Processing gatewayclass", "name", req.Name)
 
 	if isGatewayClassControlledAndUnmanaged(gwc) {
 		alreadyAccepted := util.CheckCondition(

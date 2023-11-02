@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -116,11 +117,22 @@ func (i *httpRouteTranslationIndex) translateToKongServiceBackends(rulesMeta []h
 }
 
 func (i *httpRouteTranslationIndex) translateToKongServiceRoutes(s *KongServiceTranslation, rulesMeta []httpRouteRuleMeta) {
-	for _, rulesByFilter := range groupRulesByFilter(rulesMeta) {
-		// each filter group must be a separate Kong route, not eligible for consolidation
-		// thus need to be translated separately
-		routesByFilter := i.translateToKongRoutes(rulesByFilter)
-		s.KongRoutes = append(s.KongRoutes, routesByFilter...)
+	_, hasRedirectFilter := lo.Find(rulesMeta[0].Rule.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+	})
+	if hasRedirectFilter {
+		s.KongRoutes = make([]KongRouteTranslation, 0)
+		for r := range rulesMeta {
+			route := i.translateToKongRoutes(rulesMeta[r : r+1])
+			s.KongRoutes = append(s.KongRoutes, route...)
+		}
+	} else {
+		for _, rulesByFilter := range groupRulesByFilter(rulesMeta) {
+			// each filter group must be a separate Kong route, not eligible for consolidation
+			// thus need to be translated separately
+			routesByFilter := i.translateToKongRoutes(rulesByFilter)
+			s.KongRoutes = append(s.KongRoutes, routesByFilter...)
+		}
 	}
 
 	// Sort the routes by name to ensure that the order is deterministic.
@@ -433,14 +445,7 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
 // of request redirect filter.
 func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectFilter, path string) []kong.Plugin {
-	plugins := make([]kong.Plugin, 2)
-	plugins[0] = kong.Plugin{
-		Name: kong.String("request-termination"),
-		Config: kong.Configuration{
-			"status_code": modifier.StatusCode,
-		},
-	}
-
+	var plugins []kong.Plugin
 	var locationHeader string
 	scheme := "http"
 	port := 80
@@ -458,18 +463,40 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		path = *modifier.Path.ReplaceFullPath
 	}
 	if modifier.Hostname != nil {
-		locationHeader = fmt.Sprintf("Location: %s://%s", scheme, pathlib.Join(fmt.Sprintf("%s:%d", *modifier.Hostname, port), path))
-	} else {
-		locationHeader = fmt.Sprintf("Location: %s", path)
-	}
-
-	plugins[1] = kong.Plugin{
-		Name: kong.String("response-transformer"),
-		Config: kong.Configuration{
-			"add": map[string][]string{
-				"headers": {locationHeader},
+		plugins = append(plugins, kong.Plugin{
+			Name: kong.String("request-termination"),
+			Config: kong.Configuration{
+				"status_code": modifier.StatusCode,
 			},
-		},
+		})
+
+		locationHeader = fmt.Sprintf("Location: %s://%s", scheme, pathlib.Join(fmt.Sprintf("%s:%d", *modifier.Hostname, port), path))
+		plugins = append(plugins, kong.Plugin{
+			Name: kong.String("response-transformer"),
+			Config: kong.Configuration{
+				"add": map[string][]string{
+					"headers": {locationHeader},
+				},
+			},
+		})
+	} else if modifier.Port != nil {
+		plugins = append(plugins, kong.Plugin{
+			Name: kong.String("post-function"),
+			Config: kong.Configuration{
+				"access": []string{
+					fmt.Sprintf("kong.response.exit(%d, nil, {['Location'] = '%s://' .. kong.request.get_host() .. ':%d%s'})", *modifier.StatusCode, scheme, *modifier.Port, path),
+				},
+			},
+		})
+	} else {
+		plugins = append(plugins, kong.Plugin{
+			Name: kong.String("post-function"),
+			Config: kong.Configuration{
+				"access": []string{
+					fmt.Sprintf("kong.response.exit(%d, nil, {['Location'] = '%s://' .. kong.request.get_host() .. ':' .. kong.request.get_port() .. '%s'})", *modifier.StatusCode, scheme, path),
+				},
+			},
+		})
 	}
 
 	return plugins

@@ -12,6 +12,8 @@ import (
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
+	redirectPortNumber := gatewayapi.PortNumber(8083)
+
 	testCases := []struct {
 		name                      string
 		filters                   []gatewayapi.HTTPRouteFilter
@@ -151,6 +153,29 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 							"headers": {
 								"header-to-set:bar",
 							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "request redirect with modifier hostname unspecified",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+						Port:       &redirectPortNumber,
+						StatusCode: lo.ToPtr(302),
+					},
+				},
+			},
+			path: "/test",
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("post-function"),
+					Config: kong.Configuration{
+						"access": []string{
+							"kong.response.exit(302, nil, {['Location'] = 'http://' .. kong.request.get_host() .. ':8083/test'})",
 						},
 					},
 				},

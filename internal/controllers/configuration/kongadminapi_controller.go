@@ -121,7 +121,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		return ctrl.Result{}, err
 	}
-	r.Log.Info("reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+	r.Log.Info("Reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 	if !endpoints.DeletionTimestamp.IsZero() {
 		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
@@ -176,7 +176,7 @@ func (r *KongAdminAPIServiceReconciler) notify() {
 	discovered := flattenDiscoveredAdminAPIs(r.Cache)
 	addresses := lo.Map(discovered, func(d adminapi.DiscoveredAdminAPI, _ int) string { return d.Address })
 	r.Log.V(util.DebugLevel).
-		Info("notifying about newly detected Admin APIs", "admin_apis", addresses)
+		Info("Notifying about newly detected Admin APIs", "admin_apis", addresses)
 	r.EndpointsNotifier.Notify(discovered)
 }
 

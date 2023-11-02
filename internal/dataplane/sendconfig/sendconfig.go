@@ -62,9 +62,9 @@ func PerformUpdate(
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
-				logger.V(util.DebugLevel).Info("no configuration change, skipping sync to Konnect")
+				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Konnect")
 			} else {
-				logger.V(util.DebugLevel).Info("no configuration change, skipping sync to Kong")
+				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
 			return oldSHA, []failures.ResourceFailure{}, nil
 		}
@@ -94,9 +94,9 @@ func PerformUpdate(
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
 
 	if client.IsKonnect() {
-		logger.V(util.InfoLevel).Info("successfully synced configuration to Konnect")
+		logger.V(util.InfoLevel).Info("Successfully synced configuration to Konnect")
 	} else {
-		logger.V(util.InfoLevel).Info("successfully synced configuration to Kong")
+		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
 	}
 
 	return newSHA, nil, nil
@@ -128,13 +128,13 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr e
 			},
 		}
 		for problemSource, problem := range ee.Problems {
-			logger.V(util.DebugLevel).Info("adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
+			logger.V(util.DebugLevel).Info("Adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
 			resourceFailure, failureCreateErr := failures.NewResourceFailure(
 				fmt.Sprintf("invalid %s: %s", problemSource, problem),
 				&obj,
 			)
 			if failureCreateErr != nil {
-				logger.Error(failureCreateErr, "could not create resource failure event")
+				logger.Error(failureCreateErr, "Could not create resource failure event")
 			} else {
 				out = append(out, resourceFailure)
 			}

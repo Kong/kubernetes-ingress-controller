@@ -52,24 +52,24 @@ func Run(
 	logger logr.Logger,
 ) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
-	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
-	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
+	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
+	setupLog.Info("The ingress class name has been set", "value", c.IngressClassName)
 
 	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
-	setupLog.Info("getting enabled options and features")
+	setupLog.Info("Getting enabled options and features")
 	featureGates, err := featuregates.New(setupLog, c.FeatureGates)
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
 
-	setupLog.Info("getting the kubernetes client configuration")
+	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 
-	setupLog.Info("starting standalone health check server")
+	setupLog.Info("Starting standalone health check server")
 	healthServer := &healthCheckServer{}
 	healthServer.setHealthzCheck(healthz.Ping)
 	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
@@ -86,7 +86,7 @@ func Run(
 
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 
-	setupLog.Info("getting the kong admin api client configuration")
+	setupLog.Info("Getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(
 		ctx,
 		setupLog.WithName("initialize-kong-clients"),
@@ -129,7 +129,7 @@ func Run(
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
-	setupLog.Info("configuring and building the controller manager")
+	setupLog.Info("Configuring and building the controller manager")
 	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)
 	if err != nil {
 		return fmt.Errorf("unable to setup manager options: %w", err)
@@ -217,7 +217,7 @@ func Run(
 		kubernetesStatusQueue = status.NewQueue(status.WithBufferSize(c.UpdateStatusQueueBufferSize))
 		dataplaneClient.EnableKubernetesObjectReports(kubernetesStatusQueue)
 	} else {
-		setupLog.Info("status updates disabled, skipping status updater")
+		setupLog.Info("Status updates disabled, skipping status updater")
 	}
 
 	setupLog.Info("Initializing Dataplane address Discovery")
@@ -289,7 +289,7 @@ func Run(
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
-		setupLog.Info("starting license agent")
+		setupLog.Info("Starting license agent")
 		agent := license.NewAgent(
 			konnectLicenseAPIClient,
 			ctrl.LoggerFrom(ctx).WithName("license-agent"),
@@ -324,13 +324,13 @@ func Run(
 			instanceIDProvider,
 		)
 		if err != nil {
-			setupLog.Error(err, "failed setting up anonymous reports")
+			setupLog.Error(err, "Failed setting up anonymous reports")
 		} else {
 			defer stopAnonymousReports()
 		}
-		setupLog.Info("anonymous reports enabled")
+		setupLog.Info("Anonymous reports enabled")
 	} else {
-		setupLog.Info("anonymous reports disabled, skipping")
+		setupLog.Info("Anonymous reports disabled, skipping")
 	}
 
 	setupLog.Info("Starting manager")

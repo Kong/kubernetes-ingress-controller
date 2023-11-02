@@ -13,7 +13,7 @@ import (
 )
 
 func TestUniqueConstraintsValidation(t *testing.T) {
-	t.Log("setting up an index of existing credentials which have unique constraints")
+	t.Log("Setting up an index of existing credentials which have unique constraints")
 	index := make(Index)
 	require.NoError(t, index.add(Credential{
 		Key:   "username",
@@ -26,7 +26,7 @@ func TestUniqueConstraintsValidation(t *testing.T) {
 		Type:  "basic-auth",
 	}))
 
-	t.Log("verifying that a new basic-auth credential with a unique username doesn't violate constraints")
+	t.Log("Verifying that a new basic-auth credential with a unique username doesn't violate constraints")
 	nonviolatingCredential := Credential{
 		Key:   "username",
 		Value: "nightwing",
@@ -34,7 +34,7 @@ func TestUniqueConstraintsValidation(t *testing.T) {
 	}
 	assert.NoError(t, index.add(nonviolatingCredential))
 
-	t.Log("verifying that a new basic-auth credential with a username that's already in use violates constraints")
+	t.Log("Verifying that a new basic-auth credential with a username that's already in use violates constraints")
 	violatingCredential := Credential{
 		Key:   "username",
 		Value: "batman",
@@ -44,7 +44,7 @@ func TestUniqueConstraintsValidation(t *testing.T) {
 	err := index.add(violatingCredential)
 	assert.Error(t, err)
 
-	t.Log("setting up a list of existing credentials which have no unique constraints")
+	t.Log("Setting up a list of existing credentials which have no unique constraints")
 	index = make(Index)
 	assert.NoError(t, index.add(Credential{
 		Key:   "key",
@@ -52,7 +52,7 @@ func TestUniqueConstraintsValidation(t *testing.T) {
 		Type:  "acl",
 	}))
 
-	t.Log("verifying that non-unique constrained credentials don't trigger a violation")
+	t.Log("Verifying that non-unique constrained credentials don't trigger a violation")
 	duplicate := Credential{
 		Key:   "key",
 		Value: "test",
@@ -61,7 +61,7 @@ func TestUniqueConstraintsValidation(t *testing.T) {
 	assert.False(t, IsKeyUniqueConstrained(duplicate.Type, duplicate.Key))
 	assert.NoError(t, index.add(duplicate))
 
-	t.Log("verifying that unconstrained keys for types with constraints don't flag as violated")
+	t.Log("Verifying that unconstrained keys for types with constraints don't flag as violated")
 	assert.False(t, IsKeyUniqueConstrained("basic-auth", "unconstrained-key"))
 }
 

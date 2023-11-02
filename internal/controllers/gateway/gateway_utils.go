@@ -584,14 +584,14 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 		objs = append(objs, e.ObjectOld)
 		objs = append(objs, e.ObjectNew)
 	default:
-		log.Error(fmt.Errorf("invalid type"), "received invalid event type in event handlers", "found", reflect.TypeOf(watchEvent))
+		log.Error(fmt.Errorf("invalid type"), "Received invalid event type in event handlers", "found", reflect.TypeOf(watchEvent))
 		return false
 	}
 
 	for _, obj := range objs {
 		gwc, ok := obj.(*gatewayapi.GatewayClass)
 		if !ok {
-			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
+			log.Error(fmt.Errorf("invalid type"), "Received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 			continue
 		}
 		if gwc.Spec.ControllerName == GetControllerName() {

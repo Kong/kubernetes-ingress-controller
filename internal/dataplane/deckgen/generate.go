@@ -51,7 +51,7 @@ func ToDeckContent(
 				Plugin: *p.DeepCopy(),
 			}
 			if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-				logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
+				logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -68,7 +68,7 @@ func ToDeckContent(
 					Plugin: *p.DeepCopy(),
 				}
 				if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-					logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
+					logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -91,7 +91,7 @@ func ToDeckContent(
 			Plugin: plugin.Plugin,
 		}
 		if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-			logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
+			logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
@@ -157,7 +157,7 @@ func ToDeckContent(
 		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
 		// stopping all updates to the Kong Admin API.
 		if consumer.Username == nil {
-			logger.Error(nil, "invalid consumer received (username was empty)")
+			logger.Error(nil, "Invalid consumer received (username was empty)")
 			continue
 		}
 

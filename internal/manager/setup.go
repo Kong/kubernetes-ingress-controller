@@ -57,7 +57,7 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 }
 
 func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
-	logger.Info("building the manager runtime scheme and loading apis into the scheme")
+	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := scheme.Get()
 	if err != nil {
 		return ctrl.Options{}, err
@@ -92,7 +92,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
-		logger.Info("manager set up with multiple namespaces", "namespaces", watchNamespaces)
+		logger.Info("Manager set up with multiple namespaces", "namespaces", watchNamespaces)
 
 		// If ingress service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
@@ -176,7 +176,7 @@ func setupAdmissionServer(
 	admissionLogger := logger.WithName("admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		logger.Info("admission webhook server disabled")
+		logger.Info("Admission webhook server disabled")
 		return nil
 	}
 
@@ -196,7 +196,7 @@ func setupAdmissionServer(
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.Error(err, "admission webhook server stopped")
+		logger.Error(err, "Admission webhook server stopped")
 	}()
 	return nil
 }
@@ -216,7 +216,7 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	}
 	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP)
 	if err != nil {
-		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
+		log.Info("Falling back to a default address finder for UDP", "reason", err.Error())
 		udpAddressFinder = defaultAddressFinder
 	}
 

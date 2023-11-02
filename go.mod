@@ -19,7 +19,7 @@ go 1.21
 // toolchain go1.21.0
 
 require (
-	cloud.google.com/go/container v1.27.0
+	cloud.google.com/go/container v1.27.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/blang/semver/v4 v4.0.0

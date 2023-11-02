@@ -2403,7 +2403,7 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - name: admin
+  - name: admin-tls
     port: 8444
     protocol: TCP
     targetPort: 8444

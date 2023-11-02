@@ -90,7 +90,6 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 }
 
 // WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
-
 func (c *AdminAPIClientsManager) WithDBMode(dbMode string) *AdminAPIClientsManager {
 	c.dbMode = dbMode
 	return c
@@ -184,12 +183,12 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	return lo.Values(c.readyGatewayClients)
 }
 
-// GatewayClientsToConfigure returns the gateway clients need to be configured with the new configuration
-// in sending generated configurations.
+// GatewayClientsToConfigure returns the gateway clients which need to be configured // with the new configuration.
 // In DBLess mode, it returns ALL gateway clients
 // because we need to update configurations of each gateway instance.
 // In DB-backed mode, it returns ONE random gateway client
-// because we only need to send configurations to one gateway instance, and other instances could be synced from DB.
+// because we only need to send configurations to one gateway instance
+// while others will be synced using the DB.
 func (c *AdminAPIClientsManager) GatewayClientsToConfigure() []*adminapi.Client {
 	c.lock.RLock()
 	defer c.lock.RUnlock()

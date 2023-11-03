@@ -8,8 +8,10 @@ on:
 jobs:
     check_issues_state:
       runs-on: ubuntu-latest
+      permissions:
+        issues: read
       env:
-        GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       steps:
         - name: checkout repository
           uses: actions/checkout@v4

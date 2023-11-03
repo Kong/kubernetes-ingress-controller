@@ -44,7 +44,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 	}
 
 	for _, err := range errs {
-		p.logger.Error(err, "could not generate route from TLSRoute")
+		p.logger.Error(err, "Could not generate route from TLSRoute")
 	}
 
 	return result

@@ -86,7 +86,7 @@ func shouldEnableParserExpressionRoutes(
 		logger.V(util.InfoLevel).Info("Gateway is running with non-expression router flavor", "flavor", routerFlavor)
 		return false
 	}
-	logger.V(util.InfoLevel).Info("expression routes mode enabled")
+	logger.V(util.InfoLevel).Info("The expression routes mode enabled")
 	return true
 }
 
@@ -377,7 +377,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) ([]kongst
 				newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
 
 				if len(newTargets) == 0 {
-					p.logger.V(util.InfoLevel).Info("no targets could be found for kubernetes service",
+					p.logger.V(util.InfoLevel).Info("No targets could be found for kubernetes service",
 						"namespace", k8sService.Namespace, "name", k8sService.Name, "kong_service", *service.Name)
 				}
 
@@ -413,7 +413,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) ([]kongst
 
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
-				p.logger.V(util.InfoLevel).Info("no targets found to create upstream", "service_name", *service.Name)
+				p.logger.V(util.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
 			}
 
 			// define the upstream including all the newly populated targets
@@ -478,7 +478,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 		for _, listener := range gateway.Spec.Listeners {
 			status, ok := statuses[listener.Name]
 			if !ok {
-				logger.V(util.DebugLevel).Info("listener missing status information",
+				logger.V(util.DebugLevel).Info("Listener missing status information",
 					"gateway", gateway.Name,
 					"listener", listener.Name,
 					"listener_protocol", listener.Protocol,
@@ -655,7 +655,7 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Cert
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
 					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/2605
-					logger.Error(nil, "same SNI requested for multiple certs, can only serve one cert",
+					logger.Error(nil, "Same SNI requested for multiple certs, can only serve one cert",
 						"served_secret_cert", seen,
 						"requested_secret_cert", *current.cert.ID,
 						"sni", sni)
@@ -695,7 +695,7 @@ func getServiceEndpoints(
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
-		logger.V(util.DebugLevel).Info("unable to retrieve IngressClassParameters", "error", err)
+		logger.V(util.DebugLevel).Info("Unable to retrieve IngressClassParameters", "error", err)
 	} else {
 		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
@@ -707,7 +707,7 @@ func getServiceEndpoints(
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
-		logger.V(util.DebugLevel).Info("no active endpoints")
+		logger.V(util.DebugLevel).Info("No active endpoints")
 	}
 
 	return targetsForEndpoints(endpoints)
@@ -765,7 +765,7 @@ func getEndpoints(
 
 	// ExternalName services
 	if service.Spec.Type == corev1.ServiceTypeExternalName {
-		logger.V(util.DebugLevel).Info("found service of type=ExternalName")
+		logger.V(util.DebugLevel).Info("Found service of type=ExternalName")
 		return []util.Endpoint{
 			{
 				Address: service.Spec.ExternalName,
@@ -774,13 +774,13 @@ func getEndpoints(
 		}
 	}
 
-	logger.V(util.DebugLevel).Info("fetching EndpointSlices")
+	logger.V(util.DebugLevel).Info("Fetching EndpointSlices")
 	endpointSlices, err := getEndpointSlices(service.Namespace, service.Name)
 	if err != nil {
-		logger.Error(err, "error fetching EndpointSlices")
+		logger.Error(err, "Error fetching EndpointSlices")
 		return []util.Endpoint{}
 	}
-	logger.V(util.DebugLevel).Info("fetched EndpointSlices", "count", len(endpointSlices))
+	logger.V(util.DebugLevel).Info("Fetched EndpointSlices", "count", len(endpointSlices))
 
 	// Avoid duplicated upstream servers when the service contains
 	// multiple port definitions sharing the same target port.
@@ -815,7 +815,7 @@ func getEndpoints(
 			}
 		}
 	}
-	logger.V(util.DebugLevel).Info("found endpoints", "endpoints", upstreamServers)
+	logger.V(util.DebugLevel).Info("Found endpoints", "endpoints", upstreamServers)
 	return upstreamServers
 }
 

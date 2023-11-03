@@ -56,7 +56,7 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 		err := httpServer.ListenAndServe()
 		if err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
-				s.Logger.Error(err, "could not start diagnostics server")
+				s.Logger.Error(err, "Could not start diagnostics server")
 				errChan <- err
 			}
 		}

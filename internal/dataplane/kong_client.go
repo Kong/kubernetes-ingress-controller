@@ -182,7 +182,7 @@ func NewKongClient(
 func (c *KongClient) initializeControllerPodReference() {
 	podNN, err := util.GetPodNN()
 	if err != nil {
-		c.logger.Error(err, "failed to resolve controller's pod to attach the apply configuration events to")
+		c.logger.Error(err, "Failed to resolve controller's pod to attach the apply configuration events to")
 		return
 	}
 	c.controllerPodReference = mo.Some(podNN)
@@ -395,17 +395,17 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 
-	c.logger.V(util.DebugLevel).Info("parsing kubernetes objects into data-plane configuration")
+	c.logger.V(util.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
-		c.logger.V(util.DebugLevel).Info("translation failures occurred when building data-plane configuration", "count", failuresCount)
+		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.prometheusMetrics.RecordTranslationBrokenResources(0)
-		c.logger.V(util.DebugLevel).Info("successfully built data-plane configuration")
+		c.logger.V(util.DebugLevel).Info("Successfully built data-plane configuration")
 	}
 
 	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig)
@@ -428,7 +428,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 			if fallbackSyncErr != nil {
 				return errors.Join(gatewaysSyncErr, fallbackSyncErr)
 			}
-			c.logger.V(util.DebugLevel).Info("due to errors in the current config, the last valid config has been pushed to Gateways")
+			c.logger.V(util.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
 		}
 		return gatewaysSyncErr
 	}
@@ -438,11 +438,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// if the configuration SHAs that have just been pushed are different than
 		// what's been previously pushed.
 		if !slices.Equal(shas, c.SHAs) {
-			c.logger.V(util.DebugLevel).Info("triggering report for configured Kubernetes objects", "count",
+			c.logger.V(util.DebugLevel).Info("Triggering report for configured Kubernetes objects", "count",
 				len(parsingResult.ConfiguredKubernetesObjects))
 			c.triggerKubernetesObjectReport(parsingResult.ConfiguredKubernetesObjects, parsingResult.TranslationFailures)
 		} else {
-			c.logger.V(util.DebugLevel).Info("no configuration change; resource status update not necessary, skipping")
+			c.logger.V(util.DebugLevel).Info("No configuration change; resource status update not necessary, skipping")
 		}
 	}
 	return nil
@@ -558,7 +558,7 @@ func (c *KongClient) sendToClient(
 
 	if err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
-			logger.Error(nil, "exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+			logger.Error(nil, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
 	}
@@ -620,9 +620,9 @@ func prepareSendDiagnosticFn(
 		// later on but we're OK with this limitation of said API.
 		select {
 		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
-			logger.V(util.DebugLevel).Info("shipping config to diagnostic server")
+			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
-			logger.Error(nil, "config diagnostic buffer full, dropping diagnostic config")
+			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")
 		}
 	}
 }
@@ -720,11 +720,11 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus clients.ConfigStatus) {
 	if c.currentConfigStatus == configStatus {
 		// No change in config status, nothing to do.
-		c.logger.V(util.DebugLevel).Info("no change in config status, not notifying")
+		c.logger.V(util.DebugLevel).Info("No change in config status, not notifying")
 		return
 	}
 
-	c.logger.V(util.DebugLevel).Info("config status changed, notifying", "configStatus", configStatus)
+	c.logger.V(util.DebugLevel).Info("Config status changed, notifying", "configStatus", configStatus)
 	c.currentConfigStatus = configStatus
 	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
 }

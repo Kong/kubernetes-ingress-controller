@@ -142,6 +142,13 @@ Nothing yet.
   They must be migrated to annotations. `upstream` field is deprecated - it's recommended
   to migrate its settings to the new `KongUpstreamPolicy` resource.
   [#5022](https://github.com/Kong/kubernetes-ingress-controller/pull/5022)
+- Fixed `HTTPRoute` and `KongConsumer` admission webhook validators to properly
+  signal validation failures, resulting in returning responses with `AdmissionResponse`
+  filled instead of 500 status codes. It will make them work as expected in cases where
+  the `ValidatingWebhookConfiguration` has `failurePolicy: Ignore`.
+  This will enable validations of `HTTPRoute` and `KongConsumer` that were previously only
+  accidentally effective with `failurePolicy: Fail`, thus it can be considered a breaking change.
+  [#5063](https://github.com/Kong/kubernetes-ingress-controller/pull/5063)
 
 ### Fixed
 
@@ -173,11 +180,6 @@ Nothing yet.
 - Error logs emitted from Gateway Discovery readiness checker that should be
   logged at `debug` level are now logged at that level.
   [#5029](https://github.com/Kong/kubernetes-ingress-controller/pull/5029)
-- Fixed `HTTPRoute` and `KongConsumer` admission webhook validators to properly
-  signal validation failures, resulting in returning responses with `AdmissionResponse`
-  filled instead of 500 status codes. It will make them work as expected in cases where
-  the `ValidatingWebhookConfiguration` has `failurePolicy: Ignore`.
-  [#5063](https://github.com/Kong/kubernetes-ingress-controller/pull/5063)
 
 ### Changed
 

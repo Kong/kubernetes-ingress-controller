@@ -569,7 +569,7 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 		cert, key, err := getCertFromSecret(secret)
 		if err != nil {
 			causingObjects := append(SNIs.Parents(), secret)
-			p.registerTranslationFailure("Failed to construct certificate from secret", causingObjects...)
+			p.registerTranslationFailure("failed to construct certificate from secret", causingObjects...)
 			continue
 		}
 		certs = append(certs, certWrapper{

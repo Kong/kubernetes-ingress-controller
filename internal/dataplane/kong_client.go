@@ -182,7 +182,7 @@ func NewKongClient(
 func (c *KongClient) initializeControllerPodReference() {
 	podNN, err := util.GetPodNN()
 	if err != nil {
-		c.logger.Error(err, "failed to resolve controller's pod to attach the apply configuration events to")
+		c.logger.Error(err, "Failed to resolve controller's pod to attach the apply configuration events to")
 		return
 	}
 	c.controllerPodReference = mo.Some(podNN)

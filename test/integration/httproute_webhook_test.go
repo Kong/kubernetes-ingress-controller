@@ -62,7 +62,7 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErrSubstring: `Gateway.gateway.networking.k8s.io \"fake-gateway\" not found`,
+			WantCreateErrSubstring: `fake-gateway not found`,
 		},
 		{
 			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",

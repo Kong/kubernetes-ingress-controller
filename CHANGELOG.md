@@ -7,7 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
- - [3.0.0-rc1](#300-rc1)
+ - [3.0.0](#300)
  - [2.12.0](#2120)
  - [2.11.1](#2111)
  - [2.11.0](#2110)
@@ -82,7 +82,7 @@ Nothing yet.
 
 ## 3.0.0
 
-> Release date: 2023-11-02
+> Release date: 2023-11-03
 
 ### Breaking changes
 
@@ -3005,7 +3005,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[3.0.0-rc1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0-rc1
+[3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.11.0

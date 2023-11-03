@@ -4,7 +4,44 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"sigs.k8s.io/yaml"
 )
+
+// -----------------------------------------------------------------------------
+// Dependency manifest reader
+// -----------------------------------------------------------------------------
+
+const dependencyFilePath = "../../.github/test_dependencies.yaml"
+
+// GetDependencyVersion returns the version of a dependency specified by the dependency tracker file given a YAML path.
+func GetDependencyVersion(path string) (string, error) {
+	source, err := os.Open(dependencyFilePath)
+	if err != nil {
+		return "", fmt.Errorf("could not open %s: %w", dependencyFilePath, err)
+	}
+	defer source.Close()
+	info, err := source.Stat()
+	if err != nil {
+		return "", fmt.Errorf("could not stat %s: %w", dependencyFilePath, err)
+	}
+
+	raw := make([]byte, info.Size())
+	_, err = source.Read(raw)
+	if err != nil {
+		return "", fmt.Errorf("could not read %s: %w", dependencyFilePath, err)
+	}
+	deps, err := yaml.YAMLToJSON(raw)
+	if err != nil {
+		return "", fmt.Errorf("could not parse %s: %w", dependencyFilePath, err)
+	}
+	found := gjson.GetBytes(deps, path)
+	if !found.Exists() {
+		return "", fmt.Errorf("path %s not found in %s", path, dependencyFilePath)
+	}
+	return found.String(), nil
+}
 
 // -----------------------------------------------------------------------------
 // Testing Helpers for Environment Variables Overrides
@@ -74,12 +111,18 @@ func KongEffectiveVersion() string {
 	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
 }
 
+const helmChartDependencyPath = "integration.helm.kong"
+
 // KongHelmChartVersion is the 'kong' helm chart version to use in tests.
 func KongHelmChartVersion() string {
+	var err error
 	v := os.Getenv("TEST_KONG_HELM_CHART_VERSION")
 	if v == "" {
-		fmt.Println("ERROR: missing required TEST_KONG_HELM_CHART_VERSION")
-		os.Exit(1)
+		v, err = GetDependencyVersion(helmChartDependencyPath)
+		if err != nil {
+			fmt.Println(fmt.Printf("WARN: could not get kong/kong chart dependency version: %s", err))
+			fmt.Println("WARN: will use whatever kong/kong chart version is installed locally")
+		}
 	}
 	return v
 }

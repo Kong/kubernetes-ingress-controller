@@ -5,6 +5,7 @@ package envtest
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -33,6 +34,9 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		// unsupportedControllerName is the name of the controller used for those
 		// gateways that are not supported by an actual controller (i.e., they won't be scheduled).
 		unsupportedControllerName gatewayapi.GatewayController = "example.com/unsupported-gateway-controller"
+
+		waitTime = 3 * time.Second
+		tickTime = 100 * time.Millisecond
 	)
 
 	scheme := Scheme(t, WithGatewayAPI)
@@ -87,7 +91,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			) {
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) })
 
 				t.Logf("verifying that the unsupported Gateway %s does not get Accepted or Programmed by the controller", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -97,18 +101,30 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				// hence wrapping the Reconciler() method is impossible with current
 				// implementation.
 				// Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/4190
-				for i := 0; i < 100; i++ {
+				//
+				// NOTE: we're not using a busy loop without a sleep because that could cause
+				// the rate limiter to kick in and fail the test.
+				require.Never(t, func() bool {
 					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
-					require.NoError(t, err)
-					require.Len(t, gateway.Status.Conditions, 2)
+					if err != nil {
+						t.Logf("error getting Gateway %s: %v", gateway.Name, err)
+						return true
+					}
+					if len(gateway.Status.Conditions) != 2 {
+						t.Logf("expected 2 Status Conditions on the Gateway: Accepted and Programmed, got: %v", gateway.Status.Conditions)
+						return true
+					}
 
 					if conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.Not(conditions.WithStatus(metav1.ConditionUnknown))) {
-						t.Fatalf("expected not to find a Programmed condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						t.Logf("expected not to find a Programmed condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						return true
 					}
 					if conditions.Contain(gateway.Status.Conditions, conditions.WithType("Accepted"), conditions.Not(conditions.WithStatus(metav1.ConditionUnknown))) {
-						t.Fatalf("expected not to find a Accepted condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						t.Logf("expected not to find a Accepted condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						return true
 					}
-				}
+					return false
+				}, waitTime, tickTime)
 			},
 		},
 		{
@@ -164,22 +180,34 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) })
 
 				// Let's wait and check that the Gateway hasn't been reconciled by the operator.
 				t.Log("verifying the Gateway is not reconciled as it is using a managed GatewayClass")
-				for i := 0; i < 100; i++ {
+
+				// NOTE: we're not using a busy loop without a sleep because that could cause
+				// the rate limiter to kick in and fail the test.
+				require.Never(t, func() bool {
 					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
-					require.NoError(t, err)
-					require.Len(t, gateway.Status.Conditions, 2)
+					if err != nil {
+						t.Logf("error getting Gateway %s: %v", gateway.Name, err)
+						return true
+					}
+					if len(gateway.Status.Conditions) != 2 {
+						t.Logf("expected 2 Status Conditions on the Gateway: Accepted and Programmed, got: %v", gateway.Status.Conditions)
+						return true
+					}
 
 					if conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.Not(conditions.WithStatus(metav1.ConditionUnknown))) {
-						t.Fatalf("expected not to find a Programmed condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						t.Logf("expected not to find a Programmed condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						return true
 					}
 					if conditions.Contain(gateway.Status.Conditions, conditions.WithType("Accepted"), conditions.Not(conditions.WithStatus(metav1.ConditionUnknown))) {
-						t.Fatalf("expected not to find a Accepted condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						t.Logf("expected not to find a Accepted condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						return true
 					}
-				}
+					return false
+				}, waitTime, tickTime)
 			},
 		},
 		{
@@ -223,22 +251,34 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				// hence wrapping the Reconciler() method is impossible with current
 				// implementation.
 				// Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/4190
-				for i := 0; i < 100; i++ {
+				//
+				// NOTE: we're not using a busy loop without a sleep because that could cause
+				// the rate limiter to kick in and fail the test.
+				require.Never(t, func() bool {
 					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
-					require.NoError(t, err)
-					require.Len(t, gateway.Status.Conditions, 2)
+					if err != nil {
+						t.Logf("error getting Gateway %s: %v", gateway.Name, err)
+						return true
+					}
+					if len(gateway.Status.Conditions) != 2 {
+						t.Logf("expected 2 Status Conditions on the Gateway: Accepted and Programmed, got: %v", gateway.Status.Conditions)
+						return true
+					}
 
 					if conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.Not(conditions.WithStatus(metav1.ConditionUnknown))) {
-						t.Fatalf("expected not to find a Programmed condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						t.Logf("expected not to find a Programmed condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						return true
 					}
 					if conditions.Contain(gateway.Status.Conditions, conditions.WithType("Accepted"), conditions.Not(conditions.WithStatus(metav1.ConditionUnknown))) {
-						t.Fatalf("expected not to find a Accepted condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						t.Logf("expected not to find a Accepted condition with Reason different than Unknown, got %#v", gateway.Status.Conditions)
+						return true
 					}
-				}
+					return false
+				}, waitTime, tickTime)
 
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) })
 
 				t.Logf("now that the GatewayClass exists, verifying that the Gateway %s gets Accepted and Programmed", gw.Name)
 
@@ -256,18 +296,17 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				for {
 					select {
 					case <-ctx.Done():
-						gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
-						require.NoError(t, err)
-						t.Logf("expected to find an Accepted and Programmed conditions with Status True, got %#v", gateway.Status.Conditions)
 						t.Fatalf("context got cancelled: %v", ctx.Err())
 					case event := <-w.ResultChan():
 						gateway, ok := event.Object.(*gatewayapi.Gateway)
-						require.True(t, ok)
+						require.True(t, ok, "expected to get a Gateway object, got %T", event.Object)
 
 						if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.WithStatus(metav1.ConditionTrue)) {
+							t.Logf("Gateway %s still doesn't have the Programmed condition with Status True", gateway.Name)
 							continue
 						}
 						if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Accepted"), conditions.WithStatus(metav1.ConditionTrue)) {
+							t.Logf("Gateway %s still doesn't have the Accepted condition with Status True", gateway.Name)
 							continue
 						}
 						break forLoop
@@ -329,7 +368,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			t.Logf("deploying gateway %s using %s gateway class", tc.Gateway.Name, tc.GatewayClass.Name)
 			tc.Gateway.Namespace = ns.Name
 			require.NoError(t, client.Create(ctx, &tc.Gateway))
-			t.Cleanup(func() { _ = client.Delete(ctx, &tc.Gateway) })
+			t.Cleanup(func() { _ = client.Delete(context.Background(), &tc.Gateway) })
 
 			gwClient := gatewayClient.GatewayV1().Gateways(ns.Name)
 			tc.Test(ctx, t, gwClient, tc.GatewayClass, tc.Gateway)

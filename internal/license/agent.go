@@ -113,7 +113,7 @@ func (a *Agent) NeedLeaderElection() bool {
 // Start starts the Agent. It attempts to pull an initial license from upstream, and then polls for updates on a
 // regular period, either the agent's initialPollingPeriod if it has not yet obtained a license or regularPollingPeriod if it has.
 func (a *Agent) Start(ctx context.Context) error {
-	a.logger.V(util.DebugLevel).Info("starting license agent")
+	a.logger.V(util.DebugLevel).Info("Starting license agent")
 
 	err := a.reconcileLicenseWithKonnect(ctx)
 	if err != nil {
@@ -165,7 +165,7 @@ func (a *Agent) runPollingLoop(ctx context.Context) error {
 			// Reset the ticker to run with the expected period which may change after we receive the license.
 			a.ticker.Reset(a.resolvePollingPeriod())
 		case <-ctx.Done():
-			a.logger.Info("context done, shutting down license agent")
+			a.logger.Info("Context done, shutting down license agent")
 			return ctx.Err()
 		}
 	}

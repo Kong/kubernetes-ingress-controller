@@ -42,7 +42,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	if len(errs) > 0 {
 		for _, err := range errs {
-			p.logger.Error(err, "could not generate route from GRPCRoute")
+			p.logger.Error(err, "Could not generate route from GRPCRoute")
 		}
 	}
 
@@ -124,7 +124,7 @@ func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	grpcRoute := splitGRPCRouteMatchWithPriority.Match.Source
 	// (very unlikely that) the rule index split from the source GRPCRoute is larger then length of original rules.
 	if len(grpcRoute.Spec.Rules) <= match.RuleIndex {
-		p.logger.Error(nil, "split rule index is greater than the length of rules in source GRPCRoute",
+		p.logger.Error(nil, "Split rule index is greater than the length of rules in source GRPCRoute",
 			"rule_index", match.RuleIndex,
 			"rule_count", len(grpcRoute.Spec.Rules))
 		return

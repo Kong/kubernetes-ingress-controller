@@ -100,7 +100,7 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
 				service.Tags = util.GenerateTagsForObject(parent)
 			} else {
-				logger.Error(nil, "multi-service backend lacks parent info, cannot generate tags",
+				logger.Error(nil, "Multi-service backend lacks parent info, cannot generate tags",
 					"service", *service.Name)
 			}
 		} else if len(k8sServices) > 0 {
@@ -110,7 +110,7 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 			// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
 			// the parser should discard this invalid route later, but this adds a placeholder value in case it doesn't.
 			// if you encounter an actual config where a service has these tags, something strange has happened.
-			logger.V(util.DebugLevel).Info("service has zero k8sServices backends, cannot generate tags for it properly",
+			logger.V(util.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
 				"service", *service.Name)
 			service.Tags = kong.StringSlice(
 				util.K8sNameTagPrefix+"UNKNOWN",

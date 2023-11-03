@@ -411,7 +411,7 @@ func (p *Parser) ingressRulesFromSplitHTTPRouteMatchWithPriority(
 	match := httpRouteMatchWithPriority.Match
 	httpRoute := httpRouteMatchWithPriority.Match.Source
 	if match.RuleIndex >= len(httpRoute.Spec.Rules) {
-		p.logger.Error(nil, "split match has rule out of bound of rules in source HTTPRoute",
+		p.logger.Error(nil, "Split match has rule out of bound of rules in source HTTPRoute",
 			"rule_index", match.RuleIndex, "rule_count", len(httpRoute.Spec.Rules))
 		return nil
 	}

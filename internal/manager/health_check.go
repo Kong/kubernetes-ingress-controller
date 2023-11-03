@@ -96,9 +96,9 @@ func (s *healthCheckServer) Start(ctx context.Context, addr string, logger logr.
 		err := server.ListenAndServe()
 		if err != nil {
 			if err == http.ErrServerClosed {
-				logger.Info("healthz server closed")
+				logger.Info("Healthz server closed")
 			} else {
-				logger.Error(err, "healthz server failed")
+				logger.Error(err, "Healthz server failed")
 			}
 		}
 	}()
@@ -112,7 +112,7 @@ func (s *healthCheckServer) Start(ctx context.Context, addr string, logger logr.
 		//nolint:contextcheck
 		err := server.Shutdown(shutdownCtx)
 		if err != nil {
-			logger.Error(err, "healthz server shutdown failed")
+			logger.Error(err, "Healthz server shutdown failed")
 		}
 	}()
 }

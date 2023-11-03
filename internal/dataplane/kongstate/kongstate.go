@@ -414,12 +414,12 @@ func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, err
 		pluginName := k8sPlugin.PluginName
 		// empty pluginName skip it
 		if pluginName == "" {
-			logger.Error(nil, "invalid KongClusterPlugin: empty plugin property",
+			logger.Error(nil, "Invalid KongClusterPlugin: empty plugin property",
 				"kongclusterplugin_name", k8sPlugin.Name)
 			continue
 		}
 		if _, ok := res[pluginName]; ok {
-			logger.Error(nil, "multiple KongPlugin with 'global' label found, cannot apply",
+			logger.Error(nil, "Multiple KongPlugin with 'global' label found, cannot apply",
 				"kongplugin_name", pluginName)
 			duplicates = append(duplicates, pluginName)
 			continue
@@ -427,7 +427,7 @@ func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, err
 		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
 			res[pluginName] = plugin
 		} else {
-			logger.Error(err, "failed to generate configuration from KongClusterPlugin",
+			logger.Error(err, "Failed to generate configuration from KongClusterPlugin",
 				"kongclusterplugin_name", k8sPlugin.Name)
 		}
 	}
@@ -456,14 +456,14 @@ func (ks *KongState) FillPlugins(
 func (ks *KongState) FillIDs(logger logr.Logger) {
 	for svcIndex, svc := range ks.Services {
 		if err := svc.FillID(); err != nil {
-			logger.Error(err, "failed to fill ID for service", "service_name", *svc.Name)
+			logger.Error(err, "Failed to fill ID for service", "service_name", *svc.Name)
 		} else {
 			ks.Services[svcIndex] = svc
 		}
 
 		for routeIndex, route := range svc.Routes {
 			if err := route.FillID(); err != nil {
-				logger.Error(err, "failed to fill ID for route", "route_name", *route.Name)
+				logger.Error(err, "Failed to fill ID for route", "route_name", *route.Name)
 			} else {
 				ks.Services[svcIndex].Routes[routeIndex] = route
 			}
@@ -472,7 +472,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 
 	for consumerIndex, consumer := range ks.Consumers {
 		if err := consumer.FillID(); err != nil {
-			logger.Error(err, "failed to fill ID for consumer", "consumer_name", consumer.FriendlyName())
+			logger.Error(err, "Failed to fill ID for consumer", "consumer_name", consumer.FriendlyName())
 		} else {
 			ks.Consumers[consumerIndex] = consumer
 		}
@@ -480,7 +480,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 
 	for consumerGroupIndex, consumerGroup := range ks.ConsumerGroups {
 		if err := consumerGroup.FillID(); err != nil {
-			logger.Error(err, "failed to fill ID for consumer group", "consumer_group_name", *consumerGroup.Name)
+			logger.Error(err, "Failed to fill ID for consumer group", "consumer_group_name", *consumerGroup.Name)
 		} else {
 			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup
 		}

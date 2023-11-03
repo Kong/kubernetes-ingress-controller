@@ -195,7 +195,7 @@ func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
-			logger.Error(nil, "invalid method", "route_name", r.Name, "method", method)
+			logger.Error(nil, "Invalid method", "route_name", r.Name, "method", method)
 			return
 		}
 	}
@@ -219,7 +219,7 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 			snis = append(snis, kong.String(sanitizedSNI))
 		} else {
 			// SNI is not a valid hostname
-			logger.Error(nil, "invalid SNI", "route_name", r.Name, "sni", sni)
+			logger.Error(nil, "Invalid SNI", "route_name", r.Name, "sni", sni)
 			return
 		}
 	}
@@ -268,7 +268,7 @@ func (r *Route) overrideRequestBuffering(logger logr.Logger, anns map[string]str
 	isEnabled, err := strconv.ParseBool(strings.ToLower(annotationValue))
 	if err != nil {
 		// the value provided is not a parseable boolean, quit
-		logger.Error(err, "invalid request_buffering value", "kongroute", r.Name)
+		logger.Error(err, "Invalid request_buffering value", "kongroute", r.Name)
 		return
 	}
 
@@ -286,7 +286,7 @@ func (r *Route) overrideResponseBuffering(logger logr.Logger, anns map[string]st
 	isEnabled, err := strconv.ParseBool(strings.ToLower(annotationValue))
 	if err != nil {
 		// the value provided is not a parseable boolean, quit
-		logger.Error(err, "invalid response_buffering values", "kongroute", r.Name)
+		logger.Error(err, "Invalid response_buffering values", "kongroute", r.Name)
 		return
 	}
 
@@ -322,7 +322,7 @@ func (r *Route) overrideHosts(logger logr.Logger, anns map[string]string) {
 			hosts = appendIfMissing(hosts, sanitizedHost)
 		} else {
 			// Host Alias is not a valid hostname
-			logger.Error(nil, "invalid host alias", "value", hostAlias, "kongroute", r.Name)
+			logger.Error(nil, "Invalid host alias", "value", hostAlias, "kongroute", r.Name)
 			return
 		}
 	}
@@ -345,7 +345,7 @@ func (r *Route) overridePathHandling(logger logr.Logger, anns map[string]string)
 	}
 
 	if !validPathHandling.MatchString(val) {
-		logger.Error(nil, "invalid path_handling", "value", val, "kongroute", r.Name)
+		logger.Error(nil, "Invalid path_handling", "value", val, "kongroute", r.Name)
 		return
 	}
 

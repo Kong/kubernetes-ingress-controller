@@ -251,10 +251,7 @@ func (h RequestHandler) handleSecret(
 
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
-		ok, message, err := h.Validator.ValidateCredential(ctx, secret)
-		if err != nil {
-			return nil, err
-		}
+		ok, message := h.Validator.ValidateCredential(ctx, secret)
 		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
@@ -293,7 +290,6 @@ func (h RequestHandler) handleHTTPRoute(
 	if err != nil {
 		return nil, err
 	}
-
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 

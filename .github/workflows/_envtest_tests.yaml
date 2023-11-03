@@ -18,7 +18,7 @@ jobs:
           go-version-file: go.mod
 
       - name: run envtest tests
-        run: make test.envtest
+        run: make test.envtest.pretty
         env:
           GOTESTSUM_JUNITFILE: envtest-tests.xml
 

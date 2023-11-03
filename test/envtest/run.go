@@ -7,16 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
@@ -166,17 +161,14 @@ func RunManager(
 	envcfg *rest.Config,
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
 	modifyCfgFns ...func(cfg *manager.Config),
-) (cfg manager.Config, loggerHook *observer.ObservedLogs) {
-	cfg = ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
+) (manager.Config, observerLogs) {
+	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
 
 	for _, modifyCfgFn := range modifyCfgFns {
 		modifyCfgFn(&cfg)
 	}
 
-	core, logs := observer.New(zap.InfoLevel)
-	logger := zapr.NewLogger(zap.New(core))
-	ctx = ctrl.LoggerInto(ctx, logger)
-	ctrl.SetLogger(logger)
+	ctx, logger, logs := CreateTestLogger(ctx)
 
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
@@ -196,17 +188,7 @@ func RunManager(
 	}()
 	t.Cleanup(func() {
 		wg.Wait()
-		if t.Failed() {
-			encoder, err := util.GetZapEncoding("text")
-			require.NoError(t, err)
-
-			t.Logf("manager logs:")
-			for _, entry := range logs.All() {
-				b, err := encoder.EncodeEntry(entry.Entry, entry.Context)
-				assert.NoError(t, err)
-				t.Logf("%s", b.String())
-			}
-		}
+		DumpLogsIfTestFailed(t, logs)
 	})
 
 	return cfg, logs

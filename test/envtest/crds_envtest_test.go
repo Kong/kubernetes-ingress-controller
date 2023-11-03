@@ -63,12 +63,12 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 				if !lo.ContainsBy(loggerHook.All(), func(entry observer.LoggedEntry) bool {
 					return strings.Contains(entry.LoggerName, controller) && strings.Contains(entry.Message, expectedLog)
 				}) {
-					t.Logf("expected log not found for %s controller", controller)
+					t.Logf("expected log %q not found for %s controller", expectedLog, controller)
 					return false
 				}
 			}
 			return true
-		}, time.Minute, time.Millisecond*500)
+		}, 30*time.Second, time.Millisecond*500)
 	}
 
 	const (

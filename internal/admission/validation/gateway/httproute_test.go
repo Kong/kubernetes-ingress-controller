@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -59,8 +58,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "Couldn't determine parentRefs for httproute",
-			err:           fmt.Errorf("no parentRef matched gateway default/testing-gateway"),
+			validationMsg: "Couldn't determine parentRefs for httproute: no parentRef matched gateway default/testing-gateway",
 		},
 		{
 			msg: "if you use sectionname to attach to a non-existent gateway listener, it fails validation",
@@ -98,8 +96,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "Couldn't find gateway listeners for httproute",
-			err:           fmt.Errorf("sectionname referenced listener listener-that-doesnt-exist was not found on gateway default/testing-gateway"),
+			validationMsg: "Couldn't find gateway listeners for httproute: sectionname referenced listener listener-that-doesnt-exist was not found on gateway default/testing-gateway",
 		},
 		{
 			msg: "if the provided gateway has NO listeners, the HTTPRoute fails validation",
@@ -126,8 +123,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "Couldn't find gateway listeners for httproute",
-			err:           fmt.Errorf("no listeners could be found for gateway default/testing-gateway"),
+			validationMsg: "Couldn't find gateway listeners for httproute: no listeners could be found for gateway default/testing-gateway",
 		},
 		{
 			msg: "parentRefs which omit the namespace pass validation in the same namespace",
@@ -200,8 +196,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute linked Gateway listeners did not pass validation",
-			err:           fmt.Errorf("HTTPRoute not supported by listener http-alternate"),
+			validationMsg: "HTTPRoute linked Gateway listeners did not pass validation: HTTPRoute not supported by listener http-alternate",
 		},
 		{
 			msg: "if an HTTPRoute is using queryparams matching it fails validation due to only supporting expression router",
@@ -253,8 +248,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation",
-			err:           fmt.Errorf("queryparam matching is supported with expression router only"),
+			validationMsg: "HTTPRoute spec did not pass validation: queryparam matching is supported with expression router only",
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",
@@ -311,8 +305,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation",
-			err:           fmt.Errorf("example is not a supported group for httproute backendRefs, only core is supported"),
+			validationMsg: "HTTPRoute spec did not pass validation: example is not a supported group for httproute backendRefs, only core is supported",
 		},
 		{
 			msg: "we don't support any core kind except Service for backendRefs",
@@ -368,17 +361,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation",
-			err:           fmt.Errorf("Pod is not a supported kind for httproute backendRefs, only Service is supported"),
+			validationMsg: "HTTPRoute spec did not pass validation: Pod is not a supported kind for httproute backendRefs, only Service is supported",
 		},
 	} {
-		// Passed routesValidator is irrelevant for the above test cases.
-		valid, validMsg, err := ValidateHTTPRoute(
-			context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, tt.route, tt.gateways...,
-		)
-		assert.Equal(t, tt.valid, valid, tt.msg)
-		assert.Equal(t, tt.validationMsg, validMsg, tt.msg)
-		assert.Equal(t, tt.err, err, tt.msg)
+		t.Run(tt.msg, func(t *testing.T) {
+			// Passed routesValidator is irrelevant for the above test cases.
+			valid, validMsg, err := ValidateHTTPRoute(
+				context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, tt.route, tt.gateways...,
+			)
+			assert.Equal(t, tt.valid, valid, tt.msg)
+			assert.Equal(t, tt.validationMsg, validMsg, tt.msg)
+			assert.Equal(t, tt.err, err, tt.msg)
+		})
 	}
 }
 

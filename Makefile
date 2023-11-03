@@ -387,7 +387,9 @@ ENVTEST_TIMEOUT ?= 5m
 _test.envtest: gotestsum setup-envtest use-setup-envtest
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- \
+		$(GOTESTSUM) \
+		--hide-summary output \
+		-- \
 		-race $(GOTESTFLAGS) \
 		-tags envtest \
 		-covermode=atomic \

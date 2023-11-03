@@ -5,11 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,8 +24,8 @@ import (
 func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconcilers ...controllers.Reconciler) {
 	t.Helper()
 
-	core, logs := observer.New(zap.InfoLevel)
-	logger := zapr.NewLogger(zap.New(core))
+	ctx, logger, logs := CreateTestLogger(ctx)
+
 	o := manager.Options{
 		Logger: logger,
 		Scheme: scheme,
@@ -55,13 +52,7 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 	}()
 	t.Cleanup(func() {
 		wg.Wait()
-
-		if t.Failed() {
-			t.Logf("Test %s failed: dumping controller logs\n", t.Name())
-			for _, log := range logs.All() {
-				t.Logf("%s %s\n", log.Time, log.Message)
-			}
-		}
+		DumpLogsIfTestFailed(t, logs)
 	})
 }
 

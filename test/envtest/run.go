@@ -66,8 +66,10 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.AnonymousReports = false
 	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
 
-	// Extend the graceful shutdown timeout to prevent flakiness on CI.
-	cfg.GracefulShutdownTimeout = lo.ToPtr(time.Minute)
+	// Set the GracefulShutdownTimeout to 0 to prevent errors:
+	// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
+	// Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/e59161ee/pkg/manager/internal.go#L543-L548
+	cfg.GracefulShutdownTimeout = lo.ToPtr(time.Duration(0))
 
 	// Disable Gateway API controllers, enable those only in tests that use them.
 	cfg.GatewayAPIGatewayController = false

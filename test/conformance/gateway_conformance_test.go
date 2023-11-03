@@ -19,8 +19,6 @@ var commonSkippedTests = []string{
 	tests.GatewayStaticAddresses.ShortName,
 
 	tests.HTTPRouteRedirectPortAndScheme.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
-	tests.HTTPRouteRedirectScheme.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
 	tests.HTTPRouteRequestMirror.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165

@@ -271,7 +271,10 @@ Adding a new version? You'll need three changes:
   configurations to one of the backend pods of the service specified by the
   flag `--kong-admin-svc` if Kong gateway is DB backed.
   [#4828](https://github.com/Kong/kubernetes-ingress-controller/pull/4828)
-- Support the HTTPRoutePortRedirect feature. [#5057](https://github.com/Kong/kubernetes-ingress-controller/pull/5057)
+- Support the HTTPRoutePortRedirect feature.
+  [#5057](https://github.com/Kong/kubernetes-ingress-controller/pull/5057)
+- Support the HTTPRouteSchemeRedirect feature.
+  [#5057](https://github.com/Kong/kubernetes-ingress-controller/pull/5057)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/

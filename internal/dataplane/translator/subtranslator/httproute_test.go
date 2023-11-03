@@ -78,37 +78,6 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "request redirect modifier filter",
-			filters: []gatewayapi.HTTPRouteFilter{
-				{
-					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
-					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
-						Hostname:   (*gatewayapi.PreciseHostname)(lo.ToPtr("example.org")),
-						StatusCode: lo.ToPtr(302),
-					},
-				},
-			},
-			path: "/test",
-			expectedPlugins: []kong.Plugin{
-				{
-					Name: kong.String("request-termination"),
-					Config: kong.Configuration{
-						"status_code": lo.ToPtr(302),
-					},
-				},
-				{
-					Name: kong.String("response-transformer"),
-					Config: kong.Configuration{
-						"add": map[string][]string{
-							"headers": {
-								"Location: http://example.org:80/test",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
 			name: "response header modifier filter",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
@@ -159,7 +128,30 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "request redirect with modifier hostname unspecified",
+			name: "request redirect modifier filter",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+						Hostname:   (*gatewayapi.PreciseHostname)(lo.ToPtr("example.org")),
+						Port:       &redirectPortNumber,
+						StatusCode: lo.ToPtr(302),
+						Scheme:     lo.ToPtr("http"),
+					},
+				},
+			},
+			path: "/test",
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("post-function"),
+					Config: kong.Configuration{
+						"access": []string{"kong.response.exit(302, nil, {['Location'] = 'http' .. '://' .. 'example.org' .. ':' .. '8083' .. '/test'})"},
+					},
+				},
+			},
+		},
+		{
+			name: "request redirect with modifier hostname and scheme unspecified",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
@@ -174,9 +166,35 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("post-function"),
 					Config: kong.Configuration{
-						"access": []string{
-							"kong.response.exit(302, nil, {['Location'] = 'http://' .. kong.request.get_host() .. ':8083/test'})",
+						"access": []string{`
+if (kong.request.get_scheme() == "https" and 8083 == 443) or (kong.request.get_scheme() == "http" and 8083 == 80) then
+   kong.response.exit(302, nil, {['Location'] = kong.request.get_scheme() .. '://' .. kong.request.get_host() .. '/test'})
+else
+   kong.response.exit(302, nil, {['Location'] = kong.request.get_scheme() .. '://' .. kong.request.get_host() .. ':' .. '8083' .. '/test'})
+end`,
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "request redirect with modifier port unspecified",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+						Hostname:   (*gatewayapi.PreciseHostname)(lo.ToPtr("example.org")),
+						StatusCode: lo.ToPtr(302),
+						Scheme:     lo.ToPtr("http"),
+					},
+				},
+			},
+			path: "/test",
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("post-function"),
+					Config: kong.Configuration{
+						"access": []string{"kong.response.exit(302, nil, {['Location'] = 'http' .. '://' .. 'example.org' .. '/test'})"},
 					},
 				},
 			},

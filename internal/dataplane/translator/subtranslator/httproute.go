@@ -3,7 +3,6 @@ package subtranslator
 import (
 	"encoding/json"
 	"fmt"
-	pathlib "path"
 	"sort"
 	"strings"
 
@@ -117,17 +116,23 @@ func (i *httpRouteTranslationIndex) translateToKongServiceBackends(rulesMeta []h
 }
 
 func (i *httpRouteTranslationIndex) translateToKongServiceRoutes(s *KongServiceTranslation, rulesMeta []httpRouteRuleMeta) {
-	_, hasRedirectFilter := lo.Find(rulesMeta[0].Rule.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
-	})
-	if hasRedirectFilter {
-		s.KongRoutes = make([]KongRouteTranslation, 0)
-		for r := range rulesMeta {
-			route := i.translateToKongRoutes(rulesMeta[r : r+1])
+	s.KongRoutes = make([]KongRouteTranslation, 0)
+	rulesMetaNotRedirect := make([]httpRouteRuleMeta, 0)
+
+	for _, r := range rulesMeta {
+		_, hasRedirectFilter := lo.Find(r.Rule.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+			return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+		})
+		if hasRedirectFilter {
+			route := i.translateToKongRoutes([]httpRouteRuleMeta{r})
 			s.KongRoutes = append(s.KongRoutes, route...)
+		} else {
+			rulesMetaNotRedirect = append(rulesMetaNotRedirect, r)
 		}
-	} else {
-		for _, rulesByFilter := range groupRulesByFilter(rulesMeta) {
+	}
+
+	if len(rulesMetaNotRedirect) > 0 {
+		for _, rulesByFilter := range groupRulesByFilter(rulesMetaNotRedirect) {
 			// each filter group must be a separate Kong route, not eligible for consolidation
 			// thus need to be translated separately
 			routesByFilter := i.translateToKongRoutes(rulesByFilter)
@@ -408,7 +413,7 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 			kongPlugins = append(kongPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
 
 		case gatewayapi.HTTPRouteFilterRequestRedirect:
-			kongPlugins = append(kongPlugins, generateRequestRedirectKongPlugin(filter.RequestRedirect, path)...)
+			kongPlugins = append(kongPlugins, generateRequestRedirectKongPlugin(filter.RequestRedirect, path))
 
 		case gatewayapi.HTTPRouteFilterResponseHeaderModifier:
 			kongPlugins = append(kongPlugins, generateResponseHeaderModifierKongPlugin(filter.ResponseHeaderModifier))
@@ -444,14 +449,16 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
 // of request redirect filter.
-func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectFilter, path string) []kong.Plugin {
-	var plugins []kong.Plugin
-	var locationHeader string
-	scheme := "http"
-	port := 80
+func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectFilter, path string) kong.Plugin {
+	scheme := "kong.request.get_scheme()"
+	host := "kong.request.get_host()"
+	port := 0
 
 	if modifier.Scheme != nil {
-		scheme = *modifier.Scheme
+		scheme = fmt.Sprintf("'%s'", *modifier.Scheme)
+	}
+	if modifier.Hostname != nil {
+		host = fmt.Sprintf("'%s'", *modifier.Hostname)
 	}
 	if modifier.Port != nil {
 		port = int(*modifier.Port)
@@ -462,44 +469,44 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		// only ReplaceFullPath currently supported
 		path = *modifier.Path.ReplaceFullPath
 	}
-	if modifier.Hostname != nil {
-		plugins = append(plugins, kong.Plugin{
-			Name: kong.String("request-termination"),
-			Config: kong.Configuration{
-				"status_code": modifier.StatusCode,
-			},
-		})
 
-		locationHeader = fmt.Sprintf("Location: %s://%s", scheme, pathlib.Join(fmt.Sprintf("%s:%d", *modifier.Hostname, port), path))
-		plugins = append(plugins, kong.Plugin{
-			Name: kong.String("response-transformer"),
-			Config: kong.Configuration{
-				"add": map[string][]string{
-					"headers": {locationHeader},
-				},
-			},
-		})
-	} else if modifier.Port != nil {
-		plugins = append(plugins, kong.Plugin{
+	if port == 0 || scheme == "http" && port == 80 || scheme == "https" && port == 443 {
+		return kong.Plugin{
 			Name: kong.String("post-function"),
 			Config: kong.Configuration{
 				"access": []string{
-					fmt.Sprintf("kong.response.exit(%d, nil, {['Location'] = '%s://' .. kong.request.get_host() .. ':%d%s'})", *modifier.StatusCode, scheme, *modifier.Port, path),
+					fmt.Sprintf("kong.response.exit(%d, nil, {['Location'] = %s .. '://' .. %s .. '%s'})", *modifier.StatusCode, scheme, host, path),
 				},
 			},
-		})
-	} else {
-		plugins = append(plugins, kong.Plugin{
-			Name: kong.String("post-function"),
-			Config: kong.Configuration{
-				"access": []string{
-					fmt.Sprintf("kong.response.exit(%d, nil, {['Location'] = '%s://' .. kong.request.get_host() .. ':' .. kong.request.get_port() .. '%s'})", *modifier.StatusCode, scheme, path),
-				},
-			},
-		})
+		}
 	}
 
-	return plugins
+	if scheme != "kong.request.get_scheme()" {
+		return kong.Plugin{
+			Name: kong.String("post-function"),
+			Config: kong.Configuration{
+				"access": []string{
+					fmt.Sprintf("kong.response.exit(%d, nil, {['Location'] = %s .. '://' .. %s .. ':' .. '%d' .. '%s'})", *modifier.StatusCode, scheme, host, port, path),
+				},
+			},
+		}
+	}
+
+	return kong.Plugin{
+		Name: kong.String("post-function"),
+		Config: kong.Configuration{
+			"access": []string{
+				fmt.Sprintf(`
+if (%s == "https" and %d == 443) or (%s == "http" and %d == 80) then
+   kong.response.exit(%d, nil, {['Location'] = %s .. '://' .. %s .. '%s'})
+else
+   kong.response.exit(%d, nil, {['Location'] = %s .. '://' .. %s .. ':' .. '%d' .. '%s'})
+end`, scheme, port, scheme, port,
+					*modifier.StatusCode, scheme, host, path,
+					*modifier.StatusCode, scheme, host, port, path),
+			},
+		},
+	}
 }
 
 func generateExtensionRefKongPlugin(modifier *gatewayapi.LocalObjectReference) (string, error) {

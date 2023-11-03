@@ -130,17 +130,9 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					},
 					Plugins: []kong.Plugin{
 						{
-							Name: kong.String("request-termination"),
+							Name: kong.String("post-function"),
 							Config: kong.Configuration{
-								"status_code": kong.Int(301),
-							},
-						},
-						{
-							Name: kong.String("response-transformer"),
-							Config: kong.Configuration{
-								"add": map[string][]string{
-									"headers": {`Location: http://a.foo.com:80/exact/0`},
-								},
+								"access": []string{"kong.response.exit(301, nil, {['Location'] = 'http' .. '://' .. 'a.foo.com' .. '/exact/0'})"},
 							},
 						},
 					},
@@ -156,17 +148,9 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					},
 					Plugins: []kong.Plugin{
 						{
-							Name: kong.String("request-termination"),
+							Name: kong.String("post-function"),
 							Config: kong.Configuration{
-								"status_code": kong.Int(301),
-							},
-						},
-						{
-							Name: kong.String("response-transformer"),
-							Config: kong.Configuration{
-								"add": map[string][]string{
-									"headers": {`Location: http://a.foo.com:80/exact/1`},
-								},
+								"access": []string{"kong.response.exit(301, nil, {['Location'] = 'http' .. '://' .. 'a.foo.com' .. '/exact/1'})"},
 							},
 						},
 					},

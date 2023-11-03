@@ -46,10 +46,10 @@ func (c *Config) Init(
 	kongClients []*adminapi.Client,
 ) {
 	if err := tagsFilteringEnabled(ctx, kongClients); err != nil {
-		logger.Error(err, "tag filtering disabled")
+		logger.Error(err, "Tag filtering disabled")
 		c.FilterTags = nil
 	} else {
-		logger.Info("tag filtering enabled", "tags", c.FilterTags)
+		logger.Info("Tag filtering enabled", "tags", c.FilterTags)
 	}
 }
 

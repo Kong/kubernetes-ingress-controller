@@ -60,7 +60,7 @@ func backendRefsToKongStateBackends(
 				route.GetObjectKind().GroupVersionKind().String(),
 				route.GetNamespace(),
 				route.GetName())
-			logger.Error(nil, "object requested backendRef to target, but no ReferenceGrant permits it, skipping...",
+			logger.Error(nil, "Object requested backendRef to target, but no ReferenceGrant permits it, skipping...",
 				"object_name", objName,
 				"target_kind", kind,
 				"target_namespace", namespace,

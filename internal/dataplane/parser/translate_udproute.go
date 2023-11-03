@@ -46,7 +46,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 	}
 
 	for _, err := range errs {
-		p.logger.Error(err, "could not generate route from UDPRoute")
+		p.logger.Error(err, "Could not generate route from UDPRoute")
 	}
 
 	return result

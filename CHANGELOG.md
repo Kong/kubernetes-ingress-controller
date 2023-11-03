@@ -218,6 +218,7 @@ Nothing yet.
   [#5038](https://github.com/Kong/kubernetes-ingress-controller/pull/5038)
   [#5049](https://github.com/Kong/kubernetes-ingress-controller/pull/5049)
   [#5050](https://github.com/Kong/kubernetes-ingress-controller/pull/5050)
+  [#5065](https://github.com/Kong/kubernetes-ingress-controller/pull/5065)
 
 ### Added
 

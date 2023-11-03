@@ -110,7 +110,7 @@ func PerformUpdate(
 // In case of parseErr being not nil, it just returns a nil slice.
 func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr error, logger logr.Logger) []failures.ResourceFailure {
 	if parseErr != nil {
-		logger.Error(parseErr, "failed parsing resource errors")
+		logger.Error(parseErr, "Failed parsing resource errors")
 		return nil
 	}
 

@@ -4526,7 +4526,7 @@ func TestNewFeatureFlags(t *testing.T) {
 			expectedFeatureFlags: FeatureFlags{
 				ExpressionRoutes: true,
 			},
-			expectInfoLog: "expression routes mode enabled",
+			expectInfoLog: "The expression routes mode enabled",
 		},
 	}
 

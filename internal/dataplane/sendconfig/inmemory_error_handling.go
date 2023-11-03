@@ -101,7 +101,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		}
 		for _, p := range ee.Errors {
 			if len(p.Message) > 0 && len(p.Messages) > 0 {
-				logger.Error(nil, "entity has both single and array errors for field",
+				logger.Error(nil, "Entity has both single and array errors for field",
 					"name", ee.Name, "field", p.Field)
 				continue
 			}
@@ -125,7 +125,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		}
 		parsed, err := parseRawResourceError(raw)
 		if err != nil {
-			logger.Error(err, "entity tags missing fields", "name", ee.Name)
+			logger.Error(err, "Entity tags missing fields", "name", ee.Name)
 			continue
 		}
 		resourceErrors = append(resourceErrors, parsed)

@@ -78,7 +78,10 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
-Nothing yet.
+### Changed
+
+- use `req.Clone` improve RoundTrip function.
+  [#5089](https://github.com/Kong/kubernetes-ingress-controller/pull/5089)
 
 ## 3.0.0
 

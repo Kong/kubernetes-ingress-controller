@@ -75,7 +75,7 @@ type KongClient struct {
 	kongConfig sendconfig.Config
 
 	// dbmode indicates the current database mode of the backend Kong Admin API
-	dbmode string
+	dbmode dataplaneutil.DBMode
 
 	// lock is used to ensure threadsafety of the KongClient object
 	lock sync.RWMutex
@@ -150,7 +150,7 @@ func NewKongClient(
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
-	dbMode string,
+	dbMode dataplaneutil.DBMode,
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
@@ -368,7 +368,7 @@ func (c *KongClient) KubernetesObjectConfigurationStatus(obj client.Object) k8so
 // -----------------------------------------------------------------------------
 
 // DBMode indicates which database the Kong Gateway is using.
-func (c *KongClient) DBMode() string {
+func (c *KongClient) DBMode() dataplaneutil.DBMode {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.dbmode

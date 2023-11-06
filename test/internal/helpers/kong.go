@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
@@ -73,7 +74,7 @@ func (e TooOldKongGatewayError) Error() string {
 }
 
 // GetKongDBMode returns kong dbmode using the provided Admin API URL.
-func GetKongDBMode(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
+func GetKongDBMode(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (dataplaneutil.DBMode, error) {
 	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err

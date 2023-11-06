@@ -42,7 +42,7 @@ type Synchronizer struct {
 
 	// dataplane client to send updates to the Kong Admin API
 	dataplaneClient Client
-	dbMode          string
+	dbMode          dataplaneutil.DBMode
 
 	// server configuration, flow control, channels and utility attributes
 	stagger         time.Duration

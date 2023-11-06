@@ -144,7 +144,7 @@ var (
 type mockGatewayClientsProvider struct {
 	gatewayClients []*adminapi.Client
 	konnectClient  *adminapi.KonnectClient
-	dbMode         string
+	dbMode         dataplaneutil.DBMode
 }
 
 func (p mockGatewayClientsProvider) KonnectClient() *adminapi.KonnectClient {
@@ -681,7 +681,6 @@ func setupTestKongClient(
 	timeout := time.Second
 	diagnostic := util.ConfigDumpDiagnostic{}
 	config := sendconfig.Config{}
-	dbMode := "off"
 
 	if eventRecorder == nil {
 		eventRecorder = mocks.NewEventRecorder()
@@ -693,7 +692,7 @@ func setupTestKongClient(
 		diagnostic,
 		config,
 		eventRecorder,
-		dbMode,
+		dataplaneutil.DBModeOff,
 		clientsProvider,
 		updateStrategyResolver,
 		configChangeDetector,

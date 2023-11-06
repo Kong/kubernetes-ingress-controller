@@ -56,7 +56,7 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 	return logger, nil
 }
 
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dataplaneutil.DBMode) (ctrl.Options, error) {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := scheme.Get()
 	if err != nil {
@@ -113,7 +113,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 	return managerOpts, nil
 }
 
-func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
+func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode dataplaneutil.DBMode) bool {
 	if c.Konnect.ConfigSynchronizationEnabled {
 		logger.Info("Konnect config synchronisation enabled, enabling leader election")
 		return true

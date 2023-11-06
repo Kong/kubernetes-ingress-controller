@@ -14,12 +14,7 @@ type HeaderRoundTripper struct {
 
 // RoundTrip satisfies the RoundTripper interface.
 func (t *HeaderRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	newRequest := new(http.Request)
-	*newRequest = *req
-	newRequest.Header = make(http.Header, len(req.Header))
-	for k, s := range req.Header {
-		newRequest.Header[k] = append([]string(nil), s...)
-	}
+	newRequest := req.Clone(req.Context())
 	for _, s := range t.headers {
 		split := strings.SplitN(s, ":", 2)
 		if len(split) >= 2 {

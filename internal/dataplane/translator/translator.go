@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -34,13 +35,7 @@ import (
 // Translator - Public Constants and Package Variables
 // -----------------------------------------------------------------------------
 
-const (
-	KindGateway = gatewayapi.Kind("Gateway")
-
-	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
-	// to enable expression based router of kong.
-	kongRouterFlavorExpressions = "expressions"
-)
+const KindGateway = gatewayapi.Kind("Gateway")
 
 // -----------------------------------------------------------------------------
 // Translator - Public Types
@@ -65,9 +60,8 @@ type FeatureFlags struct {
 }
 
 func NewFeatureFlags(
-	logger logr.Logger,
 	featureGates featuregates.FeatureGates,
-	routerFlavor string,
+	routerFlavor dataplaneutil.RouterFlavor,
 	updateStatusFlag bool,
 ) FeatureFlags {
 	return FeatureFlags{

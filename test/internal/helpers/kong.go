@@ -87,7 +87,7 @@ func GetKongDBMode(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword
 }
 
 // GetKongRouterFlavor gets router flavor of Kong using the provided Admin API URL.
-func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
+func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (dataplaneutil.RouterFlavor, error) {
 	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err

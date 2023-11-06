@@ -50,7 +50,7 @@ type AdminAPIClientsManager struct {
 	discoveredAdminAPIsNotifyChan    chan []adminapi.DiscoveredAdminAPI
 	gatewayClientsChangesSubscribers []chan struct{}
 
-	dbMode string
+	dbMode dataplaneutil.DBMode
 
 	ctx                   context.Context
 	onceNotifyLoopRunning sync.Once
@@ -90,7 +90,7 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 }
 
 // WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
-func (c *AdminAPIClientsManager) WithDBMode(dbMode string) *AdminAPIClientsManager {
+func (c *AdminAPIClientsManager) WithDBMode(dbMode dataplaneutil.DBMode) *AdminAPIClientsManager {
 	c.dbMode = dbMode
 	return c
 }

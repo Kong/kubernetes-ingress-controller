@@ -14,12 +14,13 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
 // The fields are extracted from results of Kong gateway configuration root.
 type KongStartUpOptions struct {
-	DBMode       string
+	DBMode       dataplaneutil.DBMode
 	RouterFlavor string
 	Version      kong.Version
 }
@@ -75,7 +76,7 @@ func extractConfigurationFromRoot(r Root) (map[string]any, error) {
 	return rootConfig, nil
 }
 
-func DBModeFromRoot(r Root) (string, error) {
+func DBModeFromRoot(r Root) (dataplaneutil.DBMode, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -91,7 +92,7 @@ func DBModeFromRoot(r Root) (string, error) {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", dbModeKey, dbMode)
 	}
 
-	return dbModeStr, nil
+	return dataplaneutil.DBMode(dbModeStr), nil
 }
 
 func RouterFlavorFromRoot(r Root) (string, error) {
@@ -151,7 +152,7 @@ func (kr Root) Key(skipCACerts bool) string {
 		return ""
 	}
 
-	return dbMode
+	return string(dbMode)
 }
 
 func validateRootFunc(skipCACerts bool) func(Root, int) error {
@@ -170,13 +171,13 @@ func getRootKeyFunc(skipCACerts bool) func(Root) string {
 }
 
 // validateDBMode validates the provided dbMode string.
-func validateDBMode(dbMode string, skipCACerts bool) error {
+func validateDBMode(dbMode dataplaneutil.DBMode, skipCACerts bool) error {
 	switch dbMode {
-	case "off", "":
+	case "", dataplaneutil.DBModeOff:
 		if skipCACerts {
 			return fmt.Errorf("--skip-ca-certificates is not available for use with DB-less Kong instances")
 		}
-	case "postgres":
+	case dataplaneutil.DBModePostgres:
 		return nil
 	case "cassandra":
 		return fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -38,7 +39,7 @@ func RunWhenKongVersion(t *testing.T, vRangeStr string, msg ...any) {
 	}
 }
 
-func RunWhenKongDBMode(t *testing.T, dbmode string, msg ...any) {
+func RunWhenKongDBMode(t *testing.T, dbmode dataplaneutil.DBMode, msg ...any) {
 	t.Helper()
 
 	actual := eventuallyGetKongDBMode(t, proxyAdminURL)
@@ -84,12 +85,12 @@ func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 	return version
 }
 
-func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
+func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) dataplaneutil.DBMode {
 	t.Helper()
 
 	var (
 		err    error
-		dbmode string
+		dbmode dataplaneutil.DBMode
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {

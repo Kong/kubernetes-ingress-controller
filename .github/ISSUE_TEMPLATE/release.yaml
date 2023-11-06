@@ -29,7 +29,7 @@ body:
     options:
       - label: "Ensure that you have up to date copy of `main`: `git checkout main; git pull` or a targeted release branch e.g. `release/2.7.x`: `git checkout release/2.7.x; git pull`"
       - label: "Create the `prepare-release` branch for the version (e.g. `prepare-release/2.7.1`): `git branch -m prepare-release/2.7.1`"
-      - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end. If there were any RC releases before this version, fold their changes into the final release entry.
+      - label: Review carefully CHANGELOG.md. Manually reorder entries for relevance, common topic, adjust description, etc. - make it clear and easy to follow for users. Optionally headline notable changes (emojis are allowed). Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the GitHub compare link at the end. If there were any RC releases before this version, fold their changes into the final release entry.
       - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
       - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
       - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
@@ -66,7 +66,7 @@ body:
   id: conformance_tests_report
   attributes:
     label: Conformance tests report
-    value: Trigger for released version CI workflow `conformance_tests_report.yaml`, verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase. Update the KIC version in the README's Gateway API conformance badge.
+    value: Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/conformance_tests_report.yaml), verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase. Update the KIC version in the README's Gateway API conformance badge.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

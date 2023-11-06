@@ -44,7 +44,7 @@ require (
 	github.com/samber/lo v1.38.1
 	github.com/samber/mo v1.11.0
 	github.com/sethvargo/go-password v0.2.0
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	github.com/testcontainers/testcontainers-go v0.26.0

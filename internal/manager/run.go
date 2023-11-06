@@ -120,7 +120,7 @@ func Run(
 		FilterTags:         c.FilterTags,
 		SkipCACertificates: c.SkipCACertificates,
 		EnableReverseSync:  c.EnableReverseSync,
-		ExpressionRoutes:   routerFlavor == "expressions",
+		ExpressionRoutes:   dataplaneutil.ShouldEnableExpressionRoutes(routerFlavor),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
@@ -160,7 +160,6 @@ func Run(
 	}
 
 	parserFeatureFlags := parser.NewFeatureFlags(
-		logger,
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,

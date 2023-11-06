@@ -102,12 +102,12 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) dataplaneutil.DBMo
 	return dbmode
 }
 
-func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) string {
+func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) dataplaneutil.RouterFlavor {
 	t.Helper()
 
 	var (
 		err          error
-		routerFlavor string
+		routerFlavor dataplaneutil.RouterFlavor
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {

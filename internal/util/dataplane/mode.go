@@ -18,3 +18,15 @@ func IsDBLessMode(mode DBMode) bool {
 func DBBacked(mode DBMode) bool {
 	return !IsDBLessMode(mode)
 }
+
+type RouterFlavor string
+
+const (
+	RouterFlavorTraditional           RouterFlavor = "traditional"
+	RouterFlavorTraditionalCompatible RouterFlavor = "traditional_compatible"
+	RouterFlavorExpressions           RouterFlavor = "expressions"
+)
+
+func ShouldEnableExpressionRoutes(rf RouterFlavor) bool {
+	return rf == RouterFlavorExpressions
+}

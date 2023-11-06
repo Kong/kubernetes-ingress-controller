@@ -19,7 +19,7 @@ echo '---
 title: CLI Arguments
 ---
 
-Various settings and configurations of the controller can be tweaked
+Learn about the various settings and configurations of the controller can be tweaked
 using CLI flags.
 
 ## Environment variables
@@ -35,7 +35,7 @@ environment variable:
 CONTROLLER_INGRESS_CLASS=kong-foobar
 ```
 
-It is recommended that all the configuration is done via environment variables
+It is recommended that all the configuration is done through environment variables
 and not CLI flags.
 
 <!-- vale off -->

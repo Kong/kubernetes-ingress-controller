@@ -83,6 +83,7 @@ webhooks:
     apiVersions:
     - 'v1alpha2'
     - 'v1beta1'
+    - 'v1'
     operations:
     - CREATE
     - UPDATE

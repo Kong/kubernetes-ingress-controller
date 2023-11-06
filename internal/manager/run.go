@@ -120,7 +120,11 @@ func Run(
 		FilterTags:         c.FilterTags,
 		SkipCACertificates: c.SkipCACertificates,
 		EnableReverseSync:  c.EnableReverseSync,
+<<<<<<< HEAD
 		ExpressionRoutes:   dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+=======
+		ExpressionRoutes:   dataplaneutil.ShouldEnableExpressionRoutes(routerFlavor),
+>>>>>>> e629c903e (define router flavor as a dedicated type)
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 

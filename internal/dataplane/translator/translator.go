@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -61,7 +62,11 @@ type FeatureFlags struct {
 
 func NewFeatureFlags(
 	featureGates featuregates.FeatureGates,
+<<<<<<< HEAD
 	routerFlavor dpconf.RouterFlavor,
+=======
+	routerFlavor dataplaneutil.RouterFlavor,
+>>>>>>> e629c903e (define router flavor as a dedicated type)
 	updateStatusFlag bool,
 ) FeatureFlags {
 	return FeatureFlags{

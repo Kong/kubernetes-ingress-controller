@@ -83,7 +83,7 @@ Adding a new version? You'll need three changes:
 - use `req.Clone` improve RoundTrip function.
   [#5089](https://github.com/Kong/kubernetes-ingress-controller/pull/5089)
 
-## 3.0.0
+## [3.0.0]
 
 > Release date: 2023-11-03
 
@@ -275,7 +275,7 @@ Adding a new version? You'll need three changes:
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 
-## 2.12.1
+## [2.12.1]
 
 > Release date: TBD
 
@@ -290,7 +290,7 @@ Adding a new version? You'll need three changes:
   [#5030](https://github.com/Kong/kubernetes-ingress-controller/pull/5030)
 
 
-## 2.12.0
+## [2.12.0]
 
 > Release date: 2023-09-25
 

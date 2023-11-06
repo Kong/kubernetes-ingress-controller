@@ -7,8 +7,8 @@ import (
 
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -28,12 +28,12 @@ type routeValidator interface {
 func ValidateHTTPRoute(
 	ctx context.Context,
 	routesValidator routeValidator,
-	parserFeatures parser.FeatureFlags,
+	translatorFeatures translator.FeatureFlags,
 	httproute *gatewayapi.HTTPRoute,
 	attachedGateways ...*gatewayapi.Gateway,
 ) (bool, string, error) {
 	// validate that no unsupported features are in use
-	if err := validateHTTPRouteFeatures(httproute, parserFeatures); err != nil {
+	if err := validateHTTPRouteFeatures(httproute, translatorFeatures); err != nil {
 		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
 	}
 
@@ -62,7 +62,7 @@ func ValidateHTTPRoute(
 		}
 	}
 
-	ok, msg := validateWithKongGateway(ctx, routesValidator, parserFeatures, httproute)
+	ok, msg := validateWithKongGateway(ctx, routesValidator, translatorFeatures, httproute)
 	return ok, msg, nil
 }
 
@@ -96,12 +96,12 @@ func validateHTTPRouteListener(listener *gatewayapi.Listener) error {
 // validateHTTPRouteFeatures checks for features that are not supported by this
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
-func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, parserFeatures parser.FeatureFlags) error {
+func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
 			// We support query parameters matching rules only with expression router.
 			if len(match.QueryParams) != 0 {
-				if !parserFeatures.ExpressionRoutes {
+				if !translatorFeatures.ExpressionRoutes {
 					return fmt.Errorf("queryparam matching is supported with expression router only")
 				}
 			}
@@ -188,10 +188,10 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayapi.SectionName, gat
 }
 
 func validateWithKongGateway(
-	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, httproute *gatewayapi.HTTPRoute,
+	ctx context.Context, routesValidator routeValidator, translatorFeatures translator.FeatureFlags, httproute *gatewayapi.HTTPRoute,
 ) (bool, string) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
-	// Use KIC parser that works both for traditional and expressions based routes.
+	// Use KIC translator that works both for traditional and expressions based routes.
 	var kongRoutes []kong.Route
 	var errMsgs []string
 	for _, rule := range httproute.Spec.Rules {
@@ -200,8 +200,8 @@ func validateWithKongGateway(
 			Matches: rule.Matches,
 			Filters: rule.Filters,
 		}
-		routes, err := parser.GenerateKongRouteFromTranslation(
-			httproute, translation, parserFeatures.ExpressionRoutes,
+		routes, err := translator.GenerateKongRouteFromTranslation(
+			httproute, translation, translatorFeatures.ExpressionRoutes,
 		)
 		if err != nil {
 			errMsgs = append(errMsgs, err.Error())

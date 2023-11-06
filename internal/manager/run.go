@@ -23,8 +23,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
@@ -159,7 +159,7 @@ func Run(
 		clientsManager.Run()
 	}
 
-	parserFeatureFlags := parser.NewFeatureFlags(
+	translatorFeatureFlags := translator.NewFeatureFlags(
 		logger,
 		featureGates,
 		routerFlavor,
@@ -167,23 +167,23 @@ func Run(
 	)
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, parserFeatureFlags); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags); err != nil {
 		return err
 	}
 
 	cache := store.NewCacheStores()
-	configParser, err := parser.NewParser(
+	configTranslator, err := translator.NewTranslator(
 		logger,
 		store.New(cache, c.IngressClassName, logger),
-		parserFeatureFlags,
+		translatorFeatureFlags,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create parser: %w", err)
+		return fmt.Errorf("failed to create translator: %w", err)
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
-	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(parserFeatureFlags.FillIDs)
+	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs)
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -195,7 +195,7 @@ func Run(
 		updateStrategyResolver,
 		configurationChangeDetector,
 		kongConfigFetcher,
-		configParser,
+		configTranslator,
 		cache,
 	)
 	if err != nil {
@@ -297,7 +297,7 @@ func Run(
 		if err != nil {
 			return fmt.Errorf("could not add license agent to manager: %w", err)
 		}
-		configParser.InjectLicenseGetter(agent)
+		configTranslator.InjectLicenseGetter(agent)
 	}
 
 	if c.AnonymousReports {

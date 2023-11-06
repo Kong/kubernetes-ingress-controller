@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -367,7 +367,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			// Passed routesValidator is irrelevant for the above test cases.
 			valid, validMsg, err := ValidateHTTPRoute(
-				context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, tt.route, tt.gateways...,
+				context.Background(), mockRoutesValidator{}, translator.FeatureFlags{}, tt.route, tt.gateways...,
 			)
 			assert.Equal(t, tt.valid, valid, tt.msg)
 			assert.Equal(t, tt.validationMsg, validMsg, tt.msg)

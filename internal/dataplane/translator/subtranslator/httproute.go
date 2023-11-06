@@ -119,6 +119,8 @@ func (i *httpRouteTranslationIndex) translateToKongServiceRoutes(s *KongServiceT
 	s.KongRoutes = make([]KongRouteTranslation, 0)
 	rulesMetaNotRedirect := make([]httpRouteRuleMeta, 0)
 
+	// If the rules specify the redirect filter, we can not group them by filters to the same route,
+	// as the kong plugin needs to know the exact path to use to perform redirection.
 	for _, r := range rulesMeta {
 		_, hasRedirectFilter := lo.Find(r.Rule.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
 			return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
@@ -470,6 +472,9 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		path = *modifier.Path.ReplaceFullPath
 	}
 
+	// Don't add the port number in the 'Location' header in the following cases:
+	// If the redirect port is unspecified, use the redirect scheme to determine defaults for the port.
+	// If the redirect port is well-known port associated with the redirect scheme.
 	if port == 0 || scheme == "http" && port == 80 || scheme == "https" && port == 443 {
 		return kong.Plugin{
 			Name: kong.String("post-function"),
@@ -481,6 +486,9 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		}
 	}
 
+	// If both the redirect scheme and redirect port are specified,
+	// and the redirect port is not a well-known port for the redirect scheme,
+	// add the port number in the 'Location' header.
 	if scheme != "kong.request.get_scheme()" {
 		return kong.Plugin{
 			Name: kong.String("post-function"),
@@ -492,6 +500,8 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		}
 	}
 
+	// If the redirect scheme is unspecified, use the request scheme as the redirect scheme.
+	// Need to dynamically determine whether to add the port number in the 'Location' header.
 	return kong.Plugin{
 		Name: kong.String("post-function"),
 		Config: kong.Configuration{

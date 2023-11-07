@@ -14,7 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
@@ -434,7 +434,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			},
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
-					t, translators.ErrRouteValidationNoRules.Error(),
+					t, subtranslator.ErrRouteValidationNoRules.Error(),
 					&gatewayapi.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
@@ -896,7 +896,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
-					t, translators.ErrRouteValidationNoRules.Error(),
+					t, subtranslator.ErrRouteValidationNoRules.Error(),
 					&gatewayapi.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},

@@ -3,7 +3,7 @@ package translator
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -48,7 +48,7 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 func (t *Translator) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayapi.TCPRoute) error {
 	spec := tcproute.Spec
 	if len(spec.Rules) == 0 {
-		return translators.ErrRouteValidationNoRules
+		return subtranslator.ErrRouteValidationNoRules
 	}
 
 	gwPorts := t.getGatewayListeningPorts(tcproute.Namespace, gatewayapi.TCPProtocolType, spec.CommonRouteSpec.ParentRefs)

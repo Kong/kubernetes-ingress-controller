@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -63,9 +63,9 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 		// determine the routes needed to route traffic to services for this rule
 		var routes []kongstate.Route
 		if t.featureFlags.ExpressionRoutes {
-			routes = translators.GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
+			routes = subtranslator.GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
 		} else {
-			routes = translators.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
+			routes = subtranslator.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
 		}
 
 		// create a service and attach the routes to it
@@ -89,7 +89,7 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 // and finally translate the split GRPCRoutes into Kong services and routes with assigned priorities.
 func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayapi.GRPCRoute, result *ingressRules) {
 	// first, split GRPCRoutes by hostname and match.
-	splitGRPCRouteMatches := []translators.SplitGRPCRouteMatch{}
+	splitGRPCRouteMatches := []subtranslator.SplitGRPCRouteMatch{}
 	// record GRPCRoutes passing the validation and get translated.
 	// after they are translated, register the success event in the translator.
 	translatedGRPCRoutes := []*gatewayapi.GRPCRoute{}
@@ -99,12 +99,12 @@ func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes 
 			t.registerTranslationFailure(err.Error(), grpcRoute)
 			continue
 		}
-		splitGRPCRouteMatches = append(splitGRPCRouteMatches, translators.SplitGRPCRoute(grpcRoute)...)
+		splitGRPCRouteMatches = append(splitGRPCRouteMatches, subtranslator.SplitGRPCRoute(grpcRoute)...)
 		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
 	}
 
 	// assign priorities to split GRPCRoutes.
-	splitGRPCRouteMatchesWithPriorities := translators.AssignRoutePriorityToSplitGRPCRouteMatches(t.logger, splitGRPCRouteMatches)
+	splitGRPCRouteMatchesWithPriorities := subtranslator.AssignRoutePriorityToSplitGRPCRouteMatches(t.logger, splitGRPCRouteMatches)
 	// generate Kong service and route from each split GRPC route with its assigned priority of Kong route.
 	for _, splitGRPCRouteMatchWithPriority := range splitGRPCRouteMatchesWithPriorities {
 		t.ingressRulesFromGRPCRouteWithPriority(result, splitGRPCRouteMatchWithPriority)
@@ -118,7 +118,7 @@ func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes 
 
 func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 	rules *ingressRules,
-	splitGRPCRouteMatchWithPriority translators.SplitGRPCRouteMatchToPriority,
+	splitGRPCRouteMatchWithPriority subtranslator.SplitGRPCRouteMatchToPriority,
 ) {
 	match := splitGRPCRouteMatchWithPriority.Match
 	grpcRoute := splitGRPCRouteMatchWithPriority.Match.Source
@@ -132,7 +132,7 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 	grpcRouteRule := grpcRoute.Spec.Rules[match.RuleIndex]
 	backendRefs := grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)
 
-	serviceName := translators.KongServiceNameFromSplitGRPCRouteMatch(match)
+	serviceName := subtranslator.KongServiceNameFromSplitGRPCRouteMatch(match)
 
 	kongService, _ := generateKongServiceFromBackendRefWithName(
 		t.logger,
@@ -145,7 +145,7 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 	)
 	kongService.Routes = append(
 		kongService.Routes,
-		translators.KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(splitGRPCRouteMatchWithPriority),
+		subtranslator.KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(splitGRPCRouteMatchWithPriority),
 	)
 	// cache the service to avoid duplicates in further loop iterations
 	rules.ServiceNameToServices[serviceName] = kongService
@@ -164,7 +164,7 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []
 func validateGRPCRoute(grpcRoute *gatewayapi.GRPCRoute) error {
 	if len(grpcRoute.Spec.Hostnames) == 0 {
 		if len(grpcRoute.Spec.Rules) == 0 {
-			return translators.ErrRouteValidationNoRules
+			return subtranslator.ErrRouteValidationNoRules
 		}
 	}
 	return nil

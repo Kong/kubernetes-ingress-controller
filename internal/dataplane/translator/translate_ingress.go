@@ -10,7 +10,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -52,7 +52,7 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 	)
 	for i := range servicesCache {
 		service := servicesCache[i]
-		if err := translators.MaybeRewriteURI(&service, t.featureFlags.RewriteURIs); err != nil {
+		if err := subtranslator.MaybeRewriteURI(&service, t.featureFlags.RewriteURIs); err != nil {
 			t.registerTranslationFailure(err.Error(), service.Parent)
 			continue
 		}
@@ -83,7 +83,7 @@ func IngressesV1ToKongServices(
 	icp kongv1alpha1.IngressClassParametersSpec,
 	translatedObjectsCollector *ObjectsCollector,
 ) KongServicesCache {
-	return translators.TranslateIngresses(ingresses, icp, translators.TranslateIngressFeatureFlags{
+	return subtranslator.TranslateIngresses(ingresses, icp, subtranslator.TranslateIngressFeatureFlags{
 		ExpressionRoutes: featureFlags.ExpressionRoutes,
 	}, translatedObjectsCollector)
 }
@@ -97,7 +97,7 @@ func getDefaultBackendService(allDefaultBackends []netv1.Ingress, expressionRout
 	if len(allDefaultBackends) > 0 {
 		ingress := allDefaultBackends[0]
 		defaultBackend := allDefaultBackends[0].Spec.DefaultBackend
-		port := translators.PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
+		port := subtranslator.PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
 		serviceName := fmt.Sprintf(
 			"%s.%s.%s",
 			allDefaultBackends[0].Namespace,
@@ -155,7 +155,7 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"),
 			atc.Or(atc.NewPredicateNetProtocol(atc.OpEqual, "http"), atc.NewPredicateNetProtocol(atc.OpEqual, "https")),
 		)
-		atc.ApplyExpression(&r.Route, catchAllMatcher, translators.IngressDefaultBackendPriority)
+		atc.ApplyExpression(&r.Route, catchAllMatcher, subtranslator.IngressDefaultBackendPriority)
 	} else {
 		r.Route.Paths = kong.StringSlice("/")
 		r.Route.Protocols = kong.StringSlice("http", "https")

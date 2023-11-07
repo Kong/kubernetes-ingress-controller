@@ -8,7 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -195,7 +195,7 @@ func validateWithKongGateway(
 	var kongRoutes []kong.Route
 	var errMsgs []string
 	for _, rule := range httproute.Spec.Rules {
-		translation := translators.KongRouteTranslation{
+		translation := subtranslator.KongRouteTranslation{
 			Name:    "validation-attempt",
 			Matches: rule.Matches,
 			Filters: rule.Filters,

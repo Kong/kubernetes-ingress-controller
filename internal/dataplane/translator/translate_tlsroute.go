@@ -7,7 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
@@ -57,7 +57,7 @@ func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *ga
 		return fmt.Errorf("no hostnames provided")
 	}
 	if len(spec.Rules) == 0 {
-		return translators.ErrRouteValidationNoRules
+		return subtranslator.ErrRouteValidationNoRules
 	}
 
 	tlsPassthrough, err := t.isTLSRoutePassthrough(tlsroute)

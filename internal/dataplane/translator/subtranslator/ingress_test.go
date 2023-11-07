@@ -1,4 +1,4 @@
-package translators
+package subtranslator
 
 import (
 	"errors"

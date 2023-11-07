@@ -3,7 +3,7 @@ package integration
 import (
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/integration/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 )
 
 // -----------------------------------------------------------------------------

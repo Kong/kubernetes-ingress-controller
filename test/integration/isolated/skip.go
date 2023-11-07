@@ -8,7 +8,7 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {

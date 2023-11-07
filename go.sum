@@ -240,7 +240,6 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/juju/gnuflag v0.0.0-20171113085948-2ce1bb71843d/go.mod h1:2PavIy+JPciBPrBUjwbNvtwB6RQlve+hkpll6QSNmOE=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-<<<<<<< HEAD
 github.com/klauspost/compress v1.17.0 h1:Rnbp4K9EjcDuVuHtd0dgA4qNuv9yKDYKK1ulpJwgrqM=
 github.com/klauspost/compress v1.17.0/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
 github.com/kong/deck v1.29.0 h1:oaObpHxIY4nULFiHpnOA/qHb7twBEBAsTUGH5KEWMeI=
@@ -251,25 +250,6 @@ github.com/kong/kubernetes-telemetry v0.1.2 h1:fxKdEbFQ+aGrh+3x0LIEgRmyQ4wP/ZWv8
 github.com/kong/kubernetes-telemetry v0.1.2/go.mod h1:2p6ZiwVM6pqDMwfRpbUuJrw6oqFrKFvGzX4Ft+LwGNA=
 github.com/kong/kubernetes-testing-framework v0.41.1 h1:rYPOUZu7961lNApLkr4QaqsKaJBuY9HClCa0r7K4P+8=
 github.com/kong/kubernetes-testing-framework v0.41.1/go.mod h1:LjiFKRG/Nk/W3kL+qWr60iUeIuXGOzykUEWlzkc0wtE=
-=======
-github.com/klauspost/compress v1.16.7 h1:2mk3MPGNzKyxErAw8YaohYh69+pa4sIQSC0fPGCFR9I=
-github.com/klauspost/compress v1.16.7/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
-github.com/kong/deck v1.27.1 h1:9R/pZpwOTYz80MHz5naoN0B/k+T+wBfCtGo1nliQQ+c=
-github.com/kong/deck v1.27.1/go.mod h1:6FvrNHuCDf0I9PkUd5sPrK9EnfG4aQLhs0vPmdDRylE=
-github.com/kong/go-kong v0.47.0 h1:fuZjRnUChITogljM4mY4HGGTKTaZM50970Wwg6EvQgs=
-github.com/kong/go-kong v0.47.0/go.mod h1:QaLx1EsT+roe5V6h7aKghwLn0bXg7l/Bg8wzlcCmygc=
-github.com/kong/kubernetes-telemetry v0.1.1 h1:q8iABCuonO16p5q6QVygr7J39G5o5jK5Y3w3ZlE8JC4=
-github.com/kong/kubernetes-telemetry v0.1.1/go.mod h1:0yzRZVPwKeOQUFMWbROEJzUE1z8WWngWiujoYtdEEPA=
-github.com/kong/kubernetes-testing-framework v0.41.0 h1:H1yeLJDj6A8qltURfqGNK6N3OefkawHorq1EfesGPLA=
-github.com/kong/kubernetes-testing-framework v0.41.0/go.mod h1:LjiFKRG/Nk/W3kL+qWr60iUeIuXGOzykUEWlzkc0wtE=
-<<<<<<< HEAD
-=======
-github.com/kong/kubernetes-testing-framework v0.39.2-0.20231011203028-366e9fe9e610 h1:yns94g328EsmKwTOpWI3Ra1rodUSB7t+DvBJSUdhp4c=
-github.com/kong/kubernetes-testing-framework v0.39.2-0.20231011203028-366e9fe9e610/go.mod h1:lkKmrPeHHjAl2unrElIP0/mOO5VPaPWrBi1hZ5rzz9Y=
->>>>>>> da1b755d (tests: introduce new isolated suite for running integration tests)
->>>>>>> 688f911b3 (tests: introduce new isolated suite for running integration tests)
-=======
->>>>>>> 1487dbe3a (chore: update go.sum after rebase)
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
@@ -445,14 +425,8 @@ github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFA
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
 github.com/tklauser/numcpus v0.6.1/go.mod h1:1XfjsgE2zo8GVw7POkMbHENHzVg3GzmoZ9fESEdAacY=
-<<<<<<< HEAD
-=======
-github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
-github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYppBueQtXaqoE=
-github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
 github.com/vladimirvivien/gexe v0.2.0 h1:nbdAQ6vbZ+ZNsolCgSVb9Fno60kzSuvtzVh6Ytqi/xY=
 github.com/vladimirvivien/gexe v0.2.0/go.mod h1:LHQL00w/7gDUKIak24n801ABp8C+ni6eBht9vGVst8w=
->>>>>>> 688f911b3 (tests: introduce new isolated suite for running integration tests)
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
@@ -675,29 +649,10 @@ k8s.io/utils v0.0.0-20230726121419-3b25d923346b h1:sgn3ZU783SCgtaSJjpcVVlRqd6GSn
 k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 sigs.k8s.io/controller-runtime v0.16.3 h1:2TuvuokmfXvDUamSx1SuAOO3eTyye+47mJCigwG62c4=
 sigs.k8s.io/controller-runtime v0.16.3/go.mod h1:j7bialYoSn142nv9sCOJmQgDXQXxnroFU4VnX/brVJ0=
-<<<<<<< HEAD
-<<<<<<< HEAD
-sigs.k8s.io/gateway-api v1.0.0 h1:iPTStSv41+d9p0xFydll6d7f7MOBGuqXM6p2/zVYMAs=
-sigs.k8s.io/gateway-api v1.0.0/go.mod h1:4cUgr0Lnp5FZ0Cdq8FdRwCvpiWws7LVhLHGIudLlf4c=
-=======
-sigs.k8s.io/gateway-api v1.0.0-rc1 h1:v7N9fWTcQxox5aP2IrViDw6imeUHMAt2WFjI4BYo0sw=
-sigs.k8s.io/gateway-api v1.0.0-rc1/go.mod h1:+QpYENjk9s31/abu2Pv5BpK2v88UQDK2aeQCwCvy6ck=
-=======
-sigs.k8s.io/controller-runtime v0.16.2 h1:mwXAVuEk3EQf478PQwQ48zGOXvW27UJc8NHktQVuIPU=
-sigs.k8s.io/controller-runtime v0.16.2/go.mod h1:vpMu3LpI5sYWtujJOa2uPK61nB5rbwlN7BAB8aSLvGU=
->>>>>>> f752a6f4 (chore: refactor nits)
-=======
->>>>>>> 1487dbe3a (chore: update go.sum after rebase)
 sigs.k8s.io/e2e-framework v0.3.0 h1:eqQALBtPCth8+ulTs6lcPK7ytV5rZSSHJzQHZph4O7U=
 sigs.k8s.io/e2e-framework v0.3.0/go.mod h1:C+ef37/D90Dc7Xq1jQnNbJYscrUGpxrWog9bx2KIa+c=
-<<<<<<< HEAD
-sigs.k8s.io/gateway-api v0.8.1 h1:Bo4NMAQFYkQZnHXOfufbYwbPW7b3Ic5NjpbeW6EJxuU=
-sigs.k8s.io/gateway-api v0.8.1/go.mod h1:0PteDrsrgkRmr13nDqFWnev8tOysAVrwnvfFM55tSVg=
->>>>>>> 688f911b3 (tests: introduce new isolated suite for running integration tests)
-=======
-sigs.k8s.io/gateway-api v1.0.0-rc1 h1:v7N9fWTcQxox5aP2IrViDw6imeUHMAt2WFjI4BYo0sw=
-sigs.k8s.io/gateway-api v1.0.0-rc1/go.mod h1:+QpYENjk9s31/abu2Pv5BpK2v88UQDK2aeQCwCvy6ck=
->>>>>>> 2c233de1f (chore: refactor nits)
+sigs.k8s.io/gateway-api v1.0.0 h1:iPTStSv41+d9p0xFydll6d7f7MOBGuqXM6p2/zVYMAs=
+sigs.k8s.io/gateway-api v1.0.0/go.mod h1:4cUgr0Lnp5FZ0Cdq8FdRwCvpiWws7LVhLHGIudLlf4c=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
 sigs.k8s.io/kind v0.20.0 h1:f0sc3v9mQbGnjBUaqSFST1dwIuiikKVGgoTwpoP33a8=

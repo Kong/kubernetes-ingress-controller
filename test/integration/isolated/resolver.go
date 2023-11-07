@@ -10,7 +10,7 @@ import (
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/integration/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 )
 
 func createResolver(proxyUDPURL *url.URL) *net.Resolver {

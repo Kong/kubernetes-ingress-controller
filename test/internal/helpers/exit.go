@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
 type CleanupFunc func(context.Context) error

@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
  - [3.0.0](#300)
+ - [2.12.1](#2121)
  - [2.12.0](#2120)
  - [2.11.1](#2111)
  - [2.11.0](#2110)
@@ -87,19 +88,35 @@ Adding a new version? You'll need three changes:
 
 > Release date: 2023-11-03
 
+### Highlights
+
+- 🚀 Support for [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateways/) is now GA!
+  - You only need to install Gateway API CRDs to use GA features of Gateway API with KIC. 
+  - Check the [Ingress to Gateway migration guide] to learn how to start using Gateway API already.
+- 🏎️ Performance boosting expression router is now the default for DB-less mode.
+- 📈 Gateway Discovery feature is enabled by default both in DB-less and DB mode, allowing for scaling
+  your gateways independently of the controller.
+- 📖 Brand-new docs: [The KIC docs] have been totally revamped to be Gateway API first, and every single guide 
+  is as easy as copying and pasting your way down the page. 
+
+[Ingress to Gateway migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/ingress-to-gateway/
+[The KIC docs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/
+
 ### Breaking changes
 
-- Removed feature gate `CombinedServices`. The feature is enabled and it can't be changed.
-  [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
-- Removed feature gate `CombinedRoutes`. The feature is enabled and it can't be changed.
-  [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
-- Removed featuregate `ExpressionRoutes`. The feature is enabled and it can't be changed.
-  KIC now translates to expression based Kong routes when Kong's router flavor `expressions`.
-  [#4892](https://github.com/Kong/kubernetes-ingress-controller/pull/4892)
+- Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
+  if the version is lower, also won't discover such Kong Gateways.
+  [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
+- Removed feature gates: 
+  - `CombinedServices`: The feature is enabled and it can't be changed.
+    [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
+  - `CombinedRoutes`: The feature is enabled and it can't be changed.
+    [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
+  - `ExpressionRoutes`: The feature is enabled and it can't be changed.
+    KIC now translates to expression based Kong routes when Kong's router flavor `expressions`.
+    [#4892](https://github.com/Kong/kubernetes-ingress-controller/pull/4892)
 - Removed Knative support.
   [#4748](https://github.com/Kong/kubernetes-ingress-controller/pull/4748)
-- Removed support for the `debug-log-reduce-redundancy` CLI flag.
-  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 - The "text" logging format has changed. "json" should be used for
   machine-parseable logs.
   [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
@@ -109,33 +126,30 @@ Adding a new version? You'll need three changes:
 - Removed support for deprecated `KongIngress` fields: `Proxy` and `Route`. Respective
   `Service` or `Ingress` annotations should be used instead. See [KIC Annotations reference].
   [#4760](https://github.com/Kong/kubernetes-ingress-controller/pull/4760)
-- Removed previously deprecated flags:
-  - `sync-rate-limit`: Use `--proxy-sync-seconds` instead
-  - `stderrthreshold`: Has no effect
-  - `update-status-on-shutdown`: Has no effect
-  - `kong-custom-entities-secret`: Has no effect
-  - `leader-elect`: DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect
-  - `enable-controller-ingress-extensionsv1beta1`: Has no effect
-  - `enable-controller-ingress-networkingv1beta1`: Has no effect
-  [#4770](https://github.com/Kong/kubernetes-ingress-controller/pull/4770)
+- Removed previously deprecated CLI flags:
+  - `sync-rate-limit`
+  - `stderrthreshold`
+  - `update-status-on-shutdown`
+  - `kong-custom-entities-secret`
+  - `leader-elect`
+  - `enable-controller-ingress-extensionsv1beta1`
+  - `enable-controller-ingress-networkingv1beta1`
+    [#4770](https://github.com/Kong/kubernetes-ingress-controller/pull/4770)
+  - `debug-log-reduce-redundancy`
+    [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 - `--konnect-runtime-group-id` CLI flag is now deprecated. Please use `--konnect-control-plane-id`
   instead.
   [#4783](https://github.com/Kong/kubernetes-ingress-controller/pull/4783)
-- Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
-  if the version is lower, also won't discover such Kong Gateways.
-  [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
-- `deploy/single/all-in-one-dbless-legacy.yaml` manifest is removed.
-  It was already deprecated in 2.9
-  [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
 - All manifests from `deploy/single` are no longer supported as installation
   method and were removed, please use Helm chart or Kong Gateway Operator instead.
-  [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866), [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873), [#4970](https://github.com/Kong/kubernetes-ingress-controller/pull/4970), 
+  [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
+  [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873)
+  [#4970](https://github.com/Kong/kubernetes-ingress-controller/pull/4970)
 - Credentials now use a `konghq.com/credential` label to indicate
   credential type instead of the `kongCredType` field. This allows controller
   compontents to avoid caching unnecessary Secrets. The `kongCredType` field is
-  still supported but is now deprecated. A script to generate commands to
-  update Secrets is available at https://github.com/Kong/kubernetes-ingress-controller/issues/2502#issuecomment-1758213596
-  [#4825](https://github.com/Kong/kubernetes-ingress-controller/pull/4825)
+  still supported but is now deprecated.
+  See the [Migrate Credential Type Labels] guide to see how to update your `Secrets` smoothly.
 - The `expressions` router is now the default for DB-less mode. This is not
   expected to functionally affect routing, but may affect performance for
   some configurations.
@@ -144,6 +158,7 @@ Adding a new version? You'll need three changes:
   Its fields that were previously deprecated (`proxy` and `route`) are now not allowed to be set.
   They must be migrated to annotations. `upstream` field is deprecated - it's recommended
   to migrate its settings to the new `KongUpstreamPolicy` resource.
+  See the [KongIngress to KongUpstreamPolicy migration guide] for details.
   [#5022](https://github.com/Kong/kubernetes-ingress-controller/pull/5022)
 - Fixed `HTTPRoute` and `KongConsumer` admission webhook validators to properly
   signal validation failures, resulting in returning responses with `AdmissionResponse`
@@ -274,6 +289,8 @@ Adding a new version? You'll need three changes:
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
+[KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
+[Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
 
 ## [2.12.1]
 
@@ -3009,6 +3026,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v2.12.1
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.11.0

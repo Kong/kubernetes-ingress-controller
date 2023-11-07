@@ -14,7 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
 
@@ -156,7 +156,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 				route := svc.Routes[0]
 				if tc.expressionRoutes {
 					require.Equal(t, `(http.path ^= "/") && ((net.protocol == "http") || (net.protocol == "https"))`, *route.Expression)
-					require.Equal(t, translators.IngressDefaultBackendPriority, *route.Priority)
+					require.Equal(t, subtranslator.IngressDefaultBackendPriority, *route.Priority)
 				} else {
 					require.Len(t, route.Paths, 1)
 					require.Equal(t, *route.Paths[0], "/")

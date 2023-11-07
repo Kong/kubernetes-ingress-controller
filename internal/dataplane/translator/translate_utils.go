@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
@@ -161,7 +161,7 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 func applyExpressionToIngressRules(result *ingressRules) {
 	for _, svc := range result.ServiceNameToServices {
 		for i := range svc.Routes {
-			translators.ApplyExpressionToL4KongRoute(&svc.Routes[i])
+			subtranslator.ApplyExpressionToL4KongRoute(&svc.Routes[i])
 			svc.Routes[i].Destinations = nil
 			svc.Routes[i].SNIs = nil
 		}

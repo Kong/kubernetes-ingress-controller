@@ -3,7 +3,7 @@ package translator
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -55,7 +55,7 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 func (t *Translator) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayapi.UDPRoute) error {
 	spec := udproute.Spec
 	if len(spec.Rules) == 0 {
-		return translators.ErrRouteValidationNoRules
+		return subtranslator.ErrRouteValidationNoRules
 	}
 
 	gwPorts := t.getGatewayListeningPorts(udproute.Namespace, gatewayapi.UDPProtocolType, spec.CommonRouteSpec.ParentRefs)
@@ -90,11 +90,11 @@ func (t *Translator) ingressRulesFromUDPRoute(result *ingressRules, udproute *ga
 // at least try to provide a helpful message about the situation in the manager logs.
 func validateUDPRoute(udproute *gatewayapi.UDPRoute) error {
 	if len(udproute.Spec.Rules) == 0 {
-		return translators.ErrRouteValidationNoRules
+		return subtranslator.ErrRouteValidationNoRules
 	}
 	for _, rule := range udproute.Spec.Rules {
 		if len(rule.BackendRefs) == 0 {
-			return translators.ErrRotueValidationRuleNoBackendRef
+			return subtranslator.ErrRotueValidationRuleNoBackendRef
 		}
 	}
 	return nil

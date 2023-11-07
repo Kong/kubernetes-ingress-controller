@@ -10,7 +10,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -61,7 +61,7 @@ func (t *Translator) ingressRulesFromHTTPRoutes() ingressRules {
 // ingressRulesFromHTTPRoute validates and generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (t *Translator) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayapi.HTTPRoute) error {
-	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
+	for _, kongServiceTranslation := range subtranslator.TranslateHTTPRoute(httproute) {
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
 		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
 
@@ -97,7 +97,7 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
-		return translators.ErrRouteValidationNoRules
+		return subtranslator.ErrRouteValidationNoRules
 	}
 
 	// Kong supports query parameter match only with expression router,
@@ -106,7 +106,7 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 		for _, rule := range spec.Rules {
 			for _, match := range rule.Matches {
 				if len(match.QueryParams) > 0 {
-					return translators.ErrRouteValidationQueryParamMatchesUnsupported
+					return subtranslator.ErrRouteValidationQueryParamMatchesUnsupported
 				}
 			}
 		}
@@ -122,12 +122,12 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 // and finally translate the split HTTPRoutes into Kong services and routes with assigned priorities.
 func (t *Translator) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
 	// first, split HTTPRoutes by hostnames and matches.
-	splitHTTPRouteMatches := []translators.SplitHTTPRouteMatch{}
+	splitHTTPRouteMatches := []subtranslator.SplitHTTPRouteMatch{}
 	for _, httproute := range httpRoutes {
-		splitHTTPRouteMatches = append(splitHTTPRouteMatches, translators.SplitHTTPRoute(httproute)...)
+		splitHTTPRouteMatches = append(splitHTTPRouteMatches, subtranslator.SplitHTTPRoute(httproute)...)
 	}
 	// assign priorities to split HTTPRoutes.
-	splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRouteMatches(t.logger, splitHTTPRouteMatches)
+	splitHTTPRoutesWithPriorities := subtranslator.AssignRoutePriorityToSplitHTTPRouteMatches(t.logger, splitHTTPRouteMatches)
 	httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
 
 	// translate split HTTPRoute matches to ingress rules, including services, routes, upstreams.
@@ -185,7 +185,7 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 // pointing to a specific backend. It is used for both traditional and expression based routes.
 func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
-	translation translators.KongRouteTranslation,
+	translation subtranslator.KongRouteTranslation,
 	expressionRoutes bool,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
@@ -196,7 +196,7 @@ func GenerateKongRouteFromTranslation(
 	if expressionRoutes {
 		// get the hostnames from the HTTPRoute
 		hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
-		return translators.GenerateKongExpressionRoutesFromHTTPRouteMatches(
+		return subtranslator.GenerateKongExpressionRoutesFromHTTPRouteMatches(
 			translation,
 			objectInfo,
 			hostnames,
@@ -273,7 +273,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 
 	// if the redirect filter has not been set, we still need to set the route plugins
 	if !hasRedirectFilter {
-		if err := translators.SetRoutePlugins(&r, filters, "", tags); err != nil {
+		if err := subtranslator.SetRoutePlugins(&r, filters, "", tags); err != nil {
 			return nil, err
 		}
 		routes = []kongstate.Route{r}
@@ -324,7 +324,7 @@ func getRoutesFromMatches(
 			}
 
 			// generate kong plugins from rule.filters
-			if err := translators.SetRoutePlugins(matchRoute, filters, path, tags); err != nil {
+			if err := subtranslator.SetRoutePlugins(matchRoute, filters, path, tags); err != nil {
 				return nil, err
 			}
 
@@ -355,19 +355,19 @@ func getRoutesFromMatches(
 func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []string {
 	switch *match.Path.Type {
 	case gatewayapi.PathMatchExact:
-		return []string{translators.KongPathRegexPrefix + *match.Path.Value + "$"}
+		return []string{subtranslator.KongPathRegexPrefix + *match.Path.Value + "$"}
 
 	case gatewayapi.PathMatchPathPrefix:
 		paths := make([]string, 0, 2)
 		path := *match.Path.Value
-		paths = append(paths, fmt.Sprintf("%s%s$", translators.KongPathRegexPrefix, path))
+		paths = append(paths, fmt.Sprintf("%s%s$", subtranslator.KongPathRegexPrefix, path))
 		if !strings.HasSuffix(path, "/") {
 			path = fmt.Sprintf("%s/", path)
 		}
 		return append(paths, path)
 
 	case gatewayapi.PathMatchRegularExpression:
-		return []string{translators.KongPathRegexPrefix + *match.Path.Value}
+		return []string{subtranslator.KongPathRegexPrefix + *match.Path.Value}
 	}
 
 	return []string{""} // unreachable code
@@ -406,7 +406,7 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef) []
 // to ingress rule, including Kong service and Kong route.
 func (t *Translator) ingressRulesFromSplitHTTPRouteMatchWithPriority(
 	rules *ingressRules,
-	httpRouteMatchWithPriority translators.SplitHTTPRouteMatchToKongRoutePriority,
+	httpRouteMatchWithPriority subtranslator.SplitHTTPRouteMatchToKongRoutePriority,
 ) error {
 	match := httpRouteMatchWithPriority.Match
 	httpRoute := httpRouteMatchWithPriority.Match.Source
@@ -418,7 +418,7 @@ func (t *Translator) ingressRulesFromSplitHTTPRouteMatchWithPriority(
 
 	rule := httpRoute.Spec.Rules[match.RuleIndex]
 	backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
-	serviceName := translators.KongServiceNameFromSplitHTTPRouteMatch(httpRouteMatchWithPriority.Match)
+	serviceName := subtranslator.KongServiceNameFromSplitHTTPRouteMatch(httpRouteMatchWithPriority.Match)
 
 	kongService, err := generateKongServiceFromBackendRefWithName(
 		t.logger,
@@ -433,7 +433,7 @@ func (t *Translator) ingressRulesFromSplitHTTPRouteMatchWithPriority(
 		return err
 	}
 
-	additionalRoutes, err := translators.KongExpressionRouteFromHTTPRouteMatchWithPriority(httpRouteMatchWithPriority)
+	additionalRoutes, err := subtranslator.KongExpressionRouteFromHTTPRouteMatchWithPriority(httpRouteMatchWithPriority)
 	if err != nil {
 		return err
 	}

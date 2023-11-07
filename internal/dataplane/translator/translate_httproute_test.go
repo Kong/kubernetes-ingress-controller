@@ -17,7 +17,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -86,7 +86,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			},
 			expressionRoutes: false,
-			expectedError:    translators.ErrRouteValidationNoRules,
+			expectedError:    subtranslator.ErrRouteValidationNoRules,
 		},
 		{
 			name: "HTTPRoute with query param match should pass validation with expression routes",
@@ -134,7 +134,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			},
 			expressionRoutes: false,
-			expectedError:    translators.ErrRouteValidationQueryParamMatchesUnsupported,
+			expectedError:    subtranslator.ErrRouteValidationQueryParamMatchesUnsupported,
 		},
 	}
 
@@ -1836,15 +1836,15 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 
 	testCases := []struct {
 		name                string
-		matchWithPriority   translators.SplitHTTPRouteMatchToKongRoutePriority
+		matchWithPriority   subtranslator.SplitHTTPRouteMatchToKongRoutePriority
 		expectedKongService kongstate.Service
 		expectedKongRoute   kongstate.Route
 		expectedError       error
 	}{
 		{
 			name: "no hostname",
-			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: translators.SplitHTTPRouteMatch{
+			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: subtranslator.SplitHTTPRouteMatch{
 					Source: &gatewayapi.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
@@ -1894,8 +1894,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "precise hostname and filter",
-			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: translators.SplitHTTPRouteMatch{
+			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: subtranslator.SplitHTTPRouteMatch{
 					Source: &gatewayapi.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
@@ -1972,8 +1972,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "wildcard hostname with multiple backends",
-			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: translators.SplitHTTPRouteMatch{
+			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: subtranslator.SplitHTTPRouteMatch{
 					Source: &gatewayapi.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
@@ -2034,8 +2034,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "precise hostname and no match",
-			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: translators.SplitHTTPRouteMatch{
+			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: subtranslator.SplitHTTPRouteMatch{
 					Source: &gatewayapi.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
@@ -2086,8 +2086,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "no hostname and no match",
-			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: translators.SplitHTTPRouteMatch{
+			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: subtranslator.SplitHTTPRouteMatch{
 					Source: &gatewayapi.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
@@ -2125,7 +2125,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			expectedKongRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("httproute.default.httproute-1._.0.0"),
-					Expression:   kong.String(translators.CatchAllHTTPExpression),
+					Expression:   kong.String(subtranslator.CatchAllHTTPExpression),
 					PreserveHost: kong.Bool(true),
 					StripPath:    kong.Bool(false),
 					Priority:     kong.Uint64(1024),

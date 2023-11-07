@@ -15,7 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/translators"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
@@ -379,13 +379,13 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:       kong.String("grpcroute.default.grpcroute-no-hostnames-no-matches._.0.0"),
-							Expression: kong.String(translators.CatchAllHTTPExpression),
+							Expression: kong.String(subtranslator.CatchAllHTTPExpression),
 						},
 					},
 				},
 			},
 			expectedFailures: []failures.ResourceFailure{
-				newResourceFailure(t, translators.ErrRouteValidationNoRules.Error(),
+				newResourceFailure(t, subtranslator.ErrRouteValidationNoRules.Error(),
 					&gatewayapi.GRPCRoute{
 						TypeMeta: grpcRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{

@@ -1,4 +1,4 @@
-package translators
+package subtranslator
 
 import (
 	netv1 "k8s.io/api/networking/v1"

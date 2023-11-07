@@ -3,4 +3,4 @@ pkg/clientset/** linguist-generated=true
 deploy/single/** linguist-generated=true
 test/e2e/manifests/** linguist-generated=true
 docs/api-reference.md linguist-generated=true
-internal/dataplane/parser/testdata/golden/**/*_golden.yaml linguist-generated=true
+internal/dataplane/translator/testdata/golden/**/*_golden.yaml linguist-generated=true

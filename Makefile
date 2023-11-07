@@ -373,7 +373,7 @@ test.unit.pretty:
 
 .PHONY: test.golden.update
 test.golden.update:
-	@go test -v -run TestParser_GoldenTests ./internal/dataplane/parser -update
+	@go test -v -run TestParser_GoldenTests ./internal/dataplane/translator -update
 
 
 .PHONY: use-setup-envtest

@@ -26,7 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
@@ -171,7 +171,7 @@ func setupAdmissionServer(
 	clientsManager *clients.AdminAPIClientsManager,
 	managerClient client.Client,
 	logger logr.Logger,
-	parserFeatures parser.FeatureFlags,
+	translatorFeatures translator.FeatureFlags,
 ) error {
 	admissionLogger := logger.WithName("admission-server")
 
@@ -187,7 +187,7 @@ func setupAdmissionServer(
 			managerClient,
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
-			parserFeatures,
+			translatorFeatures,
 		),
 		Logger: admissionLogger,
 	}, admissionLogger)

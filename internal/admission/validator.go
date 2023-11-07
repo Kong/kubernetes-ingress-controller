@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -61,14 +61,14 @@ type KongHTTPValidator struct {
 	ConsumerGetter           ConsumerGetter
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
-	ParserFeatures           parser.FeatureFlags
+	TranslatorFeatures       translator.FeatureFlags
 
 	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
 }
 
-// NewKongHTTPValidator provides a new KongHTTPValidator object provided a
-// controller-runtime client which will be used to retrieve reference objects
+// NewKongHTTPValidator provides a new KongHTTPValidator object provided
+// a controller-runtime client which will be used to retrieve reference objects
 // such as consumer credentials secrets. If you do not pass a cached client
 // here, the performance of this validator can get very poor at high scales.
 func NewKongHTTPValidator(
@@ -76,7 +76,7 @@ func NewKongHTTPValidator(
 	managerClient client.Client,
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
-	parserFeatures parser.FeatureFlags,
+	translatorFeatures translator.FeatureFlags,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
@@ -84,7 +84,7 @@ func NewKongHTTPValidator(
 		ConsumerGetter:           &managerClientConsumerGetter{managerClient: managerClient},
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
-		ParserFeatures:           parserFeatures,
+		TranslatorFeatures:       translatorFeatures,
 
 		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
@@ -434,7 +434,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		routeValidator = routesSvc
 	}
 	return gatewayvalidation.ValidateHTTPRoute(
-		ctx, routeValidator, validator.ParserFeatures, &httproute, managedGateways...,
+		ctx, routeValidator, validator.TranslatorFeatures, &httproute, managedGateways...,
 	)
 }
 
@@ -451,7 +451,7 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, &ingress)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress)
 }
 
 type routeValidator interface {

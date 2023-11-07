@@ -33,8 +33,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -434,8 +434,8 @@ func newMockKongConfigBuilder() *mockKongConfigBuilder {
 	}
 }
 
-func (p *mockKongConfigBuilder) BuildKongConfig() parser.KongConfigBuildingResult {
-	return parser.KongConfigBuildingResult{
+func (p *mockKongConfigBuilder) BuildKongConfig() translator.KongConfigBuildingResult {
+	return translator.KongConfigBuildingResult{
 		KongState:           p.kongState,
 		TranslationFailures: p.translationFailuresToReturn,
 	}

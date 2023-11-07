@@ -29,8 +29,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -54,7 +54,7 @@ const (
 
 // KongConfigBuilder builds a Kong configuration from a Kubernetes object cache.
 type KongConfigBuilder interface {
-	BuildKongConfig() parser.KongConfigBuildingResult
+	BuildKongConfig() translator.KongConfigBuildingResult
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)

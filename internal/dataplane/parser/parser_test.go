@@ -4510,16 +4510,16 @@ func TestNewFeatureFlags(t *testing.T) {
 		expectedFeatureFlags FeatureFlags
 	}{
 		{
-			name:             "default",
+			name:             "traditional compatible router and update status enabled",
 			featureGates:     map[string]bool{},
-			routerFlavor:     dataplaneutil.RouterFlavorExpressions,
+			routerFlavor:     dataplaneutil.RouterFlavorTraditionalCompatible,
 			updateStatusFlag: true,
 			expectedFeatureFlags: FeatureFlags{
 				ReportConfiguredKubernetesObjects: true,
 			},
 		},
 		{
-			name:         "expression routes feature gate enabled and router flavor matches",
+			name:         "expression router and update status disabled",
 			routerFlavor: dataplaneutil.RouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
 				ExpressionRoutes: true,

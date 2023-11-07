@@ -92,7 +92,7 @@ func DBModeFromRoot(r Root) (dataplaneutil.DBMode, error) {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", dbModeKey, dbMode)
 	}
 
-	return dataplaneutil.DBMode(dbModeStr), nil
+	return dataplaneutil.NewDBMode(dbModeStr)
 }
 
 func RouterFlavorFromRoot(r Root) (dataplaneutil.RouterFlavor, error) {
@@ -179,8 +179,6 @@ func validateDBMode(dbMode dataplaneutil.DBMode, skipCACerts bool) error {
 		}
 	case dataplaneutil.DBModePostgres:
 		return nil
-	case "cassandra":
-		return fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
 	default:
 		return fmt.Errorf("%s is not a supported database backend", dbMode)
 	}

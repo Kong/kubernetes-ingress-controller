@@ -160,7 +160,6 @@ func Run(
 	}
 
 	translatorFeatureFlags := translator.NewFeatureFlags(
-		logger,
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,

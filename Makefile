@@ -612,9 +612,11 @@ run.skaffold:
 		SKAFFOLD_PROFILE=$(SKAFFOLD_RUN_PROFILE) \
 		$(MAKE) _skaffold
 
+# NOTE: We're using the --keep-running-on-failure=true to allow deployments like
+# postgres multigateway to eventually stabilize.
 .PHONY: _skaffold
 _skaffold: skaffold
-	$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
+	$(SKAFFOLD) $(CMD) --keep-running-on-failure=true --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
 
 .PHONY: run
 run: install _ensure-namespace

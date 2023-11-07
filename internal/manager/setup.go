@@ -351,6 +351,7 @@ func AdminAPIClientFromServiceDiscovery(
 			if !errors.As(err, &NoAvailableEndpointsError{}) {
 				logger.Error(err, "Failed to create kong client(s)")
 			}
+			logger.Error(err, "Failed ot create kong client(s), retrying in 1s...")
 		}),
 	}, retryOpts...)
 

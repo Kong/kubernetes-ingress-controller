@@ -27,7 +27,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=ki,categories=kong-ingress-controller
-// +kubebuilder:validation:Optional
 // +kubebuilder:validation:XValidation:rule="!has(self.proxy)", message="'proxy' field is no longer supported, use Service's annotations instead"
 // +kubebuilder:validation:XValidation:rule="!has(self.route)", message="'route' field is no longer supported, use Ingress' annotations instead"
 

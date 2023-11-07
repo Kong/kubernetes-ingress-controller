@@ -151,6 +151,8 @@ spec:
           username:
             description: Username is a Kong cluster-unique username of the consumer.
             type: string
+        required:
+        - username
         type: object
         x-kubernetes-validations:
         - message: Need to provide either username or custom_id

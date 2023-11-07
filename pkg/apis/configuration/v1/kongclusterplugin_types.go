@@ -29,7 +29,6 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=kcp,categories=kong-ingress-controller
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
@@ -65,7 +64,7 @@ type KongClusterPlugin struct {
 
 	// PluginName is the name of the plugin to which to apply the config.
 	// +kubebuilder:validation:Required
-	PluginName string `json:"plugin,omitempty"`
+	PluginName string `json:"plugin"`
 
 	// RunOn configures the plugin to run on the first or the second or both
 	// nodes in case of a service mesh deployment.

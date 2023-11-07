@@ -26,7 +26,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=kc,categories=kong-ingress-controller
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.username`,description="Username of a Kong Consumer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
@@ -38,7 +37,7 @@ type KongConsumer struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Username is a Kong cluster-unique username of the consumer.
-	Username string `json:"username,omitempty"`
+	Username string `json:"username"`
 
 	// CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
 	// Kong with users in your existing database.

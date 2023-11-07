@@ -26,7 +26,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=kcg,categories=kong-ingress-controller
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 
@@ -35,7 +34,7 @@ type KongConsumerGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Status represents the current status of the KongConsumer resource.
+	// Status represents the current status of the KongConsumerGroup resource.
 	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 

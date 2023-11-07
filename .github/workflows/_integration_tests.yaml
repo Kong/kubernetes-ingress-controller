@@ -153,7 +153,10 @@ jobs:
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
           JUNIT_REPORT: integration-tests-${{ matrix.name }}.xml
-          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+          # Use Github's "ternary operator" to fallback to default router flavor
+          # defined in env.TEST_KONG_ROUTER_FLAVOR
+          # Ref: https://docs.github.com/en/actions/learn-github-actions/expressions#example
+          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor != '' && matrix.router-flavor || env.TEST_KONG_ROUTER_FLAVOR }}
           TEST_RUN_INVALID_CONFIG_CASES: ${{ matrix.run_invalid_config }}
           GOTESTFLAGS: "${{ matrix.go_test_flags }}"
 

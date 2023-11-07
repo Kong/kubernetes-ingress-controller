@@ -20,13 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -61,12 +61,12 @@ type FeatureFlags struct {
 
 func NewFeatureFlags(
 	featureGates featuregates.FeatureGates,
-	routerFlavor dataplaneutil.RouterFlavor,
+	routerFlavor dpconf.RouterFlavor,
 	updateStatusFlag bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		ExpressionRoutes:                  dataplaneutil.ShouldEnableExpressionRoutes(routerFlavor),
+		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 	}

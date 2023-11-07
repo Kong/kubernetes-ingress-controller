@@ -24,11 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
@@ -4504,7 +4504,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		name string
 
 		featureGates     map[string]bool
-		routerFlavor     dataplaneutil.RouterFlavor
+		routerFlavor     dpconf.RouterFlavor
 		updateStatusFlag bool
 
 		expectedFeatureFlags FeatureFlags
@@ -4512,7 +4512,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		{
 			name:             "traditional compatible router and update status enabled",
 			featureGates:     map[string]bool{},
-			routerFlavor:     dataplaneutil.RouterFlavorTraditionalCompatible,
+			routerFlavor:     dpconf.RouterFlavorTraditionalCompatible,
 			updateStatusFlag: true,
 			expectedFeatureFlags: FeatureFlags{
 				ReportConfiguredKubernetesObjects: true,
@@ -4520,7 +4520,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		},
 		{
 			name:         "expression router and update status disabled",
-			routerFlavor: dataplaneutil.RouterFlavorExpressions,
+			routerFlavor: dpconf.RouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
 				ExpressionRoutes: true,
 			},

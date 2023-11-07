@@ -29,6 +29,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -38,7 +39,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -144,7 +144,7 @@ var (
 type mockGatewayClientsProvider struct {
 	gatewayClients []*adminapi.Client
 	konnectClient  *adminapi.KonnectClient
-	dbMode         dataplaneutil.DBMode
+	dbMode         dpconf.DBMode
 }
 
 func (p mockGatewayClientsProvider) KonnectClient() *adminapi.KonnectClient {
@@ -156,7 +156,7 @@ func (p mockGatewayClientsProvider) GatewayClients() []*adminapi.Client {
 }
 
 func (p mockGatewayClientsProvider) GatewayClientsToConfigure() []*adminapi.Client {
-	if dataplaneutil.IsDBLessMode(p.dbMode) {
+	if p.dbMode.IsDBLessMode() {
 		return p.gatewayClients
 	}
 	if len(p.gatewayClients) == 0 {
@@ -692,7 +692,7 @@ func setupTestKongClient(
 		diagnostic,
 		config,
 		eventRecorder,
-		dataplaneutil.DBModeOff,
+		dpconf.DBModeOff,
 		clientsProvider,
 		updateStrategyResolver,
 		configChangeDetector,

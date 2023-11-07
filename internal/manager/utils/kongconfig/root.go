@@ -14,14 +14,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
 // The fields are extracted from results of Kong gateway configuration root.
 type KongStartUpOptions struct {
-	DBMode       dataplaneutil.DBMode
-	RouterFlavor dataplaneutil.RouterFlavor
+	DBMode       dpconf.DBMode
+	RouterFlavor dpconf.RouterFlavor
 	Version      kong.Version
 }
 
@@ -76,7 +76,7 @@ func extractConfigurationFromRoot(r Root) (map[string]any, error) {
 	return rootConfig, nil
 }
 
-func DBModeFromRoot(r Root) (dataplaneutil.DBMode, error) {
+func DBModeFromRoot(r Root) (dpconf.DBMode, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -92,10 +92,10 @@ func DBModeFromRoot(r Root) (dataplaneutil.DBMode, error) {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", dbModeKey, dbMode)
 	}
 
-	return dataplaneutil.NewDBMode(dbModeStr)
+	return dpconf.NewDBMode(dbModeStr)
 }
 
-func RouterFlavorFromRoot(r Root) (dataplaneutil.RouterFlavor, error) {
+func RouterFlavorFromRoot(r Root) (dpconf.RouterFlavor, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -110,7 +110,7 @@ func RouterFlavorFromRoot(r Root) (dataplaneutil.RouterFlavor, error) {
 	if !ok {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", routerFlavorKey, routerFlavor)
 	}
-	return dataplaneutil.RouterFlavor(routerFlavorStr), nil
+	return dpconf.RouterFlavor(routerFlavorStr), nil
 }
 
 func KongVersionFromRoot(r Root) (kong.Version, error) {
@@ -171,13 +171,13 @@ func getRootKeyFunc(skipCACerts bool) func(Root) string {
 }
 
 // validateDBMode validates the provided dbMode string.
-func validateDBMode(dbMode dataplaneutil.DBMode, skipCACerts bool) error {
+func validateDBMode(dbMode dpconf.DBMode, skipCACerts bool) error {
 	switch dbMode {
-	case "", dataplaneutil.DBModeOff:
+	case "", dpconf.DBModeOff:
 		if skipCACerts {
 			return fmt.Errorf("--skip-ca-certificates is not available for use with DB-less Kong instances")
 		}
-	case dataplaneutil.DBModePostgres:
+	case dpconf.DBModePostgres:
 		return nil
 	default:
 		return fmt.Errorf("%s is not a supported database backend", dbMode)

@@ -1953,17 +1953,9 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 				},
 				Plugins: []kong.Plugin{
 					{
-						Name: kong.String("request-termination"),
+						Name: kong.String("post-function"),
 						Config: kong.Configuration{
-							"status_code": kong.Int(301),
-						},
-					},
-					{
-						Name: kong.String("response-transformer"),
-						Config: kong.Configuration{
-							"add": map[string][]string{
-								"headers": {"Location: http://bar.com:80/v1/foo"},
-							},
+							"access": []string{"kong.response.exit(301, nil, {['Location'] = kong.request.get_scheme() .. '://' .. 'bar.com' .. '/v1/foo'})"},
 						},
 					},
 				},

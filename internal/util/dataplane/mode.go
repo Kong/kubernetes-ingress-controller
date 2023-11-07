@@ -1,12 +1,23 @@
 package dataplane
 
+import "fmt"
+
 type DBMode string
 
 const (
-	DBModeOff       = "off"
-	DBModePostgres  = "postgres"
-	DBModeCassandra = "cassandra"
+	DBModeOff      DBMode = "off"
+	DBModePostgres DBMode = "postgres"
 )
+
+func NewDBMode(mode string) (DBMode, error) {
+	switch mode {
+	case "", string(DBModeOff):
+		return DBModeOff, nil
+	case string(DBModePostgres):
+		return DBModePostgres, nil
+	}
+	return "", fmt.Errorf("unsupported db mode: %q", mode)
+}
 
 // IsDBLessMode can be used to detect the proxy mode (db or dbless).
 func IsDBLessMode(mode DBMode) bool {

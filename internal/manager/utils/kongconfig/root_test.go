@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
@@ -22,14 +23,14 @@ func TestValidateRoots(t *testing.T) {
 		name                 string
 		configStr            string
 		expectedDBMode       string
-		expectedRouterFlavor string
+		expectedRouterFlavor configuration.RouterFlavor
 		expectedKongVersion  string
 	}{
 		{
 			name:                 "dbless config with version 3.4.1",
 			configStr:            dblessConfigJSON3_4_1,
 			expectedDBMode:       "off",
-			expectedRouterFlavor: "traditional_compatible",
+			expectedRouterFlavor: configuration.RouterFlavorTraditionalCompatible,
 			expectedKongVersion:  versions.KICv3VersionCutoff.String(),
 		},
 	}

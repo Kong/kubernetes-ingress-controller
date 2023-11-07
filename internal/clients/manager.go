@@ -8,9 +8,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"golang.org/x/exp/maps"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
@@ -74,10 +78,46 @@ type AdminAPIClientsManager struct {
 	// This client is used to synchronise configuration with Konnect's Control Plane Admin API.
 	konnectClient *adminapi.KonnectClient
 
+	// clientRequirements are checked against clients before passing those to subscribers.
+	clientRequirements ClientRequirements
+
 	// lock prevents concurrent access to the manager's fields.
 	lock sync.RWMutex
 
 	logger logr.Logger
+}
+
+type ClientRequirements struct {
+	logger       logr.Logger
+	RouterFlavor mo.Option[configuration.RouterFlavor]
+}
+
+func (cr ClientRequirements) Validate(ctx context.Context, cl sendconfig.AdminAPIClient) bool {
+	if routerFlavor, ok := cr.RouterFlavor.Get(); ok {
+		logger := cr.logger.WithValues("client", cl.BaseRootURL())
+		root, err := cl.AdminAPIClient().Root(ctx)
+		if err != nil {
+			logger.V(util.DebugLevel).Info("Failed fetching configuration root")
+			return false
+		}
+
+		f, err := kongconfig.RouterFlavorFromRoot(root)
+		if err != nil {
+			logger.V(util.DebugLevel).Info("Failed getting router flavor from configuration root")
+			return false
+		}
+
+		if routerFlavor != f {
+			logger.Error(err,
+				"Unexpected router flavor. Not taking it into account for pushing configuration.",
+				"expected", routerFlavor, "actual", f,
+			)
+
+			return false
+		}
+	}
+
+	return true
 }
 
 type AdminAPIClientsManagerOption func(*AdminAPIClientsManager)
@@ -93,6 +133,13 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 func (c *AdminAPIClientsManager) WithDBMode(dbMode string) *AdminAPIClientsManager {
 	c.dbMode = dbMode
 	return c
+}
+
+// WithClientRequirements allows to set custom client requirements.
+func WithClientRequirements(cr ClientRequirements) AdminAPIClientsManagerOption {
+	return func(m *AdminAPIClientsManager) {
+		m.clientRequirements = cr
+	}
 }
 
 func NewAdminAPIClientsManager(
@@ -136,7 +183,7 @@ func (c *AdminAPIClientsManager) Running() chan struct{} {
 // It should only be called when Gateway Discovery is enabled.
 func (c *AdminAPIClientsManager) Run() {
 	c.onceNotifyLoopRunning.Do(func() {
-		go c.gatewayClientsReconciliationLoop()
+		go c.gatewayClientsReconciliationLoop(c.ctx)
 
 		c.lock.Lock()
 		defer c.lock.Unlock()
@@ -239,21 +286,21 @@ func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan stru
 // gatewayClientsReconciliationLoop is an inner loop listening on:
 // - discoveredAdminAPIsNotifyChan - triggered on every Notify() call.
 // - readinessReconciliationTicker - triggered on every readinessReconciliationTicker tick.
-func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
+func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop(ctx context.Context) {
 	c.readinessReconciliationTicker.Reset(DefaultReadinessReconciliationInterval)
 	defer c.readinessReconciliationTicker.Stop()
 
 	close(c.runningChan)
 	for {
 		select {
-		case <-c.ctx.Done():
-			c.logger.V(util.InfoLevel).Info("Closing AdminAPIClientsManager", "reason", c.ctx.Err())
+		case <-ctx.Done():
+			c.logger.V(util.InfoLevel).Info("Closing AdminAPIClientsManager", "reason", ctx.Err())
 			c.closeGatewayClientsSubscribers()
 			return
 		case discoveredAdminAPIs := <-c.discoveredAdminAPIsNotifyChan:
-			c.onDiscoveredAdminAPIsNotification(discoveredAdminAPIs)
+			c.onDiscoveredAdminAPIsNotification(ctx, discoveredAdminAPIs)
 		case <-c.readinessReconciliationTicker.Channel():
-			c.onReadinessReconciliationTick()
+			c.onReadinessReconciliationTick(ctx)
 		}
 	}
 }
@@ -261,23 +308,23 @@ func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
 // onDiscoveredAdminAPIsNotification is called when a new notification about Admin API addresses change is received.
 // It will adjust lists of gateway clients and notify subscribers about the change if readyGatewayClients list has
 // changed.
-func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
+func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(ctx context.Context, discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
 	c.logger.V(util.DebugLevel).Info("Received notification about Admin API addresses change")
 
 	clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs)
-	readinessChanged := c.reconcileGatewayClientsReadiness()
+	readinessChanged := c.reconcileGatewayClientsReadiness(ctx)
 	if clientsChanged || readinessChanged {
-		c.notifyGatewayClientsSubscribers()
+		c.notifyGatewayClientsSubscribers(ctx)
 	}
 }
 
 // onReadinessReconciliationTick is called on every readinessReconciliationTicker tick. It will reconcile readiness
 // of all gateway clients and notify subscribers about the change if readyGatewayClients list has changed.
-func (c *AdminAPIClientsManager) onReadinessReconciliationTick() {
-	c.logger.V(util.DebugLevel).Info("Reconciling readiness of gateway clients")
+func (c *AdminAPIClientsManager) onReadinessReconciliationTick(ctx context.Context) {
+	c.logger.V(util.DebugLevel).Info("reconciling readiness of gateway clients")
 
-	if changed := c.reconcileGatewayClientsReadiness(); changed {
-		c.notifyGatewayClientsSubscribers()
+	if changed := c.reconcileGatewayClientsReadiness(ctx); changed {
+		c.notifyGatewayClientsSubscribers(ctx)
 	}
 }
 
@@ -338,7 +385,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 // If any of the clients is not ready anymore, it will be moved to the pendingGatewayClients list. If any of the clients
 // is not pending anymore, it will be moved to the readyGatewayClients list. It returns true if any transition has been
 // made, false otherwise.
-func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
+func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness(ctx context.Context) bool {
 	// Reset the ticker after each readiness reconciliation despite the trigger (whether it was a tick or a notification).
 	// It's to ensure that the readiness is not reconciled too often when we receive a lot of notifications.
 	defer c.readinessReconciliationTicker.Reset(DefaultReadinessReconciliationInterval)
@@ -352,7 +399,7 @@ func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 	}
 
 	readinessCheckResult := c.readinessChecker.CheckReadiness(
-		c.ctx,
+		ctx,
 		lo.MapToSlice(c.readyGatewayClients, func(_ string, cl *adminapi.Client) AlreadyCreatedClient { return cl }),
 		lo.Values(c.pendingGatewayClients),
 	)
@@ -366,15 +413,25 @@ func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 		c.pendingGatewayClients[cl.Address] = cl
 	}
 
+	readinessCheckResult.ClientsTurnedReady = lo.Filter(
+		readinessCheckResult.ClientsTurnedReady, func(cl *adminapi.Client, _ int) bool {
+			if ok := c.clientRequirements.Validate(ctx, cl); !ok {
+				delete(c.readyGatewayClients, cl.BaseRootURL())
+				return false
+			}
+			return true
+		},
+	)
+
 	return readinessCheckResult.HasChanges()
 }
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
-func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
+func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers(ctx context.Context) {
 	c.logger.V(util.DebugLevel).Info("Notifying subscribers about gateway clients change")
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		select {
-		case <-c.ctx.Done():
+		case <-ctx.Done():
 			c.logger.V(util.InfoLevel).Info("Not sending notification to subscribers as the context is done")
 			return
 		case sub <- struct{}{}:

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -101,12 +102,12 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
 	return dbmode
 }
 
-func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) string {
+func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) configuration.RouterFlavor {
 	t.Helper()
 
 	var (
 		err          error
-		routerFlavor string
+		routerFlavor configuration.RouterFlavor
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {

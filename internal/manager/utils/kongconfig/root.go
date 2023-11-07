@@ -14,13 +14,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configuration"
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
 // The fields are extracted from results of Kong gateway configuration root.
 type KongStartUpOptions struct {
 	DBMode       string
-	RouterFlavor string
+	RouterFlavor configuration.RouterFlavor
 	Version      kong.Version
 }
 
@@ -94,7 +95,7 @@ func DBModeFromRoot(r Root) (string, error) {
 	return dbModeStr, nil
 }
 
-func RouterFlavorFromRoot(r Root) (string, error) {
+func RouterFlavorFromRoot(r Root) (configuration.RouterFlavor, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -109,7 +110,7 @@ func RouterFlavorFromRoot(r Root) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", routerFlavorKey, routerFlavor)
 	}
-	return routerFlavorStr, nil
+	return configuration.RouterFlavor(routerFlavorStr), nil
 }
 
 func KongVersionFromRoot(r Root) (kong.Version, error) {

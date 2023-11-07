@@ -13,6 +13,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
+	"github.com/samber/mo"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -148,6 +149,9 @@ func Run(
 		logger,
 		initialKongClients,
 		readinessChecker,
+		clients.WithClientRequirements(clients.ClientRequirements{
+			RouterFlavor: mo.Some(routerFlavor),
+		}),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)

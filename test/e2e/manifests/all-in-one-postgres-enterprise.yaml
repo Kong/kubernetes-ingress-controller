@@ -142,6 +142,8 @@ spec:
                 - name
                 - namespace
                 type: object
+            required:
+            - secretKeyRef
             type: object
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.
@@ -358,7 +360,7 @@ spec:
           metadata:
             type: object
           status:
-            description: Status represents the current status of the KongConsumer
+            description: Status represents the current status of the KongConsumerGroup
               resource.
             properties:
               conditions:
@@ -600,6 +602,8 @@ spec:
           username:
             description: Username is a Kong cluster-unique username of the consumer.
             type: string
+        required:
+        - username
         type: object
         x-kubernetes-validations:
         - message: Need to provide either username or custom_id
@@ -1054,6 +1058,8 @@ spec:
                 - key
                 - name
                 type: object
+            required:
+            - secretKeyRef
             type: object
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.

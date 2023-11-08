@@ -8,20 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
-
-func init() {
-	if err := gatewayv1.Install(scheme.Scheme); err != nil {
-		panic(err)
-	}
-}
 
 func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	testCases := []struct {
@@ -84,7 +77,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 							Kind:  gatewayapi.Kind("UnknownKind"),
 						},
 						{
-							Group: &gatewayV1Group,
+							Group: lo.ToPtr(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -92,7 +85,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 			},
 			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
 				{
-					Group: &gatewayV1Group,
+					Group: lo.ToPtr(gatewayapi.V1Group),
 					Kind:  gatewayapi.Kind("HTTPRoute"),
 				},
 			},
@@ -123,7 +116,10 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 
 func TestGetListenerStatus(t *testing.T) {
 	ctx := context.Background()
-	client := fake.NewClientBuilder().Build()
+	scheme := runtime.NewScheme()
+	require.NoError(t, gatewayapi.InstallV1(scheme))
+
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 	testCases := []struct {
 		name                     string
@@ -133,7 +129,7 @@ func TestGetListenerStatus(t *testing.T) {
 	}{
 		{
 			name: "only one listener",
-			gateway: &gatewayv1.Gateway{
+			gateway: &gatewayapi.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "single-listener",
@@ -144,7 +140,7 @@ func TestGetListenerStatus(t *testing.T) {
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: gatewayv1.TCPProtocolType,
+							Protocol: gatewayapi.TCPProtocolType,
 						},
 					},
 				},
@@ -152,7 +148,7 @@ func TestGetListenerStatus(t *testing.T) {
 			kongListens: []gatewayapi.Listener{
 				{
 					Port:     80,
-					Protocol: gatewayv1.TCPProtocolType,
+					Protocol: gatewayapi.TCPProtocolType,
 				},
 			},
 			expectedListenerStatuses: []gatewayapi.ListenerStatus{
@@ -169,7 +165,7 @@ func TestGetListenerStatus(t *testing.T) {
 		},
 		{
 			name: "only one listener without a matching protocol or port",
-			gateway: &gatewayv1.Gateway{
+			gateway: &gatewayapi.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "single-listener",
@@ -180,7 +176,7 @@ func TestGetListenerStatus(t *testing.T) {
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: gatewayv1.TLSProtocolType,
+							Protocol: gatewayapi.TLSProtocolType,
 						},
 					},
 				},
@@ -188,7 +184,7 @@ func TestGetListenerStatus(t *testing.T) {
 			kongListens: []gatewayapi.Listener{
 				{
 					Port:     80,
-					Protocol: gatewayv1.TCPProtocolType,
+					Protocol: gatewayapi.TCPProtocolType,
 				},
 			},
 			expectedListenerStatuses: []gatewayapi.ListenerStatus{
@@ -205,7 +201,7 @@ func TestGetListenerStatus(t *testing.T) {
 		},
 		{
 			name: "2 listeners, 1 with a matching protocol",
-			gateway: &gatewayv1.Gateway{
+			gateway: &gatewayapi.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "single-listener",
@@ -216,12 +212,12 @@ func TestGetListenerStatus(t *testing.T) {
 						{
 							Name:     "tls-443",
 							Port:     443,
-							Protocol: gatewayv1.TLSProtocolType,
+							Protocol: gatewayapi.TLSProtocolType,
 						},
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: gatewayv1.TCPProtocolType,
+							Protocol: gatewayapi.TCPProtocolType,
 						},
 					},
 				},
@@ -229,7 +225,7 @@ func TestGetListenerStatus(t *testing.T) {
 			kongListens: []gatewayapi.Listener{
 				{
 					Port:     80,
-					Protocol: gatewayv1.TCPProtocolType,
+					Protocol: gatewayapi.TCPProtocolType,
 				},
 			},
 			expectedListenerStatuses: []gatewayapi.ListenerStatus{

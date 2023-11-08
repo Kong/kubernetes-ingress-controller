@@ -543,7 +543,7 @@ func getReferenceGrantConditionReason(
 		}
 		for _, from := range grant.Spec.From {
 			// we are interested only in grants for gateways that want to reference secrets
-			if from.Group != gatewayV1Group || from.Kind != "Gateway" {
+			if from.Group != gatewayapi.V1Group || from.Kind != "Gateway" {
 				continue
 			}
 			if from.Namespace == gatewayapi.Namespace(gatewayNamespace) {
@@ -672,7 +672,7 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.
 	for _, routeParentStatus := range parentStatuses {
 		gatewayNamespace := routeNamespace
 		parentRef := routeParentStatus.ParentRef
-		if (parentRef.Group != nil && *parentRef.Group != gatewayV1Group) ||
+		if (parentRef.Group != nil && *parentRef.Group != gatewayapi.V1Group) ||
 			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
 			continue
 		}
@@ -706,7 +706,7 @@ func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gatew
 		route := route
 		acceptedByGateway := lo.ContainsBy(route.Status.Parents, func(parentStatus gatewayapi.RouteParentStatus) bool {
 			parentRef := parentStatus.ParentRef
-			if parentRef.Group != nil && *parentRef.Group != gatewayV1Group {
+			if parentRef.Group != nil && *parentRef.Group != gatewayapi.V1Group {
 				return false
 			}
 			if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {

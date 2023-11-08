@@ -21,12 +21,12 @@ func TestKongRawStateToKongState(t *testing.T) {
 
 	for _, tt := range []struct {
 		name              string
-		kongRawState      utils.KongRawState
+		kongRawState      *utils.KongRawState
 		expectedKongState *kongstate.KongState
 	}{
 		{
 			name: "sanitizes all services, routes, and upstreams and create a KongState out of a KongRawState",
-			kongRawState: utils.KongRawState{
+			kongRawState: &utils.KongRawState{
 				Services: []*kong.Service{
 					{
 						Name:      kong.String("service"),
@@ -267,15 +267,26 @@ func TestKongRawStateToKongState(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:         "doesn't panic when KongRawState is nil",
+			kongRawState: nil,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
 
 			// Collect all fields that are tested in this test case.
-			testedKongRawStateFields.Insert(extractNotEmptyFieldNames(tt.kongRawState)...)
+			if tt.kongRawState != nil {
+				testedKongRawStateFields.Insert(extractNotEmptyFieldNames(*tt.kongRawState)...)
+			}
 
-			state := configfetcher.KongRawStateToKongState(&tt.kongRawState)
-			require.Equal(t, tt.expectedKongState, state)
+			var state *kongstate.KongState
+			require.NotPanics(t, func() {
+				state = configfetcher.KongRawStateToKongState(tt.kongRawState)
+			})
+			if tt.kongRawState != nil {
+				require.Equal(t, tt.expectedKongState, state)
+			}
 		})
 	}
 

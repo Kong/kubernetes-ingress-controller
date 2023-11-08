@@ -14,6 +14,9 @@ import (
 // KongRawStateToKongState converts a Deck kongRawState to a KIC KongState.
 func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState {
 	kongState := &kongstate.KongState{}
+	if rawstate == nil {
+		return kongState
+	}
 
 	routes := make(map[string][]*kong.Route)
 	for _, r := range rawstate.Routes {

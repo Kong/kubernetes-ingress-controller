@@ -334,6 +334,10 @@ func AdminAPIClientFromServiceDiscovery(
 	factory AdminAPIClientFactory,
 	retryOpts ...retry.Option,
 ) ([]*adminapi.Client, error) {
+	const (
+		delay = time.Second
+	)
+
 	// Retry this as we may encounter an error of getting 0 addresses,
 	// which can mean that Kong instances meant to be configured by this controller
 	// are not yet ready.
@@ -345,13 +349,13 @@ func AdminAPIClientFromServiceDiscovery(
 		retry.Context(ctx),
 		retry.Attempts(0),
 		retry.DelayType(retry.FixedDelay),
-		retry.Delay(time.Second),
+		retry.Delay(delay),
 		retry.OnRetry(func(_ uint, err error) {
 			// log the error if the error is NOT caused by 0 available gateway endpoints.
 			if !errors.As(err, &NoAvailableEndpointsError{}) {
 				logger.Error(err, "Failed to create kong client(s)")
 			}
-			logger.Error(err, "Failed ot create kong client(s), retrying in 1s...")
+			logger.Error(err, "Failed to create kong client(s), retrying...", "delay", delay)
 		}),
 	}, retryOpts...)
 

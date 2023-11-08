@@ -612,9 +612,13 @@ run.skaffold:
 		SKAFFOLD_PROFILE=$(SKAFFOLD_RUN_PROFILE) \
 		$(MAKE) _skaffold
 
+# NOTE: We're using the --keep-running-on-failure=true to allow deployments like
+# postgres multigateway to eventually stabilize.
+# TODO: verify if --keep-running-on-failure=true is still needed when
+# https://github.com/Kong/kubernetes-ingress-controller/issues/5116 is implemented.
 .PHONY: _skaffold
 _skaffold: skaffold
-	$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
+	$(SKAFFOLD) $(CMD) --keep-running-on-failure=true --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
 
 .PHONY: run
 run: install _ensure-namespace

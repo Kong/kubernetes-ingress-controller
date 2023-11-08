@@ -304,7 +304,7 @@ spec:
         - plugin
         type: object
         x-kubernetes-validations:
-        - message: KongClusterPlugin cannot use both Config and ConfigFrom
+        - message: Using both config and configFrom fields is not allowed.
           rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
             && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
             : true'
@@ -1212,7 +1212,7 @@ spec:
         - plugin
         type: object
         x-kubernetes-validations:
-        - message: KongPlugin cannot use both Config and ConfigFrom
+        - message: Using both config and configFrom fields is not allowed.
           rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
             && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
             : true'

@@ -298,6 +298,10 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	}
 	if k8sPlugin.ConfigFrom != nil {
 		if len(plugin.Config) > 0 {
+			// TODO: remove when KIC supports only Kubernetes 1.25+ and this no
+			// longer needs to be done in admission webhook.
+			// CRD validation expression is already in place since
+			// https://github.com/Kong/kubernetes-ingress-controller/pull/5119
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
 		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)

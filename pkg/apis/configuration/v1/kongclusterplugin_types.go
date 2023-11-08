@@ -35,6 +35,7 @@ import (
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="(!has(self.config) && has(self.configFrom)) || (has(self.config) && !has(self.configFrom))", message="KongClusterPlugin cannot use both Config and ConfigFrom"
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API.
 type KongClusterPlugin struct {

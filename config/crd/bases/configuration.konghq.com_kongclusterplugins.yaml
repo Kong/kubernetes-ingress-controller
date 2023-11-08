@@ -245,6 +245,10 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - message: KongClusterPlugin can only have one of config or configFrom set
+          rule: (!has(self.config) && has(self.configFrom)) || (has(self.config) &&
+            !has(self.configFrom))
     served: true
     storage: true
     subresources:

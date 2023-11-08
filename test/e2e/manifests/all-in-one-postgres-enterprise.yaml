@@ -1206,6 +1206,8 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - rule: has(self.config) && !has(self.configFrom)
     served: true
     storage: true
     subresources:

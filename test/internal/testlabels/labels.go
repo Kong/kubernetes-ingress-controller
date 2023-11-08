@@ -2,8 +2,9 @@ package testlabels
 
 const (
 	// Kind is the label key used to store the primary kind that's being tested.
-	Kind         = "kind"
-	KindUDPRoute = "UDPRoute"
+	Kind          = "kind"
+	KindUDPRoute  = "UDPRoute"
+	KindGRPCRoute = "GRPCRoute"
 )
 
 const (

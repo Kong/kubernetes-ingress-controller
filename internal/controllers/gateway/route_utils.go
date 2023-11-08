@@ -399,7 +399,7 @@ func routeTypeMatchesListenerType[T gatewayapi.RouteT](route T, listener gateway
 			return false
 		}
 	case *gatewayapi.GRPCRoute:
-		if listener.Protocol != gatewayapi.HTTPSProtocolType {
+		if listener.Protocol != gatewayapi.HTTPSProtocolType && listener.Protocol != gatewayapi.HTTPProtocolType {
 			return false
 		}
 	default:

@@ -5,34 +5,34 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: grpcbin
+  name: grpcbin-via-https
   labels:
-    app: grpcbin
+    app: grpcbin-via-https
 spec:
   ports:
   - name: grpc
     port: 443
     targetPort: 9001
   selector:
-    app: grpcbin
+    app: grpcbin-via-https
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: grpcbin
+  name: grpcbin-via-https
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: grpcbin
+      app: grpcbin-via-https
   template:
     metadata:
       labels:
-        app: grpcbin
+        app: grpcbin-via-https
     spec:
       containers:
       - image: kong/grpcbin
-        name: grpcbin
+        name: grpcbin-via-https
         ports:
         - containerPort: 9001
 ---
@@ -71,7 +71,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: GRPCRoute
 metadata:
-  name: grpcbin
+  name: grpcbin-via-https
 spec:
   parentRefs:
   - name: kong
@@ -79,7 +79,7 @@ spec:
   - "example.com"
   rules:
   - backendRefs:
-    - name: grpcbin
+    - name: grpcbin-via-https
       port: 443
     matches:
     - method:

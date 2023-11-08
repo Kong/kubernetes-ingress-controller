@@ -2477,6 +2477,8 @@ spec:
       annotations:
         kuma.io/gateway: enabled
         kuma.io/service-account-token-volume: kong-serviceaccount-token
+        traffic.kuma.io/exclude-outbound-ports: "8444"
+        traffic.sidecar.istio.io/excludeOutboundPorts: "8444"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
         app: ingress-kong

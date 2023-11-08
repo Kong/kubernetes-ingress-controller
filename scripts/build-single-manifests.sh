@@ -49,7 +49,7 @@ MANIFESTS=(
     'enterprise all-in-one-dbless-k4k8s-enterprise.yaml'
     'enterprise-postgres all-in-one-postgres-enterprise.yaml'
     'multi-gw/oss all-in-one-dbless.yaml'
-    'multi-gw-postgres all-in-one-postgres-multiple-gateways.yaml'
+    'multi-gw-postgres/oss all-in-one-postgres-multiple-gateways.yaml'
     'konnect/oss all-in-one-dbless-konnect.yaml'
     'konnect/enterprise all-in-one-dbless-konnect-enterprise.yaml'
 )

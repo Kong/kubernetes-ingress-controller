@@ -303,6 +303,10 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - message: KongClusterPlugin cannot use both Config and ConfigFrom
+          rule: (!has(self.config) && has(self.configFrom)) || (has(self.config) &&
+            !has(self.configFrom))
     served: true
     storage: true
     subresources:
@@ -1207,7 +1211,9 @@ spec:
         - plugin
         type: object
         x-kubernetes-validations:
-        - rule: has(self.config) && !has(self.configFrom)
+        - message: KongPlugin cannot use both Config and ConfigFrom
+          rule: (!has(self.config) && has(self.configFrom)) || (has(self.config) &&
+            !has(self.configFrom))
     served: true
     storage: true
     subresources:

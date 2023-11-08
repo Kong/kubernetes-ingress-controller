@@ -291,7 +291,7 @@ TBD
 
 ## [2.12.1]
 
-> Release date: TBD
+> Release date: 2023-11-09
 
 ### Fixed
 
@@ -302,7 +302,19 @@ TBD
 - Error logs emitted from Gateway Discovery readiness checker that should be
   logged at `debug` level are now logged at that level.
   [#5030](https://github.com/Kong/kubernetes-ingress-controller/pull/5030)
-
+- Fix `panic` when last known configuration fetcher gets a `nil` Status when requesting
+  `/status` from Kong Gateway.
+  This happens when Gateway is responding with a 50x HTTP status code.
+  [#5120](https://github.com/Kong/kubernetes-ingress-controller/pull/5120)
+- Use 46 bits in values of priorities of generated Kong routes when expression
+  rotuer is enabled to limit the priorities to be less than `1e14`. This
+  prevents them to be encoded into scientific notation when dumping
+  configurations from admin API that brings precision loss and type
+  inconsistency in decoding JSON/YAML data to `uint64`.
+  This change will limit number of `HTTPRoute`s that can be
+  deterministically sorted by their creation timestamps, names and internal
+  rule orders to `2^12=4096` and number of `GRPCRoutes` can be sorted to `2^8=256`.
+  [#5124](https://github.com/Kong/kubernetes-ingress-controller/pull/5124)
 
 ## [2.12.0]
 

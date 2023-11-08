@@ -1,4 +1,4 @@
-package dataplane
+package config
 
 import "fmt"
 
@@ -20,24 +20,12 @@ func NewDBMode(mode string) (DBMode, error) {
 }
 
 // IsDBLessMode can be used to detect the proxy mode (db or dbless).
-func IsDBLessMode(mode DBMode) bool {
-	return mode == "" || mode == DBModeOff
+func (m DBMode) IsDBLessMode() bool {
+	return m == "" || m == DBModeOff
 }
 
 // DBBacked returns true if the gateway is DB backed.
 // reverse of IsDBLessMode for readability.
-func DBBacked(mode DBMode) bool {
-	return !IsDBLessMode(mode)
-}
-
-type RouterFlavor string
-
-const (
-	RouterFlavorTraditional           RouterFlavor = "traditional"
-	RouterFlavorTraditionalCompatible RouterFlavor = "traditional_compatible"
-	RouterFlavorExpressions           RouterFlavor = "expressions"
-)
-
-func ShouldEnableExpressionRoutes(rf RouterFlavor) bool {
-	return rf == RouterFlavorExpressions
+func (m DBMode) DBBacked() bool {
+	return !m.IsDBLessMode()
 }

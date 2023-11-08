@@ -25,6 +25,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -34,7 +35,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
@@ -75,7 +75,7 @@ type KongClient struct {
 	kongConfig sendconfig.Config
 
 	// dbmode indicates the current database mode of the backend Kong Admin API
-	dbmode dataplaneutil.DBMode
+	dbmode dpconf.DBMode
 
 	// lock is used to ensure threadsafety of the KongClient object
 	lock sync.RWMutex
@@ -150,7 +150,7 @@ func NewKongClient(
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
-	dbMode dataplaneutil.DBMode,
+	dbMode dpconf.DBMode,
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
@@ -368,7 +368,7 @@ func (c *KongClient) KubernetesObjectConfigurationStatus(obj client.Object) k8so
 // -----------------------------------------------------------------------------
 
 // DBMode indicates which database the Kong Gateway is using.
-func (c *KongClient) DBMode() dataplaneutil.DBMode {
+func (c *KongClient) DBMode() dpconf.DBMode {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.dbmode
@@ -382,7 +382,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	defer c.lock.Unlock()
 
 	// If Kong is running in dbless mode, we can fetch and store the last good configuration.
-	if dataplaneutil.IsDBLessMode(c.dbmode) {
+	if c.dbmode.IsDBLessMode() {
 		// Fetch the last valid configuration from the proxy only in case there is no valid
 		// configuration already stored in memory. This can happen when KIC restarts and there
 		// already is a Kong Proxy with a valid configuration loaded.
@@ -478,7 +478,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	// since only ONE gateway client is chosen to send requests and store SHA of latest configurations,
 	// we should propagate the SHA from the chosen client to other clients
 	// as well as they will pick the configuration from the shared database.
-	if dataplaneutil.DBBacked(c.dbmode) &&
+	if c.dbmode.DBBacked() &&
 		len(gatewayClients) > 1 {
 		for _, client := range gatewayClients {
 			client.SetLastConfigSHA([]byte(shas[0]))

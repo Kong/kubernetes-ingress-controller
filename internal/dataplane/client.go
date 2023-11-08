@@ -3,7 +3,7 @@ package dataplane
 import (
 	"context"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -26,7 +26,7 @@ const (
 type Client interface {
 	// DBMode informs the caller which DB mode the data-plane has employed
 	// (e.g. "off" (dbless) or "postgres").
-	DBMode() dataplane.DBMode
+	DBMode() dpconf.DBMode
 
 	// Update the data-plane by parsing the current configuring and applying
 	// it to the backend API.

@@ -11,9 +11,9 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 )
 
 // DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
@@ -50,7 +50,7 @@ type AdminAPIClientsManager struct {
 	discoveredAdminAPIsNotifyChan    chan []adminapi.DiscoveredAdminAPI
 	gatewayClientsChangesSubscribers []chan struct{}
 
-	dbMode dataplaneutil.DBMode
+	dbMode dpconf.DBMode
 
 	ctx                   context.Context
 	onceNotifyLoopRunning sync.Once
@@ -90,7 +90,7 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 }
 
 // WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
-func (c *AdminAPIClientsManager) WithDBMode(dbMode dataplaneutil.DBMode) *AdminAPIClientsManager {
+func (c *AdminAPIClientsManager) WithDBMode(dbMode dpconf.DBMode) *AdminAPIClientsManager {
 	c.dbMode = dbMode
 	return c
 }
@@ -194,7 +194,7 @@ func (c *AdminAPIClientsManager) GatewayClientsToConfigure() []*adminapi.Client 
 	defer c.lock.RUnlock()
 	readyGatewayClients := lo.Values(c.readyGatewayClients)
 	// With DB-less mode, we should send the configuration to ALL gateway instances.
-	if dataplaneutil.IsDBLessMode(c.dbMode) {
+	if c.dbMode.IsDBLessMode() {
 		return readyGatewayClients
 	}
 	// When a gateway is DB-backed, we return a random client

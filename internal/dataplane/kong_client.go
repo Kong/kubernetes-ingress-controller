@@ -478,7 +478,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	// since only ONE gateway client is chosen to send requests and store SHA of latest configurations,
 	// we should propagate the SHA from the chosen client to other clients
 	// as well as they will pick the configuration from the shared database.
-	if c.dbmode.DBBacked() &&
+	if c.dbmode.IsDBBacked() &&
 		len(gatewayClients) > 1 {
 		for _, client := range gatewayClients {
 			client.SetLastConfigSHA([]byte(shas[0]))

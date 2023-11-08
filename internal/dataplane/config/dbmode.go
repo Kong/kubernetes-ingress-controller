@@ -24,8 +24,8 @@ func (m DBMode) IsDBLessMode() bool {
 	return m == "" || m == DBModeOff
 }
 
-// DBBacked returns true if the gateway is DB backed.
+// IsDBBacked returns true if the gateway is DB backed.
 // reverse of IsDBLessMode for readability.
-func (m DBMode) DBBacked() bool {
+func (m DBMode) IsDBBacked() bool {
 	return !m.IsDBLessMode()
 }

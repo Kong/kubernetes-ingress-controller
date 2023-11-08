@@ -533,7 +533,7 @@ func TestCRDValidations(t *testing.T) {
 					},
 				})
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "KongPlugin cannot use both Config and ConfigFrom")
+				assert.ErrorContains(t, err, "Using both config and configFrom fields is not allowed.")
 			},
 		},
 		{
@@ -590,7 +590,7 @@ func TestCRDValidations(t *testing.T) {
 					},
 				})
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "KongClusterPlugin cannot use both Config and ConfigFrom")
+				assert.ErrorContains(t, err, "Using both config and configFrom fields is not allowed.")
 			},
 		},
 	}

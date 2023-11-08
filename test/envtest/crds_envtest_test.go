@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -480,6 +481,118 @@ func TestCRDValidations(t *testing.T) {
 				require.ErrorContains(t, err, "'route' field is no longer supported, use Ingress' annotations instead")
 			},
 		},
+		{
+			name: "KongPlugin - no config is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+					PluginName: "key-auth",
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongPlugin - with config is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_names":["apikey"]}`),
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongPlugin - with configFrom is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
+							Secret: "secret-name",
+							Key:    "key-name",
+						},
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongPlugin - with configFrom and config is rejected",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_names":["apikey"]}`),
+					},
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
+							Secret: "secret-name",
+							Key:    "key-name",
+						},
+					},
+				})
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "KongPlugin cannot use both Config and ConfigFrom")
+			},
+		},
+		{
+			name: "KongClusterPlugin - no config is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongClusterPlugin - with config is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_names":["apikey"]}`),
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongClusterPlugin - with configFrom is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Secret:    "secret-name",
+							Key:       "key-name",
+							Namespace: "ns",
+						},
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongClusterPlugin - with configFrom and config is rejected",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_names":["apikey"]}`),
+					},
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Secret:    "secret-name",
+							Key:       "key-name",
+							Namespace: "ns",
+						},
+					},
+				})
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "KongClusterPlugin cannot use both Config and ConfigFrom")
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -626,4 +739,16 @@ func createKongIngress(ctx context.Context, client client.Client, ns string, ing
 	ingress.GenerateName = "test-"
 	ingress.Namespace = ns
 	return client.Create(ctx, ingress)
+}
+
+func createKongPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongPlugin) error {
+	plugin.GenerateName = "test-"
+	plugin.Namespace = ns
+	return client.Create(ctx, plugin)
+}
+
+func createKongClusterPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongClusterPlugin) error {
+	plugin.GenerateName = "test-"
+	plugin.Namespace = ns
+	return client.Create(ctx, plugin)
 }

@@ -82,7 +82,7 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
-    - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/(v[\w\d]+)
+    - pkg: github.com/kong/kubernetes-ingress-controller/v[\w\d]+/pkg/apis/configuration/(v[\w\d]+)
       alias: kong${1}
   forbidigo:
     exclude-godoc-examples: false

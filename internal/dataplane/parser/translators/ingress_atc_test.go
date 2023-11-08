@@ -432,7 +432,7 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 				MaxPathLength: 5,
 				HasRegexPath:  false,
 			},
-			expectedPriority: (3 << 50) | (2 << 41) | (1 << 32) | 5,
+			expectedPriority: (3 << 44) | (2 << 41) | (1 << 32) | 5,
 		},
 		{
 			name: "plain host false regex path true",
@@ -443,7 +443,7 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 				MaxPathLength: 5,
 				HasRegexPath:  true,
 			},
-			expectedPriority: (3 << 50) | (2 << 41) | (2 << 33) | (1 << 16) | 5,
+			expectedPriority: (3 << 44) | (2 << 41) | (2 << 33) | (1 << 16) | 5,
 		},
 		{
 			name: "header number exceed limit",
@@ -454,7 +454,7 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 				MaxPathLength: 5,
 				HasRegexPath:  true,
 			},
-			expectedPriority: (3 << 50) | (2 << 41) | (255 << 33) | (1 << 16) | 5,
+			expectedPriority: (3 << 44) | (2 << 41) | (255 << 33) | (1 << 16) | 5,
 		},
 		{
 			name: "path length exceed limit",
@@ -463,7 +463,7 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 				PlainHostOnly: true,
 				MaxPathLength: 100000,
 			},
-			expectedPriority: (3 << 50) | (2 << 41) | (1 << 32) | 65535,
+			expectedPriority: (3 << 44) | (2 << 41) | (1 << 32) | 65535,
 		},
 	}
 

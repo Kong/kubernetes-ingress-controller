@@ -12,7 +12,7 @@ services:
     https_redirect_status_code: 426
     name: httproute..httproute-testing._.0.0
     preserve_host: true
-    priority: 2251808940752895
+    priority: 35184514699263
     strip_path: true
     tags:
     - k8s-name:httproute-testing

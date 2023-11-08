@@ -16,7 +16,7 @@ services:
     https_redirect_status_code: 426
     name: grpcroute.default.grpcbin.example.com.0.0
     preserve_host: true
-    priority: 1713055227461631
+    priority: 26766487929087
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default

@@ -27,8 +27,8 @@ var (
 )
 
 var (
-	NormalIngressExpressionPriority = 1
-	IngressDefaultBackendPriority   = 0
+	NormalIngressExpressionPriority RoutePriorityType = 1
+	IngressDefaultBackendPriority   RoutePriorityType = 0
 )
 
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
@@ -244,7 +244,7 @@ type IngressRoutePriorityTraits struct {
 //   - P (Plain Host): set if ALL hosts are non-wildcard.
 //   - R (Regex): if set, regex match is used.
 //   - Path Length: maximum length of the path to match.
-func (t IngressRoutePriorityTraits) EncodeToPriority() int {
+func (t IngressRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	// route.priority in admin API could only use the lowest 52 bits
 	// because the numbers in JSON are parsed into double precision floating numbers.
 	const (
@@ -265,12 +265,12 @@ func (t IngressRoutePriorityTraits) EncodeToPriority() int {
 		pathLengthLimit   = (1 << 16) - 1
 	)
 
-	var priority int
+	var priority RoutePriorityType
 	// add max path length.
 	if t.MaxPathLength > pathLengthLimit {
 		t.MaxPathLength = pathLengthLimit
 	}
-	priority += t.MaxPathLength
+	priority += RoutePriorityType(t.MaxPathLength)
 	// add regex path mark.
 	if t.HasRegexPath {
 		priority += (1 << regexPathShiftBits)
@@ -282,9 +282,9 @@ func (t IngressRoutePriorityTraits) EncodeToPriority() int {
 	if t.HeaderCount > headerNumberLimit {
 		t.HeaderCount = headerNumberLimit
 	}
-	priority += (t.HeaderCount << headerNumberShiftBits)
-	priority += (t.MatchFields << matchFieldsShiftBits)
-	priority += (ResourceKindBitsIngress << FromResourceKindPriorityShiftBits)
+	priority += RoutePriorityType(t.HeaderCount << headerNumberShiftBits)
+	priority += RoutePriorityType(t.MatchFields << matchFieldsShiftBits)
+	priority += RoutePriorityType(ResourceKindBitsIngress << FromResourceKindPriorityShiftBits)
 
 	return priority
 }
@@ -400,7 +400,7 @@ func calculateExpressionRoutePriority(
 	regexPathPrefix string,
 	ingressHost string,
 	ingressAnnotations map[string]string,
-) int {
+) RoutePriorityType {
 	traits := calculateIngressRoutePriorityTraits(
 		paths, regexPathPrefix, ingressHost, ingressAnnotations,
 	)

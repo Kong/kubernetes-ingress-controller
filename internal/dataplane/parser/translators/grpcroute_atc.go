@@ -302,7 +302,7 @@ func CalculateGRCPRouteMatchPriorityTraits(match SplitGRPCRouteMatch) GRPCRouteP
 //
 // REVIEW: althogh not specified in official docs, do we need to assign a bit for GRPC method match type
 // to assign higher priority for method match with `Exact` match?
-func (t GRPCRoutePriorityTraits) EncodeToPriority() int {
+func (t GRPCRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	const (
 		// PreciseHostnameShiftBits assigns bit 49 for marking if the hostname is non-wildcard.
 		PreciseHostnameShiftBits = 49
@@ -319,15 +319,15 @@ func (t GRPCRoutePriorityTraits) EncodeToPriority() int {
 		// and start from all 1s, then decrease by one for each GRPCRoute.
 	)
 
-	var priority int
+	var priority RoutePriorityType
 	priority += ResourceKindBitsGRPCRoute << FromResourceKindPriorityShiftBits
 	if t.PreciseHostname {
 		priority += (1 << PreciseHostnameShiftBits)
 	}
-	priority += t.HostnameLength << HostnameLengthShiftBits
-	priority += t.ServiceLength << ServiceLengthShiftBits
-	priority += t.MethodLength << MethodLengthShiftBits
-	priority += t.HeaderCount << HeaderCountShiftBits
+	priority += RoutePriorityType(t.HostnameLength) << HostnameLengthShiftBits
+	priority += RoutePriorityType(t.ServiceLength) << ServiceLengthShiftBits
+	priority += RoutePriorityType(t.MethodLength) << MethodLengthShiftBits
+	priority += RoutePriorityType(t.HeaderCount) << HeaderCountShiftBits
 
 	return priority
 }
@@ -344,7 +344,7 @@ type SplitGRPCRouteMatch struct {
 
 type SplitGRPCRouteMatchToPriority struct {
 	Match    SplitGRPCRouteMatch
-	Priority int
+	Priority uint64
 }
 
 // AssignRoutePriorityToSplitGRPCRouteMatches assigns priority to ALL split GRPCRoute matches
@@ -358,7 +358,7 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 	logger logr.Logger,
 	splitGRPCouteMatches []SplitGRPCRouteMatch,
 ) []SplitGRPCRouteMatchToPriority {
-	priorityToSplitGRPCRouteMatches := map[int][]SplitGRPCRouteMatch{}
+	priorityToSplitGRPCRouteMatches := map[RoutePriorityType][]SplitGRPCRouteMatch{}
 	for _, match := range splitGRPCouteMatches {
 		priority := CalculateGRCPRouteMatchPriorityTraits(match).EncodeToPriority()
 		priorityToSplitGRPCRouteMatches[priority] = append(priorityToSplitGRPCRouteMatches[priority], match)
@@ -371,7 +371,7 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 	// sort them then starts with 2^14 -1 and decrease by one for each GRPCRoute;
 	// If only one GRPCRoute occupies the priority, fill the relative order bits with all 1s.
 	const relativeOrderAssignedBits = 14
-	const defaultRelativeOrderPriorityBits = (1 << relativeOrderAssignedBits) - 1
+	const defaultRelativeOrderPriorityBits RoutePriorityType = (1 << relativeOrderAssignedBits) - 1
 
 	for priority, matches := range priorityToSplitGRPCRouteMatches {
 		if len(matches) == 1 {
@@ -388,7 +388,7 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 		})
 
 		for i, match := range matches {
-			relativeOrderBits := defaultRelativeOrderPriorityBits - i
+			relativeOrderBits := defaultRelativeOrderPriorityBits - RoutePriorityType(i)
 			// Although it is very unlikely that there are 2^14 = 16384 GRPCRoutes
 			// should be given priority by their relative order, here we limit the
 			// relativeOrderBits to be at least 0.

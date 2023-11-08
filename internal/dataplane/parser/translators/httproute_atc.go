@@ -273,7 +273,7 @@ func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
 
 type SplitHTTPRouteMatchToKongRoutePriority struct {
 	Match    SplitHTTPRouteMatch
-	Priority int
+	Priority RoutePriorityType
 }
 
 type HTTPRoutePriorityTraits struct {
@@ -363,7 +363,7 @@ func CalculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRouteP
 // Header No.: number of header matches.
 // Query No.: number of query parameter matches.
 // relative order: relative order of creation timestamp, namespace and name and internal rule/match order between different (split) HTTPRoutes.
-func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
+func (t HTTPRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	const (
 		// PreciseHostnameShiftBits assigns bit 49 for marking if the hostname is non-wildcard.
 		PreciseHostnameShiftBits = 49
@@ -386,11 +386,11 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 		// and start from all 1s, then decrease by one for each HTTPRoute.
 	)
 
-	var priority int
+	var priority RoutePriorityType
 	if t.PreciseHostname {
 		priority += (1 << PreciseHostnameShiftBits)
 	}
-	priority += t.HostnameLength << HostnameLengthShiftBits
+	priority += RoutePriorityType(t.HostnameLength << HostnameLengthShiftBits)
 
 	if t.PathType == gatewayv1beta1.PathMatchExact {
 		priority += (1 << ExactPathShiftBits)
@@ -401,15 +401,15 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 
 	// max length of path is 1024, but path must start with /, so we use PathLength-1 to fill the bits.
 	if t.PathLength > 0 {
-		priority += ((t.PathLength - 1) << PathLengthShiftBits)
+		priority += RoutePriorityType(((t.PathLength - 1) << PathLengthShiftBits))
 	}
 
-	priority += (t.HeaderCount << HeaderNumberShiftBits)
+	priority += RoutePriorityType(t.HeaderCount << HeaderNumberShiftBits)
 	if t.HasMethodMatch {
 		priority += (1 << MethodMatchShiftBits)
 	}
-	priority += (t.QueryParamCount << QueryParamNumberShiftBits)
-	priority += (ResourceKindBitsHTTPRoute << FromResourceKindPriorityShiftBits)
+	priority += RoutePriorityType(t.QueryParamCount << QueryParamNumberShiftBits)
+	priority += RoutePriorityType(ResourceKindBitsHTTPRoute << FromResourceKindPriorityShiftBits)
 
 	return priority
 }
@@ -425,7 +425,7 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 	logger logr.Logger,
 	splitHTTPRouteMatches []SplitHTTPRouteMatch,
 ) []SplitHTTPRouteMatchToKongRoutePriority {
-	priorityToSplitHTTPRouteMatches := map[int][]SplitHTTPRouteMatch{}
+	priorityToSplitHTTPRouteMatches := map[RoutePriorityType][]SplitHTTPRouteMatch{}
 
 	for _, match := range splitHTTPRouteMatches {
 		priority := CalculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority()
@@ -439,7 +439,7 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 	// sort them then starts with 2^18 -1 and decrease by one for each HTTPRoute;
 	// If only one match occupies the priority, fill the relative order bits with all 1s.
 	const RelativeOrderAssignedBits = 18
-	const defaultRelativeOrderPriorityBits = (1 << RelativeOrderAssignedBits) - 1
+	const defaultRelativeOrderPriorityBits = (uint64(1) << RelativeOrderAssignedBits) - 1
 	for priority, matches := range priorityToSplitHTTPRouteMatches {
 		if len(matches) == 1 {
 			httpRouteMatchesToPriorities = append(httpRouteMatchesToPriorities, SplitHTTPRouteMatchToKongRoutePriority{
@@ -454,7 +454,7 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 		})
 
 		for i, match := range matches {
-			relativeOrderBits := defaultRelativeOrderPriorityBits - i
+			relativeOrderBits := defaultRelativeOrderPriorityBits - RoutePriorityType(i)
 			// Although it is very unlikely that there are 2^18 = 262144 HTTPRoutes
 			// should be given priority by their relative order, here we limit the
 			// relativeOrderBits to be at least 0.
@@ -549,7 +549,7 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 	// generate a "catch-all" route if the generated expression is empty.
 	if r.Expression == nil || len(*r.Expression) == 0 {
 		r.Expression = kong.String(CatchAllHTTPExpression)
-		r.Priority = kong.Int(httpRouteMatchWithPriority.Priority)
+		r.Priority = kong.Uint64(httpRouteMatchWithPriority.Priority)
 	}
 
 	// translate filters in the rule.

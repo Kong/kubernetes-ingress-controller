@@ -106,6 +106,10 @@ jobs:
           - name: dbless-invalid-config
             test: dbless
             run_invalid_config: "true"
+            # This should use the default router flavor (via TEST_KONG_ROUTER_FLAVOR)
+            # Remove the override here when
+            # https://github.com/Kong/kubernetes-ingress-controller/issues/5127 is resolved.
+            router-flavor: 'traditional'
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
 
     steps:

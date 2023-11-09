@@ -3,93 +3,84 @@
 package conformance
 
 import (
+	"os"
+	"path"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/sets"
+	conformancev1alpha1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/yaml"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
-var commonSkippedTests = []string{
-	// extended conformance
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563
-	tests.GatewayWithAttachedRoutesWithPort8080.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4913
-	tests.GatewayStaticAddresses.ShortName,
-
-	tests.HTTPRouteRedirectPortAndScheme.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
-	tests.HTTPRouteRedirectPort.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
-	tests.HTTPRouteRedirectScheme.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
-	tests.HTTPRouteRequestMirror.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
-	tests.HTTPRouteRequestMultipleMirrors.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4914
-	tests.HTTPRouteTimeoutBackendRequest.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4915
-	tests.HTTPRouteTimeoutRequest.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4983
-	tests.HTTPRouteBackendProtocolH2C.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4984
-	tests.HTTPRouteBackendProtocolWebSocket.ShortName,
-
-	// experimental conformance
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
-	tests.HTTPRouteRedirectPath.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
-	tests.HTTPRouteRewriteHost.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
-	tests.HTTPRouteRewritePath.ShortName,
-
-	// TLS
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4562
-	tests.TLSRouteInvalidReferenceGrant.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
-	tests.TLSRouteSimpleSameNamespace.ShortName,
+var skippedTestsForTraditionalRoutes = []string{
+	// core conformance
+	tests.HTTPRouteHeaderMatching.ShortName,
 }
 
-var (
-	skippedTestsForExpressionRoutes  = commonSkippedTests
-	skippedTestsForTraditionalRoutes = append(
-		commonSkippedTests,
-		// core conformance
-		tests.HTTPRouteHeaderMatching.ShortName,
-		// extended conformance
-		// only 10 and 11 broken because traditional/traditional_compatible router
-		// cannot support the path > method > header precedence,
-		// but no way to omit individual cases.
-		tests.HTTPRouteMethodMatching.ShortName,
-		// only expression router supports query param matches
-		tests.HTTPRouteQueryParamMatching.ShortName,
-	)
-)
+var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
+	// core features
+	suite.SupportGateway,
+	suite.SupportHTTPRoute,
+	// extended features
+	suite.SupportHTTPRouteResponseHeaderModification,
+}
+
+var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
+	// core features
+	suite.SupportGateway,
+	suite.SupportHTTPRoute,
+	// extended features
+	suite.SupportHTTPRouteQueryParamMatching,
+	suite.SupportHTTPRouteMethodMatching,
+	suite.SupportHTTPRouteResponseHeaderModification,
+}
 
 func TestGatewayConformance(t *testing.T) {
-	if shouldRunExperimentalConformance() {
-		t.Skip("skipping standard conformance tests")
-	}
-
 	k8sClient, gatewayClassName := prepareEnvForGatewayConformanceTests(t)
 	// Conformance tests are run for both configs with and without
 	// KONG_TEST_EXPRESSION_ROUTES='true'.
-	skipTests := skippedTestsForTraditionalRoutes
+	var skippedTests []string
+	var supportedFeatures []suite.SupportedFeature
 	if testenv.ExpressionRoutesEnabled() {
-		skipTests = skippedTestsForExpressionRoutes
+		supportedFeatures = expressionRoutesSupportedFeatures
+	} else {
+		skippedTests = skippedTestsForTraditionalRoutes
+		supportedFeatures = traditionalRoutesSupportedFeatures
 	}
 
-	cSuite := suite.New(suite.Options{
-		Client:                     k8sClient,
-		GatewayClassName:           gatewayClassName,
-		Debug:                      true,
-		CleanupBaseResources:       !testenv.IsCI(),
-		EnableAllSupportedFeatures: true,
-		ExemptFeatures:             suite.MeshCoreFeatures,
-		BaseManifests:              conformanceTestsBaseManifests,
-		SkipTests:                  skipTests,
-	})
+	cSuite, err := suite.NewExperimentalConformanceTestSuite(
+		suite.ExperimentalConformanceOptions{
+			Options: suite.Options{
+				Client:               k8sClient,
+				GatewayClassName:     gatewayClassName,
+				Debug:                true,
+				CleanupBaseResources: !testenv.IsCI(),
+				BaseManifests:        conformanceTestsBaseManifests,
+				SupportedFeatures:    sets.New(supportedFeatures...),
+				SkipTests:            skippedTests,
+			},
+			ConformanceProfiles: sets.New(
+				suite.HTTPConformanceProfileName,
+			),
+			Implementation: conformancev1alpha1.Implementation{
+				Organization: metadata.Organization,
+				Project:      metadata.ProjectName,
+				URL:          metadata.ProjectURL,
+				Version:      metadata.Release,
+				Contact: []string{
+					path.Join(metadata.ProjectURL, "/issues/new/choose"),
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
 	t.Log("starting the gateway conformance test suite")
 	cSuite.Setup(t)
 
@@ -99,5 +90,18 @@ func TestGatewayConformance(t *testing.T) {
 	// single test only, e.g.:
 	//
 	// cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
-	cSuite.Run(t, tests.ConformanceTests)
+	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
+	// single test only, e.g.:
+	//
+	//cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRedirectPortAndScheme})
+	require.NoError(t, cSuite.Run(t, tests.ConformanceTests))
+
+	const reportFileName = "kong-kubernetes-ingress-controller.yaml"
+	t.Log("saving the gateway conformance test report to file:", reportFileName)
+	report, err := cSuite.Report()
+	require.NoError(t, err)
+	rawReport, err := yaml.Marshal(report)
+	require.NoError(t, err)
+	// Save report in root of the repository, file name is in .gitignore.
+	require.NoError(t, os.WriteFile("../../"+reportFileName, rawReport, 0o600))
 }

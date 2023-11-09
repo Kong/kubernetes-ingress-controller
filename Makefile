@@ -318,21 +318,6 @@ test.conformance: _check.container.environment go-junit-report
 		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		GOFLAGS="-tags=conformance_tests" \
 		go test \
-		-v \
-		-race $(GOTESTFLAGS) \
-		-timeout $(INTEGRATION_TEST_TIMEOUT) \
-		-parallel $(NCPU) \
-		./test/conformance | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
-
-.PHONY: test.conformance-experimental
-test.conformance-experimental: _check.container.environment go-junit-report
-	@TEST_DATABASE_MODE="off" \
-		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
-		GOFLAGS="-tags=conformance_tests" \
-		KONG_TEST_EXPRESSION_ROUTES="true" \
-		TEST_EXPERIMENTAL_CONFORMANCE="true" \
-		go test \
 		-ldflags " \
 		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.ProjectURL=$(REPO_URL) \
 		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \

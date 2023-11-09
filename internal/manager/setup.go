@@ -26,10 +26,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 	return logger, nil
 }
 
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := scheme.Get()
 	if err != nil {
@@ -113,13 +113,13 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 	return managerOpts, nil
 }
 
-func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
+func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode dpconf.DBMode) bool {
 	if c.Konnect.ConfigSynchronizationEnabled {
 		logger.Info("Konnect config synchronisation enabled, enabling leader election")
 		return true
 	}
 
-	if dataplaneutil.IsDBLessMode(dbmode) {
+	if dbmode.IsDBLessMode() {
 		if c.KongAdminSvc.IsPresent() {
 			logger.Info("DB-less mode detected with service detection, enabling leader election")
 			return true

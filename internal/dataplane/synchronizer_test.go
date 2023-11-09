@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 const testSynchronizerTick = time.Millisecond * 10
@@ -22,7 +24,7 @@ func TestSynchronizer(t *testing.T) {
 	}
 
 	t.Log("setting up a fake dataplane client to test the synchronizer")
-	c := &fakeDataplaneClient{dbmode: "postgres"}
+	c := &fakeDataplaneClient{dbmode: dpconf.DBModePostgres}
 
 	t.Log("configuring the dataplane synchronizer")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,7 +92,10 @@ func TestSynchronizer(t *testing.T) {
 }
 
 func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
-	for _, dbMode := range []string{"off", "postgres"} {
+	for _, dbMode := range []dpconf.DBMode{
+		dpconf.DBModeOff,
+		dpconf.DBModePostgres,
+	} {
 		dbMode := dbMode
 		t.Run(fmt.Sprintf("dbmode=%s", dbMode), func(t *testing.T) {
 			c := &fakeDataplaneClient{dbmode: dbMode, t: t}
@@ -126,14 +131,14 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 // fakeDataplaneClient fakes the dataplane.Client interface so that we can
 // unit test the dataplane.Synchronizer.
 type fakeDataplaneClient struct {
-	dbmode                  string
+	dbmode                  dpconf.DBMode
 	updateCount             atomic.Uint64
 	lock                    sync.RWMutex
 	clientCallBlockDuration time.Duration
 	t                       *testing.T
 }
 
-func (c *fakeDataplaneClient) DBMode() string {
+func (c *fakeDataplaneClient) DBMode() dpconf.DBMode {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	if c.clientCallBlockDuration > 0 {

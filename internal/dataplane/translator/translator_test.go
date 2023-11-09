@@ -14,8 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -26,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -4505,45 +4504,35 @@ func TestNewFeatureFlags(t *testing.T) {
 		name string
 
 		featureGates     map[string]bool
-		routerFlavor     string
+		routerFlavor     dpconf.RouterFlavor
 		updateStatusFlag bool
 
 		expectedFeatureFlags FeatureFlags
-		expectInfoLog        string
 	}{
 		{
-			name:             "default",
-			featureGates:     map[string]bool{},
-			routerFlavor:     "traditional",
+			name:         "traditional compatible router and update status enabled",
+			featureGates: map[string]bool{},
+
+			routerFlavor:     dpconf.RouterFlavorTraditionalCompatible,
 			updateStatusFlag: true,
 			expectedFeatureFlags: FeatureFlags{
 				ReportConfiguredKubernetesObjects: true,
 			},
 		},
 		{
-			name:         "expression routes feature gate enabled and router flavor matches",
-			routerFlavor: kongRouterFlavorExpressions,
+			name:         "expression router and update status disabled",
+			routerFlavor: dpconf.RouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
 				ExpressionRoutes: true,
 			},
-			expectInfoLog: "The expression routes mode enabled",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			core, logs := observer.New(zap.InfoLevel)
-			logger := zapr.NewLogger(zap.New(core))
-			actualFlags := NewFeatureFlags(logger, tc.featureGates, tc.routerFlavor, tc.updateStatusFlag)
+			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
-
-			if tc.expectInfoLog != "" {
-				lastEntry := logs.All()[logs.Len()-1]
-				require.NotNil(t, lastEntry)
-				require.Equal(t, zapcore.InfoLevel, lastEntry.Level)
-				require.Equal(t, tc.expectInfoLog, lastEntry.Message)
-			}
 		})
 	}
 }

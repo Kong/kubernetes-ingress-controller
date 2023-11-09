@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ type Synchronizer struct {
 
 	// dataplane client to send updates to the Kong Admin API
 	dataplaneClient Client
-	dbMode          string
+	dbMode          dpconf.DBMode
 
 	// server configuration, flow control, channels and utility attributes
 	stagger         time.Duration
@@ -140,7 +140,7 @@ func (p *Synchronizer) IsReady() bool {
 	defer p.lock.RUnlock()
 	// If the proxy is has no database, it is only ready after a successful sync
 	// Otherwise, it has no configuration loaded
-	if dataplaneutil.IsDBLessMode(p.dbMode) {
+	if p.dbMode.IsDBLessMode() {
 		return p.configApplied
 	}
 	// If the proxy has a database, it is ready immediately

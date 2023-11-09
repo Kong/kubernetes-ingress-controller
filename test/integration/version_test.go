@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -38,7 +39,7 @@ func RunWhenKongVersion(t *testing.T, vRangeStr string, msg ...any) {
 	}
 }
 
-func RunWhenKongDBMode(t *testing.T, dbmode string, msg ...any) {
+func RunWhenKongDBMode(t *testing.T, dbmode dpconf.DBMode, msg ...any) {
 	t.Helper()
 
 	actual := eventuallyGetKongDBMode(t, proxyAdminURL)
@@ -84,12 +85,12 @@ func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 	return version
 }
 
-func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
+func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) dpconf.DBMode {
 	t.Helper()
 
 	var (
 		err    error
-		dbmode string
+		dbmode dpconf.DBMode
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -101,12 +102,12 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
 	return dbmode
 }
 
-func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) string {
+func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) dpconf.RouterFlavor {
 	t.Helper()
 
 	var (
 		err          error
-		routerFlavor string
+		routerFlavor dpconf.RouterFlavor
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {

@@ -303,6 +303,11 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - message: Using both config and configFrom fields is not allowed.
+          rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
+            && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
+            : true'
     served: true
     storage: true
     subresources:
@@ -1206,6 +1211,11 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - message: Using both config and configFrom fields is not allowed.
+          rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
+            && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
+            : true'
     served: true
     storage: true
     subresources:

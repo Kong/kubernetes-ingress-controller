@@ -79,7 +79,11 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
-TBD
+### Changed
+
+- `KongPlugin` and `KongClusterPlugin` now enforce only one of `config` and `configFrom`
+  to be set using the CRD validation expressions
+  [#5119](https://github.com/Kong/kubernetes-ingress-controller/pull/5119)
 
 ## [3.0.0]
 

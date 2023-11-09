@@ -16,7 +16,6 @@ const (
 	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
 	ErrTextPluginNameEmpty                    = "plugin name cannot be empty"
 	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
-	ErrTextPluginUsesBothConfigTypes          = "plugin cannot use both Config and ConfigFrom"
 )
 
 const (

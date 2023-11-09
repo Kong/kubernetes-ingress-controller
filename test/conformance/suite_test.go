@@ -234,10 +234,6 @@ func exitOnErr(err error) {
 	}
 }
 
-func shouldRunExperimentalConformance() bool {
-	return os.Getenv("TEST_EXPERIMENTAL_CONFORMANCE") == "true"
-}
-
 // patchGatewayClassToPassTestGatewayClassObservedGenerationBump - wait for the GatewayClass
 // (call is blocking run in a goroutine)  created by the test GatewayClassObservedGenerationBump
 // and patch it with the unmanaged annotation to make it reconciled by the GatewayClass controller.

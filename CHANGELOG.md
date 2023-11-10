@@ -87,7 +87,7 @@ Adding a new version? You'll need three changes:
     [#5119](https://github.com/Kong/kubernetes-ingress-controller/pull/5119)
   - `KongConsumer` now enforces that at least one of `username` or `custom_id` is provided.
     [#5137](https://github.com/Kong/kubernetes-ingress-controller/pull/5137)
-  - `KongPlugin` and `KongClusterPlugin` now enforce `plugin` is provided.
+  - `KongPlugin` and `KongClusterPlugin` now enforce `plugin` to be immutable.
     [#5142](https://github.com/Kong/kubernetes-ingress-controller/pull/5142)
 
 ## [3.0.0]

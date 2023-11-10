@@ -250,8 +250,8 @@ spec:
           rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
             && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
             : true'
-        - message: The plugin field needs to be provided
-          rule: has(self.plugin)
+        - message: The plugin field is immutable
+          rule: self.plugin == oldSelf.plugin
     served: true
     storage: true
     subresources:

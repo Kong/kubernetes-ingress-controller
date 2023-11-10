@@ -81,6 +81,10 @@ Adding a new version? You'll need three changes:
 
 ### Changed
 
+- `SecretKeyRef` of `ConfigFrom` field in `KongPlugin` and `KongClusterPlugin`
+  are `Required`. When `ConfigFrom` is specified, the validation of there CRDs
+  will require `SecretKeyRef` to be present.
+  [#5103](https://github.com/Kong/kubernetes-ingress-controller/pull/5103)
 - CRD Validation Expressions
   - `KongPlugin` and `KongClusterPlugin` now enforce only one of `config` and `configFrom`
     to be set.

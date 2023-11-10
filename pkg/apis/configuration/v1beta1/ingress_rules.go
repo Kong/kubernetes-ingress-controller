@@ -32,6 +32,7 @@ type IngressRule struct {
 	// Port is the port on which to accept TCP or TLS over TCP sessions and
 	// route. It is a required field. If a Host is not specified, the requested
 	// are routed based only on Port.
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32
@@ -39,16 +40,19 @@ type IngressRule struct {
 
 	// Backend defines the referenced service endpoint to which the traffic
 	// will be forwarded to.
+	// +kubebuilder:validation:Required
 	Backend IngressBackend `json:"backend"`
 }
 
 // IngressBackend describes all endpoints for a given service and port.
 type IngressBackend struct {
 	// Specifies the name of the referenced service.
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	ServiceName string `json:"serviceName"`
 
 	// Specifies the port of the referenced service.
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32

@@ -37,7 +37,7 @@ type KongConsumer struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Username is a Kong cluster-unique username of the consumer.
-	Username string `json:"username"`
+	Username string `json:"username,omitempty"`
 
 	// CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
 	// Kong with users in your existing database.

@@ -81,9 +81,12 @@ Adding a new version? You'll need three changes:
 
 ### Changed
 
-- `KongPlugin` and `KongClusterPlugin` now enforce only one of `config` and `configFrom`
-  to be set using the CRD validation expressions
-  [#5119](https://github.com/Kong/kubernetes-ingress-controller/pull/5119)
+- CRD Validation Expressions
+  - `KongPlugin` and `KongClusterPlugin` now enforce only one of `config` and `configFrom`
+    to be set.
+    [#5119](https://github.com/Kong/kubernetes-ingress-controller/pull/5119)
+  - `KongConsumer` now enforces that at least one of `username` or `custom_id` is provided.
+    [#5137](https://github.com/Kong/kubernetes-ingress-controller/pull/5137)
 
 ## [3.0.0]
 
@@ -92,13 +95,13 @@ Adding a new version? You'll need three changes:
 ### Highlights
 
 - 🚀 Support for [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateways/) is now GA!
-  - You only need to install Gateway API CRDs to use GA features of Gateway API with KIC. 
+  - You only need to install Gateway API CRDs to use GA features of Gateway API with KIC.
   - Check the [Ingress to Gateway migration guide] to learn how to start using Gateway API already.
 - 🏎️ Performance boosting expression router is now the default for DB-less mode.
 - 📈 Gateway Discovery feature is enabled by default both in DB-less and DB mode, allowing for scaling
   your gateways independently of the controller.
-- 📖 Brand-new docs: [The KIC docs] have been totally revamped to be Gateway API first, and every single guide 
-  is as easy as copying and pasting your way down the page. 
+- 📖 Brand-new docs: [The KIC docs] have been totally revamped to be Gateway API first, and every single guide
+  is as easy as copying and pasting your way down the page.
 
 [Ingress to Gateway migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/ingress-to-gateway/
 [The KIC docs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/

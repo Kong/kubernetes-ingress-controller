@@ -45,7 +45,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 		}
 		hostnames := getGRPCRouteHostnamesAsSliceOfStrings(grpcroute)
 		// assign an empty match to generate matchers by only hostnames and annotations.
-		matcher := generateMathcherFromGRPCMatch(gatewayapi.GRPCRouteMatch{}, hostnames, ingressObjectInfo.Annotations)
+		matcher := generateMatcherFromGRPCMatch(gatewayapi.GRPCRouteMatch{}, hostnames, ingressObjectInfo.Annotations)
 		atc.ApplyExpression(&r.Route, matcher, 1)
 		return []kongstate.Route{r}
 	}
@@ -68,7 +68,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 		}
 
 		hostnames := getGRPCRouteHostnamesAsSliceOfStrings(grpcroute)
-		matcher := generateMathcherFromGRPCMatch(match, hostnames, ingressObjectInfo.Annotations)
+		matcher := generateMatcherFromGRPCMatch(match, hostnames, ingressObjectInfo.Annotations)
 
 		atc.ApplyExpression(&r.Route, matcher, 1)
 		routes = append(routes, r)
@@ -77,7 +77,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 	return routes
 }
 
-func generateMathcherFromGRPCMatch(match gatewayapi.GRPCRouteMatch, hostnames []string, metaAnnotations map[string]string) atc.Matcher {
+func generateMatcherFromGRPCMatch(match gatewayapi.GRPCRouteMatch, hostnames []string, metaAnnotations map[string]string) atc.Matcher {
 	routeMatcher := atc.And()
 
 	if match.Method != nil {
@@ -479,7 +479,7 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 	}
 
 	grpcMatch := matchWithPriority.Match.Match
-	matcher := generateMathcherFromGRPCMatch(
+	matcher := generateMatcherFromGRPCMatch(
 		grpcMatch,
 		[]string{hostname},
 		grpcRoute.Annotations,

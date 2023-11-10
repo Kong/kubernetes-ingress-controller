@@ -140,7 +140,7 @@ func (d *Discoverer) AdminAPIsFromEndpointSlice(
 				Namespace: endpoints.Namespace,
 			}
 
-			adminAPI, err := adminAPIFromEndpoint(e, p, svc, d.dnsStrategy)
+			adminAPI, err := adminAPIFromEndpoint(e, p, svc, d.dnsStrategy, endpoints.AddressType)
 			if err != nil {
 				return nil, err
 			}
@@ -155,6 +155,7 @@ func adminAPIFromEndpoint(
 	port discoveryv1.EndpointPort,
 	service k8stypes.NamespacedName,
 	dnsStrategy cfgtypes.DNSStrategy,
+	addressFamily discoveryv1.AddressType,
 ) (DiscoveredAdminAPI, error) {
 	podNN := k8stypes.NamespacedName{
 		Name:      endpoint.TargetRef.Name,
@@ -197,8 +198,12 @@ func adminAPIFromEndpoint(
 		}, nil
 
 	case cfgtypes.IPDNSStrategy:
+		bounded := eAddress
+		if addressFamily == discoveryv1.AddressTypeIPv6 {
+			bounded = fmt.Sprintf("[%s]", bounded)
+		}
 		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf("https://%s:%d", eAddress, *port.Port),
+			Address: fmt.Sprintf("https://%s:%d", bounded, *port.Port),
 			PodRef:  podNN,
 		}, nil
 

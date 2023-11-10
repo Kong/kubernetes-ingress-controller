@@ -2602,7 +2602,7 @@ spec:
           value: /dev/stderr
         - name: KONG_ROUTER_FLAVOR
           value: expressions
-        image: kong:3.4
+        image: kong:3.5
         lifecycle:
           preStop:
             exec:

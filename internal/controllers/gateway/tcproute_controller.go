@@ -382,7 +382,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tcproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until tcproute is configured.
-			debug(log, tcproute, "TCPRoute not configured,requeueing")
+			debug(log, tcproute, "TCPRoute not configured, requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 

@@ -371,7 +371,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tlsroute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until tlsroute is configured.
-			debug(log, tlsroute, "TLSRoute not configured,requeueing")
+			debug(log, tlsroute, "TLSRoute not configured, requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 

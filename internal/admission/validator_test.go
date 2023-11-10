@@ -127,16 +127,6 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:      "plugin lacks plugin name",
-			PluginSvc: &fakePluginSvc{},
-			args: args{
-				plugin: kongv1.KongPlugin{},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextPluginNameEmpty,
-			wantErr:     false,
-		},
-		{
 			name:      "plugin has invalid configuration",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
@@ -235,16 +225,6 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: fmt.Sprintf(ErrTextPluginConfigViolatesSchema, "now where could my pipe be"),
-			wantErr:     false,
-		},
-		{
-			name:      "plugin lacks plugin name",
-			PluginSvc: &fakePluginSvc{},
-			args: args{
-				plugin: kongv1.KongClusterPlugin{},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextPluginNameEmpty,
 			wantErr:     false,
 		},
 		{

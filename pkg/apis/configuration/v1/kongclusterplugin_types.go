@@ -36,6 +36,7 @@ import (
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="(has(self.config) || has(self.configFrom)) ? ((!has(self.config) && has(self.configFrom)) || (has(self.config) && !has(self.configFrom))) : true", message="Using both config and configFrom fields is not allowed."
+// +kubebuilder:validation:XValidation:rule="has(self.plugin)", message="The plugin field needs to be provided"
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API.
 type KongClusterPlugin struct {

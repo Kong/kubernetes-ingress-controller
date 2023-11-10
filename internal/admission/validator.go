@@ -281,9 +281,6 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongPlugin,
 ) (bool, string, error) {
-	if k8sPlugin.PluginName == "" {
-		return false, ErrTextPluginNameEmpty, nil
-	}
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error

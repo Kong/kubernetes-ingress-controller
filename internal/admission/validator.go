@@ -284,7 +284,13 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error
-	plugin.Config, err = kongstate.RawConfigToConfiguration(k8sPlugin.Config)
+
+	plugin.Config, err = kongstate.RawConfigurationWithPatchesToConfiguration(
+		validator.SecretGetter,
+		k8sPlugin.Namespace,
+		k8sPlugin.Config,
+		k8sPlugin.ConfigPatches,
+	)
 	if err != nil {
 		return false, ErrTextPluginConfigInvalid, err
 	}

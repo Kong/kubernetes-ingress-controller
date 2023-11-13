@@ -63,6 +63,13 @@ type KongClusterPlugin struct {
 	// Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
 	ConfigFrom *NamespacedConfigSource `json:"configFrom,omitempty"`
 
+	// ConfigPatches represents JSON patches to the configuration of the plugin.
+	// Each item means a JSON patch to add something in the configuration,
+	// where path is specified in `path` and value is in `valueFrom` referencing
+	// a key in a secret.
+	// Could only be specified when Config specified.
+	ConfigPatches []NamespacedConfigPatch `json:"configPatches,omitempty"`
+
 	// PluginName is the name of the plugin to which to apply the config.
 	// +kubebuilder:validation:Required
 	PluginName string `json:"plugin"`

@@ -13,6 +13,7 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/samber/lo"
 )
 
 // updateReferredObjects updates reference records where the referrer is the object in parameter obj.
@@ -81,7 +82,7 @@ func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []k8stypes.Namespac
 }
 
 func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, 1)
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
 			Namespace: plugin.Namespace,
@@ -89,7 +90,16 @@ func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.Namespa
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	return referredSecretNames
+
+	for _, patch := range plugin.ConfigPatches {
+		nsName := k8stypes.NamespacedName{
+			Namespace: plugin.Namespace,
+			Name:      patch.ValueFrom.SecretValue.Secret,
+		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+
+	return lo.Uniq(referredSecretNames)
 }
 
 func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8stypes.NamespacedName {
@@ -101,7 +111,16 @@ func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	return referredSecretNames
+
+	for _, patch := range plugin.ConfigPatches {
+		nsName := k8stypes.NamespacedName{
+			Namespace: plugin.Namespace,
+			Name:      patch.ValueFrom.SecretValue.Secret,
+		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+
+	return lo.Uniq(referredSecretNames)
 }
 
 func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []k8stypes.NamespacedName {

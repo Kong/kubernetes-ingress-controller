@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -114,7 +115,11 @@ func kongPluginFromK8SClusterPlugin(
 	k8sPlugin kongv1.KongClusterPlugin,
 ) (Plugin, error) {
 	var config kong.Configuration
-	config, err := RawConfigToConfiguration(k8sPlugin.Config)
+	config, err := RawConfigurationWithNamespacedPatchesToConfiguration(
+		s,
+		k8sPlugin.Config,
+		k8sPlugin.ConfigPatches,
+	)
 	if err != nil {
 		return Plugin{}, fmt.Errorf("could not parse KongPlugin %s/%s config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
@@ -164,7 +169,12 @@ func kongPluginFromK8SPlugin(
 	k8sPlugin kongv1.KongPlugin,
 ) (Plugin, error) {
 	var config kong.Configuration
-	config, err := RawConfigToConfiguration(k8sPlugin.Config)
+	config, err := RawConfigurationWithPatchesToConfiguration(
+		s,
+		k8sPlugin.Namespace,
+		k8sPlugin.Config,
+		k8sPlugin.ConfigPatches,
+	)
 	if err != nil {
 		return Plugin{}, fmt.Errorf("could not parse KongPlugin %s/%s config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
@@ -201,12 +211,89 @@ func kongPluginFromK8SPlugin(
 	}, nil
 }
 
-func RawConfigToConfiguration(config apiextensionsv1.JSON) (kong.Configuration, error) {
-	if len(config.Raw) == 0 {
+var rawPatchPattern = `[{"op":"add","path":"%s","value":%s}]`
+
+func applyJSONPatchFromNamespacedSecretRef(s SecretGetter, raw []byte, path string, namespace string, secretName string, key string) ([]byte, error) {
+	secret, err := s.GetSecret(namespace, secretName)
+	if err != nil {
+		return nil, err
+	}
+	secretVal, ok := secret.Data[key]
+	if !ok {
+		return nil,
+			fmt.Errorf("no key '%v' in secret '%v/%v'",
+				key, namespace, secretName)
+	}
+	rawPatch := fmt.Sprintf(rawPatchPattern, path, string(secretVal))
+	p, err := jsonpatch.DecodePatch([]byte(rawPatch))
+	if err != nil {
+		return nil, err
+	}
+	raw, err = p.Apply(raw)
+	if err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func RawConfigurationWithPatchesToConfiguration(
+	s SecretGetter, namespace string,
+	rawConfig apiextensionsv1.JSON,
+	patches []kongv1.ConfigPatch,
+) (kong.Configuration, error) {
+	raw := rawConfig.Raw
+	// apply patches
+	for i, patch := range patches {
+		var err error
+		raw, err = applyJSONPatchFromNamespacedSecretRef(
+			s,
+			raw,
+			patch.Path,
+			namespace,
+			patch.ValueFrom.SecretValue.Secret,
+			patch.ValueFrom.SecretValue.Key,
+		)
+		if err != nil {
+			return kong.Configuration{}, err
+		}
+
+		fmt.Printf("Patched after patch %d on path %s: %q\n", i, patch.Path, string(raw))
+	}
+	return rawConfigToConfiguration(raw)
+}
+
+func RawConfigurationWithNamespacedPatchesToConfiguration(
+	s SecretGetter,
+	rawConfig apiextensionsv1.JSON,
+	patches []kongv1.NamespacedConfigPatch,
+) (kong.Configuration, error) {
+	raw := rawConfig.Raw
+	// apply patches
+	for i, patch := range patches {
+		var err error
+		raw, err = applyJSONPatchFromNamespacedSecretRef(
+			s,
+			raw,
+			patch.Path,
+			patch.ValueFrom.SecretValue.Namespace,
+			patch.ValueFrom.SecretValue.Secret,
+			patch.ValueFrom.SecretValue.Key,
+		)
+		if err != nil {
+			return kong.Configuration{}, err
+		}
+
+		fmt.Printf("Patched after patch %d on path %s: %q\n", i, patch.Path, string(raw))
+	}
+	return rawConfigToConfiguration(raw)
+}
+
+func rawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
+	if len(raw) == 0 {
 		return kong.Configuration{}, nil
 	}
 	var kongConfig kong.Configuration
-	err := json.Unmarshal(config.Raw, &kongConfig)
+	err := json.Unmarshal(raw, &kongConfig)
 	if err != nil {
 		return kong.Configuration{}, err
 	}

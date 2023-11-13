@@ -115,11 +115,9 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 					raw.Problems[fmt.Sprintf("%s:%s", ee.Type, ee.Name)] = p.Message
 				}
 			}
-			if len(p.Messages) > 0 {
-				for i, message := range p.Messages {
-					if len(message) > 0 {
-						raw.Problems[fmt.Sprintf("%s[%d]", p.Field, i)] = message
-					}
+			for i, message := range p.Messages {
+				if len(message) > 0 {
+					raw.Problems[fmt.Sprintf("%s[%d]", p.Field, i)] = message
 				}
 			}
 		}

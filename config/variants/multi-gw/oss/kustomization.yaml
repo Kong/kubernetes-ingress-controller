@@ -5,18 +5,18 @@ resources:
 - ../base
 
 components:
-  - ../../../image/oss
+- ../../../image/oss
 
 patches:
-- target:
-    group: apps
-    version: v1
-    kind: Deployment
-    name: ingress-kong
-  patch: |-
+- patch: |-
     - op: add
       path: /spec/template/metadata/annotations/traffic.kuma.io~1exclude-outbound-ports
       value: "8444"
     - op: add
       path: /spec/template/metadata/annotations/traffic.sidecar.istio.io~1excludeOutboundPorts
       value: "8444"
+  target:
+    group: apps
+    kind: Deployment
+    name: ingress-kong
+    version: v1

@@ -537,6 +537,20 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
+			name: "KongPlugin - change plugin field is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongPlugin{
+					PluginName: "key-auth",
+				}
+				err := createKongPlugin(ctx, ctrlClient, ns, plugin)
+				require.NoError(t, err)
+				plugin.PluginName = "cors"
+				err = updateKongPlugin(ctx, ctrlClient, ns, plugin)
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "The plugin field is immutable")
+			},
+		},
+		{
 			name: "KongClusterPlugin - no config is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
@@ -591,6 +605,20 @@ func TestCRDValidations(t *testing.T) {
 				})
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, "Using both config and configFrom fields is not allowed.")
+			},
+		},
+		{
+			name: "KongClusterPlugin - change plugin field is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+				}
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, plugin)
+				require.NoError(t, err)
+				plugin.PluginName = "cors"
+				err = updateKongClusterPlugin(ctx, ctrlClient, ns, plugin)
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "The plugin field is immutable")
 			},
 		},
 	}
@@ -751,4 +779,16 @@ func createKongClusterPlugin(ctx context.Context, client client.Client, ns strin
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Create(ctx, plugin)
+}
+
+func updateKongPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongPlugin) error {
+	plugin.GenerateName = "test-"
+	plugin.Namespace = ns
+	return client.Update(ctx, plugin)
+}
+
+func updateKongClusterPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongClusterPlugin) error {
+	plugin.GenerateName = "test-"
+	plugin.Namespace = ns
+	return client.Update(ctx, plugin)
 }

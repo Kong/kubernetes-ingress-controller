@@ -13,7 +13,6 @@ const (
 	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
 	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"
 	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
-	ErrTextPluginNameEmpty                    = "plugin name cannot be empty"
 	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
 )
 

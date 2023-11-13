@@ -7,11 +7,31 @@ type ConfigSource struct {
 	SecretValue SecretValueFromSource `json:"secretKeyRef"`
 }
 
+// ConfigPatch is a JSON patch to add values from secrets in the same namespace with KongPlugin
+// to the generated configuration of plugin in Kong.
+// +kubebuilder:object:generate=true
+type ConfigPatch struct {
+	// Path is the JSON path to add the patch.
+	Path string `json:"path"`
+	// ValueFrom is the reference to a key of a secret where the patched value comes from.
+	ValueFrom ConfigSource `json:"valueFrom"`
+}
+
 // NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 // +kubebuilder:object:generate=true
 type NamespacedConfigSource struct {
 	// Specifies a name, a namespace, and a key of a secret to refer to.
 	SecretValue NamespacedSecretValueFromSource `json:"secretKeyRef"`
+}
+
+// NamespacedConfigPatch is a JSON patch to add values from secrets to KongClusterPlugin
+// to the generated configuration of plugin in Kong.
+// +kubebuilder:object:generate=true
+type NamespacedConfigPatch struct {
+	// Path is the JSON path to add the patch.
+	Path string `json:"path"`
+	// ValueFrom is the reference to a key of a secret where the patched value comes from.
+	ValueFrom NamespacedConfigSource `json:"valueFrom"`
 }
 
 // SecretValueFromSource represents the source of a secret value.

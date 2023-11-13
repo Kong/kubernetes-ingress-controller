@@ -145,6 +145,44 @@ spec:
             required:
             - secretKeyRef
             type: object
+          configPatches:
+            description: ConfigPatches represents JSON patches to the configuration
+              of the plugin. Each item means a JSON patch to add something in the
+              configuration, where path is specified in `path` and value is in `valueFrom`
+              referencing a key in a secret. Could only be specified when Config specified.
+            items:
+              description: NamespacedConfigPatch is a JSON patch to add values from
+                secrets to KongClusterPlugin to the generated configuration of plugin
+                in Kong.
+              properties:
+                path:
+                  description: Path is the JSON path to add the patch.
+                  type: string
+                valueFrom:
+                  description: ValueFrom is the reference to a key of a secret where
+                    the patched value comes from.
+                  properties:
+                    secretKeyRef:
+                      description: Specifies a name, a namespace, and a key of a secret
+                        to refer to.
+                      properties:
+                        key:
+                          description: The key containing the value.
+                          type: string
+                        name:
+                          description: The secret containing the key.
+                          type: string
+                        namespace:
+                          description: The namespace containing the secret.
+                          type: string
+                      required:
+                      - key
+                      - name
+                      - namespace
+                      type: object
+                  type: object
+              type: object
+            type: array
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.
             type: string
@@ -1061,6 +1099,41 @@ spec:
             required:
             - secretKeyRef
             type: object
+          configPatches:
+            description: ConfigPatches represents JSON patches to the configuration
+              of the plugin. Each item means a JSON patch to add something in the
+              configuration, where path is specified in `path` and value is in `valueFrom`
+              referencing a key in a secret. Could only be specified when Config specified.
+            items:
+              description: ConfigPatch is a JSON patch to add values from secrets
+                in the same namespace with KongPlugin to the generated configuration
+                of plugin in Kong.
+              properties:
+                path:
+                  description: Path is the JSON path to add the patch.
+                  type: string
+                valueFrom:
+                  description: ValueFrom is the reference to a key of a secret where
+                    the patched value comes from.
+                  properties:
+                    secretKeyRef:
+                      description: Specifies a name and a key of a secret to refer
+                        to. The namespace is implicitly set to the one of referring
+                        object.
+                      properties:
+                        key:
+                          description: The key containing the value.
+                          type: string
+                        name:
+                          description: The secret containing the key.
+                          type: string
+                      required:
+                      - key
+                      - name
+                      type: object
+                  type: object
+              type: object
+            type: array
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.
             type: string
@@ -1227,6 +1300,8 @@ spec:
             : true'
         - message: The plugin field is immutable
           rule: self.plugin == oldSelf.plugin
+        - message: Can use 'configPatches' only when 'config' specified
+          rule: (has(self.config)) || (!has(self.config) && !has(self.configPatches))
     served: true
     storage: true
     subresources:

@@ -211,7 +211,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)

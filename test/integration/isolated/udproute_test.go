@@ -337,7 +337,7 @@ func TestUDPRoute(t *testing.T) {
 				gatewayclass := GetFromCtxForT[*gatewayapi.GatewayClass](ctx, t)
 
 				t.Logf("deleting the GatewayClass %s", gatewayclass.Name)
-				assert.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayclass.Name, metav1.DeleteOptions{}))
+				assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayclass.Name, metav1.DeleteOptions{}))
 
 				t.Log("verifying that the Gateway gets unlinked from the route via status")
 				callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udproute.Name)
@@ -382,7 +382,7 @@ func TestUDPRoute(t *testing.T) {
 				gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 
 				t.Log("deleting the Gateway")
-				assert.NoError(t, gatewayClient.GatewayV1beta1().Gateways(namespace).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+				assert.NoError(t, gatewayClient.GatewayV1().Gateways(namespace).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 				t.Log("verifying that the Gateway gets unlinked from the route via status")
 				callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udproute.Name)

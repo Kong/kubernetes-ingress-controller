@@ -51,7 +51,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 		case <-tick:
 			tick = nil
 			ch <- func() bool {
-				gw, err := client.GatewayV1beta1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
+				gw, err := client.GatewayV1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
 				helpers.ExitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,

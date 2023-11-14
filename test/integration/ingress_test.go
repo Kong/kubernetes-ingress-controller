@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -1094,8 +1095,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(ingress)
 
-	featureGates := testenv.ControllerFeatureGates()
-	if !strings.Contains(featureGates, "RewriteURIsFeature=true") {
+	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
 		t.Log("try to access the ingress with rewrite uri disabled")
 		req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/foo/jpeg", nil)
 		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)

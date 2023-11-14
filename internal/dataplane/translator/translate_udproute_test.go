@@ -312,6 +312,158 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			},
 		},
 		{
+			name: "single UDPRoute with specific SectionName and Port",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("udp80").WithPort(80).UDP().Build(),
+							builder.NewListener("udp81").WithPort(81).UDP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
+			udpRoutes: []*gatewayapi.UDPRoute{
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "rule-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									Port:        lo.ToPtr(gatewayapi.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									builder.NewBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     kong.String("udproute.default.rule-1.0"),
+						Protocol: kong.String("udp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"udproute.default.rule-1.0": {
+					{
+						Route: kong.Route{
+							Name: kong.String("udproute.default.rule-1.0.0"),
+							Destinations: []*kong.CIDRPort{
+								{Port: kong.Int(80)},
+							},
+							Protocols: kong.StringSlice("udp"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single UDPRoute with specific SectionName and Port but they do not match",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("udp80").WithPort(80).UDP().Build(),
+							builder.NewListener("udp81").WithPort(81).UDP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
+			udpRoutes: []*gatewayapi.UDPRoute{
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "rule-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									Port:        lo.ToPtr(gatewayapi.PortNumber(8080)),
+								},
+							},
+						},
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									builder.NewBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     kong.String("udproute.default.rule-1.0"),
+						Protocol: kong.String("udp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"udproute.default.rule-1.0": {
+					{
+						Route: kong.Route{
+							Name:         kong.String("udproute.default.rule-1.0.0"),
+							Destinations: []*kong.CIDRPort{},
+							Protocols:    kong.StringSlice("udp"),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "multiple UDPRoutes with translation errors",
 			gateways: []*gatewayapi.Gateway{
 				{
@@ -771,6 +923,156 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Route: kong.Route{
 							Name:       kong.String("udproute.default.multiple-backends.0.0"),
 							Expression: kong.String("(net.dst.port == 80) || (net.dst.port == 81)"),
+							Protocols:  kong.StringSlice("udp"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single UDPRoute with specific SectionName and Port",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("udp80").WithPort(80).UDP().Build(),
+							builder.NewListener("udp81").WithPort(81).UDP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
+			udpRoutes: []*gatewayapi.UDPRoute{
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "rule-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									Port:        lo.ToPtr(gatewayapi.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									builder.NewBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     kong.String("udproute.default.rule-1.0"),
+						Protocol: kong.String("udp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"udproute.default.rule-1.0": {
+					{
+						Route: kong.Route{
+							Name:       kong.String("udproute.default.rule-1.0.0"),
+							Expression: kong.String("net.dst.port == 80"),
+							Protocols:  kong.StringSlice("udp"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single UDPRoute with specific SectionName and Port but they do not match",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("udp80").WithPort(80).UDP().Build(),
+							builder.NewListener("udp81").WithPort(81).UDP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
+			udpRoutes: []*gatewayapi.UDPRoute{
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "rule-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									Port:        lo.ToPtr(gatewayapi.PortNumber(8080)),
+								},
+							},
+						},
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									builder.NewBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     kong.String("udproute.default.rule-1.0"),
+						Protocol: kong.String("udp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"udproute.default.rule-1.0": {
+					{
+						Route: kong.Route{
+							Name:       kong.String("udproute.default.rule-1.0.0"),
+							Expression: kong.String(""),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},

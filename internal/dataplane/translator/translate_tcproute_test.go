@@ -337,6 +337,157 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "single TCPRoute with specific SectionName and Port",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
+							builder.NewListener("tcp443").WithPort(443).TCP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
+			tcpRoutes: []*gatewayapi.TCPRoute{
+				{
+					TypeMeta: tcpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tcprule-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.TCPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp80")),
+									Port:        lo.ToPtr(gatewayapi.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayapi.TCPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									builder.NewBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     kong.String("tcproute.default.tcprule-1.0"),
+						Protocol: kong.String("tcp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"tcproute.default.tcprule-1.0": {
+					{
+						Route: kong.Route{
+							Name:       kong.String("tcproute.default.tcprule-1.0.0"),
+							Expression: kong.String("net.dst.port == 80"),
+							Protocols:  kong.StringSlice("tcp"),
+						},
+						ExpressionRoutes: true,
+					},
+				},
+			},
+		},
+		{
+			name: "single TCPRoute with specific SectionName and Port but they do not match",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
+							builder.NewListener("tcp443").WithPort(443).TCP().Build(),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-1",
+						Namespace: "test-1",
+					},
+				},
+			},
+			tcpRoutes: []*gatewayapi.TCPRoute{
+				{
+					TypeMeta: tcpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "rule-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.TCPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayapi.ParentReference{
+								{
+									Name:        "gateway-1",
+									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp80")),
+									Port:        lo.ToPtr(gatewayapi.PortNumber(8080)),
+								},
+							},
+						},
+						Rules: []gatewayapi.TCPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									builder.NewBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     kong.String("tcproute.default.rule-1.0"),
+						Protocol: kong.String("tcp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"tcproute.default.rule-1.0": {
+					{
+						Route: kong.Route{
+							Name:       kong.String("tcproute.default.rule-1.0.0"),
+							Expression: kong.String(""),
+							Protocols:  kong.StringSlice("tcp"),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

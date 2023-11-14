@@ -592,8 +592,21 @@ func (t *Translator) getGatewayListeningPorts(
 		// If no sectionName is specified, all ports are used (according to the specification
 		// "When unspecified (empty string), this will reference the entire resource." - see
 		// https://github.com/kubernetes-sigs/gateway-api/blob/ebe9f31ef27819c3b29f698a3e9b91d279453c59/apis/v1/shared_types.go#L107).
+		//
+		// When the parent resource is a Gateway, this targets all listeners
+		// listening on the specified port that also support this kind of Route(and
+		// select this Route). It's not recommended to set `Port` unless the
+		// networking behaviors specified in a Route must apply to a specific port
+		// as opposed to a listener(s) whose port(s) may be changed. When both Port
+		// and SectionName are specified, the name and port of the selected listener
+		// must match both specified values. - see
+		// https://github.com/kubernetes-sigs/gateway-api/blob/e2f02aa0fc9dfa27be271397801f52f4e0a78acc/apis/v1/shared_types.go#L124C1-L130C38
 		gwPorts = append(gwPorts, lo.FilterMap(gw.Spec.Listeners, func(l gatewayapi.Listener, _ int) (gatewayapi.PortNumber, bool) {
-			if (pr.SectionName == nil || *pr.SectionName == l.Name) && protocol == l.Protocol {
+			protocolMatches := protocol == l.Protocol
+			noSectionName := pr.SectionName == nil
+			matchingSectionNameWithNoPort := pr.SectionName != nil && *pr.SectionName == l.Name && pr.Port == nil
+			matchingSectionNameWithPort := pr.SectionName != nil && *pr.SectionName == l.Name && pr.Port != nil && *pr.Port == l.Port
+			if protocolMatches && (noSectionName || matchingSectionNameWithNoPort || matchingSectionNameWithPort) {
 				return l.Port, true
 			}
 			return 0, false

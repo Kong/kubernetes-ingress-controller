@@ -88,6 +88,14 @@ Adding a new version? You'll need three changes:
   - `KongConsumer` now enforces that at least one of `username` or `custom_id` is provided.
     [#5137](https://github.com/Kong/kubernetes-ingress-controller/pull/5137)
 
+### Added
+
+- Added support for extended field `Spec.CommonRouteSpec.ParentRefs[*].Port` in TCPRoute & UDPRoute.
+  When both Port and SectionName are specified, the name and port of the selected listener
+  must match both specified values.
+  [#5147](https://github.com/Kong/kubernetes-ingress-controller/pull/5147)
+
+
 ## [3.0.0]
 
 > Release date: 2023-11-03

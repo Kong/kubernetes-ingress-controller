@@ -36,6 +36,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="(has(self.config) || has(self.configFrom)) ? ((!has(self.config) && has(self.configFrom)) || (has(self.config) && !has(self.configFrom))) : true", message="Using both config and configFrom fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.config)) || (!has(self.config) && !has(self.configPatches))", message="Can use 'configPatches' only when 'config' specified"
+
 // KongPlugin is the Schema for the kongplugins API.
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`

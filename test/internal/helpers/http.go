@@ -78,19 +78,20 @@ func MustParseURL(t *testing.T, urlStr string) *url.URL {
 
 // EventuallyGETPath makes a GET request to the Kong proxy multiple times until
 // either the request starts to respond with the given status code and contents
-// present in the response body, or until timeout occurrs according to
-// ingressWait time limits. This uses only the path of for the request and does
-// not pay attention to hostname or other routing rules. This uses a "require"
-// for the desired conditions so if this request doesn't eventually succeed the
-// calling test will fail and stop.
+// present in the response body, or until timeout occurs according to ingressWait
+// time limits. This uses a "require" for the desired conditions so if this request
+// doesn't eventually succeed the calling test will fail and stop.
+// Parameter proxyURL is the URL of Kong Gateway proxy (set nil when it's not different
+// from parameter host). Parameter host, path and headers are used to make the GET request.
+// Response is expected to have the given statusCode and contain the passed bodyContents.
 func EventuallyGETPath(
 	t *testing.T,
-	proxyURL *url.URL, // proxyURL is the URL of Kong gateway proxy.
+	proxyURL *url.URL,
 	host string,
-	path string, // host and path are host and path of the URL in the GET request.
-	statusCode int, // statusCode is the expected status code.
-	bodyContents string, // bodyContents is the expected content to be contained in response body.
-	headers map[string]string, // headers are headers in the request.
+	path string,
+	statusCode int,
+	bodyContents string,
+	headers map[string]string,
 	waitDuration time.Duration,
 	waitTick time.Duration,
 ) {

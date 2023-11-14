@@ -11,6 +11,8 @@ manifests:
     - config/default
 deploy:
   kubectl: {}
+  # Disable this if you'd like to play around in an environment where your deployment fails.
+  statusCheck: true
 profiles:
 - name: base
   manifests:
@@ -47,6 +49,21 @@ profiles:
     kustomize:
       paths:
       - config/variants/multi-gw/dev
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile
+        target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+- name: multi_gw_postgres
+  manifests:
+    kustomize:
+      paths:
+      - config/variants/multi-gw-postgres/dev
   build:
     artifacts:
     - image: kic-placeholder

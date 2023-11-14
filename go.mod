@@ -19,9 +19,9 @@ go 1.21
 // toolchain go1.21.0
 
 require (
-	cloud.google.com/go/container v1.27.1
+	cloud.google.com/go/container v1.28.0
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/avast/retry-go/v4 v4.5.0
+	github.com/avast/retry-go/v4 v4.5.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.3.0
@@ -29,7 +29,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.4.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/deck v1.29.0
+	github.com/kong/deck v1.29.2
 	github.com/kong/go-kong v0.48.0
 	github.com/kong/kubernetes-telemetry v0.1.2
 	github.com/kong/kubernetes-testing-framework v0.41.1
@@ -49,7 +49,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/testcontainers/testcontainers-go v0.26.0
 	go.uber.org/zap v1.26.0
-	google.golang.org/api v0.149.0
+	google.golang.org/api v0.150.0
 	k8s.io/api v0.28.3
 	k8s.io/apiextensions-apiserver v0.28.3
 	k8s.io/apimachinery v0.28.3
@@ -90,7 +90,7 @@ require (
 	go4.org/netipx v0.0.0-20230728184502-ec4c8b891b28 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231016165738-49dd2c1f3d0b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 )
@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.4 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.4
+	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect

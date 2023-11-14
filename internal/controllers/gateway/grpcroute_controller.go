@@ -375,7 +375,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(grpcroute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until grpcroute is configured.
-			debug(log, grpcroute, "GRPCRoute not configured,requeueing")
+			debug(log, grpcroute, "GRPCRoute not configured, requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 

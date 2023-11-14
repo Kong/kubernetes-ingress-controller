@@ -34,6 +34,8 @@ import (
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="(has(self.config) || has(self.configFrom)) ? ((!has(self.config) && has(self.configFrom)) || (has(self.config) && !has(self.configFrom))) : true", message="Using both config and configFrom fields is not allowed."
+// +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 
 // KongPlugin is the Schema for the kongplugins API.
 type KongPlugin struct {

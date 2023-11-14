@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
@@ -36,7 +37,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
@@ -115,12 +115,12 @@ func Run(
 
 	kongConfig := sendconfig.Config{
 		Version:            kongSemVersion,
-		InMemory:           dataplaneutil.IsDBLessMode(dbMode),
+		InMemory:           dbMode.IsDBLessMode(),
 		Concurrency:        c.Concurrency,
 		FilterTags:         c.FilterTags,
 		SkipCACertificates: c.SkipCACertificates,
 		EnableReverseSync:  c.EnableReverseSync,
-		ExpressionRoutes:   routerFlavor == "expressions",
+		ExpressionRoutes:   dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
@@ -160,7 +160,6 @@ func Run(
 	}
 
 	translatorFeatureFlags := translator.NewFeatureFlags(
-		logger,
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,

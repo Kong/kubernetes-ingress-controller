@@ -47,7 +47,7 @@ func TestHTTPRouteExample(t *testing.T) {
 	cleaner.AddManifest(string(b))
 
 	t.Logf("verifying that the Gateway receives listen addresses")
-	var gatewayAddr string
+	var gatewayIP string
 	require.Eventually(t, func() bool {
 		obj, err := gwc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
 		if err != nil {
@@ -56,7 +56,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 		for _, addr := range obj.Status.Addresses {
 			if addr.Type != nil && *addr.Type == gatewayapi.IPAddressType {
-				gatewayAddr = addr.Value
+				gatewayIP = addr.Value
 				return true
 			}
 		}
@@ -64,39 +64,16 @@ func TestHTTPRouteExample(t *testing.T) {
 		return false
 	}, gatewayUpdateWaitTime, waitTick)
 
+	require.NoError(t, err)
 	t.Logf("verifying that the HTTPRoute becomes routable")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
+	helpers.EventuallyGETPath(
+		t, nil, gatewayIP, "/httproute-testing", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick,
+	)
 
 	t.Logf("verifying that the backendRefs are being loadbalanced")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>Welcome to nginx!</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
+	helpers.EventuallyGETPath(
+		t, nil, gatewayIP, "/httproute-testing", http.StatusOK, "<title>Welcome to nginx!</title>", nil, ingressWait, waitTick,
+	)
 }
 
 func TestTCPRouteExample(t *testing.T) {

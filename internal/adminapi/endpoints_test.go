@@ -110,6 +110,34 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
+			name: "basic IPDNSStrategy IPv6",
+			endpoints: discoveryv1.EndpointSlice{
+				ObjectMeta:  endpointsSliceObjectMeta,
+				AddressType: discoveryv1.AddressTypeIPv6,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"fe80::cae2:65ff:fe7b:2852", "fe80::cae2:65ff:fe7b:2853"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+						TargetRef: testPodReference(namespaceName, "pod-1"),
+					},
+				},
+				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+			},
+			portNames: sets.New("admin"),
+			want: sets.New(
+				DiscoveredAdminAPI{
+					Address: "https://[fe80::cae2:65ff:fe7b:2852]:8444",
+					PodRef: k8stypes.NamespacedName{
+						Name: "pod-1", Namespace: namespaceName,
+					},
+				},
+			),
+			dnsStrategy: cfgtypes.IPDNSStrategy,
+		},
+		{
 			name: "basic",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,

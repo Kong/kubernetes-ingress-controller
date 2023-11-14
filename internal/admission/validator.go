@@ -105,11 +105,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		return true, "", nil
 	}
 
-	// a consumer without a username is not valid
-	if consumer.Username == "" {
-		return false, ErrTextConsumerUsernameEmpty, nil
-	}
-
 	errText, err := validator.ensureConsumerDoesNotExistInGateway(ctx, consumer.Username)
 	if err != nil || errText != "" {
 		return false, errText, err
@@ -286,9 +281,6 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongPlugin,
 ) (bool, string, error) {
-	if k8sPlugin.PluginName == "" {
-		return false, ErrTextPluginNameEmpty, nil
-	}
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error
@@ -297,9 +289,6 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		return false, ErrTextPluginConfigInvalid, err
 	}
 	if k8sPlugin.ConfigFrom != nil {
-		if len(plugin.Config) > 0 {
-			return false, ErrTextPluginUsesBothConfigTypes, nil
-		}
 		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err

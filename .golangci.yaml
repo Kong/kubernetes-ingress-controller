@@ -82,12 +82,14 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
-    - pkg: github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/(v[\w\d]+)
+    - pkg: github.com/kong/kubernetes-ingress-controller/v[\w\d]+/pkg/apis/configuration/(v[\w\d]+)
       alias: kong${1}
+    - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
+      alias: dpconf
   forbidigo:
     exclude-godoc-examples: false
     forbid:
-      - 'gatewayv1alpha2|gatewayv1beta1(# use internal/gatewayapi aliases instead)?'
+      - 'gatewayv1alpha2|gatewayv1beta1|gatewayv1(# use internal/gatewayapi aliases instead)?'
       - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
       - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
   gomodguard:
@@ -158,16 +160,16 @@ issues:
       - gosec
     text: "Potential HTTP request made with variable url"
     path: test\.go
-  # Allow using SchemeGroupVersion, GroupVersion, GroupName, AddToScheme, and Install from gatewayv1alpha2 and
-  # gatewayv1beta1 as their values are different between versions, and we can't alias them in internal/gatewayapi/aliases.go.
+  # Allow using SchemeGroupVersion, GroupVersion, GroupName, AddToScheme, and Install from gatewayv1alpha2,
+  # gatewayv1beta1 and gatewayv1 as their values are different between versions, and we can't alias them in internal/gatewayapi/aliases.go.
   - linters:
       - forbidigo
-    text: "use of `(gatewayv1alpha2|gatewayv1beta1)\\.(SchemeGroupVersion|GroupVersion|GroupName|AddToScheme|Install)"
-  # Allow gatewayv1alpha2 and gatewayv1beta1 types references in internal/gatewayapi/aliases.go as that
+    text: "use of `(gatewayv1alpha2|gatewayv1beta1|gatewayv1)\\.(SchemeGroupVersion|GroupVersion|GroupName|AddToScheme|Install)"
+  # Allow gatewayv1alpha2, gatewayv1beta1 and gatewayv1 types references in internal/gatewayapi/aliases.go as that
   # should be the only place where we use them.
   - linters:
       - forbidigo
-    text: "use of `(gatewayv1alpha2|gatewayv1beta1)"
+    text: "use of `(gatewayv1alpha2|gatewayv1beta1|gatewayv1)"
     path: (internal/gatewayapi/aliases.go|pkg/apis/.*/.*\.go)
 
   - linters:

@@ -21,7 +21,7 @@ e2e:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.19.3'
+      istio: '1.19.4'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
       kind: 'v1.27.3'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
@@ -42,10 +42,10 @@ integration:
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.28.0'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.4.2'
+  kong-oss: '3.5.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.4.1.1'
+  kong-ee: '3.5.0.0'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.4.2'
+  kong-oss: '3.5.0'

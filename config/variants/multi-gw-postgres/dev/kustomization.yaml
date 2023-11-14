@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kong
+
+resources:
+- ../base/
+
+patches:
+- patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app: ingress-kong
+      name: ingress-kong
+      namespace: kong
+    spec:
+      selector:
+        matchLabels:
+          app: ingress-kong
+      template:
+        metadata:
+          labels:
+            app: ingress-kong
+        spec:
+          containers:
+          - name: ingress-controller
+            args:
+              - --feature-gates=GatewayAlpha=true
+              - --anonymous-reports=false
+            env:
+            - name: CONTROLLER_LOG_LEVEL
+              value: debug
+            - name: CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES
+              value: admin-tls
+            image: kic-placeholder:placeholder

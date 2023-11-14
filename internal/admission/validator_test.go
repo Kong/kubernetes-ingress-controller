@@ -127,16 +127,6 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:      "plugin lacks plugin name",
-			PluginSvc: &fakePluginSvc{},
-			args: args{
-				plugin: kongv1.KongPlugin{},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextPluginNameEmpty,
-			wantErr:     false,
-		},
-		{
 			name:      "plugin has invalid configuration",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
@@ -150,27 +140,6 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigInvalid,
 			wantErr:     true,
-		},
-		{
-			name:      "plugin has both Config and ConfigFrom",
-			PluginSvc: &fakePluginSvc{},
-			args: args{
-				plugin: kongv1.KongPlugin{
-					PluginName: "key-auth",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{"key_names": "whatever"}`),
-					},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
-							Key:    "key-auth-config",
-							Secret: "conf-secret",
-						},
-					},
-				},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextPluginUsesBothConfigTypes,
-			wantErr:     false,
 		},
 		{
 			name:      "plugin ConfigFrom references non-existent Secret",
@@ -259,16 +228,6 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:      "plugin lacks plugin name",
-			PluginSvc: &fakePluginSvc{},
-			args: args{
-				plugin: kongv1.KongClusterPlugin{},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextPluginNameEmpty,
-			wantErr:     false,
-		},
-		{
 			name:      "plugin has invalid configuration",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
@@ -282,28 +241,6 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigInvalid,
 			wantErr:     true,
-		},
-		{
-			name:      "plugin has both Config and ConfigFrom",
-			PluginSvc: &fakePluginSvc{},
-			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					PluginName: "key-auth",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{"key_names": "whatever"}`),
-					},
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
-							Key:       "key-auth-config",
-							Secret:    "conf-secret",
-							Namespace: "default",
-						},
-					},
-				},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextPluginUsesBothConfigTypes,
-			wantErr:     false,
 		},
 		{
 			name:      "plugin ConfigFrom references non-existent Secret",

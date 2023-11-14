@@ -3,7 +3,6 @@ package translator
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
@@ -40,10 +39,8 @@ func (t *Translator) ingressRulesFromGRPCRoutes() ingressRules {
 		}
 	}
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			t.logger.Error(err, "Could not generate route from GRPCRoute")
-		}
+	for _, err := range errs {
+		t.logger.Error(err, "Could not generate route from GRPCRoute")
 	}
 
 	return result
@@ -54,26 +51,18 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 	if err := validateGRPCRoute(grpcroute); err != nil {
 		return err
 	}
-	// first we grab the spec and gather some metdata about the object
+	// first we grab the spec and gather some metadata about the object
 	spec := grpcroute.Spec
 
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
-		// determine the routes needed to route traffic to services for this rule
-		var routes []kongstate.Route
-		if t.featureFlags.ExpressionRoutes {
-			routes = subtranslator.GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
-		} else {
-			routes = subtranslator.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
-		}
-
 		// create a service and attach the routes to it
 		service, err := generateKongServiceFromBackendRefWithRuleNumber(t.logger, t.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...)
 		if err != nil {
 			return err
 		}
-		service.Routes = append(service.Routes, routes...)
+		service.Routes = append(service.Routes, subtranslator.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber)...)
 
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service

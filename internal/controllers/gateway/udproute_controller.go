@@ -376,7 +376,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(udproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until udproute is configured.
-			debug(log, udproute, "UDPRoute not configured,requeueing")
+			debug(log, udproute, "UDPRoute not configured, requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 

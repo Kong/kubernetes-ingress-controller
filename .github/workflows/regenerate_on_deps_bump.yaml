@@ -26,11 +26,11 @@ jobs:
 
       - name: commit and push (if changes detected)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@users.noreply.github.com"
-          git add ./deploy/single
+          git add ./test/e2e/manifests
           git diff-index --quiet HEAD || \
           git commit -m "chore: regenerate manifests" && \
           git push origin ${{ github.event.pull_request.head.ref }}

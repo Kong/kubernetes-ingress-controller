@@ -456,7 +456,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(httproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until httproute is configured.
-			debug(log, httproute, "HTTPRoute not configured,requeueing")
+			debug(log, httproute, "HTTPRoute not configured, requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 

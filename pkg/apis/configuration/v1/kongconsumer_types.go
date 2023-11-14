@@ -30,6 +30,7 @@ import (
 // +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.username`,description="Username of a Kong Consumer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="has(self.username) || has(self.custom_id)", message="Need to provide either username or custom_id"
 
 // KongConsumer is the Schema for the kongconsumers API.
 type KongConsumer struct {

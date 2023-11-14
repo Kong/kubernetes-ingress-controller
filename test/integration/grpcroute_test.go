@@ -30,7 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
-func grpcbinClient(ctx context.Context, url, hostname string) (pb.GRPCBinClient, func() error, error) {
+func grpcBinClient(ctx context.Context, url, hostname string) (pb.GRPCBinClient, func() error, error) {
 	conn, err := grpc.DialContext(ctx, url,
 		grpc.WithTransportCredentials(credentials.NewTLS(
 			&tls.Config{
@@ -48,7 +48,7 @@ func grpcbinClient(ctx context.Context, url, hostname string) (pb.GRPCBinClient,
 }
 
 func grpcEchoResponds(ctx context.Context, url, hostname, input string) error {
-	client, closeConn, err := grpcbinClient(ctx, url, hostname)
+	client, closeConn, err := grpcBinClient(ctx, url, hostname)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		return err == nil
 	}, ingressWait, waitTick)
 
-	client, closeGrpcConn, err := grpcbinClient(ctx, grpcAddr, testHostname)
+	client, closeGrpcConn, err := grpcBinClient(ctx, grpcAddr, testHostname)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := closeGrpcConn()

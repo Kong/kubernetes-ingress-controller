@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -34,13 +35,7 @@ import (
 // Translator - Public Constants and Package Variables
 // -----------------------------------------------------------------------------
 
-const (
-	KindGateway = gatewayapi.Kind("Gateway")
-
-	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
-	// to enable expression based router of kong.
-	kongRouterFlavorExpressions = "expressions"
-)
+const KindGateway = gatewayapi.Kind("Gateway")
 
 // -----------------------------------------------------------------------------
 // Translator - Public Types
@@ -65,29 +60,16 @@ type FeatureFlags struct {
 }
 
 func NewFeatureFlags(
-	logger logr.Logger,
 	featureGates featuregates.FeatureGates,
-	routerFlavor string,
+	routerFlavor dpconf.RouterFlavor,
 	updateStatusFlag bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		ExpressionRoutes:                  shouldEnableTranslatorExpressionRoutes(logger, routerFlavor),
+		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 	}
-}
-
-func shouldEnableTranslatorExpressionRoutes(
-	logger logr.Logger,
-	routerFlavor string,
-) bool {
-	if routerFlavor != kongRouterFlavorExpressions {
-		logger.V(util.InfoLevel).Info("Gateway is running with non-expression router flavor", "flavor", routerFlavor)
-		return false
-	}
-	logger.V(util.InfoLevel).Info("The expression routes mode enabled")
-	return true
 }
 
 // LicenseGetter is an interface for getting the Kong Enterprise license.

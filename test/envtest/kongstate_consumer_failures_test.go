@@ -58,6 +58,9 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 			},
 		},
 	}
+	for _, secret := range secrets {
+		require.NoError(t, client.Create(ctx, secret))
+	}
 
 	kongConsumers := []*kongv1.KongConsumer{
 		{
@@ -82,9 +85,16 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 				"empty-cred",
 			},
 		},
+	}
+	for _, kongConsumer := range kongConsumers {
+		require.NoError(t, client.Create(ctx, kongConsumer))
+	}
+
+	// These KongConsumers should fail admission via the CRD Validation Expressions.
+	brokenKongConsumers := []*kongv1.KongConsumer{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        "consumer-no-username",
+				Name:        "consumer-no-username-and-no-custom-id",
 				Namespace:   ns.Name,
 				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
@@ -93,18 +103,13 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 			},
 		},
 	}
-
-	for _, secret := range secrets {
-		require.NoError(t, client.Create(ctx, secret))
-	}
-	for _, kongConsumer := range kongConsumers {
-		require.NoError(t, client.Create(ctx, kongConsumer))
+	for _, brokenKongConsumer := range brokenKongConsumers {
+		require.Error(t, client.Create(ctx, brokenKongConsumer))
 	}
 
 	// KongConsumer name -> event message
 	kongConsumerTranslationFailureMessages := map[string]string{
-		"consumer-empty-cred":  `credential "empty-cred" failure: failed to provision credential: key-auth is invalid: no key`,
-		"consumer-no-username": `no username or custom_id specified`,
+		"consumer-empty-cred": `credential "empty-cred" failure: failed to provision credential: key-auth is invalid: no key`,
 	}
 
 	RunManager(ctx, t, cfg, AdminAPIOptFns(), WithProxySyncSeconds(0.5))

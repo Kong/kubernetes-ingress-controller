@@ -1,13 +1,3 @@
-apiVersion: configuration.konghq.com/v1
-kind: KongConsumer
-metadata:
-  name: consumer1
-  annotations:
-      kubernetes.io/ingress.class: kong
-username: consumer1
-credentials:
-- consumer1-auth
----
 apiVersion: v1
 kind: Secret
 metadata:
@@ -17,6 +7,16 @@ metadata:
 type: Opaque
 stringData:
   key: password
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer1
+  annotations:
+      kubernetes.io/ingress.class: kong
+# username: consumer1
+credentials:
+- consumer1-auth
 ---
 apiVersion: apps/v1
 kind: Deployment

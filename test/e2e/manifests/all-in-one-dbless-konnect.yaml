@@ -303,6 +303,13 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - message: Using both config and configFrom fields is not allowed.
+          rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
+            && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
+            : true'
+        - message: The plugin field is immutable
+          rule: self.plugin == oldSelf.plugin
     served: true
     storage: true
     subresources:
@@ -596,6 +603,9 @@ spec:
             description: Username is a Kong cluster-unique username of the consumer.
             type: string
         type: object
+        x-kubernetes-validations:
+        - message: Need to provide either username or custom_id
+          rule: has(self.username) || has(self.custom_id)
     served: true
     storage: true
     subresources:
@@ -1206,6 +1216,13 @@ spec:
         required:
         - plugin
         type: object
+        x-kubernetes-validations:
+        - message: Using both config and configFrom fields is not allowed.
+          rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
+            && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
+            : true'
+        - message: The plugin field is immutable
+          rule: self.plugin == oldSelf.plugin
     served: true
     storage: true
     subresources:
@@ -2604,7 +2621,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong:3.4
+        image: kong:3.5
         lifecycle:
           preStop:
             exec:

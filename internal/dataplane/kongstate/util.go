@@ -10,7 +10,6 @@ import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -236,6 +235,7 @@ func applyJSONPatchFromNamespacedSecretRef(s SecretGetter, raw []byte, path stri
 	return raw, nil
 }
 
+// RawConfigurationWithPatchesToConfiguration converts config and add patches from configPatches of KongPlugin.
 func RawConfigurationWithPatchesToConfiguration(
 	s SecretGetter, namespace string,
 	rawConfig apiextensionsv1.JSON,
@@ -243,7 +243,7 @@ func RawConfigurationWithPatchesToConfiguration(
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
 	// apply patches
-	for i, patch := range patches {
+	for _, patch := range patches {
 		var err error
 		raw, err = applyJSONPatchFromNamespacedSecretRef(
 			s,
@@ -256,12 +256,11 @@ func RawConfigurationWithPatchesToConfiguration(
 		if err != nil {
 			return kong.Configuration{}, err
 		}
-
-		fmt.Printf("Patched after patch %d on path %s: %q\n", i, patch.Path, string(raw))
 	}
 	return rawConfigToConfiguration(raw)
 }
 
+// RawConfigurationWithNamespacedPatchesToConfiguration converts config and add patches from configPatches of KongClusterPlugin.
 func RawConfigurationWithNamespacedPatchesToConfiguration(
 	s SecretGetter,
 	rawConfig apiextensionsv1.JSON,
@@ -269,7 +268,7 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
 	// apply patches
-	for i, patch := range patches {
+	for _, patch := range patches {
 		var err error
 		raw, err = applyJSONPatchFromNamespacedSecretRef(
 			s,
@@ -282,12 +281,12 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 		if err != nil {
 			return kong.Configuration{}, err
 		}
-
-		fmt.Printf("Patched after patch %d on path %s: %q\n", i, patch.Path, string(raw))
 	}
 	return rawConfigToConfiguration(raw)
 }
 
+// rawConfigToConfiguration decodes raw JSON to the format of Kong configuration.
+// it is run after all patches applied to the initial config.
 func rawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
 	if len(raw) == 0 {
 		return kong.Configuration{}, nil
@@ -333,16 +332,7 @@ func SecretToConfiguration(
 			fmt.Errorf("no key '%v' in secret '%v/%v'",
 				reference.Key, namespace, reference.Secret)
 	}
-	var config kong.Configuration
-	if err := json.Unmarshal(secretVal, &config); err != nil {
-		if err := yaml.Unmarshal(secretVal, &config); err != nil {
-			return kong.Configuration{},
-				fmt.Errorf("key '%v' in secret '%v/%v' contains neither "+
-					"valid JSON nor valid YAML)",
-					reference.Key, namespace, reference.Secret)
-		}
-	}
-	return config, nil
+	return rawConfigToConfiguration(secretVal)
 }
 
 // prettyPrintServiceList makes a clean printable list of Kubernetes

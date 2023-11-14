@@ -27,7 +27,6 @@ import (
 // +kubebuilder:resource:categories=kong-ingress-controller
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 

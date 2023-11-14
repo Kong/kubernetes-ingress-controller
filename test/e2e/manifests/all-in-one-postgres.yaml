@@ -142,6 +142,8 @@ spec:
                 - name
                 - namespace
                 type: object
+            required:
+            - secretKeyRef
             type: object
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.
@@ -360,7 +362,7 @@ spec:
           metadata:
             type: object
           status:
-            description: Status represents the current status of the KongConsumer
+            description: Status represents the current status of the KongConsumerGroup
               resource.
             properties:
               conditions:
@@ -1056,6 +1058,8 @@ spec:
                 - key
                 - name
                 type: object
+            required:
+            - secretKeyRef
             type: object
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.

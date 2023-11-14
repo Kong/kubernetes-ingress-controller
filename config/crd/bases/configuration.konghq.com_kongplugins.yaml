@@ -80,6 +80,8 @@ spec:
                 - key
                 - name
                 type: object
+            required:
+            - secretKeyRef
             type: object
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.

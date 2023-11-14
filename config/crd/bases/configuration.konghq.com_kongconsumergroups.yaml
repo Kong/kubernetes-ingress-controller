@@ -44,7 +44,7 @@ spec:
           metadata:
             type: object
           status:
-            description: Status represents the current status of the KongConsumer
+            description: Status represents the current status of the KongConsumerGroup
               resource.
             properties:
               conditions:

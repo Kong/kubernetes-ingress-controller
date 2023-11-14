@@ -346,11 +346,6 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 func (validator KongHTTPValidator) ValidateGateway(
 	ctx context.Context, gateway gatewayapi.Gateway,
 ) (bool, string, error) {
-	// check if the gateway declares a gateway class
-	if gateway.Spec.GatewayClassName == "" {
-		return true, "", nil
-	}
-
 	// validate the gatewayclass reference
 	gwc := gatewayapi.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {

@@ -13,7 +13,7 @@ import (
 
 	gojson "github.com/goccy/go-json"
 	"github.com/google/uuid"
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"

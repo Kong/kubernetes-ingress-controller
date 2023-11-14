@@ -3,7 +3,7 @@ package deckerrors
 import (
 	"errors"
 
-	deckutils "github.com/kong/deck/utils"
+	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 )
 

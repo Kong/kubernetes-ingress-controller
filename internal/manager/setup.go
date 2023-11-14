@@ -10,7 +10,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/kong/deck/cprint"
+	"github.com/kong/go-database-reconciler/pkg/cprint"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"

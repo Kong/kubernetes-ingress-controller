@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/file"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )

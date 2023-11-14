@@ -53,7 +53,7 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 // DeployGateway creates a default gateway, accepts a variadic set of options,
 // and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
 func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gatewayapi.Gateway)) (*gatewayapi.Gateway, error) {
-	// create a default gateway with a listener set to port 80 for HTTP traffic
+	// Create a default gateway with a listener set to port 80 for HTTP traffic.
 	gw := &gatewayapi.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: DefaultGatewayName,
@@ -70,20 +70,19 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 		},
 	}
 
-	// call all the modifiers passed as args
+	// Call all the modifiers passed as args.
 	for _, opt := range opts {
 		opt(gw)
 	}
 
 	result, err := client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return result, err
-		}
-		result, err = client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+	if !apierrors.IsAlreadyExists(err) {
+		return result, err
 	}
-	return result, err
+	if err := client.GatewayV1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{}); err != nil {
+		return nil, err
+	}
+	return client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
 }
 
 // GetGatewayIsLinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
@@ -156,9 +155,9 @@ func gatewayLinkStatusMatches(
 				check(verifyLinked, string(gateway.GetControllerName()))
 		}
 	case gatewayapi.HTTPSProtocolType:
-		t.Fatalf("protocol %s not supported", string(protocolType))
+		t.Fatalf("protocol %s not supported", protocolType)
 	default:
-		t.Fatalf("protocol %s not supported", string(protocolType))
+		t.Fatalf("protocol %s not supported", protocolType)
 	}
 
 	t.Fatal("this should not happen")

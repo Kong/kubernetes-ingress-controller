@@ -83,7 +83,7 @@ func DeployControllerManagerForCluster(
 		}
 	}
 	if kongAddon == nil {
-		return nil, fmt.Errorf("no kong addon found loaded in cluster %s", cluster.Name())
+		return nil, fmt.Errorf("no Kong addon found loaded in cluster %s", cluster.Name())
 	}
 
 	// determine the proxy admin URL for the Kong Gateway on this cluster:

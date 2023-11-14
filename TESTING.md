@@ -174,7 +174,7 @@ The typical approach is to run them in a dedicated, disposable Kubernetes namesp
 There are a couple of key differences between isolated and regular integration tests:
 
 - In isolated tests each test's [`Feature`][pkggodev-e2e-framework-feature] gets
-  its own kong deployment through the means of [ktf][ktf]'s kong addon.
+  its own Kong deployment through the means of [ktf][ktf]'s Kong addon.
 - In isolated tests each test's [`Feature`][pkggodev-e2e-framework-feature] gets
   its own controller manager instance started which is configured against the above
   mentioned kong instance.

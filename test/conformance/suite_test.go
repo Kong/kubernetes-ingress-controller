@@ -121,7 +121,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
 
-	t.Log("preparing the environment to run the controller manager")
+	t.Log("Preparing the environment to run the controller manager")
 	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 
 	t.Log("starting the controller manager")

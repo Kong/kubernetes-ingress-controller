@@ -91,6 +91,12 @@ Adding a new version? You'll need three changes:
   `configFrom` is not present.
   [#5158](https://github.com/Kong/kubernetes-ingress-controller/pull/5158)
   [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
+- `KongServiceFacade` CRD allowing creating Kong Services directly from Kubernetes using
+  Kubernetes Services as their backends. `KongServiceFacade` can be used as a backend in
+  Kubernetes Ingress. This API is highly experimental and is not distributed by default.
+  It can be installed with `kubectl kustomize "github.com/Kong/kubernetes-ingress-controller/config/crd/incubator/?ref=v3.1.0"`
+  When installed, it has to be enabled with `ServiceFacade` feature gate.
+  [#5220](https://github.com/Kong/kubernetes-ingress-controller/pull/5220)
 
 ### Fixed
 
@@ -126,7 +132,6 @@ Adding a new version? You'll need three changes:
   [#5218](https://github.com/Kong/kubernetes-ingress-controller/pull/5218)
 - Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
   [#5219](https://github.com/Kong/kubernetes-ingress-controller/pull/5219)
-
 
 ## [3.0.0]
 

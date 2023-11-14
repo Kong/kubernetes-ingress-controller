@@ -10,6 +10,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -332,7 +333,16 @@ func SecretToConfiguration(
 			fmt.Errorf("no key '%v' in secret '%v/%v'",
 				reference.Key, namespace, reference.Secret)
 	}
-	return rawConfigToConfiguration(secretVal)
+	var config kong.Configuration
+	if err := json.Unmarshal(secretVal, &config); err != nil {
+		if err := yaml.Unmarshal(secretVal, &config); err != nil {
+			return kong.Configuration{},
+				fmt.Errorf("key '%v' in secret '%v/%v' contains neither "+
+					"valid JSON nor valid YAML)",
+					reference.Key, namespace, reference.Secret)
+		}
+	}
+	return config, nil
 }
 
 // prettyPrintServiceList makes a clean printable list of Kubernetes

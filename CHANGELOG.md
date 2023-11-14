@@ -79,6 +79,16 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Added `configPatches` field to `KongPlugin` and `KongClusterPlugin` to 
+  support using values in `Secrets` in fields of configuration. An item in
+  `configPatches` defines a JSON patch to add a field on the path in its `path`
+  and value from the value in the secret given in `valueFrom`. The JSON patches
+  are applied on the raw JSON given in `config`. Could only be specified when
+  `config` is present.
+  [#5158](https://github.com/Kong/kubernetes-ingress-controller/pull/5158)
+
 ### Changed
 
 - `SecretKeyRef` of `ConfigFrom` field in `KongPlugin` and `KongClusterPlugin`

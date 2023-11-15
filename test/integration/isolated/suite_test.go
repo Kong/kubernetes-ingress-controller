@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 	var (
 		// Specifying a run ID so that multiple runs wouldn't collide.
 		// It is used when creating tests namespaces and their labels.
-		runID = RandomName("", 3)
+		runID = envconf.RandomName("", 3)
 		// The env is shared and built only once.
 		env environments.Environment
 	)
@@ -267,7 +267,7 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 		cert, key := certificate.GetKongSystemSelfSignedCerts()
 		metricsPort := testhelpers.GetFreePort(t)
 		healthProbePort := testhelpers.GetFreePort(t)
-		ingressClass := RandomName("ingressclass", 16)
+		ingressClass := envconf.RandomName("ingressclass", 16)
 		standardControllerArgs := []string{
 			fmt.Sprintf("--health-probe-bind-address=localhost:%d", healthProbePort),
 			fmt.Sprintf("--metrics-bind-address=localhost:%d", metricsPort),

@@ -215,7 +215,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.28.3
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
-	sigs.k8s.io/e2e-framework v0.3.0
+	sigs.k8s.io/e2e-framework v0.3.1-0.20231113122213-262cac32d35e
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.20.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.3.0 // indirect

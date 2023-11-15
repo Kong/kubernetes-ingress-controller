@@ -19,7 +19,7 @@ import (
 func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, runID string) (context.Context, error) {
 	t.Helper()
 
-	ns := RandomName("ns-"+runID, 10)
+	ns := envconf.RandomName("ns-"+runID, 10)
 	ctx = context.WithValue(ctx, getNamespaceKey(t), ns)
 
 	t.Logf("Creating NS %v for test %v", ns, t.Name())

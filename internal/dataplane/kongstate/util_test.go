@@ -306,7 +306,6 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 }
 
 func TestKongPluginFromK8SPlugin(t *testing.T) {
-	assert := assert.New(t)
 	store, _ := store.NewFakeStore(store.FakeObjects{
 		Secrets: []*corev1.Secret{
 			{
@@ -471,6 +470,38 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			},
 		},
 		{
+			name: "empty config and configPatch for particular paths",
+			args: args{
+				plugin: kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+					},
+					Protocols:  []kongv1.KongProtocol{"http"},
+					PluginName: "correlation-id",
+					Config:     apiextensionsv1.JSON{},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/header_name",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Key:    "correlation-id-generator",
+									Secret: "conf-secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: kong.Plugin{
+				Name: kong.String("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "uuid",
+				},
+				Protocols: kong.StringSlice("http"),
+			},
+		},
+		{
 			name: "empty config and configPatch for whole object",
 			args: args{
 				plugin: kongv1.KongPlugin{
@@ -480,9 +511,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 					},
 					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{}`),
-					},
+					Config:     apiextensionsv1.JSON{},
 					ConfigPatches: []kongv1.ConfigPatch{
 						{
 							Path: "",
@@ -598,7 +627,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			}
 			// don't care about tags in this test
 			got.Tags = nil
-			assert.Equal(tt.want, got.Plugin)
+			assert.Equal(t, tt.want, got.Plugin)
 			assert.NotEmpty(t, got.K8sParent)
 		})
 	}

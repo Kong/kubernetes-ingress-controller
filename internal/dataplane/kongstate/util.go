@@ -211,14 +211,7 @@ func kongPluginFromK8SPlugin(
 	}, nil
 }
 
-var rawPatchPattern = `[{"op":"%s","path":"%s","value":%s}]`
-
-type JSONPatchOp string
-
-var (
-	JSONPatchOpAdd     JSONPatchOp = "add"
-	JSONPatchOpReplace JSONPatchOp = "replace"
-)
+var rawPatchPattern = `[{"op":"add","path":"%s","value":%s}]`
 
 func applyJSONPatchFromNamespacedSecretRef(s SecretGetter, raw []byte, path string, namespace string, secretName string, key string) ([]byte, error) {
 	secret, err := s.GetSecret(namespace, secretName)
@@ -231,13 +224,7 @@ func applyJSONPatchFromNamespacedSecretRef(s SecretGetter, raw []byte, path stri
 			fmt.Errorf("no key '%v' in secret '%v/%v'",
 				key, namespace, secretName)
 	}
-	// REVIEW: with the json-patch package, we cannot run `add` on an empty raw JSON (encoded to `null`).
-	// If we want to fetch whole config from secret (same as in `configFrom`), we can only use empty path and "replace" operation to construct the patch.
-	op := JSONPatchOpAdd
-	if path == "" {
-		op = JSONPatchOpReplace
-	}
-	rawPatch := fmt.Sprintf(rawPatchPattern, op, path, string(secretVal))
+	rawPatch := fmt.Sprintf(rawPatchPattern, path, string(secretVal))
 	p, err := jsonpatch.DecodePatch([]byte(rawPatch))
 	if err != nil {
 		return nil, err
@@ -259,8 +246,11 @@ func RawConfigurationWithPatchesToConfiguration(
 	patches []kongv1.ConfigPatch,
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
-	// apply patches
-	// REVIEW: JSON patch can support multiple operations. Should we first fetch the values then create a single JSON patch?
+	if raw == nil {
+		// In case the config is empty, we need to initialize it to an empty
+		// JSON object so that the patches can be applied.
+		raw = []byte("{}")
+	}
 	for _, patch := range patches {
 		var err error
 		raw, err = applyJSONPatchFromNamespacedSecretRef(

@@ -222,16 +222,18 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		require.Len(t, rules, 1)
 
 		for _, svc := range rules {
-			require.Equal(t, []kong.Plugin{
-				{
-					Name: kong.String("request-transformer"),
-					Config: kong.Configuration{
-						"replace": map[string]string{
-							"uri": "/rewrite/$(uri_captures[1])/xx",
+			for _, route := range svc.Routes {
+				require.Equal(t, []kong.Plugin{
+					{
+						Name: kong.String("request-transformer"),
+						Config: kong.Configuration{
+							"replace": map[string]string{
+								"uri": "/rewrite/$(uri_captures[1])/xx",
+							},
 						},
 					},
-				},
-			}, svc.Plugins)
+				}, route.Plugins)
+			}
 		}
 
 		errs := p.failuresCollector.PopResourceFailures()

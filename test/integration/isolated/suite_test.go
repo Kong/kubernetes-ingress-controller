@@ -160,7 +160,7 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 
 		runID := GetRunIDFromCtx(ctx)
 
-		ctx, err := createNSForTest(ctx, cfg, t, runID)
+		ctx, err := CreateNSForTest(ctx, cfg, t, runID)
 		if !assert.NoError(t, err) {
 			return ctx
 		}

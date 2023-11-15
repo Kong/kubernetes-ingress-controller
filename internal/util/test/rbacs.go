@@ -9,9 +9,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - RBACs
-// -----------------------------------------------------------------------------
 
 func DeployRBACsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	fmt.Printf("INFO: deploying Kong RBACs to cluster\n")

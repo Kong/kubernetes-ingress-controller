@@ -60,34 +60,14 @@ func setInCtx[KeyT comparable, R any](ctx context.Context, key KeyT, r R) contex
 	return context.WithValue(ctx, key, r)
 }
 
-// -----
-// RunID
-// -----
-
-type _runID struct{}
-
-func SetRunIDInCtx(ctx context.Context, runID string) context.Context {
-	return setInCtx(ctx, _runID{}, runID)
-}
-
-func GetRunIDFromCtx(ctx context.Context) string {
-	r := ctx.Value(_runID{})
-	if r == nil {
-		return ""
-	}
-	return r.(string)
-}
-
-// -----
-// Generic
-// -----
-
 type _cluster struct{}
 
+// SetClusterInCtx sets the cluster in the context.
 func SetClusterInCtx(ctx context.Context, c clusters.Cluster) context.Context {
 	return setInCtx(ctx, _cluster{}, c)
 }
 
+// GetClusterFromCtx gets the cluster from the context.
 func GetClusterFromCtx(ctx context.Context) clusters.Cluster {
 	r := ctx.Value(_cluster{})
 	if r == nil {
@@ -96,16 +76,30 @@ func GetClusterFromCtx(ctx context.Context) clusters.Cluster {
 	return r.(clusters.Cluster)
 }
 
-// -----
-// UDPURL
-// -----
+type _runID struct{}
+
+// SetRunIDInCtx sets the runID in the context.
+func SetRunIDInCtx(ctx context.Context, runID string) context.Context {
+	return setInCtx(ctx, _runID{}, runID)
+}
+
+// GetRunIDFromCtx gets the runID from the context.
+func GetRunIDFromCtx(ctx context.Context) string {
+	r := ctx.Value(_runID{})
+	if r == nil {
+		return ""
+	}
+	return r.(string)
+}
 
 type _udpURL struct{}
 
+// SetUDPURLInCtx sets the UDP URL in the context.
 func SetUDPURLInCtx(ctx context.Context, url *url.URL) context.Context {
 	return setInCtx(ctx, _udpURL{}, url)
 }
 
+// GetUDPURLFromCtx gets the UDP URL from the context.
 func GetUDPURLFromCtx(ctx context.Context) *url.URL {
 	u := ctx.Value(_udpURL{})
 	if u == nil {
@@ -114,16 +108,14 @@ func GetUDPURLFromCtx(ctx context.Context) *url.URL {
 	return u.(*url.URL)
 }
 
-// -----
-// AdminURL
-// -----
-
 type _adminURL struct{}
 
+// SetAdminURLInCtx sets the admin URL in the context.
 func SetAdminURLInCtx(ctx context.Context, url *url.URL) context.Context {
 	return setInCtx(ctx, _adminURL{}, url)
 }
 
+// GetAdminURLFromCtx gets the admin URL from the context.
 func GetAdminURLFromCtx(ctx context.Context) *url.URL {
 	u := ctx.Value(_adminURL{})
 	if u == nil {

@@ -53,6 +53,7 @@ func TestMain(m *testing.M) {
 
 	var (
 		// Specifying a run ID so that multiple runs wouldn't collide.
+		// It is used when creating tests namespaces and their labels.
 		runID = RandomName("", 3)
 		// The env is shared and built only once.
 		env environments.Environment

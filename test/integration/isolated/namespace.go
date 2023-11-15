@@ -33,50 +33,17 @@ func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, run
 			},
 		},
 	}
+
+	// TODO: We could be tempted to use cfg.Client().Resources() here but when
+	// running tests in parallel this causes a data race.
+	// Related upstream issue: https://github.com/kubernetes-sigs/e2e-framework/issues/352
+
 	c, err := client.New(cfg.Client().RESTConfig(), client.Options{})
 	if err != nil {
 		return ctx, err
 	}
+
 	return ctx, c.Create(ctx, &nsObj)
-
-	// TODO: cfg.Client().Resources() causes a data race when run in parallel
-	//
-	// WARNING: DATA RACE
-	// Write at 0x00c0010a8f20 by goroutine 168:
-	// sigs.k8s.io/e2e-framework/klient/k8s/resources.(*Resources).WithNamespace()
-	// 	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/klient/k8s/resources/resources.go:85 +0x117
-	// sigs.k8s.io/e2e-framework/klient.(*client).Resources()
-	// 	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/klient/client.go:80 +0xe9
-	// github.com/kong/kubernetes-ingress-controller/v2/test/integration/isolated.CreateNSForTest()
-	// 	/home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/test/integration/isolated/e2e.go:46 +0x437
-	// github.com/kong/kubernetes-ingress-controller/v2/test/integration/isolated.TestUDPRoute.featureSetup.func18()
-	// 	/home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/test/integration/isolated/suite_test.go:247 +0x15a
-	// sigs.k8s.io/e2e-framework/pkg/env.(*testEnv).executeSteps()
-	// 	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/pkg/env/env.go:428 +0x12a
-	// sigs.k8s.io/e2e-framework/pkg/env.(*testEnv).processTestFeature.(*testEnv).execFeature.func1()
-	// 	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/pkg/env/env.go:447 +0x1bd
-	// testing.tRunner()
-	// 	/opt/hostedtoolcache/go/1.21.1/x64/src/testing/testing.go:1595 +0x238
-	// testing.(*T).Run.func1()
-	// 	/opt/hostedtoolcache/go/1.21.1/x64/src/testing/testing.go:1648 +0x44
-
-	// Previous write at 0x00c0010a8f20 by goroutine 166:
-	// sigs.k8s.io/e2e-framework/klient/k8s/resources.(*Resources).WithNamespace()
-	//	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/klient/k8s/resources/resources.go:85 +0x117
-	// sigs.k8s.io/e2e-framework/klient.(*client).Resources()
-	//	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/klient/client.go:80 +0xe9
-	// github.com/kong/kubernetes-ingress-controller/v2/test/integration/isolated.CreateNSForTest()
-	//	/home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/test/integration/isolated/e2e.go:46 +0x437
-	// github.com/kong/kubernetes-ingress-controller/v2/test/integration/isolated.TestUDPRoute.featureSetup.func15()
-	//	/home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/test/integration/isolated/suite_test.go:247 +0x15a
-	// sigs.k8s.io/e2e-framework/pkg/env.(*testEnv).executeSteps()
-	//	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/pkg/env/env.go:428 +0x12a
-	// sigs.k8s.io/e2e-framework/pkg/env.(*testEnv).processTestFeature.(*testEnv).execFeature.func1()
-	//	/home/runner/go/pkg/mod/sigs.k8s.io/e2e-framework@v0.3.0/pkg/env/env.go:447 +0x1bd
-	// testing.tRunner()
-	//	/opt/hostedtoolcache/go/1.21.1/x64/src/testing/testing.go:1595 +0x238
-	// testing.(*T).Run.func1()
-	//	/opt/hostedtoolcache/go/1.21.1/x64/src/testing/testing.go:1648 +0x44
 }
 
 // deleteNSForTest looks up the namespace corresponding to the given test and deletes it.

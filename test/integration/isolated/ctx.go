@@ -11,26 +11,25 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
 
-type CtxKey[R any] string
-
-func getCtxKey[R any](t *testing.T) CtxKey[R] {
-	t.Helper()
-
-	// When we pass t.Name() from inside an `assess` step, the name is in the form TestName/Features/Assess.
-	if strings.Contains(t.Name(), "/") {
-		return CtxKey[R](strings.Split(t.Name(), "/")[0])
-	}
-
-	// When we pass t.Name() from inside a `testenv.BeforeEachTest` function, the name is just TestName.
-	return CtxKey[R](t.Name())
-}
-
+// SetInCtxForT sets a value in the context that can be later retrieved with GetFromCtxForT.
+// It has 1 type parameter which is the type of the value to set in context.
+//
+// Due to the usage of type parameter this allows to get only 1 value from the context.
+// If users want to be able to store more than 1 value of the same type then they
+// should use e.g. a slice or a struct containing those.
 func SetInCtxForT[R any](ctx context.Context, t *testing.T, r R) context.Context {
 	t.Helper()
 
 	return context.WithValue(ctx, getCtxKey[R](t), r)
 }
 
+// GetFromCtxForT gets a value from the context that was previously set with SetInCtxForT.
+// It has 1 type parameter which is the type of the value to get.
+// It will fail the test if the value is not found or if the type does not match.
+//
+// Due to the usage of type parameter this allows to get only 1 value from the context.
+// If users want to be able to store more than 1 value of the same type then they
+// should use e.g. a slice or a struct containing those.
 func GetFromCtxForT[R any](ctx context.Context, t *testing.T) R {
 	t.Helper()
 
@@ -41,6 +40,20 @@ func GetFromCtxForT[R any](ctx context.Context, t *testing.T) R {
 		t.Fatalf("required %T to be stored in context but found: %s (of type %T)", r, raw, raw)
 	}
 	return result
+}
+
+type ctxKey[R any] string
+
+func getCtxKey[R any](t *testing.T) ctxKey[R] {
+	t.Helper()
+
+	// When we pass t.Name() from inside an `assess` step, the name is in the form TestName/Features/Assess.
+	if strings.Contains(t.Name(), "/") {
+		return ctxKey[R](strings.Split(t.Name(), "/")[0])
+	}
+
+	// When we pass t.Name() from inside a `testenv.BeforeEachTest` function, the name is just TestName.
+	return ctxKey[R](t.Name())
 }
 
 func setInCtx[KeyT comparable, R any](ctx context.Context, key KeyT, r R) context.Context {

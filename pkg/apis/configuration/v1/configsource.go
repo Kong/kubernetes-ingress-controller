@@ -7,11 +7,12 @@ type ConfigSource struct {
 	SecretValue SecretValueFromSource `json:"secretKeyRef"`
 }
 
-// ConfigPatch is a JSON patch to add values from secrets in the same namespace with KongPlugin
-// to the generated configuration of plugin in Kong.
+// ConfigPatch is a JSON patch (RFC6902) to add values from Secret to the generated configuration.
+// It is an equivalent of the following patch:
+// `{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.
 // +kubebuilder:object:generate=true
 type ConfigPatch struct {
-	// Path is the JSON path to add the patch.
+	// Path is the JSON-Pointer value (RFC6901) that references a location within the target configuration.
 	Path string `json:"path"`
 	// ValueFrom is the reference to a key of a secret where the patched value comes from.
 	ValueFrom ConfigSource `json:"valueFrom"`

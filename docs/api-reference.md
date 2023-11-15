@@ -118,13 +118,13 @@ KongPlugin is the Schema for the kongplugins API.
 
 
 
-ConfigPatch is a JSON patch to add values from secrets in the same namespace with KongPlugin to the generated configuration of plugin in Kong.
+ConfigPatch is a JSON patch (RFC6902) to add values from Secret to the generated configuration. It is an equivalent of the following patch: `{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.
 
 
 
 | Field | Description |
 | --- | --- |
-| `path` _string_ | Path is the JSON path to add the patch. |
+| `path` _string_ | Path is the JSON-Pointer value (RFC6901) that references a location within the target configuration. |
 | `valueFrom` _[ConfigSource](#configsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
 
 

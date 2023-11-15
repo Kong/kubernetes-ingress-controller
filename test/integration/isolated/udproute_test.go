@@ -90,7 +90,6 @@ func TestUDPRoute(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		WithSetup("inject Klient into test context", injectKlient()).
 		WithSetup("prepare Gateway and GatewayClass",
 			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 				t.Log("creating Gateway API client")
@@ -487,7 +486,6 @@ func TestUDPRoute(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		WithSetup("inject Klient into test context", injectKlient()).
 		WithSetup("prepare Gateway and GatewayClass",
 			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 				t.Log("creating Gateway API client")

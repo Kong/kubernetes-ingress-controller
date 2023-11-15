@@ -33,7 +33,6 @@ func TestExampleUDPRoute(t *testing.T) {
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			helpers.ControllerManagerOptAdditionalWatchNamespace("default"),
 		)).
-		WithSetup("inject Klient into test context", injectKlient()).
 		Assess("deploying to cluster works and deployed coredns responds to UDP queries",
 			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)

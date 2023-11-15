@@ -19,10 +19,8 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/klient/conf"
-	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
@@ -328,21 +326,6 @@ func featureTeardown() func(ctx context.Context, t *testing.T, c *envconf.Config
 
 		ctx, err := deleteNSForTest(ctx, c, t, runID)
 		assert.NoError(t, err)
-		return ctx
-	}
-}
-
-// injectKlient injects a controller-runtime client to the context.
-func injectKlient() func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-	return func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-		cfg, err := conf.New(c.KubeconfigFile())
-		require.NoError(t, err)
-
-		res, err := resources.New(cfg)
-		require.NoError(t, err)
-
-		ctx = SetInCtxForT(ctx, t, res)
-
 		return ctx
 	}
 }

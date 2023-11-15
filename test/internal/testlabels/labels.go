@@ -17,14 +17,6 @@ const (
 )
 
 const (
-	// GatewayAPISupportLevel is the label key used to store the support level
-	// of the Gateway API resources being tested.
-	GatewayAPISupportLevel      = "gatewayapisupportlevel"
-	GatewayAPISupportLevelAlpha = "alpha"
-	GatewayAPISupportLevelBeta  = "beta"
-)
-
-const (
 	// Example is the label key used to indicate whether the test is testing
 	// example manifests.
 	Example     = "example"

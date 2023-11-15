@@ -141,7 +141,6 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 
-
 	t.Log("creating GatewayClass for gateway conformance tests")
 	gatewayClass := &gatewayapi.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{

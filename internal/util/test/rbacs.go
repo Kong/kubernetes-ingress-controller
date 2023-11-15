@@ -8,8 +8,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
-
-
 func DeployRBACsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	fmt.Printf("INFO: deploying Kong RBACs to cluster\n")
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongRBACsKustomize, "-n", consts.ControllerNamespace); err != nil {

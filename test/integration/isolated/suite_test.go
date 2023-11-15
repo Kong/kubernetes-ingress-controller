@@ -30,6 +30,7 @@ import (
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
@@ -263,8 +264,8 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 
 		t.Logf("starting the controller manager")
 		cert, key := certificate.GetKongSystemSelfSignedCerts()
-		metricsPort := helpers.FreePort(t)
-		healthProbePort := helpers.FreePort(t)
+		metricsPort := testhelpers.GetFreePort(t)
+		healthProbePort := testhelpers.GetFreePort(t)
 		ingressClass := RandomName("ingressclass", 16)
 		standardControllerArgs := []string{
 			fmt.Sprintf("--health-probe-bind-address=localhost:%d", healthProbePort),

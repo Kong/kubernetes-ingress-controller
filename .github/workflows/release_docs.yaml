@@ -33,12 +33,12 @@ jobs:
       - name: Generate CRDs reference
         run: |
           ./scripts/apidocs-gen/post-process-for-konghq.sh \
-          docs.konghq.com/app/_src/kubernetes-ingress-controller/references/custom-resources-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
+          docs.konghq.com/app/_src/kubernetes-ingress-controller/reference/custom-resources-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
 
       - name: Generate flags reference
         run: |
           ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
-          docs.konghq.com/app/_src/kubernetes-ingress-controller/references/cli-arguments-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
+          docs.konghq.com/app/_src/kubernetes-ingress-controller/reference/cli-arguments-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
 
       - name: Detect changes
         id: detect-changes

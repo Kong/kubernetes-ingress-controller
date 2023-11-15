@@ -6,42 +6,39 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-)
 
-const (
-	_kongRBACsKustomize        = "config/rbac/"
-	_kongGatewayRBACsKustomize = "config/rbac/gateway"
-	_kongCRDsRBACsKustomize    = "config/rbac/crds"
-	_kongCRDsKustomize         = "config/crd/"
+	"github.com/samber/lo"
 )
 
 var (
-	kongRBACsKustomize        string
-	kongGatewayRBACsKustomize string
-	kongCRDsRBACsKustomize    string
-
-	kongCRDsKustomize string
+	kongRBACsKustomize        = initKongRBACsKustomizePath()
+	kongGatewayRBACsKustomize = initKongGatewayRBACsKustomizePath()
+	kongCRDsRBACsKustomize    = initKongCRDsRBACsKustomizePath()
+	kongCRDsKustomize         = initCRDsKustomizePath()
 )
 
-// init initializes kustomize paths relative to the repo root directory so that
-// variables containing kustomize files can be used from anywhere in the repository.
-func init() {
-	root, err := getRepoRoot()
-	if err != nil {
-		panic(err)
-	}
+func initKongRBACsKustomizePath() string {
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/")
+	ensureDirExists(dir)
+	return dir
+}
 
-	kongRBACsKustomize = filepath.Join(root, _kongRBACsKustomize)
-	ensureDirExists(kongRBACsKustomize)
+func initKongGatewayRBACsKustomizePath() string {
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/gateway")
+	ensureDirExists(dir)
+	return dir
+}
 
-	kongGatewayRBACsKustomize = filepath.Join(root, _kongGatewayRBACsKustomize)
-	ensureDirExists(kongGatewayRBACsKustomize)
+func initKongCRDsRBACsKustomizePath() string {
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/crds")
+	ensureDirExists(dir)
+	return dir
+}
 
-	kongCRDsRBACsKustomize = filepath.Join(root, _kongCRDsRBACsKustomize)
-	ensureDirExists(kongCRDsRBACsKustomize)
-
-	kongCRDsKustomize = filepath.Join(root, _kongCRDsKustomize)
-	ensureDirExists(kongCRDsKustomize)
+func initCRDsKustomizePath() string {
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/")
+	ensureDirExists(dir)
+	return dir
 }
 
 func ensureDirExists(dir string) {

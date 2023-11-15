@@ -440,7 +440,7 @@ _test.integration.isolated: _check.container.environment go-junit-report
 		./test/integration/isolated -args --parallel $(E2E_FRAMEWORK_FLAGS) | \
 	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
-.PHONY: test.integration.isolated.dbles.
+.PHONY: test.integration.isolated.dbless
 test.integration.isolated.dbless:
 	@$(MAKE) _test.integration.isolated \
 		GOTAGS="integration_tests" \

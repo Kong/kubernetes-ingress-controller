@@ -35,7 +35,7 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="(has(self.config) || has(self.configFrom)) ? ((!has(self.config) && has(self.configFrom)) || (has(self.config) && !has(self.configFrom))) : true", message="Using both config and configFrom fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
-// +kubebuilder:validation:XValidation:rule="(has(self.config)) || (!has(self.config) && !has(self.configPatches))", message="Can use 'configPatches' only when 'config' specified"
+// +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches is not allowed."
 
 // KongPlugin is the Schema for the kongplugins API.
 type KongPlugin struct {

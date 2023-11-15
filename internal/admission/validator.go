@@ -312,6 +312,11 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	}
 	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
 	if err != nil || errText != "" {
+		validator.Logger.Info("validate KongPlugin on Kong gateway failed",
+			"plugin", fmt.Sprintf("%s/%s", k8sPlugin.Namespace, k8sPlugin.Name),
+			"config", plugin.Config,
+			"error", err,
+		)
 		return false, errText, err
 	}
 

@@ -122,7 +122,12 @@ spec:
                       - name
                       - namespace
                       type: object
+                  required:
+                  - secretKeyRef
                   type: object
+              required:
+              - path
+              - valueFrom
               type: object
             type: array
           consumerRef:
@@ -292,6 +297,8 @@ spec:
             : true'
         - message: The plugin field is immutable
           rule: self.plugin == oldSelf.plugin
+        - message: Using both configFrom and configPatches is not allowed.
+          rule: '!(has(self.configFrom) && has(self.configPatches))'
     served: true
     storage: true
     subresources:

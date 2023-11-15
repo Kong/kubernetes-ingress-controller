@@ -89,12 +89,13 @@ spec:
               configuration, where path is specified in `path` and value is in `valueFrom`
               referencing a key in a secret. Could only be specified when Config specified.
             items:
-              description: ConfigPatch is a JSON patch to add values from secrets
-                in the same namespace with KongPlugin to the generated configuration
-                of plugin in Kong.
+              description: 'ConfigPatch is a JSON patch (RFC6902) to add values from
+                Secret to the generated configuration. It is an equivalent of the
+                following patch: `{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.'
               properties:
                 path:
-                  description: Path is the JSON path to add the patch.
+                  description: Path is the JSON-Pointer value (RFC6901) that references
+                    a location within the target configuration.
                   type: string
                 valueFrom:
                   description: ValueFrom is the reference to a key of a secret where
@@ -115,7 +116,12 @@ spec:
                       - key
                       - name
                       type: object
+                  required:
+                  - secretKeyRef
                   type: object
+              required:
+              - path
+              - valueFrom
               type: object
             type: array
           consumerRef:
@@ -284,8 +290,8 @@ spec:
             : true'
         - message: The plugin field is immutable
           rule: self.plugin == oldSelf.plugin
-        - message: Can use 'configPatches' only when 'config' specified
-          rule: (has(self.config)) || (!has(self.config) && !has(self.configPatches))
+        - message: Using both configFrom and configPatches is not allowed.
+          rule: '!(has(self.configFrom) && has(self.configPatches))'
     served: true
     storage: true
     subresources:

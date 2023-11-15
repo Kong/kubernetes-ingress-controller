@@ -263,7 +263,7 @@ func TestUDPRoute(t *testing.T) {
 				proxyUDPURL := GetUDPURLFromCtx(ctx)
 
 				t.Logf("checking DNS to resolve via UDPIngress %s", udproute.Name)
-				assert.Eventually(t, resolveFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).
@@ -296,7 +296,7 @@ func TestUDPRoute(t *testing.T) {
 				// negative checks for these tests check that DNS queries eventually start to fail, presumably because they time
 				// out. we assume there shouldn't be unrelated failure reasons because they always follow a test that confirm
 				// resolution was working before. we can't use never here because there may be some delay in deleting the route
-				assert.Eventually(t, not(resolveFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, not(urlResolvesSuccessfullyFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
 				return ctx
 			}).
 		Assess("restoring UDPRoute parentRef bring the configuration back",
@@ -324,7 +324,7 @@ func TestUDPRoute(t *testing.T) {
 
 				t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
 				t.Logf("checking DNS to resolve via UDPRoute %s", udproute.Name)
-				assert.Eventually(t, resolveFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).
@@ -344,7 +344,7 @@ func TestUDPRoute(t *testing.T) {
 				assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 				t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the GatewayClass now removed")
-				assert.Eventually(t, not(resolveFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, not(urlResolvesSuccessfullyFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).
@@ -369,7 +369,7 @@ func TestUDPRoute(t *testing.T) {
 
 				t.Log("verifying that creating the GatewayClass again triggers reconciliation of UDPRoutes and the route becomes available again")
 				t.Logf("checking DNS to resolve via UDPRoute %s", udproute.Name)
-				assert.Eventually(t, resolveFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).
@@ -389,7 +389,7 @@ func TestUDPRoute(t *testing.T) {
 				assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 				t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the Gateway now removed")
-				assert.Eventually(t, not(resolveFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, not(urlResolvesSuccessfullyFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).
@@ -432,7 +432,7 @@ func TestUDPRoute(t *testing.T) {
 				assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 				t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
-				assert.Eventually(t, resolveFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).
@@ -615,7 +615,7 @@ func TestUDPRoute(t *testing.T) {
 				}, consts.IngressWait, consts.WaitTick)
 
 				t.Log("verifying that the UDPRoute does not get active")
-				assert.Eventually(t, not(resolveFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, not(urlResolvesSuccessfullyFn(ctx, proxyUDPURL)), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).

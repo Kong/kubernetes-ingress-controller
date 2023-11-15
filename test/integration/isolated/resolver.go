@@ -31,7 +31,7 @@ func not(fn func() bool) func() bool {
 	}
 }
 
-func resolveFn(ctx context.Context, proxyUDPURL *url.URL) func() bool {
+func urlResolvesSuccessfullyFn(ctx context.Context, proxyUDPURL *url.URL) func() bool {
 	return func() bool {
 		resolver := createResolver(proxyUDPURL)
 		_, err := resolver.LookupHost(ctx, "kernel.org")

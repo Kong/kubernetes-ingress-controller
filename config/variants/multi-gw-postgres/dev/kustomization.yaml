@@ -6,6 +6,9 @@ namespace: kong
 resources:
 - ../base/
 
+components:
+- ../../../components/manager_dev_webhook
+
 patches:
 - patch: |-
     apiVersion: apps/v1

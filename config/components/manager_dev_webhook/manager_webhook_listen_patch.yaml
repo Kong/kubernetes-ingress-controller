@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ingress-kong
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+      - name: ingress-controller
+        env:
+        - name: CONTROLLER_ADMISSION_WEBHOOK_LISTEN
+          value: :8080
+        volumeMounts:
+        - mountPath: /admission-webhook
+          name: validation-webhook
+      volumes:
+      - name: validation-webhook
+        secret:
+          secretName: kong-validation-webhook

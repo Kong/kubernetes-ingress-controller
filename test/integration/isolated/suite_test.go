@@ -273,7 +273,6 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 			fmt.Sprintf("--admission-webhook-cert=%s", cert),
 			fmt.Sprintf("--admission-webhook-key=%s", key),
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
-			"--log-level=error", // not used, as controller logger is configured separately
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
@@ -315,7 +314,7 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 
 func featureTeardown() func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 	return func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-		// Call cancel to stop the manager, this prevents them running until the whole suite ends.
+		// Call cancel to stop the manager - this prevents Feature tests from running until the whole suite ends.
 		cancel := GetFromCtxForT[func()](ctx, t)
 		cancel()
 
@@ -331,6 +330,7 @@ func featureTeardown() func(ctx context.Context, t *testing.T, c *envconf.Config
 	}
 }
 
+// injectKlient injects a controller-runtime client to the context.
 func injectKlient() func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 	return func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 		cfg, err := conf.New(c.KubeconfigFile())

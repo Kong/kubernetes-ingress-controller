@@ -90,7 +90,7 @@ func createNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, run
 	//	/opt/hostedtoolcache/go/1.21.1/x64/src/testing/testing.go:1648 +0x44
 }
 
-// DeleteNSForTest looks up the namespace corresponding to the given test and deletes it.
+// deleteNSForTest looks up the namespace corresponding to the given test and deletes it.
 func deleteNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, _ string) (context.Context, error) {
 	t.Helper()
 

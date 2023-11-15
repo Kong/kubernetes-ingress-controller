@@ -138,8 +138,9 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		"--anonymous-reports=false",
 	}
 	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args...)
-	t.Cleanup(func() { cancel() })
 	require.NoError(t, err)
+	t.Cleanup(func() { cancel() })
+
 
 	t.Log("creating GatewayClass for gateway conformance tests")
 	gatewayClass := &gatewayapi.GatewayClass{

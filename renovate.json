@@ -1,10 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "configMigration": true,
-  "enabledManagers": ["regex", "kustomize"],
+  "enabledManagers": [
+    "custom.regex",
+    "kustomize"
+  ],
   "automerge": false,
   "separateMinorPatch": true,
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "schedule": "before 5am every weekday",
   "registryAliases": {
     "kong": "https://charts.konghq.com"
@@ -30,14 +35,22 @@
   "packageRules": [
     {
       "description": "Ignore minor updates if depName has `@only-patch` suffix.",
-      "matchUpdateTypes": ["minor"],
-      "matchDepPatterns": [".*@only-patch"],
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "matchDepPatterns": [
+        ".*@only-patch"
+      ],
       "enabled": false
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files to trigger regenerate_on_deps_bump.yaml workflow.",
-      "matchManagers": ["kustomize"],
-      "addLabels": ["renovate/auto-regenerate"]
+      "matchManagers": [
+        "kustomize"
+      ],
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ]
     }
   ]
 }

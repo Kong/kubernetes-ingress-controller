@@ -169,7 +169,7 @@ func TestIngressDefaultBackend(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/test", map[string]string{
+	ingress := generators.NewIngressForService("/foo", map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
@@ -185,7 +185,7 @@ func TestIngressDefaultBackend(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("matching path")
-	helpers.EventuallyGETPath(t, nil, proxyURL.String(), "/test", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, nil, proxyURL.String(), "/foo", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 
 	t.Log("non matching path - use default backend")
 	helpers.EventuallyGETPath(

@@ -101,6 +101,18 @@ func (c *FakeKongUpstreamPolicies) Update(ctx context.Context, kongUpstreamPolic
 	return obj.(*v1beta1.KongUpstreamPolicy), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeKongUpstreamPolicies) UpdateStatus(ctx context.Context, kongUpstreamPolicy *v1beta1.KongUpstreamPolicy, opts v1.UpdateOptions) (*v1beta1.KongUpstreamPolicy, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(kongupstreampoliciesResource, "status", c.ns, kongUpstreamPolicy), &v1beta1.KongUpstreamPolicy{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.KongUpstreamPolicy), err
+}
+
 // Delete takes name of the kongUpstreamPolicy and deletes it. Returns an error if one occurs.
 func (c *FakeKongUpstreamPolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.

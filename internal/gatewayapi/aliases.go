@@ -74,32 +74,34 @@ type (
 	SecretObjectReference     = gatewayv1.SecretObjectReference
 	SectionName               = gatewayv1.SectionName
 
-	GRPCBackendRef      = gatewayv1alpha2.GRPCBackendRef
-	GRPCHeaderMatch     = gatewayv1alpha2.GRPCHeaderMatch
-	GRPCHeaderName      = gatewayv1alpha2.GRPCHeaderName
-	GRPCMethodMatch     = gatewayv1alpha2.GRPCMethodMatch
-	GRPCMethodMatchType = gatewayv1alpha2.GRPCMethodMatchType
-	GRPCRoute           = gatewayv1alpha2.GRPCRoute
-	GRPCRouteList       = gatewayv1alpha2.GRPCRouteList
-	GRPCRouteMatch      = gatewayv1alpha2.GRPCRouteMatch
-	GRPCRouteRule       = gatewayv1alpha2.GRPCRouteRule
-	GRPCRouteSpec       = gatewayv1alpha2.GRPCRouteSpec
-	GRPCRouteStatus     = gatewayv1alpha2.GRPCRouteStatus
-	TCPRoute            = gatewayv1alpha2.TCPRoute
-	TCPRouteList        = gatewayv1alpha2.TCPRouteList
-	TCPRouteRule        = gatewayv1alpha2.TCPRouteRule
-	TCPRouteSpec        = gatewayv1alpha2.TCPRouteSpec
-	TCPRouteStatus      = gatewayv1alpha2.TCPRouteStatus
-	TLSRoute            = gatewayv1alpha2.TLSRoute
-	TLSRouteList        = gatewayv1alpha2.TLSRouteList
-	TLSRouteRule        = gatewayv1alpha2.TLSRouteRule
-	TLSRouteSpec        = gatewayv1alpha2.TLSRouteSpec
-	TLSRouteStatus      = gatewayv1alpha2.TLSRouteStatus
-	UDPRoute            = gatewayv1alpha2.UDPRoute
-	UDPRouteList        = gatewayv1alpha2.UDPRouteList
-	UDPRouteRule        = gatewayv1alpha2.UDPRouteRule
-	UDPRouteSpec        = gatewayv1alpha2.UDPRouteSpec
-	UDPRouteStatus      = gatewayv1alpha2.UDPRouteStatus
+	GRPCBackendRef       = gatewayv1alpha2.GRPCBackendRef
+	GRPCHeaderMatch      = gatewayv1alpha2.GRPCHeaderMatch
+	GRPCHeaderName       = gatewayv1alpha2.GRPCHeaderName
+	GRPCMethodMatch      = gatewayv1alpha2.GRPCMethodMatch
+	GRPCMethodMatchType  = gatewayv1alpha2.GRPCMethodMatchType
+	GRPCRoute            = gatewayv1alpha2.GRPCRoute
+	GRPCRouteList        = gatewayv1alpha2.GRPCRouteList
+	GRPCRouteMatch       = gatewayv1alpha2.GRPCRouteMatch
+	GRPCRouteRule        = gatewayv1alpha2.GRPCRouteRule
+	GRPCRouteSpec        = gatewayv1alpha2.GRPCRouteSpec
+	GRPCRouteStatus      = gatewayv1alpha2.GRPCRouteStatus
+	PolicyAncestorStatus = gatewayv1alpha2.PolicyAncestorStatus
+	Policystatus         = gatewayv1alpha2.PolicyStatus
+	TCPRoute             = gatewayv1alpha2.TCPRoute
+	TCPRouteList         = gatewayv1alpha2.TCPRouteList
+	TCPRouteRule         = gatewayv1alpha2.TCPRouteRule
+	TCPRouteSpec         = gatewayv1alpha2.TCPRouteSpec
+	TCPRouteStatus       = gatewayv1alpha2.TCPRouteStatus
+	TLSRoute             = gatewayv1alpha2.TLSRoute
+	TLSRouteList         = gatewayv1alpha2.TLSRouteList
+	TLSRouteRule         = gatewayv1alpha2.TLSRouteRule
+	TLSRouteSpec         = gatewayv1alpha2.TLSRouteSpec
+	TLSRouteStatus       = gatewayv1alpha2.TLSRouteStatus
+	UDPRoute             = gatewayv1alpha2.UDPRoute
+	UDPRouteList         = gatewayv1alpha2.UDPRouteList
+	UDPRouteRule         = gatewayv1alpha2.UDPRouteRule
+	UDPRouteSpec         = gatewayv1alpha2.UDPRouteSpec
+	UDPRouteStatus       = gatewayv1alpha2.UDPRouteStatus
 )
 
 const (
@@ -167,4 +169,7 @@ const (
 
 	GRPCMethodMatchExact             = gatewayv1alpha2.GRPCMethodMatchExact
 	GRPCMethodMatchRegularExpression = gatewayv1alpha2.GRPCMethodMatchRegularExpression
+	PolicyConditionAccepted          = gatewayv1alpha2.PolicyConditionAccepted
+	PolicyReasonAccepted             = gatewayv1alpha2.PolicyReasonAccepted
+	PolicyReasonConflicted           = gatewayv1alpha2.PolicyReasonConflicted
 )

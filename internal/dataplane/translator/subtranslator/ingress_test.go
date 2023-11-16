@@ -1675,12 +1675,14 @@ func TestMaybeRewriteURI(t *testing.T) {
 		},
 	}
 
-	for i := range testCases {
-		tc := testCases[i]
+	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := MaybeRewriteURI(&tc.service, true)
 			require.Equal(t, tc.expectedError, err)
-			require.Equal(t, tc.expectedPlugins, tc.service.Plugins)
+			for _, route := range tc.service.Routes {
+				require.Equal(t, tc.expectedPlugins, route.Plugins)
+			}
 		})
 	}
 }

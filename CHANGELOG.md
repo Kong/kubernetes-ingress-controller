@@ -79,6 +79,12 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Fixed
+
+- Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
+  will no longer cause synchronization loop and random request failures due to incorrect routing.
+  [#5171](https://github.com/Kong/kubernetes-ingress-controller/pull/5171)
+
 ### Changed
 
 - `SecretKeyRef` of `ConfigFrom` field in `KongPlugin` and `KongClusterPlugin`

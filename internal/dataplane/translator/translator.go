@@ -594,7 +594,7 @@ func (t *Translator) getGatewayListeningPorts(
 		// https://github.com/kubernetes-sigs/gateway-api/blob/ebe9f31ef27819c3b29f698a3e9b91d279453c59/apis/v1/shared_types.go#L107).
 		//
 		// When the parent resource is a Gateway, this targets all listeners
-		// listening on the specified port that also support this kind of Route(and
+		// listening on the specified port that also supports this kind of Route (and
 		// select this Route). It's not recommended to set `Port` unless the
 		// networking behaviors specified in a Route must apply to a specific port
 		// as opposed to a listener(s) whose port(s) may be changed. When both Port

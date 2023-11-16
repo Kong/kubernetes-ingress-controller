@@ -167,24 +167,31 @@ func applyJSONPatchFromNamespacedSecretRef(s SecretGetter, raw []byte, path stri
 			fmt.Errorf("no key '%v' in secret '%v/%v'",
 				key, namespace, secretName)
 	}
-	// REVIEW: with the json-patch package, we cannot run `add` on an empty raw JSON (encoded to `null`).
-	// If we want to fetch whole config from secret (same as in `configFrom`), we can only use empty path and "replace" operation to construct the patch.
+
+	// JSON patch (RFC6902) specifies the behavior of applying "add" on root,
+	// but because the jsonpatch package could not do "add" on root path (path=""),
+	// we have to use "replace" op on root to set the entire content of document if patch is on root path.
+	// https://github.com/evanphx/json-patch/issues/188
 	op := JSONPatchOpAdd
 	if path == "" {
 		op = JSONPatchOpReplace
 	}
+
 	rawPatch := fmt.Sprintf(rawPatchPattern, op, path, string(secretVal))
 	p, err := jsonpatch.DecodePatch([]byte(rawPatch))
 	if err != nil {
 		return nil, err
 	}
 
+	// Set EnsurePathExistsOnAdd to true for adding to subpaths to a non-existing path, e.g:
+	// Apply {"op":"add","path":"/add/headers","value":[{"h1":"v1"},{"h2":"v2"}]} on `{}`.
 	opts := jsonpatch.NewApplyOptions()
 	opts.EnsurePathExistsOnAdd = true
 	raw, err = p.ApplyWithOptions(raw, opts)
 	if err != nil {
 		return nil, err
 	}
+
 	return raw, nil
 }
 
@@ -195,8 +202,13 @@ func RawConfigurationWithPatchesToConfiguration(
 	patches []kongv1.ConfigPatch,
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
+	if raw == nil {
+		// In case the config is empty, we need to initialize it to an empty
+		// JSON object so that the patches can be applied.
+		raw = []byte("{}")
+	}
+
 	// apply patches
-	// REVIEW: JSON patch can support multiple operations. Should we first fetch the values then create a single JSON patch?
 	for _, patch := range patches {
 		var err error
 		raw, err = applyJSONPatchFromNamespacedSecretRef(
@@ -221,7 +233,12 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 	patches []kongv1.NamespacedConfigPatch,
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
-	// apply patches
+
+	if raw == nil {
+		// In case the config is empty, we need to initialize it to an empty
+		// JSON object so that the patches can be applied.
+		raw = []byte("{}")
+	}
 	for _, patch := range patches {
 		var err error
 		raw, err = applyJSONPatchFromNamespacedSecretRef(

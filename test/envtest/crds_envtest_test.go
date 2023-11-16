@@ -551,6 +551,76 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
+			name: "KongPlugin - using configPatches is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongPlugin{
+					PluginName: "key-auth",
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/key_names",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Secret: "secret-name",
+									Key:    "key-name",
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, createKongPlugin(ctx, ctrlClient, ns, plugin))
+			},
+		},
+		{
+			name: "KongPlugin - using config and configPatches is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_name":"apikey"}`),
+					},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/key_names",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Secret: "secret-name",
+									Key:    "key-name",
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, createKongPlugin(ctx, ctrlClient, ns, plugin))
+			},
+		},
+		{
+			name: "KongPlugin - using configFrom and configPatches is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
+							Secret: "secret-name",
+							Key:    "key-name",
+						},
+					},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/key_names",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Secret: "secret-name",
+									Key:    "key-name",
+								},
+							},
+						},
+					},
+				}
+				assert.ErrorContains(t, createKongPlugin(ctx, ctrlClient, ns, plugin),
+					"Using both configFrom and configPatches fields is not allowed.")
+			},
+		},
+		{
 			name: "KongClusterPlugin - no config is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
@@ -619,6 +689,79 @@ func TestCRDValidations(t *testing.T) {
 				err = updateKongClusterPlugin(ctx, ctrlClient, ns, plugin)
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, "The plugin field is immutable")
+			},
+		},
+		{
+			name: "KongClusterPlugin - using configPatches is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/key_names",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: ns,
+									Secret:    "secret-name",
+									Key:       "key-name",
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, createKongClusterPlugin(ctx, ctrlClient, ns, plugin))
+			},
+		},
+		{
+			name: "KongClusterPlugin - using config and configPatches is allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"key_name":"apikey"}`),
+					},
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/key_names",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: ns,
+									Secret:    "secret-name",
+									Key:       "key-name",
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, createKongClusterPlugin(ctx, ctrlClient, ns, plugin))
+			},
+		},
+		{
+			name: "KongClusterPlugin - using configFrom and configPatches is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				plugin := &kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Secret: "secret-name",
+							Key:    "key-name",
+						},
+					},
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/key_names",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: ns,
+									Secret:    "secret-name",
+									Key:       "key-name",
+								},
+							},
+						},
+					},
+				}
+				assert.ErrorContains(t, createKongClusterPlugin(ctx, ctrlClient, ns, plugin),
+					"Using both configFrom and configPatches fields is not allowed.")
 			},
 		},
 	}

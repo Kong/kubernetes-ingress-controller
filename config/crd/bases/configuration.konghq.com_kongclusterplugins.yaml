@@ -292,13 +292,11 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: Using both config and configFrom fields is not allowed.
-          rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
-            && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
-            : true'
+          rule: '!(has(self.config) && has(self.configFrom))'
+        - message: Using both configFrom and configPatches fields is not allowed.
+          rule: '!(has(self.configFrom) && has(self.configPatches))'
         - message: The plugin field is immutable
           rule: self.plugin == oldSelf.plugin
-        - message: Using both configFrom and configPatches is not allowed.
-          rule: '!(has(self.configFrom) && has(self.configPatches))'
     served: true
     storage: true
     subresources:

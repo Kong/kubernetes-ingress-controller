@@ -23,9 +23,11 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
-					"correlation-id-config":    []byte(`{"header_name": "foo"}`),
-					"correlation-id-generator": []byte(`"uuid"`),
-					"correlation-id-invalid":   []byte(`"aaa`),
+					"correlation-id-config":            []byte(`{"header_name": "foo"}`),
+					"correlation-id-headername":        []byte(`"foo"`),
+					"correlation-id-generator":         []byte(`"uuid"`),
+					"correlation-id-invalid":           []byte(`"aaa`),
+					"response-transformer-add-headers": []byte(`["h1:v1","h2:v2"]`),
 				},
 			},
 		},
@@ -171,14 +173,93 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			},
 		},
 		{
+			name: "configPatch on subpath of non-exist path",
+			args: args{
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
+					PluginName: "response-transformer",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"replace":{"headers":["foo:bar"]}}`),
+					},
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/add/headers",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: "default",
+									Key:       "response-transformer-add-headers",
+									Secret:    "conf-secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: kong.Plugin{
+				Name: kong.String("response-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]interface{}{
+						"headers": []interface{}{
+							"foo:bar",
+						},
+					},
+					"add": map[string]interface{}{
+						"headers": []interface{}{
+							"h1:v1",
+							"h2:v2",
+						},
+					},
+				},
+				Protocols: kong.StringSlice("http"),
+			},
+		},
+		{
+			name: "empty config and configPatch for particular paths",
+			args: args{
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
+					PluginName: "correlation-id",
+					Config:     apiextensionsv1.JSON{},
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/header_name",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: "default",
+									Key:       "correlation-id-headername",
+									Secret:    "conf-secret",
+								},
+							},
+						},
+						{
+							Path: "/generator",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: "default",
+									Key:       "correlation-id-generator",
+									Secret:    "conf-secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: kong.Plugin{
+				Name: kong.String("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "foo",
+					"generator":   "uuid",
+				},
+				Protocols: kong.StringSlice("http"),
+			},
+		},
+		{
 			name: "empty config and configPatch for whole object",
 			args: args{
 				plugin: kongv1.KongClusterPlugin{
 					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{}`),
-					},
+					Config:     apiextensionsv1.JSON{},
 					ConfigPatches: []kongv1.NamespacedConfigPatch{
 						{
 							Path: "",
@@ -309,9 +390,11 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
-					"correlation-id-config":    []byte(`{"header_name": "foo"}`),
-					"correlation-id-generator": []byte(`"uuid"`),
-					"correlation-id-invalid":   []byte(`"aaa`),
+					"correlation-id-config":            []byte(`{"header_name": "foo"}`),
+					"correlation-id-headername":        []byte(`"foo"`),
+					"correlation-id-generator":         []byte(`"uuid"`),
+					"correlation-id-invalid":           []byte(`"aaa`),
+					"response-transformer-add-headers": []byte(`["h1:v1","h2:v2"]`),
 				},
 			},
 		},
@@ -465,6 +548,92 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			},
 		},
 		{
+			name: "configPatch on subpath of non-exist path",
+			args: args{
+				plugin: kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+					},
+					Protocols:  []kongv1.KongProtocol{"http"},
+					PluginName: "response-transformer",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"replace":{"headers":["foo:bar"]}}`),
+					},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/add/headers",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Key:    "response-transformer-add-headers",
+									Secret: "conf-secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: kong.Plugin{
+				Name: kong.String("response-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]interface{}{
+						"headers": []interface{}{
+							"foo:bar",
+						},
+					},
+					"add": map[string]interface{}{
+						"headers": []interface{}{
+							"h1:v1",
+							"h2:v2",
+						},
+					},
+				},
+				Protocols: kong.StringSlice("http"),
+			},
+		},
+		{
+			name: "empty config and configPatch for particular paths",
+			args: args{
+				plugin: kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+					},
+					Protocols:  []kongv1.KongProtocol{"http"},
+					PluginName: "correlation-id",
+					Config:     apiextensionsv1.JSON{},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/header_name",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Key:    "correlation-id-headername",
+									Secret: "conf-secret",
+								},
+							},
+						},
+						{
+							Path: "/generator",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Key:    "correlation-id-generator",
+									Secret: "conf-secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: kong.Plugin{
+				Name: kong.String("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "foo",
+					"generator":   "uuid",
+				},
+				Protocols: kong.StringSlice("http"),
+			},
+		},
+		{
 			name: "empty config and configPatch for whole object",
 			args: args{
 				plugin: kongv1.KongPlugin{
@@ -474,9 +643,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 					},
 					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{}`),
-					},
+					Config:     apiextensionsv1.JSON{},
 					ConfigPatches: []kongv1.ConfigPatch{
 						{
 							Path: "",

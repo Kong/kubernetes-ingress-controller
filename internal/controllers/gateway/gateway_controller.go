@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -143,7 +144,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// start the required gatewayclass controller as well
 	gwcCTRL := &GatewayClassReconciler{
 		Client:           r.Client,
-		Log:              r.Log.WithName("V1Beta1GatewayClass"),
+		Log:              r.Log.WithName(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass"),
 		Scheme:           r.Scheme,
 		CacheSyncTimeout: r.CacheSyncTimeout,
 	}

@@ -79,11 +79,22 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Added `configPatches` field to KongPlugin and KongClusterPlugin to 
+  support populating configuration fields from Secret values. An item in
+  `configPatches` defines a JSON patch to add a field on the path in its `path`
+  and value from the value in the secret given in `valueFrom`. The JSON patches
+  are applied to the raw JSON in `config`. Can only be specified when
+  `configFrom` is not present.
+  [#5158](https://github.com/Kong/kubernetes-ingress-controller/pull/5158)
+
 ### Fixed
 
 - Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
   will no longer cause synchronization loop and random request failures due to incorrect routing.
   [#5171](https://github.com/Kong/kubernetes-ingress-controller/pull/5171)
+
 
 ### Changed
 

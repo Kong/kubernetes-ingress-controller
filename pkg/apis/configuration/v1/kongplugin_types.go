@@ -33,7 +33,8 @@ import (
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
-// +kubebuilder:validation:XValidation:rule="(has(self.config) || has(self.configFrom)) ? ((!has(self.config) && has(self.configFrom)) || (has(self.config) && !has(self.configFrom))) : true", message="Using both config and configFrom fields is not allowed."
+// +kubebuilder:validation:XValidation:rule="!(has(self.config) && has(self.configFrom))", message="Using both config and configFrom fields is not allowed."
+// +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 
 // KongPlugin is the Schema for the kongplugins API.
@@ -62,6 +63,13 @@ type KongPlugin struct {
 	// such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin.
 	// Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once.
 	ConfigFrom *ConfigSource `json:"configFrom,omitempty"`
+
+	// ConfigPatches represents JSON patches to the configuration of the plugin.
+	// Each item means a JSON patch to add something in the configuration,
+	// where path is specified in `path` and value is in `valueFrom` referencing
+	// a key in a secret.
+	// Could only be specified when Config specified.
+	ConfigPatches []ConfigPatch `json:"configPatches,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.
 	// +kubebuilder:validation:Required

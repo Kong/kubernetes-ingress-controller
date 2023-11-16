@@ -32,6 +32,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
 | `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
 | `configFrom` _[NamespacedConfigSource](#namespacedconfigsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
+| `configPatches` _[NamespacedConfigPatch](#namespacedconfigpatch) array_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. Could only be specified when Config specified. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
@@ -99,6 +100,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
 | `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
 | `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
+| `configPatches` _[ConfigPatch](#configpatch) array_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. Could only be specified when Config specified. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
@@ -111,6 +113,23 @@ KongPlugin is the Schema for the kongplugins API.
 
 
 
+
+### ConfigPatch
+
+
+
+ConfigPatch is a JSON patch (RFC6902) to add values from Secret to the generated configuration. It is an equivalent of the following patch: `{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.
+
+
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path is the JSON-Pointer value (RFC6901) that references a location within the target configuration. |
+| `valueFrom` _[ConfigSource](#configsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
+
+
+_Appears in:_
+- [KongPlugin](#kongplugin)
 
 ### ConfigSource
 
@@ -126,6 +145,7 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 
 _Appears in:_
+- [ConfigPatch](#configpatch)
 - [KongPlugin](#kongplugin)
 
 
@@ -225,6 +245,23 @@ _Appears in:_
 - [KongIngressRoute](#kongingressroute)
 - [KongPlugin](#kongplugin)
 
+### NamespacedConfigPatch
+
+
+
+NamespacedConfigPatch is a JSON patch to add values from secrets to KongClusterPlugin to the generated configuration of plugin in Kong.
+
+
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path is the JSON path to add the patch. |
+| `valueFrom` _[NamespacedConfigSource](#namespacedconfigsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
+
+
+_Appears in:_
+- [KongClusterPlugin](#kongclusterplugin)
+
 ### NamespacedConfigSource
 
 
@@ -240,6 +277,7 @@ NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 
 _Appears in:_
 - [KongClusterPlugin](#kongclusterplugin)
+- [NamespacedConfigPatch](#namespacedconfigpatch)
 
 ### NamespacedSecretValueFromSource
 

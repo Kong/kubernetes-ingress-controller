@@ -87,6 +87,49 @@ spec:
             required:
             - secretKeyRef
             type: object
+          configPatches:
+            description: ConfigPatches represents JSON patches to the configuration
+              of the plugin. Each item means a JSON patch to add something in the
+              configuration, where path is specified in `path` and value is in `valueFrom`
+              referencing a key in a secret. Could only be specified when Config specified.
+            items:
+              description: NamespacedConfigPatch is a JSON patch to add values from
+                secrets to KongClusterPlugin to the generated configuration of plugin
+                in Kong.
+              properties:
+                path:
+                  description: Path is the JSON path to add the patch.
+                  type: string
+                valueFrom:
+                  description: ValueFrom is the reference to a key of a secret where
+                    the patched value comes from.
+                  properties:
+                    secretKeyRef:
+                      description: Specifies a name, a namespace, and a key of a secret
+                        to refer to.
+                      properties:
+                        key:
+                          description: The key containing the value.
+                          type: string
+                        name:
+                          description: The secret containing the key.
+                          type: string
+                        namespace:
+                          description: The namespace containing the secret.
+                          type: string
+                      required:
+                      - key
+                      - name
+                      - namespace
+                      type: object
+                  required:
+                  - secretKeyRef
+                  type: object
+              required:
+              - path
+              - valueFrom
+              type: object
+            type: array
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.
             type: string
@@ -249,9 +292,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: Using both config and configFrom fields is not allowed.
-          rule: '(has(self.config) || has(self.configFrom)) ? ((!has(self.config)
-            && has(self.configFrom)) || (has(self.config) && !has(self.configFrom)))
-            : true'
+          rule: '!(has(self.config) && has(self.configFrom))'
+        - message: Using both configFrom and configPatches fields is not allowed.
+          rule: '!(has(self.configFrom) && has(self.configPatches))'
         - message: The plugin field is immutable
           rule: self.plugin == oldSelf.plugin
     served: true

@@ -3,6 +3,7 @@ package configuration
 import (
 	"context"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -81,7 +82,7 @@ func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []k8stypes.Namespac
 }
 
 func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, 1)
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
 			Namespace: plugin.Namespace,
@@ -89,7 +90,16 @@ func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.Namespa
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	return referredSecretNames
+
+	for _, patch := range plugin.ConfigPatches {
+		nsName := k8stypes.NamespacedName{
+			Namespace: plugin.Namespace,
+			Name:      patch.ValueFrom.SecretValue.Secret,
+		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+
+	return lo.Uniq(referredSecretNames)
 }
 
 func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8stypes.NamespacedName {
@@ -101,7 +111,16 @@ func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	return referredSecretNames
+
+	for _, patch := range plugin.ConfigPatches {
+		nsName := k8stypes.NamespacedName{
+			Namespace: plugin.Namespace,
+			Name:      patch.ValueFrom.SecretValue.Secret,
+		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+
+	return lo.Uniq(referredSecretNames)
 }
 
 func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []k8stypes.NamespacedName {

@@ -441,34 +441,37 @@ func generateRewriteURIConfig(uri string) (string, error) {
 	return out.String(), nil
 }
 
-// MaybeRewriteURI appends a request-transformer plugin if the value of konghq.com/rewrite annotation is valid.
+// MaybeRewriteURI appends a request-transformer plugin to Kong routes based on
+// the value of konghq.com/rewrite annotation configured on related K8s Ingresses.
 func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
-	rewriteURI, exists := annotations.ExtractRewriteURI(service.Parent.GetAnnotations())
-	if !exists {
-		return nil
-	}
+	for i := range service.Routes {
+		route := &service.Routes[i]
 
-	if !rewriteURIEnable {
-		return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
-	}
+		rewriteURI, exists := annotations.ExtractRewriteURI(route.Ingress.Annotations)
+		if !exists {
+			return nil
+		}
+		if !rewriteURIEnable {
+			return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
+		}
 
-	if rewriteURI == "" {
-		rewriteURI = "/"
-	}
+		if rewriteURI == "" {
+			rewriteURI = "/"
+		}
 
-	config, err := generateRewriteURIConfig(rewriteURI)
-	if err != nil {
-		return err
-	}
-
-	service.Plugins = append(service.Plugins, kong.Plugin{
-		Name: kong.String("request-transformer"),
-		Config: kong.Configuration{
-			"replace": map[string]string{
-				"uri": config,
+		config, err := generateRewriteURIConfig(rewriteURI)
+		if err != nil {
+			return err
+		}
+		route.Plugins = append(route.Plugins, kong.Plugin{
+			Name: kong.String("request-transformer"),
+			Config: kong.Configuration{
+				"replace": map[string]string{
+					"uri": config,
+				},
 			},
-		},
-	})
+		})
 
+	}
 	return nil
 }

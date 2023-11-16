@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,7 +64,8 @@ type GatewayClassReconciler struct { //nolint:revive
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("V1Beta1GatewayClass", mgr, controller.Options{
+	name := strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass"
+	c, err := controller.New(name, mgr, controller.Options{
 		Reconciler: r,
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log

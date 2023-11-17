@@ -33,6 +33,11 @@ on:
         type: string
         default: ""
         required: false
+      log-output-file:
+        # specifies the file for KIC manager's logs to output to.
+        type: string
+        default: ""
+        required: false
 
 jobs:
   dependencies-versions:
@@ -164,6 +169,7 @@ jobs:
           # Ref: https://docs.github.com/en/actions/learn-github-actions/expressions#example
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor != '' && matrix.router-flavor || env.TEST_KONG_ROUTER_FLAVOR }}
           TEST_RUN_INVALID_CONFIG_CASES: ${{ matrix.run_invalid_config }}
+          TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
           GOTESTFLAGS: "${{ matrix.go_test_flags }}"
 
       - name: collect test coverage
@@ -179,6 +185,14 @@ jobs:
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: upload KIC logs 
+        if: ${{ !cancelled() }} && ${{ inputs.log-output-file }} != ""
+        uses: actions/upload-artifact@v3
+        with: 
+          name: integration-tests-kic-logs-${{ matrix.name }}
+          path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 
       - name: collect test report

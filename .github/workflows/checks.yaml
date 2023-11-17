@@ -105,6 +105,8 @@ jobs:
     if: needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
+    with:
+      log-output-file: /tmp/integration-tests-kic-logs
 
   conformance-tests:
     needs:

@@ -97,12 +97,14 @@ jobs:
           - name: postgres-gateway-alpha
             test: postgres
             feature_gates: "GatewayAlpha=true"
+            router-flavor: 'traditional_compatible'
           - name: dbless-rewrite-uris
             test: dbless
             feature_gates: "GatewayAlpha=true,RewriteURIs=true"
           - name: postgres-rewrite-uris
             test: postgres
             feature_gates: "GatewayAlpha=true,RewriteURIs=true"
+            router-flavor: 'traditional_compatible'
           - name: dbless-invalid-config
             test: dbless
             run_invalid_config: "true"

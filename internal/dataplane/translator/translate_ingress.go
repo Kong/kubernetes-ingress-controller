@@ -64,6 +64,11 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 	// Add a default backend if it exists.
 	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends, t.featureFlags.ExpressionRoutes)
 	if ok {
+		// When such service would overwrite an existing service, merge the routes.
+		if svc, ok := result.ServiceNameToServices[*defaultBackendService.Name]; ok {
+			svc.Routes = append(svc.Routes, defaultBackendService.Routes...)
+			defaultBackendService = svc
+		}
 		result.ServiceNameToServices[*defaultBackendService.Name] = defaultBackendService
 		result.ServiceNameToParent[*defaultBackendService.Name] = defaultBackendService.Parent
 	}

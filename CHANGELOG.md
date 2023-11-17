@@ -94,6 +94,9 @@ Adding a new version? You'll need three changes:
 - Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
   will no longer cause synchronization loop and random request failures due to incorrect routing.
   [#5171](https://github.com/Kong/kubernetes-ingress-controller/pull/5171)
+- Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
+  [#5188](https://github.com/Kong/kubernetes-ingress-controller/pull/5188)
+
 
 
 ### Changed

@@ -8,6 +8,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,6 +62,93 @@ func TestFromIngressV1(t *testing.T) {
 		assert.NotPanics(t, func() {
 			p.ingressRulesFromIngressV1()
 		})
+	})
+
+	t.Run("Ingress with default backend targeting the same Service doesn't overwrite routes", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{
+			Services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc",
+						Namespace: "my-ns",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name: "http",
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+			IngressesV1: []*netv1.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "baz",
+						Namespace: "my-ns",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: netv1.IngressSpec{
+						DefaultBackend: &netv1.IngressBackend{
+							Service: &netv1.IngressServiceBackend{
+								Name: "svc",
+								Port: netv1.ServiceBackendPort{
+									Number: 80,
+								},
+							},
+						},
+						Rules: []netv1.IngressRule{
+							{
+								IngressRuleValue: netv1.IngressRuleValue{
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path:     "/foo",
+												PathType: lo.ToPtr(netv1.PathTypePrefix),
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: "svc",
+														Port: netv1.ServiceBackendPort{
+															Number: 80,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		p := mustNewTranslator(t, s)
+
+		result := p.ingressRulesFromIngressV1()
+		require.Contains(t, result.ServiceNameToServices, "my-ns.svc.80")
+		snts := result.ServiceNameToServices["my-ns.svc.80"]
+		require.Len(t, snts.Routes, 2, "ServiceNameToServices should have 2 routes: 1 for default and 1 for /foo")
+		if assert.Len(t, snts.Routes[0].Paths, 2) {
+			assert.Equal(t, *snts.Routes[0].Paths[0], "/foo/")
+			assert.Equal(t, *snts.Routes[0].Paths[1], "~/foo$")
+		}
+		if assert.Len(t, snts.Routes[1].Paths, 1) {
+			assert.Equal(t, *snts.Routes[1].Paths[0], "/")
+		}
+
+		require.Len(t, snts.Backends, 1)
+		assert.Equal(t, snts.Backends[0].Name, "svc")
+
+		require.Contains(t, result.ServiceNameToParent, "my-ns.svc.80")
+		assert.Equal(t, result.ServiceNameToParent["my-ns.svc.80"].GetName(), "baz")
 	})
 }
 

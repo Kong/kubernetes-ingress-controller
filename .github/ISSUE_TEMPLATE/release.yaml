@@ -62,6 +62,7 @@ body:
       - label: "Add entries in support policy documents: `app/_includes/md/support-policy.md` and `app/_src/kubernetes-ingress-controller/support-policy.md`."
       - label: Mark the PR ready for review.
       - label: Inform and ping the @Kong/team-k8s via slack of impending release with a link to the release PR.
+      - label: Ensure that [KGO](https://github.com/Kong/gateway-operator) works with the released version of KIC. Update and release it if needed.
 - type: textarea
   id: conformance_tests_report
   attributes:

@@ -225,8 +225,9 @@ func ingressV1ToKongServiceLegacy(
 
 // routeName generates a name for a Kong Route based on the Ingress name, namespace and rule index and path index.
 func routeName(failuresCollector *failures.ResourceFailuresCollector, objIngress client.Object, ruleIndex, pathIndex int) *string {
-	// Indexes are expected to be ascending (starts from 0), hence the first conflict is expected to be
-	// for the below condition - both will be `111`. Register failure with a hint for user.
+	// Since there is no separator between the rule and path index in the traditional Ingress -> route name pattern,
+	// the controller can generate multiple routes with the same name if there are multiple rules where the pattern
+	// results in the same sequence of digits. For example, rule 1 path 11 and rule 11 path 1 both result in suffix111
 	if ruleIndex == 1 && pathIndex == 11 || ruleIndex == 11 && pathIndex == 1 {
 		failuresCollector.PushResourceFailure(
 			fmt.Sprint(

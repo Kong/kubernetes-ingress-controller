@@ -57,9 +57,9 @@ jobs:
           KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
       
-      # REVIEW: upload logs only when test failed?
+      # upload logs when test failed
       - name: upload KIC logs 
-        if: ${{ !cancelled() }} && ${{ inputs.log-output-file }} != ""
+        if: ${{ failure() && inputs.log-output-file != '' }}
         uses: actions/upload-artifact@v3
         with: 
           name: ${{ matrix.name }}-kic-logs

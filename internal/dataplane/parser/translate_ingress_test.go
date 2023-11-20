@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -270,5 +271,74 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		for _, err := range errs {
 			require.Equal(t, "konghq.com/rewrite annotation not supported when rewrite uris disabled", err.Message())
 		}
+	})
+}
+
+func TestConflictingNames(t *testing.T) {
+	createIngress := func(noRules, noPaths int) *netv1.Ingress {
+		var ingresRules []netv1.IngressRule
+		for i := 0; i <= noRules; i++ {
+			var paths []netv1.HTTPIngressPath
+			for j := 0; j <= noPaths; j++ {
+				paths = append(paths, netv1.HTTPIngressPath{
+					Path:     "/~/api/(.*)",
+					PathType: lo.ToPtr(netv1.PathTypePrefix),
+					Backend: netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "foo-svc",
+							Port: netv1.ServiceBackendPort{Number: 80},
+						},
+					},
+				},
+				)
+			}
+			ingresRules = append(ingresRules, netv1.IngressRule{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: paths,
+					},
+				},
+			})
+		}
+		return &netv1.Ingress{
+			TypeMeta: metav1.TypeMeta{Kind: "Ingress"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("conflicting-one-%d-%d", noRules, noPaths),
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: ingresRules,
+			},
+		}
+	}
+	s, err := store.NewFakeStore(store.FakeObjects{
+		IngressesV1: []*netv1.Ingress{
+			createIngress(1, 1),
+			// The below generates Kong Routes that are conflicting with each other.
+			createIngress(1, 11),
+			createIngress(11, 1),
+		},
+	})
+	require.NoError(t, err)
+	p := mustNewParser(t, s)
+
+	t.Run("Ingress rule with conflicting names - CombinedRoutes=false", func(t *testing.T) {
+		p.featureFlags.CombinedServiceRoutes = false
+		_ = p.ingressRulesFromIngressV1()
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Len(t, errs, 2)
+		require.Contains(t, errs[0].Message(), "ERROR: Kong route with conflicting name for Ingress: conflicting-one-1-11")
+		require.Contains(t, errs[1].Message(), "ERROR: Kong route with conflicting name for Ingress: conflicting-one-11-1")
+	})
+
+	t.Run("Ingress rule with conflicting names - CombinedRoutes=true", func(t *testing.T) {
+		p.featureFlags.CombinedServiceRoutes = true
+		_ = p.ingressRulesFromIngressV1()
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Len(t, errs, 0)
 	})
 }

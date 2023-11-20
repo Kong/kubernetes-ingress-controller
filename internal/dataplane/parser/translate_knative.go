@@ -73,7 +73,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              routeName(p.failuresCollector, ingress, i, j),
 						Paths:             kong.StringSlice(path),
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),

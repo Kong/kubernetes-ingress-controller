@@ -7,6 +7,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -162,7 +163,7 @@ func ingressV1ToKongServiceLegacy(
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              routeName(failuresCollector, ingress, i, j),
 						Paths:             paths,
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),
@@ -220,6 +221,25 @@ func ingressV1ToKongServiceLegacy(
 	}
 
 	return servicesCache
+}
+
+// routeName generates a name for a Kong Route based on the Ingress name, namespace and rule index and path index.
+func routeName(failuresCollector *failures.ResourceFailuresCollector, objIngress client.Object, ruleIndex, pathIndex int) *string {
+	// Indexes are expected to be ascending (starts from 0), hence the first conflict is expected to be
+	// for the below condition - both will be `111`. Register failure with a hint for user.
+	if ruleIndex == 1 && pathIndex == 11 || ruleIndex == 11 && pathIndex == 1 {
+		failuresCollector.PushResourceFailure(
+			fmt.Sprint(
+				"ERROR: Kong route with conflicting name for Ingress: ",
+				objIngress.GetName()+" ",
+				"use feature gate CombinedRoutes=true ",
+				"or update Kong Kubernetes Ingress Controller version to 3.0.0 or above ",
+				"(both remediation changes naming schema of Kong routes) ",
+			),
+			objIngress,
+		)
+	}
+	return kong.String(fmt.Sprintf("%s.%s.%d%d", objIngress.GetNamespace(), objIngress.GetName(), ruleIndex, pathIndex))
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.

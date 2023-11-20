@@ -186,7 +186,8 @@ jobs:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
-
+      
+      # REVIEW: upload logs only when test failed?
       - name: upload KIC logs 
         if: ${{ !cancelled() }} && ${{ inputs.log-output-file }} != ""
         uses: actions/upload-artifact@v3

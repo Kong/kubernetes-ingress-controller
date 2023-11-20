@@ -114,6 +114,8 @@ jobs:
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_conformance_tests.yaml
     secrets: inherit
+    with:
+      log-output-file: /tmp/conformance-tests-kic-logs
 
   build-docker-image:
     needs:

@@ -1,7 +1,13 @@
 name: conformance tests
 
 on:
-  workflow_call: {}
+  workflow_call:
+    inputs:
+      log-output-file:
+        # specifies the file for KIC manager's logs to output to.
+        type: string
+        default: ""
+        required: false
 
 jobs:
   dependencies-versions:
@@ -49,6 +55,16 @@ jobs:
         env:
           JUNIT_REPORT: "conformance-tests.xml"
           KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
+          TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
+      
+      # REVIEW: upload logs only when test failed?
+      - name: upload KIC logs 
+        if: ${{ !cancelled() }} && ${{ inputs.log-output-file }} != ""
+        uses: actions/upload-artifact@v3
+        with: 
+          name: integration-tests-kic-logs-${{ matrix.name }}
+          path: ${{ inputs.log-output-file }}
+          if-no-files-found: ignore
 
       - name: collect test report
         if: ${{ always() }}

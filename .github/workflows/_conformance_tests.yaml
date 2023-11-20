@@ -62,7 +62,7 @@ jobs:
         if: ${{ !cancelled() }} && ${{ inputs.log-output-file }} != ""
         uses: actions/upload-artifact@v3
         with: 
-          name: integration-tests-kic-logs-${{ matrix.name }}
+          name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 

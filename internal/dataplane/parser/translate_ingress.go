@@ -227,7 +227,9 @@ func ingressV1ToKongServiceLegacy(
 func routeName(failuresCollector *failures.ResourceFailuresCollector, objIngress client.Object, ruleIndex, pathIndex int) *string {
 	// Since there is no separator between the rule and path index in the traditional Ingress -> route name pattern,
 	// the controller can generate multiple routes with the same name if there are multiple rules where the pattern
-	// results in the same sequence of digits. For example, rule 1 path 11 and rule 11 path 1 both result in suffix111
+	// results in the same sequence of digits. For example, rule 1 path 11 and rule 11 path 1 both result in suffix111.
+	// Detecting only the first problematic case is enough, because indexes are in ascending order, thus without hitting
+	// the first problematic case, the second one will not be hit either.
 	if ruleIndex == 1 && pathIndex == 11 || ruleIndex == 11 && pathIndex == 1 {
 		failuresCollector.PushResourceFailure(
 			fmt.Sprint(

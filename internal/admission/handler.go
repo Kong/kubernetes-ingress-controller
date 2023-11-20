@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -25,6 +26,10 @@ type RequestHandler struct {
 	// Validator validates the entities that the k8s API-server asks
 	// it the server to validate.
 	Validator KongValidator
+	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
+	// referring the validated resource (Secret) to check the changes on
+	// referred Secret will produce invalid configuration of the plugins.
+	ReferenceIndexers ctrlref.CacheIndexers
 
 	Logger logr.Logger
 }
@@ -203,7 +208,7 @@ func (h RequestHandler) handleKongPlugin(
 		return nil, err
 	}
 
-	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin)
+	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +227,7 @@ func (h RequestHandler) handleKongClusterPlugin(
 		return nil, err
 	}
 
-	ok, message, err := h.Validator.ValidateClusterPlugin(ctx, plugin)
+	ok, message, err := h.Validator.ValidateClusterPlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +257,49 @@ func (h RequestHandler) handleSecret(
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
 		ok, message := h.Validator.ValidateCredential(ctx, secret)
-		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+		if !ok {
+			return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+		}
+		referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(&secret)
+		if err != nil {
+			return responseBuilder.Allowed(false).WithMessage(err.Error()).Build(), err
+		}
+		for _, obj := range referrers {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == "KongPlugin" {
+				plugin := obj.(*kongv1.KongPlugin)
+				ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{&secret})
+				if err != nil {
+					return nil, fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
+						plugin.Namespace, plugin.Name, err,
+					)
+				}
+				if !ok {
+					return responseBuilder.Allowed(ok).WithMessage(
+						fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
+							plugin.Namespace, plugin.Name, message,
+						)).Build(), nil
+				}
+			}
+			if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == "KongClusterPlugin" {
+				plugin := obj.(*kongv1.KongClusterPlugin)
+				ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{&secret})
+				if err != nil {
+					return nil, fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
+						plugin.Name, err,
+					)
+				}
+				if !ok {
+					return responseBuilder.Allowed(ok).WithMessage(
+						fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
+							plugin.Name, message,
+						)).Build(), nil
+				}
+
+			}
+		}
+		return responseBuilder.Allowed(true).WithMessage("").Build(), nil
+
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}

@@ -192,6 +192,27 @@ func (c CacheIndexers) ListReferencesByReferrer(referrer client.Object) ([]*Obje
 	return returnRefList, nil
 }
 
+// ListReferencesByReferent lists all reference records referring to the same referent.
+func (c CacheIndexers) ListReferencesByReferent(referent client.Object) ([]*ObjectReference, error) {
+	referenctKey, err := objectKeyFunc(referent)
+	if err != nil {
+		return nil, err
+	}
+	refList, err := c.indexer.ByIndex(IndexNameReferent, referenctKey)
+	if err != nil {
+		return nil, err
+	}
+	returnRefList := make([]*ObjectReference, 0, len(refList))
+	for _, ref := range refList {
+		retRef, ok := ref.(*ObjectReference)
+		if !ok {
+			return nil, ErrTypeNotObjectReference
+		}
+		returnRefList = append(returnRefList, retRef)
+	}
+	return returnRefList, nil
+}
+
 // DeleteReferencesByReferrer deletes all reference records where referrer has the same key
 // (GroupVersionKind+NamespacedName, that means the same k8s object).
 // called when a k8s object deleted in cluster, or when we do not care about it anymore.
@@ -242,6 +263,18 @@ func (c CacheIndexers) ListReferredObjects(referrer client.Object) ([]client.Obj
 	objs := []client.Object{}
 	for _, ref := range refs {
 		objs = append(objs, ref.Referent)
+	}
+	return objs, nil
+}
+
+func (c CacheIndexers) ListReferrerObjectsByReferent(referent client.Object) ([]client.Object, error) {
+	refs, err := c.ListReferencesByReferent(referent)
+	if err != nil {
+		return nil, err
+	}
+	objs := []client.Object{}
+	for _, ref := range refs {
+		objs = append(objs, ref.Referrer)
 	}
 	return objs, nil
 }

@@ -249,7 +249,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
+			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin, nil)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidatePlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,
@@ -433,7 +433,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 				ingressClassMatcher: fakeClassMatcher,
 			}
 
-			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin)
+			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin, nil)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidateClusterPlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,

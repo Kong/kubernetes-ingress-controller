@@ -539,6 +539,70 @@ func TestValidationWebhook(t *testing.T) {
 	}
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidJWT, metav1.CreateOptions{})
 	require.ErrorContains(t, err, "some fields were invalid due to missing data: rsa_public_key, key, secret")
+
+	t.Log("verifying that the validation fails when secret generates invalid plugin configuration for KongPlugin")
+	for _, tt := range []struct {
+		name          string
+		KongPlugin    *kongv1.KongPlugin
+		secretBefore  *corev1.Secret
+		secretAfter   *corev1.Secret
+		errorOnUpdate bool
+	}{
+		{
+			name: "should fail the validation if secret produces invalid plugin configuration",
+			KongPlugin: &kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns.Name,
+					Name:      "rate-limiting",
+				},
+				PluginName: "rate-limiting",
+				ConfigFrom: &kongv1.ConfigSource{
+					SecretValue: kongv1.SecretValueFromSource{
+						Secret: "conf-secret",
+						Key:    "rate-limiting-config",
+					},
+				},
+			},
+			secretBefore: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns.Name,
+					Name:      "conf-secret",
+				},
+				Data: map[string][]byte{
+					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
+				},
+			},
+			secretAfter: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns.Name,
+					Name:      "conf-secret",
+				},
+				Data: map[string][]byte{
+					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local"}`),
+				},
+			},
+			errorOnUpdate: true,
+		},
+	} {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
+			require.NoError(t, err)
+			_, err = kongClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, tt.KongPlugin, metav1.CreateOptions{})
+			require.NoError(t, err)
+			defer func() {
+				err := kongClient.ConfigurationV1().KongPlugins(ns.Name).Delete(ctx, tt.KongPlugin.Name, metav1.DeleteOptions{})
+				require.NoError(t, err)
+			}()
+
+			_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretAfter, metav1.CreateOptions{})
+			if tt.errorOnUpdate {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func ensureWebhookService(ctx context.Context, t *testing.T, name string) {

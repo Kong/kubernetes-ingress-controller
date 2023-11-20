@@ -422,6 +422,31 @@ _test.integration: _check.container.environment go-junit-report
 		./test/integration | \
 	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
+.PHONY: _test.integration.isolated
+_test.integration.isolated: _check.container.environment go-junit-report
+	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
+		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
+		TEST_DATABASE_MODE="$(DBMODE)" \
+		GOFLAGS="-tags=$(GOTAGS)" \
+		KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
+		go test $(GOTESTFLAGS) \
+		-v \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
+		-parallel $(NCPU) \
+		-race \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=$(COVERAGE_OUT) \
+		./test/integration/isolated -args --parallel $(E2E_FRAMEWORK_FLAGS) | \
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+
+.PHONY: test.integration.isolated.dbless
+test.integration.isolated.dbless:
+	@$(MAKE) _test.integration.isolated \
+		GOTAGS="integration_tests" \
+		DBMODE=off \
+		COVERAGE_OUT=coverage.dbless.out
+
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@$(MAKE) _test.integration \

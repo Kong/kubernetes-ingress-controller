@@ -17,10 +17,6 @@ import (
 // Testing Utility Functions - CRDs
 // -----------------------------------------------------------------------------
 
-const (
-	kongCRDsKustomize = "../../config/crd/"
-)
-
 func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	apiextClient, err := apiextclient.NewForConfig(cluster.Config())
 	if err != nil {

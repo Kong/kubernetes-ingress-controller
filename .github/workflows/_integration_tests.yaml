@@ -113,6 +113,14 @@ jobs:
             # https://github.com/Kong/kubernetes-ingress-controller/issues/5127 is resolved.
             router-flavor: 'traditional'
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
+          # Experimental tests, in the future all integration tests will be migrated to them.
+          - name: isolated-dbless
+            test: isolated.dbless
+            feature_gates: "GatewayAlpha=true"
+          - name: isolated-dbless-expression-router
+            router-flavor: expressions
+            test: isolated.dbless
+            feature_gates: "GatewayAlpha=true"
 
     steps:
       - uses: Kong/kong-license@master

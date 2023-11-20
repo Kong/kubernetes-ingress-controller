@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os/signal"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,16 +20,17 @@ func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
 	}
 	ctx = ctrl.LoggerInto(ctx, logger)
 
+	ctx, err = SetupSignalHandler(ctx, c, logger)
+	if err != nil {
+		return fmt.Errorf("failed to setup signal handler: %w", err)
+	}
+	defer signal.Ignore(shutdownSignals...)
+
 	return RunWithLogger(ctx, c, logger)
 }
 
 // RunWithLogger starts the controller manager with a provided logger.
 func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) error {
-	ctx, err := SetupSignalHandler(ctx, c, logger)
-	if err != nil {
-		return fmt.Errorf("failed to setup signal handler: %w", err)
-	}
-
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}

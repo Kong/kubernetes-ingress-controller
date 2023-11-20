@@ -1258,3 +1258,18 @@ func TestIngressRewriteURI(t *testing.T) {
 	cancelBackgroundTest()
 	require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")
 }
+
+// setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value
+// and retries if update conflict happens.
+func setIngressClassNameWithRetry(ctx context.Context, namespace string, ingress *netv1.Ingress, ingressClassName *string) error {
+	ingressClient := env.Cluster().Client().NetworkingV1().Ingresses(namespace)
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ingress, err := ingressClient.Get(ctx, ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		ingress.Spec.IngressClassName = ingressClassName
+		_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		return err
+	})
+}

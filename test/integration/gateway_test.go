@@ -56,7 +56,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new gateway")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -168,7 +168,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new Gateway using the default GatewayClass")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -347,7 +347,7 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway that allows routes in all namespaces")
-	gateway, err := DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = uuid.NewString()
 		gw.Spec.Listeners = []gatewayapi.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).
@@ -422,7 +422,7 @@ func TestGatewayFilters(t *testing.T) {
 	cleaner.Add(otherRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")

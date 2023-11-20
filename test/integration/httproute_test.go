@@ -44,13 +44,13 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a new gateway")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		// add a UDP listener to check the HTTPRoute does not get attached to it.
 		gw.Spec.Listeners = append(gw.Spec.Listeners, gatewayapi.Listener{
@@ -147,11 +147,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(httpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the httproute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
+		helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 
@@ -240,7 +240,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
@@ -256,7 +256,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -266,18 +266,18 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
 	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
@@ -287,20 +287,20 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
 	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
@@ -311,7 +311,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -319,12 +319,12 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("testing port matching....")
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	_, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
 	t.Log("putting the GatewayClass back")
-	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	// Set the Port in ParentRef which does not have a matching listener in Gateway.
@@ -352,13 +352,13 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a new gateway")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
@@ -542,13 +542,13 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a new gateway with specified hostname")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		for i := range gw.Spec.Listeners {
 			gw.Spec.Listeners[i].Hostname = &listenerHostname

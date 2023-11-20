@@ -8,25 +8,19 @@ import (
 	"testing"
 	"time"
 
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	netv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 const (
 	// defaultGatewayName is the default name for the Gateways created during tests.
-	defaultGatewayName = "kong"
+	defaultGatewayName = helpers.DefaultGatewayName
 	// unmanagedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
 	unmanagedGatewayClassName = "kong-unmanaged"
 	// unsupportedControllerName is the name of the controller used for those gateways that are not supported
@@ -36,72 +30,6 @@ const (
 	// to enable expression based router of kong.
 	kongRouterFlavorExpressions = "expressions"
 )
-
-// DeployGateway creates a default gatewayClass, accepts a variadic set of options,
-// and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
-func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gatewayapi.GatewayClass)) (*gatewayapi.GatewayClass, error) {
-	gwc := &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: gatewayClassName,
-			Annotations: map[string]string{
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
-			},
-		},
-		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-	}
-
-	for _, opt := range opts {
-		opt(gwc)
-	}
-
-	result, err := client.GatewayV1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return result, err
-		}
-		result, err = client.GatewayV1().GatewayClasses().Create(ctx, gwc, metav1.CreateOptions{})
-	}
-	return result, err
-}
-
-// DeployGateway creates a default gateway, accepts a variadic set of options,
-// and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
-func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gatewayapi.Gateway)) (*gatewayapi.Gateway, error) {
-	// create a default gateway with a listener set to port 80 for HTTP traffic
-	gw := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: defaultGatewayName,
-		},
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gatewayClassName),
-			Listeners: []gatewayapi.Listener{
-				{
-					Name:     "http",
-					Protocol: gatewayapi.HTTPProtocolType,
-					Port:     gatewayapi.PortNumber(ktfkong.DefaultProxyTCPServicePort),
-				},
-			},
-		},
-	}
-
-	// call all the modifiers passed as args
-	for _, opt := range opts {
-		opt(gw)
-	}
-
-	result, err := client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		err = client.GatewayV1().Gateways(namespace).Delete(ctx, gw.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return result, err
-		}
-		result, err = client.GatewayV1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
-	}
-	return result, err
-}
 
 // gatewayHealthCheck checks the gateway has been scheduled by KIC. This function is inspired by
 // assert.eventually (https://github.com/stretchr/testify/blob/v1.7.5/assert/assertions.go#L1669-L1700)
@@ -124,7 +52,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 			tick = nil
 			ch <- func() bool {
 				gw, err := client.GatewayV1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
-				exitOnErr(ctx, err)
+				helpers.ExitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,
 					util.ConditionType(gatewayapi.GatewayConditionProgrammed),
@@ -193,224 +121,4 @@ func ListenersHaveNAttachedRoutesCallback(t *testing.T, c *gatewayclient.Clients
 		}
 		return true
 	}
-}
-
-// GetGatewayIsLinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
-// is correctly linked to a supported gateway.
-func GetGatewayIsLinkedCallback(
-	ctx context.Context,
-	t *testing.T,
-	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
-	namespace,
-	name string,
-) func() bool {
-	return func() bool {
-		return gatewayLinkStatusMatches(ctx, t, c, true, protocolType, namespace, name)
-	}
-}
-
-// GetGatewayIsUnlinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
-// is correctly unlinked from a supported gateway.
-func GetGatewayIsUnlinkedCallback(
-	ctx context.Context,
-	t *testing.T,
-	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
-	namespace,
-	name string,
-) func() bool {
-	return func() bool {
-		return gatewayLinkStatusMatches(ctx, t, c, false, protocolType, namespace, name)
-	}
-}
-
-type routeParents struct {
-	parents []gatewayapi.RouteParentStatus
-}
-
-func newRouteParentsStatus(parents []gatewayapi.RouteParentStatus) routeParents {
-	return routeParents{
-		parents: parents,
-	}
-}
-
-func (rp routeParents) check(verifyLinked bool, controllerName string) bool {
-	for _, ps := range rp.parents {
-		if string(ps.ControllerName) == controllerName {
-			// supported Gateway link was found, hence if we want to ensure
-			// the link existence return true
-			return verifyLinked
-		}
-	}
-
-	// supported Gateway link was not found, hence if we want to ensure
-	// the link existence return false
-	return !verifyLinked
-}
-
-// gatewayLinkStatusMatches checks if the specific Route (HTTP, TCP, TLS, or UDP)
-// is correctly linked to (or unlinked from) a supported gateway. In order to assert
-// that the route must be linked to the gateway, or unlinked from the gateway, the
-// verifyLinked boolean arg must be set accordingly.
-func gatewayLinkStatusMatches(
-	ctx context.Context,
-	t *testing.T,
-	c *gatewayclient.Clientset,
-	verifyLinked bool,
-	protocolType gatewayapi.ProtocolType,
-	namespace, name string,
-) bool {
-	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType {
-	case gatewayapi.HTTPProtocolType:
-		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil && gerr != nil {
-			t.Logf("error getting http route: %v", err)
-			t.Logf("error getting grpc route: %v", err)
-		} else {
-			if err == nil {
-				return newRouteParentsStatus(route.Status.Parents).
-					check(verifyLinked, string(gateway.GetControllerName()))
-			}
-			if gerr == nil {
-				return newRouteParentsStatus(groute.Status.Parents).
-					check(verifyLinked, string(gateway.GetControllerName()))
-			}
-		}
-	case gatewayapi.TCPProtocolType:
-		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting tcp route: %v", err)
-		} else {
-			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
-		}
-	case gatewayapi.UDPProtocolType:
-		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting udp route: %v", err)
-		} else {
-			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
-		}
-	case gatewayapi.TLSProtocolType:
-		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting tls route: %v", err)
-		} else {
-			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
-		}
-	default:
-		t.Fatalf("protocol %s not supported", string(protocolType))
-	}
-
-	t.Fatal("this should not happen")
-	return false
-}
-
-func parentStatusContainsProgrammedCondition(
-	parentStatuses []gatewayapi.RouteParentStatus,
-	controllerName gatewayapi.GatewayController,
-	expectedStatus metav1.ConditionStatus,
-) bool {
-	var conditions []metav1.Condition
-	parentFound := false
-	for _, parentStatus := range parentStatuses {
-		if parentStatus.ControllerName == controllerName {
-			conditions = parentStatus.Conditions
-			parentFound = true
-		}
-
-		if parentFound {
-			break
-		}
-	}
-
-	if !parentFound {
-		return false
-	}
-	return lo.ContainsBy(conditions, func(cond metav1.Condition) bool {
-		return cond.Type == "Programmed" && cond.Status == expectedStatus
-	})
-}
-
-func verifyProgrammedConditionStatus(t *testing.T,
-	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
-	namespace, name string,
-	expectedStatus metav1.ConditionStatus,
-) bool {
-	ctx := context.Background()
-
-	// gather a fresh copy of the route, given the specific protocol type
-	switch protocolType {
-	case gatewayapi.HTTPProtocolType:
-		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil && gerr != nil {
-			t.Logf("error getting http route: %v", err)
-			t.Logf("error getting grpc route: %v", err)
-		} else {
-			if err == nil {
-				return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
-			}
-			if gerr == nil {
-				return parentStatusContainsProgrammedCondition(groute.Status.Parents, gateway.GetControllerName(), expectedStatus)
-			}
-		}
-	case gatewayapi.TCPProtocolType:
-		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting tcp route: %v", err)
-		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
-		}
-	case gatewayapi.TLSProtocolType:
-		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting tls route: %v", err)
-		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
-		}
-	case gatewayapi.UDPProtocolType:
-		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting udp route: %v", err)
-		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
-		}
-	default:
-		t.Fatalf("protocol %s not supported", string(protocolType))
-	}
-
-	return false
-}
-
-func GetVerifyProgrammedConditionCallback(t *testing.T,
-	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
-	namespace, name string,
-	expectedStatus metav1.ConditionStatus,
-) func() bool {
-	return func() bool {
-		return verifyProgrammedConditionStatus(t, c, protocolType, namespace, name, expectedStatus)
-	}
-}
-
-// setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value
-// and retries if update conflict happens.
-func setIngressClassNameWithRetry(ctx context.Context, namespace string, ingress *netv1.Ingress, ingressClassName *string) error {
-	ingressClient := env.Cluster().Client().NetworkingV1().Ingresses(namespace)
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ingress, err := ingressClient.Get(ctx, ingress.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		ingress.Spec.IngressClassName = ingressClassName
-		_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
-		return err
-	})
 }

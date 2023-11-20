@@ -48,13 +48,13 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Logf("deploying a gateway to the test cluster using unmanaged gateway mode and port %d", ktfkong.DefaultTCPServicePort)
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     gatewayTCPPortName,
@@ -152,11 +152,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(tcpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the tcproute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name, metav1.ConditionTrue),
+		helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 
@@ -176,7 +176,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
@@ -202,7 +202,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -211,10 +211,10 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
@@ -224,11 +224,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -240,7 +240,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
@@ -250,7 +250,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     gatewayTCPPortName,
@@ -261,7 +261,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -274,7 +274,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -284,11 +284,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     gatewayTCPPortName,
@@ -299,7 +299,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -350,7 +350,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -361,7 +361,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("testing port matching")
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	_, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     gatewayTCPPortName,
@@ -371,7 +371,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Log("putting the GatewayClass back")
-	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("verifying that the TCPRoute responds before specifying a port not existent in Gateway")
@@ -418,13 +418,13 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("deploying a gatewayclass to the test cluster")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     gatewayTCPPortName,

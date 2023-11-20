@@ -17,13 +17,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -52,7 +48,7 @@ func TestMain(m *testing.M) {
 	// The logger cannot be configured after that point.
 	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	if err != nil {
-		exitOnErrWithCode(ctx, fmt.Errorf("failed to setup loggers: %w", err), consts.ExitCodeCantCreateLogger)
+		helpers.ExitOnErrWithCode(ctx, fmt.Errorf("failed to setup loggers: %w", err), consts.ExitCodeCantCreateLogger)
 	}
 	if logOutput != "" {
 		fmt.Printf("INFO: writing manager logs to %s\n", logOutput)
@@ -60,7 +56,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder, extraControllerArgs, err := helpers.GenerateKongBuilder(ctx)
-	exitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
+	helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
 	}
@@ -74,11 +70,11 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster := testenv.ExistingClusterName(); existingCluster != "" {
 		if testenv.ClusterVersion() != "" {
-			exitOnErrWithCode(ctx, fmt.Errorf("can't flag cluster version & provide an existing cluster at the same time"), consts.ExitCodeIncompatibleOptions)
+			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("can't flag cluster version & provide an existing cluster at the same time"), consts.ExitCodeIncompatibleOptions)
 		}
 		clusterParts := strings.Split(existingCluster, ":")
 		if len(clusterParts) != 2 {
-			exitOnErrWithCode(ctx, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), consts.ExitCodeCantUseExistingCluster)
+			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), consts.ExitCodeCantUseExistingCluster)
 		}
 		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
@@ -86,15 +82,15 @@ func TestMain(m *testing.M) {
 		switch clusterType {
 		case string(kind.KindClusterType):
 			cluster, err := kind.NewFromExisting(clusterName)
-			exitOnErr(ctx, err)
+			helpers.ExitOnErr(ctx, err)
 			builder.WithExistingCluster(cluster)
 			builder.WithAddons(metallb.New())
 		case string(gke.GKEClusterType):
 			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
-			exitOnErr(ctx, err)
+			helpers.ExitOnErr(ctx, err)
 			builder.WithExistingCluster(cluster)
 		default:
-			exitOnErrWithCode(ctx, fmt.Errorf("unknown cluster type: %s", clusterType), consts.ExitCodeCantUseExistingCluster)
+			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("unknown cluster type: %s", clusterType), consts.ExitCodeCantUseExistingCluster)
 		}
 	} else {
 		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
@@ -103,7 +99,7 @@ func TestMain(m *testing.M) {
 
 		if testenv.ClusterVersion() != "" {
 			clusterVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
-			exitOnErr(ctx, err)
+			helpers.ExitOnErr(ctx, err)
 
 			fmt.Printf("INFO: build a new KIND cluster with version %s\n", clusterVersion.String())
 			builder.WithKubernetesVersion(clusterVersion)
@@ -112,7 +108,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: building test environment")
 	env, err = builder.Build(ctx)
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 
 	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
@@ -121,21 +117,20 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
 	defer envReadyCancel()
-	exitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
+	helpers.ExitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
 
 	fmt.Println("INFO: collecting urls from the kong proxy deployment")
 	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 
-	exitOnErr(
+	helpers.ExitOnErr(
 		ctx,
 		retry.Do(
 			func() error {
@@ -161,16 +156,13 @@ func TestMain(m *testing.M) {
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
-		fmt.Println("INFO: creating additional controller namespaces")
-		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: consts.ControllerNamespace}}
-		if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				exitOnErr(ctx, err)
-			}
-		}
 		fmt.Println("INFO: configuring feature gates")
 		featureGates := testenv.ControllerFeatureGates()
 		fmt.Printf("INFO: feature gates enabled: %s\n", featureGates)
+
+		fmt.Println("preparing the environment to run the controller manager")
+		helpers.ExitOnErr(ctx, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
+
 		fmt.Println("INFO: starting the controller manager")
 		cert, key := certificate.GetKongSystemSelfSignedCerts()
 		standardControllerArgs := []string{
@@ -186,43 +178,25 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		exitOnErr(ctx, testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), allControllerArgs...))
+		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs...)
+		defer cancel()
+		helpers.ExitOnErr(ctx, err)
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 
 	fmt.Println("INFO: Deploying the default GatewayClass")
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, unmanagedGatewayClassName)
-	exitOnErr(ctx, err)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, unmanagedGatewayClassName)
+	helpers.ExitOnErr(ctx, err)
 	cleaner.Add(gwc)
 
 	fmt.Printf("INFO: Deploying the controller's IngressClass %q\n", consts.IngressClass)
-	createIngressClass := func() *netv1.IngressClass {
-		return &netv1.IngressClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: consts.IngressClass,
-			},
-			Spec: netv1.IngressClassSpec{
-				Controller: store.IngressClassKongController,
-			},
-		}
-	}
-	ingClasses := env.Cluster().Client().NetworkingV1().IngressClasses()
-	_, err = ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		// If for some reason the ingress class is already in the cluster don't
-		// fail the whole test suite but recreate it and continue.
-		err = ingClasses.Delete(ctx, consts.IngressClass, metav1.DeleteOptions{})
-		exitOnErr(ctx, err)
-		_, err = ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
-		exitOnErr(ctx, err)
-	}
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, helpers.CreateIngressClass(ctx, consts.IngressClass, env.Cluster().Client()))
 	defer func() {
 		// deleting this directly instead of adding it to the cleaner because
 		// the cleaner always gets a 404 on it for unknown reasons
-		_ = ingClasses.Delete(ctx, consts.IngressClass, metav1.DeleteOptions{})
+		_ = env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, consts.IngressClass, metav1.DeleteOptions{})
 	}()
 
 	if os.Getenv("TEST_RUN_INVALID_CONFIG_CASES") == "true" {
@@ -232,7 +206,7 @@ func TestMain(m *testing.M) {
 	}
 
 	clusterVersion, err := env.Cluster().Version()
-	exitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()
@@ -242,6 +216,6 @@ func TestMain(m *testing.M) {
 	} else {
 		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
 		defer cancel()
-		exitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
+		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
 	}
 }

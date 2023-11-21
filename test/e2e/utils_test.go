@@ -45,6 +45,8 @@ const (
 var (
 	// gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.
 	gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
+	// adminAPIHTTP2MinimalKongVersion is the minimal version of Kong gateway version that supports `http2` on admin APIs.
+	adminAPIHTTP2MinimalKongVersion = semver.Version{Major: 3, Minor: 0} // 3.0.0
 	// statusReadyProbeMinimalKongVersion is the minimal version of kong gateway version that enables /status/ready probe.
 	statusReadyProbeMinimalKongVersion = semver.Version{Major: 3, Minor: 3} // 3.3.0
 )
@@ -114,6 +116,48 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	}, time.Minute, time.Second)
 }
 
+func removeAdminListenHTTP2(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment k8stypes.NamespacedName) {
+	t.Helper()
+	t.Log("updating the proxy container KONG_ADMIN_LISTEN to disable the admin API listen on HTTP2")
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	var kongAdminListenValue string
+	for _, containerSpec := range deployment.Spec.Template.Spec.Containers {
+		if containerSpec.Name == proxyContainerName {
+			for _, envVar := range containerSpec.Env {
+				if envVar.Name == "KONG_ADMIN_LISTEN" {
+					value := envVar.Value
+					kongAdminListenValue = strings.ReplaceAll(value, " http2", "")
+				}
+			}
+		}
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Patch(
+		ctx, deployment.Name,
+		k8stypes.StrategicMergePatchType,
+		[]byte(fmt.Sprintf(
+			`{
+				"spec": {
+					"template":{
+						"spec":{
+							"containers":[
+								{
+									"name":"%s","env":[{"name":"KONG_ADMIN_LISTEN","value":"%s"}]
+								}
+							]
+						}
+					}
+				}
+			}`,
+			proxyContainerName,
+			kongAdminListenValue,
+		)),
+		metav1.PatchOptions{},
+	)
+	require.NoError(t, err)
+}
+
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
 // In case of any failure while patching, the base manifest is returned.
 // If skipTestPatches is true, no patches are applied (useful when untouched manifest is needed, e.g. in upgrade tests).
@@ -162,8 +206,8 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 		}
 
 		if kongImageOverride != "" {
-			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
 			kongVersion, err := getKongVersionFromOverrideImageTag()
+			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
 			// If we could not get version from kong image, assume they are latest.
 			// So we do not patch the readiness probe path to the legacy path `/status`.
 			if err == nil && patchReadinessProbeRange(kongVersion) {

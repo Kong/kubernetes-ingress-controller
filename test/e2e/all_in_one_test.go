@@ -47,10 +47,21 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	forDeployment := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
 	}
-	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(podList.Items))
-	pod := podList.Items[0]
+
+	var pod corev1.Pod
+	require.Eventually(
+		t, func() bool {
+			podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+			require.NoError(t, err)
+			if len(podList.Items) == 1 && podList.Items[0].Status.Phase == corev1.PodRunning {
+				pod = podList.Items[0]
+				return true
+			}
+			return false
+		},
+		time.Minute, time.Second,
+		"should have only one 'Running' pod in deployment",
+	)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

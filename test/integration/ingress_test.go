@@ -151,6 +151,48 @@ func TestIngressEssentials(t *testing.T) {
 	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingress_essentials", ingressWait, waitTick, nil)
 }
 
+func TestIngressDefaultBackend(t *testing.T) {
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
+	ingress := generators.NewIngressForService("/foo", map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
+	ingress.Spec.DefaultBackend = &netv1.IngressBackend{
+		Service: &netv1.IngressServiceBackend{
+			Name: service.Name,
+			Port: netv1.ServiceBackendPort{
+				Number: service.Spec.Ports[0].Port,
+			},
+		},
+	}
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	cleaner.Add(ingress)
+
+	t.Log("matching path")
+	helpers.EventuallyGETPath(t, proxyURL, "/foo", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+
+	t.Log("non matching path - use default backend")
+	helpers.EventuallyGETPath(
+		t, proxyURL, fmt.Sprintf("/status/%d", http.StatusTeapot), http.StatusTeapot, "", nil, ingressWait, waitTick,
+	)
+}
+
 func TestGRPCIngressEssentials(t *testing.T) {
 	t.Parallel()
 

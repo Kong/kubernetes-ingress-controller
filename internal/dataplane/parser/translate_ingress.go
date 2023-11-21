@@ -138,6 +138,7 @@ func ingressV1ToKongServiceLegacy(
 	for _, ingress := range ingresses {
 		ingressSpec := ingress.Spec
 		maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && featureFlags.RegexPathPrefix)
+		routeName := routeNamer(failuresCollector, ingress)
 		for i, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
@@ -163,7 +164,7 @@ func ingressV1ToKongServiceLegacy(
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						Name:              routeName(failuresCollector, ingress, i, j),
+						Name:              routeName(i, j),
 						Paths:             paths,
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),
@@ -223,26 +224,26 @@ func ingressV1ToKongServiceLegacy(
 	return servicesCache
 }
 
-// routeName generates a name for a Kong Route based on the Ingress name, namespace and rule index and path index.
-func routeName(failuresCollector *failures.ResourceFailuresCollector, objIngress client.Object, ruleIndex, pathIndex int) *string {
-	// Since there is no separator between the rule and path index in the traditional Ingress -> route name pattern,
-	// the controller can generate multiple routes with the same name if there are multiple rules where the pattern
-	// results in the same sequence of digits. For example, rule 1 path 11 and rule 11 path 1 both result in suffix111.
-	// Detecting only the first problematic case is enough, because indexes are in ascending order, thus without hitting
-	// the first problematic case, the second one will not be hit either.
-	if ruleIndex == 1 && pathIndex == 11 || ruleIndex == 11 && pathIndex == 1 {
-		failuresCollector.PushResourceFailure(
-			fmt.Sprint(
-				"ERROR: Kong route with conflicting name for Ingress: ",
-				objIngress.GetName()+" ",
-				"use feature gate CombinedRoutes=true ",
-				"or update Kong Kubernetes Ingress Controller version to 3.0.0 or above ",
-				"(both remediation changes naming schema of Kong routes) ",
-			),
-			objIngress,
-		)
+// routeNamer returns function for generating a name for a Kong Route based on the Ingress name, namespace, rule index and path index.
+// If the name won't be unique, it registers a failure.
+func routeNamer(failuresCollector *failures.ResourceFailuresCollector, objIngress client.Object) func(ruleIndex, pathIndex int) *string {
+	uniqueRouteNames := make(map[string]struct{})
+	return func(ruleIndex, pathIndex int) *string {
+		routeName := kong.String(fmt.Sprintf("%s.%s.%d%d", objIngress.GetNamespace(), objIngress.GetName(), ruleIndex, pathIndex))
+		if _, conflicting := uniqueRouteNames[*routeName]; conflicting {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprint(
+					"ERROR: Kong route with conflicting name: ", *routeName, " ",
+					"use feature gate CombinedRoutes=true ",
+					"or update Kong Kubernetes Ingress Controller version to 3.0.0 or above ",
+					"(both remediation changes naming schema of Kong routes)",
+				),
+				objIngress,
+			)
+		}
+		uniqueRouteNames[*routeName] = struct{}{}
+		return routeName
 	}
-	return kong.String(fmt.Sprintf("%s.%s.%d%d", objIngress.GetNamespace(), objIngress.GetName(), ruleIndex, pathIndex))
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.

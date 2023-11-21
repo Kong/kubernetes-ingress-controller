@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -318,9 +319,11 @@ func TestConflictingNames(t *testing.T) {
 	s, err := store.NewFakeStore(store.FakeObjects{
 		IngressesV1: []*netv1.Ingress{
 			createIngress(1, 1),
+			createIngress(7, 11),
+			createIngress(11, 5),
 			// The below generates Kong Routes that are conflicting with each other.
-			createIngress(1, 11),
-			createIngress(11, 1),
+			createIngress(11, 11),
+			createIngress(22, 23),
 		},
 	})
 	require.NoError(t, err)
@@ -330,9 +333,21 @@ func TestConflictingNames(t *testing.T) {
 		p.featureFlags.CombinedServiceRoutes = false
 		_ = p.ingressRulesFromIngressV1()
 		errs := p.failuresCollector.PopResourceFailures()
-		require.Len(t, errs, 2)
-		require.Contains(t, errs[0].Message(), "ERROR: Kong route with conflicting name for Ingress: conflicting-one-1-11")
-		require.Contains(t, errs[1].Message(), "ERROR: Kong route with conflicting name for Ingress: conflicting-one-11-1")
+		require.Len(t, errs, 30)
+		errMsgs := lo.Map(errs, func(err failures.ResourceFailure, _ int) string {
+			return err.Message()
+		})
+
+		// Just check couple of them, other follows the same pattern.
+		const expectedErrMsg = "ERROR: Kong route with conflicting name: %s use feature gate CombinedRoutes=true or update Kong Kubernetes Ingress Controller version to 3.0.0 or above (both remediation changes naming schema of Kong routes)"
+		for _, conflictingName := range []string{
+			"foo-namespace.conflicting-one-11-11.110",
+			"foo-namespace.conflicting-one-11-11.111",
+			"foo-namespace.conflicting-one-22-23.114",
+			"foo-namespace.conflicting-one-22-23.222",
+		} {
+			require.Contains(t, errMsgs, fmt.Sprintf(expectedErrMsg, conflictingName))
+		}
 	})
 
 	t.Run("Ingress rule with conflicting names - CombinedRoutes=true", func(t *testing.T) {

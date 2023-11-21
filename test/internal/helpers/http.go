@@ -43,6 +43,10 @@ func MustHTTPRequest(t *testing.T, method string, proxyURL *url.URL, path string
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", host, path), nil)
 	require.NoError(t, err)
 	for header, value := range headers {
+		if header == "Host" {
+			req.Host = value
+			continue
+		}
 		req.Header.Set(header, value)
 	}
 	return req

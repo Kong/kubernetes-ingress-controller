@@ -122,7 +122,7 @@ Adding a new version? You'll need three changes:
 
 ## [3.0.1]
 
-> Release date: 2023-11-21
+> Release date: 2023-11-22
 
 ### Fixed
 

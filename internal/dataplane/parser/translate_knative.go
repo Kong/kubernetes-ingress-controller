@@ -57,6 +57,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 
 		secretToSNIs.addFromIngressV1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress)
 
+		routeName := routeNamer(p.failuresCollector, ingress)
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			hosts := rule.Hosts
@@ -73,7 +74,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              routeName(i, j),
 						Paths:             kong.StringSlice(path),
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),

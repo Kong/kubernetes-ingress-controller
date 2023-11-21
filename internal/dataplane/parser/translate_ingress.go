@@ -7,6 +7,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -137,6 +138,7 @@ func ingressV1ToKongServiceLegacy(
 	for _, ingress := range ingresses {
 		ingressSpec := ingress.Spec
 		maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && featureFlags.RegexPathPrefix)
+		routeName := routeNamer(failuresCollector, ingress)
 		for i, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
@@ -162,7 +164,7 @@ func ingressV1ToKongServiceLegacy(
 				r := kongstate.Route{
 					Ingress: util.FromK8sObject(ingress),
 					Route: kong.Route{
-						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Name:              routeName(i, j),
 						Paths:             paths,
 						StripPath:         kong.Bool(false),
 						PreserveHost:      kong.Bool(true),
@@ -220,6 +222,28 @@ func ingressV1ToKongServiceLegacy(
 	}
 
 	return servicesCache
+}
+
+// routeNamer returns function for generating a name for a Kong Route based on the Ingress name, namespace, rule index and path index.
+// If the name won't be unique, it registers a failure.
+func routeNamer(failuresCollector *failures.ResourceFailuresCollector, objIngress client.Object) func(ruleIndex, pathIndex int) *string {
+	uniqueRouteNames := make(map[string]struct{})
+	return func(ruleIndex, pathIndex int) *string {
+		routeName := kong.String(fmt.Sprintf("%s.%s.%d%d", objIngress.GetNamespace(), objIngress.GetName(), ruleIndex, pathIndex))
+		if _, conflicting := uniqueRouteNames[*routeName]; conflicting {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprint(
+					"Kong route with conflicting name: ", *routeName, " ",
+					"use feature gate CombinedRoutes=true ",
+					"or update Kong Kubernetes Ingress Controller version to 3.0.0 or above ",
+					"(both remediation changes naming schema of Kong routes)",
+				),
+				objIngress,
+			)
+		}
+		uniqueRouteNames[*routeName] = struct{}{}
+		return routeName
+	}
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.

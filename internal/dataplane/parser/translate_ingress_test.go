@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -270,5 +272,88 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		for _, err := range errs {
 			require.Equal(t, "konghq.com/rewrite annotation not supported when rewrite uris disabled", err.Message())
 		}
+	})
+}
+
+func TestIngressGeneratingKongRoutesWithConflictingNames(t *testing.T) {
+	createIngress := func(noRules, noPaths int) *netv1.Ingress {
+		var ingresRules []netv1.IngressRule
+		for i := 0; i <= noRules; i++ {
+			var paths []netv1.HTTPIngressPath
+			for j := 0; j <= noPaths; j++ {
+				paths = append(paths, netv1.HTTPIngressPath{
+					Path:     "/~/api/(.*)",
+					PathType: lo.ToPtr(netv1.PathTypePrefix),
+					Backend: netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "foo-svc",
+							Port: netv1.ServiceBackendPort{Number: 80},
+						},
+					},
+				},
+				)
+			}
+			ingresRules = append(ingresRules, netv1.IngressRule{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: paths,
+					},
+				},
+			})
+		}
+		return &netv1.Ingress{
+			TypeMeta: metav1.TypeMeta{Kind: "Ingress"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("conflicting-one-%d-%d", noRules, noPaths),
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: ingresRules,
+			},
+		}
+	}
+	s, err := store.NewFakeStore(store.FakeObjects{
+		IngressesV1: []*netv1.Ingress{
+			createIngress(1, 1),
+			createIngress(7, 11),
+			createIngress(11, 5),
+			// The below generates Kong Routes that are conflicting with each other.
+			createIngress(11, 11),
+			createIngress(22, 23),
+		},
+	})
+	require.NoError(t, err)
+	p := mustNewParser(t, s)
+
+	t.Run("more than 11 rules and paths in Ingress and CombinedRoutes=false warns about conflicts", func(t *testing.T) {
+		p.featureFlags.CombinedServiceRoutes = false
+		_ = p.ingressRulesFromIngressV1()
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Len(t, errs, 30)
+		errMsgs := lo.Map(errs, func(err failures.ResourceFailure, _ int) string {
+			return err.Message()
+		})
+
+		// Just check couple of them, other follows the same pattern.
+		const expectedErrMsg = "Kong route with conflicting name: %s use feature gate CombinedRoutes=true or update Kong Kubernetes Ingress Controller version to 3.0.0 or above (both remediation changes naming schema of Kong routes)"
+		for _, conflictingName := range []string{
+			"foo-namespace.conflicting-one-11-11.110",
+			"foo-namespace.conflicting-one-11-11.111",
+			"foo-namespace.conflicting-one-22-23.114",
+			"foo-namespace.conflicting-one-22-23.222",
+		} {
+			require.Contains(t, errMsgs, fmt.Sprintf(expectedErrMsg, conflictingName))
+		}
+	})
+
+	t.Run("more than 11 rules and paths in Ingress and CombinedRoutes=true gives no conflicts and no warnings", func(t *testing.T) {
+		p.featureFlags.CombinedServiceRoutes = true
+		_ = p.ingressRulesFromIngressV1()
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Len(t, errs, 0)
 	})
 }

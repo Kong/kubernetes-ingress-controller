@@ -3,6 +3,10 @@ on:
   push:
     branches:
     - '**'
+    paths-ignore:
+      - 'docs/**'
+      - 'keps/**'
+      - '*.md'
 
 permissions:
   contents: write

@@ -275,7 +275,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 	})
 }
 
-func TestConflictingNames(t *testing.T) {
+func TestIngressGeneratingKongRoutesWithConflictingNames(t *testing.T) {
 	createIngress := func(noRules, noPaths int) *netv1.Ingress {
 		var ingresRules []netv1.IngressRule
 		for i := 0; i <= noRules; i++ {
@@ -329,7 +329,7 @@ func TestConflictingNames(t *testing.T) {
 	require.NoError(t, err)
 	p := mustNewParser(t, s)
 
-	t.Run("Ingress rule with conflicting names - CombinedRoutes=false", func(t *testing.T) {
+	t.Run("more than 11 rules and paths in Ingress and CombinedRoutes=false warns about conflicts", func(t *testing.T) {
 		p.featureFlags.CombinedServiceRoutes = false
 		_ = p.ingressRulesFromIngressV1()
 		errs := p.failuresCollector.PopResourceFailures()
@@ -350,7 +350,7 @@ func TestConflictingNames(t *testing.T) {
 		}
 	})
 
-	t.Run("Ingress rule with conflicting names - CombinedRoutes=true", func(t *testing.T) {
+	t.Run("more than 11 rules and paths in Ingress and CombinedRoutes=true gives no conflicts and no warnings", func(t *testing.T) {
 		p.featureFlags.CombinedServiceRoutes = true
 		_ = p.ingressRulesFromIngressV1()
 		errs := p.failuresCollector.PopResourceFailures()

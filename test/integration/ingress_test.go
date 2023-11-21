@@ -15,6 +15,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -1061,13 +1063,16 @@ func TestIngressMatchByHost(t *testing.T) {
 }
 
 func TestIngressRewriteURI(t *testing.T) {
-	pathImplementationSpecific := netv1.PathTypeImplementationSpecific
+	const (
+		jpegMagicNumber = "\xff\xd8\xff\xe0\x00\x10JFIF"
+		pngMagicNumber  = "\x89PNG\r\n\x1a\n"
+	)
 
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
-	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	t.Log("deploying a minimal HTTP Bin container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
@@ -1080,98 +1085,134 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with rewrite annotation", service.Name)
-	ingress := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
-		"konghq.com/strip-path": "true",
-		"konghq.com/rewrite":    "/image/$1",
+	t.Logf("creating an Ingress for service %s without rewrite annotation", service.Name)
+	const serviceDomainDirect = "direct.example"
+	ingressDirect := generators.NewIngressForService("/", map[string]string{
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
-	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	for i := range ingress.Spec.Rules {
-		ingress.Spec.Rules[i].Host = "test.example"
-		ingress.Spec.Rules[i].HTTP.Paths[0].PathType = &pathImplementationSpecific
+	ingressDirect.Name += "-direct"
+	ingressDirect.Spec.IngressClassName = kong.String(consts.IngressClass)
+	for i := range ingressDirect.Spec.Rules {
+		ingressDirect.Spec.Rules[i].Host = serviceDomainDirect
+		ingressDirect.Spec.Rules[i].HTTP.Paths[0].PathType = lo.ToPtr(netv1.PathTypePrefix)
 	}
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	ingressDirect, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressDirect, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(ingress)
+	cleaner.Add(ingressDirect)
 
-	featureGates := testenv.ControllerFeatureGates()
-	if !strings.Contains(featureGates, "RewriteURIsFeature=true") {
+	// There is no programmed condition for Ingress to check. Hence to avoid 503 and 404 that are result of Ingress not being configured yet,
+	// wait for first successful response. After it all subsequent must be successful too.
+	t.Log("wait for the Ingress direct to become available")
+	const path = "image/jpeg"
+	helpers.EventuallyGETPath(t, proxyURL, serviceDomainDirect, path, http.StatusOK, jpegMagicNumber, nil, ingressWait, waitTick)
+
+	waitForMainTestToFinish, cancelBackgroundTest := context.WithCancel(ctx)
+	backgroundTestError := make(chan error)
+	go func() {
+		t.Log("check constantly in the background that Ingress without rewrite annotation is not affected by Ingress with rewrite annotation")
+		var cntOK, cntAttempts int
+		unexpectedErrs := make(map[string]int)
+		for {
+			select {
+			case <-waitForMainTestToFinish.Done():
+				if cntAttempts == 0 {
+					backgroundTestError <- fmt.Errorf("no requests were made to Ingress without rewrite")
+					return
+				}
+				if ratio := float64(cntOK) / float64(cntAttempts); ratio >= 0.99 {
+					backgroundTestError <- nil
+				} else {
+					backgroundTestError <- fmt.Errorf(
+						"expected >= 99%% of requests to be successful, current rate is %f %%, unexpected status codes: %v",
+						ratio*100, unexpectedErrs,
+					)
+				}
+				return
+			case <-time.After(50 * time.Millisecond):
+			}
+			cntAttempts++
+			resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(helpers.MustHTTPRequest(t, http.MethodGet, serviceDomainDirect, path, nil))
+			if err != nil {
+				t.Logf("WARNING: Ingress without rewrite - http request failed for GET %s/%s to %s: %v", serviceDomainDirect, path, proxyURL, err)
+				continue
+			}
+			if resp.StatusCode == http.StatusOK {
+				var b bytes.Buffer
+				if _, err := b.ReadFrom(resp.Body); err == nil {
+					if strings.HasPrefix(b.String(), jpegMagicNumber) {
+						cntOK++
+					} else {
+						t.Log("WARNING: Ingress without rewrite - response body is not a JPEG image")
+						unexpectedErrs["response no JPEG"]++
+					}
+				} else {
+					t.Log("WARNING: Ingress without rewrite - failed to read response body:", err)
+					unexpectedErrs["cannot read response body"]++
+				}
+			} else {
+				t.Log("WARNING: Ingress without rewrite - response status code is:", resp.StatusCode)
+				unexpectedErrs[fmt.Sprintf("status code: %d", resp.StatusCode)]++
+			}
+			resp.Body.Close()
+		}
+	}()
+
+	t.Logf("creating an Ingress for service %s with rewrite annotation", service.Name)
+	const serviceDomainRewrite = "rewrite.example"
+	ingressRewrite := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
+		annotations.AnnotationPrefix + annotations.StripPathKey:  "true",
+		annotations.AnnotationPrefix + annotations.RewriteURIKey: "/image/$1",
+	}, service)
+	ingressRewrite.Name += "-rewrite"
+	ingressRewrite.Spec.IngressClassName = kong.String(consts.IngressClass)
+	for i := range ingressRewrite.Spec.Rules {
+		ingressRewrite.Spec.Rules[i].Host = serviceDomainRewrite
+		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].PathType = lo.ToPtr(netv1.PathTypeImplementationSpecific)
+	}
+	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressRewrite, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingressRewrite)
+
+	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
+		t.Log("rewrite uri feature is disabled")
 		t.Log("try to access the ingress with rewrite uri disabled")
-		req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/foo/jpeg", nil)
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		require.Equal(t, resp.StatusCode, http.StatusNotFound)
-
+		helpers.EventuallyGETPath(t, proxyURL, serviceDomainRewrite, "/foo/jpeg", http.StatusNotFound, "", nil, ingressWait, waitTick)
+		cancelBackgroundTest()
+		require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")
 		return
 	}
+	t.Log("rewrite uri feature is enabled")
 
 	t.Log("try to access the ingress with valid capture group")
-	req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/foo/jpeg", nil)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return resp.Header.Get("Content-Type") == "image/jpeg"
-		}
-		return false
-	}, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, serviceDomainRewrite, "/foo/jpeg", http.StatusOK, jpegMagicNumber, nil, ingressWait, waitTick)
 
 	t.Log("try to access the ingress with invalid capture group, should return 404")
-	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
-	resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, resp.StatusCode, http.StatusNotFound)
+	helpers.EventuallyGETPath(t, proxyURL, serviceDomainRewrite, "/", http.StatusNotFound, "", nil, ingressWait, waitTick)
 
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	t.Log("update the ingress capture group")
-	for i := range ingress.Spec.Rules {
-		ingress.Spec.Rules[i].HTTP.Paths[0].Path = "/~/foo/(\\w+)/(.*)"
+	for i := range ingressRewrite.Spec.Rules {
+		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].Path = "/~/foo/(\\w+)/(.*)"
 	}
 
-	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressRewrite, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new valid capture group")
-	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.exmaple", "/foo/jpeg/png", nil)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return resp.Header.Get("Content-Type") == "image/jpeg"
-		}
-		return false
-	}, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, serviceDomainRewrite, "/foo/jpeg", http.StatusOK, jpegMagicNumber, nil, ingressWait, waitTick)
 
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	t.Log("update the ingress rewrite annotation")
-	ingress.Annotations["konghq.com/rewrite"] = "/image/$2"
+	ingressRewrite.Annotations[annotations.AnnotationPrefix+annotations.RewriteURIKey] = "/image/$2"
 
-	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressRewrite, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new rewrite annotation")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return resp.Header.Get("Content-Type") == "image/png"
-		}
-		return false
-	}, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, serviceDomainRewrite, "/foo/test/png", http.StatusOK, pngMagicNumber, nil, ingressWait, waitTick)
+
+	cancelBackgroundTest()
+	require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")
 }

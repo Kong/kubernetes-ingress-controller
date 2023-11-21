@@ -39,12 +39,25 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 You can use [Minikube or Kind][k8s-io-tools] on your local machine or use
 a hosted Kubernetes service like [GKE](https://cloud.google.com/kubernetes-engine/).
 
-Setting up Kong for Kubernetes is as simple as:
+### Install the Gateway API CRDs
+
+This command will install all resources that have graduated to GA or beta,
+including `GatewayClass`, `Gateway`, `HTTPRoute`, and `ReferenceGrant`.
 
 ```shell
-# Install the Gateway API CRDs before installing Kong Ingress Controller.
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-# Install the Kong Ingress Controller with Helm.
+```
+
+Or, if you want to use experimental resources and fields such as `TCPRoute`s and `UDPRoute`s,
+please run this command.
+
+```shell
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+```
+
+### Install the Kong Ingress Controller with Helm
+
+```shell
 helm install kong --namespace kong --create-namespace --repo https://charts.konghq.com ingress
 ```
 

@@ -304,12 +304,9 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)
 	}
-	if k8sPlugin.Ordering != nil {
-		plugin.Ordering = k8sPlugin.Ordering
-	}
-	if len(k8sPlugin.Protocols) > 0 {
-		plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
-	}
+	plugin.Ordering = k8sPlugin.Ordering
+	plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
+
 	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
 	if err != nil || errText != "" {
 		validator.Logger.Info("validate KongPlugin on Kong gateway failed",
@@ -329,29 +326,44 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongClusterPlugin,
 ) (bool, string, error) {
-	derived := kongv1.KongPlugin{
-		TypeMeta:    k8sPlugin.TypeMeta,
-		ObjectMeta:  k8sPlugin.ObjectMeta,
-		ConsumerRef: k8sPlugin.ConsumerRef,
-		Disabled:    k8sPlugin.Disabled,
-		Config:      k8sPlugin.Config,
-		PluginName:  k8sPlugin.PluginName,
-		RunOn:       k8sPlugin.RunOn,
-		Protocols:   k8sPlugin.Protocols,
+	var plugin kong.Plugin
+	plugin.Name = kong.String(k8sPlugin.PluginName)
+	var err error
+
+	plugin.Config, err = kongstate.RawConfigurationWithNamespacedPatchesToConfiguration(
+		validator.SecretGetter,
+		k8sPlugin.Config,
+		k8sPlugin.ConfigPatches,
+	)
+	if err != nil {
+		return false, ErrTextPluginConfigInvalid, err
 	}
+
 	if k8sPlugin.ConfigFrom != nil {
-		ref := kongv1.ConfigSource{
-			SecretValue: kongv1.SecretValueFromSource{
-				Secret: k8sPlugin.ConfigFrom.SecretValue.Secret,
-				Key:    k8sPlugin.ConfigFrom.SecretValue.Key,
-			},
+		config, err := kongstate.NamespacedSecretToConfiguration(validator.SecretGetter, k8sPlugin.ConfigFrom.SecretValue)
+		if err != nil {
+			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}
-		derived.ConfigFrom = &ref
-		derived.ObjectMeta.Namespace = k8sPlugin.ConfigFrom.SecretValue.Namespace
-	} else {
-		derived.ObjectMeta.Namespace = "default"
+		plugin.Config = config
 	}
-	return validator.ValidatePlugin(ctx, derived)
+	if k8sPlugin.RunOn != "" {
+		plugin.RunOn = kong.String(k8sPlugin.RunOn)
+	}
+
+	plugin.Ordering = k8sPlugin.Ordering
+	plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
+
+	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
+	if err != nil || errText != "" {
+		validator.Logger.Info("validate KongClusterPlugin on Kong gateway failed",
+			"plugin", k8sPlugin.Name,
+			"config", plugin.Config,
+			"error", err,
+		)
+		return false, errText, err
+	}
+
+	return true, "", nil
 }
 
 func (validator KongHTTPValidator) ValidateGateway(

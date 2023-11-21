@@ -67,7 +67,7 @@ func kongPluginFromK8SClusterPlugin(
 	}
 	if k8sPlugin.ConfigFrom != nil {
 		var err error
-		config, err = namespacedSecretToConfiguration(
+		config, err = NamespacedSecretToConfiguration(
 			s,
 			(*k8sPlugin.ConfigFrom).SecretValue)
 		if err != nil {
@@ -270,8 +270,11 @@ func rawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
 	return kongConfig, nil
 }
 
-func namespacedSecretToConfiguration(
-	s store.Storer,
+// NamespacedSecretToConfiguration fetches specified value from given namespace, secret and key,
+// then parse the value to Kong plugin configurations.
+// Export it for using in validators.
+func NamespacedSecretToConfiguration(
+	s SecretGetter,
 	reference kongv1.NamespacedSecretValueFromSource) (
 	kong.Configuration, error,
 ) {
@@ -286,6 +289,9 @@ type SecretGetter interface {
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 }
 
+// SecretToConfiguration fetches specified value from secret and key in the namespace,
+// then parse the value to Kong plugin configurations.
+// Export it for using in validators.
 func SecretToConfiguration(
 	s SecretGetter,
 	reference kongv1.SecretValueFromSource, namespace string) (

@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 func RunWhenKongVersion(t *testing.T, vRangeStr string, msg ...any) {
@@ -51,6 +52,10 @@ func RunWhenKongDBMode(t *testing.T, dbmode string, msg ...any) {
 
 func RunWhenKongEnterprise(t *testing.T) {
 	t.Helper()
+
+	if !testenv.KongEnterpriseEnabled() {
+		t.Skipf("skipping because Kong enterprise is not enabled")
+	}
 
 	version := eventuallyGetKongVersion(t, proxyAdminURL)
 

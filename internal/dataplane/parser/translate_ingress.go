@@ -233,7 +233,7 @@ func routeNamer(failuresCollector *failures.ResourceFailuresCollector, objIngres
 		if _, conflicting := uniqueRouteNames[*routeName]; conflicting {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprint(
-					"ERROR: Kong route with conflicting name: ", *routeName, " ",
+					"Kong route with conflicting name: ", *routeName, " ",
 					"use feature gate CombinedRoutes=true ",
 					"or update Kong Kubernetes Ingress Controller version to 3.0.0 or above ",
 					"(both remediation changes naming schema of Kong routes)",

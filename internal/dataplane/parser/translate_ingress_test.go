@@ -339,7 +339,7 @@ func TestIngressGeneratingKongRoutesWithConflictingNames(t *testing.T) {
 		})
 
 		// Just check couple of them, other follows the same pattern.
-		const expectedErrMsg = "ERROR: Kong route with conflicting name: %s use feature gate CombinedRoutes=true or update Kong Kubernetes Ingress Controller version to 3.0.0 or above (both remediation changes naming schema of Kong routes)"
+		const expectedErrMsg = "Kong route with conflicting name: %s use feature gate CombinedRoutes=true or update Kong Kubernetes Ingress Controller version to 3.0.0 or above (both remediation changes naming schema of Kong routes)"
 		for _, conflictingName := range []string{
 			"foo-namespace.conflicting-one-11-11.110",
 			"foo-namespace.conflicting-one-11-11.111",

@@ -91,7 +91,9 @@ spec:
             description: ConfigPatches represents JSON patches to the configuration
               of the plugin. Each item means a JSON patch to add something in the
               configuration, where path is specified in `path` and value is in `valueFrom`
-              referencing a key in a secret. Could only be specified when Config specified.
+              referencing a key in a secret. When Config is specified, patches will
+              be applied to the configuration in Config. Otherwise, patches will be
+              applied to an empty object.
             items:
               description: NamespacedConfigPatch is a JSON patch to add values from
                 secrets to KongClusterPlugin to the generated configuration of plugin

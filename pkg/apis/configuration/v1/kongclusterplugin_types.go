@@ -68,7 +68,8 @@ type KongClusterPlugin struct {
 	// Each item means a JSON patch to add something in the configuration,
 	// where path is specified in `path` and value is in `valueFrom` referencing
 	// a key in a secret.
-	// Could only be specified when Config specified.
+	// When Config is specified, patches will be applied to the configuration in Config.
+	// Otherwise, patches will be applied to an empty object.
 	ConfigPatches []NamespacedConfigPatch `json:"configPatches,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.

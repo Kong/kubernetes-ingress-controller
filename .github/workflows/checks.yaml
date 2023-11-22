@@ -11,20 +11,12 @@ on:
   pull_request:
     branches:
       - '**'
-    paths-ignore:
-      - 'docs/**'
-      - 'keps/**'
-      - '*.md'
   push:
     branches:
       - 'main'
       - 'release/[0-9]+.[0-9]+.x'
     tags:
       - '**'
-    paths-ignore:
-      - 'docs/**'
-      - 'keps/**'
-      - '*.md'
   workflow_dispatch: {}
 
 jobs:

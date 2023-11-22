@@ -272,7 +272,7 @@ func rawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
 
 // NamespacedSecretToConfiguration fetches specified value from given namespace, secret and key,
 // then parse the value to Kong plugin configurations.
-// Export it for using in validators.
+// Exported primarily to be used in admission validators.
 func NamespacedSecretToConfiguration(
 	s SecretGetter,
 	reference kongv1.NamespacedSecretValueFromSource) (
@@ -291,7 +291,7 @@ type SecretGetter interface {
 
 // SecretToConfiguration fetches specified value from secret and key in the namespace,
 // then parse the value to Kong plugin configurations.
-// Export it for using in validators.
+// Exported primarily to be used in admission validators.
 func SecretToConfiguration(
 	s SecretGetter,
 	reference kongv1.SecretValueFromSource, namespace string) (

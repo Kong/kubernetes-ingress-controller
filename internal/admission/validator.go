@@ -292,12 +292,12 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		k8sPlugin.ConfigPatches,
 	)
 	if err != nil {
-		return false, ErrTextPluginConfigInvalid, err
+		return false, fmt.Sprintf("%s: %s", ErrTextPluginConfigInvalid, err), nil
 	}
 	if k8sPlugin.ConfigFrom != nil {
 		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
-			return false, ErrTextPluginSecretConfigUnretrievable, err
+			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
 		plugin.Config = config
 	}
@@ -311,7 +311,6 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if err != nil || errText != "" {
 		validator.Logger.Info("validate KongPlugin on Kong gateway failed",
 			"plugin", fmt.Sprintf("%s/%s", k8sPlugin.Namespace, k8sPlugin.Name),
-			"config", plugin.Config,
 			"error", err,
 		)
 		return false, errText, err
@@ -336,13 +335,13 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 		k8sPlugin.ConfigPatches,
 	)
 	if err != nil {
-		return false, ErrTextPluginConfigInvalid, err
+		return false, fmt.Sprintf("%s: %s", ErrTextPluginConfigInvalid, err), nil
 	}
 
 	if k8sPlugin.ConfigFrom != nil {
 		config, err := kongstate.NamespacedSecretToConfiguration(validator.SecretGetter, k8sPlugin.ConfigFrom.SecretValue)
 		if err != nil {
-			return false, ErrTextPluginSecretConfigUnretrievable, err
+			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
 		plugin.Config = config
 	}
@@ -357,7 +356,6 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	if err != nil || errText != "" {
 		validator.Logger.Info("validate KongClusterPlugin on Kong gateway failed",
 			"plugin", k8sPlugin.Name,
-			"config", plugin.Config,
 			"error", err,
 		)
 		return false, errText, err

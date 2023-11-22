@@ -152,7 +152,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigInvalid,
-			wantErr:     true,
+			wantErr:     false,
 		},
 		{
 			name:      "plugin has valid configPatches",
@@ -204,7 +204,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigInvalid,
-			wantErr:     true,
+			wantErr:     false,
 		},
 		{
 			name:      "plugin ConfigFrom references non-existent Secret",
@@ -222,7 +222,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginSecretConfigUnretrievable,
-			wantErr:     true,
+			wantErr:     false,
 		},
 		{
 			name:      "failed to retrieve validation info",
@@ -244,17 +244,21 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			got, got1, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("KongHTTPValidator.ValidatePlugin() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
+			assert.Equalf(t, tt.wantOK, gotOK,
+				"KongHTTPValidator.ValidatePlugin() want OK: %v, got OK: %v",
+				tt.wantOK, gotOK,
+			)
+			if tt.wantMessage != "" {
+				assert.Containsf(t, gotMessage, tt.wantMessage,
+					"KongHTTPValidator.ValidatePlugin() want message: %v, got message: %v",
+					tt.wantMessage, gotMessage,
+				)
 			}
-			if got != tt.wantOK {
-				t.Errorf("KongHTTPValidator.ValidatePlugin() got = %v, want %v", got, tt.wantOK)
-			}
-			if got1 != tt.wantMessage {
-				t.Errorf("KongHTTPValidator.ValidatePlugin() got message = %v, want %v", got1, tt.wantMessage)
-			}
+			assert.Equalf(t, tt.wantErr, err != nil,
+				"KongHTTPValidator.ValidatePlugin() wantErr %v, got error %v",
+				tt.wantErr, err,
+			)
 		})
 	}
 }
@@ -318,7 +322,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigInvalid,
-			wantErr:     true,
+			wantErr:     false,
 		},
 		{
 			name:      "plugin has valid configPatches",
@@ -372,7 +376,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigInvalid,
-			wantErr:     true,
+			wantErr:     false,
 		},
 		{
 			name:      "plugin ConfigFrom references non-existent Secret",
@@ -391,7 +395,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginSecretConfigUnretrievable,
-			wantErr:     true,
+			wantErr:     false,
 		},
 		{
 			name:      "failed to retrieve validation info",
@@ -423,17 +427,22 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			got, got1, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("KongHTTPValidator.ValidateClusterPlugin() error = %v, wantErr %v", err, tt.wantErr)
-				return
+
+			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin)
+			assert.Equalf(t, tt.wantOK, gotOK,
+				"KongHTTPValidator.ValidateClusterPlugin() want OK: %v, got OK: %v",
+				tt.wantOK, gotOK,
+			)
+			if tt.wantMessage != "" {
+				assert.Containsf(t, gotMessage, tt.wantMessage,
+					"KongHTTPValidator.ValidateClusterPlugin() want message: %v, got message: %v",
+					tt.wantMessage, gotMessage,
+				)
 			}
-			if got != tt.wantOK {
-				t.Errorf("KongHTTPValidator.ValidateClusterPlugin() got = %v, want %v", got, tt.wantOK)
-			}
-			if got1 != tt.wantMessage {
-				t.Errorf("KongHTTPValidator.ValidateClusterPlugin() got message = %v, want %v", got1, tt.wantMessage)
-			}
+			assert.Equalf(t, tt.wantErr, err != nil,
+				"KongHTTPValidator.ValidateClusterPlugin() wantErr %v, got error %v",
+				tt.wantErr, err,
+			)
 		})
 	}
 }

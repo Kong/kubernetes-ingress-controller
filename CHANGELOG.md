@@ -7,7 +7,9 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.2](#2122)
  - [2.12.1](#2121)
  - [2.12.0](#2120)
  - [2.11.1](#2111)
@@ -103,8 +105,6 @@ Adding a new version? You'll need three changes:
   validation failures.
   [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
 
-
-
 ### Changed
 
 - `SecretKeyRef` of `ConfigFrom` field in `KongPlugin` and `KongClusterPlugin`
@@ -119,6 +119,19 @@ Adding a new version? You'll need three changes:
     [#5137](https://github.com/Kong/kubernetes-ingress-controller/pull/5137)
   - `KongPlugin` and `KongClusterPlugin` now enforce `plugin` to be immutable.
     [#5142](https://github.com/Kong/kubernetes-ingress-controller/pull/5142)
+
+## [3.0.1]
+
+> Release date: 2023-11-22
+
+### Fixed
+
+- Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
+  will no longer cause synchronization loop and random request failures due to incorrect routing.
+  [#5218](https://github.com/Kong/kubernetes-ingress-controller/pull/5218)
+- Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
+  [#5219](https://github.com/Kong/kubernetes-ingress-controller/pull/5219)
+
 
 ## [3.0.0]
 
@@ -327,6 +340,25 @@ Adding a new version? You'll need three changes:
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
+
+## [2.12.2]
+
+> Release date: 2023-11-22
+
+### Fixed
+
+- Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
+  will no longer cause synchronization loop and random request failures due to incorrect routing.
+  [#5215](https://github.com/Kong/kubernetes-ingress-controller/pull/5215)
+- Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
+  [#5217](https://github.com/Kong/kubernetes-ingress-controller/pull/5217)
+
+### Known issues
+
+- **Only when combined routes are not enabled**, generated Kong routes may have conflicting names, that leads to
+  incorrect routing. In such case the descriptive error message is now provided. Use feature gate `CombinedRoutes=true`
+  or update Kong Kubernetes Ingress Controller version to 3.0.0 or above (both remediation changes naming schema of Kong routes).
+  [#5198](https://github.com/Kong/kubernetes-ingress-controller/issues/5198)
 
 ## [2.12.1]
 
@@ -3073,7 +3105,9 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.1...v2.12.2
 [2.12.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v2.12.1
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1

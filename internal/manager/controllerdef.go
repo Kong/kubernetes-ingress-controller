@@ -62,7 +62,7 @@ func setupControllers(
 	udpDataplaneAddressFinder *dataplane.AddressFinder,
 	kubernetesStatusQueue *status.Queue,
 	c *Config,
-	featureGates map[string]bool,
+	featureGates featuregates.FeatureGates,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
@@ -261,6 +261,19 @@ func setupControllers(
 				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
+		{
+			Enabled: featureGates.Enabled(featuregates.ServiceFacade) && c.KongServiceFacadeEnabled,
+			Controller: &configuration.IncubatorV1Alpha1KongServiceFacadeReconciler{
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongServiceFacade"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				StatusQueue:                kubernetesStatusQueue,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Gateway API Controllers
 		// ---------------------------------------------------------------------------
@@ -329,7 +342,7 @@ func setupControllers(
 		// Gateway API Controllers - Alpha APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/UDPRoute"),
@@ -350,7 +363,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TCPRoute"),
@@ -371,7 +384,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
@@ -392,7 +405,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/GRPCRoute"),

@@ -194,6 +194,22 @@ rules:
   - list
   - watch
 - apiGroups:
+  - incubator.konghq.com
+  resources:
+  - kongservicefacades
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - incubator.konghq.com
+  resources:
+  - kongservicefacades/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - networking.k8s.io
   resources:
   - ingressclasses

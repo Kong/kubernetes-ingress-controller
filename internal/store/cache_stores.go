@@ -17,6 +17,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that
@@ -48,6 +49,7 @@ type CacheStores struct {
 	UDPIngress                     cache.Store
 	KongUpstreamPolicy             cache.Store
 	IngressClassParametersV1alpha1 cache.Store
+	KongServiceFacade              cache.Store
 
 	l *sync.RWMutex
 }
@@ -79,6 +81,7 @@ func NewCacheStores() CacheStores {
 		UDPIngress:                     cache.NewStore(keyFunc),
 		KongUpstreamPolicy:             cache.NewStore(keyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(keyFunc),
+		KongServiceFacade:              cache.NewStore(keyFunc),
 
 		l: &sync.RWMutex{},
 	}
@@ -183,6 +186,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.KongUpstreamPolicy.Get(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Get(obj)
+	case *incubatorv1alpha1.KongServiceFacade:
+		return c.KongServiceFacade.Get(obj)
 	}
 	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
 }
@@ -245,6 +250,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.KongUpstreamPolicy.Add(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Add(obj)
+	case *incubatorv1alpha1.KongServiceFacade:
+		return c.KongServiceFacade.Add(obj)
 	default:
 		return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
 	}
@@ -308,6 +315,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.KongUpstreamPolicy.Delete(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Delete(obj)
+	case *incubatorv1alpha1.KongServiceFacade:
+		return c.KongServiceFacade.Delete(obj)
 	default:
 		return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
 	}

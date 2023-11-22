@@ -43,6 +43,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 const (
@@ -67,6 +68,7 @@ type Storer interface {
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
 	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
 	GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error)
+	GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error)
 
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
@@ -499,6 +501,18 @@ func (s Store) GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongU
 		return nil, NotFoundError{fmt.Sprintf("KongUpstreamPolicy %v not found", key)}
 	}
 	return p.(*kongv1beta1.KongUpstreamPolicy), nil
+}
+
+func (s Store) GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exists, err := s.stores.KongServiceFacade.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongServiceFacade %v not found", key)}
+	}
+	return p.(*incubatorv1alpha1.KongServiceFacade), nil
 }
 
 // GetIngressClassParametersV1Alpha1 returns IngressClassParameters for provided

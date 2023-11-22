@@ -25,6 +25,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 func keyFunc(obj interface{}) (string, error) {
@@ -62,6 +63,7 @@ type FakeObjects struct {
 	KongConsumers                  []*kongv1.KongConsumer
 	KongConsumerGroups             []*kongv1beta1.KongConsumerGroup
 	KongUpstreamPolicies           []*kongv1beta1.KongUpstreamPolicy
+	KongServiceFacades             []*incubatorv1alpha1.KongServiceFacade
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -209,6 +211,13 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	kongServiceFacade := cache.NewStore(keyFunc)
+	for _, s := range objects.KongServiceFacades {
+		err := kongServiceFacade.Add(s)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	s = Store{
 		stores: CacheStores{
@@ -233,6 +242,7 @@ func NewFakeStore(
 			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 			KongUpstreamPolicy:             kongUpstreamPolicyStore,
+			KongServiceFacade:              kongServiceFacade,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),

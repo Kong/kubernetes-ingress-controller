@@ -23,6 +23,8 @@ const (
 	kongv1       = "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/v3/api/configuration/v1beta1"
 	kongv1alpha1 = "github.com/kong/kubernetes-ingress-controller/v3/api/configuration/v1alpha1"
+
+	incubatorv1alpha1 = "github.com/kong/kubernetes-ingress-controller/v3/api/incubator/v1alpha1"
 )
 
 // inputControllersNeeded is a list of the supported Types for the
@@ -231,6 +233,21 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
+	typeNeeded{
+		Group:                             "incubator.konghq.com",
+		Version:                           "v1alpha1",
+		Kind:                              "KongServiceFacade",
+		PackageImportAlias:                "incubatorv1alpha1",
+		PackageAlias:                      "IncubatorV1Alpha1",
+		Package:                           incubatorv1alpha1,
+		Plural:                            "kongservicefacades",
+		CacheType:                         "KongServiceFacade",
+		NeedsStatusPermissions:            true,
+		ConfigStatusNotificationsEnabled:  true,
+		ProgrammedConditionUpdatesEnabled: true,
+		AcceptsIngressClassNameAnnotation: true,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
 }
 
 var inputRBACPermissionsNeeded = &rbacsNeeded{
@@ -429,6 +446,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 `
 

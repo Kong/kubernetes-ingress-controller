@@ -88,6 +88,7 @@ Adding a new version? You'll need three changes:
   are applied to the raw JSON in `config`. Can only be specified when
   `configFrom` is not present.
   [#5158](https://github.com/Kong/kubernetes-ingress-controller/pull/5158)
+  [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
 
 ### Fixed
 
@@ -96,6 +97,11 @@ Adding a new version? You'll need three changes:
   [#5171](https://github.com/Kong/kubernetes-ingress-controller/pull/5171)
 - Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
   [#5188](https://github.com/Kong/kubernetes-ingress-controller/pull/5188)
+- Validators of `KongPlugin` and `KongClusterPlugin` will not return `500` on
+  failures to parse configurations and failures to retrieve secrets used for
+  configuration. Instead, it will return `400` with message to tell the
+  validation failures.
+  [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
 
 
 

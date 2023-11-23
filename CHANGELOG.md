@@ -94,11 +94,6 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
-  will no longer cause synchronization loop and random request failures due to incorrect routing.
-  [#5171](https://github.com/Kong/kubernetes-ingress-controller/pull/5171)
-- Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
-  [#5188](https://github.com/Kong/kubernetes-ingress-controller/pull/5188)
 - Validators of `KongPlugin` and `KongClusterPlugin` will not return `500` on
   failures to parse configurations and failures to retrieve secrets used for
   configuration. Instead, it will return `400` with message to tell the

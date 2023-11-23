@@ -280,14 +280,17 @@ func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.
 	t.Log("waiting for controller to be ready")
 	deployments := getManifestDeployments(d.Path)
 
-	adminAPINoHTTP2Range := kong.MustNewRange("<" + adminAPIHTTP2MinimalKongVersion.String())
-	kongVersion, err := getKongVersionFromOverrideImageTag()
-	if err == nil && adminAPINoHTTP2Range(kongVersion) {
-		t.Logf(
-			"Kong version %s is below %s, should disable HTTP/2 on admin API",
-			kongVersion.String(), adminAPIHTTP2MinimalKongVersion.String(),
-		)
-		removeAdminListenHTTP2(ctx, t, env, deployments.ProxyNN)
+	if !d.SkipTestPatches {
+		adminAPINoHTTP2Range := kong.MustNewRange("<" + adminAPIHTTP2MinimalKongVersion.String())
+		kongVersion, err := getKongVersionFromOverrideImageTag()
+		if err == nil && adminAPINoHTTP2Range(kongVersion) {
+			t.Logf(
+				"Kong version %s is below %s, should disable HTTP/2 on admin API",
+				kongVersion.String(), adminAPIHTTP2MinimalKongVersion.String(),
+			)
+			removeAdminListenHTTP2(ctx, t, env, deployments.ProxyNN)
+		}
+
 	}
 
 	waitForDeploymentRollout(ctx, t, env, deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)

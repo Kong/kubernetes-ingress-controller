@@ -199,7 +199,8 @@ verify.generators: verify.repo generate verify.diff
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
-CRD_GEN_PATHS ?= ./...
+CRD_GEN_PATHS ?= ./pkg/apis/configuration/...
+CRD_INCUBATOR_GEN_PATHS ?= ./pkg/apis/incubator/...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
@@ -207,6 +208,7 @@ manifests: manifests.crds manifests.rbac manifests.single
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_INCUBATOR_GEN_PATHS)" output:crd:artifacts:config=config/crd/incubator
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_GEN_PATHS)" output:crd:artifacts:config=config/crd/bases
 
 .PHONY: manifests.rbac ## Generate ClusterRole objects.

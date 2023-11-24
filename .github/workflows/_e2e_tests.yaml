@@ -224,6 +224,8 @@ jobs:
       - name: check availability of KIC image
         id: check_kic_image
         if: ${{ inputs.kic-image != '' }}
+        # We have to check whether the image passed in inputs is available in the docker hub. 
+        # If it's not, we'll fall back to a nightly image later.
         run: (docker manifest inspect ${{ inputs.kic-image }} && echo "kic_image=${{ inputs.kic-image }}" >> $GITHUB_OUTPUT) || true
 
       - name: split image and tag
@@ -244,11 +246,11 @@ jobs:
             echo "kic-image=$kic_image_repo" >> $GITHUB_OUTPUT
             echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT  
           else
+            # See the https://github.com/Kong/kubernetes-testing-framework/issues/587 TODO below.
+            # If we add local image GKE support, we can get rid of this fallback.
             echo "kic-image=kong/nightly-ingress-controller" >> $GITHUB_OUTPUT
             echo "kic-tag=nightly" >> $GITHUB_OUTPUT
           fi
-          # see the https://github.com/Kong/kubernetes-testing-framework/issues/587 TODO below
-          # if we add local image GKE support, we probably need to split it into components here
 
       - name: run ${{ matrix.test }}
         run: make test.e2e

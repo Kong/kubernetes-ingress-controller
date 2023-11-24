@@ -193,14 +193,32 @@ jobs:
         with:
           password: ${{ secrets.PULP_PASSWORD }}
 
+      - name: check availability of KIC image
+        id: check_kic_image
+        if: ${{ inputs.kic-image != '' }}
+        # We have to check whether the image passed in inputs is available in the docker hub. 
+        # If it's not, we'll fall back to a nightly image later.
+        run: (docker manifest inspect ${{ inputs.kic-image }} && echo "kic_image=${{ inputs.kic-image }}" >> $GITHUB_OUTPUT) || true
+
+      - name: choose KIC image
+        id: choose_kic_image
+        run: |
+          if [ "${{ steps.check_kic_image.outputs.kic_image }}" != "" ]; then
+            echo "kic-image=${{ steps.check_kic_image.outputs.kic_image }}" >> $GITHUB_OUTPUT  
+          else
+            # See the https://github.com/Kong/kubernetes-testing-framework/issues/587 TODO below.
+            # If we add local image GKE support, we can get rid of this fallback.
+            echo "kic-image=kong/nightly-ingress-controller" >> $GITHUB_OUTPUT
+          fi
+
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
           # NOTE: The limitation of the GKE setup is that we cannot run tests against a local image,
-          # therefore we need to use the nightly one.
+          # therefore we need to use the nightly one if the input image is not availabe externally.
           # TODO: Once we have a way to load images into GKE, we can use the local image.
           # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
-          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ steps.choose_kic_image.outputs.kic-image }}
           TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}

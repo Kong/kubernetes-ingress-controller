@@ -387,6 +387,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		}
 		notExistingPort := gatewayapi.PortNumber(81)
 		tcpRoute.Spec.ParentRefs[0].Port = &notExistingPort
+		tcpRoute.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1.Name)
 		tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Update(ctx, tcpRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)

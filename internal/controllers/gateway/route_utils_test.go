@@ -733,6 +733,75 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 				},
 			},
+			{
+				name: "TCPRoute specifying in sectionName existing listener with a matching port gets Accepted",
+				route: func() *gatewayapi.TCPRoute {
+					r := basicTCPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tcp"))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+						{
+							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
+						},
+					}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithTCP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "tcp",
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+				},
+			},
+			{
+				name: "TCPRoute specifying in sectionName existing listener with a non-matching port does not gets Accepted",
+				route: func() *gatewayapi.TCPRoute {
+					r := basicTCPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(8080))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tcp"))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+						{
+							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
+						},
+					}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithTCP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "tcp",
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+				},
+			},
+			{
+				name: "TCPRoute specifying in sectionName non existing listener with an existing port does not gets Accepted",
+				route: func() *gatewayapi.TCPRoute {
+					r := basicTCPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+						{
+							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
+						},
+					}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithTCP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "unknown-listener",
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+				},
+			},
 		}
 
 		for _, tt := range tests {
@@ -898,6 +967,60 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			},
 			{
 				name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
+				route: func() *gatewayapi.UDPRoute {
+					r := basicUDPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithUDP53Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "unknown-listener",
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+				},
+			},
+			{
+				name: "UDPRoute specifying in sectionName existing listener with a matching port gets Accepted",
+				route: func() *gatewayapi.UDPRoute {
+					r := basicUDPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("udp"))
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithUDP53Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "udp",
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+				},
+			},
+			{
+				name: "UDPRoute specifying in sectionName existing listener with a non-matching port does not get Accepted",
+				route: func() *gatewayapi.UDPRoute {
+					r := basicUDPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(533))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("udp"))
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithUDP53Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "udp",
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+				},
+			},
+			{
+				name: "UDPRoute specifying in sectionName non existing listener with an existing port does not get Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
 					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))

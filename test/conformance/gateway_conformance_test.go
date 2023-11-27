@@ -29,6 +29,7 @@ var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRoute,
 	// extended features
 	suite.SupportHTTPRouteResponseHeaderModification,
+	suite.SupportHTTPRouteBackendTimeout,
 }
 
 var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
@@ -39,6 +40,7 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRouteQueryParamMatching,
 	suite.SupportHTTPRouteMethodMatching,
 	suite.SupportHTTPRouteResponseHeaderModification,
+	suite.SupportHTTPRouteBackendTimeout,
 }
 
 func TestGatewayConformance(t *testing.T) {

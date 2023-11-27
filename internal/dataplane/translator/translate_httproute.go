@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -86,7 +87,51 @@ func (t *Translator) ingressRulesFromHTTPRoute(result *ingressRules, httproute *
 		result.ServiceNameToServices[*service.Service.Name] = service
 		result.ServiceNameToParent[serviceName] = httproute
 	}
+	applyTimeoutsToService(httproute, result)
 	return nil
+}
+
+// applyTimeoutsToService applies timeouts from HTTPRoute to the service.
+// If the HTTPRoute has multiple rules, the timeout from the last rule which has specific timeout will be applied to the service.
+// If the HTTPRoute has multiple rules and the first rule doesn't have timeout, the default timeout will be applied to the service.
+func applyTimeoutsToService(httpRoute *gatewayapi.HTTPRoute, rules *ingressRules) {
+	// If the HTTPRoute doesn't have rules, we don't need to apply timeouts to the service.
+	if httpRoute.Spec.Rules == nil {
+		return
+	}
+
+	backendRequestTimeout := DefaultServiceTimeout
+	for _, rule := range httpRoute.Spec.Rules {
+		if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+			duration, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			// We ignore the error here because the rule.Timeouts.BackendRequest is validated
+			// to be a strict subset of Golang time.ParseDuration so it should never happen
+			if err != nil {
+				continue
+			}
+			backendRequestTimeout = int(duration.Milliseconds())
+		}
+	}
+
+	// if the backendRequestTimeout is the same as the default timeout, we don't need to apply it to the service.
+	if backendRequestTimeout == DefaultServiceTimeout {
+		return
+	}
+
+	// due rules.ServiceNameToServices is a map, we need to iterate over the map to find the service
+	// which has the same parent as the HTTPRoute.
+	for serviceName, service := range rules.ServiceNameToServices {
+		if service.Parent.GetObjectKind() == httpRoute.GetObjectKind() && service.Parent.GetName() == httpRoute.Name && service.Parent.GetNamespace() == httpRoute.Namespace {
+			// Due to only one field being available in the Gateway API to control this behavior,
+			// when users set `spec.rules[].timeouts` in HTTPRoute,
+			// KIC will also set ReadTimeout, WriteTimeout and ConnectTimeout for the service to this value
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/4914#issuecomment-1813964669
+			service.Service.ReadTimeout = kong.Int(backendRequestTimeout)
+			service.Service.ConnectTimeout = kong.Int(backendRequestTimeout)
+			service.Service.WriteTimeout = kong.Int(backendRequestTimeout)
+			rules.ServiceNameToServices[serviceName] = service
+		}
+	}
 }
 
 func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlags) error {
@@ -148,7 +193,9 @@ func (t *Translator) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes 
 			Namespace: httproute.Namespace,
 			Name:      httproute.Name,
 		}
-		if translationFailures, ok := httpRouteNameToTranslationFailure[nsName]; ok {
+		if translationFailures, ok := httpRouteNameToTranslationFailure[nsName]; !ok {
+			applyTimeoutsToService(httproute, result)
+		} else {
 			t.registerTranslationFailure(
 				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
 				httproute,

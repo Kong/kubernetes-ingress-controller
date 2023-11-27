@@ -142,7 +142,7 @@ Adding a new version? You'll need three changes:
   Kong vault is restrained unique, the `spec.prefix` field is set to immutable,
   and only one of multiple `KongVault`s with the same `spec.prefix` will get
   translated. Translation failiure events will be recorded for others with
-  duplicating `spec.prefix`.  
+  duplicating `spec.prefix`. 
   [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
   [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
   [#5435](https://github.com/Kong/kubernetes-ingress-controller/pull/5435)
@@ -150,6 +150,13 @@ Adding a new version? You'll need three changes:
 - Added flag `--gateway-to-reconcile` to set KIC to only reconcile
   the specified Gateway resource in Kubernetes.
   [#5405](https://github.com/Kong/kubernetes-ingress-controller/pull/5405)
+- Added support for `HTTPRouteTimeoutBackendRequest` in Gateway API.
+  Due to only one field being available in the Gateway API to control this behavior,
+  when users set `spec.rules[].timeouts` in HTTPRoute,
+  KIC will set `connect_timeout`, `read_timeout` and `write_timeout` for the service to this value.
+  It's only possible to set the same timeout for each rule in a single `HTTPRoute`. Other settings
+  will be rejected by the admission webhook validation.
+  [#5243](https://github.com/Kong/kubernetes-ingress-controller/pull/5243)
 
 ### Fixed
 

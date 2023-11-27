@@ -358,7 +358,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type RequestMirror is unsupported",
 		},
 		{
-			msg: "we do not support setting timeouts on rules",
+			msg: "we only support setting the timeout to the same value",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
@@ -387,7 +387,104 @@ func TestValidateHTTPRoute(t *testing.T) {
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							Request: lo.ToPtr(gatewayapi.Duration("1s")),
+							BackendRequest: lo.ToPtr(gatewayapi.Duration("1s")),
+						},
+					}, {
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+							},
+						},
+						Timeouts: &gatewayapi.HTTPRouteTimeouts{
+							BackendRequest: lo.ToPtr(gatewayapi.Duration("1s")),
+						},
+					}},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			msg: "we don't support setting the timeout to different value",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+							},
+						},
+						Timeouts: &gatewayapi.HTTPRouteTimeouts{
+							BackendRequest: lo.ToPtr(gatewayapi.Duration("1s")),
+						},
+					}, {
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+							},
+						},
+						Timeouts: &gatewayapi.HTTPRouteTimeouts{
+							BackendRequest: lo.ToPtr(gatewayapi.Duration("5s")),
 						},
 					}},
 				},
@@ -416,7 +513,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: rules[0]: rule timeout is unsupported",
+			validationMsg: "HTTPRoute spec did not pass validation: timeout is set for one of the rules, but a different value is set in another rule",
 		},
 		{
 			msg: "we do not support filters in backendRefs",

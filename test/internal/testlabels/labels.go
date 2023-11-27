@@ -5,6 +5,7 @@ const (
 	Kind          = "kind"
 	KindUDPRoute  = "UDPRoute"
 	KindGRPCRoute = "GRPCRoute"
+	KindIngress   = "Ingress"
 )
 
 const (

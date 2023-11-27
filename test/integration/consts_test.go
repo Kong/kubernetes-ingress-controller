@@ -22,5 +22,5 @@ const (
 
 	// statusWait is a const duration used in test assertions like .Eventually to
 	// wait for object statuses to fulfill a provided predicate.
-	statusWait = time.Minute * 3
+	statusWait = consts.StatusWait
 )

@@ -329,6 +329,7 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			// the cleaner always gets a 404 on it for unknown reasons
 			_ = cluster.Client().NetworkingV1().IngressClasses().Delete(ctx, ingressClass, metav1.DeleteOptions{})
 		}()
+		ctx = setInCtx(ctx, _ingressClass{}, ingressClass)
 
 		clusterVersion, err := cluster.Version()
 		if !assert.NoError(t, err, "failed getting cluster version") {

@@ -255,6 +255,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 				portMatched = true
 			}
 
+			// Check if listener protocol matches
 			if !routeTypeMatchesListenerType(route, listener) {
 				listenerLogger.V(util.DebugLevel).Info(
 					"Route's type does not match listener's type",

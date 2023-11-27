@@ -47,6 +47,9 @@ var (
 	gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
 	// adminAPIHTTP2MinimalKongVersion is the minimal version of Kong gateway version that supports `http2` on admin APIs.
 	adminAPIHTTP2MinimalKongVersion = semver.Version{Major: 3, Minor: 0} // 3.0.0
+	// upgradeTestMinimalKongVersion is the minimal version of Kong gateway version that enables `TestDeployAndUpgrade*` test cases.
+	// Since the source Kong version used in TestDeployAndUpgrade* is 3.3, we should enable the test for Kong 3.0.x and above.
+	upgradeTestMinimalKongVersion = semver.Version{Major: 3, Minor: 0} // 3.0.0
 	// statusReadyProbeMinimalKongVersion is the minimal version of kong gateway version that enables /status/ready probe.
 	statusReadyProbeMinimalKongVersion = semver.Version{Major: 3, Minor: 3} // 3.3.0
 )

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -84,6 +85,20 @@ func testManifestsUpgrade(
 	t *testing.T,
 	testParams manifestsUpgradeTestParams,
 ) {
+	// Skip the test if the version of the provides Kong image is too low
+	// that the version of target image is not be compatible with the already-running KIC.
+	if kongImageOverride != "" {
+		kongVersion, err := getKongVersionFromOverrideImageTag()
+		skipTestVersionRange := kong.MustNewRange("<" + upgradeTestMinimalKongVersion.String())
+		// If we could not get version from kong image, assume they are latest.
+		// So we will run the upgrade tests.
+		if err == nil && skipTestVersionRange(kongVersion) {
+			t.Skipf("skip upgrade test because Kong version is %s, lower than %s",
+				kongVersion.String(), upgradeTestMinimalKongVersion.String(),
+			)
+		}
+	}
+
 	httpClient := helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())
 	oldManifest, err := httpClient.Get(testParams.fromManifestURL)
 	require.NoError(t, err)

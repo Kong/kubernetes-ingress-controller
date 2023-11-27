@@ -108,6 +108,22 @@ func GetUDPURLFromCtx(ctx context.Context) *url.URL {
 	return u.(*url.URL)
 }
 
+type _proxyURL struct{}
+
+// SetProxyURLInCtx sets the proxy URL in the context.
+func SetProxyURLInCtx(ctx context.Context, url *url.URL) context.Context {
+	return setInCtx(ctx, _proxyURL{}, url)
+}
+
+// GetProxyURLFromCtx gets the proxy URL from the context.
+func GetProxyURLFromCtx(ctx context.Context) *url.URL {
+	u := ctx.Value(_proxyURL{})
+	if u == nil {
+		return nil
+	}
+	return u.(*url.URL)
+}
+
 type _adminURL struct{}
 
 // SetAdminURLInCtx sets the admin URL in the context.

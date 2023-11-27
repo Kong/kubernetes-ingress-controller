@@ -2,4 +2,8 @@
 
 package isolated
 
-const examplesDIR = "../../../examples"
+import "fmt"
+
+func manifestPath(manifestName string) string {
+	return fmt.Sprintf("../../../examples/%s", manifestName)
+}

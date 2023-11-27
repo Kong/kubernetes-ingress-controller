@@ -145,7 +145,30 @@ func TestMain(m *testing.M) {
 	}
 }
 
-func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+type featureSetupCfg struct {
+	controllerManagerOpts []helpers.ControllerManagerOpt
+	kongProxyEnvVars      map[string]string
+}
+
+type featureSetupOpt func(*featureSetupCfg)
+
+func withControllerManagerOpts(opts ...helpers.ControllerManagerOpt) featureSetupOpt {
+	return func(o *featureSetupCfg) {
+		o.controllerManagerOpts = opts
+	}
+}
+
+func withKongProxyEnvVars(envVars map[string]string) featureSetupOpt {
+	return func(o *featureSetupCfg) {
+		o.kongProxyEnvVars = envVars
+	}
+}
+
+func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+	var setupCfg featureSetupCfg
+	for _, opt := range opts {
+		opt(&setupCfg)
+	}
 	return func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 		// TODO: this is temporary to allow things like:
 		// clusters.ApplyManifestByYAML(ctx, cluster, s)
@@ -180,7 +203,7 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 		}
 
 		t.Logf("setting up test environment")
-		kongbuilder, extraControllerArgs, err := helpers.GenerateKongBuilder(ctx)
+		kongBuilder, extraControllerArgs, err := helpers.GenerateKongBuilder(ctx)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
@@ -189,12 +212,15 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 		}
 
 		// Pin the Helm chart version.
-		kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
-		kongbuilder.WithNamespace(namespace)
-		kongbuilder.WithName(NameFromT(t))
-		kongbuilder.WithAdditionalValue("readinessProbe.initialDelaySeconds", "1")
+		kongBuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
+		kongBuilder.WithNamespace(namespace)
+		kongBuilder.WithName(NameFromT(t))
+		kongBuilder.WithAdditionalValue("readinessProbe.initialDelaySeconds", "1")
+		for name, value := range setupCfg.kongProxyEnvVars {
+			kongBuilder.WithProxyEnvVar(name, value)
+		}
 
-		kongAddon := kongbuilder.Build()
+		kongAddon := kongBuilder.Build()
 		t.Logf("deploying kong addon to cluster %s in namespace %s", cluster.Name(), namespace)
 		if !assert.NoError(t, cluster.DeployAddon(ctx, kongAddon)) {
 			return ctx
@@ -235,6 +261,11 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 			return ctx
 		}
 		ctx = SetUDPURLInCtx(ctx, proxyUDPURL)
+		proxyURL, err := kongAddon.ProxyURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetProxyURLInCtx(ctx, proxyURL)
 
 		if !assert.NoError(t, retry.Do(
 			func() error {
@@ -279,7 +310,7 @@ func featureSetup(opts ...helpers.ControllerManagerOpt) func(ctx context.Context
 			fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		for _, opt := range opts {
+		for _, opt := range setupCfg.controllerManagerOpts {
 			allControllerArgs = opt(allControllerArgs)
 		}
 

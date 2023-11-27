@@ -28,8 +28,11 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 			listener: gatewayapi.Listener{
 				Protocol: gatewayapi.HTTPProtocolType,
 			},
-			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
+			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
+				builder.NewRouteGroupKind().HTTPRoute().Build(),
+				builder.NewRouteGroupKind().GRPCRoute().Build(),
+			},
+			resolvedRefsReason: gatewayapi.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only HTTPS protocol specified",

@@ -4,7 +4,6 @@ package isolated
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -22,7 +21,7 @@ import (
 func TestExampleUDPRoute(t *testing.T) {
 	t.Parallel()
 
-	udpRouteExampleManifests := fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
+	udpRouteExampleManifests := manifestPath("gateway-udproute.yaml")
 
 	f := features.
 		New("example").
@@ -31,7 +30,7 @@ func TestExampleUDPRoute(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			helpers.ControllerManagerOptAdditionalWatchNamespace("default"),
+			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		Assess("deploying to cluster works and deployed coredns responds to UDP queries",
 			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {

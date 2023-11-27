@@ -58,7 +58,9 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(t.logger, t.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(
+			t.logger, t.storer, result, grpcroute, ruleNumber, t.getProtocolForKongService(grpcroute), grpcBackendRefsToBackendRefs(rule.BackendRefs)...,
+		)
 		if err != nil {
 			return err
 		}
@@ -119,18 +121,16 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 		return
 	}
 	grpcRouteRule := grpcRoute.Spec.Rules[match.RuleIndex]
-	backendRefs := grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)
 
 	serviceName := subtranslator.KongServiceNameFromSplitGRPCRouteMatch(match)
-
 	kongService, _ := generateKongServiceFromBackendRefWithName(
 		t.logger,
 		t.storer,
 		rules,
 		serviceName,
 		grpcRoute,
-		"grpcs",
-		backendRefs...,
+		t.getProtocolForKongService(grpcRoute),
+		grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)...,
 	)
 	kongService.Routes = append(
 		kongService.Routes,
@@ -139,6 +139,14 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 	// cache the service to avoid duplicates in further loop iterations
 	rules.ServiceNameToServices[serviceName] = kongService
 	rules.ServiceNameToParent[serviceName] = grpcRoute
+}
+
+func (t *Translator) getProtocolForKongService(grpcRoute *gatewayapi.GRPCRoute) string {
+	// When Gateway listens on HTTP use "grpc" protocol for the service. Otherwise for HTTPS use "grpcs".
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+		return "grpc"
+	}
+	return "grpcs"
 }
 
 func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []gatewayapi.BackendRef {

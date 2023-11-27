@@ -608,19 +608,17 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 // Otherwise, user specified AllowedRoutes.Kinds are used, filtered by the global Gateway supported kinds.
 func getListenerSupportedRouteKinds(l gatewayapi.Listener) ([]gatewayapi.RouteGroupKind, gatewayapi.ListenerConditionReason) {
 	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
-		switch string(l.Protocol) {
-		case string(gatewayapi.HTTPProtocolType):
-			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice(), gatewayapi.ListenerReasonResolvedRefs
-		case string(gatewayapi.HTTPSProtocolType):
+		switch l.Protocol {
+		case gatewayapi.HTTPProtocolType, gatewayapi.HTTPSProtocolType:
 			return []gatewayapi.RouteGroupKind{
 				builder.NewRouteGroupKind().HTTPRoute().Build(),
 				builder.NewRouteGroupKind().GRPCRoute().Build(),
 			}, gatewayapi.ListenerReasonResolvedRefs
-		case string(gatewayapi.TCPProtocolType):
+		case gatewayapi.TCPProtocolType:
 			return builder.NewRouteGroupKind().TCPRoute().IntoSlice(), gatewayapi.ListenerReasonResolvedRefs
-		case string(gatewayapi.UDPProtocolType):
+		case gatewayapi.UDPProtocolType:
 			return builder.NewRouteGroupKind().UDPRoute().IntoSlice(), gatewayapi.ListenerReasonResolvedRefs
-		case string(gatewayapi.TLSProtocolType):
+		case gatewayapi.TLSProtocolType:
 			return builder.NewRouteGroupKind().TLSRoute().IntoSlice(), gatewayapi.ListenerReasonResolvedRefs
 		}
 	}

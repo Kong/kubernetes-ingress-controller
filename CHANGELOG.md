@@ -99,6 +99,7 @@ Adding a new version? You'll need three changes:
   [#5220](https://github.com/Kong/kubernetes-ingress-controller/pull/5220)
 - Added support for GRPC over HTTP (without TLS) in Gateway API.
   [#5128](https://github.com/Kong/kubernetes-ingress-controller/pull/5128)
+- Added InitCacheSyncDuration to CLI parameters, changed default back to 5s [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
 
 ### Fixed
 

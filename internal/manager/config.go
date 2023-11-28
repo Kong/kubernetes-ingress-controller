@@ -196,7 +196,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.")
-	flagSet.DurationVar(&c.InitCacheSyncDuration, "init-cache-sync-duration", 5*time.Second, `The initial delay to wait for Kubernetes object caches to be synced before the initial configuration`)
+	flagSet.DurationVar(&c.InitCacheSyncDuration, "init-cache-sync-duration", dataplane.DefaultCacheSyncWaitDuration, `The initial delay to wait for Kubernetes object caches to be synced before the initial configuration.`)
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
 		"Sets the timeout (in seconds) for all requests to Kong's Admin API.")
 

@@ -38,7 +38,7 @@
 | `--gateway-discovery-dns-strategy` | `dns-strategy` | DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod. | `"ip"` |
 | `--health-probe-bind-address` | `string` | The address the probe endpoint binds to. | `:10254` |
 | `--ingress-class` | `string` | Name of the ingress class to route through this controller. | `kong` |
-| `--init-cache-sync-duration`  | `duration` | The initial delay to wait for Kubernetes object caches to be synced before the initial configuration. | `5s` |
+| `--init-cache-sync-duration`  | `duration` | The initial Kubernetes cache sync delay before generating and sending configuration to Kong. | `5s` |
 | `--kong-admin-ca-cert` | `string` | PEM-encoded CA certificate to verify Kong's Admin TLS certificate. Mutually exclusive with --kong-admin-ca-cert-file. |  |
 | `--kong-admin-ca-cert-file` | `string` | Path to PEM-encoded CA certificate file to verify Kong's Admin TLS certificate. Mutually exclusive with --kong-admin-ca-cert. |  |
 | `--kong-admin-concurrency` | `int` | Max number of concurrent requests sent to Kong's Admin API. | `10` |

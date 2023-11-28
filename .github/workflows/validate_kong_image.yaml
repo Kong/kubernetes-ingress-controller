@@ -79,6 +79,7 @@ jobs:
       kong-enterprise-container-repo: ${{ github.event.inputs.kong-image-repo }}
       kong-enterprise-container-tag: ${{ github.event.inputs.kong-image-tag }}
       kong-enterprise-effective-version: ${{ github.event.inputs.kong-effective-version }}
+      log-output-file:  /tmp/integration-tests-kic-logs
 
   on-finish-comment-or-close-issue:
     needs:

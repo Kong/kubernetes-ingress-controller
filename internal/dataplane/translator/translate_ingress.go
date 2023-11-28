@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 func (t *Translator) ingressRulesFromIngressV1() ingressRules {
@@ -45,10 +43,13 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 	}
 
 	// Translate Ingress objects into Kong Services.
-	servicesCache := IngressesV1ToKongServices(
-		t.featureFlags,
+	servicesCache := subtranslator.TranslateIngresses(
 		ingressList,
 		icp,
+		subtranslator.TranslateIngressFeatureFlags{
+			ExpressionRoutes: t.featureFlags.ExpressionRoutes,
+			ServiceFacade:    t.featureFlags.ServiceFacade,
+		},
 		t.translatedObjectsCollector,
 		t.logger,
 	)
@@ -81,25 +82,6 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 	}
 
 	return result
-}
-
-// KongServicesCache is a cache of Kong Services indexed by their name.
-type KongServicesCache map[string]kongstate.Service
-
-// IngressesV1ToKongServices translates IngressV1 object into Kong Service, returns them indexed by name.
-// Argument translatedObjectsCollector is used to register all successfully translated objects. In case of a failure,
-// the object is registered in failuresCollector.
-func IngressesV1ToKongServices(
-	featureFlags FeatureFlags,
-	ingresses []*netv1.Ingress,
-	icp kongv1alpha1.IngressClassParametersSpec,
-	translatedObjectsCollector *ObjectsCollector,
-	logger logr.Logger,
-) KongServicesCache {
-	return subtranslator.TranslateIngresses(ingresses, icp, subtranslator.TranslateIngressFeatureFlags{
-		ExpressionRoutes: featureFlags.ExpressionRoutes,
-		ServiceFacade:    featureFlags.ServiceFacade,
-	}, translatedObjectsCollector, logger)
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.

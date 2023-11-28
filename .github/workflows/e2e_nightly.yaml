@@ -50,6 +50,7 @@ jobs:
       kong-enterprise-container-repo: kong/kong-gateway-dev
       kong-enterprise-container-tag: nightly
       kong-enterprise-effective-version: "3.4"
+      log-output-file:  /tmp/integration-tests-kic-logs
 
   test-reports:
     needs:

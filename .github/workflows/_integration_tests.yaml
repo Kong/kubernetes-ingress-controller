@@ -33,6 +33,11 @@ on:
         type: string
         default: ""
         required: false
+      log-output-file:
+        # specifies the file for KIC manager's logs to output to.
+        type: string
+        default: ""
+        required: false
 
 jobs:
   integration-tests:
@@ -122,6 +127,7 @@ jobs:
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
           JUNIT_REPORT: "integration-tests-${{ matrix.name }}.xml"
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+          TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
 
       - name: run ${{ matrix.name }} - invalid config
         run: make test.integration.${{ matrix.test }}
@@ -132,6 +138,7 @@ jobs:
           JUNIT_REPORT: "integration-tests-invalid-config-${{ matrix.name }}.xml"
           GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
           TEST_RUN_INVALID_CONFIG_CASES: "true"
+          TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
 
       - name: collect test coverage
         if: ${{ !cancelled() }}
@@ -146,6 +153,15 @@ jobs:
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+      
+      # upload logs when test failed
+      - name: upload KIC logs 
+        if: ${{ failure() && inputs.log-output-file != '' }}
+        uses: actions/upload-artifact@v3
+        with: 
+          name: integration-tests-kic-logs-${{ matrix.name }}
+          path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 
       - name: collect test report

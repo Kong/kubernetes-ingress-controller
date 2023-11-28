@@ -98,6 +98,8 @@ jobs:
     if: needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
+    with:
+      log-output-file: /tmp/integration-tests-kic-logs
 
   conformance-tests:
     needs:
@@ -105,6 +107,8 @@ jobs:
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_conformance_tests.yaml
     secrets: inherit
+    with:
+      log-output-file: /tmp/conformance-tests-kic-logs
 
   build-docker-image:
     needs:

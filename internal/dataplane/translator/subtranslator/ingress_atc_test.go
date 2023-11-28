@@ -12,6 +12,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -282,6 +283,7 @@ func TestTranslateIngressATC(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 			services := TranslateIngresses(
 				[]*netv1.Ingress{tc.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
@@ -289,7 +291,7 @@ func TestTranslateIngressATC(t *testing.T) {
 					ExpressionRoutes: true,
 				},
 				noopObjectsCollector{},
-				logr.Discard(),
+				failuresCollector,
 			)
 			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.

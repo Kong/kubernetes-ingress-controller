@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -25,10 +26,13 @@ func ValidateIngress(
 	ingress *netv1.Ingress,
 	logger logr.Logger,
 ) (bool, string, error) {
-	// Validate by using feature of Kong Gateway.
-	var errMsgs []string
-	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, logger) {
+	var (
+		errMsgs           []string
+		failuresCollector = failures.NewResourceFailuresCollector(logger)
+	)
+	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector) {
 		kg := kg
+		// Validate by using feature of Kong Gateway.
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
 			return false, fmt.Sprintf("Unable to validate Ingress schema: %s", err.Error()), nil
@@ -36,6 +40,10 @@ func ValidateIngress(
 		if !ok {
 			errMsgs = append(errMsgs, msg)
 		}
+	}
+	// Collect failures from the translation.
+	for _, failure := range failuresCollector.PopResourceFailures() {
+		errMsgs = append(errMsgs, failure.Message())
 	}
 	if len(errMsgs) > 0 {
 		return false, fmt.Sprintf("Ingress failed schema validation: %s", strings.Join(errMsgs, ", ")), nil
@@ -48,7 +56,7 @@ func ValidateIngress(
 func ingressToKongRoutesForValidation(
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
-	logger logr.Logger,
+	failuresCollector subtranslator.FailuresCollector,
 ) []kong.Route {
 	kongServices := subtranslator.TranslateIngresses(
 		[]*netv1.Ingress{ingress},
@@ -58,7 +66,7 @@ func ingressToKongRoutesForValidation(
 			ServiceFacade:    translatorFeatures.ServiceFacade,
 		},
 		&translator.ObjectsCollector{}, // It's irrelevant for validation.
-		logger,
+		failuresCollector,
 	)
 
 	var kongRoutes []kong.Route

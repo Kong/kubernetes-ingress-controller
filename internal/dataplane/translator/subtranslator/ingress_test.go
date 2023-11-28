@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -1358,6 +1359,8 @@ func TestTranslateIngress(t *testing.T) {
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
+
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 			diff := cmp.Diff(tt.expected, TranslateIngresses(
 				[]*netv1.Ingress{tt.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
@@ -1366,7 +1369,7 @@ func TestTranslateIngress(t *testing.T) {
 					ServiceFacade:    true,
 				},
 				noopObjectsCollector{},
-				logr.Discard(),
+				failuresCollector,
 			), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})

@@ -7,7 +7,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
@@ -27,8 +27,15 @@ import (
 // Ingress Translation - Public Functions
 // -----------------------------------------------------------------------------
 
+// TranslatedKubernetesObjectsCollector is an interface for collecting Kubernetes objects that have been translated
+// successfully.
 type TranslatedKubernetesObjectsCollector interface {
 	Add(client.Object)
+}
+
+// FailuresCollector is an interface for collecting failures during translation.
+type FailuresCollector interface {
+	PushResourceFailure(reason string, causingObjects ...client.Object)
 }
 
 type TranslateIngressFeatureFlags struct {
@@ -46,9 +53,9 @@ func TranslateIngresses(
 	icp kongv1alpha1.IngressClassParametersSpec,
 	flags TranslateIngressFeatureFlags,
 	translatedObjectsCollector TranslatedKubernetesObjectsCollector,
-	logger logr.Logger,
+	failuresCollector FailuresCollector,
 ) map[string]kongstate.Service {
-	index := newIngressTranslationIndex(flags, logger)
+	index := newIngressTranslationIndex(flags, failuresCollector)
 	for _, ingress := range ingresses {
 		prependRegexPrefix := MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection)
 		index.Add(ingress, prependRegexPrefix)
@@ -104,16 +111,17 @@ func defaultServiceTimeoutInKongFormat() *int {
 // data-points, a separate kong.Service and separate kong.Routes will be created
 // for each unique combination.
 type ingressTranslationIndex struct {
-	cache        map[string]*ingressTranslationMeta
-	featureFlags TranslateIngressFeatureFlags
-	logger       logr.Logger
+	cache             map[string]*ingressTranslationMeta
+	featureFlags      TranslateIngressFeatureFlags
+	failuresCollector FailuresCollector
+	storer            store.Storer
 }
 
-func newIngressTranslationIndex(flags TranslateIngressFeatureFlags, logger logr.Logger) *ingressTranslationIndex {
+func newIngressTranslationIndex(flags TranslateIngressFeatureFlags, failuresCollector FailuresCollector) *ingressTranslationIndex {
 	return &ingressTranslationIndex{
-		cache:        make(map[string]*ingressTranslationMeta),
-		featureFlags: flags,
-		logger:       logger,
+		cache:             make(map[string]*ingressTranslationMeta),
+		featureFlags:      flags,
+		failuresCollector: failuresCollector,
 	}
 }
 
@@ -137,17 +145,18 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 				httpIngressPath.PathType = &defaultHTTPIngressPathType
 			}
 
-			backend, err := i.getIngressPathBackend(httpIngressPath)
+			backend, err := i.getIngressPathBackend(ingress.Namespace, httpIngressPath)
 			if err != nil {
-				// TODO: emit an event
-				i.logger.Error(err, "failed to get backend for ingress path", "ingress", ingress, "path", httpIngressPath)
+				i.failuresCollector.PushResourceFailure(fmt.Sprintf("failed to get backend for ingress path %q", httpIngressPath.Path), ingress)
 				continue
 			}
 
 			cacheKey, err := backend.intoCacheKey(k8stypes.NamespacedName{Namespace: ingress.Namespace, Name: ingress.Name}, ingressRule.Host)
 			if err != nil {
-				i.logger.Error(err, "failed to translate backend into cache key", "backend", backend)
-				// TODO: emit an event
+				i.failuresCollector.PushResourceFailure(
+					fmt.Sprintf("failed to translate ingress path %q backend into cache key", httpIngressPath.Path),
+					ingress,
+				)
 				continue
 			}
 
@@ -171,12 +180,12 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 	}
 }
 
-func (i *ingressTranslationIndex) getIngressPathBackend(httpIngressPath netv1.HTTPIngressPath) (ingressTranslationMetaBackend, error) {
+func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIngressPath netv1.HTTPIngressPath) (ingressTranslationMetaBackend, error) {
 	if service := httpIngressPath.Backend.Service; service != nil {
 		return ingressTranslationMetaBackend{
 			backendType: ingressPathBackendTypeService,
 			name:        service.Name,
-			port:        lo.ToPtr(PortDefFromServiceBackendPort(&service.Port)),
+			port:        PortDefFromServiceBackendPort(&service.Port),
 		}, nil
 	}
 
@@ -188,9 +197,14 @@ func (i *ingressTranslationIndex) getIngressPathBackend(httpIngressPath netv1.HT
 			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to enable it", featuregates.ServiceFacade)
 		}
 
+		serviceFacade, err := i.storer.GetKongServiceFacade(namespace, resource.Name)
+		if err != nil {
+			return ingressTranslationMetaBackend{}, fmt.Errorf("failed to get KongServiceFacade %q: %w", resource.Name, err)
+		}
 		return ingressTranslationMetaBackend{
 			backendType: ingressPathBackendTypeKongServiceFacade,
 			name:        resource.Name,
+			port:        PortDefFromPortNumber(serviceFacade.Spec.Backend.Port),
 		}, nil
 	}
 
@@ -257,9 +271,7 @@ type ingressTranslationMetaBackend struct {
 	name string
 
 	// port is the port of the backend.
-	// For KongServiceFacade backends this will be nil as the port is not known
-	// during translation. It will be resolved later.
-	port *kongstate.PortDef
+	port kongstate.PortDef
 }
 
 func (b ingressTranslationMetaBackend) intoCacheKey(ingress k8stypes.NamespacedName, host string) (string, error) {
@@ -272,7 +284,7 @@ func (b ingressTranslationMetaBackend) intoCacheKey(ingress k8stypes.NamespacedN
 	return "", fmt.Errorf("unknown backend type %s", b.backendType)
 }
 
-func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef *kongstate.PortDef) kongstate.Service {
+func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) kongstate.Service {
 	if m.backend.backendType == ingressPathBackendTypeService {
 		return kongstate.Service{
 			Namespace: m.parentIngress.GetNamespace(),
@@ -291,7 +303,7 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			Backends: []kongstate.ServiceBackend{{
 				Name:      m.backend.name,
 				Namespace: m.parentIngress.GetNamespace(),
-				PortDef:   *portDef,
+				PortDef:   portDef,
 			}},
 			Parent: m.parentIngress,
 		}
@@ -316,6 +328,7 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				Type:      kongstate.ServiceBackendTypeKongServiceFacade,
 				Name:      m.backend.name,
 				Namespace: m.parentIngress.GetNamespace(),
+				PortDef:   portDef,
 			}},
 			Parent: m.parentIngress,
 		}

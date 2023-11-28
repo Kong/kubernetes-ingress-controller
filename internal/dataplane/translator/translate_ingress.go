@@ -51,7 +51,7 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 			ServiceFacade:    t.featureFlags.ServiceFacade,
 		},
 		t.translatedObjectsCollector,
-		t.logger,
+		t.failuresCollector,
 	)
 	for i := range servicesCache {
 		service := servicesCache[i]

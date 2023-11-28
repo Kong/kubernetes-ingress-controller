@@ -26,12 +26,8 @@ var (
 	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
-var (
-	NormalIngressExpressionPriority RoutePriorityType = 1
-	IngressDefaultBackendPriority   RoutePriorityType = 0
-)
+var IngressDefaultBackendPriority RoutePriorityType = 0
 
-// TODO: handle KongServiceFacade.
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
 	ingressHost := m.ingressHost
 	if strings.Contains(ingressHost, "*") {
@@ -41,7 +37,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 
 	var routeName string
 	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
-		routeName = fmt.Sprintf("%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost)
+		routeName = fmt.Sprintf("%s.%s.%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost)
 	} else {
 		routeName = fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost, m.backend.port.CanonicalString())
 	}

@@ -341,7 +341,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 
 				backendName := backend.Name
 				if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
-					// In the case of KongServiceFacade we need to look up the backing Kubernetes Service.
+					// In the case of KongServiceFacade we need to look it up to determine the backing Kubernetes Service.
 					svcFacade, err := t.storer.GetKongServiceFacade(backend.Namespace, backend.Name)
 					if err != nil {
 						t.registerTranslationFailure(

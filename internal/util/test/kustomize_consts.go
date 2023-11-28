@@ -11,11 +11,18 @@ import (
 )
 
 var (
-	kongRBACsKustomize        = initKongRBACsKustomizePath()
-	kongGatewayRBACsKustomize = initKongGatewayRBACsKustomizePath()
-	kongCRDsRBACsKustomize    = initKongCRDsRBACsKustomizePath()
-	kongCRDsKustomize         = initCRDsKustomizePath()
+	kongRBACsKustomize         = initKongRBACsKustomizePath()
+	kongGatewayRBACsKustomize  = initKongGatewayRBACsKustomizePath()
+	kongCRDsRBACsKustomize     = initKongCRDsRBACsKustomizePath()
+	kongCRDsKustomize          = initCRDsKustomizePath()
+	kongIncubatorCRDsKustomize = initIncubatorCRDsKustomizePath()
 )
+
+func initIncubatorCRDsKustomizePath() string {
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/incubator")
+	ensureDirExists(dir)
+	return dir
+}
 
 func initKongRBACsKustomizePath() string {
 	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/")

@@ -71,7 +71,7 @@ kind: KongServiceFacade
 metadata:
   annotations:
     kubernetes.io/ingress.class: kong
-    konghq.com/plugin: auth-alpha
+    konghq.com/plugins: auth-alpha
   name: svc-facade-alpha
   namespace: default
 spec:

@@ -36,7 +36,7 @@ func TestIngressGRPC(t *testing.T) {
 				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
 			}),
 		)).
-		Assess("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -62,7 +62,7 @@ func TestIngressGRPC(t *testing.T) {
 			ctx = deployGRPCServiceWithIngress(ctx, t, true)
 
 			t.Log("deploying a minimal GRPC service exposed with Ingress via HTTP")
-			return deployGRPCServiceWithIngress(ctx, t, false) // To test GRPC over HTTP.
+			return deployGRPCServiceWithIngress(ctx, t, false)
 		}).
 		Assess("checking whether Ingress status is updated and gRPC traffic over HTTPS is properly routed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			t.Log("verifying service connectivity via HTTPS and Ingress status update")

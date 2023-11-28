@@ -186,7 +186,6 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 				t.Logf("configure Kong admin API to non-HTTP2 listen because Kong version %s is below %s",
 					kongVersion.String(), adminAPIHTTP2MinimalKongVersion.String(),
 				)
-				// REVIEW: replace to `0.0.0.0:8001, 0.0.0.0:8444` or extract the value then remove the `http2` as the new value?
 				manifestsReader, err = patchKongAdminAPIListen(manifestsReader, deployments.ProxyNN,
 					"0.0.0.0:8001, 0.0.0.0:8444 ssl",
 				)

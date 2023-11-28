@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
@@ -21,10 +22,11 @@ func ValidateIngress(
 	routesValidator routeValidator,
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
+	logger logr.Logger,
 ) (bool, string, error) {
 	// Validate by using feature of Kong Gateway.
 	var errMsgs []string
-	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress) {
+	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, logger) {
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
@@ -43,13 +45,16 @@ func ValidateIngress(
 // ingressToKongRoutesForValidation converts Ingress to Kong Routes that can be validated by Kong Gateway,
 // discards everything else that is not needed for validation.
 func ingressToKongRoutesForValidation(
-	translatorFeatures translator.FeatureFlags, ingress *netv1.Ingress,
+	translatorFeatures translator.FeatureFlags,
+	ingress *netv1.Ingress,
+	logger logr.Logger,
 ) []kong.Route {
 	kongServices := translator.IngressesV1ToKongServices(
 		translatorFeatures,
 		[]*netv1.Ingress{ingress},
 		kongv1alpha1.IngressClassParametersSpec{EnableLegacyRegexDetection: true},
 		&translator.ObjectsCollector{}, // It's irrelevant for validation.
+		logger,
 	)
 
 	var kongRoutes []kong.Route

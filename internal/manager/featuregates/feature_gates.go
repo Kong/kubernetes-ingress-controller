@@ -58,7 +58,7 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // manager configuration options if present.
 //
 // NOTE: if you're adding a new feature gate, it needs to be added here.
-func GetFeatureGatesDefaults() map[string]bool {
+func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
 		GatewayAlphaFeature: false,
 		FillIDsFeature:      true,

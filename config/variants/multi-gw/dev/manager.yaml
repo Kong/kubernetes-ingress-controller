@@ -17,7 +17,7 @@ spec:
       containers:
       - name: ingress-controller
         args:
-          - --feature-gates=GatewayAlpha=true
+          - --feature-gates=GatewayAlpha=true,ServiceFacade=true
           - --anonymous-reports=false
         env:
         - name: CONTROLLER_LOG_LEVEL

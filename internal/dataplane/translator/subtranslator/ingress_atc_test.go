@@ -3,6 +3,7 @@ package subtranslator
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -288,6 +289,7 @@ func TestTranslateIngressATC(t *testing.T) {
 					ExpressionRoutes: true,
 				},
 				noopObjectsCollector{},
+				logr.Discard(),
 			)
 			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.

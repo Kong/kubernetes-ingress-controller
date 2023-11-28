@@ -4,8 +4,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -1275,6 +1278,74 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "KongServiceBackend used as a backend",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						Host: "konghq.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path: "/api/",
+									Backend: netv1.IngressBackend{
+										Resource: &corev1.TypedLocalObjectReference{
+											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+											Kind:     "KongServiceFacade",
+											Name:     "svc-facade",
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
+			expected: map[string]kongstate.Service{
+				"default.svc-facade.svc.facade": {
+					Namespace: corev1.NamespaceDefault,
+					Service: kong.Service{
+						Name:           kong.String("default.svc-facade.svc.facade"),
+						Host:           kong.String("default.svc-facade.svc.facade"),
+						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					},
+					Routes: []kongstate.Route{{
+						Ingress: util.K8sObjectInfo{
+							Name:      "test-ingress",
+							Namespace: corev1.NamespaceDefault,
+						},
+						Route: kong.Route{
+							Name:              kong.String("default.test-ingress.svc-facade.konghq.com.svc.facade"),
+							Hosts:             kong.StringSlice("konghq.com"),
+							Paths:             kong.StringSlice("/api/"), // default ImplementationSpecific
+							PreserveHost:      kong.Bool(true),
+							Protocols:         kong.StringSlice("http", "https"),
+							RegexPriority:     kong.Int(0),
+							StripPath:         kong.Bool(false),
+							ResponseBuffering: kong.Bool(true),
+							RequestBuffering:  kong.Bool(true),
+							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
+						},
+					}},
+					Backends: []kongstate.ServiceBackend{{
+						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
+						Name:      "svc-facade",
+						Namespace: corev1.NamespaceDefault,
+					}},
+					Parent: expectedParentIngress(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tts {
@@ -1292,8 +1363,10 @@ func TestTranslateIngress(t *testing.T) {
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					ExpressionRoutes: false,
+					ServiceFacade:    true,
 				},
 				noopObjectsCollector{},
+				logr.Discard(),
 			), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})

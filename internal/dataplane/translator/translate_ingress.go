@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
@@ -49,6 +50,7 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 		ingressList,
 		icp,
 		t.translatedObjectsCollector,
+		t.logger,
 	)
 	for i := range servicesCache {
 		service := servicesCache[i]
@@ -60,6 +62,11 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 		result.ServiceNameToServices[*service.Name] = service
 		result.ServiceNameToParent[*service.Name] = service.Parent
 	}
+
+	t.logger.V(util.DebugLevel).Info("translated IngressV1s into Kong Services",
+		"services", servicesCache,
+		"ingresses_count", len(ingressList),
+	)
 
 	// Add a default backend if it exists.
 	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends, t.featureFlags.ExpressionRoutes)
@@ -87,10 +94,12 @@ func IngressesV1ToKongServices(
 	ingresses []*netv1.Ingress,
 	icp kongv1alpha1.IngressClassParametersSpec,
 	translatedObjectsCollector *ObjectsCollector,
+	logger logr.Logger,
 ) KongServicesCache {
 	return subtranslator.TranslateIngresses(ingresses, icp, subtranslator.TranslateIngressFeatureFlags{
 		ExpressionRoutes: featureFlags.ExpressionRoutes,
-	}, translatedObjectsCollector)
+		ServiceFacade:    featureFlags.ServiceFacade,
+	}, translatedObjectsCollector, logger)
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.

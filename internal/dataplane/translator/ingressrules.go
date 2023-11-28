@@ -63,6 +63,22 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 		// and all annotations with our prefix in use across all services (when applicable).
 		k8sServices, seenKongAnnotations := getK8sServicesForBackends(logger, s, service.Namespace, service.Backends)
 
+		// populate service.Backend ports for KongServiceFacades
+		// TODO: find cleaner way to do that
+		for i, backend := range service.Backends {
+			if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
+				svcFacade, err := s.GetKongServiceFacade(backend.Namespace, backend.Name)
+				if err != nil {
+					logger.Error(err, "Failed to fetch KongServiceFacade", "name", backend.Name, "namespace", backend.Namespace)
+					continue
+				}
+				service.Backends[i].PortDef = kongstate.PortDef{
+					Mode:   kongstate.PortModeByNumber,
+					Number: svcFacade.Spec.Backend.Port,
+				}
+			}
+		}
+
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
 		if !collectInconsistentAnnotations(k8sServices, seenKongAnnotations, failuresCollector, key) {
@@ -97,6 +113,7 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 			}
 		}
 		if len(k8sServices) > 1 {
+			// TODO: Make sure that when KongServiceFacade is used, it is assigned as a parent instead of the backing Service.
 			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
 				service.Tags = util.GenerateTagsForObject(parent)
 			} else {
@@ -240,6 +257,7 @@ func (s SNIs) Hosts() []string {
 	return s.hosts
 }
 
+// TODO: return encapsulated object from here that will contain either Service or KongServiceFacade.
 func getK8sServicesForBackends(
 	log logr.Logger,
 	storer store.Storer,
@@ -258,13 +276,35 @@ func getK8sServicesForBackends(
 		if backend.Namespace != "" {
 			backendNamespace = backend.Namespace
 		}
-		k8sService, err := storer.GetService(backendNamespace, backend.Name)
+
+		k8sServiceName := backend.Name
+		var serviceFacadeAnnotations map[string]string
+		if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
+			svcFacade, err := storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+			if err != nil {
+				// TODO: emit an event instead
+				log.Error(err, "Failed to fetch KongServiceFacade", "name", backend.Name, "namespace", backend.Namespace)
+				continue
+			}
+
+			serviceFacadeAnnotations = svcFacade.Annotations
+
+			// Use the Kubernetes Service backing the KongServiceFacade.
+			k8sServiceName = svcFacade.Spec.Backend.Name
+		}
+
+		k8sService, err := storer.GetService(backendNamespace, k8sServiceName)
 		if err != nil {
 			log.Error(err, "Failed to fetch service",
 				"service_name", backend.PortDef.Name,
 				"service_namespace", backendNamespace,
 			)
 			continue
+		}
+		// Merge the annotations from the KongServiceFacade with the annotations from the Service.
+		// KongServiceFacade overrides the Service annotations if they have the same key.
+		for k, v := range serviceFacadeAnnotations {
+			k8sService.Annotations[k] = v
 		}
 		if k8sService != nil {
 			// record all Kong annotations in use by the service

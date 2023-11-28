@@ -43,7 +43,16 @@ func (p *PortDef) CanonicalString() string {
 	return ImplicitPort
 }
 
+type ServiceBackendType string
+
+const (
+	ServiceBackendTypeService           ServiceBackendType = "Service"
+	ServiceBackendTypeKongServiceFacade ServiceBackendType = "KongServiceFacade"
+)
+
+// ServiceBackend TODO: encapsulate and make sure it's always created by a constructor.
 type ServiceBackend struct {
+	Type      ServiceBackendType
 	Name      string
 	Namespace string
 	PortDef   PortDef

@@ -31,6 +31,7 @@ var (
 	IngressDefaultBackendPriority   RoutePriorityType = 0
 )
 
+// TODO: handle KongServiceFacade.
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
 	ingressHost := m.ingressHost
 	if strings.Contains(ingressHost, "*") {
@@ -38,7 +39,13 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
 	}
 
-	routeName := fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.serviceName, ingressHost, m.servicePort.CanonicalString())
+	var routeName string
+	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
+		routeName = fmt.Sprintf("%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost)
+	} else {
+		routeName = fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost, m.backend.port.CanonicalString())
+	}
+
 	route := &kongstate.Route{
 		Ingress: util.K8sObjectInfo{
 			Namespace:   m.parentIngress.GetNamespace(),

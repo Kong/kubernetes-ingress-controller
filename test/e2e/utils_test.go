@@ -119,48 +119,6 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	}, time.Minute, time.Second)
 }
 
-func removeAdminListenHTTP2(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment k8stypes.NamespacedName) {
-	t.Helper()
-	t.Log("updating the proxy container KONG_ADMIN_LISTEN to disable the admin API listen on HTTP2")
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-
-	var kongAdminListenValue string
-	for _, containerSpec := range deployment.Spec.Template.Spec.Containers {
-		if containerSpec.Name == proxyContainerName {
-			for _, envVar := range containerSpec.Env {
-				if envVar.Name == "KONG_ADMIN_LISTEN" {
-					value := envVar.Value
-					kongAdminListenValue = strings.ReplaceAll(value, " http2", "")
-				}
-			}
-		}
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Patch(
-		ctx, deployment.Name,
-		k8stypes.StrategicMergePatchType,
-		[]byte(fmt.Sprintf(
-			`{
-				"spec": {
-					"template":{
-						"spec":{
-							"containers":[
-								{
-									"name":"%s","env":[{"name":"KONG_ADMIN_LISTEN","value":"%s"}]
-								}
-							]
-						}
-					}
-				}
-			}`,
-			proxyContainerName,
-			kongAdminListenValue,
-		)),
-		metav1.PatchOptions{},
-	)
-	require.NoError(t, err)
-}
-
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
 // In case of any failure while patching, the base manifest is returned.
 // If skipTestPatches is true, no patches are applied (useful when untouched manifest is needed, e.g. in upgrade tests).
@@ -209,19 +167,35 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 		}
 
 		if kongImageOverride != "" {
-			kongVersion, err := getKongVersionFromOverrideImageTag()
+			kongVersion, getVersionErr := getKongVersionFromOverrideImageTag()
 			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
 			// If we could not get version from kong image, assume they are latest.
 			// So we do not patch the readiness probe path to the legacy path `/status`.
-			if err == nil && patchReadinessProbeRange(kongVersion) {
+			if getVersionErr == nil && patchReadinessProbeRange(kongVersion) {
 				manifestsReader, err = patchReadinessProbePath(manifestsReader, deployments.ProxyNN, "/status")
 				if err != nil {
 					t.Logf("failed patching controller readiness (%v), using default manifest %v", err, baseManifestPath)
 					return manifestsReader
 				}
 			}
-		}
 
+			adminAPINoHTTP2Range := kong.MustNewRange("<" + adminAPIHTTP2MinimalKongVersion.String())
+			// If we could not get version from kong image, assume they are latest.
+			// So we do not patch the Kong admin API listen to remove the HTTP/2 listen.
+			if getVersionErr == nil && adminAPINoHTTP2Range(kongVersion) {
+				t.Logf("configure Kong admin API to non-HTTP2 listen because Kong version %s is below %s",
+					kongVersion.String(), adminAPIHTTP2MinimalKongVersion.String(),
+				)
+				// REVIEW: replace to `0.0.0.0:8001, 0.0.0.0:8444` or extract the value then remove the `http2` as the new value?
+				manifestsReader, err = patchKongAdminAPIListen(manifestsReader, deployments.ProxyNN,
+					"0.0.0.0:8001, 0.0.0.0:8444 ssl",
+				)
+				if err != nil {
+					t.Logf("failed patching Kong admin API listen (%v), using default manifest %v", err, baseManifestPath)
+					return manifestsReader
+				}
+			}
+		}
 	}
 
 	return manifestsReader

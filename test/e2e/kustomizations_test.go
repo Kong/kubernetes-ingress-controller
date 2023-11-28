@@ -154,3 +154,42 @@ func patchReadinessProbePath(baseManifestReader io.Reader, deployment k8stypes.N
 	}
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
 }
+
+const kustomizePatchKongAdminAPIListenFormat = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: %s
+  name: %s
+spec:
+  template:
+    spec:
+      containers:
+      - name: %s
+        env:
+        - name: KONG_ADMIN_LISTEN
+          value: %s
+`
+
+func patchKongAdminAPIListen(baseManifestReader io.Reader, deployment k8stypes.NamespacedName, adminAPIListenConfig string) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: fmt.Sprintf(kustomizePatchKongAdminAPIListenFormat,
+					deployment.Namespace, deployment.Name, proxyContainerName, adminAPIListenConfig,
+				),
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      deployment.Name,
+						Namespace: deployment.Namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}

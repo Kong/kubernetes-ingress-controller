@@ -45,6 +45,11 @@ const (
 var (
 	// gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.
 	gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
+	// adminAPIHTTP2MinimalKongVersion is the minimal version of Kong gateway version that supports `http2` on admin APIs.
+	adminAPIHTTP2MinimalKongVersion = semver.Version{Major: 3, Minor: 0} // 3.0.0
+	// upgradeTestMinimalKongVersion is the minimal version of Kong gateway version that enables `TestDeployAndUpgrade*` test cases.
+	// Since the source Kong version used in TestDeployAndUpgrade* is 3.3, we should enable the test for Kong 3.0.x and above.
+	upgradeTestMinimalKongVersion = semver.Version{Major: 3, Minor: 0} // 3.0.0
 	// statusReadyProbeMinimalKongVersion is the minimal version of kong gateway version that enables /status/ready probe.
 	statusReadyProbeMinimalKongVersion = semver.Version{Major: 3, Minor: 3} // 3.3.0
 )
@@ -162,19 +167,34 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 		}
 
 		if kongImageOverride != "" {
+			kongVersion, getVersionErr := getKongVersionFromOverrideImageTag()
 			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
-			kongVersion, err := getKongVersionFromOverrideImageTag()
 			// If we could not get version from kong image, assume they are latest.
 			// So we do not patch the readiness probe path to the legacy path `/status`.
-			if err == nil && patchReadinessProbeRange(kongVersion) {
+			if getVersionErr == nil && patchReadinessProbeRange(kongVersion) {
 				manifestsReader, err = patchReadinessProbePath(manifestsReader, deployments.ProxyNN, "/status")
 				if err != nil {
 					t.Logf("failed patching controller readiness (%v), using default manifest %v", err, baseManifestPath)
 					return manifestsReader
 				}
 			}
-		}
 
+			adminAPINoHTTP2Range := kong.MustNewRange("<" + adminAPIHTTP2MinimalKongVersion.String())
+			// If we could not get version from kong image, assume they are latest.
+			// So we do not patch the Kong admin API listen to remove the HTTP/2 listen.
+			if getVersionErr == nil && adminAPINoHTTP2Range(kongVersion) {
+				t.Logf("configure Kong admin API to non-HTTP2 listen because Kong version %s is below %s",
+					kongVersion.String(), adminAPIHTTP2MinimalKongVersion.String(),
+				)
+				manifestsReader, err = patchKongAdminAPIListen(manifestsReader, deployments.ProxyNN,
+					"0.0.0.0:8001, 0.0.0.0:8444 ssl",
+				)
+				if err != nil {
+					t.Logf("failed patching Kong admin API listen (%v), using default manifest %v", err, baseManifestPath)
+					return manifestsReader
+				}
+			}
+		}
 	}
 
 	return manifestsReader

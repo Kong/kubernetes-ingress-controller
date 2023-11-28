@@ -19,7 +19,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
 	"github.com/kong/deck/dump"
-	gokong "github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -535,7 +535,7 @@ func verifyIngressWithEchoBackendsPath(
 func verifyIngressWithEchoBackendsInAdminAPI(
 	ctx context.Context,
 	t *testing.T,
-	kongClient *gokong.Client,
+	kongClient *kong.Client,
 	noReplicas int,
 ) {
 	t.Helper()

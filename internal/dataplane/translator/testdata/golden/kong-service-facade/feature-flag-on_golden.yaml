@@ -28,8 +28,8 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
-    id: 029f01f6-e7e4-55dd-ab04-3de4283709d8
-    name: default.beta.svc-facade-beta.
+    id: b1319e6d-56a4-591a-9c50-4ccd7d9619fc
+    name: default.beta.svc-facade-beta..svc.facade
     path_handling: v0
     paths:
     - ~/beta$
@@ -64,8 +64,8 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
-    id: 4a8a1cb0-bac7-554a-851a-bfc11a466489
-    name: default.alpha.svc-facade-alpha.
+    id: a50a4894-369d-59e8-b2bc-0d6c8f663602
+    name: default.alpha.svc-facade-alpha..svc.facade
     path_handling: v0
     paths:
     - ~/alpha$

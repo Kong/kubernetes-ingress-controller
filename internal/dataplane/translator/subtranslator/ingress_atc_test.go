@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -284,6 +285,7 @@ func TestTranslateIngressATC(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			storer := lo.Must(store.NewFakeStore(store.FakeObjects{}))
 			services := TranslateIngresses(
 				[]*netv1.Ingress{tc.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
@@ -292,6 +294,7 @@ func TestTranslateIngressATC(t *testing.T) {
 				},
 				noopObjectsCollector{},
 				failuresCollector,
+				storer,
 			)
 			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.

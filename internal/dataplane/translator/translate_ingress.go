@@ -52,6 +52,7 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 		},
 		t.translatedObjectsCollector,
 		t.failuresCollector,
+		t.storer,
 	)
 	for i := range servicesCache {
 		service := servicesCache[i]
@@ -63,11 +64,6 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 		result.ServiceNameToServices[*service.Name] = service
 		result.ServiceNameToParent[*service.Name] = service.Parent
 	}
-
-	t.logger.V(util.DebugLevel).Info("translated IngressV1s into Kong Services",
-		"services", servicesCache,
-		"ingresses_count", len(ingressList),
-	)
 
 	// Add a default backend if it exists.
 	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends, t.featureFlags.ExpressionRoutes)

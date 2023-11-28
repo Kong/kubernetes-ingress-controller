@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -25,12 +26,13 @@ func ValidateIngress(
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
 	logger logr.Logger,
+	storer store.Storer,
 ) (bool, string, error) {
 	var (
 		errMsgs           []string
 		failuresCollector = failures.NewResourceFailuresCollector(logger)
 	)
-	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector) {
+	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, storer) {
 		kg := kg
 		// Validate by using feature of Kong Gateway.
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
@@ -57,6 +59,7 @@ func ingressToKongRoutesForValidation(
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
 	failuresCollector subtranslator.FailuresCollector,
+	storer store.Storer,
 ) []kong.Route {
 	kongServices := subtranslator.TranslateIngresses(
 		[]*netv1.Ingress{ingress},
@@ -67,6 +70,7 @@ func ingressToKongRoutesForValidation(
 		},
 		&translator.ObjectsCollector{}, // It's irrelevant for validation.
 		failuresCollector,
+		storer,
 	)
 
 	var kongRoutes []kong.Route

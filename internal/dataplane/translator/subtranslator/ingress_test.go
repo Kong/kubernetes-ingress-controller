@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,9 +43,10 @@ func (noopObjectsCollector) Add(client.Object) {}
 
 func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
-		name     string
-		ingress  *netv1.Ingress
-		expected map[string]kongstate.Service
+		name               string
+		ingress            *netv1.Ingress
+		expected           map[string]kongstate.Service
+		kongServiceFacades []*incubatorv1alpha1.KongServiceFacade
 	}{
 		{
 			name: "a basic ingress resource with a single rule and prefix path type",
@@ -1306,6 +1308,20 @@ func TestTranslateIngress(t *testing.T) {
 					}},
 				},
 			},
+			kongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-facade",
+						Namespace: "default",
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "svc",
+							Port: 8080,
+						},
+					},
+				},
+			},
 			expected: map[string]kongstate.Service{
 				"default.svc-facade.svc.facade": {
 					Namespace: corev1.NamespaceDefault,
@@ -1342,6 +1358,7 @@ func TestTranslateIngress(t *testing.T) {
 						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
 						Name:      "svc-facade",
 						Namespace: corev1.NamespaceDefault,
+						PortDef:   PortDefFromPortNumber(8080),
 					}},
 					Parent: expectedParentIngress(),
 				},
@@ -1361,6 +1378,9 @@ func TestTranslateIngress(t *testing.T) {
 			})
 
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			storer := lo.Must(store.NewFakeStore(store.FakeObjects{
+				KongServiceFacades: tt.kongServiceFacades,
+			}))
 			diff := cmp.Diff(tt.expected, TranslateIngresses(
 				[]*netv1.Ingress{tt.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
@@ -1370,6 +1390,7 @@ func TestTranslateIngress(t *testing.T) {
 				},
 				noopObjectsCollector{},
 				failuresCollector,
+				storer,
 			), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})

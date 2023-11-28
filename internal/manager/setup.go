@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/cprint"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -172,6 +173,7 @@ func setupAdmissionServer(
 	managerClient client.Client,
 	logger logr.Logger,
 	translatorFeatures translator.FeatureFlags,
+	storer store.Storer,
 ) error {
 	admissionLogger := logger.WithName("admission-server")
 
@@ -188,6 +190,7 @@ func setupAdmissionServer(
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
 			translatorFeatures,
+			storer,
 		),
 		Logger: admissionLogger,
 	}, admissionLogger)

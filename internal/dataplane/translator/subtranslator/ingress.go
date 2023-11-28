@@ -54,8 +54,9 @@ func TranslateIngresses(
 	flags TranslateIngressFeatureFlags,
 	translatedObjectsCollector TranslatedKubernetesObjectsCollector,
 	failuresCollector FailuresCollector,
+	storer store.Storer,
 ) map[string]kongstate.Service {
-	index := newIngressTranslationIndex(flags, failuresCollector)
+	index := newIngressTranslationIndex(flags, failuresCollector, storer)
 	for _, ingress := range ingresses {
 		prependRegexPrefix := MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection)
 		index.Add(ingress, prependRegexPrefix)
@@ -117,11 +118,12 @@ type ingressTranslationIndex struct {
 	storer            store.Storer
 }
 
-func newIngressTranslationIndex(flags TranslateIngressFeatureFlags, failuresCollector FailuresCollector) *ingressTranslationIndex {
+func newIngressTranslationIndex(flags TranslateIngressFeatureFlags, failuresCollector FailuresCollector, storer store.Storer) *ingressTranslationIndex {
 	return &ingressTranslationIndex{
 		cache:             make(map[string]*ingressTranslationMeta),
 		featureFlags:      flags,
 		failuresCollector: failuresCollector,
+		storer:            storer,
 	}
 }
 
@@ -299,7 +301,6 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 				Retries:        kong.Int(defaultRetries),
 			},
-			// TODO: use constructor
 			Backends: []kongstate.ServiceBackend{{
 				Name:      m.backend.name,
 				Namespace: m.parentIngress.GetNamespace(),
@@ -323,7 +324,6 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 				Retries:        kong.Int(defaultRetries),
 			},
-			// TODO: use constructor
 			Backends: []kongstate.ServiceBackend{{
 				Type:      kongstate.ServiceBackendTypeKongServiceFacade,
 				Name:      m.backend.name,

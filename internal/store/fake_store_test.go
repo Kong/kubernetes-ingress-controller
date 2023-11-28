@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 func TestKeyFunc(t *testing.T) {
@@ -815,4 +816,30 @@ func TestFakeStore_KongUpstreamPolicy(t *testing.T) {
 	storedPolicy, err := store.GetKongUpstreamPolicy("default", "foo")
 	require.NoError(t, err)
 	require.Equal(t, fakeObjects.KongUpstreamPolicies[0], storedPolicy)
+}
+
+func TestFakeStore_KongServiceFacade(t *testing.T) {
+	fakeObjects := FakeObjects{
+		KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+					Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+						Name: "service-name",
+						Port: 80,
+					},
+				},
+			},
+		},
+	}
+
+	store, err := NewFakeStore(fakeObjects)
+	require.NoError(t, err)
+
+	storedFacade, err := store.GetKongServiceFacade("default", "foo")
+	require.NoError(t, err)
+	require.Equal(t, fakeObjects.KongServiceFacades[0], storedFacade)
 }

@@ -1,6 +1,7 @@
 package configfetcher
 
 import (
+	"github.com/blang/semver/v4"
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 
@@ -12,8 +13,10 @@ import (
 // -----------------------------------------------------------------------------
 
 // KongRawStateToKongState converts a Deck kongRawState to a KIC KongState.
-func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState {
-	kongState := &kongstate.KongState{}
+func KongRawStateToKongState(rawstate *utils.KongRawState, kongVersion semver.Version) *kongstate.KongState {
+	kongState := &kongstate.KongState{
+		KongVersion: kongVersion,
+	}
 	if rawstate == nil {
 		return kongState
 	}

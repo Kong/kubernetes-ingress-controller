@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
@@ -83,10 +84,16 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 			continue
 		}
 
-		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
+		var kongVersion semver.Version
+		kongVersionStr, getVersionErr := client.GetKongVersion(ctx)
+		if getVersionErr != nil {
+			kongVersion, getVersionErr = semver.Parse(kongVersionStr)
+		}
+
+		if status.ConfigurationHash != sendconfig.WellKnownInitialHash && getVersionErr == nil {
 			// Get the first good one as the one to be used.
 			clientUsed = client
-			ks := KongRawStateToKongState(rs)
+			ks := KongRawStateToKongState(rs, kongVersion)
 			goodKongState = ks
 			break
 		}

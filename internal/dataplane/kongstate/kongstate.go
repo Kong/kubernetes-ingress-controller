@@ -355,7 +355,7 @@ func buildPlugins(
 				continue
 			}
 		}
-
+		// REVIEW: skip this step if Kong version < 3.2.0?
 		usedInstanceNames := sets.New[string]()
 		for _, rel := range relations.GetCombinations() {
 			plugin := plugin.DeepCopy()

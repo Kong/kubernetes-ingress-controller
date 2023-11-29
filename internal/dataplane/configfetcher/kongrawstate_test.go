@@ -268,6 +268,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 					},
 				},
+				KongVersion: semver.MustParse("3.4.0"),
 			},
 		},
 		{

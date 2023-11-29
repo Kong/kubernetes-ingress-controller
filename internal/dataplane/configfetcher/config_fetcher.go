@@ -87,8 +87,10 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		var kongVersion semver.Version
 		kongVersionStr, getVersionErr := client.GetKongVersion(ctx)
 		if getVersionErr != nil {
-			kongVersion, getVersionErr = semver.Parse(kongVersionStr)
+			errs = errors.Join(errs, fmt.Errorf("failed to fetch configuration from %q, cannot get Kong version: %w", client.BaseRootURL(), getVersionErr))
+			continue
 		}
+		kongVersion, getVersionErr = semver.Parse(kongVersionStr)
 
 		if status.ConfigurationHash != sendconfig.WellKnownInitialHash && getVersionErr == nil {
 			// Get the first good one as the one to be used.

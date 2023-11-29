@@ -790,6 +790,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 					},
 				},
 			},
+			KongVersion: semver.MustParse("3.4.0"),
 		}
 		configBuilder = newMockKongConfigBuilder()
 	)
@@ -848,6 +849,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 			configChangeDetector.status.ConfigurationHash = tc.lastKongStatusHash
 			kongRawStateGetter := &mockKongLastValidConfigFetcher{
 				status:       configChangeDetector.status,
+				kongVersion:  semver.MustParse("3.4.0"),
 				kongRawState: tc.lastValidKongRawState,
 			}
 			kongClient := setupTestKongClient(

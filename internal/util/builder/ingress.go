@@ -22,7 +22,12 @@ func NewIngress(name string, class string) *IngressBuilder {
 		ingress: netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,
+				Namespace:   "default",
 				Annotations: make(map[string]string),
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: "networking.k8s.io/v1",
 			},
 			Spec: netv1.IngressSpec{
 				IngressClassName: classToSet,

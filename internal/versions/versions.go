@@ -29,4 +29,7 @@ var (
 
 	// ExpressionRouterL4Cutoff is the lowest Kong version with support of L4 proxy in expression router.
 	ExpressionRouterL4Cutoff = semver.Version{Major: 3, Minor: 4}
+
+	// PluginInstanceNameCutoff is the lowest Kong version having the `instance_name` field in `plugin` objects.
+	PluginInstanceNameCutoff = semver.Version{Major: 3, Minor: 2}
 )

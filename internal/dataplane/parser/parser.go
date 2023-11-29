@@ -247,7 +247,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// process annotation plugins
-	result.FillPlugins(p.logger, p.storer, p.failuresCollector)
+	result.FillPlugins(p.logger, p.storer, p.kongVersion, p.failuresCollector)
 	for i := range result.Plugins {
 		p.registerSuccessfullyParsedObject(result.Plugins[i].K8sParent)
 	}

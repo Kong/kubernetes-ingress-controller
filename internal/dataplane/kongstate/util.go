@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -13,6 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -111,6 +113,7 @@ func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
 func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
 	k8sPlugin kongv1.KongClusterPlugin,
+	kongVersion semver.Version,
 ) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
@@ -146,6 +149,8 @@ func kongPluginFromK8SClusterPlugin(
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
 			Tags:         util.GenerateTagsForObject(&k8sPlugin),
+
+			KongVersion: kongVersion,
 		}.toKongPlugin(),
 		K8sParent: &k8sPlugin,
 	}, nil
@@ -168,6 +173,7 @@ func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin kongv1.KongPlugin,
+	kongVersion semver.Version,
 ) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
@@ -193,15 +199,16 @@ func kongPluginFromK8SPlugin(
 
 	return Plugin{
 		Plugin: plugin{
-			Name:   k8sPlugin.PluginName,
-			Config: config,
-
+			Name:         k8sPlugin.PluginName,
+			Config:       config,
 			RunOn:        k8sPlugin.RunOn,
 			Ordering:     k8sPlugin.Ordering,
 			InstanceName: k8sPlugin.InstanceName,
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
 			Tags:         util.GenerateTagsForObject(&k8sPlugin),
+
+			KongVersion: kongVersion,
 		}.toKongPlugin(),
 		K8sParent: &k8sPlugin,
 	}, nil
@@ -292,6 +299,8 @@ type plugin struct {
 	Disabled     bool
 	Protocols    []string
 	Tags         []*string
+
+	KongVersion semver.Version
 }
 
 func (p plugin) toKongPlugin() kong.Plugin {
@@ -310,7 +319,7 @@ func (p plugin) toKongPlugin() kong.Plugin {
 	if len(p.Protocols) > 0 {
 		result.Protocols = kong.StringSlice(p.Protocols...)
 	}
-	if p.InstanceName != "" {
+	if p.InstanceName != "" && p.KongVersion.GT(versions.PluginInstanceNameCutoff) {
 		result.InstanceName = kong.String(p.InstanceName)
 	}
 	return result

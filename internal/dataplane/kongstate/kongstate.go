@@ -28,6 +28,8 @@ type KongState struct {
 	Plugins        []Plugin
 	Consumers      []Consumer
 	ConsumerGroups []ConsumerGroup
+
+	KongVersion semver.Version
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -56,6 +58,8 @@ func (ks *KongState) SanitizedCopy() *KongState {
 			return
 		}(),
 		ConsumerGroups: ks.ConsumerGroups,
+
+		KongVersion: ks.KongVersion,
 	}
 }
 
@@ -318,6 +322,7 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 func buildPlugins(
 	log logrus.FieldLogger,
 	s store.Storer,
+	kongVersion semver.Version,
 	failuresCollector *failures.ResourceFailuresCollector,
 	pluginRels map[string]util.ForeignRelations,
 ) []Plugin {
@@ -337,14 +342,14 @@ func buildPlugins(
 
 		var plugin Plugin
 		if k8sPlugin != nil {
-			plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin)
+			plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin, kongVersion)
 			if err != nil {
 				failuresCollector.PushResourceFailure(err.Error(), k8sPlugin)
 				continue
 			}
 		}
 		if k8sClusterPlugin != nil {
-			plugin, err = kongPluginFromK8SClusterPlugin(s, *k8sClusterPlugin)
+			plugin, err = kongPluginFromK8SClusterPlugin(s, *k8sClusterPlugin, kongVersion)
 			if err != nil {
 				failuresCollector.PushResourceFailure(err.Error(), k8sClusterPlugin)
 				continue
@@ -390,7 +395,7 @@ func buildPlugins(
 		}
 	}
 
-	globalPlugins, err := globalPlugins(log, s)
+	globalPlugins, err := globalPlugins(log, s, kongVersion)
 	if err != nil {
 		log.WithError(err).Error("failed to fetch global plugins")
 	}
@@ -400,7 +405,7 @@ func buildPlugins(
 	return plugins
 }
 
-func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
+func globalPlugins(log logrus.FieldLogger, s store.Storer, kongVersion semver.Version) ([]Plugin, error) {
 	// removed as of 0.10.0
 	// only retrieved now to warn users
 	globalPlugins, err := s.ListGlobalKongPlugins()
@@ -441,7 +446,7 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
+		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin, kongVersion); err == nil {
 			res[pluginName] = plugin
 		} else {
 			log.WithFields(logrus.Fields{
@@ -464,7 +469,7 @@ func (ks *KongState) FillPlugins(
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
-	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations())
+	ks.Plugins = buildPlugins(log, s, ks.KongVersion, failuresCollector, ks.getPluginRelations())
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity

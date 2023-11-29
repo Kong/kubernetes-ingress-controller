@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongClusterPlugin
+		plugin      kongv1.KongClusterPlugin
+		kongVersion semver.Version
 	}
 	tests := []struct {
 		name    string
@@ -55,6 +57,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want: kong.Plugin{
 				Name: kong.String("correlation-id"),
@@ -63,6 +66,29 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 				Protocols:    kong.StringSlice("http"),
 				InstanceName: kong.String("example"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "basic configuration with Kong version not supporting instance name",
+			args: args{
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:    []kongv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"header_name": "foo"}`),
+					},
+				},
+				kongVersion: semver.MustParse("2.8.0"),
+			},
+			want: kong.Plugin{
+				Name: kong.String("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "foo",
+				},
+				Protocols:    kong.StringSlice("http"),
+				InstanceName: nil,
 			},
 			wantErr: false,
 		},
@@ -80,6 +106,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						},
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want: kong.Plugin{
 				Name: kong.String("correlation-id"),
@@ -104,6 +131,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						},
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want:    kong.Plugin{},
 			wantErr: true,
@@ -118,6 +146,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						Raw: []byte(`{{}`),
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want:    kong.Plugin{},
 			wantErr: true,
@@ -139,6 +168,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						},
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want:    kong.Plugin{},
 			wantErr: true,
@@ -146,7 +176,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kongPluginFromK8SClusterPlugin(store, tt.args.plugin)
+			got, err := kongPluginFromK8SClusterPlugin(store, tt.args.plugin, tt.args.kongVersion)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("kongPluginFromK8SClusterPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -173,7 +203,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongPlugin
+		plugin      kongv1.KongPlugin
+		kongVersion semver.Version
 	}
 	tests := []struct {
 		name    string
@@ -192,6 +223,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want: kong.Plugin{
 				Name: kong.String("correlation-id"),
@@ -200,6 +232,29 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 				Protocols:    kong.StringSlice("http"),
 				InstanceName: kong.String("example"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "basic configuration with Kong version not supporting instance name",
+			args: args{
+				plugin: kongv1.KongPlugin{
+					Protocols:    []kongv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"header_name": "foo"}`),
+					},
+				},
+				kongVersion: semver.MustParse("2.8.0"),
+			},
+			want: kong.Plugin{
+				Name: kong.String("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "foo",
+				},
+				Protocols:    kong.StringSlice("http"),
+				InstanceName: nil,
 			},
 			wantErr: false,
 		},
@@ -220,6 +275,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						},
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want: kong.Plugin{
 				Name: kong.String("correlation-id"),
@@ -247,6 +303,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						},
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want:    kong.Plugin{},
 			wantErr: true,
@@ -261,6 +318,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						Raw: []byte(`{{}`),
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want:    kong.Plugin{},
 			wantErr: true,
@@ -281,6 +339,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						},
 					},
 				},
+				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want:    kong.Plugin{},
 			wantErr: true,
@@ -288,7 +347,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kongPluginFromK8SPlugin(store, tt.args.plugin)
+			got, err := kongPluginFromK8SPlugin(store, tt.args.plugin, tt.args.kongVersion)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("kongPluginFromK8SPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return

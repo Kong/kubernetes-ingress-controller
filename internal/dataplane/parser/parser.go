@@ -218,9 +218,6 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	// add the routes and services to the state
 	var result kongstate.KongState
 
-	// set Kong version of the state.
-	result.KongVersion = p.kongVersion
-
 	// generate Upstreams and Targets from service defs
 	// update ServiceNameToServices with resolved ports (translating any name references to their number, as Kong
 	// services require a number)
@@ -250,7 +247,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// process annotation plugins
-	result.FillPlugins(p.logger, p.storer, p.failuresCollector)
+	result.FillPlugins(p.logger, p.storer, p.kongVersion, p.failuresCollector)
 	for i := range result.Plugins {
 		p.registerSuccessfullyParsedObject(result.Plugins[i].K8sParent)
 	}

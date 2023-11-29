@@ -53,7 +53,6 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
-				KongVersion: semver.MustParse("3.4.0"),
 			},
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
@@ -68,7 +67,6 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
-				KongVersion: semver.MustParse("3.4.0"),
 			},
 		},
 	} {
@@ -788,11 +786,11 @@ func TestKongState_FillIDs(t *testing.T) {
 
 func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		in         []*kongv1.KongPlugin
-		kv         semver.Version
-		pluginRels map[string]util.ForeignRelations
-		want       []string
+		name        string
+		in          []*kongv1.KongPlugin
+		kongVersion semver.Version
+		pluginRels  map[string]util.ForeignRelations
+		want        []string
 	}{
 		{
 			name: "collision test",
@@ -806,7 +804,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					InstanceName: "test",
 				},
 			},
-			kv: semver.MustParse("3.4.0"),
+			kongVersion: semver.MustParse("3.4.0"),
 			pluginRels: map[string]util.ForeignRelations{
 				"default:foo-plugin": {
 					// this shouldn't happen in practice, as all generated route names are unique
@@ -823,7 +821,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 				KongPlugins: tt.in,
 			})
 			// this is not testing the kongPluginFromK8SPlugin failure cases, so there is no failures collector
-			got := buildPlugins(log, store, tt.kv, nil, tt.pluginRels)
+			got := buildPlugins(log, store, tt.kongVersion, nil, tt.pluginRels)
 			require.Len(t, got, 2)
 			require.Equal(t, tt.want, []string{*got[0].InstanceName, *got[1].InstanceName})
 		})

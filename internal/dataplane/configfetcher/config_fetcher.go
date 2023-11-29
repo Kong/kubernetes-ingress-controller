@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
@@ -84,18 +83,10 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 			continue
 		}
 
-		var kongVersion semver.Version
-		kongVersionStr, getVersionErr := client.GetKongVersion(ctx)
-		if getVersionErr != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to fetch configuration from %q, cannot get Kong version: %w", client.BaseRootURL(), getVersionErr))
-			continue
-		}
-		kongVersion, getVersionErr = semver.Parse(kongVersionStr)
-
-		if status.ConfigurationHash != sendconfig.WellKnownInitialHash && getVersionErr == nil {
+		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
 			// Get the first good one as the one to be used.
 			clientUsed = client
-			ks := KongRawStateToKongState(rs, kongVersion)
+			ks := KongRawStateToKongState(rs)
 			goodKongState = ks
 			break
 		}

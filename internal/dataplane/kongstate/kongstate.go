@@ -28,8 +28,6 @@ type KongState struct {
 	Plugins        []Plugin
 	Consumers      []Consumer
 	ConsumerGroups []ConsumerGroup
-
-	KongVersion semver.Version
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -58,8 +56,6 @@ func (ks *KongState) SanitizedCopy() *KongState {
 			return
 		}(),
 		ConsumerGroups: ks.ConsumerGroups,
-
-		KongVersion: ks.KongVersion,
 	}
 }
 
@@ -355,7 +351,7 @@ func buildPlugins(
 				continue
 			}
 		}
-		// REVIEW: skip this step if Kong version < 3.2.0?
+
 		usedInstanceNames := sets.New[string]()
 		for _, rel := range relations.GetCombinations() {
 			plugin := plugin.DeepCopy()
@@ -467,9 +463,10 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer, kongVersion semver.Ve
 func (ks *KongState) FillPlugins(
 	log logrus.FieldLogger,
 	s store.Storer,
+	kongVersion semver.Version,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
-	ks.Plugins = buildPlugins(log, s, ks.KongVersion, failuresCollector, ks.getPluginRelations())
+	ks.Plugins = buildPlugins(log, s, kongVersion, failuresCollector, ks.getPluginRelations())
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity

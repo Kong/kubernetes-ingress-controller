@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/utils"
@@ -722,7 +721,6 @@ func mapClientsToUrls(clients mockGatewayClientsProvider) []string {
 type mockKongLastValidConfigFetcher struct {
 	kongRawState  *utils.KongRawState
 	lastKongState *kongstate.KongState
-	kongVersion   semver.Version
 	status        kong.Status
 }
 
@@ -739,7 +737,7 @@ func (cf *mockKongLastValidConfigFetcher) StoreLastValidConfig(s *kongstate.Kong
 
 func (cf *mockKongLastValidConfigFetcher) TryFetchingValidConfigFromGateways(context.Context, logrus.FieldLogger, []*adminapi.Client) error {
 	if cf.kongRawState != nil {
-		cf.lastKongState = configfetcher.KongRawStateToKongState(cf.kongRawState, cf.kongVersion)
+		cf.lastKongState = configfetcher.KongRawStateToKongState(cf.kongRawState)
 	}
 	return nil
 }
@@ -773,7 +771,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 				},
 			},
 		}
-		lastKongState = configfetcher.KongRawStateToKongState(lastKongRawState, semver.MustParse("3.4.0"))
+		lastKongState = configfetcher.KongRawStateToKongState(lastKongRawState)
 		newKongState  = &kongstate.KongState{
 			Services: []kongstate.Service{
 				{
@@ -790,7 +788,6 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 					},
 				},
 			},
-			KongVersion: semver.MustParse("3.4.0"),
 		}
 		configBuilder = newMockKongConfigBuilder()
 	)
@@ -849,7 +846,6 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 			configChangeDetector.status.ConfigurationHash = tc.lastKongStatusHash
 			kongRawStateGetter := &mockKongLastValidConfigFetcher{
 				status:       configChangeDetector.status,
-				kongVersion:  semver.MustParse("3.4.0"),
 				kongRawState: tc.lastValidKongRawState,
 			}
 			kongClient := setupTestKongClient(

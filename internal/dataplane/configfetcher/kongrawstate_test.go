@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -23,7 +22,6 @@ func TestKongRawStateToKongState(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
 		kongRawState      *utils.KongRawState
-		kongVersion       semver.Version
 		expectedKongState *kongstate.KongState
 	}{
 		{
@@ -160,7 +158,6 @@ func TestKongRawStateToKongState(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: semver.MustParse("3.4.0"),
 			expectedKongState: &kongstate.KongState{
 				Services: []kongstate.Service{
 					{
@@ -268,7 +265,6 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 					},
 				},
-				KongVersion: semver.MustParse("3.4.0"),
 			},
 		},
 		{
@@ -286,7 +282,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 
 			var state *kongstate.KongState
 			require.NotPanics(t, func() {
-				state = configfetcher.KongRawStateToKongState(tt.kongRawState, tt.kongVersion)
+				state = configfetcher.KongRawStateToKongState(tt.kongRawState)
 			})
 			if tt.kongRawState != nil {
 				require.Equal(t, tt.expectedKongState, state)

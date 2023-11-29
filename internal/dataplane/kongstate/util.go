@@ -149,9 +149,7 @@ func kongPluginFromK8SClusterPlugin(
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
 			Tags:         util.GenerateTagsForObject(&k8sPlugin),
-
-			KongVersion: kongVersion,
-		}.toKongPlugin(),
+		}.toKongPlugin(kongVersion),
 		K8sParent: &k8sPlugin,
 	}, nil
 }
@@ -207,9 +205,7 @@ func kongPluginFromK8SPlugin(
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
 			Tags:         util.GenerateTagsForObject(&k8sPlugin),
-
-			KongVersion: kongVersion,
-		}.toKongPlugin(),
+		}.toKongPlugin(kongVersion),
 		K8sParent: &k8sPlugin,
 	}, nil
 }
@@ -299,11 +295,9 @@ type plugin struct {
 	Disabled     bool
 	Protocols    []string
 	Tags         []*string
-
-	KongVersion semver.Version
 }
 
-func (p plugin) toKongPlugin() kong.Plugin {
+func (p plugin) toKongPlugin(kongVersion semver.Version) kong.Plugin {
 	result := kong.Plugin{
 		Name:   kong.String(p.Name),
 		Config: p.Config.DeepCopy(),
@@ -319,7 +313,7 @@ func (p plugin) toKongPlugin() kong.Plugin {
 	if len(p.Protocols) > 0 {
 		result.Protocols = kong.StringSlice(p.Protocols...)
 	}
-	if p.InstanceName != "" && p.KongVersion.GT(versions.PluginInstanceNameCutoff) {
+	if p.InstanceName != "" && kongVersion.GT(versions.PluginInstanceNameCutoff) {
 		result.InstanceName = kong.String(p.InstanceName)
 	}
 	return result

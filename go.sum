@@ -242,8 +242,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.17.0 h1:Rnbp4K9EjcDuVuHtd0dgA4qNuv9yKDYKK1ulpJwgrqM=
 github.com/klauspost/compress v1.17.0/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
-github.com/kong/go-database-reconciler v1.0.1 h1:SB+zvLq+4a8cyGArL+pBTnlTT00FYTmjY/aZopguwtA=
-github.com/kong/go-database-reconciler v1.0.1/go.mod h1:p8NvafqBSuMR9YNCOZ24aIeeajc145+biXpAaMExvpI=
+github.com/kong/go-database-reconciler v1.1.0 h1:USCdsAj/7eh9sOOfbnvsOe4jw5k4+FSTD3okcTLIVqQ=
+github.com/kong/go-database-reconciler v1.1.0/go.mod h1:p8NvafqBSuMR9YNCOZ24aIeeajc145+biXpAaMExvpI=
 github.com/kong/go-kong v0.48.0 h1:vK1OpoxO50qlKdwPfmx9ChvkTKRsoCCB3b3iHo1umLc=
 github.com/kong/go-kong v0.48.0/go.mod h1:qH4CEFqT83ywmu1TlMZX09clQH4B8/dX88CtT/jdv/E=
 github.com/kong/kubernetes-telemetry v0.1.2 h1:fxKdEbFQ+aGrh+3x0LIEgRmyQ4wP/ZWv8QucqTI4Jcs=

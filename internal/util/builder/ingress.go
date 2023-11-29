@@ -22,7 +22,6 @@ func NewIngress(name string, class string) *IngressBuilder {
 		ingress: netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,
-				Namespace:   "default",
 				Annotations: make(map[string]string),
 			},
 			TypeMeta: metav1.TypeMeta{
@@ -47,5 +46,10 @@ func (b *IngressBuilder) WithLegacyClassAnnotation(class string) *IngressBuilder
 
 func (b *IngressBuilder) WithRules(rules ...netv1.IngressRule) *IngressBuilder {
 	b.ingress.Spec.Rules = append(b.ingress.Spec.Rules, rules...)
+	return b
+}
+
+func (b *IngressBuilder) WithNamespace(namespace string) *IngressBuilder {
+	b.ingress.ObjectMeta.Namespace = namespace
 	return b
 }

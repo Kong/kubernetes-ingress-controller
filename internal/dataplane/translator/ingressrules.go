@@ -275,8 +275,8 @@ func getK8sServicesForBackends(
 	return k8sServices, seenAnnotationsForK8sServices
 }
 
-func resolveKubernetesServiceForBackend(storer store.Storer, namespace string, backend kongstate.ServiceBackend) (*corev1.Service, error) {
-	backendNamespace := namespace
+func resolveKubernetesServiceForBackend(storer store.Storer, ingressNamespace string, backend kongstate.ServiceBackend) (*corev1.Service, error) {
+	backendNamespace := ingressNamespace
 	if backend.Namespace != "" {
 		backendNamespace = backend.Namespace
 	}

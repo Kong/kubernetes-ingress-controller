@@ -149,19 +149,11 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 
 			backend, err := i.getIngressPathBackend(ingress.Namespace, httpIngressPath)
 			if err != nil {
-				i.failuresCollector.PushResourceFailure(fmt.Sprintf("failed to get backend for ingress path %q", httpIngressPath.Path), ingress)
+				i.failuresCollector.PushResourceFailure(fmt.Sprintf("failed to get backend for ingress path %q: %s", httpIngressPath.Path, err), ingress)
 				continue
 			}
 
-			cacheKey, err := backend.intoCacheKey(k8stypes.NamespacedName{Namespace: ingress.Namespace, Name: ingress.Name}, ingressRule.Host)
-			if err != nil {
-				i.failuresCollector.PushResourceFailure(
-					fmt.Sprintf("failed to translate ingress path %q backend into cache key", httpIngressPath.Path),
-					ingress,
-				)
-				continue
-			}
-
+			cacheKey := backend.intoCacheKey(k8stypes.NamespacedName{Namespace: ingress.Namespace, Name: ingress.Name}, ingressRule.Host)
 			meta, ok := i.cache[cacheKey]
 			if !ok {
 				meta = &ingressTranslationMeta{
@@ -185,15 +177,18 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIngressPath netv1.HTTPIngressPath) (ingressTranslationMetaBackend, error) {
 	if service := httpIngressPath.Backend.Service; service != nil {
 		return ingressTranslationMetaBackend{
-			backendType: ingressPathBackendTypeService,
-			name:        service.Name,
-			port:        PortDefFromServiceBackendPort(&service.Port),
+			name: service.Name,
+			port: PortDefFromServiceBackendPort(&service.Port),
 		}, nil
 	}
 
 	if resource := httpIngressPath.Backend.Resource; resource != nil {
 		if !isKongServiceFacade(resource) {
-			return ingressTranslationMetaBackend{}, fmt.Errorf("unknown resource type %s", resource.Kind)
+			gk := resource.Kind
+			if resource.APIGroup != nil {
+				gk = *resource.APIGroup + "/" + gk
+			}
+			return ingressTranslationMetaBackend{}, fmt.Errorf("unknown resource type %s", gk)
 		}
 		if !i.featureFlags.ServiceFacade {
 			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to enable it", featuregates.ServiceFacade)
@@ -261,12 +256,11 @@ type ingressTranslationMeta struct {
 type ingressPathBackendType string
 
 const (
-	ingressPathBackendTypeService           ingressPathBackendType = "Service"
 	ingressPathBackendTypeKongServiceFacade ingressPathBackendType = "KongServiceFacade"
 )
 
 type ingressTranslationMetaBackend struct {
-	// backendType is the type of backend, either a Kubernetes Service or a KongServiceFacade.
+	// backendType is the type of backend. If left empty, it's assumed to be a Kubernetes Service.
 	backendType ingressPathBackendType
 
 	// name is the Kubernetes object name of the backend.
@@ -276,23 +270,22 @@ type ingressTranslationMetaBackend struct {
 	port kongstate.PortDef
 }
 
-func (b ingressTranslationMetaBackend) intoCacheKey(ingress k8stypes.NamespacedName, host string) (string, error) {
-	switch b.backendType {
-	case ingressPathBackendTypeService:
-		return fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, host, b.name, b.port.CanonicalString()), nil
-	case ingressPathBackendTypeKongServiceFacade:
-		return fmt.Sprintf("%s.%s.%s", ingress.Namespace, b.backendType, b.name), nil
+func (b ingressTranslationMetaBackend) intoCacheKey(ingress k8stypes.NamespacedName, host string) string {
+	if b.backendType == ingressPathBackendTypeKongServiceFacade {
+		return fmt.Sprintf("%s.%s.%s", ingress.Namespace, b.backendType, b.name)
 	}
-	return "", fmt.Errorf("unknown backend type %s", b.backendType)
+
+	// Otherwise, we assume it's a Kubernetes Service.
+	return fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, host, b.name, b.port.CanonicalString())
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) kongstate.Service {
-	if m.backend.backendType == ingressPathBackendTypeService {
+	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
 		return kongstate.Service{
 			Namespace: m.parentIngress.GetNamespace(),
 			Service: kong.Service{
 				Name:           kong.String(kongServiceName),
-				Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", m.backend.name, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
+				Host:           kong.String(fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)),
 				Port:           kong.Int(defaultHTTPPort),
 				Protocol:       kong.String("http"),
 				Path:           kong.String("/"),
@@ -302,6 +295,7 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				Retries:        kong.Int(defaultRetries),
 			},
 			Backends: []kongstate.ServiceBackend{{
+				Type:      kongstate.ServiceBackendTypeKongServiceFacade,
 				Name:      m.backend.name,
 				Namespace: m.parentIngress.GetNamespace(),
 				PortDef:   portDef,
@@ -335,6 +329,29 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 	}
 }
 
+	// Otherwise, we assume it's a Kubernetes Service.
+	return kongstate.Service{
+		Namespace: m.parentIngress.GetNamespace(),
+		Service: kong.Service{
+			Name:           kong.String(kongServiceName),
+			Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", m.backend.name, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
+			Port:           kong.Int(defaultHTTPPort),
+			Protocol:       kong.String("http"),
+			Path:           kong.String("/"),
+			ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+			ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+			WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+			Retries:        kong.Int(defaultRetries),
+		},
+		Backends: []kongstate.ServiceBackend{{
+			Name:      m.backend.name,
+			Namespace: m.parentIngress.GetNamespace(),
+			PortDef:   portDef,
+		}},
+		Parent: m.parentIngress,
+	}
+}
+
 func (m *ingressTranslationMeta) generateKongServiceName() string {
 	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
 		return fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)
@@ -355,16 +372,6 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
 	}
 	var routeName string
-	if m.backend.backendType == ingressPathBackendTypeService {
-		routeName = fmt.Sprintf(
-			"%s.%s.%s.%s.%s",
-			m.parentIngress.GetNamespace(),
-			m.parentIngress.GetName(),
-			m.backend.name,
-			ingressHost,
-			m.backend.port.CanonicalString(),
-		)
-	}
 	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
 		routeName = fmt.Sprintf(
 			"%s.%s.%s.%s.svc.facade",
@@ -372,6 +379,16 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 			m.parentIngress.GetName(),
 			m.backend.name,
 			ingressHost,
+		)
+	} else {
+		// Otherwise, we assume it's a Kubernetes Service.
+		routeName = fmt.Sprintf(
+			"%s.%s.%s.%s.%s",
+			m.parentIngress.GetNamespace(),
+			m.parentIngress.GetName(),
+			m.backend.name,
+			ingressHost,
+			m.backend.port.CanonicalString(),
 		)
 	}
 

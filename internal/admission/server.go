@@ -8,22 +8,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 )
 
-var codecs = initCodecFactory()
-
-func initCodecFactory() serializer.CodecFactory {
-	s, err := scheme.Get()
-	if err != nil {
-		// If this happens, it's a programming error that will be caught in tests.
-		panic(err)
-	}
-	return serializer.NewCodecFactory(s)
-}
+var (
+	scheme = runtime.NewScheme()
+	codecs = serializer.NewCodecFactory(scheme)
+)
 
 const (
 	DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"

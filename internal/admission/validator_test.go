@@ -23,7 +23,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	managerScheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -764,7 +764,7 @@ func (f fakeConsumerGetter) ListAllConsumers(context.Context) ([]kongv1.KongCons
 
 func TestValidator_ValidateIngress(t *testing.T) {
 	const testSvcFacadeName = "svc-facade"
-	s := lo.Must(scheme.Get())
+	s := lo.Must(managerScheme.Get())
 	b := fake.NewClientBuilder().WithScheme(s)
 
 	testCases := []struct {
@@ -779,6 +779,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		{
 			name: "not matching ingress class is always ok",
 			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Service: &netv1.IngressServiceBackend{
@@ -797,6 +798,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		{
 			name: "valid with Service backend",
 			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Service: &netv1.IngressServiceBackend{
@@ -813,7 +815,8 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		},
 		{
 			name: "invalid with Service backend",
-			ingress: builder.NewIngress("ingress", "not-kong").
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Service: &netv1.IngressServiceBackend{
@@ -833,6 +836,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		{
 			name: "valid with KongServiceFacade backend",
 			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
@@ -869,7 +873,8 @@ func TestValidator_ValidateIngress(t *testing.T) {
 			translatorFeatures: translator.FeatureFlags{
 				ServiceFacade: true,
 			},
-			ingress: builder.NewIngress("ingress", "not-kong").
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
@@ -882,7 +887,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				Build(),
 			storerObjects: store.FakeObjects{}, // No KongServiceFacade will be found resulting in an error.
 			wantOK:        false,
-			wantMessage:   `Ingress failed schema validation: failed to get backend for ingress path "/"`,
+			wantMessage:   `Ingress failed schema validation: failed to get backend for ingress path "/": failed to get KongServiceFacade "svc-facade": KongServiceFacade default/svc-facade not found`,
 		},
 		{
 			name: "invalid with KongServiceFacade backend with feature flag off is ok",
@@ -890,6 +895,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				ServiceFacade: false,
 			},
 			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
@@ -906,6 +912,9 @@ func TestValidator_ValidateIngress(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		ingressClassMatcher := func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool {
+			return false
+		}
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{
@@ -916,11 +925,12 @@ func TestValidator_ValidateIngress(t *testing.T) {
 						shouldFail: tc.kongRouteValidationShouldFail,
 					},
 				},
-				TranslatorFeatures: translator.FeatureFlags{
-					ServiceFacade: true,
+				TranslatorFeatures:  tc.translatorFeatures,
+				ingressClassMatcher: ingressClassMatcher,
+				ingressV1ClassMatcher: func(ingress *netv1.Ingress, matching annotations.ClassMatching) bool {
+					return *ingress.Spec.IngressClassName == "kong"
 				},
-				ingressClassMatcher: fakeClassMatcher,
-				Logger:              logr.Discard(),
+				Logger: logr.Discard(),
 			}
 			ok, msg, err := validator.ValidateIngress(context.Background(), *tc.ingress)
 			require.NoError(t, err)

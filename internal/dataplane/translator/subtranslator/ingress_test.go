@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -1282,7 +1283,7 @@ func TestTranslateIngress(t *testing.T) {
 			},
 		},
 		{
-			name: "KongServiceBackend used as a backend",
+			name: "KongServiceFacade used as a backend",
 			ingress: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
@@ -1344,7 +1345,7 @@ func TestTranslateIngress(t *testing.T) {
 						Route: kong.Route{
 							Name:              kong.String("default.test-ingress.svc-facade.konghq.com.svc.facade"),
 							Hosts:             kong.StringSlice("konghq.com"),
-							Paths:             kong.StringSlice("/api/"), // default ImplementationSpecific
+							Paths:             kong.StringSlice("/api/"),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
 							RegexPriority:     kong.Int(0),
@@ -1363,6 +1364,35 @@ func TestTranslateIngress(t *testing.T) {
 					Parent: expectedParentIngress(),
 				},
 			},
+		},
+		{
+			name: "not existing KongServiceFacade used as a backend",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						Host: "konghq.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path: "/api/",
+									Backend: netv1.IngressBackend{
+										Resource: &corev1.TypedLocalObjectReference{
+											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+											Kind:     "KongServiceFacade",
+											Name:     "svc-facade",
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
+			expected: map[string]kongstate.Service{},
 		},
 	}
 
@@ -1393,6 +1423,107 @@ func TestTranslateIngress(t *testing.T) {
 				storer,
 			), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
+		})
+	}
+}
+
+func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		ingress                *netv1.Ingress
+		storerObjects          store.FakeObjects
+		serviceFacadeFeatureOn bool
+		expectedFailures       []string
+	}{
+		{
+			name: "KongServiceFacade used as backend with no feature flag on",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(netv1.IngressRule{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+										Kind:     "KongServiceFacade",
+										Name:     "svc-facade",
+									},
+								},
+							}},
+						},
+					},
+				}).Build(),
+			serviceFacadeFeatureOn: false,
+			expectedFailures:       []string{`failed to get backend for ingress path "/": KongServiceFacade is not enabled, please set the "ServiceFacade" feature gate to enable it`},
+		},
+		{
+			name: "KongServiceFacade used as backend but not existing",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(netv1.IngressRule{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+										Kind:     "KongServiceFacade",
+										Name:     "svc-facade",
+									},
+								},
+							}},
+						},
+					},
+				}).Build(),
+			serviceFacadeFeatureOn: true,
+			expectedFailures:       []string{`failed to get backend for ingress path "/": failed to get KongServiceFacade "svc-facade": KongServiceFacade default/svc-facade not found`},
+		},
+		{
+			name: "wrong API group used for KongServiceFacade",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(netv1.IngressRule{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: lo.ToPtr("wrong-group"),
+										Kind:     "KongServiceFacade",
+										Name:     "svc-facade",
+									},
+								},
+							}},
+						},
+					},
+				}).Build(),
+			serviceFacadeFeatureOn: true,
+			expectedFailures:       []string{`failed to get backend for ingress path "/": unknown resource type wrong-group/KongServiceFacade`},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
+			result := TranslateIngresses(
+				[]*netv1.Ingress{tc.ingress},
+				kongv1alpha1.IngressClassParametersSpec{},
+				TranslateIngressFeatureFlags{
+					ServiceFacade: tc.serviceFacadeFeatureOn,
+				},
+				noopObjectsCollector{},
+				failuresCollector,
+				storer,
+			)
+			require.Empty(t, result)
+
+			collectedFailures := failuresCollector.PopResourceFailures()
+			require.Len(t, collectedFailures, len(tc.expectedFailures))
+			for _, failure := range collectedFailures {
+				require.Contains(t, tc.expectedFailures, failure.Message())
+			}
 		})
 	}
 }

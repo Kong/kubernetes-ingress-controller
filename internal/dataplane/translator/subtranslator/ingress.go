@@ -42,8 +42,8 @@ type TranslateIngressFeatureFlags struct {
 	// ExpressionRoutes indicates whether to translate Kubernetes objects to expression based Kong Routes.
 	ExpressionRoutes bool
 
-	// ServiceFacade indicates whether we should support KongServiceFacade as Ingress backends.
-	ServiceFacade bool
+	// KongServiceFacade indicates whether we should support KongServiceFacade as Ingress backends.
+	KongServiceFacade bool
 }
 
 // TranslateIngresses receives a slice of Kubernetes Ingress objects and produces a translated set of kong.Services
@@ -190,8 +190,8 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 			}
 			return ingressTranslationMetaBackend{}, fmt.Errorf("unknown resource type %s", gk)
 		}
-		if !i.featureFlags.ServiceFacade {
-			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to enable it", featuregates.ServiceFacade)
+		if !i.featureFlags.KongServiceFacade {
+			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to enable it", featuregates.KongServiceFacade)
 		}
 
 		serviceFacade, err := i.storer.GetKongServiceFacade(namespace, resource.Name)

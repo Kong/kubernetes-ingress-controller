@@ -22,8 +22,8 @@ const (
 	// RewriteURIsFeature is the name of the feature-gate for enabling/disabling konghq.com/rewrite annotation.
 	RewriteURIsFeature = "RewriteURIs"
 
-	// ServiceFacade is the name of the feature-gate for enabling KongServiceFacade CR reconciliation.
-	ServiceFacade = "ServiceFacade"
+	// KongServiceFacade is the name of the feature-gate for enabling KongServiceFacade CR reconciliation.
+	KongServiceFacade = "KongServiceFacade"
 
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
@@ -63,6 +63,6 @@ func GetFeatureGatesDefaults() FeatureGates {
 		GatewayAlphaFeature: false,
 		FillIDsFeature:      true,
 		RewriteURIsFeature:  false,
-		ServiceFacade:       false,
+		KongServiceFacade:   false,
 	}
 }

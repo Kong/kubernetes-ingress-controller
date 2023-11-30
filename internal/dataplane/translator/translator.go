@@ -58,8 +58,8 @@ type FeatureFlags struct {
 	// RewriteURIs enables the translator to translate the konghq.com/rewrite annotation to the proper set of Kong plugins.
 	RewriteURIs bool
 
-	// ServiceFacade indicates whether we should support KongServiceFacades as Ingress backends.
-	ServiceFacade bool
+	// KongServiceFacade indicates whether we should support KongServiceFacades as Ingress backends.
+	KongServiceFacade bool
 }
 
 func NewFeatureFlags(
@@ -72,7 +72,7 @@ func NewFeatureFlags(
 		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
-		ServiceFacade:                     featureGates.Enabled(featuregates.ServiceFacade),
+		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
 	}
 }
 

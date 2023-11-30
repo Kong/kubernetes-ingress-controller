@@ -65,8 +65,8 @@ func ingressToKongRoutesForValidation(
 		[]*netv1.Ingress{ingress},
 		kongv1alpha1.IngressClassParametersSpec{EnableLegacyRegexDetection: true},
 		subtranslator.TranslateIngressFeatureFlags{
-			ExpressionRoutes: translatorFeatures.ExpressionRoutes,
-			ServiceFacade:    translatorFeatures.ServiceFacade,
+			ExpressionRoutes:  translatorFeatures.ExpressionRoutes,
+			KongServiceFacade: translatorFeatures.KongServiceFacade,
 		},
 		&translator.ObjectsCollector{}, // It's irrelevant for validation.
 		failuresCollector,

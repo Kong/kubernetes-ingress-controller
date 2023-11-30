@@ -47,8 +47,8 @@ func (t *Translator) ingressRulesFromIngressV1() ingressRules {
 		ingressList,
 		icp,
 		subtranslator.TranslateIngressFeatureFlags{
-			ExpressionRoutes: t.featureFlags.ExpressionRoutes,
-			ServiceFacade:    t.featureFlags.ServiceFacade,
+			ExpressionRoutes:  t.featureFlags.ExpressionRoutes,
+			KongServiceFacade: t.featureFlags.KongServiceFacade,
 		},
 		t.translatedObjectsCollector,
 		t.failuresCollector,

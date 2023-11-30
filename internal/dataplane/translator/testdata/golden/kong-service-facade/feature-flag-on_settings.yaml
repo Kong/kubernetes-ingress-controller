@@ -1,2 +1,2 @@
 feature_flags:
-  ServiceFacade: true
+  KongServiceFacade: true

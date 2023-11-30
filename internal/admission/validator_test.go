@@ -848,7 +848,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				).
 				Build(),
 			translatorFeatures: translator.FeatureFlags{
-				ServiceFacade: true,
+				KongServiceFacade: true,
 			},
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
@@ -871,7 +871,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		{
 			name: "invalid with KongServiceFacade backend",
 			translatorFeatures: translator.FeatureFlags{
-				ServiceFacade: true,
+				KongServiceFacade: true,
 			},
 			ingress: builder.NewIngress("ingress", "kong").
 				WithNamespace("default").
@@ -892,7 +892,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		{
 			name: "invalid with KongServiceFacade backend with feature flag off is ok",
 			translatorFeatures: translator.FeatureFlags{
-				ServiceFacade: false,
+				KongServiceFacade: false,
 			},
 			ingress: builder.NewIngress("ingress", "not-kong").
 				WithNamespace("default").

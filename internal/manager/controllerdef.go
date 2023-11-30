@@ -262,7 +262,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(featuregates.ServiceFacade) && c.KongServiceFacadeEnabled,
+			Enabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
 			Controller: &configuration.IncubatorV1Alpha1KongServiceFacadeReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongServiceFacade"),

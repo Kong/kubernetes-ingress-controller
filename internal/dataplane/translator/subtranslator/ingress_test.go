@@ -1545,8 +1545,8 @@ func TestTranslateIngress(t *testing.T) {
 				tt.ingresses,
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
-					ExpressionRoutes: false,
-					ServiceFacade:    true,
+					ExpressionRoutes:  false,
+					KongServiceFacade: true,
 				},
 				noopObjectsCollector{},
 				failuresCollector,
@@ -1585,7 +1585,7 @@ func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {
 					},
 				}).Build(),
 			serviceFacadeFeatureOn: false,
-			expectedFailures:       []string{`failed to get backend for ingress path "/": KongServiceFacade is not enabled, please set the "ServiceFacade" feature gate to enable it`},
+			expectedFailures:       []string{`failed to get backend for ingress path "/": KongServiceFacade is not enabled, please set the "KongServiceFacade" feature gate to enable it`},
 		},
 		{
 			name: "KongServiceFacade used as backend but not existing",
@@ -1641,7 +1641,7 @@ func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {
 				[]*netv1.Ingress{tc.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
-					ServiceFacade: tc.serviceFacadeFeatureOn,
+					KongServiceFacade: tc.serviceFacadeFeatureOn,
 				},
 				noopObjectsCollector{},
 				failuresCollector,

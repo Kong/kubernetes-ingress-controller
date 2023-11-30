@@ -410,8 +410,8 @@ func TestTranslateIngressATC(t *testing.T) {
 				[]*netv1.Ingress{tc.ingress},
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
-					ExpressionRoutes: true,
-					ServiceFacade:    true,
+					ExpressionRoutes:  true,
+					KongServiceFacade: true,
 				},
 				noopObjectsCollector{},
 				failuresCollector,

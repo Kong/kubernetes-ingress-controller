@@ -36,8 +36,8 @@ var (
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			FillIDs:       defaults.Enabled(featuregates.FillIDsFeature),
-			ServiceFacade: defaults.Enabled(featuregates.ServiceFacade),
+			FillIDs:           defaults.Enabled(featuregates.FillIDsFeature),
+			KongServiceFacade: defaults.Enabled(featuregates.KongServiceFacade),
 		}
 	}
 )

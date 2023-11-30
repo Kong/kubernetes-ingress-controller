@@ -298,7 +298,7 @@ func TestTranslateIngressATC(t *testing.T) {
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
 											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
-											Kind:     "KongServiceFacade",
+											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 											Name:     "svc-facade",
 										},
 									},
@@ -385,7 +385,7 @@ func TestTranslateIngressATC(t *testing.T) {
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
 											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
-											Kind:     "KongServiceFacade",
+											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 											Name:     "svc-facade",
 										},
 									},

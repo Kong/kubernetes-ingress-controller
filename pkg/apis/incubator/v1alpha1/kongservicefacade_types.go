@@ -4,6 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// KongServiceFacadeKind is the string value representing the KongServiceFacade kind in Kubernetes.
+	KongServiceFacadeKind = "KongServiceFacade"
+)
+
 func init() {
 	SchemeBuilder.Register(&KongServiceFacade{}, &KongServiceFacadeList{})
 }

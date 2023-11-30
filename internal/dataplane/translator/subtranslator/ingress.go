@@ -153,8 +153,8 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 				continue
 			}
 
-			cacheKey := backend.intoCacheKey(k8stypes.NamespacedName{Namespace: ingress.Namespace, Name: ingress.Name}, ingressRule.Host)
-			meta, ok := i.cache[cacheKey]
+			kongRouteName := backend.intoKongRouteName(k8stypes.NamespacedName{Namespace: ingress.Namespace, Name: ingress.Name}, ingressRule.Host)
+			meta, ok := i.cache[kongRouteName]
 			if !ok {
 				meta = &ingressTranslationMeta{
 					ingressNamespace: ingress.Namespace,
@@ -169,7 +169,7 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 
 			meta.parentIngress = ingress
 			meta.paths = append(meta.paths, httpIngressPath)
-			i.cache[cacheKey] = meta
+			i.cache[kongRouteName] = meta
 		}
 	}
 }
@@ -210,7 +210,7 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 }
 
 func isKongServiceFacade(resource *corev1.TypedLocalObjectReference) bool {
-	return resource.Kind == "KongServiceFacade" &&
+	return resource.Kind == incubatorv1alpha1.KongServiceFacadeKind &&
 		resource.APIGroup != nil && *resource.APIGroup == incubatorv1alpha1.GroupVersion.Group
 }
 
@@ -270,13 +270,20 @@ type ingressTranslationMetaBackend struct {
 	port kongstate.PortDef
 }
 
-func (b ingressTranslationMetaBackend) intoCacheKey(ingress k8stypes.NamespacedName, host string) string {
+// intoKongRouteName constructs a Kong Route name for the ingressTranslationMeta object.
+func (b ingressTranslationMetaBackend) intoKongRouteName(ingress k8stypes.NamespacedName, host string) string {
+	// For KongServiceFacade backends, Kong Routes are created separately for the following combination
+	// `<ingress-namespace>.<ingress-name>.<host>.<service-facade-name>.svc.facade`.
+
+	// Note: in the case of KongServiceFacade, we don't use the port in the Kong Route name
+	// because KongServiceFacade may only specify one port (unlike Kubernetes Service) so it's not necessary.
 	if b.backendType == ingressPathBackendTypeKongServiceFacade {
-		return fmt.Sprintf("%s.%s.%s", ingress.Namespace, b.backendType, b.name)
+		return fmt.Sprintf("%s.%s.%s.%s.svc.facade", ingress.Namespace, ingress.Name, host, b.name)
 	}
 
-	// Otherwise, we assume it's a Kubernetes Service.
-	return fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, host, b.name, b.port.CanonicalString())
+	// Otherwise, we assume it's a Kubernetes Service and create Kong Routes for the following combination
+	// `<ingress-namespace>.<ingress-name>.<host>.<service-name>.<service-port>`.
+	return fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, b.name, host, b.port.CanonicalString())
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) kongstate.Service {
@@ -354,9 +361,13 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 
 func (m *ingressTranslationMeta) generateKongServiceName() string {
 	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
+		// For KongServiceFacade we create one Kong Service per KongServiceFacade.
+		// The naming pattern is `<facade-namespace>.<facade-name>.svc.facade`.
 		return fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)
 	}
 
+	// For Kubernetes Services, we create one Kong Service per Kubernetes Service + port combination.
+	// The naming pattern is `<service-namespace>.<service-name>.<service-port>`.
 	return fmt.Sprintf(
 		"%s.%s.%s",
 		m.parentIngress.GetNamespace(),
@@ -371,26 +382,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
 		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
 	}
-	var routeName string
-	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
-		routeName = fmt.Sprintf(
-			"%s.%s.%s.%s.svc.facade",
-			m.parentIngress.GetNamespace(),
-			m.parentIngress.GetName(),
-			m.backend.name,
-			ingressHost,
-		)
-	} else {
-		// Otherwise, we assume it's a Kubernetes Service.
-		routeName = fmt.Sprintf(
-			"%s.%s.%s.%s.%s",
-			m.parentIngress.GetNamespace(),
-			m.parentIngress.GetName(),
-			m.backend.name,
-			ingressHost,
-			m.backend.port.CanonicalString(),
-		)
-	}
+	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{Namespace: m.ingressNamespace, Name: m.ingressName}, ingressHost)
 
 	route := &kongstate.Route{
 		Ingress: util.K8sObjectInfo{

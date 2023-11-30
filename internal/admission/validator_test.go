@@ -23,7 +23,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	managerScheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	managerscheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -764,7 +764,7 @@ func (f fakeConsumerGetter) ListAllConsumers(context.Context) ([]kongv1.KongCons
 
 func TestValidator_ValidateIngress(t *testing.T) {
 	const testSvcFacadeName = "svc-facade"
-	s := lo.Must(managerScheme.Get())
+	s := lo.Must(managerscheme.Get())
 	b := fake.NewClientBuilder().WithScheme(s)
 
 	testCases := []struct {
@@ -841,7 +841,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
 							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
-							Kind:     "KongServiceFacade",
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 							Name:     testSvcFacadeName,
 						},
 					}),
@@ -879,7 +879,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
 							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
-							Kind:     "KongServiceFacade",
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 							Name:     testSvcFacadeName,
 						},
 					}),
@@ -900,7 +900,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
 							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
-							Kind:     "KongServiceFacade",
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 							Name:     testSvcFacadeName,
 						},
 					}),

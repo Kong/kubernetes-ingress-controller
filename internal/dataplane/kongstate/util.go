@@ -313,7 +313,7 @@ func (p plugin) toKongPlugin(kongVersion semver.Version) kong.Plugin {
 	if len(p.Protocols) > 0 {
 		result.Protocols = kong.StringSlice(p.Protocols...)
 	}
-	if p.InstanceName != "" && kongVersion.GT(versions.PluginInstanceNameCutoff) {
+	if p.InstanceName != "" && kongVersion.GTE(versions.PluginInstanceNameCutoff) {
 		result.InstanceName = kong.String(p.InstanceName)
 	}
 	return result

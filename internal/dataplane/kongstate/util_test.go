@@ -57,7 +57,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 				},
-				kongVersion: semver.MustParse("3.4.0"),
+				kongVersion: semver.MustParse("3.2.0"),
 			},
 			want: kong.Plugin{
 				Name: kong.String("correlation-id"),
@@ -96,8 +96,9 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			name: "secret configuration",
 			args: args{
 				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
-					PluginName: "correlation-id",
+					Protocols:    []kongv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
 					ConfigFrom: &kongv1.NamespacedConfigSource{
 						SecretValue: kongv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
@@ -109,7 +110,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name:         kong.String("correlation-id"),
+				InstanceName: kong.String("example"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
@@ -223,7 +225,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
 				},
-				kongVersion: semver.MustParse("3.4.0"),
+				kongVersion: semver.MustParse("3.2.0"),
 			},
 			want: kong.Plugin{
 				Name: kong.String("correlation-id"),
@@ -266,8 +268,9 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						Name:      "foo",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
-					PluginName: "correlation-id",
+					Protocols:    []kongv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
 					ConfigFrom: &kongv1.ConfigSource{
 						SecretValue: kongv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
@@ -278,7 +281,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				kongVersion: semver.MustParse("3.4.0"),
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name:         kong.String("correlation-id"),
+				InstanceName: kong.String("example"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},

@@ -1329,13 +1329,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.svc-facade.svc.facade"),
 						Host:           kong.String("default.svc-facade.svc.facade"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -1468,13 +1468,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.svc-facade.svc.facade"),
 						Host:           kong.String("default.svc-facade.svc.facade"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{
 						{
@@ -1585,7 +1585,7 @@ func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {
 					},
 				}).Build(),
 			serviceFacadeFeatureOn: false,
-			expectedFailures:       []string{`failed to get backend for ingress path "/": KongServiceFacade is not enabled, please set the "KongServiceFacade" feature gate to enable it`},
+			expectedFailures:       []string{`failed to get backend for ingress path "/": KongServiceFacade is not enabled, please set the "KongServiceFacade" feature gate to 'true' to enable it`},
 		},
 		{
 			name: "KongServiceFacade used as backend but not existing",

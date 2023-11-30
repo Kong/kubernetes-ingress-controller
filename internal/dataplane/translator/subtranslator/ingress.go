@@ -191,7 +191,7 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 			return ingressTranslationMetaBackend{}, fmt.Errorf("unknown resource type %s", gk)
 		}
 		if !i.featureFlags.KongServiceFacade {
-			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to enable it", featuregates.KongServiceFacade)
+			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", featuregates.KongServiceFacade)
 		}
 
 		serviceFacade, err := i.storer.GetKongServiceFacade(namespace, resource.Name)
@@ -311,31 +311,6 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 		}
 	}
 
-	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
-		return kongstate.Service{
-			Namespace: m.parentIngress.GetNamespace(),
-			Service: kong.Service{
-				Name:           kong.String(kongServiceName),
-				Host:           kong.String(fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)),
-				Port:           kong.Int(defaultHTTPPort),
-				Protocol:       kong.String("http"),
-				Path:           kong.String("/"),
-				ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-				ReadTimeout:    defaultServiceTimeoutInKongFormat(),
-				WriteTimeout:   defaultServiceTimeoutInKongFormat(),
-				Retries:        kong.Int(defaultRetries),
-			},
-			Backends: []kongstate.ServiceBackend{{
-				Type:      kongstate.ServiceBackendTypeKongServiceFacade,
-				Name:      m.backend.name,
-				Namespace: m.parentIngress.GetNamespace(),
-				PortDef:   portDef,
-			}},
-			Parent: m.parentIngress,
-		}
-	}
-}
-
 	// Otherwise, we assume it's a Kubernetes Service.
 	return kongstate.Service{
 		Namespace: m.parentIngress.GetNamespace(),
@@ -345,9 +320,9 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			Port:           kong.Int(defaultHTTPPort),
 			Protocol:       kong.String("http"),
 			Path:           kong.String("/"),
-			ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
-			ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-			WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+			ConnectTimeout: defaultServiceTimeoutInKongFormat(),
+			ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+			WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 			Retries:        kong.Int(defaultRetries),
 		},
 		Backends: []kongstate.ServiceBackend{{

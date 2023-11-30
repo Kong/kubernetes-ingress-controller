@@ -328,13 +328,13 @@ func TestTranslateIngressATC(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.svc-facade.svc.facade"),
 						Host:           kong.String("default.svc-facade.svc.facade"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -342,7 +342,7 @@ func TestTranslateIngressATC(t *testing.T) {
 							Namespace: corev1.NamespaceDefault,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.svc-facade.konghq.com.svc.facade"),
+							Name:       kong.String("default.test-ingress.konghq.com.svc-facade.svc.facade"),
 							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
 							Priority: kong.Uint64(IngressRoutePriorityTraits{
 								MatchFields:   2,

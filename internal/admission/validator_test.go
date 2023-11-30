@@ -912,9 +912,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ingressClassMatcher := func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool {
-			return false
-		}
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{
@@ -925,10 +922,12 @@ func TestValidator_ValidateIngress(t *testing.T) {
 						shouldFail: tc.kongRouteValidationShouldFail,
 					},
 				},
-				TranslatorFeatures:  tc.translatorFeatures,
-				ingressClassMatcher: ingressClassMatcher,
+				TranslatorFeatures: tc.translatorFeatures,
+				ingressClassMatcher: func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool {
+					return false // Always return false, we'll use Spec.IngressClassName matcher.
+				},
 				ingressV1ClassMatcher: func(ingress *netv1.Ingress, matching annotations.ClassMatching) bool {
-					return *ingress.Spec.IngressClassName == "kong"
+					return *ingress.Spec.IngressClassName == annotations.DefaultIngressClass
 				},
 				Logger: logr.Discard(),
 			}

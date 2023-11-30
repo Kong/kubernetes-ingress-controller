@@ -1,13 +1,13 @@
 package subtranslator
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -29,18 +29,14 @@ var (
 const IngressDefaultBackendPriority RoutePriorityType = 0
 
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
-	ingressHost := m.ingressHost
-	if strings.Contains(ingressHost, "*") {
-		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
-		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
-	}
-
-	var routeName string
-	if m.backend.backendType == ingressPathBackendTypeKongServiceFacade {
-		routeName = fmt.Sprintf("%s.%s.%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost)
-	} else {
-		routeName = fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.backend.name, ingressHost, m.backend.port.CanonicalString())
-	}
+	// '_' is not allowed in a host, so use '_' to replace a possible occurrence of  '*' since '*' is not allowed in Kong.
+	ingressHost := strings.ReplaceAll(m.ingressHost, "*", "_")
+	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{
+		Namespace: m.parentIngress.GetNamespace(),
+		Name:      m.parentIngress.GetName(),
+	},
+		ingressHost,
+	)
 
 	route := &kongstate.Route{
 		Ingress: util.K8sObjectInfo{

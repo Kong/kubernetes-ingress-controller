@@ -1209,9 +1209,15 @@ func TestIngressRewriteURI(t *testing.T) {
 	const (
 		jpegMagicNumber = "\xff\xd8\xff\xe0\x00\x10JFIF"
 		pngMagicNumber  = "\x89PNG\r\n\x1a\n"
+
+		// Since Kong adds `~` prefix for regex paths from 3.0,
+		// we append `/~` to ingress paths if Kong major version >= 3.
+		addRegexPrefixMinimalMajorVersion = 3
+		pathRegexPrefix                   = "/~"
 	)
 
 	ctx := context.Background()
+	kongVersion := eventuallyGetKongVersion(t, proxyAdminURL)
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -1302,7 +1308,11 @@ func TestIngressRewriteURI(t *testing.T) {
 
 	t.Logf("creating an Ingress for service %s with rewrite annotation", service.Name)
 	const serviceDomainRewrite = "rewrite.example"
-	ingressRewrite := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
+	ingressPath := "/foo/(.*)"
+	if kongVersion.Major() >= addRegexPrefixMinimalMajorVersion {
+		ingressPath = pathRegexPrefix + ingressPath
+	}
+	ingressRewrite := generators.NewIngressForService(ingressPath, map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey:  "true",
 		annotations.AnnotationPrefix + annotations.RewriteURIKey: "/image/$1",
 	}, service)
@@ -1335,8 +1345,13 @@ func TestIngressRewriteURI(t *testing.T) {
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	t.Log("update the ingress capture group")
+	ingressPath = "/foo/(\\w+)/(.*)"
+	if kongVersion.Major() >= addRegexPrefixMinimalMajorVersion {
+		ingressPath = pathRegexPrefix + ingressPath
+	}
+
 	for i := range ingressRewrite.Spec.Rules {
-		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].Path = "/~/foo/(\\w+)/(.*)"
+		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].Path = ingressPath
 	}
 
 	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressRewrite, metav1.UpdateOptions{})

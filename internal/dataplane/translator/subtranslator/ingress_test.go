@@ -78,13 +78,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -151,13 +151,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -225,13 +225,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -299,13 +299,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -373,13 +373,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -446,13 +446,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -519,13 +519,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -657,13 +657,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -801,13 +801,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -894,13 +894,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service1.80"),
 						Host:           kong.String("test-service1.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{
 						{
@@ -937,13 +937,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service2.80"),
 						Host:           kong.String("test-service2.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{
 						{
@@ -1037,13 +1037,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.ad-service.80"),
 						Host:           kong.String("ad-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{
 						{
@@ -1080,13 +1080,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.mad-service.80"),
 						Host:           kong.String("mad-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{
 						{
@@ -1155,13 +1155,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{
@@ -1231,13 +1231,13 @@ func TestTranslateIngress(t *testing.T) {
 					Service: kong.Service{
 						Name:           kong.String("default.test-service.http"),
 						Host:           kong.String("test-service.default.http.svc"),
-						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 						Path:           kong.String("/"),
 						Port:           kong.Int(80),
 						Protocol:       kong.String("http"),
 						Retries:        kong.Int(defaultRetries),
-						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
 					Routes: []kongstate.Route{{
 						Ingress: util.K8sObjectInfo{

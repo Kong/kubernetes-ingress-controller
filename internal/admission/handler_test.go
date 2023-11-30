@@ -4,19 +4,39 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+)
+
+var (
+	secretTypeMeta = metav1.TypeMeta{
+		APIVersion: "v1",
+		Kind:       "Secret",
+	}
+	kongPluginTypeMeta = metav1.TypeMeta{
+		APIVersion: kongv1.GroupVersion.String(),
+		Kind:       "KongPlugin",
+	}
+	kongClusterPluginTypeMeta = metav1.TypeMeta{
+		APIVersion: kongv1.GroupVersion.String(),
+		Kind:       "KongClusterPlugin",
+	}
 )
 
 func TestHandleKongIngress(t *testing.T) {
@@ -130,7 +150,6 @@ func TestHandleService(t *testing.T) {
 					Raw:    raw,
 				},
 			}
-
 			handler := RequestHandler{
 				Validator: validator,
 				Logger:    logr.Discard(),
@@ -142,6 +161,181 @@ func TestHandleService(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, got.Allowed)
 			require.Equal(t, tt.wantWarnings, got.Warnings)
+		})
+	}
+}
+
+func TestHandleSecret(t *testing.T) {
+	testCases := []struct {
+		name             string
+		secret           *corev1.Secret
+		referrers        []client.Object
+		validatorOK      bool
+		validatorMessage string
+		validatorError   error
+		expectAllowed    bool
+		expectStatusCode int32
+		expectMessage    string
+		expectError      bool
+	}{
+		{
+			name: "secret used as a credential and passes the validation of credential",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "true",
+					},
+				},
+				Data: map[string][]byte{},
+			},
+			validatorOK:   true,
+			expectAllowed: true,
+		},
+		{
+			name: "secret used as credential and fails the validation of credential",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-1",
+					Labels: map[string]string{
+						"konghq.com/credential": "true",
+					},
+				},
+				Data: map[string][]byte{},
+			},
+			validatorOK:      false,
+			validatorMessage: "invalid credential",
+			expectAllowed:    false,
+			expectStatusCode: http.StatusBadRequest,
+			expectMessage:    "invalid credential",
+		},
+		{
+			name: "secret used as KongPlugin config and KongClusterPlugin and passes validation of both CRDs",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "plugin-conf",
+				},
+			},
+			referrers: []client.Object{
+				&kongv1.KongPlugin{
+					TypeMeta: kongPluginTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "plugin-0",
+					},
+					PluginName: "test-plugin",
+				},
+				&kongv1.KongClusterPlugin{
+					TypeMeta: kongClusterPluginTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-plugin-0",
+					},
+					PluginName: "test-plugin",
+				},
+			},
+			validatorOK:   true,
+			expectAllowed: true,
+		},
+		{
+			name: "secret used as KongPlugin config and fails validation of KongPlugin",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "plugin-conf",
+				},
+			},
+			referrers: []client.Object{
+				&kongv1.KongPlugin{
+					TypeMeta: kongPluginTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "plugin-0",
+					},
+					PluginName: "test-plugin",
+				},
+			},
+			validatorOK:      false,
+			validatorMessage: "invalid KongPlugin",
+			expectAllowed:    false,
+			expectStatusCode: http.StatusBadRequest,
+			expectMessage:    "Change on secret will generate invalid configuration for KongPlugin default/plugin-0: invalid KongPlugin",
+		},
+		{
+			name: "secret used as KongClusterPlugin config and fails validation of KongClusterPlugin",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "plugin-conf",
+				},
+			},
+			referrers: []client.Object{
+				&kongv1.KongClusterPlugin{
+					TypeMeta: kongClusterPluginTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-plugin-0",
+					},
+					PluginName: "test-plugin",
+				},
+			},
+			validatorOK:      false,
+			validatorMessage: "invalid KongClusterPlugin",
+			expectAllowed:    false,
+			expectStatusCode: http.StatusBadRequest,
+			expectMessage:    "Change on secret will generate invalid configuration for KongClusterPlugin cluster-plugin-0: invalid KongClusterPlugin",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			validator := KongFakeValidator{
+				Result:  tc.validatorOK,
+				Message: tc.validatorMessage,
+				Error:   tc.validatorError,
+			}
+			raw, err := json.Marshal(tc.secret)
+			require.NoError(t, err)
+			request := admissionv1.AdmissionRequest{
+				Object: runtime.RawExtension{
+					Object: tc.secret,
+					Raw:    raw,
+				},
+				Operation: admissionv1.Update,
+			}
+
+			logger := testr.NewWithOptions(t, testr.Options{Verbosity: util.DebugLevel})
+			referenceIndexer := ctrlref.NewCacheIndexers(logger)
+
+			handler := RequestHandler{
+				Validator:         validator,
+				Logger:            logger,
+				ReferenceIndexers: referenceIndexer,
+			}
+			for _, obj := range tc.referrers {
+				err := handler.ReferenceIndexers.SetObjectReference(obj, tc.secret)
+				require.NoError(t, err)
+			}
+
+			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
+			got, err := handler.handleSecret(context.Background(), request, responseBuilder)
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expectAllowed, got.Allowed, "should return expected result of allowed")
+			require.Equal(t, tc.expectStatusCode, got.Result.Code)
+			if len(tc.expectMessage) > 0 {
+				require.Contains(t, got.Result.Message, tc.expectMessage)
+			}
 		})
 	}
 }

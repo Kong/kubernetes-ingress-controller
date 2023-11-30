@@ -245,20 +245,17 @@ func (h RequestHandler) handleSecret(
 	if err != nil {
 		return nil, err
 	}
-	// TODO so long as we still handle the deprecated field, this has to remain
-	// once the deprecated field is removed, we must replace this with a label filter in the webhook itself
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4853
-
-	if _, credentialTypeSource := util.ExtractKongCredentialType(&secret); credentialTypeSource == util.CredentialTypeAbsent {
-		// secret does not look like a credential resource in Kong
-		return responseBuilder.Allowed(true).Build(), nil
-	}
 
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
-		ok, message := h.Validator.ValidateCredential(ctx, secret)
-		if !ok {
-			return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+		// TODO so long as we still handle the deprecated field, this has to remain
+		// once the deprecated field is removed, we must replace this with a label filter in the webhook itself
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/4853
+		if _, credentialTypeSource := util.ExtractKongCredentialType(&secret); credentialTypeSource != util.CredentialTypeAbsent {
+			ok, message := h.Validator.ValidateCredential(ctx, secret)
+			if !ok {
+				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+			}
 		}
 		referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(&secret)
 		if err != nil {
@@ -266,7 +263,9 @@ func (h RequestHandler) handleSecret(
 		}
 		for _, obj := range referrers {
 			gvk := obj.GetObjectKind().GroupVersionKind()
+			// REVIEW: Should we check version here? Seems that we do not need to support KongPlugin and KongClusterPlugin in other versions.
 			if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == "KongPlugin" {
+				// REVIEW: run type check here to avoid panic, although it should be unlikely to happen after checking the GVK?
 				plugin := obj.(*kongv1.KongPlugin)
 				ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{&secret})
 				if err != nil {

@@ -194,11 +194,11 @@ func (c CacheIndexers) ListReferencesByReferrer(referrer client.Object) ([]*Obje
 
 // ListReferencesByReferent lists all reference records referring to the same referent.
 func (c CacheIndexers) ListReferencesByReferent(referent client.Object) ([]*ObjectReference, error) {
-	referenctKey, err := objectKeyFunc(referent)
+	referentKey, err := objectKeyFunc(referent)
 	if err != nil {
 		return nil, err
 	}
-	refList, err := c.indexer.ByIndex(IndexNameReferent, referenctKey)
+	refList, err := c.indexer.ByIndex(IndexNameReferent, referentKey)
 	if err != nil {
 		return nil, err
 	}

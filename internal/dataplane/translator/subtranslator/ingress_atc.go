@@ -26,7 +26,7 @@ var (
 	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
-var IngressDefaultBackendPriority RoutePriorityType = 0
+const IngressDefaultBackendPriority RoutePriorityType = 0
 
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
 	ingressHost := m.ingressHost

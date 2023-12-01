@@ -34,7 +34,7 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
   - request/response transformations
   - rate-limiting
 
-## Get started
+## Get started (using Helm)
 
 You can use [Minikube or Kind][k8s-io-tools] on your local machine or use
 a hosted Kubernetes service like [GKE](https://cloud.google.com/kubernetes-engine/).
@@ -68,6 +68,12 @@ to start using Kong in your Kubernetes cluster.
 
 > Note: Kong Enterprise users, please follow along with our
 [enterprise guide][docs-konghq-k4k8s-enterprise-setup] to setup the enterprise version.
+
+## Get started (using Operator _tech preview_) 
+
+As an alternative to Helm, you can also install Kong Ingress Controller using the **Kong Gateway Operator** by following this [quick start guide][kgo-guide].
+
+**Tech Preview warning**: Please note that this capability is a Tech Preview (alpha-quality) and should not be depended upon in a production environment.
 
 ## Container images
 
@@ -162,3 +168,5 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [docs-konghq-getting-started-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/getting-started/
 [docs-konghq-k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/
 [docs-konghq-kic-guides]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/
+
+[kgo-guide]: https://docs.konghq.com/gateway-operator/1.0.x/get-started/kic/install/

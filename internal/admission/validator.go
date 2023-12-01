@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -59,6 +60,7 @@ type KongHTTPValidator struct {
 	Logger                   logr.Logger
 	SecretGetter             kongstate.SecretGetter
 	ConsumerGetter           ConsumerGetter
+	Storer                   store.Storer
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
 	TranslatorFeatures       translator.FeatureFlags
@@ -77,11 +79,13 @@ func NewKongHTTPValidator(
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
 	translatorFeatures translator.FeatureFlags,
+	storer store.Storer,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
 		SecretGetter:             &managerClientSecretGetter{managerClient: managerClient},
 		ConsumerGetter:           &managerClientConsumerGetter{managerClient: managerClient},
+		Storer:                   storer,
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
 		TranslatorFeatures:       translatorFeatures,
@@ -456,7 +460,7 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer)
 }
 
 type routeValidator interface {

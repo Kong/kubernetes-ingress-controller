@@ -29,6 +29,7 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -172,6 +173,7 @@ func setupAdmissionServer(
 	managerClient client.Client,
 	logger logr.Logger,
 	translatorFeatures translator.FeatureFlags,
+	storer store.Storer,
 ) error {
 	admissionLogger := logger.WithName("admission-server")
 
@@ -188,6 +190,7 @@ func setupAdmissionServer(
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
 			translatorFeatures,
+			storer,
 		),
 		Logger: admissionLogger,
 	}, admissionLogger)

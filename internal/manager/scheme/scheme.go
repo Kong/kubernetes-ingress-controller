@@ -11,6 +11,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // Get returns a scheme aware of all types the manager can interact with.
@@ -32,6 +33,9 @@ func Get() (*runtime.Scheme, error) {
 		return nil, err
 	}
 	if err := kongv1beta1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := incubatorv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 

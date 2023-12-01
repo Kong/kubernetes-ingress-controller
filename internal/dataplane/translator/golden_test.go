@@ -30,12 +30,14 @@ var (
 
 	// defaultFeatureFlags is the default set of feature flags to use in tests. Can be overridden in a test case.
 	defaultFeatureFlags = func() translator.FeatureFlags {
+		defaults := featuregates.GetFeatureGatesDefaults()
 		return translator.FeatureFlags{
 			// We do not verify configuration reports in golden tests.
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			FillIDs: featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
+			FillIDs:           defaults.Enabled(featuregates.FillIDsFeature),
+			KongServiceFacade: defaults.Enabled(featuregates.KongServiceFacade),
 		}
 	}
 )

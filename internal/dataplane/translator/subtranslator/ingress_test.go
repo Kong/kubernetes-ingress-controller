@@ -4,8 +4,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -14,9 +16,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 var (
@@ -38,13 +44,14 @@ func (noopObjectsCollector) Add(client.Object) {}
 
 func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
-		name     string
-		ingress  *netv1.Ingress
-		expected map[string]kongstate.Service
+		name               string
+		ingresses          []*netv1.Ingress
+		expected           map[string]kongstate.Service
+		kongServiceFacades []*incubatorv1alpha1.KongServiceFacade
 	}{
 		{
 			name: "a basic ingress resource with a single rule and prefix path type",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -71,7 +78,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -118,7 +125,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "a basic ingress resource with a single rule, and only one path results in a single kong service and route",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -144,7 +151,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -191,7 +198,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "a basic ingress resource with a single rule and prefix path type",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -218,7 +225,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -265,7 +272,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "an ingress with path type exact gets a kong route with an exact path match",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -292,7 +299,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -339,7 +346,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "an Ingress resource with implementation specific path type doesn't modify the path",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -366,7 +373,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -413,7 +420,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "an Ingress resource with paths with double /'s gets flattened",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -439,7 +446,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -486,7 +493,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "empty paths get treated as '/'",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -512,7 +519,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -559,7 +566,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "multiple and various paths get compiled together properly",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -650,7 +657,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -704,7 +711,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "when no host is provided, all hosts are matched",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -794,7 +801,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -847,7 +854,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "when there are multiple backends services, paths wont be combined and separate kong services will be provided",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -887,7 +894,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service1.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -979,7 +986,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "when there are multiple ingress rules with overlapping host and service, separate kong services will be provided",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -1030,7 +1037,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.ad-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -1122,7 +1129,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "* in host is replaced to _",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -1148,7 +1155,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
@@ -1195,7 +1202,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "use port name when service port number is not provided",
-			ingress: &netv1.Ingress{
+			ingresses: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -1224,7 +1231,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: map[string]kongstate.Service{
 				"default.test-service.http": {
 					Namespace: corev1.NamespaceDefault,
@@ -1275,6 +1282,248 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "KongServiceFacade used as a backend",
+			ingresses: []*netv1.Ingress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						Host: "konghq.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path: "/api/",
+									Backend: netv1.IngressBackend{
+										Resource: &corev1.TypedLocalObjectReference{
+											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+											Name:     "svc-facade",
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			}},
+			kongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-facade",
+						Namespace: "default",
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "svc",
+							Port: 8080,
+						},
+					},
+				},
+			},
+			expected: map[string]kongstate.Service{
+				"default.svc-facade.svc.facade": {
+					Namespace: corev1.NamespaceDefault,
+					Service: kong.Service{
+						Name:           kong.String("default.svc-facade.svc.facade"),
+						Host:           kong.String("default.svc-facade.svc.facade"),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
+					},
+					Routes: []kongstate.Route{{
+						Ingress: util.K8sObjectInfo{
+							Name:      "test-ingress",
+							Namespace: corev1.NamespaceDefault,
+						},
+						Route: kong.Route{
+							Name:              kong.String("default.test-ingress.konghq.com.svc-facade.svc.facade"),
+							Hosts:             kong.StringSlice("konghq.com"),
+							Paths:             kong.StringSlice("/api/"),
+							PreserveHost:      kong.Bool(true),
+							Protocols:         kong.StringSlice("http", "https"),
+							RegexPriority:     kong.Int(0),
+							StripPath:         kong.Bool(false),
+							ResponseBuffering: kong.Bool(true),
+							RequestBuffering:  kong.Bool(true),
+							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
+						},
+					}},
+					Backends: []kongstate.ServiceBackend{{
+						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
+						Name:      "svc-facade",
+						Namespace: corev1.NamespaceDefault,
+						PortDef:   PortDefFromPortNumber(8080),
+					}},
+					Parent: expectedParentIngress(),
+				},
+			},
+		},
+		{
+			name: "not existing KongServiceFacade used as a backend",
+			ingresses: []*netv1.Ingress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						Host: "konghq.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path: "/api/",
+									Backend: netv1.IngressBackend{
+										Resource: &corev1.TypedLocalObjectReference{
+											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+											Name:     "svc-facade",
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			}},
+			expected: map[string]kongstate.Service{},
+		},
+		{
+			name: "KongServiceFacade used in multiple Ingresses",
+			ingresses: []*netv1.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ingress",
+						Namespace: "default",
+					},
+					Spec: netv1.IngressSpec{
+						Rules: []netv1.IngressRule{{
+							Host: "konghq.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{{
+										Path: "/ingress-1/",
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+												Name:     "svc-facade",
+											},
+										},
+									}},
+								},
+							},
+						}},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ingress-2",
+						Namespace: "default",
+					},
+					Spec: netv1.IngressSpec{
+						Rules: []netv1.IngressRule{{
+							Host: "konghq.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{{
+										Path: "/ingress-2/",
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+												Name:     "svc-facade",
+											},
+										},
+									}},
+								},
+							},
+						}},
+					},
+				},
+			},
+			kongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-facade",
+						Namespace: "default",
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "svc",
+							Port: 8080,
+						},
+					},
+				},
+			},
+			expected: map[string]kongstate.Service{
+				"default.svc-facade.svc.facade": {
+					Namespace: corev1.NamespaceDefault,
+					Service: kong.Service{
+						Name:           kong.String("default.svc-facade.svc.facade"),
+						Host:           kong.String("default.svc-facade.svc.facade"),
+						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
+					},
+					Routes: []kongstate.Route{
+						{
+							Ingress: util.K8sObjectInfo{
+								Name:      "test-ingress",
+								Namespace: corev1.NamespaceDefault,
+							},
+							Route: kong.Route{
+								Name:              kong.String("default.test-ingress.konghq.com.svc-facade.svc.facade"),
+								Hosts:             kong.StringSlice("konghq.com"),
+								Paths:             kong.StringSlice("/ingress-1/"),
+								PreserveHost:      kong.Bool(true),
+								Protocols:         kong.StringSlice("http", "https"),
+								RegexPriority:     kong.Int(0),
+								StripPath:         kong.Bool(false),
+								ResponseBuffering: kong.Bool(true),
+								RequestBuffering:  kong.Bool(true),
+								Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
+							},
+						},
+						{
+							Ingress: util.K8sObjectInfo{
+								Name:      "test-ingress-2",
+								Namespace: corev1.NamespaceDefault,
+							},
+							Route: kong.Route{
+								Name:              kong.String("default.test-ingress-2.konghq.com.svc-facade.svc.facade"),
+								Hosts:             kong.StringSlice("konghq.com"),
+								Paths:             kong.StringSlice("/ingress-2/"),
+								PreserveHost:      kong.Bool(true),
+								Protocols:         kong.StringSlice("http", "https"),
+								RegexPriority:     kong.Int(0),
+								StripPath:         kong.Bool(false),
+								ResponseBuffering: kong.Bool(true),
+								RequestBuffering:  kong.Bool(true),
+								Tags:              kong.StringSlice("k8s-name:test-ingress-2", "k8s-namespace:default"),
+							},
+						},
+					},
+					Backends: []kongstate.ServiceBackend{{
+						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
+						Name:      "svc-facade",
+						Namespace: corev1.NamespaceDefault,
+						PortDef:   PortDefFromPortNumber(8080),
+					}},
+					Parent: expectedParentIngress(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tts {
@@ -1287,15 +1536,124 @@ func TestTranslateIngress(t *testing.T) {
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
+
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			storer := lo.Must(store.NewFakeStore(store.FakeObjects{
+				KongServiceFacades: tt.kongServiceFacades,
+			}))
 			diff := cmp.Diff(tt.expected, TranslateIngresses(
-				[]*netv1.Ingress{tt.ingress},
+				tt.ingresses,
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
-					ExpressionRoutes: false,
+					ExpressionRoutes:  false,
+					KongServiceFacade: true,
 				},
 				noopObjectsCollector{},
+				failuresCollector,
+				storer,
 			), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
+		})
+	}
+}
+
+func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		ingress                *netv1.Ingress
+		storerObjects          store.FakeObjects
+		serviceFacadeFeatureOn bool
+		expectedFailures       []string
+	}{
+		{
+			name: "KongServiceFacade used as backend with no feature flag on",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(netv1.IngressRule{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     "svc-facade",
+									},
+								},
+							}},
+						},
+					},
+				}).Build(),
+			serviceFacadeFeatureOn: false,
+			expectedFailures:       []string{`failed to get backend for ingress path "/": KongServiceFacade is not enabled, please set the "KongServiceFacade" feature gate to 'true' to enable it`},
+		},
+		{
+			name: "KongServiceFacade used as backend but not existing",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(netv1.IngressRule{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     "svc-facade",
+									},
+								},
+							}},
+						},
+					},
+				}).Build(),
+			serviceFacadeFeatureOn: true,
+			expectedFailures:       []string{`failed to get backend for ingress path "/": failed to get KongServiceFacade "svc-facade": KongServiceFacade default/svc-facade not found`},
+		},
+		{
+			name: "wrong API group used for KongServiceFacade",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(netv1.IngressRule{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: lo.ToPtr("wrong-group"),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     "svc-facade",
+									},
+								},
+							}},
+						},
+					},
+				}).Build(),
+			serviceFacadeFeatureOn: true,
+			expectedFailures:       []string{`failed to get backend for ingress path "/": unknown resource type wrong-group/KongServiceFacade`},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
+			result := TranslateIngresses(
+				[]*netv1.Ingress{tc.ingress},
+				kongv1alpha1.IngressClassParametersSpec{},
+				TranslateIngressFeatureFlags{
+					KongServiceFacade: tc.serviceFacadeFeatureOn,
+				},
+				noopObjectsCollector{},
+				failuresCollector,
+				storer,
+			)
+			require.Empty(t, result)
+
+			collectedFailures := failuresCollector.PopResourceFailures()
+			require.Len(t, collectedFailures, len(tc.expectedFailures))
+			for _, failure := range collectedFailures {
+				require.Contains(t, tc.expectedFailures, failure.Message())
+			}
 		})
 	}
 }

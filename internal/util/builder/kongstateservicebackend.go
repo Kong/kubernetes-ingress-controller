@@ -38,6 +38,11 @@ func (b *KongstateServiceBackendBuilder) WithPortNumber(port int) *KongstateServ
 	return b
 }
 
+func (b *KongstateServiceBackendBuilder) WithType(t kongstate.ServiceBackendType) *KongstateServiceBackendBuilder {
+	b.kongstateServiceBackend.Type = t
+	return b
+}
+
 func (b *KongstateServiceBackendBuilder) Build() kongstate.ServiceBackend {
 	return b.kongstateServiceBackend
 }

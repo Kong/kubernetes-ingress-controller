@@ -24,6 +24,10 @@ func NewIngress(name string, class string) *IngressBuilder {
 				Name:        name,
 				Annotations: make(map[string]string),
 			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: "networking.k8s.io/v1",
+			},
 			Spec: netv1.IngressSpec{
 				IngressClassName: classToSet,
 			},
@@ -42,5 +46,10 @@ func (b *IngressBuilder) WithLegacyClassAnnotation(class string) *IngressBuilder
 
 func (b *IngressBuilder) WithRules(rules ...netv1.IngressRule) *IngressBuilder {
 	b.ingress.Spec.Rules = append(b.ingress.Spec.Rules, rules...)
+	return b
+}
+
+func (b *IngressBuilder) WithNamespace(namespace string) *IngressBuilder {
+	b.ingress.ObjectMeta.Namespace = namespace
 	return b
 }

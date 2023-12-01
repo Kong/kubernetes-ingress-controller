@@ -165,19 +165,20 @@ func Run(
 		c.UpdateStatus,
 	)
 
-	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags); err != nil {
-		return err
-	}
-
 	cache := store.NewCacheStores()
+	storer := store.New(cache, c.IngressClassName, logger)
 	configTranslator, err := translator.NewTranslator(
 		logger,
-		store.New(cache, c.IngressClassName, logger),
+		storer,
 		translatorFeatureFlags,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
+	}
+
+	setupLog.Info("Starting Admission Server")
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
+		return err
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)

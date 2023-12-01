@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,9 +22,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	managerscheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 type fakePluginSvc struct {
@@ -755,4 +760,209 @@ type fakeConsumerGetter struct {
 
 func (f fakeConsumerGetter) ListAllConsumers(context.Context) ([]kongv1.KongConsumer, error) {
 	return f.consumers, nil
+}
+
+func TestValidator_ValidateIngress(t *testing.T) {
+	const testSvcFacadeName = "svc-facade"
+	s := lo.Must(managerscheme.Get())
+	b := fake.NewClientBuilder().WithScheme(s)
+
+	testCases := []struct {
+		name                          string
+		storerObjects                 store.FakeObjects
+		kongRouteValidationShouldFail bool
+		translatorFeatures            translator.FeatureFlags
+		ingress                       *netv1.Ingress
+		wantOK                        bool
+		wantMessage                   string
+	}{
+		{
+			name: "not matching ingress class is always ok",
+			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			kongRouteValidationShouldFail: true, // Despite the route validation failing, the ingress class is not kong, so it's ok.
+			storerObjects:                 store.FakeObjects{},
+			wantOK:                        true,
+		},
+		{
+			name: "valid with Service backend",
+			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			storerObjects: store.FakeObjects{},
+			wantOK:        true,
+		},
+		{
+			name: "invalid with Service backend",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			kongRouteValidationShouldFail: true,
+			storerObjects:                 store.FakeObjects{},
+			wantOK:                        false,
+			wantMessage:                   "Ingress failed schema validation: something is wrong with the route",
+		},
+		{
+			name: "valid with KongServiceFacade backend",
+			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Resource: &corev1.TypedLocalObjectReference{
+							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+							Name:     testSvcFacadeName,
+						},
+					}),
+				).
+				Build(),
+			translatorFeatures: translator.FeatureFlags{
+				KongServiceFacade: true,
+			},
+			storerObjects: store.FakeObjects{
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      testSvcFacadeName,
+							Namespace: "default",
+						},
+						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+								Name: "svc",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "invalid with KongServiceFacade backend",
+			translatorFeatures: translator.FeatureFlags{
+				KongServiceFacade: true,
+			},
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Resource: &corev1.TypedLocalObjectReference{
+							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+							Name:     testSvcFacadeName,
+						},
+					}),
+				).
+				Build(),
+			storerObjects: store.FakeObjects{}, // No KongServiceFacade will be found resulting in an error.
+			wantOK:        false,
+			wantMessage:   `Ingress failed schema validation: failed to get backend for ingress path "/": failed to get KongServiceFacade "svc-facade": KongServiceFacade default/svc-facade not found`,
+		},
+		{
+			name: "invalid with KongServiceFacade backend with feature flag off is ok",
+			translatorFeatures: translator.FeatureFlags{
+				KongServiceFacade: false,
+			},
+			ingress: builder.NewIngress("ingress", "not-kong").
+				WithNamespace("default").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Resource: &corev1.TypedLocalObjectReference{
+							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+							Name:     testSvcFacadeName,
+						},
+					}),
+				).
+				Build(),
+			storerObjects: store.FakeObjects{}, // No KongServiceFacade found would result in an error, but the feature flag is off.
+			wantOK:        true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
+			validator := KongHTTPValidator{
+				ManagerClient: b.Build(),
+				Storer:        storer,
+				AdminAPIServicesProvider: fakeServicesProvider{
+					routeSvc: &fakeRouteSvc{
+						shouldFail: tc.kongRouteValidationShouldFail,
+					},
+				},
+				TranslatorFeatures: tc.translatorFeatures,
+				ingressClassMatcher: func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool {
+					return false // Always return false, we'll use Spec.IngressClassName matcher.
+				},
+				ingressV1ClassMatcher: func(ingress *netv1.Ingress, matching annotations.ClassMatching) bool {
+					return *ingress.Spec.IngressClassName == annotations.DefaultIngressClass
+				},
+				Logger: logr.Discard(),
+			}
+			ok, msg, err := validator.ValidateIngress(context.Background(), *tc.ingress)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantMessage, msg)
+		})
+	}
+}
+
+func newHTTPIngressRule(backend netv1.IngressBackend) netv1.IngressRule {
+	return netv1.IngressRule{
+		IngressRuleValue: netv1.IngressRuleValue{
+			HTTP: &netv1.HTTPIngressRuleValue{
+				Paths: []netv1.HTTPIngressPath{
+					{
+						Path:     "/",
+						PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+						Backend:  backend,
+					},
+				},
+			},
+		},
+	}
+}
+
+type fakeRouteSvc struct {
+	kong.AbstractRouteService
+	shouldFail bool
+}
+
+func (f *fakeRouteSvc) Validate(context.Context, *kong.Route) (bool, string, error) {
+	if f.shouldFail {
+		return false, "something is wrong with the route", nil
+	}
+	return true, "", nil
 }

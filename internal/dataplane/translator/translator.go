@@ -57,6 +57,9 @@ type FeatureFlags struct {
 
 	// RewriteURIs enables the translator to translate the konghq.com/rewrite annotation to the proper set of Kong plugins.
 	RewriteURIs bool
+
+	// KongServiceFacade indicates whether we should support KongServiceFacades as Ingress backends.
+	KongServiceFacade bool
 }
 
 func NewFeatureFlags(
@@ -69,6 +72,7 @@ func NewFeatureFlags(
 		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
+		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
 	}
 }
 
@@ -334,10 +338,24 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					// placeholder service.
 					backendNamespace = service.Namespace
 				}
-				k8sService, ok := service.K8sServices[fmt.Sprintf("%s/%s", backendNamespace, backend.Name)]
+
+				backendName := backend.Name
+				if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
+					// In the case of KongServiceFacade we need to look it up to determine the backing Kubernetes Service.
+					svcFacade, err := t.storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+					if err != nil {
+						t.registerTranslationFailure(
+							fmt.Sprintf("couldn't get KongServiceFacade %s: %v", backend.Name, err),
+							service.Parent,
+						)
+						continue
+					}
+					backendName = svcFacade.Spec.Backend.Name
+				}
+				k8sService, ok := service.K8sServices[fmt.Sprintf("%s/%s", backendNamespace, backendName)]
 				if !ok {
 					t.registerTranslationFailure(
-						fmt.Sprintf("can't add target for backend %s: no kubernetes service found", backend.Name),
+						fmt.Sprintf("can't add target for backend %s: no kubernetes service found", backendName),
 						service.Parent,
 					)
 					continue

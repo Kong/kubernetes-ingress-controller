@@ -254,16 +254,9 @@ func getK8sServicesForBackends(
 	// retreieve that backend and capture any Kong annotations its using.
 	k8sServices := make([]*corev1.Service, 0, len(backends))
 	for _, backend := range backends {
-		backendNamespace := namespace
-		if backend.Namespace != "" {
-			backendNamespace = backend.Namespace
-		}
-		k8sService, err := storer.GetService(backendNamespace, backend.Name)
+		k8sService, err := resolveKubernetesServiceForBackend(storer, namespace, backend)
 		if err != nil {
-			log.Error(err, "Failed to fetch service",
-				"service_name", backend.PortDef.Name,
-				"service_namespace", backendNamespace,
-			)
+			log.Error(err, "Failed to resolve Kubernetes Service for backend")
 			continue
 		}
 		if k8sService != nil {
@@ -280,6 +273,44 @@ func getK8sServicesForBackends(
 	}
 
 	return k8sServices, seenAnnotationsForK8sServices
+}
+
+func resolveKubernetesServiceForBackend(storer store.Storer, ingressNamespace string, backend kongstate.ServiceBackend) (*corev1.Service, error) {
+	backendNamespace := ingressNamespace
+	if backend.Namespace != "" {
+		backendNamespace = backend.Namespace
+	}
+	k8sServiceName := backend.Name
+
+	// In case of KongServiceFacade, we need to fetch it to determine the Kubernetes Service backing it.
+	// We also want to use its annotations as they override the annotations of the Kubernetes Service.
+	var serviceFacadeAnnotations map[string]string
+	if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
+		svcFacade, err := storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch KongServiceFacade %s/%s: %w", backend.Namespace, backend.Name, err)
+		}
+		serviceFacadeAnnotations = svcFacade.Annotations
+
+		// Use the Kubernetes Service backing the KongServiceFacade.
+		k8sServiceName = svcFacade.Spec.Backend.Name
+	}
+
+	k8sService, err := storer.GetService(backendNamespace, k8sServiceName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backendNamespace, k8sServiceName, err)
+	}
+
+	// Merge the annotations from the KongServiceFacade with the annotations from the Service.
+	// KongServiceFacade overrides the Service annotations if they have the same key.
+	for k, v := range serviceFacadeAnnotations {
+		if k8sService.Annotations == nil {
+			k8sService.Annotations = make(map[string]string)
+		}
+		k8sService.Annotations[k] = v
+	}
+
+	return k8sService, nil
 }
 
 // collectInconsistentAnnotations takes a list of services and annotation+value pairs and confirms that all services

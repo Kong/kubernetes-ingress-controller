@@ -110,6 +110,9 @@ Adding a new version? You'll need three changes:
   configuration. Instead, it will return `400` with message to tell the
   validation failures.
   [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
+- Fixed an issue that prevented the controller from associating admin API
+  errors with a GRPCRoute.
+  [#5267](https://github.com/Kong/kubernetes-ingress-controller/pull/5267)
 
 ### Changed
 

@@ -65,7 +65,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindTCPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		WithSetup("configure TCP Deployments with Services and HTTPRoutes", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		WithSetup("configure TCP Deployments with Services and TCPRoutes", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			gatewayClient, err := gatewayclient.NewForConfig(cfg.Client().RESTConfig())
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, gatewayClient)

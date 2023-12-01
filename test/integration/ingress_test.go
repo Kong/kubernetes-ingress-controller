@@ -193,52 +193,6 @@ func TestIngressDefaultBackend(t *testing.T) {
 	)
 }
 
-func TestGRPCIngressEssentials(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("grpcbin", test.GRPCBinImage, test.GRPCBinPort)
-	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(deployment)
-
-	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	// as of KTF 0.9,0 NewServiceForDeployment doesn't initialize annotations itself, need to do it outside
-	service.ObjectMeta.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.ProtocolKey: "grpc"}
-	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(service)
-
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/", map[string]string{
-		annotations.AnnotationPrefix + annotations.ProtocolsKey: "grpc,grpcs",
-		annotations.AnnotationPrefix + annotations.StripPathKey: "false",
-	}, service)
-	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	cleaner.Add(ingress)
-
-	t.Log("waiting for updated ingress status to include IP")
-	require.Eventually(t, func() bool {
-		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
-		if err != nil {
-			return false
-		}
-		return len(lbstatus.Ingress) > 0
-	}, statusWait, waitTick)
-
-	// So far this only tests that the ingress is created and receives status information, to confirm the fix for
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/1991
-	// It does not test routing, though the status implementation implies it (we only add status after we confirm
-	// configuration is present in the proxy). This test could be expanded to better confirm routing with a suitable
-	// gRPC test client.
-}
-
 func TestIngressClassNameSpec(t *testing.T) {
 	t.Parallel()
 	t.Log("locking IngressClass management")

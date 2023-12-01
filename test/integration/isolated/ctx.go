@@ -139,3 +139,14 @@ func GetAdminURLFromCtx(ctx context.Context) *url.URL {
 	}
 	return u.(*url.URL)
 }
+
+type _ingressClass struct{}
+
+// GetIngressClassFromCtx gets the Ingress Class from the context.
+func GetIngressClassFromCtx(ctx context.Context) string {
+	r := ctx.Value(_ingressClass{})
+	if r == nil {
+		return ""
+	}
+	return r.(string)
+}

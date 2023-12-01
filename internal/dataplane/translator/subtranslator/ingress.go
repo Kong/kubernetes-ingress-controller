@@ -58,13 +58,19 @@ var defaultHTTPIngressPathType = netv1.PathTypeImplementationSpecific
 const (
 	defaultHTTPPort = 80
 	defaultRetries  = 5
-
-	// defaultServiceTimeout indicates the amount of time by default that we wait
-	// for connections to an underlying Kubernetes service to complete in the
-	// data-plane. The current value is based on a historical default that started
-	// in version 0 of the ingress controller.
-	defaultServiceTimeout = time.Second * 60
 )
+
+// defaultServiceTimeoutKongFormat returns the defaultServiceTimeout in format
+// expected by Kong (pointer to an integer representing milliseconds).
+//
+// defaultServiceTimeout indicates the amount of time by default that we wait
+// for connections to an underlying Kubernetes service to complete in the
+// data-plane. The current value is based on a historical default that started
+// in version 0 of the ingress controller.
+func defaultServiceTimeoutInKongFormat() *int {
+	const defaultServiceTimeout = time.Second * 60
+	return kong.Int(int(defaultServiceTimeout.Milliseconds()))
+}
 
 // -----------------------------------------------------------------------------
 // Ingress Translation - Private - Index
@@ -194,9 +200,9 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			Port:           kong.Int(defaultHTTPPort),
 			Protocol:       kong.String("http"),
 			Path:           kong.String("/"),
-			ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
-			ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-			WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+			ConnectTimeout: defaultServiceTimeoutInKongFormat(),
+			ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+			WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 			Retries:        kong.Int(defaultRetries),
 		},
 		Backends: []kongstate.ServiceBackend{{

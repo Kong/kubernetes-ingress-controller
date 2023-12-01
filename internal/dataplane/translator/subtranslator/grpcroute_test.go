@@ -210,6 +210,13 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						Name:      kong.String("grpcroute.default.hostname-only.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Hosts:     kong.StringSlice("foo.com"),
+						Tags: kong.StringSlice(
+							"k8s-name:hostname-only",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
 					},
 				},
 			},

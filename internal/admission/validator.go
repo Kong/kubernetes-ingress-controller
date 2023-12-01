@@ -56,14 +56,14 @@ type ConsumerGetter interface {
 	ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error)
 }
 
-var _ kongstate.SecretGetter = SecretGetterWithOverride{}
+var _ kongstate.SecretGetter = &SecretGetterWithOverride{}
 
 type SecretGetterWithOverride struct {
 	overrideSecrets map[k8stypes.NamespacedName]*corev1.Secret
 	secretGetter    kongstate.SecretGetter
 }
 
-func (s SecretGetterWithOverride) GetSecret(namespace, name string) (*corev1.Secret, error) {
+func (s *SecretGetterWithOverride) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	nsName := k8stypes.NamespacedName{
 		Namespace: namespace,
 		Name:      name,
@@ -76,15 +76,16 @@ func (s SecretGetterWithOverride) GetSecret(namespace, name string) (*corev1.Sec
 	return s.secretGetter.GetSecret(namespace, name)
 }
 
-func NewSecretGetterWithOverride(s kongstate.SecretGetter, overrideSecrets []*corev1.Secret) SecretGetterWithOverride {
-	return SecretGetterWithOverride{
-		overrideSecrets: lo.SliceToMap(overrideSecrets, func(secret *corev1.Secret) (k8stypes.NamespacedName, *corev1.Secret) {
-			return k8stypes.NamespacedName{
-				Namespace: secret.Namespace,
-				Name:      secret.Name,
-			}, secret
-		}),
-		secretGetter: s,
+func NewSecretGetterWithOverride(s kongstate.SecretGetter, overrideSecrets []*corev1.Secret) *SecretGetterWithOverride {
+	overrideSecretMap := lo.SliceToMap(overrideSecrets, func(secret *corev1.Secret) (k8stypes.NamespacedName, *corev1.Secret) {
+		return k8stypes.NamespacedName{
+			Namespace: secret.Namespace,
+			Name:      secret.Name,
+		}, secret.DeepCopy()
+	})
+	return &SecretGetterWithOverride{
+		overrideSecrets: overrideSecretMap,
+		secretGetter:    s,
 	}
 }
 
@@ -336,7 +337,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		return false, fmt.Sprintf("%s: %s", ErrTextPluginConfigInvalid, err), nil
 	}
 	if k8sPlugin.ConfigFrom != nil {
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(secretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
@@ -387,6 +388,11 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
 		plugin.Config = config
+		validator.Logger.V(util.DebugLevel).Info("Got config from secret",
+			"secret", k8sPlugin.ConfigFrom.SecretValue.Namespace+"/"+k8sPlugin.ConfigFrom.SecretValue.Secret,
+			"key", k8sPlugin.ConfigFrom.SecretValue.Key,
+			"config", config,
+		)
 	}
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)

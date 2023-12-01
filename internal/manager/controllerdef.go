@@ -58,6 +58,7 @@ func setupControllers(
 	ctx context.Context,
 	mgr manager.Manager,
 	dataplaneClient controllers.DataPlane,
+	referenceIndexers ctrlref.CacheIndexers,
 	dataplaneAddressFinder *dataplane.AddressFinder,
 	udpDataplaneAddressFinder *dataplane.AddressFinder,
 	kubernetesStatusQueue *status.Queue,
@@ -66,8 +67,6 @@ func setupControllers(
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
-	referenceIndexers := ctrlref.NewCacheIndexers(ctrl.LoggerFrom(ctx).WithName("controllers").WithName("reference-indexers"))
-
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Kong Gateway Admin API Service discovery

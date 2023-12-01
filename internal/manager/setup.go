@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
@@ -170,6 +171,8 @@ func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
+	// REVIEW: where to add it? More general: where to add new args in constructors, all append to the last?
+	referenceIndexers ctrlref.CacheIndexers,
 	managerClient client.Client,
 	logger logr.Logger,
 	translatorFeatures translator.FeatureFlags,
@@ -192,7 +195,8 @@ func setupAdmissionServer(
 			translatorFeatures,
 			storer,
 		),
-		Logger: admissionLogger,
+		ReferenceIndexers: referenceIndexers,
+		Logger:            admissionLogger,
 	}, admissionLogger)
 	if err != nil {
 		return err

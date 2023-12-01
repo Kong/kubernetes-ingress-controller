@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
@@ -174,6 +175,7 @@ func Run(
 		c.UpdateStatus,
 	)
 
+	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
 	configTranslator, err := translator.NewTranslator(
@@ -186,7 +188,7 @@ func Run(
 	}
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
 		return err
 	}
 
@@ -237,6 +239,7 @@ func Run(
 		ctx,
 		mgr,
 		dataplaneClient,
+		referenceIndexers,
 		dataplaneAddressFinder,
 		udpDataplaneAddressFinder,
 		kubernetesStatusQueue,

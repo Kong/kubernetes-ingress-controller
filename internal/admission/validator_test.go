@@ -114,7 +114,8 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongPlugin
+		plugin          kongv1.KongPlugin
+		overrideSecrets []*corev1.Secret
 	}
 	tests := []struct {
 		name        string
@@ -239,6 +240,34 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			wantMessage: ErrTextPluginConfigValidationFailed,
 			wantErr:     true,
 		},
+		{
+			name:      "validate from override secret which generates valid configuration",
+			PluginSvc: &fakePluginSvc{valid: true},
+			args: args{
+				plugin: kongv1.KongPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
+							Key:    "valid-conf",
+							Secret: "another-conf-secret",
+						},
+					},
+				},
+				overrideSecrets: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "",
+							Name:      "another-conf-secret",
+						},
+						Data: map[string][]byte{
+							"valid-conf":   []byte(`{"foo":"bar"}`),
+							"invalid-conf": []byte(`{"foo":"baz}`),
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -249,7 +278,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin, nil)
+			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin, tt.args.overrideSecrets)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidatePlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,
@@ -284,7 +313,8 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongClusterPlugin
+		plugin          kongv1.KongClusterPlugin
+		overrideSecrets []*corev1.Secret
 	}
 	tests := []struct {
 		name        string
@@ -413,6 +443,35 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			wantErr:     true,
 		},
 		{
+			name:      "validate from override secret which generates valid configuration",
+			PluginSvc: &fakePluginSvc{valid: true},
+			args: args{
+				plugin: kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Namespace: "default",
+							Key:       "valid-conf",
+							Secret:    "another-conf-secret",
+						},
+					},
+				},
+				overrideSecrets: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "another-conf-secret",
+						},
+						Data: map[string][]byte{
+							"valid-conf":   []byte(`{"foo":"bar"}`),
+							"invalid-conf": []byte(`{"foo":"baz}`),
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
 			name:      "no gateway was available at the time of validation",
 			PluginSvc: nil, // no plugin service is available as there's no gateways
 			args: args{
@@ -433,7 +492,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 				ingressClassMatcher: fakeClassMatcher,
 			}
 
-			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin, nil)
+			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin, tt.args.overrideSecrets)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidateClusterPlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,

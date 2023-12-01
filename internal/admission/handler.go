@@ -20,6 +20,11 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
+const (
+	KindKongPlugin        = "KongPlugin"
+	KindKongClusterPlugin = "KongClusterPlugin"
+)
+
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
 // Custom Resources using Kubernetes Admission Webhooks.
 type RequestHandler struct {
@@ -257,51 +262,65 @@ func (h RequestHandler) handleSecret(
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 			}
 		}
-		referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(&secret)
-		if err != nil {
-			return responseBuilder.Allowed(false).WithMessage(err.Error()).Build(), err
-		}
-		for _, obj := range referrers {
-			gvk := obj.GetObjectKind().GroupVersionKind()
-			// REVIEW: Should we check version here? Seems that we do not need to support KongPlugin and KongClusterPlugin in other versions.
-			if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == "KongPlugin" {
-				// REVIEW: run type check here to avoid panic, although it should be unlikely to happen after checking the GVK?
-				plugin := obj.(*kongv1.KongPlugin)
-				ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{&secret})
-				if err != nil {
-					return nil, fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
-						plugin.Namespace, plugin.Name, err,
-					)
-				}
-				if !ok {
-					return responseBuilder.Allowed(ok).WithMessage(
-						fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
-							plugin.Namespace, plugin.Name, message,
-						)).Build(), nil
-				}
-			}
-			if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == "KongClusterPlugin" {
-				plugin := obj.(*kongv1.KongClusterPlugin)
-				ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{&secret})
-				if err != nil {
-					return nil, fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
-						plugin.Name, err,
-					)
-				}
-				if !ok {
-					return responseBuilder.Allowed(ok).WithMessage(
-						fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
-							plugin.Name, message,
-						)).Build(), nil
-				}
 
-			}
+		ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
+		if err != nil {
+			return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
 		}
-		return responseBuilder.Allowed(true).WithMessage("").Build(), nil
+		if !ok {
+			return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
+		}
+
+		return responseBuilder.Allowed(true).Build(), nil
 
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
+}
+
+// checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret
+// and rejects the secret if it generates invalid configurations for any of the referrers.
+func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, string, error) {
+	referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(secret)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to list referrers of secret: %w", err)
+	}
+
+	for _, obj := range referrers {
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		// REVIEW: Should we check version here? Seems that we do not need to support KongPlugin and KongClusterPlugin in other versions.
+		if gvk.Group == kongv1.GroupVersion.Group && gvk.Kind == KindKongPlugin {
+			// REVIEW: run type check here to avoid panic, although it should be unlikely to happen after checking the GVK?
+			plugin := obj.(*kongv1.KongPlugin)
+			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
+			if err != nil {
+				return false, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
+					plugin.Namespace, plugin.Name, err,
+				)
+			}
+			if !ok {
+				return false,
+					fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
+						plugin.Namespace, plugin.Name, message,
+					), nil
+			}
+		}
+		if gvk.Group == kongv1.GroupVersion.Group && gvk.Kind == KindKongClusterPlugin {
+			plugin := obj.(*kongv1.KongClusterPlugin)
+			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
+			if err != nil {
+				return false, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
+					plugin.Name, err,
+				)
+			}
+			if !ok {
+				return false, fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
+					plugin.Name, message,
+				), nil
+			}
+		}
+	}
+	return true, "", nil
 }
 
 func (h RequestHandler) handleGateway(

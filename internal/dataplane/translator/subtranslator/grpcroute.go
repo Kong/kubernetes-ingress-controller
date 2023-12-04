@@ -81,6 +81,7 @@ func GenerateKongRoutesFromGRPCRouteRule(
 			Route: kong.Route{
 				Name:      kong.String(routeName),
 				Protocols: kong.StringSlice("grpc", "grpcs"),
+				Tags:      tags,
 			},
 		}
 

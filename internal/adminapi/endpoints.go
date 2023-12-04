@@ -165,9 +165,9 @@ func adminAPIFromEndpoint(
 	// Format for calling the Admin API. If the port explicitly indicates http as the AppProtocol, use http.
 	// Otherwise, default to HTTPS as a best practice. Consumers may want to use HTTP if they have a service mesh in place which
 	// is already handling TLS authentication for them.
-	format := "https://%s:%d"
-	if port.AppProtocol != nil && strings.Compare(*port.AppProtocol, "http") == 0 {
-		format = "http://%s:%d"
+	adminAPIAddressFormat := "https://%s:%d"
+	if port.AppProtocol != nil && *port.AppProtocol == "http" {
+		adminAPIAddressFormat = "http://%s:%d"
 	}
 
 	// NOTE: Endpoint's addresses are assumed to be fungible, therefore we pick
@@ -188,7 +188,7 @@ func adminAPIFromEndpoint(
 		address := fmt.Sprintf("%s.%s.%s.svc", ipAddr, service.Name, service.Namespace)
 
 		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf(format, address, *port.Port),
+			Address: fmt.Sprintf(adminAPIAddressFormat, address, *port.Port),
 			PodRef:  podNN,
 		}, nil
 
@@ -197,7 +197,7 @@ func adminAPIFromEndpoint(
 		address := fmt.Sprintf("%s.%s.pod", ipAddr, service.Namespace)
 
 		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf(format, address, *port.Port),
+			Address: fmt.Sprintf(adminAPIAddressFormat, address, *port.Port),
 			PodRef:  podNN,
 		}, nil
 
@@ -207,7 +207,7 @@ func adminAPIFromEndpoint(
 			bounded = fmt.Sprintf("[%s]", bounded)
 		}
 		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf(format, bounded, *port.Port),
+			Address: fmt.Sprintf(adminAPIAddressFormat, bounded, *port.Port),
 			PodRef:  podNN,
 		}, nil
 

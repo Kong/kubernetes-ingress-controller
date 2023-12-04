@@ -277,6 +277,23 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 						},
 					},
 				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "httpbin-facade-svg",
+						Annotations: map[string]string{
+							// We'll use this annotation to verify that the default backend is used when no path matches.
+							// httpbin's /anything should return anything passed in the request data.
+							annotations.AnnotationPrefix + annotations.PathKey: "/anything",
+							annotations.IngressClassKey:                        ingressClass,
+						},
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: service.Name,
+							Port: test.HTTPBinPort,
+						},
+					},
+				},
 			}
 			clients := GetFromCtxForT[*clientset.Clientset](ctx, t)
 			for _, serviceFacade := range serviceFacades {
@@ -319,7 +336,15 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 				}).
 				WithAnnotations(map[string]string{
 					annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-				}).Build()
+				}).
+				WithDefaultBackend(&netv1.IngressBackend{
+					Resource: &corev1.TypedLocalObjectReference{
+						APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+						Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+						Name:     serviceFacades[2].Name,
+					},
+				}).
+				Build()
 			ingress, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
 			require.NoError(t, err)
 			cleaner.Add(ingress)
@@ -345,6 +370,11 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 
 			expectContent(jpegIngressPath, testconsts.JPEGMagicNumber)
 			expectContent(pngIngressPath, testconsts.PNGMagicNumber)
+
+			// This is testing that the default backend is used when no path matches. httpbin's /anything should return
+			// the used path in response.
+			const nonExistingPath = "/path/that/does/not/exist"
+			expectContent(nonExistingPath, nonExistingPath)
 
 			return ctx
 		}).

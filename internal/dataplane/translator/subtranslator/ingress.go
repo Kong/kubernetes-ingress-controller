@@ -184,7 +184,7 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 	}
 
 	if resource := httpIngressPath.Backend.Resource; resource != nil {
-		if !isKongServiceFacade(resource) {
+		if !IsKongServiceFacade(resource) {
 			gk := resource.Kind
 			if resource.APIGroup != nil {
 				gk = *resource.APIGroup + "/" + gk
@@ -210,7 +210,8 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 	return ingressTranslationMetaBackend{}, fmt.Errorf("no Service or Resource specified for Ingress path")
 }
 
-func isKongServiceFacade(resource *corev1.TypedLocalObjectReference) bool {
+// IsKongServiceFacade returns true if the given resource reference is a KongServiceFacade.
+func IsKongServiceFacade(resource *corev1.TypedLocalObjectReference) bool {
 	return resource.Kind == incubatorv1alpha1.KongServiceFacadeKind &&
 		resource.APIGroup != nil && *resource.APIGroup == incubatorv1alpha1.GroupVersion.Group
 }

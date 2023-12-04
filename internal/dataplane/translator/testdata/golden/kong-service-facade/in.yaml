@@ -34,6 +34,11 @@ spec:
                 name: svc-facade-beta
             path: /beta
             pathType: Exact
+  defaultBackend:
+    resource:
+      apiGroup: incubator.konghq.com
+      kind: KongServiceFacade
+      name: svc-facade-default
 ---
 apiVersion: v1
 kind: Service
@@ -86,6 +91,18 @@ metadata:
     kubernetes.io/ingress.class: kong
     konghq.com/plugins: auth-beta
   name: svc-facade-beta
+  namespace: default
+spec:
+  backendRef:
+    name: svc
+    port: 80
+---
+apiVersion: incubator.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: svc-facade-default
   namespace: default
 spec:
   backendRef:

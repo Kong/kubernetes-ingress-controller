@@ -18,6 +18,37 @@ plugins:
   - k8s-version:v1
 services:
 - connect_timeout: 60000
+  host: default.svc-facade-default.svc.facade
+  id: 3f003a09-c285-52aa-a944-c6e156c71e36
+  name: default.svc-facade-default.svc.facade
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path ^= "/") && ((net.protocol == "http") || (net.protocol ==
+      "https"))
+    https_redirect_status_code: 426
+    id: 95255daa-88f8-504b-9098-9300d404c741
+    name: default.beta
+    preserve_host: true
+    priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:beta
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:svc
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
   host: default.svc-facade-beta.svc.facade
   id: 0487ced6-2552-5ccb-905d-db086a449a6c
   name: default.svc-facade-beta.svc.facade
@@ -82,6 +113,15 @@ services:
   - k8s-version:v1alpha1
   write_timeout: 60000
 upstreams:
+- algorithm: round-robin
+  name: default.svc-facade-default.svc.facade
+  tags:
+  - k8s-name:svc
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  targets:
+  - target: 10.244.0.5:80
 - algorithm: round-robin
   name: default.svc-facade-beta.svc.facade
   tags:

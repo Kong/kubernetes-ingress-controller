@@ -820,3 +820,50 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				"service": "from-service",
+			},
+		},
+	}
+	// Preserve a copy to compare against later.
+	svcCopy := svc.DeepCopy()
+
+	kongServiceFacade := &incubatorv1alpha1.KongServiceFacade{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service-facade",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				"facade": "from-facade",
+			},
+		},
+		Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+			Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+				Name: "test-service",
+				Port: 80,
+			},
+		},
+	}
+	fakeStore := lo.Must(store.NewFakeStore(store.FakeObjects{
+		Services:           []*corev1.Service{svc},
+		KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{kongServiceFacade},
+	}))
+	backend := builder.NewKongstateServiceBackend("test-service-facade").
+		WithNamespace("test-namespace").
+		WithPortNumber(80).
+		WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+		Build()
+
+	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, "test-namespace", backend)
+	require.NoError(t, err)
+	require.Equal(t, svcCopy, svc, "service stored in cache should not be modified")
+	require.Equal(t, resolvedService.Annotations, map[string]string{
+		"service": "from-service",
+		"facade":  "from-facade",
+	}, "annotations should be merged in the returned service")
+}

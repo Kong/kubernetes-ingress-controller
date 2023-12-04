@@ -11,7 +11,7 @@ plugins:
 - name: basic-auth
   service: default.svc-facade-alpha.svc.facade
   tags:
-  - k8s-name:auth-beta
+  - k8s-name:auth-alpha
   - k8s-namespace:default
   - k8s-kind:KongPlugin
   - k8s-group:configuration.konghq.com

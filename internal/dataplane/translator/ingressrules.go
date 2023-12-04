@@ -303,6 +303,10 @@ func resolveKubernetesServiceForBackend(storer store.Storer, ingressNamespace st
 
 	// Merge the annotations from the KongServiceFacade with the annotations from the Service.
 	// KongServiceFacade overrides the Service annotations if they have the same key.
+	// We make a copy of the Kubernetes Service to avoid mutating the cache (the k8sService we
+	// get from the storer is a pointer).
+	k8sService = k8sService.DeepCopy()
+
 	for k, v := range serviceFacadeAnnotations {
 		if k8sService.Annotations == nil {
 			k8sService.Annotations = make(map[string]string)

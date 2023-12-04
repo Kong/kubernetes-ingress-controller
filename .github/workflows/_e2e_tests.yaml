@@ -133,6 +133,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: split image and tag
         id: split
@@ -219,6 +220,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: split image and tag
         id: split
@@ -307,6 +309,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: split image and tag
         id: split

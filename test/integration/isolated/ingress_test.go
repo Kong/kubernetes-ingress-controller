@@ -5,6 +5,7 @@ package isolated
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ import (
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -202,6 +204,11 @@ func TestIngressGRPC(t *testing.T) {
 }
 
 func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
+	const (
+		jpegIngressPath = "/jpeg"
+		pngIngressPath  = "/png"
+	)
+
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
@@ -285,7 +292,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 						HTTP: &netv1.HTTPIngressRuleValue{
 							Paths: []netv1.HTTPIngressPath{
 								{
-									Path:     "/jpeg",
+									Path:     jpegIngressPath,
 									PathType: lo.ToPtr(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
@@ -296,7 +303,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 									},
 								},
 								{
-									Path:     "/png",
+									Path:     pngIngressPath,
 									PathType: lo.ToPtr(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
@@ -321,30 +328,23 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 		}).
 		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			proxyURL := GetProxyURLFromCtx(ctx)
-			httpClient := helpers.DefaultHTTPClient()
-
-			expectContentType := func(path, expectedContentType string) {
-				assert.Eventually(t, func() bool {
-					resp, err := httpClient.Get(fmt.Sprintf("%s%s", proxyURL, path))
-					if err != nil {
-						t.Log(err)
-						return false
-					}
-					defer resp.Body.Close()
-
-					if contentType := resp.Header.Get("Content-Type"); contentType != expectedContentType {
-						t.Logf("expected Content-Type header to be %s, got %s", expectedContentType, contentType)
-						return false
-					}
-					return true
-				}, consts.IngressWait, consts.WaitTick)
+			expectContentType := func(path, expectedMagicNumber string) {
+				t.Logf("asserting %s path returns expected image", path)
+				helpers.EventuallyGETPath(
+					t,
+					proxyURL,
+					proxyURL.Host,
+					path,
+					http.StatusOK,
+					expectedMagicNumber,
+					nil,
+					consts.IngressWait,
+					consts.WaitTick,
+				)
 			}
 
-			t.Log("asserting /jpeg path returns JPEG image")
-			expectContentType("/jpeg", "image/jpeg")
-
-			t.Log("asserting /png path returns PNG image")
-			expectContentType("/png", "image/png")
+			expectContentType(jpegIngressPath, testconsts.JPEGMagicNumber)
+			expectContentType(pngIngressPath, testconsts.PNGMagicNumber)
 
 			return ctx
 		}).

@@ -8,6 +8,8 @@ metadata:
   name: grpcbin-via-https
   labels:
     app: grpcbin-via-https
+  annotations:
+    konghq.com/protocol: grpcs
 spec:
   ports:
   - name: grpc

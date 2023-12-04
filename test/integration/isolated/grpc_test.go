@@ -44,7 +44,8 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		Assess("deploying Gateway and example GRPC service exposed via GRPCRoute", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTPS", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+			// On purpose omit protocol annotation to test defaulting to "grpcs" that is preserved to not break users' configs.
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -83,17 +84,22 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 			t.Log("deploying a new gateway")
 			gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Spec.Listeners = builder.NewListener("https").
-					HTTPS().
-					WithPort(ktfkong.DefaultProxyTLSServicePort).
-					WithHostname(testHostname).
-					WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-						CertificateRefs: []gatewayapi.SecretObjectReference{
-							{
-								Name: gatewayapi.ObjectName(secret.Name),
+				// Besides default HTTP listener, add a HTTPS listener.
+				gw.Spec.Listeners = append(
+					gw.Spec.Listeners,
+					builder.NewListener("https").
+						HTTPS().
+						WithPort(ktfkong.DefaultProxyTLSServicePort).
+						WithHostname(testHostname).
+						WithTLSConfig(&gatewayapi.GatewayTLSConfig{
+							CertificateRefs: []gatewayapi.SecretObjectReference{
+								{
+									Name: gatewayapi.ObjectName(secret.Name),
+								},
 							},
-						},
-					}).IntoSlice()
+						}).
+						Build(),
+				)
 			})
 			assert.NoError(t, err)
 			cleaner.Add(gateway)

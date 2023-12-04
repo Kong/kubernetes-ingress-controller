@@ -2,6 +2,7 @@ package subtranslator
 
 import (
 	"errors"
+	"sort"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -1361,7 +1362,16 @@ func TestTranslateIngress(t *testing.T) {
 						Namespace: corev1.NamespaceDefault,
 						PortDef:   PortDefFromPortNumber(8080),
 					}},
-					Parent: expectedParentIngress(),
+					Parent: &incubatorv1alpha1.KongServiceFacade{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "svc-facade",
+							Namespace: "default",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+							APIVersion: incubatorv1alpha1.GroupVersion.String(),
+						},
+					},
 				},
 			},
 		},
@@ -1520,7 +1530,16 @@ func TestTranslateIngress(t *testing.T) {
 						Namespace: corev1.NamespaceDefault,
 						PortDef:   PortDefFromPortNumber(8080),
 					}},
-					Parent: expectedParentIngress(),
+					Parent: &incubatorv1alpha1.KongServiceFacade{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "svc-facade",
+							Namespace: corev1.NamespaceDefault,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+							APIVersion: incubatorv1alpha1.GroupVersion.String(),
+						},
+					},
 				},
 			},
 		},
@@ -1541,7 +1560,7 @@ func TestTranslateIngress(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(store.FakeObjects{
 				KongServiceFacades: tt.kongServiceFacades,
 			}))
-			diff := cmp.Diff(tt.expected, TranslateIngresses(
+			translatedServices := TranslateIngresses(
 				tt.ingresses,
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
@@ -1551,7 +1570,17 @@ func TestTranslateIngress(t *testing.T) {
 				noopObjectsCollector{},
 				failuresCollector,
 				storer,
-			), checkOnlyObjectMeta)
+			)
+
+			// Sort routes to make the test deterministic. Not doing this in the code itself as the deterministic
+			// order is not required on this level of translation and that would be an unnecessary performance hit.
+			for _, service := range translatedServices {
+				sort.Slice(service.Routes, func(i, j int) bool {
+					return *service.Routes[i].Route.Name > *service.Routes[j].Route.Name
+				})
+			}
+
+			diff := cmp.Diff(tt.expected, translatedServices, checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

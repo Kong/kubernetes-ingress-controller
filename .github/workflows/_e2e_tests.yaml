@@ -125,6 +125,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       # We need to pull the Gateway image locally if loading local image was specified.
       # This is a "workaround" of the fact that we bind the env variable - responsible for
@@ -192,6 +193,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: check availability of KIC image
         id: check_kic_image
@@ -288,6 +290,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: run Istio tests
         run: make test.istio

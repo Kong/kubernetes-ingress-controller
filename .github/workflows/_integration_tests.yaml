@@ -95,6 +95,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: Set image of Kong
         id: set_kong_image

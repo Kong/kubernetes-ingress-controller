@@ -328,7 +328,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 		}).
 		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			proxyURL := GetProxyURLFromCtx(ctx)
-			expectContentType := func(path, expectedMagicNumber string) {
+			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)
 				helpers.EventuallyGETPath(
 					t,
@@ -343,8 +343,8 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 				)
 			}
 
-			expectContentType(jpegIngressPath, testconsts.JPEGMagicNumber)
-			expectContentType(pngIngressPath, testconsts.PNGMagicNumber)
+			expectContent(jpegIngressPath, testconsts.JPEGMagicNumber)
+			expectContent(pngIngressPath, testconsts.PNGMagicNumber)
 
 			return ctx
 		}).

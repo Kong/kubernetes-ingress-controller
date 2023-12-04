@@ -20,6 +20,31 @@ import (
 )
 
 func TestGRPCRouteExample(t *testing.T) {
+	testGRPC := func(ctx context.Context, t *testing.T, manifestName string, gatewayPort int, hostname string, enableTLS bool) {
+		cluster := GetClusterFromCtx(ctx)
+		proxyURL := GetProxyURLFromCtx(ctx)
+		manifestPath := manifestPath(manifestName)
+		t.Logf("applying yaml manifest %s", manifestPath)
+		b, err := os.ReadFile(manifestPath)
+		assert.NoError(t, err)
+		manifest := string(b)
+		assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
+
+		t.Log("verifying that GRPCRoute becomes routable")
+		assert.Eventually(t, func() bool {
+			if err := grpcEchoResponds(
+				ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), gatewayPort), hostname, "kong", enableTLS,
+			); err != nil {
+				t.Log(err)
+				return false
+			}
+			return true
+		}, consts.IngressWait, consts.WaitTick)
+
+		t.Logf("deleting yaml manifest %s", manifestPath)
+		assert.NoError(t, clusters.DeleteManifestByYAML(ctx, cluster, manifest))
+	}
+
 	f := features.
 		New("example").
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
@@ -32,36 +57,14 @@ func TestGRPCRouteExample(t *testing.T) {
 			}),
 		)).
 		Assess("deploying to cluster works and deployed GRPC via HTTP responds", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-			testGRPC(ctx, t, manifestPath("gateway-grpcroute-via-http.yaml"), ktfkong.DefaultProxyHTTPPort, false)
+			testGRPC(ctx, t, "gateway-grpcroute-via-http.yaml", ktfkong.DefaultProxyHTTPPort, "example-grpc-via-http.com", false)
 			return ctx
 		}).
 		Assess("deploying to cluster works and deployed GRPC via HTTPS responds", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-			testGRPC(ctx, t, manifestPath("gateway-grpcroute-via-https.yaml"), ktfkong.DefaultProxyTLSServicePort, true)
+			testGRPC(ctx, t, "gateway-grpcroute-via-https.yaml", ktfkong.DefaultProxyTLSServicePort, "example.com", true)
 			return ctx
 		}).
 		Teardown(featureTeardown())
 
 	tenv.Test(t, f.Feature())
-}
-
-func testGRPC(ctx context.Context, t *testing.T, manifestPath string, gatewayPort int, enableTLS bool) {
-	cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
-	cluster := GetClusterFromCtx(ctx)
-	proxyURL := GetProxyURLFromCtx(ctx)
-	t.Logf("applying yaml manifest %s", manifestPath)
-	b, err := os.ReadFile(manifestPath)
-	assert.NoError(t, err)
-	assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, string(b)))
-	cleaner.AddManifest(string(b))
-
-	t.Log("verifying that GRPCRoute becomes routable")
-	assert.Eventually(t, func() bool {
-		if err := grpcEchoResponds(
-			ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), gatewayPort), "example.com", "kong", enableTLS,
-		); err != nil {
-			t.Log(err)
-			return false
-		}
-		return true
-	}, consts.IngressWait, consts.WaitTick)
 }

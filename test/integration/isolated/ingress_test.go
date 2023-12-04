@@ -159,7 +159,7 @@ func TestIngressGRPC(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("checking whether Ingress status is updated and gRPC traffic over HTTPS is properly routed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("checking whether Ingress status is updated and gRPC traffic is properly routed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			t.Log("waiting for updated ingress status to include IP")
 			assert.Eventually(t, func() bool {
 				cluster := GetClusterFromCtx(ctx)

@@ -8,6 +8,8 @@ metadata:
   name: grpcbin-via-http
   labels:
     app: grpcbin-via-http
+  annotations:
+    konghq.com/protocol: grpc
 spec:
   ports:
   - name: grpc
@@ -64,7 +66,7 @@ spec:
   parentRefs:
   - name: kong
   hostnames:
-  - "example.com"
+  - example-grpc-via-http.com
   rules:
   - backendRefs:
     - name: grpcbin-via-http

@@ -57,10 +57,10 @@ func (b *IngressBuilder) WithNamespace(namespace string) *IngressBuilder {
 func (b *IngressBuilder) WithAnnotations(annotations map[string]string) *IngressBuilder {
 	if b.ingress.Annotations == nil {
 		b.ingress.Annotations = annotations
-	} else {
-		for k, v := range annotations {
-			b.ingress.Annotations[k] = v
-		}
+		return b
+	}
+	for k, v := range annotations {
+		b.ingress.Annotations[k] = v
 	}
 	return b
 }

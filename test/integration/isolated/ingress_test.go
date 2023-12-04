@@ -240,7 +240,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 						Annotations: map[string]string{
 							annotations.IngressClassKey: ingressClass,
 							// We'll use this annotation to test that modifications are allowed on KongServiceFacade
-							// level. This should make Kong Service created from this KongServiceFacade to always
+							// level. This should make Kong Service created from this KongServiceFacade always
 							// return a JPEG image.
 							annotations.AnnotationPrefix + annotations.PathKey: "/image/jpeg",
 						},
@@ -257,7 +257,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 						Name: "httpbin-facade-png",
 						Annotations: map[string]string{
 							// We'll use this annotation to test that modifications are allowed on KongServiceFacade
-							// level. This should make Kong Service created from this KongServiceFacade to always
+							// level. This should make Kong Service created from this KongServiceFacade always
 							// return a PNG image.
 							annotations.AnnotationPrefix + annotations.PathKey: "/image/png",
 							annotations.IngressClassKey:                        ingressClass,

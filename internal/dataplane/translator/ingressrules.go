@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 type ingressRules struct {
@@ -50,7 +51,12 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 // populateServices populates the ServiceNameToServices map with additional information
 // and returns a map of services to be skipped.
-func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
+func (ir *ingressRules) populateServices(
+	logger logr.Logger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+	translatedObjectsCollector *ObjectsCollector,
+) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 
 	// populate Kubernetes Service
@@ -66,6 +72,7 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 			s,
 			service.Namespace,
 			service.Backends,
+			translatedObjectsCollector,
 			failuresCollector,
 			serviceParent,
 		)
@@ -268,6 +275,7 @@ func getK8sServicesForBackends(
 	storer store.Storer,
 	namespace string,
 	backends kongstate.ServiceBackends,
+	translatedObjectsCollector *ObjectsCollector,
 	failuresCollector *failures.ResourceFailuresCollector,
 	parent client.Object,
 ) ([]*corev1.Service, map[string]string) {
@@ -279,7 +287,7 @@ func getK8sServicesForBackends(
 	// retreieve that backend and capture any Kong annotations its using.
 	k8sServices := make([]*corev1.Service, 0, len(backends))
 	for _, backend := range backends {
-		k8sService, err := resolveKubernetesServiceForBackend(storer, namespace, backend)
+		k8sService, err := resolveKubernetesServiceForBackend(storer, namespace, backend, translatedObjectsCollector)
 		if err != nil {
 			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to resolve Kubernetes Service for backend: %s", err), parent)
 			continue
@@ -300,7 +308,12 @@ func getK8sServicesForBackends(
 	return k8sServices, seenAnnotationsForK8sServices
 }
 
-func resolveKubernetesServiceForBackend(storer store.Storer, ingressNamespace string, backend kongstate.ServiceBackend) (*corev1.Service, error) {
+func resolveKubernetesServiceForBackend(
+	storer store.Storer,
+	ingressNamespace string,
+	backend kongstate.ServiceBackend,
+	translatedObjectsCollector *ObjectsCollector,
+) (*corev1.Service, error) {
 	backendNamespace := ingressNamespace
 	if backend.Namespace != "" {
 		backendNamespace = backend.Namespace
@@ -309,14 +322,13 @@ func resolveKubernetesServiceForBackend(storer store.Storer, ingressNamespace st
 
 	// In case of KongServiceFacade, we need to fetch it to determine the Kubernetes Service backing it.
 	// We also want to use its annotations as they override the annotations of the Kubernetes Service.
-	var serviceFacadeAnnotations map[string]string
+	var svcFacade *incubatorv1alpha1.KongServiceFacade
 	if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
-		svcFacade, err := storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+		var err error
+		svcFacade, err = storer.GetKongServiceFacade(backend.Namespace, backend.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch KongServiceFacade %s/%s: %w", backend.Namespace, backend.Name, err)
 		}
-		serviceFacadeAnnotations = svcFacade.Annotations
-
 		// Use the Kubernetes Service backing the KongServiceFacade.
 		k8sServiceName = svcFacade.Spec.Backend.Name
 	}
@@ -326,17 +338,22 @@ func resolveKubernetesServiceForBackend(storer store.Storer, ingressNamespace st
 		return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backendNamespace, k8sServiceName, err)
 	}
 
-	// Merge the annotations from the KongServiceFacade with the annotations from the Service.
-	// KongServiceFacade overrides the Service annotations if they have the same key.
 	// We make a copy of the Kubernetes Service to avoid mutating the cache (the k8sService we
 	// get from the storer is a pointer).
 	k8sService = k8sService.DeepCopy()
 
-	for k, v := range serviceFacadeAnnotations {
-		if k8sService.Annotations == nil {
-			k8sService.Annotations = make(map[string]string)
+	if svcFacade != nil {
+		// After KongServiceFacade's backing Service is fetched successfully, we can consider it a translated object.
+		translatedObjectsCollector.Add(svcFacade)
+
+		// Merge the annotations from the KongServiceFacade with the annotations from the Service.
+		// KongServiceFacade overrides the Service annotations if they have the same key.
+		for k, v := range svcFacade.GetAnnotations() {
+			if k8sService.Annotations == nil {
+				k8sService.Annotations = make(map[string]string)
+			}
+			k8sService.Annotations[k] = v
 		}
-		k8sService.Annotations[k] = v
 	}
 
 	return k8sService, nil

@@ -11,7 +11,6 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -200,9 +199,10 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 			return ingressTranslationMetaBackend{}, fmt.Errorf("failed to get KongServiceFacade %q: %w", resource.Name, err)
 		}
 		return ingressTranslationMetaBackend{
-			backendType: ingressPathBackendTypeKongServiceFacade,
-			name:        resource.Name,
-			port:        PortDefFromPortNumber(serviceFacade.Spec.Backend.Port),
+			backendType:             ingressPathBackendTypeKongServiceFacade,
+			name:                    resource.Name,
+			port:                    PortDefFromPortNumber(serviceFacade.Spec.Backend.Port),
+			parentKongServiceFacade: serviceFacade,
 		}, nil
 	}
 
@@ -270,6 +270,9 @@ type ingressTranslationMetaBackend struct {
 
 	// port is the port of the backend.
 	port kongstate.PortDef
+
+	// parentKongServiceFacade is the parent KongServiceFacade object if the backend is a KongServiceFacade. Otherwise, it's nil.
+	parentKongServiceFacade *incubatorv1alpha1.KongServiceFacade
 }
 
 // intoKongRouteName constructs a Kong Route name for the ingressTranslationMeta object.
@@ -309,16 +312,7 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				Namespace: m.parentIngress.GetNamespace(),
 				PortDef:   portDef,
 			}},
-			Parent: &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: m.parentIngress.GetNamespace(),
-					Name:      m.backend.name,
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       incubatorv1alpha1.KongServiceFacadeKind,
-					APIVersion: incubatorv1alpha1.GroupVersion.String(),
-				},
-			},
+			Parent: m.backend.parentKongServiceFacade,
 		}
 	}
 

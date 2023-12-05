@@ -5,7 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/conditions"
@@ -37,6 +41,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		WithHealthProbePort(healthProbePort),
 		WithPublishService(ns.Name),
 		WithPublishStatusAddress("http://localhost:8080"),
+		WithKongServiceFacadeFeatureEnabled(),
 	)
 
 	testCases := []struct {
@@ -129,6 +134,137 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			},
 			expectedProgrammedStatus: metav1.ConditionTrue,
 			expectedProgrammedReason: kongv1.ReasonProgrammed,
+		},
+		{
+			name: "valid KongServiceFacade with Ingress",
+			objects: []client.Object{
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-facade",
+						Namespace: ns.Name,
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "svc",
+							Port: 80,
+						},
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc",
+						Namespace: ns.Name,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Port: 80,
+							},
+						},
+					},
+				},
+				&netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ingress",
+						Namespace: ns.Name,
+					},
+					Spec: netv1.IngressSpec{
+						IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+						Rules: []netv1.IngressRule{{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{{
+										Path:     "/",
+										PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+												Name:     "svc-facade",
+											},
+										},
+									}},
+								},
+							},
+						}},
+					},
+				},
+			},
+			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+				var serviceFacade incubatorv1alpha1.KongServiceFacade
+				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+					Name:      "svc-facade",
+					Namespace: ns.Name,
+				}, &serviceFacade)
+				if err != nil {
+					return nil, err
+				}
+				return serviceFacade.Status.Conditions, nil
+			},
+			expectedProgrammedStatus: metav1.ConditionTrue,
+			expectedProgrammedReason: kongv1.ReasonProgrammed,
+		},
+		{
+			name: "KongServiceFacade with Ingress referring to non-existent Service",
+			objects: []client.Object{
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-facade-with-non-existent-service",
+						Namespace: ns.Name,
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "non-existent-service",
+							Port: 80,
+						},
+					},
+				},
+				&netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ingress",
+						Namespace: ns.Name,
+					},
+					Spec: netv1.IngressSpec{
+						IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+						Rules: []netv1.IngressRule{{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{{
+										Path:     "/",
+										PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+												Name:     "svc-facade-with-non-existent-service",
+											},
+										},
+									}},
+								},
+							},
+						}},
+					},
+				},
+			},
+			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+				var serviceFacade incubatorv1alpha1.KongServiceFacade
+				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+					Name:      "svc-facade-with-non-existent-service",
+					Namespace: ns.Name,
+				}, &serviceFacade)
+				if err != nil {
+					return nil, err
+				}
+				return serviceFacade.Status.Conditions, nil
+			},
+			expectedProgrammedStatus: metav1.ConditionFalse,
+			expectedProgrammedReason: kongv1.ReasonInvalid,
 		},
 		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4578
 		// if there are multiple KIC instances within a cluster, they will fight over setting this condition because the

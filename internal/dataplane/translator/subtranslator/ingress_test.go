@@ -1548,10 +1548,17 @@ func TestTranslateIngress(t *testing.T) {
 	for _, tt := range tts {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
+			checkOnlyIngressMeta := cmp.Transformer("checkOnlyIngressMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.
 				// We ignore specification to simplify tests.
 				return &netv1.Ingress{
+					ObjectMeta: i.ObjectMeta,
+				}
+			})
+			checkOnlyKongServiceFacadeMeta := cmp.Transformer("checkOnlyKongServiceFacadeMeta", func(i *incubatorv1alpha1.KongServiceFacade) *incubatorv1alpha1.KongServiceFacade {
+				// In the result we only care about KongServiceFacades' metadata being equal.
+				// We ignore specification to simplify tests.
+				return &incubatorv1alpha1.KongServiceFacade{
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
@@ -1580,7 +1587,7 @@ func TestTranslateIngress(t *testing.T) {
 				})
 			}
 
-			diff := cmp.Diff(tt.expected, translatedServices, checkOnlyObjectMeta)
+			diff := cmp.Diff(tt.expected, translatedServices, checkOnlyIngressMeta, checkOnlyKongServiceFacadeMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

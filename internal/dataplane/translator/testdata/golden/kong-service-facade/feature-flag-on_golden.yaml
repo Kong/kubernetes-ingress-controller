@@ -47,10 +47,11 @@ services:
     - k8s-group:networking.k8s.io
     - k8s-version:v1
   tags:
-  - k8s-name:svc
+  - k8s-name:svc-facade-default
   - k8s-namespace:default
-  - k8s-kind:Service
-  - k8s-version:v1
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.konghq.com
+  - k8s-version:v1alpha1
   write_timeout: 60000
 - connect_timeout: 60000
   host: default.svc-facade-beta.svc.facade
@@ -130,10 +131,11 @@ upstreams:
 - algorithm: round-robin
   name: default.svc-facade-default.svc.facade
   tags:
-  - k8s-name:svc
+  - k8s-name:svc-facade-default
   - k8s-namespace:default
-  - k8s-kind:Service
-  - k8s-version:v1
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.konghq.com
+  - k8s-version:v1alpha1
   targets:
   - target: 10.244.0.5:80
 - algorithm: round-robin

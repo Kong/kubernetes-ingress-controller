@@ -132,7 +132,7 @@ func translateIngressDefaultBackendResource(
 		if resource.APIGroup != nil {
 			gk = *resource.APIGroup + "/" + gk
 		}
-		failuresCollector.PushResourceFailure(fmt.Sprintf("default backend: unknown resource type %s", gk), &ingress)
+		failuresCollector.PushResourceFailure(fmt.Sprintf("default backend: unsupported resource type %s", gk), &ingress)
 		return kongstate.Service{}, false
 	}
 	if !features.KongServiceFacade {
@@ -162,6 +162,8 @@ func translateIngressDefaultBackendResource(
 			ReadTimeout:    kong.Int(DefaultServiceTimeout),
 			WriteTimeout:   kong.Int(DefaultServiceTimeout),
 			Retries:        kong.Int(DefaultRetries),
+			// We do not populate Service's Tags field here because it would get overridden anyway later in the
+			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
 		Namespace: ingress.Namespace,
 		Backends: []kongstate.ServiceBackend{{
@@ -199,7 +201,8 @@ func translateIngressDefaultBackendService(ingress netv1.Ingress, route *kongsta
 			ReadTimeout:    kong.Int(DefaultServiceTimeout),
 			WriteTimeout:   kong.Int(DefaultServiceTimeout),
 			Retries:        kong.Int(DefaultRetries),
-			Tags:           util.GenerateTagsForObject(&ingress),
+			// We do not populate Service's Tags field here because it would get overridden anyway later in the
+			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
 		Namespace: ingress.Namespace,
 		Backends: []kongstate.ServiceBackend{{

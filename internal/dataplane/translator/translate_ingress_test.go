@@ -339,7 +339,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 				},
 			}},
 			expectedHaveBackendService: false,
-			expectedFailures:           []string{"default backend: unknown resource type unknown.group.com/UnknownKind"},
+			expectedFailures:           []string{"default backend: unsupported resource type unknown.group.com/UnknownKind"},
 		},
 	}
 

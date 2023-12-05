@@ -115,6 +115,8 @@ Adding a new version? You'll need three changes:
   [#5267](https://github.com/Kong/kubernetes-ingress-controller/pull/5267)
   [#5275](https://github.com/Kong/kubernetes-ingress-controller/pull/5275)
   [#5283](https://github.com/Kong/kubernetes-ingress-controller/pull/5283)
+- Restore the diagnostics server functionality, which was accidentally disabled.
+  [#5270](https://github.com/Kong/kubernetes-ingress-controller/pull/5270)
 
 ### Changed
 

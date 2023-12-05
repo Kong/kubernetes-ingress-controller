@@ -21,7 +21,7 @@ import (
 func TestExampleUDPRoute(t *testing.T) {
 	t.Parallel()
 
-	udpRouteExampleManifests := manifestPath("gateway-udproute.yaml")
+	udpRouteExampleManifests := examplesManifestPath("gateway-udproute.yaml")
 
 	f := features.
 		New("example").

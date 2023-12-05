@@ -24,6 +24,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -321,7 +322,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 
 	t.Log("restart the controller")
 	deployments.RestartController(ctx, t, env)
-	waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), namespace, controllerDeploymentName)
 
 	t.Log("scale proxy to 3 replicas and verify that the new replica gets the old good configuration")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)

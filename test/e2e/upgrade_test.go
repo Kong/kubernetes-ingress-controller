@@ -129,7 +129,7 @@ func testManifestsUpgrade(
 			variableName:  "CONTROLLER_FEATURE_GATES",
 			value:         featureGates,
 		}))
-		waitForDeploymentRollout(ctx, t, env, deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
+		helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
 	}
 
 	t.Log("creating new ingress with new path /echo-new")

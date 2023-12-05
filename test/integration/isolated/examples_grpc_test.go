@@ -23,7 +23,7 @@ func TestGRPCRouteExample(t *testing.T) {
 	testGRPC := func(ctx context.Context, t *testing.T, manifestName string, gatewayPort int, hostname string, enableTLS bool) {
 		cluster := GetClusterFromCtx(ctx)
 		proxyURL := GetProxyURLFromCtx(ctx)
-		manifestPath := manifestPath(manifestName)
+		manifestPath := examplesManifestPath(manifestName)
 		t.Logf("applying yaml manifest %s", manifestPath)
 		b, err := os.ReadFile(manifestPath)
 		assert.NoError(t, err)

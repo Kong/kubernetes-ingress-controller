@@ -283,8 +283,8 @@ func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.
 	t.Log("waiting for controller to be ready")
 	deployments := getManifestDeployments(d.Path)
 
-	waitForDeploymentRollout(ctx, t, env, deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
-	waitForDeploymentRollout(ctx, t, env, deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
 
 	return deployments
 }
@@ -310,52 +310,6 @@ func (d ManifestDeploy) Delete(ctx context.Context, t *testing.T, env environmen
 	cmd.Stdin = manifest
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
-}
-
-func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environments.Environment, namespace, name string) {
-	require.Eventuallyf(t, func() bool {
-		deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		if err := allUpdatedReplicasRolledOutAndReady(deployment); err != nil {
-			t.Logf("%s/%s deployment not ready: %s", namespace, name, err)
-			return false
-		}
-
-		return true
-	}, kongComponentWait, time.Second, "deployment %s/%s didn't roll out in time", namespace, name)
-}
-
-// allUpdatedReplicasRolledOutAndReady ensures that all updated replicas are rolled out and ready. It is to make sure
-// that the deployment rollout is finished and all the new replicas are ready to serve traffic before we proceed with
-// the test. It returns an error with a reason if the deployment is not ready yet.
-func allUpdatedReplicasRolledOutAndReady(d *appsv1.Deployment) error {
-	if newReplicasRolledOut := d.Spec.Replicas != nil && d.Status.UpdatedReplicas < *d.Spec.Replicas; newReplicasRolledOut {
-		return fmt.Errorf(
-			"%d out of %d new replicas have been updated",
-			d.Status.UpdatedReplicas,
-			*d.Spec.Replicas,
-		)
-	}
-
-	if oldReplicasPendingTermination := d.Status.Replicas > d.Status.UpdatedReplicas; oldReplicasPendingTermination {
-		return fmt.Errorf(
-			"%d old replicas pending termination",
-			d.Status.Replicas-d.Status.UpdatedReplicas,
-		)
-	}
-
-	if rolloutFinished := d.Status.AvailableReplicas == d.Status.UpdatedReplicas; !rolloutFinished {
-		return fmt.Errorf(
-			"%d of %d updated replicas are available",
-			d.Status.AvailableReplicas,
-			d.Status.UpdatedReplicas,
-		)
-	}
-
-	return nil
 }
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.
@@ -919,6 +873,6 @@ func (d Deployments) Restart(ctx context.Context, t *testing.T, env environments
 	})
 	require.NoError(t, err, "failed to delete proxy pods")
 
-	waitForDeploymentRollout(ctx, t, env, d.ControllerNN.Namespace, d.ControllerNN.Name)
-	waitForDeploymentRollout(ctx, t, env, d.ProxyNN.Namespace, d.ProxyNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), d.ControllerNN.Namespace, d.ControllerNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), d.ProxyNN.Namespace, d.ProxyNN.Name)
 }

@@ -168,3 +168,89 @@ services: if two HTTPRoute rules use both serviceA and serviceB in their
 backendRefs, KIC will generate a single Kong service with endpoints from both
 serviceA and serviceB, named for the first rule and match indices with that
 combination of Services.
+
+## Using KongServiceFacade
+
+In KIC 3.1.0 we introduced a new feature called `KongServiceFacade`. Currently, we only
+support `KongServiceFacade` to be used as a backend for `netv1.Ingress`es.
+If you find this might be useful to you in other contexts (e.g. Gateway API's `HTTPRoute`s),
+please let us know in the [#5216](https://github.com/Kong/kubernetes-ingress-controller/issues/5216)
+issue tracking this effort.
+
+### Installation
+
+`KongServiceFacade` feature is currently in `Alpha` maturity and is disabled by default.
+To start using it, you must not only enable the feature gate (`KongServiceFacade=true`),
+but also install the `KongServiceFacade` CRD which is distributed in a separate
+package we named `incubator`. You can install it by running:
+
+```shell
+kubectl apply -k github.com/Kong/kubernetes-ingress-controller/main/config/crd/incubator?ref=main
+```
+
+### Usage
+
+Once the CRD is installed and the feature gate is set to `true`, you can start using it by creating
+`KongServiceFacade` objects and use them as your `netv1.Ingress` backends. For example, to create
+a `KongServiceFacade` that points to a service named `my-service` in the `default` namespace and uses
+its port number `80`, you can run:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  name: my-service-facade
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+spec:
+  backendRef:
+    name: my-service
+    port: 80
+EOF
+```
+
+For a complete CRD reference please see the [incubator-crd-reference] document. 
+
+To use the `KongServiceFacade` as a backend for your `netv1.Ingress`, you can create an `Ingress`
+like the following:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  namespace: default
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      - path: /my-service
+        pathType: Prefix
+        backend:
+          resource:
+            apiGroup: incubator.ingress-controller.konghq.com
+            kind: KongServiceFacade
+            name: my-service-facade
+EOF
+```
+
+Please note the `KongServiceFacade` must be in the same namespace as the `Ingress` that uses it.
+
+An advantage of using `KongServiceFacade` over plain `corev1.Service`s is that you can create multiple
+`KongServiceFacade`s that point to the same `Service` and KIC will always generate one Kong Service per each
+`KongServiceFacade`. That enables you to, e.g., use different `KongPlugin`s for each `KongServiceFacade`
+while still pointing to the same Kubernetes `Service`. A single `KongServiceFacade` may be used in multiple
+`Ingress`es and customization done through the `KongServiceFacade`'s annotations will be honored in all of them
+on a single Kong Service level (no need to duplicate annotations in multiple `Ingress`es).
+
+For a complete example of using `KongServiceFacade` for customizing `Service` authentication methods, please
+refer to the [kong-service-facade.yaml] manifest in our examples.
+
+[incubator-crd-reference]: ./docs/incubator-api-reference.md
+[kong-service-facade.yaml]: ./examples/kong-service-facade.yaml

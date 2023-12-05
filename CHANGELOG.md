@@ -100,6 +100,7 @@ Adding a new version? You'll need three changes:
   [#5234](https://github.com/Kong/kubernetes-ingress-controller/pull/5234)
   [#5290](https://github.com/Kong/kubernetes-ingress-controller/pull/5290)
   [#5282](https://github.com/Kong/kubernetes-ingress-controller/pull/5282)
+  [#5298](https://github.com/Kong/kubernetes-ingress-controller/pull/5298)
   [#5302](https://github.com/Kong/kubernetes-ingress-controller/pull/5302)
 - Added support for GRPC over HTTP (without TLS) in Gateway API.
   [#5128](https://github.com/Kong/kubernetes-ingress-controller/pull/5128)

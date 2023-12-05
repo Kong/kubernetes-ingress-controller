@@ -364,7 +364,16 @@ func TestTranslateIngressATC(t *testing.T) {
 						Namespace: corev1.NamespaceDefault,
 						PortDef:   PortDefFromPortNumber(8080),
 					}},
-					Parent: expectedParentIngress(),
+					Parent: &incubatorv1alpha1.KongServiceFacade{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "svc-facade",
+							Namespace: corev1.NamespaceDefault,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+							APIVersion: incubatorv1alpha1.GroupVersion.String(),
+						},
+					},
 				},
 			},
 		},

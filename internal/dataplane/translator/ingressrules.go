@@ -96,37 +96,54 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 				}
 			}
 		}
-		if len(k8sServices) > 1 {
-			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
-				service.Tags = util.GenerateTagsForObject(parent)
-			} else {
-				logger.Error(nil, "Multi-service backend lacks parent info, cannot generate tags",
-					"service", *service.Name)
-			}
-		} else if len(k8sServices) > 0 {
-			service.Tags = util.GenerateTagsForObject(k8sServices[0])
-		} else {
-			// this tag generation code runs _before_ we would discard routes that are invalid because their backend
-			// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
-			// the translator should discard this invalid route later, but this adds a placeholder value in case it doesn't.
-			// if you encounter an actual config where a service has these tags, something strange has happened.
-			logger.V(util.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
-				"service", *service.Name)
-			service.Tags = kong.StringSlice(
-				util.K8sNameTagPrefix+"UNKNOWN",
-				util.K8sNamespaceTagPrefix+"UNKNOWN",
-				util.K8sKindTagPrefix+"Service",
-				util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
-				util.K8sGroupTagPrefix+"core",
-				util.K8sVersionTagPrefix+"v1",
-			)
-		}
+		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
 
 		// Kubernetes Services have been populated for this Kong Service, so it can
 		// now be cached.
 		ir.ServiceNameToServices[key] = service
 	}
 	return serviceNamesToSkip
+}
+
+func (ir *ingressRules) generateKongServiceTags(
+	k8sServices []*corev1.Service,
+	service kongstate.Service,
+	logger logr.Logger,
+) []*string {
+	// For multi-backend Services we expect ServiceNameToParent to be populated.
+	if len(k8sServices) > 1 {
+		if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
+			return util.GenerateTagsForObject(parent)
+		}
+		logger.Error(nil, "Multi-service backend lacks parent info, cannot generate tags",
+			"service", *service.Name)
+		return nil
+	}
+
+	// For single-backend Services we ...
+	if len(k8sServices) == 1 {
+		// ... either use the parent object of the Service when its backend is a KongServiceFacade ...
+		if len(service.Backends) == 1 && service.Backends[0].Type == kongstate.ServiceBackendTypeKongServiceFacade {
+			return util.GenerateTagsForObject(service.Parent)
+		}
+		// ... or use the backing Kubernetes Service.
+		return util.GenerateTagsForObject(k8sServices[0])
+	}
+
+	// This tag generation code runs _before_ we would discard routes that are invalid because their backend
+	// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
+	// The translator should discard this invalid route later, but this adds a placeholder value in case it doesn't.
+	// If you encounter an actual config where a service has these tags, something strange has happened.
+	logger.V(util.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
+		"service", *service.Name)
+	return kong.StringSlice(
+		util.K8sNameTagPrefix+"UNKNOWN",
+		util.K8sNamespaceTagPrefix+"UNKNOWN",
+		util.K8sKindTagPrefix+"Service",
+		util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
+		util.K8sGroupTagPrefix+"core",
+		util.K8sVersionTagPrefix+"v1",
+	)
 }
 
 type SecretNameToSNIs struct {

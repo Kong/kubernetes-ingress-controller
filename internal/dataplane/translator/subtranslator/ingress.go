@@ -11,6 +11,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -307,7 +308,16 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				Namespace: m.parentIngress.GetNamespace(),
 				PortDef:   portDef,
 			}},
-			Parent: m.parentIngress,
+			Parent: &incubatorv1alpha1.KongServiceFacade{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: m.parentIngress.GetNamespace(),
+					Name:      m.backend.name,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+					APIVersion: incubatorv1alpha1.GroupVersion.String(),
+				},
+			},
 		}
 	}
 

@@ -314,6 +314,10 @@ func TestTranslateIngressATC(t *testing.T) {
 						Name:      "svc-facade",
 						Namespace: "default",
 					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+						APIVersion: incubatorv1alpha1.GroupVersion.String(),
+					},
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 							Name: "svc",
@@ -426,14 +430,21 @@ func TestTranslateIngressATC(t *testing.T) {
 				failuresCollector,
 				storer,
 			)
-			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
+			checkOnlyIngressMeta := cmp.Transformer("checkOnlyIngressMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.
 				// We ignore specification to simplify tests.
 				return &netv1.Ingress{
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
-			diff := cmp.Diff(tc.expectedServices, services, checkOnlyObjectMeta)
+			checkOnlyKongServiceFacadeMeta := cmp.Transformer("checkOnlyKongServiceFacadeMeta", func(i *incubatorv1alpha1.KongServiceFacade) *incubatorv1alpha1.KongServiceFacade {
+				// In the result we only care about KongServiceFacades' metadata being equal.
+				// We ignore specification to simplify tests.
+				return &incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: i.ObjectMeta,
+				}
+			})
+			diff := cmp.Diff(tc.expectedServices, services, checkOnlyIngressMeta, checkOnlyKongServiceFacadeMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

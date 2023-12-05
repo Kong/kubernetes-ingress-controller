@@ -153,7 +153,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 
 	// populate any Kubernetes Service objects relevant objects and get the
 	// services to be skipped because of annotations inconsistency
-	servicesToBeSkipped := ingressRules.populateServices(t.logger, t.storer, t.failuresCollector)
+	servicesToBeSkipped := ingressRules.populateServices(t.logger, t.storer, t.failuresCollector, t.translatedObjectsCollector)
 
 	// add the routes and services to the state
 	var result kongstate.KongState

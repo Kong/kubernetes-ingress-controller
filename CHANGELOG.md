@@ -98,6 +98,7 @@ Adding a new version? You'll need three changes:
   When installed, it has to be enabled with `ServiceFacade` feature gate.
   [#5220](https://github.com/Kong/kubernetes-ingress-controller/pull/5220)
   [#5234](https://github.com/Kong/kubernetes-ingress-controller/pull/5234)
+  [#5290](https://github.com/Kong/kubernetes-ingress-controller/pull/5290)
   [#5282](https://github.com/Kong/kubernetes-ingress-controller/pull/5282)
 - Added support for GRPC over HTTP (without TLS) in Gateway API.
   [#5128](https://github.com/Kong/kubernetes-ingress-controller/pull/5128)

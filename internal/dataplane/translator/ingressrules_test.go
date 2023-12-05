@@ -348,8 +348,9 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			require.NoError(t, err)
 
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			translatedObjectsCollector := NewObjectsCollector()
 
-			services, annotations := getK8sServicesForBackends(storer, tt.namespace, tt.backends, failuresCollector, parent)
+			services, annotations := getK8sServicesForBackends(storer, tt.namespace, tt.backends, translatedObjectsCollector, failuresCollector, parent)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
 			var collectedFailures []string
@@ -657,7 +658,8 @@ func TestPopulateServices(t *testing.T) {
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
 			logger := zapr.NewLogger(zap.NewNop())
 			failuresCollector := failures.NewResourceFailuresCollector(logger)
-			servicesToBeSkipped := ingressRules.populateServices(logger, fakeStore, failuresCollector)
+			translatedObjectsCollector := NewObjectsCollector()
+			servicesToBeSkipped := ingressRules.populateServices(logger, fakeStore, failuresCollector, translatedObjectsCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
 		})
 	}
@@ -675,12 +677,13 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                string
-		storerObjects       store.FakeObjects
-		backend             kongstate.ServiceBackend
-		ingressNamespace    string
-		expectedService     *corev1.Service
-		expectErrorContains string
+		name                      string
+		storerObjects             store.FakeObjects
+		backend                   kongstate.ServiceBackend
+		ingressNamespace          string
+		expectedService           *corev1.Service
+		expectErrorContains       string
+		expectedTranslatedObjects []client.Object
 	}{
 		{
 			name: "backend is an existing service",
@@ -738,6 +741,14 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				"facade":  "facade-from-facade",
 				"service": "service-from-service",
 			}),
+			expectedTranslatedObjects: []client.Object{
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+					},
+				},
+			},
 		},
 		{
 			name: "backend is an existing KongServiceFacade with no annotations",
@@ -771,6 +782,14 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				"common": "common-from-facade",
 				"facade": "facade-from-facade",
 			}),
+			expectedTranslatedObjects: []client.Object{
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+					},
+				},
+			},
 		},
 		{
 			name: "backend is an existing KongServiceFacade referring not existing Service",
@@ -816,13 +835,21 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore := lo.Must(store.NewFakeStore(tc.storerObjects))
-			service, err := resolveKubernetesServiceForBackend(fakeStore, tc.ingressNamespace, tc.backend)
+			translatedObjectsCollector := NewObjectsCollector()
+			service, err := resolveKubernetesServiceForBackend(fakeStore, tc.ingressNamespace, tc.backend, translatedObjectsCollector)
 			if tc.expectErrorContains != "" {
 				require.ErrorContains(t, err, tc.expectErrorContains)
 				return
 			}
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedService, service)
+			gotTranslatedObjects := translatedObjectsCollector.Pop()
+			for _, expectedObject := range tc.expectedTranslatedObjects {
+				require.True(t, lo.ContainsBy(gotTranslatedObjects, func(obj client.Object) bool {
+					return obj.GetNamespace()+"/"+obj.GetName() ==
+						expectedObject.GetNamespace()+"/"+expectedObject.GetName()
+				}), "expected translated object not found in actual translated objects")
+			}
 		})
 	}
 }
@@ -865,7 +892,8 @@ func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
 		WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 		Build()
 
-	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, "test-namespace", backend)
+	translatedObjectsCollector := NewObjectsCollector()
+	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, "test-namespace", backend, translatedObjectsCollector)
 	require.NoError(t, err)
 	require.Equal(t, svcCopy, svc, "service stored in cache should not be modified")
 	require.Equal(t, resolvedService.Annotations, map[string]string{

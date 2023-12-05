@@ -141,6 +141,12 @@ func WithUpdateStatus() func(cfg *manager.Config) {
 	}
 }
 
+func WithKongServiceFacadeFeatureEnabled() func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.FeatureGates[featuregates.KongServiceFacade] = true
+	}
+}
+
 // AdminAPIOptFns wraps a variadic list of mocks.AdminAPIHandlerOpt and returns
 // a slice containing all of them.
 // The purpose of this is func is to make the call sites a bit less verbose.

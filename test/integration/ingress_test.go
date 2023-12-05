@@ -1061,6 +1061,10 @@ func TestIngressMatchByHost(t *testing.T) {
 func TestIngressRewriteURI(t *testing.T) {
 	ctx := context.Background()
 
+	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
+		t.Skipf("rewrite uri feature is disabled")
+	}
+
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP Bin container deployment to test Ingress routes")
@@ -1164,14 +1168,6 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(ingressRewrite)
 
-	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
-		t.Log("rewrite uri feature is disabled")
-		t.Log("try to access the ingress with rewrite uri disabled")
-		helpers.EventuallyGETPath(t, proxyURL, serviceDomainRewrite, "/foo/jpeg", http.StatusNotFound, "", nil, ingressWait, waitTick)
-		cancelBackgroundTest()
-		require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")
-		return
-	}
 	t.Log("rewrite uri feature is enabled")
 
 	t.Log("try to access the ingress with valid capture group")

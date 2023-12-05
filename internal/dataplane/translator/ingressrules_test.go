@@ -3,6 +3,7 @@ package translator
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -252,7 +253,7 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 		services            []*corev1.Service
 		expectedServices    []*corev1.Service
 		expectedAnnotations map[string]string
-		expectedLogEntries  []string
+		expectedFailures    []string
 	}{
 		{
 			name:      "if all backends have a service then all services will be returned and their annotations recorded",
@@ -333,24 +334,29 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 				},
 			}},
 			expectedAnnotations: map[string]string{},
-			expectedLogEntries: []string{
-				"Failed to resolve Kubernetes Service for backend",
+			expectedFailures: []string{
+				"failed to resolve Kubernetes Service for backend: failed to fetch Service default/test-service2: Service default/test-service2 not found",
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			parent := &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{Name: "ingress", Namespace: tt.namespace},
+				TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+			}
 			storer, err := store.NewFakeStore(store.FakeObjects{Services: tt.services})
 			require.NoError(t, err)
 
-			core, logs := observer.New(zap.InfoLevel)
-			logger := zapr.NewLogger(zap.New(core))
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 
-			services, annotations := getK8sServicesForBackends(logger, storer, tt.namespace, tt.backends)
+			services, annotations := getK8sServicesForBackends(storer, tt.namespace, tt.backends, failuresCollector, parent)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
-			for i, expectedLogEntry := range tt.expectedLogEntries {
-				assert.Contains(t, logs.All()[i].Entry.Message, expectedLogEntry)
+			var collectedFailures []string
+			for _, failure := range failuresCollector.PopResourceFailures() {
+				collectedFailures = append(collectedFailures, failure.Message())
 			}
+			assert.Equal(t, tt.expectedFailures, collectedFailures)
 		})
 	}
 }

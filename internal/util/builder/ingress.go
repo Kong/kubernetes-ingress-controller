@@ -64,3 +64,8 @@ func (b *IngressBuilder) WithAnnotations(annotations map[string]string) *Ingress
 	}
 	return b
 }
+
+func (b *IngressBuilder) WithDefaultBackend(backend *netv1.IngressBackend) *IngressBuilder {
+	b.ingress.Spec.DefaultBackend = backend
+	return b
+}

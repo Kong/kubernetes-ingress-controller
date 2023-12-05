@@ -61,7 +61,14 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 
 		// collect all the Kubernetes services configured for the service backends,
 		// and all annotations with our prefix in use across all services (when applicable).
-		k8sServices, seenKongAnnotations := getK8sServicesForBackends(logger, s, service.Namespace, service.Backends)
+		serviceParent := ir.ServiceNameToParent[key]
+		k8sServices, seenKongAnnotations := getK8sServicesForBackends(
+			s,
+			service.Namespace,
+			service.Backends,
+			failuresCollector,
+			serviceParent,
+		)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
@@ -258,10 +265,11 @@ func (s SNIs) Hosts() []string {
 }
 
 func getK8sServicesForBackends(
-	log logr.Logger,
 	storer store.Storer,
 	namespace string,
 	backends kongstate.ServiceBackends,
+	failuresCollector *failures.ResourceFailuresCollector,
+	parent client.Object,
 ) ([]*corev1.Service, map[string]string) {
 	// we collect all annotations seen for this group of services so that these
 	// can be later validated.
@@ -273,7 +281,7 @@ func getK8sServicesForBackends(
 	for _, backend := range backends {
 		k8sService, err := resolveKubernetesServiceForBackend(storer, namespace, backend)
 		if err != nil {
-			log.Error(err, "Failed to resolve Kubernetes Service for backend")
+			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to resolve Kubernetes Service for backend: %s", err), parent)
 			continue
 		}
 		if k8sService != nil {

@@ -169,7 +169,7 @@ jobs:
       - name: Create KIND cluster
         uses: helm/kind-action@v1.5.0
         with:
-          node_image: kindest/node@${{ needs.dependencies-versions.outputs.kind }}
+          node_image: kindest/node:${{ needs.dependencies-versions.outputs.kind }}
           cluster_name: ktf-cluster-${{ matrix.name }}
 
       - name: Install Telepresence

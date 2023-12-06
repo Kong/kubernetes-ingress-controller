@@ -147,7 +147,6 @@ func Run(
 		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 	} else {
 		setupLog.Info("emit translation event disabled, discard all events")
-		// REVIEW: Use record.FakeRecorder to discard all events that is not primarily defined for this. Should we define a "no-op recorder" somewhere instead?
 		eventRecorder = &record.FakeRecorder{}
 	}
 

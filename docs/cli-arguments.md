@@ -18,6 +18,7 @@
 | `--dump-sensitive-config` | `bool` | Include credentials and TLS secrets in configs exposed with --dump-config flag. | `false` |
 | `--election-id` | `string` | Election id to use for status update. | `5b374a9e.konghq.com` |
 | `--election-namespace` | `string` | Leader election namespace to use when running outside a cluster. |  |
+| `--emit-translation-events` | `bool` | Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects. | `true` |
 | `--enable-controller-gwapi-gateway` | `bool` | Enable the Gateway API Gateway controller. | `true` |
 | `--enable-controller-gwapi-httproute` | `bool` | Enable the Gateway API HTTPRoute controller. | `true` |
 | `--enable-controller-gwapi-reference-grant` | `bool` | Enable the Gateway API ReferenceGrant controller. | `true` |

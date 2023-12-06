@@ -84,9 +84,10 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
-- Added `--emit-translation-events` CLI flag to disable the creation of events
+- Added `--emit-kubernetes-events` CLI flag to disable the creation of events
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
+  [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
 
 ## [2.12.2]
 

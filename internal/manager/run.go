@@ -140,11 +140,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
-	if c.EmitTranslationEvents {
-		setupLog.Info("Emit translation event enabled, create event recorder for " + KongClientEventRecorderComponentName)
+	if c.EmitKubernetesEvents {
+		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + KongClientEventRecorderComponentName)
 		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 	} else {
-		setupLog.Info("Emit translation event disabled, discard all events")
+		setupLog.Info("Emitting Kubernetes events disabled, discarding all events")
+		// Create an empty record.FakeRecorder with no Events channel to discard all events.
 		eventRecorder = &record.FakeRecorder{}
 	}
 

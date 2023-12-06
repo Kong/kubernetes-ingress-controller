@@ -143,10 +143,10 @@ func Run(
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
 	if c.EmitTranslationEvents {
-		setupLog.Info("emit translation event enabled, create event recorder for " + KongClientEventRecorderComponentName)
+		setupLog.Info("Emit translation event enabled, create event recorder for " + KongClientEventRecorderComponentName)
 		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 	} else {
-		setupLog.Info("emit translation event disabled, discard all events")
+		setupLog.Info("Emit translation event disabled, discard all events")
 		eventRecorder = &record.FakeRecorder{}
 	}
 

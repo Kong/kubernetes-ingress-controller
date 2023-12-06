@@ -178,6 +178,7 @@ jobs:
         uses: datawire/telepresence-actions/helm@v1.1.0
       - name: Telepresence connect
         uses: datawire/telepresence-actions/connect@v1.1.0
+        timeout-minutes: 5
 
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}

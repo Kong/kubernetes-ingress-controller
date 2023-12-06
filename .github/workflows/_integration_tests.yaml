@@ -166,6 +166,12 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Create KIND cluster
+        uses: helm/kind-action@v1.5.0
+        with:
+          node_image: kindest/node@${{ needs.dependencies-versions.outputs.kind }}
+          cluster_name: ktf-cluster-${{ matrix.name }}
+
       - name: Install Telepresence
         uses: datawire/telepresence-actions/install@v1.1.0
       - name: Install Traffic Manager
@@ -178,6 +184,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_TEST_CLUSTER: kind:ktf-cluster-${{ matrix.name }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
           JUNIT_REPORT: integration-tests-${{ matrix.name }}.xml
           # Use Github's "ternary operator" to fallback to default router flavor

@@ -173,9 +173,10 @@ jobs:
           cluster_name: ktf-cluster-${{ matrix.name }}
 
       - name: Install Telepresence
-        uses: datawire/telepresence-actions/install@v1.1.0
-        with:
-          version: v2.14.4
+        run: |
+          mkdir -p /opt/telepresence/bin/
+          curl -Lsvo /opt/telepresence/bin/telepresence https://app.getambassador.io/download/tel2oss/releases/download/v2.17.0/telepresence-linux-amd64
+          chmod a+x /opt/telepresence/bin/telepresence
       - name: Install Traffic Manager
         uses: datawire/telepresence-actions/helm@v1.1.0
       - name: Telepresence connect

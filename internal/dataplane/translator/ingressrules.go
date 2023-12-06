@@ -50,7 +50,12 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 // populateServices populates the ServiceNameToServices map with additional information
 // and returns a map of services to be skipped.
-func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
+func (ir *ingressRules) populateServices(
+	logger logr.Logger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+	translatedObjectsCollector *ObjectsCollector,
+) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 
 	// populate Kubernetes Service
@@ -61,7 +66,15 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 
 		// collect all the Kubernetes services configured for the service backends,
 		// and all annotations with our prefix in use across all services (when applicable).
-		k8sServices, seenKongAnnotations := getK8sServicesForBackends(logger, s, service.Namespace, service.Backends)
+		serviceParent := ir.ServiceNameToParent[key]
+		k8sServices, seenKongAnnotations := getK8sServicesForBackends(
+			s,
+			service.Namespace,
+			service.Backends,
+			translatedObjectsCollector,
+			failuresCollector,
+			serviceParent,
+		)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
@@ -96,37 +109,54 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 				}
 			}
 		}
-		if len(k8sServices) > 1 {
-			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
-				service.Tags = util.GenerateTagsForObject(parent)
-			} else {
-				logger.Error(nil, "Multi-service backend lacks parent info, cannot generate tags",
-					"service", *service.Name)
-			}
-		} else if len(k8sServices) > 0 {
-			service.Tags = util.GenerateTagsForObject(k8sServices[0])
-		} else {
-			// this tag generation code runs _before_ we would discard routes that are invalid because their backend
-			// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
-			// the translator should discard this invalid route later, but this adds a placeholder value in case it doesn't.
-			// if you encounter an actual config where a service has these tags, something strange has happened.
-			logger.V(util.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
-				"service", *service.Name)
-			service.Tags = kong.StringSlice(
-				util.K8sNameTagPrefix+"UNKNOWN",
-				util.K8sNamespaceTagPrefix+"UNKNOWN",
-				util.K8sKindTagPrefix+"Service",
-				util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
-				util.K8sGroupTagPrefix+"core",
-				util.K8sVersionTagPrefix+"v1",
-			)
-		}
+		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
 
 		// Kubernetes Services have been populated for this Kong Service, so it can
 		// now be cached.
 		ir.ServiceNameToServices[key] = service
 	}
 	return serviceNamesToSkip
+}
+
+func (ir *ingressRules) generateKongServiceTags(
+	k8sServices []*corev1.Service,
+	service kongstate.Service,
+	logger logr.Logger,
+) []*string {
+	// For multi-backend Services we expect ServiceNameToParent to be populated.
+	if len(k8sServices) > 1 {
+		if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
+			return util.GenerateTagsForObject(parent)
+		}
+		logger.Error(nil, "Multi-service backend lacks parent info, cannot generate tags",
+			"service", *service.Name)
+		return nil
+	}
+
+	// For single-backend Services we ...
+	if len(k8sServices) == 1 {
+		// ... either use the parent object of the Service when its backend is a KongServiceFacade ...
+		if len(service.Backends) == 1 && service.Backends[0].Type == kongstate.ServiceBackendTypeKongServiceFacade {
+			return util.GenerateTagsForObject(service.Parent)
+		}
+		// ... or use the backing Kubernetes Service.
+		return util.GenerateTagsForObject(k8sServices[0])
+	}
+
+	// This tag generation code runs _before_ we would discard routes that are invalid because their backend
+	// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
+	// The translator should discard this invalid route later, but this adds a placeholder value in case it doesn't.
+	// If you encounter an actual config where a service has these tags, something strange has happened.
+	logger.V(util.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
+		"service", *service.Name)
+	return kong.StringSlice(
+		util.K8sNameTagPrefix+"UNKNOWN",
+		util.K8sNamespaceTagPrefix+"UNKNOWN",
+		util.K8sKindTagPrefix+"Service",
+		util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
+		util.K8sGroupTagPrefix+"core",
+		util.K8sVersionTagPrefix+"v1",
+	)
 }
 
 type SecretNameToSNIs struct {
@@ -241,10 +271,12 @@ func (s SNIs) Hosts() []string {
 }
 
 func getK8sServicesForBackends(
-	log logr.Logger,
 	storer store.Storer,
 	namespace string,
 	backends kongstate.ServiceBackends,
+	translatedObjectsCollector *ObjectsCollector,
+	failuresCollector *failures.ResourceFailuresCollector,
+	parent client.Object,
 ) ([]*corev1.Service, map[string]string) {
 	// we collect all annotations seen for this group of services so that these
 	// can be later validated.
@@ -254,16 +286,9 @@ func getK8sServicesForBackends(
 	// retreieve that backend and capture any Kong annotations its using.
 	k8sServices := make([]*corev1.Service, 0, len(backends))
 	for _, backend := range backends {
-		backendNamespace := namespace
-		if backend.Namespace != "" {
-			backendNamespace = backend.Namespace
-		}
-		k8sService, err := storer.GetService(backendNamespace, backend.Name)
+		k8sService, err := resolveKubernetesServiceForBackend(storer, namespace, backend, translatedObjectsCollector)
 		if err != nil {
-			log.Error(err, "Failed to fetch service",
-				"service_name", backend.PortDef.Name,
-				"service_namespace", backendNamespace,
-			)
+			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to resolve Kubernetes Service for backend: %s", err), parent)
 			continue
 		}
 		if k8sService != nil {
@@ -280,6 +305,56 @@ func getK8sServicesForBackends(
 	}
 
 	return k8sServices, seenAnnotationsForK8sServices
+}
+
+func resolveKubernetesServiceForBackend(
+	storer store.Storer,
+	ingressNamespace string,
+	backend kongstate.ServiceBackend,
+	translatedObjectsCollector *ObjectsCollector,
+) (*corev1.Service, error) {
+	backendNamespace := ingressNamespace
+	if backend.Namespace != "" {
+		backendNamespace = backend.Namespace
+	}
+
+	// In case of KongServiceFacade, we need to fetch it to determine the Kubernetes Service backing it.
+	// We also want to use its annotations as they override the annotations of the Kubernetes Service.
+	if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
+		svcFacade, err := storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch KongServiceFacade %s/%s: %w", backend.Namespace, backend.Name, err)
+		}
+		k8sService, err := storer.GetService(backendNamespace, svcFacade.Spec.Backend.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backendNamespace, svcFacade.Spec.Backend.Name, err)
+		}
+
+		// Make a copy of the Kubernetes Service to avoid mutating the cache (the k8sService we
+		// get from the storer is a pointer).
+		k8sService = k8sService.DeepCopy()
+
+		// Merge the annotations from the KongServiceFacade with the annotations from the Service.
+		// KongServiceFacade overrides the Service annotations if they have the same key.
+		for k, v := range svcFacade.GetAnnotations() {
+			if k8sService.Annotations == nil {
+				k8sService.Annotations = make(map[string]string)
+			}
+			k8sService.Annotations[k] = v
+		}
+
+		// After KongServiceFacade's backing Service is fetched successfully, we can consider it a translated object.
+		translatedObjectsCollector.Add(svcFacade)
+
+		return k8sService, nil
+	}
+
+	// In case of Kubernetes Service, we just need to fetch it.
+	k8sService, err := storer.GetService(backendNamespace, backend.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backendNamespace, backend.Name, err)
+	}
+	return k8sService, nil
 }
 
 // collectInconsistentAnnotations takes a list of services and annotation+value pairs and confirms that all services

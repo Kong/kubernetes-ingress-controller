@@ -14,6 +14,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -140,7 +141,15 @@ func Run(
 	}
 
 	setupLog.Info("Initializing Dataplane Client")
-	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+	var eventRecorder record.EventRecorder
+	if c.EmitKubernetesEvents {
+		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + KongClientEventRecorderComponentName)
+		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+	} else {
+		setupLog.Info("Emitting Kubernetes events disabled, discarding all events")
+		// Create an empty record.FakeRecorder with no Events channel to discard all events.
+		eventRecorder = &record.FakeRecorder{}
+	}
 
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
@@ -165,19 +174,20 @@ func Run(
 		c.UpdateStatus,
 	)
 
-	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags); err != nil {
-		return err
-	}
-
 	cache := store.NewCacheStores()
+	storer := store.New(cache, c.IngressClassName, logger)
 	configTranslator, err := translator.NewTranslator(
 		logger,
-		store.New(cache, c.IngressClassName, logger),
+		storer,
 		translatorFeatureFlags,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
+	}
+
+	setupLog.Info("Starting Admission Server")
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
+		return err
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)

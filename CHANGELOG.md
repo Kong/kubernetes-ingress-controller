@@ -97,12 +97,19 @@ Adding a new version? You'll need three changes:
   It can be installed with `kubectl kustomize "github.com/Kong/kubernetes-ingress-controller/config/crd/incubator/?ref=v3.1.0"`
   When installed, it has to be enabled with `ServiceFacade` feature gate.
   [#5220](https://github.com/Kong/kubernetes-ingress-controller/pull/5220)
+  [#5234](https://github.com/Kong/kubernetes-ingress-controller/pull/5234)
+  [#5290](https://github.com/Kong/kubernetes-ingress-controller/pull/5290)
+  [#5282](https://github.com/Kong/kubernetes-ingress-controller/pull/5282)
 - Added support for GRPC over HTTP (without TLS) in Gateway API.
   [#5128](https://github.com/Kong/kubernetes-ingress-controller/pull/5128)
 - Added `-init-cache-sync-duration` CLI flag. This flag configures how long the controller waits for Kubernetes resources to populate at startup before generating the initial Kong configuration. It also fixes a bug that removed the default 5 second wait period.
   [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
+- Added `--emit-kubernetes-events` CLI flag to disable the creation of events
+  in translating and applying configurations to Kong.
+  [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
+  [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
 - Added support in Gateway Discovery for specifying that the Admin API should use HTTP via the appProtocol field on the admin port. 
-- [#5251](https://github.com/Kong/kubernetes-ingress-controller/pull/5251)
+  [#5251](https://github.com/Kong/kubernetes-ingress-controller/pull/5251)
 
 ### Fixed
 
@@ -111,6 +118,13 @@ Adding a new version? You'll need three changes:
   configuration. Instead, it will return `400` with message to tell the
   validation failures.
   [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
+- Fixed an issue that prevented the controller from associating admin API
+  errors with a GRPCRoute.
+  [#5267](https://github.com/Kong/kubernetes-ingress-controller/pull/5267)
+  [#5275](https://github.com/Kong/kubernetes-ingress-controller/pull/5275)
+  [#5283](https://github.com/Kong/kubernetes-ingress-controller/pull/5283)
+- Restore the diagnostics server functionality, which was accidentally disabled.
+  [#5270](https://github.com/Kong/kubernetes-ingress-controller/pull/5270)
 
 ### Changed
 

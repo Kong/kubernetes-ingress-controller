@@ -144,10 +144,11 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 	projectRoot := filepath.Join(filepath.Dir(thisFilePath), "..", "..")
 	// install Kong CRDs from config/crd/bases.
 	kongCRDPath := filepath.Join(projectRoot, "config", "crd", "bases")
+	kongIncubatorCRDPath := filepath.Join(projectRoot, "config", "crd", "incubator")
 	t.Logf("install Kong CRDs from manifests in %s", kongCRDPath)
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
-		Paths:              []string{kongCRDPath},
+		Paths:              []string{kongCRDPath, kongIncubatorCRDPath},
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err)

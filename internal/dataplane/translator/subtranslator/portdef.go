@@ -16,3 +16,7 @@ func PortDefFromServiceBackendPort(sbp *netv1.ServiceBackendPort) kongstate.Port
 		return kongstate.PortDef{Mode: kongstate.PortModeImplicit}
 	}
 }
+
+func PortDefFromPortNumber(port int32) kongstate.PortDef {
+	return kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: port}
+}

@@ -31,6 +31,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
@@ -2363,7 +2364,6 @@ func TestKongServiceAnnotations(t *testing.T) {
 }
 
 func TestDefaultBackend(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("default backend is processed correctly", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -2374,6 +2374,7 @@ func TestDefaultBackend(t *testing.T) {
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
+				TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
 				Spec: netv1.IngressSpec{
 					DefaultBackend: &netv1.IngressBackend{
 						Service: &netv1.IngressServiceBackend{
@@ -2393,6 +2394,14 @@ func TestDefaultBackend(t *testing.T) {
 					Name:      "default-svc",
 					Namespace: "default",
 				},
+				TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Port: 80,
+						},
+					},
+				},
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -2406,12 +2415,20 @@ func TestDefaultBackend(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
-		assert.Equal("default.default-svc.80", *state.Services[0].Name)
-		assert.Equal("default-svc.default.80.svc", *state.Services[0].Host)
-		assert.Equal(1, len(state.Services[0].Routes),
+		service := state.Services[0]
+		assert.Equal(t, "default.default-svc.80", *service.Name)
+		assert.Equal(t, "default-svc.default.80.svc", *service.Host)
+		assert.Equal(t, 1, len(service.Routes),
 			"expected one routes to be rendered")
-		assert.Equal("default.ing-with-default-backend", *state.Services[0].Routes[0].Name)
-		assert.Equal("/", *state.Services[0].Routes[0].Paths[0])
+		route := service.Routes[0]
+		assert.Equal(t, "default.ing-with-default-backend", *route.Name)
+		assert.Equal(t, "/", *route.Paths[0])
+		assert.ElementsMatch(t, []*string{
+			lo.ToPtr("k8s-name:default-svc"),
+			lo.ToPtr("k8s-namespace:default"),
+			lo.ToPtr("k8s-kind:Service"),
+			lo.ToPtr("k8s-version:v1"),
+		}, service.Tags, "tags are populated with Service as a parent")
 	})
 
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
@@ -2479,11 +2496,67 @@ func TestDefaultBackend(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(0, len(state.Certificates),
+		assert.Equal(t, 0, len(state.Certificates),
 			"expected no certificates to be rendered")
 
-		assert.Equal(1, len(state.Services))
-		assert.Nil(state.Services[0].ClientCertificate)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
+	})
+
+	t.Run("KongServiceFacade used as a backend", func(t *testing.T) {
+		storer := lo.Must(store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+				Spec: netv1.IngressSpec{
+					IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+					DefaultBackend: &netv1.IngressBackend{
+						Resource: &corev1.TypedLocalObjectReference{
+							APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+							Name:     "foo-facade",
+						},
+					},
+				},
+			}},
+			Services: []*corev1.Service{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+				},
+			}},
+			KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-facade",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{Kind: incubatorv1alpha1.KongServiceFacadeKind, APIVersion: incubatorv1alpha1.GroupVersion.String()},
+				Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+					Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+						Name: "foo-svc",
+						Port: 80,
+					},
+				},
+			}},
+		}))
+
+		translator := mustNewTranslator(t, storer)
+		translator.featureFlags.KongServiceFacade = true
+		result := translator.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		require.Len(t, result.KongState.Services, 1)
+		service := result.KongState.Services[0]
+		assert.Equal(t, "default.foo-facade.svc.facade", *service.Name)
+		assert.ElementsMatch(t, []*string{
+			lo.ToPtr("k8s-name:foo-facade"),
+			lo.ToPtr("k8s-namespace:default"),
+			lo.ToPtr("k8s-kind:KongServiceFacade"),
+			lo.ToPtr("k8s-group:incubator.konghq.com"),
+			lo.ToPtr("k8s-version:v1alpha1"),
+		}, service.Tags, "tags are populated with KongServiceFacade as a parent")
 	})
 }
 
@@ -4744,6 +4817,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 			// We'll assume these are true for all tests.
 			FillIDs:                           true,
 			ReportConfiguredKubernetesObjects: true,
+			KongServiceFacade:                 true,
 		},
 	)
 	require.NoError(t, err)

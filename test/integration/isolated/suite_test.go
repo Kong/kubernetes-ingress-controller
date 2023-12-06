@@ -243,7 +243,7 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			}
 
 			return ok
-		}, time.Minute, 100*time.Millisecond, "failed waiting for kong addon to become ready") {
+		}, time.Minute*3, 100*time.Millisecond, "failed waiting for kong addon to become ready") {
 			return ctx
 		}
 

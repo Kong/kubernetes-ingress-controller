@@ -3,6 +3,7 @@ package translator
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -19,6 +20,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 type testSNIs struct {
@@ -250,7 +253,7 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 		services            []*corev1.Service
 		expectedServices    []*corev1.Service
 		expectedAnnotations map[string]string
-		expectedLogEntries  []string
+		expectedFailures    []string
 	}{
 		{
 			name:      "if all backends have a service then all services will be returned and their annotations recorded",
@@ -331,24 +334,30 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 				},
 			}},
 			expectedAnnotations: map[string]string{},
-			expectedLogEntries: []string{
-				"Failed to fetch service",
+			expectedFailures: []string{
+				"failed to resolve Kubernetes Service for backend: failed to fetch Service default/test-service2: Service default/test-service2 not found",
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			parent := &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{Name: "ingress", Namespace: tt.namespace},
+				TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+			}
 			storer, err := store.NewFakeStore(store.FakeObjects{Services: tt.services})
 			require.NoError(t, err)
 
-			core, logs := observer.New(zap.InfoLevel)
-			logger := zapr.NewLogger(zap.New(core))
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			translatedObjectsCollector := NewObjectsCollector()
 
-			services, annotations := getK8sServicesForBackends(logger, storer, tt.namespace, tt.backends)
+			services, annotations := getK8sServicesForBackends(storer, tt.namespace, tt.backends, translatedObjectsCollector, failuresCollector, parent)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
-			for i, expectedLogEntry := range tt.expectedLogEntries {
-				assert.Contains(t, logs.All()[i].Entry.Message, expectedLogEntry)
+			var collectedFailures []string
+			for _, failure := range failuresCollector.PopResourceFailures() {
+				collectedFailures = append(collectedFailures, failure.Message())
 			}
+			assert.Equal(t, tt.expectedFailures, collectedFailures)
 		})
 	}
 }
@@ -649,8 +658,246 @@ func TestPopulateServices(t *testing.T) {
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
 			logger := zapr.NewLogger(zap.NewNop())
 			failuresCollector := failures.NewResourceFailuresCollector(logger)
-			servicesToBeSkipped := ingressRules.populateServices(logger, fakeStore, failuresCollector)
+			translatedObjectsCollector := NewObjectsCollector()
+			servicesToBeSkipped := ingressRules.populateServices(logger, fakeStore, failuresCollector, translatedObjectsCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
 		})
 	}
+}
+
+func TestResolveKubernetesServiceForBackend(t *testing.T) {
+	testService := func(annotations map[string]string) *corev1.Service {
+		return &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "test-service",
+				Namespace:   "test-namespace",
+				Annotations: annotations,
+			},
+		}
+	}
+
+	testCases := []struct {
+		name                      string
+		storerObjects             store.FakeObjects
+		backend                   kongstate.ServiceBackend
+		ingressNamespace          string
+		expectedService           *corev1.Service
+		expectErrorContains       string
+		expectedTranslatedObjects []client.Object
+	}{
+		{
+			name: "backend is an existing service",
+			storerObjects: store.FakeObjects{
+				Services: []*corev1.Service{testService(nil)},
+			},
+			backend: builder.NewKongstateServiceBackend("test-service").
+				WithNamespace("test-namespace").
+				WithPortNumber(80).
+				Build(),
+			expectedService: testService(nil),
+		},
+		{
+			name:          "backend is not an existing service",
+			storerObjects: store.FakeObjects{},
+			backend: builder.NewKongstateServiceBackend("test-service").
+				WithNamespace("test-namespace").
+				WithPortNumber(80).
+				Build(),
+			expectErrorContains: "Service test-namespace/test-service not found",
+		},
+		{
+			name: "backend is an existing KongServiceFacade with annotations",
+			storerObjects: store.FakeObjects{
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-service-facade",
+							Namespace: "test-namespace",
+							Annotations: map[string]string{
+								"common": "common-from-facade",
+								"facade": "facade-from-facade",
+							},
+						},
+						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+								Name: "test-service",
+								Port: 80,
+							},
+						},
+					},
+				},
+				Services: []*corev1.Service{testService(map[string]string{
+					"common":  "common-from-service",
+					"service": "service-from-service",
+				})},
+			},
+			backend: builder.NewKongstateServiceBackend("test-service-facade").
+				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+				WithNamespace("test-namespace").
+				WithPortNumber(80).
+				Build(),
+			expectedService: testService(map[string]string{
+				"common":  "common-from-facade",
+				"facade":  "facade-from-facade",
+				"service": "service-from-service",
+			}),
+			expectedTranslatedObjects: []client.Object{
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+		},
+		{
+			name: "backend is an existing KongServiceFacade with no annotations",
+			storerObjects: store.FakeObjects{
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-service-facade",
+							Namespace: "test-namespace",
+							Annotations: map[string]string{
+								"common": "common-from-facade",
+								"facade": "facade-from-facade",
+							},
+						},
+						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+								Name: "test-service",
+								Port: 80,
+							},
+						},
+					},
+				},
+				Services: []*corev1.Service{testService(nil)},
+			},
+			backend: builder.NewKongstateServiceBackend("test-service-facade").
+				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+				WithNamespace("test-namespace").
+				WithPortNumber(80).
+				Build(),
+			expectedService: testService(map[string]string{
+				"common": "common-from-facade",
+				"facade": "facade-from-facade",
+			}),
+			expectedTranslatedObjects: []client.Object{
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+		},
+		{
+			name: "backend is an existing KongServiceFacade referring not existing Service",
+			storerObjects: store.FakeObjects{
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-service-facade",
+							Namespace: "test-namespace",
+							Annotations: map[string]string{
+								"common": "common-from-facade",
+								"facade": "facade-from-facade",
+							},
+						},
+						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+								Name: "not-existing-service",
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+			backend: builder.NewKongstateServiceBackend("test-service-facade").
+				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+				WithNamespace("test-namespace").
+				WithPortNumber(80).
+				Build(),
+			expectErrorContains: "Service test-namespace/not-existing-service not found",
+		},
+		{
+			name:          "backend is not existing KongServiceFacade",
+			storerObjects: store.FakeObjects{},
+			backend: builder.NewKongstateServiceBackend("not-existing-service-facade").
+				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+				WithNamespace("test-namespace").
+				WithPortNumber(80).
+				Build(),
+			expectErrorContains: "KongServiceFacade test-namespace/not-existing-service-facade not found",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeStore := lo.Must(store.NewFakeStore(tc.storerObjects))
+			translatedObjectsCollector := NewObjectsCollector()
+			service, err := resolveKubernetesServiceForBackend(fakeStore, tc.ingressNamespace, tc.backend, translatedObjectsCollector)
+			if tc.expectErrorContains != "" {
+				require.ErrorContains(t, err, tc.expectErrorContains)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedService, service)
+			gotTranslatedObjects := translatedObjectsCollector.Pop()
+			for _, expectedObject := range tc.expectedTranslatedObjects {
+				require.True(t, lo.ContainsBy(gotTranslatedObjects, func(obj client.Object) bool {
+					return obj.GetNamespace()+"/"+obj.GetName() ==
+						expectedObject.GetNamespace()+"/"+expectedObject.GetName()
+				}), "expected translated object not found in actual translated objects")
+			}
+		})
+	}
+}
+
+func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				"service": "from-service",
+			},
+		},
+	}
+	// Preserve a copy to compare against later.
+	svcCopy := svc.DeepCopy()
+
+	kongServiceFacade := &incubatorv1alpha1.KongServiceFacade{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service-facade",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				"facade": "from-facade",
+			},
+		},
+		Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+			Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+				Name: "test-service",
+				Port: 80,
+			},
+		},
+	}
+	fakeStore := lo.Must(store.NewFakeStore(store.FakeObjects{
+		Services:           []*corev1.Service{svc},
+		KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{kongServiceFacade},
+	}))
+	backend := builder.NewKongstateServiceBackend("test-service-facade").
+		WithNamespace("test-namespace").
+		WithPortNumber(80).
+		WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+		Build()
+
+	translatedObjectsCollector := NewObjectsCollector()
+	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, "test-namespace", backend, translatedObjectsCollector)
+	require.NoError(t, err)
+	require.Equal(t, svcCopy, svc, "service stored in cache should not be modified")
+	require.Equal(t, resolvedService.Annotations, map[string]string{
+		"service": "from-service",
+		"facade":  "from-facade",
+	}, "annotations should be merged in the returned service")
 }

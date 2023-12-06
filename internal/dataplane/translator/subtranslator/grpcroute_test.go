@@ -93,6 +93,13 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						Headers: map[string][]string{
 							"X-Foo": {"Bar"},
 						},
+						Tags: kong.StringSlice(
+							"k8s-name:single-match",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
 					},
 				},
 			},
@@ -127,12 +134,19 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						Paths:     kong.StringSlice("~/service0/method0"),
 						Hosts:     kong.StringSlice("foo.com", "*.foo.com"),
 						Headers:   map[string][]string{},
+						Tags: kong.StringSlice(
+							"k8s-name:single-match-with-hostname",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
 					},
 				},
 			},
 		},
 		{
-			name:       "multuple matches without hostname",
+			name:       "multiple matches without hostname",
 			objectName: "multiple-matches",
 			rule: gatewayapi.GRPCRouteRule{
 				Matches: []gatewayapi.GRPCRouteMatch{
@@ -175,6 +189,13 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"Version": {"2"},
 							"Client":  {"kong-test"},
 						},
+						Tags: kong.StringSlice(
+							"k8s-name:multiple-matches",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
 					},
 				},
 				{
@@ -188,6 +209,13 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Paths:     kong.StringSlice("~/v[012]/.+"),
 						Headers:   map[string][]string{},
+						Tags: kong.StringSlice(
+							"k8s-name:multiple-matches",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
 					},
 				},
 			},
@@ -210,6 +238,13 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						Name:      kong.String("grpcroute.default.hostname-only.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Hosts:     kong.StringSlice("foo.com"),
+						Tags: kong.StringSlice(
+							"k8s-name:hostname-only",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
 					},
 				},
 			},

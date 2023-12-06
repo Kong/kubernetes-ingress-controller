@@ -118,7 +118,11 @@ func EventuallyGETPath(
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
 			require.True(t, n > 0)
-			return strings.Contains(b.String(), bodyContents)
+			if !strings.Contains(b.String(), bodyContents) {
+				t.Logf("WARNING: http response body does not contain expected contents: %s, actual: \n%s", bodyContents, b.String())
+				return false
+			}
+			return true
 		}
 		return false
 	}, waitDuration, waitTick)

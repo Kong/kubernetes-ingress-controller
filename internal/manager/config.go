@@ -85,6 +85,7 @@ type Config struct {
 	WatchNamespaces          []string
 	GatewayAPIControllerName string
 	Impersonate              string
+	EmitKubernetesEvents     bool
 
 	// Ingress status
 	PublishServiceUDP       OptionalNamespacedName
@@ -213,6 +214,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
 		`Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces.`)
+	flagSet.BoolVar(&c.EmitKubernetesEvents, "emit-kubernetes-events", true, `Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.`)
 
 	// Ingress status
 	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
@@ -266,6 +268,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/.", DiagnosticsPort))
 	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config.", DiagnosticsPort))
 	flagSet.BoolVar(&c.DumpSensitiveConfig, "dump-sensitive-config", false, "Include credentials and TLS secrets in configs exposed with --dump-config flag.")
+	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
+	_ = flagSet.MarkHidden("diagnostic-server-port")
 
 	// Feature Gates (see FEATURE_GATES.md).
 	flagSet.Var(cliflag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+

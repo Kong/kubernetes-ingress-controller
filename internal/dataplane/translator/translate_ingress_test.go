@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -14,9 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 func TestFromIngressV1(t *testing.T) {
@@ -153,13 +156,14 @@ func TestFromIngressV1(t *testing.T) {
 }
 
 func TestGetDefaultBackendService(t *testing.T) {
-	someIngress := func(creationTimestamp time.Time, serviceName string) netv1.Ingress {
+	ingressWithDefaultBackendService := func(creationTimestamp time.Time, serviceName string) netv1.Ingress {
 		return netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "foo",
 				Namespace:         "foo-namespace",
 				CreationTimestamp: metav1.NewTime(creationTimestamp),
 			},
+			TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: "networking.k8s.io/v1"},
 			Spec: netv1.IngressSpec{
 				DefaultBackend: &netv1.IngressBackend{
 					Service: &netv1.IngressServiceBackend{
@@ -170,40 +174,60 @@ func TestGetDefaultBackendService(t *testing.T) {
 			},
 		}
 	}
+	ingressWithDefaultBackendKongServiceFacade := func(creationTimestamp time.Time, serviceFacadeName string) netv1.Ingress {
+		return netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "foo",
+				Namespace:         "foo-namespace",
+				CreationTimestamp: metav1.NewTime(creationTimestamp),
+			},
+			TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: "networking.k8s.io/v1"},
+			Spec: netv1.IngressSpec{
+				DefaultBackend: &netv1.IngressBackend{
+					Resource: &corev1.TypedLocalObjectReference{
+						APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+						Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+						Name:     serviceFacadeName,
+					},
+					Service: &netv1.IngressServiceBackend{},
+				},
+			},
+		}
+	}
 
 	now := time.Now()
 	testCases := []struct {
 		name                       string
 		ingresses                  []netv1.Ingress
-		expressionRoutes           bool
+		featureFlags               FeatureFlags
+		storerObjects              store.FakeObjects
 		expectedHaveBackendService bool
+		expectedFailures           []string
 		expectedServiceName        string
 		expectedServiceHost        string
 	}{
 		{
 			name:                       "no ingresses",
 			ingresses:                  []netv1.Ingress{},
-			expressionRoutes:           false,
 			expectedHaveBackendService: false,
 		},
 		{
 			name:                       "no ingresses with expression routes",
 			ingresses:                  []netv1.Ingress{},
-			expressionRoutes:           true,
+			featureFlags:               FeatureFlags{ExpressionRoutes: true},
 			expectedHaveBackendService: false,
 		},
 		{
 			name:                       "one ingress with default backend",
-			ingresses:                  []netv1.Ingress{someIngress(now, "foo-svc")},
-			expressionRoutes:           false,
+			ingresses:                  []netv1.Ingress{ingressWithDefaultBackendService(now, "foo-svc")},
 			expectedHaveBackendService: true,
 			expectedServiceName:        "foo-namespace.foo-svc.80",
 			expectedServiceHost:        "foo-svc.foo-namespace.80.svc",
 		},
 		{
 			name:                       "one ingress with default backend and expression routes enabled",
-			ingresses:                  []netv1.Ingress{someIngress(now, "foo-svc")},
-			expressionRoutes:           true,
+			ingresses:                  []netv1.Ingress{ingressWithDefaultBackendService(now, "foo-svc")},
+			featureFlags:               FeatureFlags{ExpressionRoutes: true},
 			expectedHaveBackendService: true,
 			expectedServiceName:        "foo-namespace.foo-svc.80",
 			expectedServiceHost:        "foo-svc.foo-namespace.80.svc",
@@ -211,10 +235,9 @@ func TestGetDefaultBackendService(t *testing.T) {
 		{
 			name: "multiple ingresses with default backend",
 			ingresses: []netv1.Ingress{
-				someIngress(now.Add(time.Second), "newer"),
-				someIngress(now, "older"),
+				ingressWithDefaultBackendService(now.Add(time.Second), "newer"),
+				ingressWithDefaultBackendService(now, "older"),
 			},
-			expressionRoutes:           false,
 			expectedHaveBackendService: true,
 			expectedServiceName:        "foo-namespace.older.80",
 			expectedServiceHost:        "older.foo-namespace.80.svc",
@@ -222,27 +245,122 @@ func TestGetDefaultBackendService(t *testing.T) {
 		{
 			name: "multiple ingresses with default backend and expression routes enabled",
 			ingresses: []netv1.Ingress{
-				someIngress(now.Add(time.Second), "newer"),
-				someIngress(now, "older"),
+				ingressWithDefaultBackendService(now.Add(time.Second), "newer"),
+				ingressWithDefaultBackendService(now, "older"),
 			},
-			expressionRoutes:           true,
+			featureFlags:               FeatureFlags{ExpressionRoutes: true},
 			expectedHaveBackendService: true,
 			expectedServiceName:        "foo-namespace.older.80",
 			expectedServiceHost:        "older.foo-namespace.80.svc",
+		},
+		{
+			name: "ingress with default backend kong service facade",
+			ingresses: []netv1.Ingress{
+				ingressWithDefaultBackendKongServiceFacade(now, "foo-svc-facade"),
+			},
+			featureFlags: FeatureFlags{KongServiceFacade: true},
+			storerObjects: store.FakeObjects{
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc-facade",
+						Namespace: "foo-namespace",
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "foo-svc",
+							Port: 8080,
+						},
+					},
+				}},
+			},
+			expectedHaveBackendService: true,
+			expectedServiceName:        "foo-namespace.foo-svc-facade.svc.facade",
+			expectedServiceHost:        "foo-namespace.foo-svc-facade.svc.facade",
+		},
+		{
+			name: "ingress with default backend kong service facade and expression routes enabled",
+			ingresses: []netv1.Ingress{
+				ingressWithDefaultBackendKongServiceFacade(now, "foo-svc-facade"),
+			},
+			featureFlags: FeatureFlags{
+				KongServiceFacade: true,
+				ExpressionRoutes:  true,
+			},
+			storerObjects: store.FakeObjects{
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-svc-facade",
+						Namespace: "foo-namespace",
+					},
+					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+							Name: "foo-svc",
+							Port: 8080,
+						},
+					},
+				}},
+			},
+			expectedHaveBackendService: true,
+			expectedServiceName:        "foo-namespace.foo-svc-facade.svc.facade",
+			expectedServiceHost:        "foo-namespace.foo-svc-facade.svc.facade",
+		},
+		{
+			name: "ingress with default backend kong service facade and no feature flag enabled",
+			ingresses: []netv1.Ingress{
+				ingressWithDefaultBackendKongServiceFacade(now, "foo-svc-facade"),
+			},
+			expectedHaveBackendService: false,
+			expectedFailures:           []string{`default backend: KongServiceFacade is not enabled, please set the "KongServiceFacade" feature gate to 'true' to enable it`},
+		},
+		{
+			name: "ingress with default non existing backend kong service facade",
+			ingresses: []netv1.Ingress{
+				ingressWithDefaultBackendKongServiceFacade(now, "foo-svc-facade"),
+			},
+			featureFlags:               FeatureFlags{KongServiceFacade: true},
+			expectedHaveBackendService: false,
+			expectedFailures:           []string{`default backend: KongServiceFacade "foo-svc-facade" could not be fetched: KongServiceFacade foo-namespace/foo-svc-facade not found`},
+		},
+		{
+			name: "ingress with default backend resource unknown",
+			ingresses: []netv1.Ingress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "foo-namespace",
+				},
+				TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: "networking.k8s.io/v1"},
+				Spec: netv1.IngressSpec{
+					DefaultBackend: &netv1.IngressBackend{
+						Resource: &corev1.TypedLocalObjectReference{
+							APIGroup: lo.ToPtr("unknown.group.com"),
+							Kind:     "UnknownKind",
+						},
+					},
+				},
+			}},
+			expectedHaveBackendService: false,
+			expectedFailures:           []string{"default backend: unsupported resource type unknown.group.com/UnknownKind"},
 		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			svc, ok := getDefaultBackendService(tc.ingresses, tc.expressionRoutes)
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			svc, ok := getDefaultBackendService(storer, failuresCollector, tc.ingresses, tc.featureFlags)
 			require.Equal(t, tc.expectedHaveBackendService, ok)
+			var gotFailures []string
+			for _, failure := range failuresCollector.PopResourceFailures() {
+				gotFailures = append(gotFailures, failure.Message())
+			}
+			require.Equal(t, tc.expectedFailures, gotFailures)
 			if tc.expectedHaveBackendService {
 				require.Equal(t, tc.expectedServiceName, *svc.Name)
 				require.Equal(t, tc.expectedServiceHost, *svc.Host)
 				require.Len(t, svc.Routes, 1)
 				route := svc.Routes[0]
-				if tc.expressionRoutes {
+				if tc.featureFlags.ExpressionRoutes {
 					require.Equal(t, `(http.path ^= "/") && ((net.protocol == "http") || (net.protocol == "https"))`, *route.Expression)
 					require.Equal(t, subtranslator.IngressDefaultBackendPriority, *route.Priority)
 				} else {

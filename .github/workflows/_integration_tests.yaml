@@ -172,16 +172,13 @@ jobs:
           node_image: kindest/node:${{ needs.dependencies-versions.outputs.kind }}
           cluster_name: ktf-cluster-${{ matrix.name }}
 
-      - name: Install Telepresence
+      - name: Install and connect Telepresence
         run: |
           mkdir -p /opt/telepresence/bin/
           curl -Lsvo /opt/telepresence/bin/telepresence https://app.getambassador.io/download/tel2oss/releases/download/v2.17.0/telepresence-linux-amd64
           chmod a+x /opt/telepresence/bin/telepresence
-      - name: Install Traffic Manager
-        uses: datawire/telepresence-actions/helm@v1.1.0
-      - name: Telepresence connect
-        uses: datawire/telepresence-actions/connect@v1.1.0
-        timeout-minutes: 5
+          /opt/telepresence/bin/telepresence helm install
+          /opt/telepresence/bin/telepresence connect
 
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}

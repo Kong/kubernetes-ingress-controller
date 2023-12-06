@@ -2,7 +2,6 @@ package translator
 
 import (
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/zapr"
@@ -34,7 +33,6 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		expectedKongServices []kongstate.Service
 		// service name -> routes
 		expectedKongRoutes map[string][]kongstate.Route
-		expectedFailures   []failures.ResourceFailure
 	}{
 		{
 			name: "single GRPCRoute with multiple hostnames and multiple rules",
@@ -384,16 +382,6 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			expectedFailures: []failures.ResourceFailure{
-				newResourceFailure(t, subtranslator.ErrRouteValidationNoRules.Error(),
-					&gatewayapi.GRPCRoute{
-						TypeMeta: grpcRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "grpcroute-no-rules",
-						},
-					}),
-			},
 		},
 	}
 
@@ -427,15 +415,9 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					require.Equal(t, *expectedRoute.Expression, *r.Expression)
 				}
 			}
-			// check translation failures
+			// Check translation failures.
 			translationFailures := failureCollector.PopResourceFailures()
-			require.Equal(t, len(tc.expectedFailures), len(translationFailures))
-			for _, expectedTranslationFailure := range tc.expectedFailures {
-				expectedFailureMessage := expectedTranslationFailure.Message()
-				require.True(t, lo.ContainsBy(translationFailures, func(failure failures.ResourceFailure) bool {
-					return strings.Contains(failure.Message(), expectedFailureMessage)
-				}))
-			}
+			require.Empty(t, translationFailures)
 		})
 
 	}

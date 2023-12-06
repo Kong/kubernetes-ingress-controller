@@ -103,6 +103,7 @@ Adding a new version? You'll need three changes:
   [#5302](https://github.com/Kong/kubernetes-ingress-controller/pull/5302)
 - Added support for GRPC over HTTP (without TLS) in Gateway API.
   [#5128](https://github.com/Kong/kubernetes-ingress-controller/pull/5128)
+  [#5283](https://github.com/Kong/kubernetes-ingress-controller/pull/5283)
 - Added `-init-cache-sync-duration` CLI flag. This flag configures how long the controller waits for Kubernetes resources to populate at startup before generating the initial Kong configuration. It also fixes a bug that removed the default 5 second wait period.
   [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
 - Added `--emit-kubernetes-events` CLI flag to disable the creation of events
@@ -121,9 +122,11 @@ Adding a new version? You'll need three changes:
   errors with a GRPCRoute.
   [#5267](https://github.com/Kong/kubernetes-ingress-controller/pull/5267)
   [#5275](https://github.com/Kong/kubernetes-ingress-controller/pull/5275)
-  [#5283](https://github.com/Kong/kubernetes-ingress-controller/pull/5283)
 - Restore the diagnostics server functionality, which was accidentally disabled.
   [#5270](https://github.com/Kong/kubernetes-ingress-controller/pull/5270)
+- Allow configuring a GRPCRoute without hostnames and matches that catch all
+  requests.
+  [#5303](https://github.com/Kong/kubernetes-ingress-controller/pull/5303)
 
 ### Changed
 

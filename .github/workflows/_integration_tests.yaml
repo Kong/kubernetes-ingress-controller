@@ -166,6 +166,13 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install Telepresence
+        uses: datawire/telepresence-actions/install@v1.1.0
+      - name: Install Traffic Manager
+        uses: datawire/telepresence-actions/helm@v1.1.0
+      - name: Telepresence connect
+        uses: datawire/telepresence-actions/connect@v1.1.0
+
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}
         env:

@@ -66,7 +66,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: dependencies-versions
     env:
-      KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
       TEST_KONG_ROUTER_FLAVOR: 'expressions'
       TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
     strategy:

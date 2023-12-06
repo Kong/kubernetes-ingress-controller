@@ -7,6 +7,9 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.12.3](#2123)
+ - [2.12.2](#2122)
+ - [2.12.1](#2121)
  - [2.12.0](#2120)
  - [2.11.1](#2111)
  - [2.11.0](#2110)
@@ -75,7 +78,63 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## 2.12.0
+## [2.12.3]
+
+> Release date: TBD
+
+### Added
+
+- Added `--emit-translation-events` CLI flag to disable the creation of events
+  in translating and applying configurations to Kong.
+  [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
+
+## [2.12.2]
+
+> Release date: 2023-11-22
+
+### Fixed
+
+- Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
+  will no longer cause synchronization loop and random request failures due to incorrect routing.
+  [#5215](https://github.com/Kong/kubernetes-ingress-controller/pull/5215)
+- Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
+  [#5217](https://github.com/Kong/kubernetes-ingress-controller/pull/5217)
+
+### Known issues
+
+- **Only when combined routes are not enabled**, generated Kong routes may have conflicting names, that leads to
+  incorrect routing. In such case the descriptive error message is now provided. Use feature gate `CombinedRoutes=true`
+  or update Kong Kubernetes Ingress Controller version to 3.0.0 or above (both remediation changes naming schema of Kong routes).
+  [#5198](https://github.com/Kong/kubernetes-ingress-controller/issues/5198)
+
+## [2.12.1]
+
+> Release date: 2023-11-09
+
+### Fixed
+
+- Credentials Secrets that are not referenced by any KongConsumer but violate the KongConsumer
+  basic level validation (invalid credential type or missing required fields) are now rejected
+  by the admission webhook.
+  [#4887](https://github.com/Kong/kubernetes-ingress-controller/pull/4887)
+- Error logs emitted from Gateway Discovery readiness checker that should be
+  logged at `debug` level are now logged at that level.
+  [#5030](https://github.com/Kong/kubernetes-ingress-controller/pull/5030)
+- Fix `panic` when last known configuration fetcher gets a `nil` Status when requesting
+  `/status` from Kong Gateway.
+  This happens when Gateway is responding with a 50x HTTP status code.
+  [#5120](https://github.com/Kong/kubernetes-ingress-controller/pull/5120)
+- Use 46 bits in values of priorities of generated Kong routes when expression
+  rotuer is enabled to limit the priorities to be less than `1e14`. This
+  prevents them to be encoded into scientific notation when dumping
+  configurations from admin API that brings precision loss and type
+  inconsistency in decoding JSON/YAML data to `uint64`.
+  This change will limit number of `HTTPRoute`s that can be
+  deterministically sorted by their creation timestamps, names and internal
+  rule orders to `2^12=4096` and number of `GRPCRoutes` can be sorted to `2^8=256`.
+  [#5124](https://github.com/Kong/kubernetes-ingress-controller/pull/5124)
+
+## [2.12.0]
 
 > Release date: 2023-09-25
 

@@ -14,6 +14,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -140,7 +141,15 @@ func Run(
 	}
 
 	setupLog.Info("Initializing Dataplane Client")
-	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+	var eventRecorder record.EventRecorder
+	if c.EmitTranslationEvents {
+		setupLog.Info("emit translation event enabled, create event recorder for " + KongClientEventRecorderComponentName)
+		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+	} else {
+		setupLog.Info("emit translation event disabled, discard all events")
+		// REVIEW: Use record.FakeRecorder to discard all events that is not primarily defined for this. Should we define a "no-op recorder" somewhere instead?
+		eventRecorder = &record.FakeRecorder{}
+	}
 
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(

@@ -7,7 +7,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "incubator.konghq.com", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "incubator.ingress-controller.konghq.com", Version: "v1alpha1"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets.
 	SchemeGroupVersion = GroupVersion

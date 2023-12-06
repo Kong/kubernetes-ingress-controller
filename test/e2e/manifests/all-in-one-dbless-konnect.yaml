@@ -2279,7 +2279,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - incubator.konghq.com
+  - incubator.ingress-controller.konghq.com
   resources:
   - kongservicefacades
   verbs:
@@ -2287,7 +2287,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - incubator.konghq.com
+  - incubator.ingress-controller.konghq.com
   resources:
   - kongservicefacades/status
   verbs:

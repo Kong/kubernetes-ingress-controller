@@ -1845,7 +1845,7 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetupWithManager(mgr ctrl
 	if r.StatusQueue != nil {
 		if err := c.Watch(
 			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "incubator.konghq.com",
+				Group:   "incubator.ingress-controller.konghq.com",
 				Version: "v1alpha1",
 				Kind:    "KongServiceFacade",
 			})},
@@ -1898,8 +1898,8 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetLogger(l logr.Logger) 
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=incubator.konghq.com,resources=kongservicefacades,verbs=get;list;watch
-//+kubebuilder:rbac:groups=incubator.konghq.com,resources=kongservicefacades/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades,verbs=get;list;watch
+//+kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -1,4 +1,4 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- incubator.konghq.com_kongservicefacades.yaml
+- incubator.ingress-controller.konghq.com_kongservicefacades.yaml

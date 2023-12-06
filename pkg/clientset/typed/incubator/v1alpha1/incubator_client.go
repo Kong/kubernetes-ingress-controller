@@ -31,7 +31,7 @@ type IncubatorV1alpha1Interface interface {
 	KongServiceFacadesGetter
 }
 
-// IncubatorV1alpha1Client is used to interact with features provided by the incubator.konghq.com group.
+// IncubatorV1alpha1Client is used to interact with features provided by the incubator.ingress-controller.konghq.com group.
 type IncubatorV1alpha1Client struct {
 	restClient rest.Interface
 }

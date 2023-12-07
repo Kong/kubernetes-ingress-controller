@@ -16,6 +16,7 @@ type (
 	BackendObjectReference    = gatewayv1.BackendObjectReference
 	BackendRef                = gatewayv1.BackendRef
 	CommonRouteSpec           = gatewayv1.CommonRouteSpec
+	Duration                  = gatewayv1.Duration
 	Gateway                   = gatewayv1.Gateway
 	GatewayAddress            = gatewayv1.GatewayAddress
 	GatewayClass              = gatewayv1.GatewayClass
@@ -39,9 +40,11 @@ type (
 	HTTPRequestRedirectFilter = gatewayv1.HTTPRequestRedirectFilter
 	HTTPRoute                 = gatewayv1.HTTPRoute
 	HTTPRouteFilter           = gatewayv1.HTTPRouteFilter
+	HTTPRouteFilterType       = gatewayv1.HTTPRouteFilterType
 	HTTPRouteList             = gatewayv1.HTTPRouteList
 	HTTPRouteMatch            = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule             = gatewayv1.HTTPRouteRule
+	HTTPRouteTimeouts         = gatewayv1.HTTPRouteTimeouts
 	LocalObjectReference      = gatewayv1.LocalObjectReference
 	HTTPRouteSpec             = gatewayv1.HTTPRouteSpec
 	HTTPRouteStatus           = gatewayv1.HTTPRouteStatus

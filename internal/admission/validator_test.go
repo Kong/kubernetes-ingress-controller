@@ -23,6 +23,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	managerscheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
@@ -809,6 +810,186 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 			ok, msg := validator.ValidateCredential(context.Background(), tc.secret)
 			assert.Equal(t, tc.wantOK, ok)
 			assert.Equal(t, tc.wantMessage, msg)
+		})
+	}
+}
+
+func TestKongHTTPValidator_ValidateHTTPRoute(t *testing.T) {
+	testGatewayClass := &gatewayapi.GatewayClass{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: string(gatewayapi.V1Group) + "/" + gatewayapi.V1GroupVersion,
+			Kind:       "GatewayClass",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-validate-httproute",
+		},
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: "konghq.com/kic-gateway-controller",
+		},
+	}
+	testGateway := &gatewayapi.Gateway{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: string(gatewayapi.V1Group) + "/" + gatewayapi.V1GroupVersion,
+			Kind:       "Gateway",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-validate-httproute",
+		},
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName("test-validate-httproute"),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     gatewayapi.SectionName("http"),
+					Protocol: gatewayapi.HTTPProtocolType,
+					Port:     gatewayapi.PortNumber(80),
+				},
+			},
+		},
+	}
+	testGatewayNoClass := &gatewayapi.Gateway{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: string(gatewayapi.V1Group) + "/" + gatewayapi.V1GroupVersion,
+			Kind:       "Gateway",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-validate-httproute-no-gatewayclass",
+		},
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName("non-exist-gatewayclass"),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     gatewayapi.SectionName("http"),
+					Protocol: gatewayapi.HTTPProtocolType,
+					Port:     gatewayapi.PortNumber(80),
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name                string
+		httpRoute           *gatewayapi.HTTPRoute
+		wantOK              bool
+		wantMessageContains string
+		wantErrContains     string
+	}{
+		{
+			name: "HTTPRoute with non-exist gateway in parentRefs should not pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "unsupported-parent-ref-kind",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: "non-exist-gateway",
+							},
+						},
+					},
+				},
+			},
+			wantOK:              false,
+			wantMessageContains: "referenced gateway default/non-exist-gateway not found",
+		},
+		{
+			name: "HTTPRoute with gateway using non-exist gateway class should not pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "unsupported-parent-ref-kind",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: "test-validate-httproute-no-gatewayclass",
+							},
+						},
+					},
+				},
+			},
+			wantOK:              false,
+			wantMessageContains: "referenced gatewayclass non-exist-gatewayclass not found",
+		},
+		{
+			name: "HTTPRoute using unsupported filter should not pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "unsupported-filter",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: gatewayapi.ObjectName("test-validate-httproute"),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Filters: []gatewayapi.HTTPRouteFilter{
+								{
+									Type: gatewayapi.HTTPRouteFilterRequestMirror,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantOK:              false,
+			wantMessageContains: "rules[0].filters[0]: filter type RequestMirror is unsupported",
+		},
+		{
+			name: "HTTPRoute with valid parent references and rules should pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "valid-parentref-and-rules",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: gatewayapi.ObjectName("test-validate-httproute"),
+							},
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, testk8sclient.AddToScheme(scheme))
+			require.NoError(t, gatewayapi.InstallV1(scheme))
+			b := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(testGatewayClass, testGateway, testGatewayNoClass)
+
+			validator := KongHTTPValidator{
+				ManagerClient:            b.Build(),
+				AdminAPIServicesProvider: fakeServicesProvider{},
+				ingressClassMatcher:      fakeClassMatcher,
+				Logger:                   logr.Discard(),
+			}
+			ok, msg, err := validator.ValidateHTTPRoute(context.Background(), *tc.httpRoute)
+			assert.Equal(t, tc.wantOK, ok)
+			if tc.wantMessageContains != "" {
+				assert.Contains(t, msg, tc.wantMessageContains)
+			}
+			if tc.wantErrContains != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErrContains)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

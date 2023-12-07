@@ -117,6 +117,14 @@ Adding a new version? You'll need three changes:
    invalid confiugration of plugins for `KongPlugin`s or `KongClusterPlugin`s
    referencing to the secret.
    [#5203](https://github.com/Kong/kubernetes-ingress-controller/pull/5203)
+- Validate `HTTPRoute` in admission webhook and reject it if the spec uses 
+  the following features that we do not support:
+  - `parentRefs` other than `gatewayapi.networking.k8s.io/Gateway`
+  - using `timeouts` in rules
+  - `URLRewrite`, `RequestMirror` filters
+  - using filters in backendRefs of rules
+  [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
+
 
 ### Fixed
 

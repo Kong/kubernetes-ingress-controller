@@ -249,6 +249,34 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "single no hostnames, no matches",
+			objectName:  "catch-all",
+			annotations: map[string]string{},
+			rule:        gatewayapi.GRPCRouteRule{},
+			expectedRoutes: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:             "catch-all",
+						Namespace:        "default",
+						Annotations:      map[string]string{},
+						GroupVersionKind: grpcRouteGVK,
+					},
+					Route: kong.Route{
+						Name:      kong.String("grpcroute.default.catch-all.0.0"),
+						Protocols: kong.StringSlice("grpc", "grpcs"),
+						Tags: kong.StringSlice(
+							"k8s-name:catch-all",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1alpha2",
+						),
+						Paths: kong.StringSlice("/"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -257,6 +285,48 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule})
 			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0)
 			require.Equal(t, tc.expectedRoutes, routes)
+		})
+	}
+}
+
+func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
+	for _, tC := range []struct {
+		name      string
+		grpcroute *gatewayapi.GRPCRoute
+		expected  []*string
+	}{
+		{
+			name: "single hostname",
+			grpcroute: &gatewayapi.GRPCRoute{
+				Spec: gatewayapi.GRPCRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"example.com"},
+				},
+			},
+			expected: []*string{
+				lo.ToPtr("example.com"),
+			},
+		},
+		{
+			name: "multiple hostnames",
+			grpcroute: &gatewayapi.GRPCRoute{
+				Spec: gatewayapi.GRPCRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"example.com", "api.example.com"},
+				},
+			},
+			expected: []*string{
+				lo.ToPtr("example.com"),
+				lo.ToPtr("api.example.com"),
+			},
+		},
+		{
+			name:      "nil hostnames",
+			grpcroute: &gatewayapi.GRPCRoute{},
+			expected:  nil,
+		},
+	} {
+		t.Run(tC.name, func(t *testing.T) {
+			result := getGRPCRouteHostnamesAsSliceOfStringPointers(tC.grpcroute)
+			require.Equal(t, tC.expected, result)
 		})
 	}
 }

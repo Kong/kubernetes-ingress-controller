@@ -40,48 +40,54 @@ func GenerateKongRoutesFromGRPCRouteRule(
 	if ruleNumber >= len(grpcroute.Spec.Rules) {
 		return nil
 	}
-	rule := grpcroute.Spec.Rules[ruleNumber]
 
-	routes := make([]kongstate.Route, 0, len(rule.Matches))
-	// gather the k8s object information and hostnames from the grpcroute
+	routeName := func(namespace string, name string, ruleNumber int, matchNumber int) *string {
+		return kong.String(fmt.Sprintf(
+			"grpcroute.%s.%s.%d.%d",
+			namespace,
+			name,
+			ruleNumber,
+			matchNumber,
+		))
+	}
+
+	// Gather the K8s object information and hostnames from the GRPCRoute.
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 	tags := util.GenerateTagsForObject(grpcroute)
-
-	// generate a route to match hostnames only if there is no match in the rule.
+	grpcProtocols := kong.StringSlice("grpc", "grpcs")
+	rule := grpcroute.Spec.Rules[ruleNumber]
+	// Kong Route expects to have for gRPC, at least one of Hosts, Headers or Paths fields set.
+	// For no matches it can be a catch-all or route based on hostnames.
 	if len(rule.Matches) == 0 {
-		routeName := fmt.Sprintf(
-			"grpcroute.%s.%s.%d.0",
-			grpcroute.Namespace,
-			grpcroute.Name,
-			ruleNumber,
-		)
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name:      kong.String(routeName),
-				Protocols: kong.StringSlice("grpc", "grpcs"),
+				Name:      routeName(grpcroute.Namespace, grpcroute.Name, ruleNumber, 0),
+				Protocols: grpcProtocols,
 				Tags:      tags,
 			},
 		}
-		r.Hosts = getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute)
+		if configuredHostnames := getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute); len(configuredHostnames) > 0 {
+			// Match based on hostnames.
+			r.Hosts = configuredHostnames
+		} else {
+			// No hostnames configured, so this is a catch-all.
+			// https://docs.konghq.com/gateway/latest/production/configuring-a-grpc-service/#single-grpc-service-and-route
+			r.Paths = kong.StringSlice("/")
+		}
 		return []kongstate.Route{r}
 	}
 
+	// Rule matches are configured, hostname may be specified too.
+	routes := make([]kongstate.Route, 0, len(rule.Matches))
 	for matchNumber, match := range rule.Matches {
-		routeName := fmt.Sprintf(
-			"grpcroute.%s.%s.%d.%d",
-			grpcroute.Namespace,
-			grpcroute.Name,
-			ruleNumber,
-			matchNumber,
-		)
-
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name:      kong.String(routeName),
-				Protocols: kong.StringSlice("grpc", "grpcs"),
+				Name:      routeName(grpcroute.Namespace, grpcroute.Name, ruleNumber, matchNumber),
+				Protocols: grpcProtocols,
 				Tags:      tags,
+				Hosts:     getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute),
 			},
 		}
 
@@ -110,10 +116,6 @@ func GenerateKongRoutesFromGRPCRouteRule(
 			r.Paths = append(r.Paths, path)
 		}
 
-		if len(grpcroute.Spec.Hostnames) > 0 {
-			r.Hosts = getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute)
-		}
-
 		r.Headers = map[string][]string{}
 		for _, hmatch := range match.Headers {
 			name := string(hmatch.Name)
@@ -122,7 +124,6 @@ func GenerateKongRoutesFromGRPCRouteRule(
 
 		routes = append(routes, r)
 	}
-
 	return routes
 }
 
@@ -134,6 +135,9 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // in an GRPCRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute) []*string {
+	if len(grpcroute.Spec.Hostnames) == 0 {
+		return nil
+	}
 	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
 		return lo.ToPtr(string(h))
 	})

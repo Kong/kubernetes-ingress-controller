@@ -28,14 +28,14 @@ func (t *Translator) ingressRulesFromGRPCRoutes() ingressRules {
 	}
 
 	var errs []error
-	for _, grpcroute := range grpcRouteList {
-		if err := t.ingressRulesFromGRPCRoute(&result, grpcroute); err != nil {
-			err = fmt.Errorf("GRPCRoute %s/%s can't be routed: %w", grpcroute.Namespace, grpcroute.Name, err)
+	for _, grpcRoute := range grpcRouteList {
+		if err := t.ingressRulesFromGRPCRoute(&result, grpcRoute); err != nil {
+			err = fmt.Errorf("GRPCRoute %s/%s can't be routed: %w", grpcRoute.Namespace, grpcRoute.Name, err)
 			errs = append(errs, err)
 		} else {
 			// at this point the object has been configured and can be
 			// reported as successfully translated.
-			t.registerSuccessfullyTranslatedObject(grpcroute)
+			t.registerSuccessfullyTranslatedObject(grpcRoute)
 		}
 	}
 
@@ -47,10 +47,6 @@ func (t *Translator) ingressRulesFromGRPCRoutes() ingressRules {
 }
 
 func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gatewayapi.GRPCRoute) error {
-	// validate the grpcRoute before it gets translated
-	if err := validateGRPCRoute(grpcroute); err != nil {
-		return err
-	}
 	// first we grab the spec and gather some metadata about the object
 	spec := grpcroute.Spec
 
@@ -86,11 +82,6 @@ func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes 
 	// after they are translated, register the success event in the translator.
 	translatedGRPCRoutes := []*gatewayapi.GRPCRoute{}
 	for _, grpcRoute := range grpcRoutes {
-		// validate the GRPCRoute before it gets split by hostnames and matches.
-		if err := validateGRPCRoute(grpcRoute); err != nil {
-			t.registerTranslationFailure(err.Error(), grpcRoute)
-			continue
-		}
 		splitGRPCRouteMatches = append(splitGRPCRouteMatches, subtranslator.SplitGRPCRoute(grpcRoute)...)
 		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
 	}
@@ -152,13 +143,4 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
-}
-
-func validateGRPCRoute(grpcRoute *gatewayapi.GRPCRoute) error {
-	if len(grpcRoute.Spec.Hostnames) == 0 {
-		if len(grpcRoute.Spec.Rules) == 0 {
-			return subtranslator.ErrRouteValidationNoRules
-		}
-	}
-	return nil
 }

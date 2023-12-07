@@ -11,7 +11,7 @@ spec:
         paths:
           - backend:
               resource:
-                apiGroup: incubator.konghq.com
+                apiGroup: incubator.ingress-controller.konghq.com
                 kind: KongServiceFacade
                 name: svc-facade-alpha
             path: /alpha
@@ -29,14 +29,14 @@ spec:
         paths:
           - backend:
               resource:
-                apiGroup: incubator.konghq.com
+                apiGroup: incubator.ingress-controller.konghq.com
                 kind: KongServiceFacade
                 name: svc-facade-beta
             path: /beta
             pathType: Exact
   defaultBackend:
     resource:
-      apiGroup: incubator.konghq.com
+      apiGroup: incubator.ingress-controller.konghq.com
       kind: KongServiceFacade
       name: svc-facade-default
 ---
@@ -71,7 +71,7 @@ ports:
     port: 80
     protocol: TCP
 ---
-apiVersion: incubator.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
 kind: KongServiceFacade
 metadata:
   annotations:
@@ -84,7 +84,7 @@ spec:
     name: svc
     port: 80
 ---
-apiVersion: incubator.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
 kind: KongServiceFacade
 metadata:
   annotations:
@@ -97,7 +97,7 @@ spec:
     name: svc
     port: 80
 ---
-apiVersion: incubator.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
 kind: KongServiceFacade
 metadata:
   annotations:

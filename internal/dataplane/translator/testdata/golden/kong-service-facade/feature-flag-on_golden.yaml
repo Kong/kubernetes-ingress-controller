@@ -50,7 +50,7 @@ services:
   - k8s-name:svc-facade-default
   - k8s-namespace:default
   - k8s-kind:KongServiceFacade
-  - k8s-group:incubator.konghq.com
+  - k8s-group:incubator.ingress-controller.konghq.com
   - k8s-version:v1alpha1
   write_timeout: 60000
 - connect_timeout: 60000
@@ -87,7 +87,7 @@ services:
   - k8s-name:svc-facade-beta
   - k8s-namespace:default
   - k8s-kind:KongServiceFacade
-  - k8s-group:incubator.konghq.com
+  - k8s-group:incubator.ingress-controller.konghq.com
   - k8s-version:v1alpha1
   write_timeout: 60000
 - connect_timeout: 60000
@@ -124,7 +124,7 @@ services:
   - k8s-name:svc-facade-alpha
   - k8s-namespace:default
   - k8s-kind:KongServiceFacade
-  - k8s-group:incubator.konghq.com
+  - k8s-group:incubator.ingress-controller.konghq.com
   - k8s-version:v1alpha1
   write_timeout: 60000
 upstreams:
@@ -134,7 +134,7 @@ upstreams:
   - k8s-name:svc-facade-default
   - k8s-namespace:default
   - k8s-kind:KongServiceFacade
-  - k8s-group:incubator.konghq.com
+  - k8s-group:incubator.ingress-controller.konghq.com
   - k8s-version:v1alpha1
   targets:
   - target: 10.244.0.5:80
@@ -144,7 +144,7 @@ upstreams:
   - k8s-name:svc-facade-beta
   - k8s-namespace:default
   - k8s-kind:KongServiceFacade
-  - k8s-group:incubator.konghq.com
+  - k8s-group:incubator.ingress-controller.konghq.com
   - k8s-version:v1alpha1
   targets:
   - target: 10.244.0.5:80
@@ -154,7 +154,7 @@ upstreams:
   - k8s-name:svc-facade-alpha
   - k8s-namespace:default
   - k8s-kind:KongServiceFacade
-  - k8s-group:incubator.konghq.com
+  - k8s-group:incubator.ingress-controller.konghq.com
   - k8s-version:v1alpha1
   targets:
   - target: 10.244.0.5:80

@@ -234,7 +234,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "incubator.konghq.com",
+		Group:                             "incubator.ingress-controller.konghq.com",
 		Version:                           "v1alpha1",
 		Kind:                              "KongServiceFacade",
 		PackageImportAlias:                "incubatorv1alpha1",

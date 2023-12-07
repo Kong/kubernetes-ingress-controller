@@ -113,7 +113,7 @@ Adding a new version? You'll need three changes:
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
   [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
- - Added validation on `Secret`s to reject the change if it will genereate
+ - Added validation on `Secret`s to reject the change if it will generate
    invalid confiugration of plugins for `KongPlugin`s or `KongClusterPlugin`s
    referencing to the secret.
    [#5203](https://github.com/Kong/kubernetes-ingress-controller/pull/5203)

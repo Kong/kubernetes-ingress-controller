@@ -56,12 +56,15 @@ type ConsumerGetter interface {
 	ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error)
 }
 
-var _ kongstate.SecretGetter = &SecretGetterWithOverride{}
-
+// SecretGetterWithOverride returns the override secrets in the list if the namespace and name matches,
+// or use the nested secretGetter to fetch the secret otherwise.
+// Used for validating changes of secrets to override existing the one in cache with the one to be updated.
 type SecretGetterWithOverride struct {
 	overrideSecrets map[k8stypes.NamespacedName]*corev1.Secret
 	secretGetter    kongstate.SecretGetter
 }
+
+var _ kongstate.SecretGetter = &SecretGetterWithOverride{}
 
 func (s *SecretGetterWithOverride) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	nsName := k8stypes.NamespacedName{
@@ -76,6 +79,7 @@ func (s *SecretGetterWithOverride) GetSecret(namespace, name string) (*corev1.Se
 	return s.secretGetter.GetSecret(namespace, name)
 }
 
+// NewSecretGetterWithOverride returns a secret getter with given override secrets.
 func NewSecretGetterWithOverride(s kongstate.SecretGetter, overrideSecrets []*corev1.Secret) *SecretGetterWithOverride {
 	overrideSecretMap := lo.SliceToMap(overrideSecrets, func(secret *corev1.Secret) (k8stypes.NamespacedName, *corev1.Secret) {
 		return k8stypes.NamespacedName{

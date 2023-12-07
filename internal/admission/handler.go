@@ -288,9 +288,7 @@ func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *core
 
 	for _, obj := range referrers {
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		// REVIEW: Should we check version here? Seems that we do not need to support KongPlugin and KongClusterPlugin in other versions.
-		if gvk.Group == kongv1.GroupVersion.Group && gvk.Kind == KindKongPlugin {
-			// REVIEW: run type check here to avoid panic, although it should be unlikely to happen after checking the GVK?
+		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
 			plugin := obj.(*kongv1.KongPlugin)
 			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
@@ -305,7 +303,7 @@ func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *core
 					), nil
 			}
 		}
-		if gvk.Group == kongv1.GroupVersion.Group && gvk.Kind == KindKongClusterPlugin {
+		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
 			plugin := obj.(*kongv1.KongClusterPlugin)
 			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {

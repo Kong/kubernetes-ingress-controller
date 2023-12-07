@@ -263,7 +263,7 @@ func TestDeleteReferencesByReferrer(t *testing.T) {
 	}
 }
 
-func TestListReferencesByReferent(t *testing.T) {
+func TestListReferrerObjectsByReferent(t *testing.T) {
 	testCases := []struct {
 		name          string
 		addReferrer   client.Object

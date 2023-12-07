@@ -171,7 +171,6 @@ func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
-	// REVIEW: where to add it? More general: where to add new args in constructors, all append to the last?
 	referenceIndexers ctrlref.CacheIndexers,
 	managerClient client.Client,
 	logger logr.Logger,

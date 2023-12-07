@@ -267,6 +267,7 @@ func (c CacheIndexers) ListReferredObjects(referrer client.Object) ([]client.Obj
 	return objs, nil
 }
 
+// ListReferrerObjectsByReferent lists all objects that refers to the same referent.
 func (c CacheIndexers) ListReferrerObjectsByReferent(referent client.Object) ([]client.Object, error) {
 	refs, err := c.ListReferencesByReferent(referent)
 	if err != nil {

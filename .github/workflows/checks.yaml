@@ -65,7 +65,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: third_party/go.mod
       - run: make tools

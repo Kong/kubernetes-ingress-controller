@@ -161,7 +161,7 @@ lint: verify.tidy golangci-lint staticcheck looppointer
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download
-	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml
+	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: staticcheck
 staticcheck: staticcheck.download

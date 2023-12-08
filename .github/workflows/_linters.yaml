@@ -18,6 +18,9 @@ jobs:
           go-version-file: third_party/go.mod
 
       - name: Run lint
+        env:
+          # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
+          GOLANGCI_LINT_FLAGS: "--fix=false"
         run: make lint
 
       - name: Verify manifest consistency

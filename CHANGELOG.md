@@ -82,8 +82,12 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
-### Added
+### Fixed
 
+- Fix(manager): set InitCacheSyncDuration to 5s by default and allow it to be configured via cli.
+  [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
+- Don't set `instance_name` of plugin if Kong version is below 3.2.0.
+  [#5250](https://github.com/Kong/kubernetes-ingress-controller/pull/5250)
 - Added `--emit-kubernetes-events` CLI flag to disable the creation of events
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)

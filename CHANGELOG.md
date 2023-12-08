@@ -76,11 +76,30 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.0.2]
 
-Nothing yet.
+> Release date: TBD
 
-## 3.0.0
+### Added
+
+- Added `--emit-kubernetes-events` CLI flag to disable the creation of events
+  in translating and applying configurations to Kong.
+  [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
+  [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
+
+## [3.0.1]
+
+> Release date: 2023-11-22
+
+### Fixed
+
+- Using an Ingress with annotation `konghq.com/rewrite` and another Ingress without it pointing to the same Service,
+  will no longer cause synchronization loop and random request failures due to incorrect routing.
+  [#5218](https://github.com/Kong/kubernetes-ingress-controller/pull/5218)
+- Using the same Service in one Ingress as a target for ingress rule and default backend works without issues.
+  [#5219](https://github.com/Kong/kubernetes-ingress-controller/pull/5219)
+
+## [3.0.0]
 
 > Release date: 2023-11-03
 

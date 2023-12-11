@@ -124,7 +124,6 @@ jobs:
       - uses: Kong/kong-license@master
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       # We need to pull the Gateway image locally if loading local image was specified.
@@ -192,7 +191,6 @@ jobs:
         continue-on-error: true
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: check availability of KIC image
@@ -289,7 +287,6 @@ jobs:
       - uses: Kong/kong-license@master
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: run Istio tests

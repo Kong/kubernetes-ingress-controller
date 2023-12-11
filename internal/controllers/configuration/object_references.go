@@ -103,7 +103,7 @@ func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.Namespa
 }
 
 func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, 1)
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
 			Namespace: plugin.ConfigFrom.SecretValue.Namespace,
@@ -114,7 +114,7 @@ func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8
 
 	for _, patch := range plugin.ConfigPatches {
 		nsName := k8stypes.NamespacedName{
-			Namespace: plugin.Namespace,
+			Namespace: patch.ValueFrom.SecretValue.Namespace,
 			Name:      patch.ValueFrom.SecretValue.Secret,
 		}
 		referredSecretNames = append(referredSecretNames, nsName)

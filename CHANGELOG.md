@@ -104,12 +104,19 @@ Adding a new version? You'll need three changes:
 - Added support for GRPC over HTTP (without TLS) in Gateway API.
   [#5128](https://github.com/Kong/kubernetes-ingress-controller/pull/5128)
   [#5283](https://github.com/Kong/kubernetes-ingress-controller/pull/5283)
-- Added `-init-cache-sync-duration` CLI flag. This flag configures how long the controller waits for Kubernetes resources to populate at startup before generating the initial Kong configuration. It also fixes a bug that removed the default 5 second wait period.
+- Added `--init-cache-sync-duration` CLI flag. This flag configures how long the
+  controller waits for Kubernetes resources to populate at startup before
+  generating the initial Kong configuration. It also fixes a bug that removed
+  the default 5 second wait period.
   [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
 - Added `--emit-kubernetes-events` CLI flag to disable the creation of events
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
   [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
+ - Added validation on `Secret`s to reject the change if it will generate
+   invalid confiugration of plugins for `KongPlugin`s or `KongClusterPlugin`s
+   referencing to the secret.
+   [#5203](https://github.com/Kong/kubernetes-ingress-controller/pull/5203)
 
 ### Fixed
 

@@ -262,3 +262,41 @@ func TestDeleteReferencesByReferrer(t *testing.T) {
 		})
 	}
 }
+
+func TestListReferrerObjectsByReferent(t *testing.T) {
+	testCases := []struct {
+		name          string
+		addReferrer   client.Object
+		addReferent   client.Object
+		checkReferent client.Object
+		objectNum     int
+	}{
+		{
+			name:          "has_referring_objects",
+			addReferrer:   testRefService1,
+			addReferent:   testRefSecret1,
+			checkReferent: testRefSecret1,
+			objectNum:     1,
+		},
+		{
+			name:          "has_no_referring_objects",
+			addReferrer:   testRefService1,
+			addReferent:   testRefSecret1,
+			checkReferent: testRefSecret2,
+			objectNum:     0,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewCacheIndexers(logr.Discard())
+			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
+			require.NoError(t, err, "should not return error on setting reference")
+
+			referrers, err := c.ListReferrerObjectsByReferent(tc.checkReferent)
+			require.NoError(t, err)
+			require.Len(t, referrers, tc.objectNum)
+		})
+	}
+}

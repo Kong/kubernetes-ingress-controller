@@ -110,6 +110,8 @@ Adding a new version? You'll need three changes:
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
   [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
+- Added support in Gateway Discovery for specifying that the Admin API should use HTTP via the appProtocol field on the admin port. 
+  [#5251](https://github.com/Kong/kubernetes-ingress-controller/pull/5251)
 
 ### Fixed
 

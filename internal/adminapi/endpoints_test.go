@@ -82,6 +82,34 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
 		},
 		{
+			name: "basic with appProtocol http",
+			endpoints: discoveryv1.EndpointSlice{
+				ObjectMeta:  endpointsSliceObjectMeta,
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1", "10.0.0.2"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+						TargetRef: testPodReference(namespaceName, "pod-1"),
+					},
+				},
+				Ports: builder.NewEndpointPort(8444).WithName("admin").WithAppProtocol("http").IntoSlice(),
+			},
+			portNames: sets.New("admin"),
+			want: sets.New(
+				DiscoveredAdminAPI{
+					Address: "http://10-0-0-1.ns.pod:8444",
+					PodRef: k8stypes.NamespacedName{
+						Name: "pod-1", Namespace: namespaceName,
+					},
+				},
+			),
+			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
+		},
+		{
 			name: "basic",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,

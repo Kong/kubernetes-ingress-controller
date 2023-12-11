@@ -32,6 +32,12 @@ func (b *EndpointPortBuilder) WithName(name string) *EndpointPortBuilder {
 	return b
 }
 
+// WithAppProtocol sets the appProtocol on the endpoint port.
+func (b *EndpointPortBuilder) WithAppProtocol(appProtocol string) *EndpointPortBuilder {
+	b.ep.AppProtocol = lo.ToPtr(appProtocol)
+	return b
+}
+
 // Build returns the configured EndpointPort.
 func (b *EndpointPortBuilder) Build() discoveryv1.EndpointPort {
 	return b.ep

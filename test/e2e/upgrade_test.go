@@ -20,13 +20,13 @@ import (
 
 const (
 	// upgradeTestFromTag is the tag of the previous version of the controller to upgrade from.
-	upgradeTestFromTag = "v2.9.4"
+	upgradeTestFromTag = "v3.0.1"
 
 	// dblessURLTemplate is the template of the URL to the all-in-one-dbless.yaml manifest with a placeholder for the tag.
-	dblessURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/deploy/single/all-in-one-dbless.yaml"
+	dblessURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/test/e2e/manifests/all-in-one-dbless.yaml"
 
 	// 	postgresURLTemplate is the template of the URL to the all-in-one-postgres.yaml manifest with a placeholder for the tag.
-	postgresURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/deploy/single/all-in-one-postgres.yaml"
+	postgresURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/test/e2e/manifests/all-in-one-postgres.yaml"
 )
 
 func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {

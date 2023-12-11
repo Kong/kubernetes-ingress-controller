@@ -172,7 +172,7 @@ combination of Services.
 ## Using KongServiceFacade
 
 In KIC 3.1.0 we introduced a new feature called `KongServiceFacade`. Currently, we only
-support `KongServiceFacade` to be used as a backend for `netv1.Ingress`es.
+support `KongServiceFacade` to be used as a backend for `networking.k8s.io/v1` `Ingress`es.
 If you find this might be useful to you in other contexts (e.g. Gateway API's `HTTPRoute`s),
 please let us know in the [#5216](https://github.com/Kong/kubernetes-ingress-controller/issues/5216)
 issue tracking this effort.
@@ -185,7 +185,7 @@ but also install the `KongServiceFacade` CRD which is distributed in a separate
 package we named `incubator`. You can install it by running:
 
 ```shell
-kubectl apply -k github.com/Kong/kubernetes-ingress-controller/main/config/crd/incubator?ref=main
+kubectl apply -k 'https://github.com/Kong/kubernetes-ingress-controller/config/crd/incubator?ref=main'
 ```
 
 ### Usage
@@ -248,6 +248,13 @@ An advantage of using `KongServiceFacade` over plain `corev1.Service`s is that y
 while still pointing to the same Kubernetes `Service`. A single `KongServiceFacade` may be used in multiple
 `Ingress`es and customization done through the `KongServiceFacade`'s annotations will be honored in all of them
 on a single Kong Service level (no need to duplicate annotations in multiple `Ingress`es).
+
+A recommended, generally available alternative to `KongServiceFacade` exists: you can
+create several Kubernetes `Service`s with the same selector. `KongServiceFacade` should
+be useful if you are unable to use the `Service` alternative. Reasons known at the
+moment of writing are: using certain mesh solutions (Consul Connect) that [impose a
+"single service only" requirement](https://github.com/hashicorp/consul-k8s/issues/68) and (hypothetical) performance implications of
+repetitive kube-proxy reconciliation.
 
 For a complete example of using `KongServiceFacade` for customizing `Service` authentication methods, please
 refer to the [kong-service-facade.yaml] manifest in our examples.

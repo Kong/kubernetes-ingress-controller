@@ -392,11 +392,6 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
 		plugin.Config = config
-		validator.Logger.V(util.DebugLevel).Info("Got config from secret",
-			"secret", k8sPlugin.ConfigFrom.SecretValue.Namespace+"/"+k8sPlugin.ConfigFrom.SecretValue.Secret,
-			"key", k8sPlugin.ConfigFrom.SecretValue.Key,
-			"config", config,
-		)
 	}
 	if k8sPlugin.RunOn != "" {
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)

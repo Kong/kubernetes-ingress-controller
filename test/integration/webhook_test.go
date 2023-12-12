@@ -782,7 +782,7 @@ func TestValidationWebhook(t *testing.T) {
 			errorContains: "Change on secret will generate invalid configuration for KongClusterPlugin",
 		},
 		{
-			name: "should pass the validation if the secret in ConfigPatches generates valid configuration",
+			name: "should pass the validation if the secret in ConfigPatches of KongClusterPlugin generates valid configuration",
 			kongClusterPlugin: &kongv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-rate-limiting-valid-config-patches",
@@ -828,7 +828,7 @@ func TestValidationWebhook(t *testing.T) {
 			errorOnUpdate: false,
 		},
 		{
-			name: "should pass the validation if the secret in ConfigPatches generates invalid configuration",
+			name: "should fail the validation if the secret in ConfigPatches of KongClusterPlugin generates invalid configuration",
 			kongClusterPlugin: &kongv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-rate-limiting-invalid-config-patches",

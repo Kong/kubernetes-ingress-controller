@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -248,7 +249,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: queryparam matching is supported with expression router only",
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].matches[0]: queryparam matching is supported with expression router only",
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",
@@ -305,7 +306,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: example is not a supported group for httproute backendRefs, only core is supported",
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].backendRefs[0]: example is not a supported group for httproute backendRefs, only core is supported",
 		},
 		{
 			msg: "we don't support any core kind except Service for backendRefs",
@@ -361,7 +362,182 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 			}},
 			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: Pod is not a supported kind for httproute backendRefs, only Service is supported",
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].backendRefs[0]: Pod is not a supported kind for httproute backendRefs, only Service is supported",
+		},
+		{
+			msg: "we do not support RequestMirror filter",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+							},
+						},
+						Filters: []gatewayapi.HTTPRouteFilter{
+							{
+								Type: gatewayapi.HTTPRouteFilterRequestMirror,
+							},
+						},
+					}},
+				},
+			},
+			gateways: []*gatewayapi.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type RequestMirror is unsupported",
+		},
+		{
+			msg: "we do not support setting timeouts on rules",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+							},
+						},
+						Timeouts: &gatewayapi.HTTPRouteTimeouts{
+							Request: lo.ToPtr(gatewayapi.Duration("1s")),
+						},
+					}},
+				},
+			},
+			gateways: []*gatewayapi.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0]: rule timeout is unsupported",
+		},
+		{
+			msg: "we do not support filters in backendRefs",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+								Filters: []gatewayapi.HTTPRouteFilter{
+									{
+										Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
+									},
+								},
+							},
+						},
+					}},
+				},
+			},
+			gateways: []*gatewayapi.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].backendRefs[0]: filters in backendRef is unsupported",
 		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {

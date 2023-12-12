@@ -66,6 +66,25 @@ func ValidateHTTPRoute(
 	return ok, msg, nil
 }
 
+// ValidateHTTPRouteParentRefs checks the group/kind of each parentRef in spec and allows only
+// empty or `gateway.networking.k8s.io.Gateway`.
+func ValidateHTTPRouteParentRefs(httproute *gatewayapi.HTTPRoute) error {
+	const KindGateway = gatewayapi.Kind("Gateway")
+
+	for parentRefIndex, parentRef := range httproute.Spec.ParentRefs {
+		if parentRef.Group != nil && *parentRef.Group != "" && *parentRef.Group != gatewayapi.V1Group {
+			return fmt.Errorf("parentRefs[%d]: %s is not a supported group for httproute parentRefs, only %s is supported",
+				parentRefIndex, *parentRef.Group, gatewayapi.V1Group)
+		}
+		if parentRef.Kind != nil && *parentRef.Kind != "" && *parentRef.Kind != KindGateway {
+			return fmt.Errorf("parentRefs[%d]: %s is not a supported kind for httproute parentRefs, only kind %s is supported",
+				parentRefIndex, *parentRef.Kind, KindGateway)
+		}
+	}
+
+	return nil
+}
+
 // -----------------------------------------------------------------------------
 // Validation - HTTPRoute - Private Functions
 // -----------------------------------------------------------------------------
@@ -97,22 +116,53 @@ func validateHTTPRouteListener(listener *gatewayapi.Listener) error {
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
 func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
-	for _, rule := range httproute.Spec.Rules {
-		for _, match := range rule.Matches {
+	unsupportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
+		gatewayapi.HTTPRouteFilterURLRewrite:    {},
+		gatewayapi.HTTPRouteFilterRequestMirror: {},
+	}
+	const (
+		KindService = gatewayapi.Kind("Service")
+	)
+
+	for ruleIndex, rule := range httproute.Spec.Rules {
+		// Rule timeout is not supported.
+		// TODO: remove the check after https://github.com/Kong/kubernetes-ingress-controller/issues/4914 fixed.
+		if rule.Timeouts != nil {
+			return fmt.Errorf("rules[%d]: rule timeout is unsupported", ruleIndex)
+		}
+		// Filters URLRewrite, RequestMirror are not supported.
+		for filterIndex, filter := range rule.Filters {
+			if _, unsupported := unsupportedFilterMap[filter.Type]; unsupported {
+				return fmt.Errorf("rules[%d].filters[%d]: filter type %s is unsupported",
+					ruleIndex, filterIndex, filter.Type)
+			}
+		}
+
+		for refIndex, ref := range rule.BackendRefs {
+			// Specifying filters in backendRef is not supported.
+			if len(ref.Filters) != 0 {
+				return fmt.Errorf("rules[%d].backendRefs[%d]: filters in backendRef is unsupported",
+					ruleIndex, refIndex)
+			}
+
+			// We don't support any backendRef types except Kubernetes Services.
+			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
+				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported group for httproute backendRefs, only core is supported",
+					ruleIndex, refIndex, *ref.BackendRef.Group)
+			}
+			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != KindService {
+				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported kind for httproute backendRefs, only %s is supported",
+					ruleIndex, refIndex, *ref.BackendRef.Kind, KindService)
+			}
+		}
+
+		for matchIndex, match := range rule.Matches {
 			// We support query parameters matching rules only with expression router.
 			if len(match.QueryParams) != 0 {
 				if !translatorFeatures.ExpressionRoutes {
-					return fmt.Errorf("queryparam matching is supported with expression router only")
+					return fmt.Errorf("rules[%d].matches[%d]: queryparam matching is supported with expression router only",
+						ruleIndex, matchIndex)
 				}
-			}
-		}
-		// We don't support any backendRef types except Kubernetes Services.
-		for _, ref := range rule.BackendRefs {
-			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
-				return fmt.Errorf("%s is not a supported group for httproute backendRefs, only core is supported", *ref.BackendRef.Group)
-			}
-			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != "Service" {
-				return fmt.Errorf("%s is not a supported kind for httproute backendRefs, only Service is supported", *ref.BackendRef.Kind)
 			}
 		}
 	}

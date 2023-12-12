@@ -436,6 +436,9 @@ func (validator KongHTTPValidator) ValidateGateway(
 func (validator KongHTTPValidator) ValidateHTTPRoute(
 	ctx context.Context, httproute gatewayapi.HTTPRoute,
 ) (bool, string, error) {
+	if err := gatewayvalidation.ValidateHTTPRouteParentRefs(&httproute); err != nil {
+		return false, fmt.Sprintf("HTTPRoute has invalid parentRef: %s", err), nil
+	}
 	// in order to be sure whether or not an HTTPRoute resource is managed by this
 	// controller we disallow references to Gateway resources that do not exist.
 	var managedGateways []*gatewayapi.Gateway

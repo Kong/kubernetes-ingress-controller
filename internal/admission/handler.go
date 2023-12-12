@@ -23,7 +23,6 @@ import (
 const (
 	KindKongPlugin        = "KongPlugin"
 	KindKongClusterPlugin = "KongClusterPlugin"
-	KindGateway           = gatewayapi.Kind("Gateway")
 )
 
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'

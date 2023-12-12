@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
@@ -67,6 +66,25 @@ func ValidateHTTPRoute(
 	return ok, msg, nil
 }
 
+// ValidateHTTPRouteParentRefs checks the group/kind of each parentRef in spec and allows only
+// empty or `gateway.networking.k8s.io.Gateway`.
+func ValidateHTTPRouteParentRefs(httproute *gatewayapi.HTTPRoute) error {
+	const KindGateway = gatewayapi.Kind("Gateway")
+
+	for parentRefIndex, parentRef := range httproute.Spec.ParentRefs {
+		if parentRef.Group != nil && *parentRef.Group != "" && *parentRef.Group != gatewayapi.V1Group {
+			return fmt.Errorf("parentRefs[%d]: %s is not a supported group for httproute parentRefs, only %s is supported",
+				parentRefIndex, *parentRef.Group, gatewayapi.V1Group)
+		}
+		if parentRef.Kind != nil && *parentRef.Kind != "" && *parentRef.Kind != KindGateway {
+			return fmt.Errorf("parentRefs[%d]: %s is not a supported kind for httproute parentRefs, only kind %s is supported",
+				parentRefIndex, *parentRef.Kind, KindGateway)
+		}
+	}
+
+	return nil
+}
+
 // -----------------------------------------------------------------------------
 // Validation - HTTPRoute - Private Functions
 // -----------------------------------------------------------------------------
@@ -98,34 +116,17 @@ func validateHTTPRouteListener(listener *gatewayapi.Listener) error {
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
 func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
-	unsupportedHTTPRouteFilterTypes := []gatewayapi.HTTPRouteFilterType{
-		gatewayapi.HTTPRouteFilterURLRewrite,
-		gatewayapi.HTTPRouteFilterRequestMirror,
+	unsupportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
+		gatewayapi.HTTPRouteFilterURLRewrite:    {},
+		gatewayapi.HTTPRouteFilterRequestMirror: {},
 	}
-	unsupportedFilterMap := lo.SliceToMap(unsupportedHTTPRouteFilterTypes, func(t gatewayapi.HTTPRouteFilterType) (gatewayapi.HTTPRouteFilterType, struct{}) {
-		return t, struct{}{}
-	})
-
 	const (
 		KindService = gatewayapi.Kind("Service")
-		KindGateway = gatewayapi.Kind("Gateway")
 	)
 
-	// Validate parentRefs: only allow empty, `/Gateway` or `gateway.networking.k8s.io/Gateway`
-	// REVIEW: Should this happen before we get here? we search for parent gateways before we reach here.
-	for parentRefIndex, parentRef := range httproute.Spec.ParentRefs {
-		if parentRef.Group != nil && *parentRef.Group != "" && *parentRef.Group != gatewayapi.V1Group {
-			return fmt.Errorf("parentRefs[%d]: %s is not a supported group for httproute parentRefs, only %s is supported",
-				parentRefIndex, *parentRef.Group, gatewayapi.V1Group)
-		}
-		if parentRef.Kind != nil && *parentRef.Kind != "" && *parentRef.Kind != KindGateway {
-			return fmt.Errorf("parentRefs[%d]: %s is not a supported kind for httproute parentRefs, only kind %s is supported",
-				parentRefIndex, *parentRef.Kind, KindGateway)
-		}
-	}
-
 	for ruleIndex, rule := range httproute.Spec.Rules {
-		// rule timeout is not supported.
+		// Rule timeout is not supported.
+		// TODO: remove the check after https://github.com/Kong/kubernetes-ingress-controller/issues/4914 fixed.
 		if rule.Timeouts != nil {
 			return fmt.Errorf("rules[%d]: rule timeout is unsupported", ruleIndex)
 		}
@@ -143,6 +144,7 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 				return fmt.Errorf("rules[%d].backendRefs[%d]: filters in backendRef is unsupported",
 					ruleIndex, refIndex)
 			}
+
 			// We don't support any backendRef types except Kubernetes Services.
 			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
 				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported group for httproute backendRefs, only core is supported",

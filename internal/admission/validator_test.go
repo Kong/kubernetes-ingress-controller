@@ -916,6 +916,27 @@ func TestKongHTTPValidator_ValidateHTTPRoute(t *testing.T) {
 			wantMessageContains: "referenced gatewayclass non-exist-gatewayclass not found",
 		},
 		{
+			name: "HTTPRoute with parentRef in kind other than Gateway should not pass the validation",
+			httpRoute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "unsupported-parent-ref-kind",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Group: lo.ToPtr(gatewayapi.Group("somegroup")),
+								Name:  "test-validate-httproute-no-gatewayclass",
+							},
+						},
+					},
+				},
+			},
+			wantOK:              false,
+			wantMessageContains: "HTTPRoute has invalid parentRef: parentRefs[0]: somegroup is not a supported group for httproute parentRefs, only gateway.networking.k8s.io is supported",
+		},
+		{
 			name: "HTTPRoute using unsupported filter should not pass the validation",
 			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{

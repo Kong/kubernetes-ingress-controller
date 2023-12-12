@@ -539,61 +539,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid:         false,
 			validationMsg: "HTTPRoute spec did not pass validation: rules[0].backendRefs[0]: filters in backendRef is unsupported",
 		},
-		{
-			msg: "we do not support parentRef groups other than gateway.networking.k8s.io",
-			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
-							Group: lo.ToPtr(gatewayapi.Group("somegroup")),
-							Name:  "testing-gateway",
-						}},
-					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
-								Name:  "Content-Type",
-								Value: "audio/vorbis",
-							}},
-						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
-							},
-						},
-					}},
-				},
-			},
-			gateways: []*gatewayapi.Gateway{{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-gateway",
-				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{{
-						Name:     "http",
-						Port:     80,
-						Protocol: (gatewayapi.HTTPProtocolType),
-						AllowedRoutes: &gatewayapi.AllowedRoutes{
-							Kinds: []gatewayapi.RouteGroupKind{{
-								Group: &group,
-								Kind:  "HTTPRoute",
-							}},
-						},
-					}},
-				},
-			}},
-			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: parentRefs[0]: somegroup is not a supported group for httproute parentRefs, only gateway.networking.k8s.io is supported",
-		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
 			// Passed routesValidator is irrelevant for the above test cases.

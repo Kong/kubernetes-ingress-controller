@@ -213,26 +213,8 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	// get all the services that reference this UpstreamPolicy
-	services := &corev1.ServiceList{}
-	err := r.List(ctx, services,
-		client.InNamespace(kongUpstreamPolicy.Namespace),
-		client.MatchingFields{
-			upstreamPolicyIndexKey: kongUpstreamPolicy.Name,
-		},
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// build the desired KongUpstreamPolicy status
-	servicesStatus, err := r.buildServicesStatus(ctx, services.Items)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// enforce the desired KongUpstreamPolicy status
-	updated, err := r.enforceKongUpstreamPolicyStatus(ctx, kongUpstreamPolicy, servicesStatus)
+	updated, err := r.enforceKongUpstreamPolicyStatus(ctx, kongUpstreamPolicy)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

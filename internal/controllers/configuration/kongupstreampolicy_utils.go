@@ -4,16 +4,20 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
+
+const maxNAncestors = 16
 
 type serviceStatus struct {
 	service           corev1.Service
@@ -26,7 +30,28 @@ type serviceStatus struct {
 
 // enforceKongUpstreamPolicyStatus gets a list of services (ancestors) along with their desired status and enforce them
 // in the KongUpstreamPolicy status.
-func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx context.Context, oldPolicy *kongv1beta1.KongUpstreamPolicy, servicesStatus []serviceStatus) (bool, error) {
+func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx context.Context, oldPolicy *kongv1beta1.KongUpstreamPolicy) (bool, error) {
+	// get all the services that reference this UpstreamPolicy
+	services := &corev1.ServiceList{}
+	err := r.List(ctx, services,
+		client.InNamespace(oldPolicy.Namespace),
+		client.MatchingFields{
+			upstreamPolicyIndexKey: oldPolicy.Name,
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+
+	// build the desired KongUpstreamPolicy status
+	servicesStatus, err := r.buildServicesStatus(ctx, k8stypes.NamespacedName{
+		Namespace: oldPolicy.Namespace,
+		Name:      oldPolicy.Name,
+	}, services.Items)
+	if err != nil {
+		return false, err
+	}
+
 	newPolicyStatus := gatewayapi.Policystatus{}
 	if len(servicesStatus) > 0 {
 		newPolicyStatus.Ancestors = make([]gatewayapi.PolicyAncestorStatus, 0, len(servicesStatus))
@@ -56,19 +81,33 @@ func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx conte
 }
 
 // buildServicesStatus creates a list of services with their conditions associated.
-func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, services []corev1.Service) ([]serviceStatus, error) {
+func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, upstreamPolicyNN k8stypes.NamespacedName, services []corev1.Service) ([]serviceStatus, error) {
+	// sort the services by creationTimestamp
+	sort.Slice(services, func(i, j int) bool {
+		return services[i].CreationTimestamp.Before(&services[j].CreationTimestamp)
+	})
+
 	// prepare a service mapping to be used in subsequent operations
 	mappedServices := make(map[string]serviceStatus)
-	for _, service := range services {
+	for i, service := range services {
 		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayapi.PolicyConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			Reason:             string(gatewayapi.PolicyReasonAccepted),
 			LastTransitionTime: metav1.Now(),
 		}
-		mappedServices[buildServiceReference(service.Namespace, service.Name)] = serviceStatus{
-			service:           service,
-			acceptedCondition: acceptedCondition,
+		if i < maxNAncestors {
+			mappedServices[buildServiceReference(service.Namespace, service.Name)] = serviceStatus{
+				service:           service,
+				acceptedCondition: acceptedCondition,
+			}
+		} else {
+			r.Log.Info("kongUpstreamPolicy %s/%s status has already %d ancestors, cannot set service %s/%s as an ancestor in the status",
+				upstreamPolicyNN.Namespace,
+				upstreamPolicyNN.Name,
+				maxNAncestors,
+				service.Namespace,
+				service.Name)
 		}
 	}
 

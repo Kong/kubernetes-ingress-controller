@@ -113,18 +113,20 @@ Adding a new version? You'll need three changes:
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
   [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
- - Added validation on `Secret`s to reject the change if it will generate
-   invalid confiugration of plugins for `KongPlugin`s or `KongClusterPlugin`s
-   referencing to the secret.
-   [#5203](https://github.com/Kong/kubernetes-ingress-controller/pull/5203)
-- Validate `HTTPRoute` in admission webhook and reject it if the spec uses 
+- Added validation on `Secret`s to reject the change if it will generate
+  invalid confiugration of plugins for `KongPlugin`s or `KongClusterPlugin`s
+  referencing to the secret.
+  [#5203](https://github.com/Kong/kubernetes-ingress-controller/pull/5203)
+- Validate `HTTPRoute` in admission webhook and reject it if the spec uses
   the following features that we do not support:
   - `parentRefs` other than `gatewayapi.networking.k8s.io/Gateway`
   - using `timeouts` in rules
   - `URLRewrite`, `RequestMirror` filters
   - using filters in backendRefs of rules
   [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
-
+- Added functionality to the `KongUpstreamPolicy` controller to properly set and
+  enforce `KongUpstreamPolicy`status.
+  [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
 
 ### Fixed
 

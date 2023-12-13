@@ -52,7 +52,7 @@ func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx conte
 		return false, err
 	}
 
-	newPolicyStatus := gatewayapi.Policystatus{}
+	newPolicyStatus := gatewayapi.PolicyStatus{}
 	if len(servicesStatus) > 0 {
 		newPolicyStatus.Ancestors = make([]gatewayapi.PolicyAncestorStatus, 0, len(servicesStatus))
 	}
@@ -87,35 +87,43 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 		return services[i].CreationTimestamp.Before(&services[j].CreationTimestamp)
 	})
 
+	type indexedServiceStatus struct {
+		index int
+		data  serviceStatus
+	}
+
 	// prepare a service mapping to be used in subsequent operations
-	mappedServices := make(map[string]serviceStatus)
+	mappedServices := make(map[string]indexedServiceStatus)
 	for i, service := range services {
-		acceptedCondition := metav1.Condition{
-			Type:               string(gatewayapi.PolicyConditionAccepted),
-			Status:             metav1.ConditionTrue,
-			Reason:             string(gatewayapi.PolicyReasonAccepted),
-			LastTransitionTime: metav1.Now(),
-		}
 		if i < maxNAncestors {
-			mappedServices[buildServiceReference(service.Namespace, service.Name)] = serviceStatus{
-				service:           service,
-				acceptedCondition: acceptedCondition,
+			acceptedCondition := metav1.Condition{
+				Type:               string(gatewayapi.PolicyConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayapi.PolicyReasonAccepted),
+				LastTransitionTime: metav1.Now(),
+			}
+			mappedServices[buildServiceReference(service.Namespace, service.Name)] = indexedServiceStatus{
+				index: i,
+				data: serviceStatus{
+					service:           service,
+					acceptedCondition: acceptedCondition,
+				},
 			}
 		} else {
-			r.Log.Info("kongUpstreamPolicy %s/%s status has already %d ancestors, cannot set service %s/%s as an ancestor in the status",
+			r.Log.Info(fmt.Sprintf("kongUpstreamPolicy %s/%s status has already %d ancestors, cannot set service %s/%s as an ancestor in the status",
 				upstreamPolicyNN.Namespace,
 				upstreamPolicyNN.Name,
 				maxNAncestors,
 				service.Namespace,
-				service.Name)
+				service.Name))
 		}
 	}
 
-	for _, service := range services {
+	for serviceKey, serviceStatus := range mappedServices {
 		httpRoutes := &gatewayapi.HTTPRouteList{}
 		err := r.List(ctx, httpRoutes,
 			client.MatchingFields{
-				routeBackendRefServiceNameIndexKey: buildServiceReference(service.Namespace, service.Name),
+				routeBackendRefServiceNameIndexKey: serviceKey,
 			},
 		)
 		if err != nil {
@@ -124,27 +132,18 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 
 		for _, httpRoute := range httpRoutes.Items {
 			for _, rule := range httpRoute.Spec.Rules {
-				var commonPolicy string
 				if len(rule.BackendRefs) == 0 {
 					continue
 				}
-				for i, br := range rule.BackendRefs {
+				for _, br := range rule.BackendRefs {
 					serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
 					if serviceRef == "" {
 						continue
 					}
-					policy := getPolicyByService(mappedServices[serviceRef].service)
 					if _, ok := mappedServices[serviceRef]; !ok {
-						continue
-					}
-					if i == 0 {
-						commonPolicy = policy
-					}
-					if policy != commonPolicy {
-						serviceStatus := mappedServices[serviceRef]
-						serviceStatus.acceptedCondition.Status = metav1.ConditionFalse
-						serviceStatus.acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
-						mappedServices[serviceRef] = serviceStatus
+						serviceStatus.data.acceptedCondition.Status = metav1.ConditionFalse
+						serviceStatus.data.acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
+						mappedServices[serviceKey] = serviceStatus
 					}
 				}
 			}
@@ -152,10 +151,8 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 	}
 
 	servicesStatus := make([]serviceStatus, len(mappedServices))
-	var i int
-	for _, ss := range mappedServices {
-		servicesStatus[i] = ss
-		i++
+	for _, ms := range mappedServices {
+		servicesStatus[ms.index] = ms.data
 	}
 	return servicesStatus, nil
 }
@@ -164,7 +161,7 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 // KongUpstreamPolicy Controller - Helpers
 // -----------------------------------------------------------------------------
 
-func isPolicyStatusUpdated(oldStatus, newStatus gatewayapi.Policystatus) bool {
+func isPolicyStatusUpdated(oldStatus, newStatus gatewayapi.PolicyStatus) bool {
 	if len(oldStatus.Ancestors) != len(newStatus.Ancestors) {
 		return false
 	}
@@ -206,10 +203,6 @@ func backendRefToServiceRef(routeNamespace string, br gatewayapi.BackendRef) str
 		namespace = string(*br.Namespace)
 	}
 	return buildServiceReference(namespace, string(br.Name))
-}
-
-func getPolicyByService(service corev1.Service) string {
-	return service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 }
 
 func buildServiceReference(namespace, name string) string {

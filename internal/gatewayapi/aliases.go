@@ -86,7 +86,7 @@ type (
 	GRPCRouteSpec        = gatewayv1alpha2.GRPCRouteSpec
 	GRPCRouteStatus      = gatewayv1alpha2.GRPCRouteStatus
 	PolicyAncestorStatus = gatewayv1alpha2.PolicyAncestorStatus
-	Policystatus         = gatewayv1alpha2.PolicyStatus
+	PolicyStatus         = gatewayv1alpha2.PolicyStatus
 	TCPRoute             = gatewayv1alpha2.TCPRoute
 	TCPRouteList         = gatewayv1alpha2.TCPRouteList
 	TCPRouteRule         = gatewayv1alpha2.TCPRouteRule

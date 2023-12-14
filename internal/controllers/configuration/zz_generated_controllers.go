@@ -1047,7 +1047,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+		)
 		obj.Status.Conditions = conditions
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
@@ -1234,7 +1238,11 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+		)
 		obj.Status.Conditions = conditions
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
@@ -1879,7 +1887,12 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+			ctrlutils.WithUnknownMessage("KongServiceFacade hasn't been configured in Kong yet. It has to referenced by another resource (e.g. Ingress) to be configured."),
+		)
 		obj.Status.Conditions = conditions
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)

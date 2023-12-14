@@ -29,14 +29,14 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 
 	testCases := []struct {
 		name                             string
-		kongupstreamPolicy               kongv1beta1.KongUpstreamPolicy
+		kongUpstreamPolicy               kongv1beta1.KongUpstreamPolicy
 		inputObjects                     []client.Object
-		expectedkongUpstreamPolicyStatus gatewayapi.PolicyStatus
+		expectedKongUpstreamPolicyStatus gatewayapi.PolicyStatus
 		updated                          bool
 	}{
 		{
 			name: "2 services referencing the same policy, all accepted. Status update.",
-			kongupstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -94,7 +94,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
-			expectedkongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
+			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
@@ -134,7 +134,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "2 services referencing the same policy, all accepted. No status update.",
-			kongupstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -228,7 +228,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
-			expectedkongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
+			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
@@ -268,7 +268,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "2 services referencing different policies, policy with conflict",
-			kongupstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -326,7 +326,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
-			expectedkongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
+			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
@@ -356,7 +356,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			objectsToAdd := append(tc.inputObjects, &tc.kongupstreamPolicy)
+			objectsToAdd := append(tc.inputObjects, &tc.kongUpstreamPolicy)
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
@@ -370,17 +370,17 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Client: fakeClient,
 			}
 
-			updated, err := reconciler.enforceKongUpstreamPolicyStatus(context.TODO(), &tc.kongupstreamPolicy)
+			updated, err := reconciler.enforceKongUpstreamPolicyStatus(context.TODO(), &tc.kongUpstreamPolicy)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.updated, updated)
 			newPolicy := &kongv1beta1.KongUpstreamPolicy{}
 			assert.NoError(t, fakeClient.Get(context.TODO(), k8stypes.NamespacedName{
-				Namespace: tc.kongupstreamPolicy.Namespace,
-				Name:      tc.kongupstreamPolicy.Name,
+				Namespace: tc.kongUpstreamPolicy.Namespace,
+				Name:      tc.kongUpstreamPolicy.Name,
 			}, newPolicy))
-			assert.Len(t, newPolicy.Status.Ancestors, len(tc.expectedkongUpstreamPolicyStatus.Ancestors))
+			assert.Len(t, newPolicy.Status.Ancestors, len(tc.expectedKongUpstreamPolicyStatus.Ancestors))
 			for i, got := range newPolicy.Status.Ancestors {
-				expected := tc.expectedkongUpstreamPolicyStatus.Ancestors[i]
+				expected := tc.expectedKongUpstreamPolicyStatus.Ancestors[i]
 				assert.Equal(t, expected.ControllerName, got.ControllerName)
 				assert.Equal(t, expected.AncestorRef, got.AncestorRef)
 				assert.Len(t, got.Conditions, len(expected.Conditions))

@@ -125,7 +125,7 @@ Adding a new version? You'll need three changes:
   - using filters in backendRefs of rules
   [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
-  enforce `KongUpstreamPolicy`status.
+  enforce `KongUpstreamPolicy` status.
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
 
 ### Fixed

@@ -53,7 +53,7 @@ func ToDeckContent(
 			}
 			err = fillPlugin(ctx, &plugin, params.PluginSchemas)
 			if err != nil {
-				log.Errorf("failed to fill-in defaults for plugin: %s, error %v", *plugin.Name, err)
+				log.WithError(err).Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -71,7 +71,7 @@ func ToDeckContent(
 				}
 				err = fillPlugin(ctx, &plugin, params.PluginSchemas)
 				if err != nil {
-					log.Errorf("failed to fill-in defaults for plugin: %s, error %v", *plugin.Name, err)
+					log.WithError(err).Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -95,7 +95,7 @@ func ToDeckContent(
 		}
 		err = fillPlugin(ctx, &plugin, params.PluginSchemas)
 		if err != nil {
-			log.Errorf("failed to fill-in defaults for plugin: %s, error %v", *plugin.Name, err)
+			log.WithError(err).Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}

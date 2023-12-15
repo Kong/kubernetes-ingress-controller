@@ -194,6 +194,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - incubator.ingress-controller.konghq.com
   resources:
   - kongservicefacades

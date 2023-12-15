@@ -1,6 +1,9 @@
 package v1beta1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+)
 
 const (
 	// KongUpstreamPolicyAnnotationKey is the key used to attach KongUpstreamPolicy to Services.
@@ -56,8 +59,8 @@ type KongUpstreamPolicy struct {
 	// Spec contains the configuration of the Kong upstream.
 	Spec KongUpstreamPolicySpec `json:"spec,omitempty"`
 
-	// TODO: Add support for PolicyStatus.
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4932
+	// Status defines the current state of KongUpstreamPolicy
+	Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
 }
 
 // KongUpstreamPolicyList contains a list of KongUpstreamPolicy.

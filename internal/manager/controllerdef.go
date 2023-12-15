@@ -252,12 +252,24 @@ func setupControllers(
 		},
 		{
 			Enabled: c.KongUpstreamPolicyEnabled,
-			Controller: &configuration.KongV1beta1KongUpstreamPolicyReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KongUpstreamPolicy"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: []schema.GroupVersionResource{
+					{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "httproutes",
+					},
+				},
+				Controller: &configuration.KongUpstreamPolicyReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+				},
 			},
 		},
 		{

@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -18,6 +19,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
+
+func getClientCertIncompatibleProtocols() []string {
+	return []string{"http", "grpc", "tcp", "tls_passthrough", "udp", "ws"}
+}
 
 type ingressRules struct {
 	SecretNameToSNIs      SecretNameToSNIs
@@ -102,10 +107,23 @@ func (ir *ingressRules) populateServices(
 					continue
 				}
 
-				// ensure that the cert is loaded into Kong
-				ir.SecretNameToSNIs.addUniqueParents(secretKey, k8sService)
-				service.ClientCertificate = &kong.Certificate{
-					ID: kong.String(string(secret.UID)),
+				// override protocol isn't set yet, need to get it from the annotation
+				protocol := annotations.ExtractProtocolName(k8sService.Annotations)
+				// annotation value does not indicate the effective default, so stuff it in unset
+				if protocol == "" {
+					protocol = "http"
+				}
+				if lo.Contains(getClientCertIncompatibleProtocols(), protocol) {
+					failuresCollector.PushResourceFailure(
+						fmt.Sprintf("client certificate requested for incompatible service protocol '%s'", *service.Protocol),
+						k8sService,
+					)
+				} else {
+					// ensure that the cert is loaded into Kong
+					ir.SecretNameToSNIs.addUniqueParents(secretKey, k8sService)
+					service.ClientCertificate = &kong.Certificate{
+						ID: kong.String(string(secret.UID)),
+					}
 				}
 			}
 		}

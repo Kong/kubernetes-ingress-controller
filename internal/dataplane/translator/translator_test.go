@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
@@ -893,6 +894,7 @@ func TestServiceClientCertificate(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "https",
 					},
 				},
 			},
@@ -968,6 +970,7 @@ func TestServiceClientCertificate(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "https",
 					},
 				},
 			},
@@ -985,6 +988,94 @@ func TestServiceClientCertificate(t *testing.T) {
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")
 
+		assert.Equal(1, len(state.Services))
+		assert.Nil(state.Services[0].ClientCertificate)
+	})
+	t.Run("valid cert+secret but incompatible protocol", func(t *testing.T) {
+		ingresses := []*netv1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "foo-svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					TLS: []netv1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+		}
+		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret1",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"tls.crt": crt,
+					"tls.key": key,
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "http",
+					},
+				},
+			},
+		}
+		for _, service := range services {
+			scheme, err := scheme.Get()
+			require.NoError(t, err)
+			err = util.PopulateTypeMeta(service, scheme)
+			require.NoError(t, err)
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: ingresses,
+			Secrets:     secrets,
+			Services:    services,
+		})
+		require.NoError(t, err)
+		p := mustNewTranslator(t, store)
+		result := p.BuildKongConfig()
+		require.NotEmpty(t, result.TranslationFailures)
+		state := result.KongState
+		require.NotNil(t, state)
 		assert.Equal(1, len(state.Services))
 		assert.Nil(state.Services[0].ClientCertificate)
 	})

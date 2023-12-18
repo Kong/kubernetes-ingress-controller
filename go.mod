@@ -31,7 +31,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.1.0
 	github.com/kong/go-kong v0.48.0
-	github.com/kong/kubernetes-telemetry v0.1.2
+	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.42.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.57

@@ -133,7 +133,6 @@ Adding a new version? You'll need three changes:
   data used in plugin configurations.
   [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
 
-
 ### Fixed
 
 - Validators of `KongPlugin` and `KongClusterPlugin` will not return `500` on

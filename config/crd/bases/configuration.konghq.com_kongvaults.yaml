@@ -54,7 +54,7 @@ spec:
           spec:
             properties:
               backend:
-                description: Backend is the type of the backend storing the values
+                description: Backend is the type of the backend storing the secrets
                   in the vault.
                 minLength: 1
                 type: string
@@ -63,8 +63,7 @@ spec:
                   different backends.
                 x-kubernetes-preserve-unknown-fields: true
               description:
-                description: Description is the description to tell the information
-                  about the vault.
+                description: Description is the additional information about the vault.
                 type: string
               prefix:
                 description: Prefix is the prefix of vault URI for referencing values

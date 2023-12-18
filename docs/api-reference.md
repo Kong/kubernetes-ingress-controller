@@ -385,9 +385,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `backend` _string_ | Backend is the type of the backend storing the values in the vault. |
+| `backend` _string_ | Backend is the type of the backend storing the secrets in the vault. |
 | `prefix` _string_ | Prefix is the prefix of vault URI for referencing values in the vault. |
-| `description` _string_ | Description is the description to tell the information about the vault. |
+| `description` _string_ | Description is the additional information about the vault. |
 | `config` _[JSON](#json)_ | Config is the configuration of the vault. Varies for different backends. |
 
 

@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	KongValtKind = "KongVault"
+	KongVaultKind = "KongVault"
 )
 
 // +genclient
@@ -46,13 +46,13 @@ type KongVault struct {
 }
 
 type KongVaultSpec struct {
-	// Backend is the type of the backend storing the values in the vault.
+	// Backend is the type of the backend storing the secrets in the vault.
 	// +kubebuilder:validation:MinLength=1
 	Backend string `json:"backend"`
 	// Prefix is the prefix of vault URI for referencing values in the vault.
 	// +kubebuilder:validation:MinLength=1
 	Prefix string `json:"prefix"`
-	// Description is the description to tell the information about the vault.
+	// Description is the additional information about the vault.
 	Description string `json:"description,omitempty"`
 	// Config is the configuration of the vault. Varies for different backends.
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
@@ -72,6 +72,7 @@ type KongVaultStatus struct {
 	Conditions []metav1.Condition `json:"conditions"`
 }
 
+// KongVaultList contains a list of KongVault.
 // +kubebuilder:object:root=true
 
 type KongVaultList struct {

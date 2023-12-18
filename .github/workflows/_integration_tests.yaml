@@ -182,14 +182,14 @@ jobs:
 
       - name: collect test coverage
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage.*.out
 
       - name: upload diagnostics
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
@@ -198,7 +198,7 @@ jobs:
       # upload logs when test failed
       - name: upload KIC logs 
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with: 
           name: integration-tests-kic-logs-${{ matrix.name }}
           path: ${{ inputs.log-output-file }}
@@ -206,7 +206,7 @@ jobs:
 
       - name: collect test report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tests-report
           path: integration-tests-${{ matrix.name }}.xml

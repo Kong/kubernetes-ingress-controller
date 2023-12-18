@@ -242,7 +242,7 @@ var inputControllersNeeded = &typesNeeded{
 		ConfigStatusNotificationsEnabled: true,
 		ProgrammedCondition: ProgrammedConditionConfiguration{
 			UpdatesEnabled:       true,
-			CustomUnknownMessage: "KongServiceFacade hasn't been configured in Kong yet. It has to referenced by another resource (e.g. Ingress) to be configured.",
+			CustomUnknownMessage: "Found no references to this resource in Ingress or similar resources.",
 		},
 		AcceptsIngressClassNameAnnotation: true,
 		RBACVerbs:                         []string{"get", "list", "watch"},

@@ -87,10 +87,10 @@ func DeployControllerManagerForCluster(
 	}
 
 	// determine the proxy admin URL for the Kong Gateway on this cluster:
-	proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
-	}
+	//proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
+	//if err != nil {
+	//	return nil, fmt.Errorf("couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
+	//}
 
 	// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 	// generate a temporary kubeconfig since we're going to be using the helm CLI
@@ -101,7 +101,8 @@ func DeployControllerManagerForCluster(
 
 	// render all controller manager flag options
 	controllerManagerFlags := []string{
-		fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
+		fmt.Sprintf("--kong-admin-svc=%s/%s", kongAddon.Namespace(), ktfkong.DefaultAdminServiceName),
+		fmt.Sprintf("--kong-admin-tls-skip-verify=true"),
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
 		"--log-format=text",

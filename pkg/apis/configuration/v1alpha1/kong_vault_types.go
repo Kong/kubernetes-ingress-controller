@@ -79,6 +79,7 @@ type KongVaultStatus struct {
 	Conditions []metav1.Condition `json:"conditions"`
 }
 
+// KongVaultList contains a list of KongVault.
 // +kubebuilder:object:root=true
 
 // KongVaultList contains a list of KongVault.

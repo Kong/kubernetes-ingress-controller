@@ -2,7 +2,6 @@
 
 ## Packages
 - [configuration.konghq.com/v1](#configurationkonghqcomv1)
-- [configuration.konghq.com/v1alpha1](#configurationkonghqcomv1alpha1)
 - [configuration.konghq.com/v1beta1](#configurationkonghqcomv1beta1)
 
 
@@ -313,48 +312,6 @@ SecretValueFromSource represents the source of a secret value.
 
 _Appears in:_
 - [ConfigSource](#configsource)
-
-
-## configuration.konghq.com/v1alpha1
-
-Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
-
-- [IngressClassParameters](#ingressclassparameters)
-
-### IngressClassParameters
-
-
-
-IngressClassParameters is the Schema for the IngressClassParameters API.
-
-<!-- ingress_class_parameters description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
-| `kind` _string_ | `IngressClassParameters`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
-
-
-
-
-### IngressClassParametersSpec
-
-
-
-
-
-
-
-| Field | Description |
-| --- | --- |
-| `serviceUpstream` _boolean_ | Offload load-balancing to kube-proxy or sidecar. |
-| `enableLegacyRegexDetection` _boolean_ | EnableLegacyRegexDetection automatically detects if ImplementationSpecific Ingress paths are regular expression paths using the legacy 2.x heuristic. The controller adds the "~" prefix to those paths if the Kong version is 3.0 or higher. |
-
-
-_Appears in:_
-- [IngressClassParameters](#ingressclassparameters)
 
 
 ## configuration.konghq.com/v1beta1

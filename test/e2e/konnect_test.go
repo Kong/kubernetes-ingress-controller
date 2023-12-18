@@ -6,17 +6,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
-	"github.com/google/uuid"
 	gokong "github.com/kong/go-kong/kong"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
@@ -29,35 +25,25 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	cp "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
-	cpc "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanesconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
+	testkonnect "github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
 )
 
 const (
-	konnectControlPlanesBaseURL          = "https://us.kic.api.konghq.tech/v2"
-	konnectControlPlanesConfigBaseURLFmt = "https://us.api.konghq.tech/v2/control-planes/%s/"
-	konnectControlPlaneAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
-	konnectRolesBaseURL                  = "https://global.api.konghq.tech/v2"
+	konnectControlPlaneAdminAPIBaseURL = "https://us.kic.api.konghq.tech"
 
 	konnectNodeRegistrationTimeout = 5 * time.Minute
 	konnectNodeRegistrationCheck   = 30 * time.Second
 )
 
-var konnectAccessToken = os.Getenv("TEST_KONG_KONNECT_ACCESS_TOKEN")
-
 func TestKonnectConfigPush(t *testing.T) {
 	t.Parallel()
-	skipIfMissingRequiredKonnectEnvVariables(t)
+	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	cpID := createTestControlPlane(ctx, t)
-	cert, key := createClientCertificate(ctx, t, cpID)
+	cpID := testkonnect.CreateTestControlPlane(ctx, t)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, cpID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, cpID)
 
 	deployments := deployAllInOneKonnectManifest(ctx, t, env)
@@ -77,12 +63,12 @@ func TestKonnectConfigPush(t *testing.T) {
 
 func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
-	skipIfMissingRequiredKonnectEnvVariables(t)
+	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestControlPlane(ctx, t)
-	cert, key := createClientCertificate(ctx, t, rgID)
+	rgID := testkonnect.CreateTestControlPlane(ctx, t)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
 	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
@@ -141,11 +127,11 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Parallel()
-	skipIfMissingRequiredKonnectEnvVariables(t)
+	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestControlPlane(ctx, t)
-	cert, key := createClientCertificate(ctx, t, rgID)
+	rgID := testkonnect.CreateTestControlPlane(ctx, t)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 
 	// create a Konnect client secret and config map with a non-existing control plane ID to simulate misconfiguration
 	notExistingRgID := "not-existing-cp-id"
@@ -158,12 +144,6 @@ func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
 
-func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
-	if konnectAccessToken == "" {
-		t.Skip("missing TEST_KONG_KONNECT_ACCESS_TOKEN")
-	}
-}
-
 // deployAllInOneKonnectManifest deploys all-in-one-dbless-konnect.yaml manifest, replacing the controller image
 // if specified by environment variables.
 func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env environment.Environment) Deployments {
@@ -171,121 +151,6 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	t.Logf("deploying %s manifest file", manifestFile)
 
 	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
-}
-
-func generateTestKonnectControlPlaneDescription(t *testing.T) string {
-	t.Helper()
-
-	desc := fmt.Sprintf("control plane for test %s", t.Name())
-	if testenv.GithubServerURL() != "" && testenv.GithubRepo() != "" && testenv.GithubRunID() != "" {
-		githubRunURL := fmt.Sprintf("%s/%s/actions/runs/%s",
-			testenv.GithubServerURL(), testenv.GithubRepo(), testenv.GithubRunID())
-		desc += ", github workflow run " + githubRunURL
-	}
-
-	return desc
-}
-
-// createTestControlPlane creates a control plane to be used in tests. It returns the created control plane's ID.
-// It also sets up a cleanup function for it to be deleted.
-func createTestControlPlane(ctx context.Context, t *testing.T) string {
-	t.Helper()
-	rgClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
-			return nil
-		}),
-	)
-	require.NoError(t, err)
-	rolesClient := roles.NewClient(
-		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
-		konnectRolesBaseURL,
-		konnectAccessToken,
-	)
-
-	var rgID uuid.UUID
-	createRgErr := retry.Do(func() error {
-		rgName := uuid.NewString()
-		createRgResp, err := rgClient.CreateControlPlaneWithResponse(ctx, cp.CreateControlPlaneRequest{
-			Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
-			Labels: &cp.Labels{
-				"created_in_tests": "true",
-			},
-			Name:        rgName,
-			ClusterType: cp.ClusterTypeKubernetesIngressController,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create control plane: %w", err)
-		}
-		if createRgResp.StatusCode() != http.StatusCreated {
-			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
-		}
-		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
-			return errors.New("No control plane ID in response")
-		}
-
-		rgID = *createRgResp.JSON201.Id
-		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
-	require.NoError(t, createRgErr)
-
-	t.Cleanup(func() {
-		t.Logf("deleting test Konnect Control Plane: %q", rgID)
-		err := retry.Do(
-			func() error {
-				_, err := rgClient.DeleteControlPlaneWithResponse(ctx, rgID)
-				return err
-			},
-			retry.Attempts(5), retry.Delay(time.Second),
-		)
-		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", rgID)
-
-		// We have to manually delete roles created for the control plane because Konnect doesn't do it automatically.
-		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
-		// because of a performance issue when there's too many roles for the account
-		// (see https://konghq.atlassian.net/browse/TPS-1319).
-		//
-		// We can drop this once the automated cleanup is implemented on Konnect side:
-		// https://konghq.atlassian.net/browse/TPS-1453.
-		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
-		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
-		for _, role := range rgRoles {
-			if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
-				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
-				err := rolesClient.DeleteRole(ctx, role.ID)
-				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
-			}
-		}
-	})
-
-	t.Logf("created test Konnect Control Plane: %q", rgID.String())
-	return rgID.String()
-}
-
-// createClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API
-// so that KIC can use the certificates to authenticate against Konnect Admin API.
-func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (certPEM string, keyPEM string) {
-	t.Helper()
-
-	rgConfigClient, err := cpc.NewClientWithResponses(fmt.Sprintf(konnectControlPlanesConfigBaseURLFmt, rgID), cpc.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
-			return nil
-		}),
-		cpc.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
-	)
-	require.NoError(t, err)
-
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
-
-	t.Log("creating client certificate in Konnect")
-	resp, err := rgConfigClient.PostDpClientCertificatesWithResponse(ctx, cpc.PostDpClientCertificatesJSONRequestBody{
-		Cert: string(cert),
-	})
-	require.NoError(t, err)
-	require.Equalf(t, http.StatusCreated, resp.StatusCode(), "failed creating client certificate: %s", string(resp.Body))
-
-	return string(cert), string(key)
 }
 
 // createKonnectClientSecretAndConfigMap creates a Secret with client TLS certificate that is used by KIC to communicate

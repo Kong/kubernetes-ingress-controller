@@ -1077,7 +1077,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		failure := result.TranslationFailures[0]
 		assert.Contains(failure.Message(), "client certificate requested for incompatible service protocol 'http'")
-		
+
 		state := result.KongState
 		require.NotNil(t, state)
 		assert.Equal(1, len(state.Services))

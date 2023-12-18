@@ -129,6 +129,10 @@ Adding a new version? You'll need three changes:
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
   enforce `KongUpstreamPolicy` status.
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
+- Add CRD `KongVault` to reperesent a custom Kong vault for storing senstive
+  data used in plugin configurations.
+  [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
+
 
 ### Fixed
 

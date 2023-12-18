@@ -44,6 +44,7 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 
 		configurationStatus object.ConfigurationStatus
 		conditions          []metav1.Condition
+		options             []utils.ProgrammedConditionOption
 
 		expectedUpdatedConditions []metav1.Condition
 		expectedUpdateNeeded      bool
@@ -101,11 +102,37 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionTrue},
 			expectedUpdateNeeded:      true,
 		},
+		{
+			name:                "condition for Unknown status with custom message",
+			configurationStatus: object.ConfigurationStatusUnknown,
+			conditions:          nil,
+			options: []utils.ProgrammedConditionOption{
+				utils.WithUnknownMessage("some other message"),
+			},
+			expectedUpdatedConditions: []metav1.Condition{
+				func() metav1.Condition {
+					cond := expectedProgrammedConditionUnknown
+					cond.Message = "some other message"
+					return cond
+				}(),
+			},
+			expectedUpdateNeeded: true,
+		},
+		{
+			name:                "condition for Succeeded status not affected by custom Unknown message",
+			configurationStatus: object.ConfigurationStatusSucceeded,
+			conditions:          nil,
+			options: []utils.ProgrammedConditionOption{
+				utils.WithUnknownMessage("some other message"),
+			},
+			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionTrue},
+			expectedUpdateNeeded:      true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			conditions, updateNeeded := utils.EnsureProgrammedCondition(tc.configurationStatus, testObjectGeneration, tc.conditions)
+			conditions, updateNeeded := utils.EnsureProgrammedCondition(tc.configurationStatus, testObjectGeneration, tc.conditions, tc.options...)
 			assert.Equal(t, tc.expectedUpdateNeeded, updateNeeded)
 
 			ignoreLastTransitionTime := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")

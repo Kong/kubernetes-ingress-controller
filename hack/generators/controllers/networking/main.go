@@ -107,34 +107,38 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
-		Version:                           "v1",
-		Kind:                              "KongPlugin",
-		PackageImportAlias:                "kongv1",
-		PackageAlias:                      "KongV1",
-		Package:                           kongv1,
-		Plural:                            "kongplugins",
-		CacheType:                         "Plugin",
-		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
-		ProgrammedConditionUpdatesEnabled: false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		Group:                            "configuration.konghq.com",
+		Version:                          "v1",
+		Kind:                             "KongPlugin",
+		PackageImportAlias:               "kongv1",
+		PackageAlias:                     "KongV1",
+		Package:                          kongv1,
+		Plural:                           "kongplugins",
+		CacheType:                        "Plugin",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		},
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
-		Version:                           "v1",
-		Kind:                              "KongClusterPlugin",
-		PackageImportAlias:                "kongv1",
-		PackageAlias:                      "KongV1",
-		Package:                           kongv1,
-		Plural:                            "kongclusterplugins",
-		CacheType:                         "ClusterPlugin",
-		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
-		ProgrammedConditionUpdatesEnabled: false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		Group:                            "configuration.konghq.com",
+		Version:                          "v1",
+		Kind:                             "KongClusterPlugin",
+		PackageImportAlias:               "kongv1",
+		PackageAlias:                     "KongV1",
+		Package:                          kongv1,
+		Plural:                           "kongclusterplugins",
+		CacheType:                        "ClusterPlugin",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: false, // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		},
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
@@ -155,20 +159,24 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 		ConfigStatusNotificationsEnabled:  true,
-		ProgrammedConditionUpdatesEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: true,
+		},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
-		Version:                           "v1beta1",
-		Kind:                              "KongConsumerGroup",
-		PackageImportAlias:                "kongv1beta1",
-		PackageAlias:                      "KongV1Beta1",
-		Package:                           kongv1beta1,
-		Plural:                            "kongconsumergroups",
-		CacheType:                         "ConsumerGroup",
-		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  true,
-		ProgrammedConditionUpdatesEnabled: true,
+		Group:                            "configuration.konghq.com",
+		Version:                          "v1beta1",
+		Kind:                             "KongConsumerGroup",
+		PackageImportAlias:               "kongv1beta1",
+		PackageAlias:                     "KongV1Beta1",
+		Package:                          kongv1beta1,
+		Plural:                           "kongconsumergroups",
+		CacheType:                        "ConsumerGroup",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: true,
+		},
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
@@ -222,17 +230,20 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "incubator.ingress-controller.konghq.com",
-		Version:                           "v1alpha1",
-		Kind:                              "KongServiceFacade",
-		PackageImportAlias:                "incubatorv1alpha1",
-		PackageAlias:                      "IncubatorV1Alpha1",
-		Package:                           incubatorv1alpha1,
-		Plural:                            "kongservicefacades",
-		CacheType:                         "KongServiceFacade",
-		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  true,
-		ProgrammedConditionUpdatesEnabled: true,
+		Group:                            "incubator.ingress-controller.konghq.com",
+		Version:                          "v1alpha1",
+		Kind:                             "KongServiceFacade",
+		PackageImportAlias:               "incubatorv1alpha1",
+		PackageAlias:                     "IncubatorV1Alpha1",
+		Package:                          incubatorv1alpha1,
+		Plural:                           "kongservicefacades",
+		CacheType:                        "KongServiceFacade",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled:       true,
+			CustomUnknownMessage: "Found no references to this resource in Ingress or similar resources.",
+		},
 		AcceptsIngressClassNameAnnotation: true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
@@ -363,13 +374,21 @@ type typeNeeded struct {
 	// resource.
 	IngressAddressUpdatesEnabled bool
 
-	// ProgrammedConditionUpdatesEnabled indicates that the controllers should manage the programmed condition for the
-	// resource.
-	ProgrammedConditionUpdatesEnabled bool
+	// ProgrammedCondition contains the configuration for the Programmed condition for the resource.
+	ProgrammedCondition ProgrammedConditionConfiguration
 
 	// NeedUpdateReferences is true if we need to update the reference relationships
 	// between reconciled object and other objects.
 	NeedsUpdateReferences bool
+}
+
+type ProgrammedConditionConfiguration struct {
+	// UpdatesEnabled indicates that the controllers should manage the Programmed condition for the
+	// resource.
+	UpdatesEnabled bool
+
+	// CustomUnknownMessage is the message to use for the Programmed condition when the configuration status is Unknown.
+	CustomUnknownMessage string
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
@@ -644,9 +663,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{- end }}
 
-{{- /* For ProgrammedConditionUpdatesEnabled we do not update references before status is updated because in case of
+{{- /* For ProgrammedCondition.UpdatesEnabled we do not update references before status is updated because in case of
        a reference to non-existing object, the status update would never happen. */ -}}
-{{- if and .NeedsUpdateReferences (not .ProgrammedConditionUpdatesEnabled) }}
+{{- if and .NeedsUpdateReferences (not .ProgrammedCondition.UpdatesEnabled) }}
 	{{- template "updateReferences" . }}
 {{- end }}
 
@@ -674,10 +693,17 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		}
 		{{- end }}
 
-		{{- if .ProgrammedConditionUpdatesEnabled }}
+		{{- if .ProgrammedCondition.UpdatesEnabled }}
 		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus, 
+			obj.Generation, 
+			obj.Status.Conditions,
+		{{- if .ProgrammedCondition.CustomUnknownMessage }}
+			ctrlutils.WithUnknownMessage("{{ .ProgrammedCondition.CustomUnknownMessage }}"),
+		{{- end }}
+		)
 		obj.Status.Conditions = conditions
 		{{- end }}
 		if updateNeeded {
@@ -687,9 +713,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{- end}}
 
-{{- /* For ProgrammedConditionUpdatesEnabled we update references after status is updated because otherwise in case of
+{{- /* For ProgrammedCondition.UpdatesEnabled we update references after status is updated because otherwise in case of
        a reference to non-existing object, the status update would never happen. */ -}}
-{{- if and .NeedsUpdateReferences .ProgrammedConditionUpdatesEnabled }}
+{{- if and .NeedsUpdateReferences .ProgrammedCondition.UpdatesEnabled }}
 	{{- template "updateReferences" . }}
 {{- end }}
 

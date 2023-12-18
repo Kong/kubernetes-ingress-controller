@@ -20,12 +20,29 @@ const (
 	ProgrammedConditionFalsePendingMessage = "Object is pending configuration in Kong."
 )
 
+type ProgrammedConditionOption func(object.ConfigurationStatus, *metav1.Condition)
+
+// WithUnknownMessage sets the message of the desired Programmed condition to the given message if the
+// configuration status is Unknown.
+func WithUnknownMessage(message string) ProgrammedConditionOption {
+	return func(status object.ConfigurationStatus, condition *metav1.Condition) {
+		if status == object.ConfigurationStatusUnknown {
+			condition.Message = message
+		}
+	}
+}
+
 // EnsureProgrammedCondition ensures that the programmed condition is present in the conditions slice with the
 // status reflecting the current configuration status of the object.
 // If the condition is already present with the correct status, the conditions slice is returned unmodified and false is
 // returned as the second return value. If the condition is not present or has the wrong status, the conditions slice is
 // returned with the condition updated and true is returned.
-func EnsureProgrammedCondition(configurationStatus object.ConfigurationStatus, objectGeneration int64, conditions []metav1.Condition) (
+func EnsureProgrammedCondition(
+	configurationStatus object.ConfigurationStatus,
+	objectGeneration int64,
+	conditions []metav1.Condition,
+	options ...ProgrammedConditionOption,
+) (
 	updatedConditions []metav1.Condition,
 	updateNeeded bool,
 ) {
@@ -56,6 +73,9 @@ func EnsureProgrammedCondition(configurationStatus object.ConfigurationStatus, o
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(reason),
 		Message:            message,
+	}
+	for _, opt := range options {
+		opt(configurationStatus, &desiredCondition)
 	}
 
 	hasMatchingCondition := util.CheckCondition(

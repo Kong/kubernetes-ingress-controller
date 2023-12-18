@@ -1891,7 +1891,7 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 			configurationStatus,
 			obj.Generation,
 			obj.Status.Conditions,
-			ctrlutils.WithUnknownMessage("KongServiceFacade hasn't been configured in Kong yet. It has to referenced by another resource (e.g. Ingress) to be configured."),
+			ctrlutils.WithUnknownMessage("Found no references to this resource in Ingress or similar resources."),
 		)
 		obj.Status.Conditions = conditions
 		if updateNeeded {

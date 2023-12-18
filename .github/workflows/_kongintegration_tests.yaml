@@ -26,6 +26,7 @@ jobs:
         run: make test.kongintegration
         env:
           GOTESTSUM_JUNITFILE: kongintegration-tests.xml
+          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
 
       - name: collect test coverage
         uses: actions/upload-artifact@v3

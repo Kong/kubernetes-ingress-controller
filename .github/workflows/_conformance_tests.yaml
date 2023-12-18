@@ -60,7 +60,7 @@ jobs:
       # upload logs when test failed
       - name: upload KIC logs 
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with: 
           name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
@@ -68,7 +68,7 @@ jobs:
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tests-report
           path: conformance-tests.xml

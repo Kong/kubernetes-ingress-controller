@@ -25,12 +25,12 @@ jobs:
       - name: collect test coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-envtest
           path: coverage.envtest.out
 
       - name: collect test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tests-report-envtests
+          name: tests-report-envtest
           path: envtest-tests.xml

@@ -77,7 +77,7 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-enterprise-postgres-nightly
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
@@ -122,7 +122,7 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-enterprise-dbless-nightly
         path: coverage.enterprisedbless.out
 
     - name: upload diagnostics

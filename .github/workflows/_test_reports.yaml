@@ -30,7 +30,7 @@ jobs:
         id: download-coverage
         uses: actions/download-artifact@v4
         with:
-          name: coverage
+          name: coverage-*
           path: coverage
 
       - name: Upload coverage to Codecov
@@ -55,7 +55,7 @@ jobs:
         id: download-coverage
         uses: actions/download-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-*
           path: report
 
       - name: Upload test results to BuildPulse for flaky test detection

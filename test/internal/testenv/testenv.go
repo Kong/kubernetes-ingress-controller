@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -38,6 +39,14 @@ func KongImage() string {
 // KongTag is the Kong image tag to use in tests.
 func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
+}
+
+// KongImageTag is the combined Kong image and tag if both are set, or empty string if not.
+func KongImageTag() string {
+	if KongImage() != "" && KongTag() != "" {
+		return fmt.Sprintf("%s:%s", KongImage(), KongTag())
+	}
+	return ""
 }
 
 // KongEffectiveVersion is the effective semver of kong gateway.

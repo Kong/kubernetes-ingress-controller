@@ -5,8 +5,14 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
@@ -15,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -103,12 +110,14 @@ func testManifestsUpgrade(
 	oldManifest, err := httpClient.Get(testParams.fromManifestURL)
 	require.NoError(t, err)
 	defer oldManifest.Body.Close()
+	oldManifestPath := dumpToTempFile(t, oldManifest.Body)
+
+	skipIfNotTwoConsecutiveKongMinorVersions(t, oldManifestPath, testParams.toManifestPath)
 
 	t.Log("configuring upgrade manifests test")
 	ctx, env := setupE2ETest(t)
 
 	t.Logf("deploying previous kong manifests: %s", testParams.fromManifestURL)
-	oldManifestPath := dumpToTempFile(t, oldManifest.Body)
 	ManifestDeploy{
 		Path:            oldManifestPath,
 		SkipTestPatches: true,
@@ -153,4 +162,81 @@ func testManifestsUpgrade(
 	require.NoError(t, err)
 
 	verifyIngressWithEchoBackendsPath(ctx, t, env, numberOfEchoBackends, newPath)
+}
+
+// skipIfNotTwoConsecutiveKongMinorVersions skips the test if the old and new Kong versions are not two consecutive
+// minor versions. This is necessary because Kong in DB-mode doesn't support skipping minor versions when upgrading.
+// See the Gateway upgrade guide for details: https://docs.konghq.com/gateway/latest/upgrade/.
+func skipIfNotTwoConsecutiveKongMinorVersions(
+	t *testing.T,
+	oldManifestPath string,
+	newManifestPath string,
+) {
+	oldKongVersion := extractKongVersionFromManifest(t, oldManifestPath)
+
+	var newKongVersion kong.Version
+	if targetKongImage := testenv.KongImageTag(); targetKongImage != "" {
+		// If the target Kong image is specified via environment variable, use it...
+		newKongVersion = extractKongVersionFromDockerImage(t, targetKongImage)
+	} else {
+		// ...otherwise, use the version used in the new manifest.
+		newKongVersion = extractKongVersionFromManifest(t, newManifestPath)
+	}
+
+	if oldKongVersion.Major() != newKongVersion.Major() ||
+		oldKongVersion.Minor()+1 != newKongVersion.Minor() {
+		t.Skipf("skipping upgrade test because the old and new Kong versions are not two consecutive minor versions: %s and %s",
+			oldKongVersion, newKongVersion)
+	}
+}
+
+var kongVersionRegex = regexp.MustCompile(`image: (kong:.*)`)
+
+// extractKongVersionFromManifest extracts the Kong version from the manifest.
+func extractKongVersionFromManifest(t *testing.T, manifestPath string) kong.Version {
+	manifest, err := os.ReadFile(manifestPath)
+	require.NoError(t, err)
+
+	res := kongVersionRegex.FindStringSubmatch(string(manifest))
+	require.NotEmpty(t, res)
+
+	version := res[1]
+	return extractKongVersionFromDockerImage(t, version)
+}
+
+// extractKongVersionFromDockerImage extracts the Kong version from the docker image by inspecting the image's env vars
+// for the KONG_VERSION env var.
+func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version {
+	dockerc, err := client.NewClientWithOpts(client.FromEnv)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Logf("pulling docker image %s to inspect it", image)
+	_, err = dockerc.ImagePull(ctx, image, types.ImagePullOptions{})
+	require.NoError(t, err)
+
+	t.Logf("inspecting docker image %s", image)
+	var imageDetails types.ImageInspect
+	// Retry because the image may not be available immediately after pulling it.
+	require.Eventually(t, func() bool {
+		var err error
+		imageDetails, _, err = dockerc.ImageInspectWithRaw(ctx, image)
+		if err != nil {
+			t.Logf("failed to inspect docker image %s: %s", image, err)
+			return false
+		}
+		return true
+	}, time.Minute, time.Second)
+
+	kongVersionEnv, ok := lo.Find(imageDetails.Config.Env, func(s string) bool {
+		return strings.HasPrefix(s, "KONG_VERSION=")
+	})
+	require.True(t, ok, "KONG_VERSION env var not found in image %s", image)
+
+	version, err := kong.ParseSemanticVersion(strings.TrimPrefix(kongVersionEnv, "KONG_VERSION="))
+	require.NoError(t, err)
+	t.Logf("parsed Kong version %s from docker image %s", version, image)
+
+	return version
 }

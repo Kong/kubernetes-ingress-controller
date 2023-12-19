@@ -80,7 +80,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.12.3]
 
-> Release date: TBD
+> Release date: 2023-12-19
 
 ### Fixed
 

@@ -64,10 +64,10 @@ require (
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/Microsoft/hcsshim v0.11.1 // indirect
+	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/bombsimon/logrusr/v3 v3.1.0 // indirect
-	github.com/containerd/containerd v1.7.7 // indirect
+	github.com/containerd/containerd v1.7.11 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect

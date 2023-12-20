@@ -166,6 +166,12 @@ func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
 }
 
+// GKEClusterReleaseChannel indicates the GKE cluster release channel to use when
+// creating a GKE cluster in tests.
+func GKEClusterReleaseChannel() string {
+	return os.Getenv("TEST_GKE_CLUSTER_RELEASE_CHANNEL")
+}
+
 // ClusterProvider indicates the Kubernetes cluster provider.
 func ClusterProvider() string {
 	return os.Getenv("KONG_CLUSTER_PROVIDER")

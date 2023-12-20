@@ -273,6 +273,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+          TEST_GKE_CLUSTER_RELEASE_CHANNEL: "rapid"
 
       - name: upload diagnostics
         if: ${{ always() }}

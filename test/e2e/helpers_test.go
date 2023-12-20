@@ -228,6 +228,9 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
 		clusterBuilder.WithClusterVersion(k8sVersion)
 	}
+	if ch := testenv.GKEClusterReleaseChannel(); ch != "" {
+		clusterBuilder.WithReleaseChannel(gke.ReleaseChannel(ch))
+	}
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }

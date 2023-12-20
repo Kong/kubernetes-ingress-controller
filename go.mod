@@ -32,7 +32,7 @@ require (
 	github.com/kong/go-database-reconciler v1.1.0
 	github.com/kong/go-kong v0.48.0
 	github.com/kong/kubernetes-telemetry v0.1.3
-	github.com/kong/kubernetes-testing-framework v0.42.0
+	github.com/kong/kubernetes-testing-framework v0.43.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.57
 	github.com/mitchellh/mapstructure v1.5.0
@@ -185,7 +185,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.10 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sourcegraph/conc v0.3.0
-	github.com/spf13/cast v1.5.1 // indirect
+	github.com/spf13/cast v1.6.0 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/match v1.1.1 // indirect

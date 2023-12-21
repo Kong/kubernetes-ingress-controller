@@ -20,6 +20,8 @@ func backendRefsToKongStateBackends(
 	backends := kongstate.ServiceBackends{}
 
 	for _, backendRef := range backendRefs {
+		logger := loggerForBackendRef(logger, route, backendRef)
+
 		if util.IsBackendRefGroupKindSupported(
 			backendRef.Group,
 			backendRef.Kind,
@@ -32,7 +34,7 @@ func backendRefsToKongStateBackends(
 			if backendRef.Namespace != nil {
 				namespace = string(*backendRef.Namespace)
 			}
-			backend := kongstate.NewServiceBackendForService(
+			backend, err := kongstate.NewServiceBackendForService(
 				namespace,
 				string(backendRef.Name),
 				kongstate.PortDef{
@@ -40,6 +42,9 @@ func backendRefsToKongStateBackends(
 					Number: port,
 				},
 			)
+			if err != nil {
+				logger.Error(err, "failed to create ServiceBackend for backendRef")
+			}
 			if backendRef.Weight != nil {
 				backend.SetWeight(*backendRef.Weight)
 			}
@@ -49,29 +54,33 @@ func backendRefsToKongStateBackends(
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and
 			// that remain viable (because they still have some permissible backendRefs)
-			var (
-				namespace = route.GetNamespace()
-				kind      string
-			)
-			if backendRef.Namespace != nil {
-				namespace = string(*backendRef.Namespace)
-			}
-			if backendRef.Kind != nil {
-				kind = string(*backendRef.Kind)
-			}
-
-			objName := fmt.Sprintf("%s %s/%s",
-				route.GetObjectKind().GroupVersionKind().String(),
-				route.GetNamespace(),
-				route.GetName())
-			logger.Error(nil, "Object requested backendRef to target, but no ReferenceGrant permits it, skipping...",
-				"object_name", objName,
-				"target_kind", kind,
-				"target_namespace", namespace,
-				"target_name", backendRef.Name,
-			)
+			logger.Error(nil, "Object requested backendRef to target, but no ReferenceGrant permits it, skipping...")
 		}
 	}
 
 	return backends
+}
+
+func loggerForBackendRef(logger logr.Logger, route client.Object, backendRef gatewayapi.BackendRef) logr.Logger {
+	var (
+		namespace = route.GetNamespace()
+		kind      string
+	)
+	if backendRef.Namespace != nil {
+		namespace = string(*backendRef.Namespace)
+	}
+	if backendRef.Kind != nil {
+		kind = string(*backendRef.Kind)
+	}
+
+	objName := fmt.Sprintf("%s %s/%s",
+		route.GetObjectKind().GroupVersionKind().String(),
+		route.GetNamespace(),
+		route.GetName())
+	return logger.WithValues(
+		"object_name", objName,
+		"target_kind", kind,
+		"target_namespace", namespace,
+		"target_name", backendRef.Name,
+	)
 }

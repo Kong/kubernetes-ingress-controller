@@ -221,7 +221,12 @@ func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 		kongServiceName := meta.generateKongServiceName()
 		kongStateService, ok := kongStateServiceCache[kongServiceName]
 		if !ok {
-			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.backend.port)
+			var err error
+			kongStateService, err = meta.translateIntoKongStateService(kongServiceName, meta.backend.port)
+			if err != nil {
+				i.failuresCollector.PushResourceFailure(fmt.Sprintf("failed to translate Ingress into Kong Service: %s", err), meta.parentIngress)
+				continue
+			}
 		}
 
 		if i.featureFlags.ExpressionRoutes {
@@ -320,8 +325,20 @@ func (b ingressTranslationMetaBackend) isServiceFacade() bool {
 	return b.backendType == ingressPathBackendTypeKongServiceFacade
 }
 
-func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) kongstate.Service {
+func (m *ingressTranslationMeta) translateIntoKongStateService(
+	kongServiceName string,
+	portDef kongstate.PortDef,
+) (kongstate.Service, error) {
 	if m.backend.isServiceFacade() {
+		serviceBackend, err := kongstate.NewServiceBackendForServiceFacade(
+			m.parentIngress.GetNamespace(),
+			m.backend.name,
+			portDef,
+		)
+		if err != nil {
+			return kongstate.Service{}, fmt.Errorf("failed to create ServiceBackend for KongServiceFacade %q: %w", m.backend.name, err)
+		}
+
 		return kongstate.Service{
 			Namespace: m.parentIngress.GetNamespace(),
 			Service: kong.Service{
@@ -335,15 +352,18 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 				WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 				Retries:        kong.Int(defaultRetries),
 			},
-			Backends: []kongstate.ServiceBackend{
-				kongstate.NewServiceBackendForServiceFacade(
-					m.parentIngress.GetNamespace(),
-					m.backend.name,
-					portDef,
-				),
-			},
-			Parent: m.backend.parentKongServiceFacade,
-		}
+			Backends: []kongstate.ServiceBackend{serviceBackend},
+			Parent:   m.backend.parentKongServiceFacade,
+		}, nil
+	}
+
+	serviceBackend, err := kongstate.NewServiceBackendForService(
+		m.parentIngress.GetNamespace(),
+		m.backend.name,
+		portDef,
+	)
+	if err != nil {
+		return kongstate.Service{}, fmt.Errorf("failed to create ServiceBackend for Kubernetes Service %q: %w", m.backend.name, err)
 	}
 
 	// Otherwise, we assume it's a Kubernetes Service.
@@ -360,15 +380,9 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 			Retries:        kong.Int(defaultRetries),
 		},
-		Backends: []kongstate.ServiceBackend{
-			kongstate.NewServiceBackendForService(
-				m.parentIngress.GetNamespace(),
-				m.backend.name,
-				portDef,
-			),
-		},
-		Parent: m.parentIngress,
-	}
+		Backends: []kongstate.ServiceBackend{serviceBackend},
+		Parent:   m.parentIngress,
+	}, nil
 }
 
 func (m *ingressTranslationMeta) generateKongServiceName() string {

@@ -1327,11 +1327,11 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 					Backends: []kongstate.ServiceBackend{
-						kongstate.NewServiceBackendForServiceFacade(
-							corev1.NamespaceDefault,
-							"svc-facade",
-							PortDefFromPortNumber(8080),
-						),
+						builder.NewKongstateServiceBackend("svc-facade").
+							WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(8080).
+							Build(),
 					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1496,11 +1496,11 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					},
 					Backends: []kongstate.ServiceBackend{
-						kongstate.NewServiceBackendForServiceFacade(
-							corev1.NamespaceDefault,
-							"svc-facade",
-							PortDefFromPortNumber(8080),
-						),
+						builder.NewKongstateServiceBackend("svc-facade").
+							WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(8080).
+							Build(),
 					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
 						ObjectMeta: metav1.ObjectMeta{

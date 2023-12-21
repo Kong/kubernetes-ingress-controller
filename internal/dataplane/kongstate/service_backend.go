@@ -1,6 +1,8 @@
 package kongstate
 
 import (
+	"errors"
+
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 )
@@ -27,39 +29,51 @@ type ServiceBackend struct {
 	weight      *int
 }
 
+// NewServiceBackend creates a new ServiceBackend with an arbitrary backend type.
 func NewServiceBackend(
 	t ServiceBackendType,
 	namespace string,
 	name string,
 	portDef PortDef,
-) ServiceBackend {
-	// TODO return error
+) (ServiceBackend, error) {
+	if t == "" {
+		return ServiceBackend{}, errors.New("backend type cannot be empty")
+	}
+	if namespace == "" {
+		return ServiceBackend{}, errors.New("namespace cannot be empty")
+	}
+	if name == "" {
+		return ServiceBackend{}, errors.New("name cannot be empty")
+	}
 	return ServiceBackend{
 		backendType: t,
 		namespace:   namespace,
 		name:        name,
 		portDef:     portDef,
-	}
+	}, nil
 }
 
-func NewServiceBackendForService(namespace, name string, portDef PortDef) ServiceBackend {
-	return ServiceBackend{
-		namespace:   namespace,
-		name:        name,
-		portDef:     portDef,
-		backendType: ServiceBackendTypeKubernetesService,
-	}
+// NewServiceBackendForService creates a new ServiceBackend for a Kubernetes Service.
+func NewServiceBackendForService(namespace, name string, portDef PortDef) (ServiceBackend, error) {
+	return NewServiceBackend(
+		ServiceBackendTypeKubernetesService,
+		namespace,
+		name,
+		portDef,
+	)
 }
 
-func NewServiceBackendForServiceFacade(namespace, name string, portDef PortDef) ServiceBackend {
-	return ServiceBackend{
-		name:        name,
-		namespace:   namespace,
-		portDef:     portDef,
-		backendType: ServiceBackendTypeKongServiceFacade,
-	}
+// NewServiceBackendForServiceFacade creates a new ServiceBackend for a KongServiceFacade.
+func NewServiceBackendForServiceFacade(namespace, name string, portDef PortDef) (ServiceBackend, error) {
+	return NewServiceBackend(
+		ServiceBackendTypeKongServiceFacade,
+		namespace,
+		name,
+		portDef,
+	)
 }
 
+// SetWeight sets the weight of the backend used for load-balancing.
 func (s *ServiceBackend) SetWeight(weight int32) {
 	s.weight = lo.ToPtr(int(weight))
 }

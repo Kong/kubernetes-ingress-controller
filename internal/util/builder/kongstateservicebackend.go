@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"fmt"
+
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -64,12 +66,17 @@ func (b *KongstateServiceBackendBuilder) Build() kongstate.ServiceBackend {
 		b.namespace = metav1.NamespaceDefault
 	}
 
-	s := kongstate.NewServiceBackend(
+	s, err := kongstate.NewServiceBackend(
 		b.t,
 		b.namespace,
 		b.name,
 		b.portDef,
 	)
+	if err != nil {
+		// This should never happen. If it does, it's a bug that will be discovered in tests as the builder
+		// is used in tests only.
+		panic(fmt.Errorf("failed to build service backend: %w", err))
+	}
 	if b.weight != nil {
 		s.SetWeight(*b.weight)
 	}

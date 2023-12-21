@@ -388,7 +388,7 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- Fix(manager): set InitCacheSyncDuration to 5s by default and allow it to be configured via cli.
+- Fix(manager): set InitCacheSyncDuration to 5s by default and allow it to be configured via `--init-cache-sync-duration` CLI flag
   [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
 - Don't set `instance_name` of plugin if Kong version is below 3.2.0.
   [#5250](https://github.com/Kong/kubernetes-ingress-controller/pull/5250)

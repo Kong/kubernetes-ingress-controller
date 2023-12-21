@@ -105,7 +105,6 @@ func ControllerImageTag() string {
 }
 
 // KongEffectiveVersion is the effective semver of kong gateway.
-// KongEffectiveVersion is the effective semver of kong gateway.
 // When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
 func KongEffectiveVersion() string {
 	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
@@ -205,7 +204,7 @@ func GithubRunID() string {
 func ControllerFeatureGates() string {
 	featureGates := os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 	if featureGates == "" {
-		featureGates = getFeatureGates()
+		featureGates = GetFeatureGates()
 	}
 	return featureGates
 }

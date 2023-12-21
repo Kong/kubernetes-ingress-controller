@@ -1584,10 +1584,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("httproute.default.httproute-1._.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 			},
@@ -1653,10 +1653,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("httproute.default.httproute-1.foo.com.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 				{
@@ -1664,10 +1664,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("httproute.default.httproute-1._.bar.com.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 				{
@@ -1675,10 +1675,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("httproute.default.httproute-1.foo.com.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service2").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 				{
@@ -1686,10 +1686,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("httproute.default.httproute-1._.bar.com.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service2").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 			},
@@ -1772,10 +1772,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("httproute.default.httproute-1.foo.com.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 			},
@@ -1875,10 +1875,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1._.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name:    "service1",
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-					},
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -1937,10 +1934,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1.foo.com.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name:    "service1",
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-					},
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -2009,16 +2003,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1._.foo.com.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name:    "service1",
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						Weight:  lo.ToPtr(int32(10)),
-					},
-					{
-						Name:    "service2",
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						Weight:  lo.ToPtr(int32(20)),
-					},
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).WithWeight(10).Build(),
+					builder.NewKongstateServiceBackend("service2").WithPortNumber(80).WithWeight(20).Build(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -2067,10 +2053,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1.a.foo.com.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name:    "service1",
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-					},
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -2116,10 +2099,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1._.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name:    "service1",
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-					},
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{

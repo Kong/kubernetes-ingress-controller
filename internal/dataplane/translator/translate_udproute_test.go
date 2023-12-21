@@ -85,10 +85,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 			},
@@ -185,10 +185,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 				{
@@ -197,10 +197,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(81)},
-						},
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(81).Build(),
 					},
 				},
 			},
@@ -285,14 +282,14 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(81)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(81).
+							Build(),
 					},
 				},
 			},
@@ -389,10 +386,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 				{
@@ -401,10 +398,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).Build(),
 					},
 				},
 			},
@@ -559,10 +553,10 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 			},
@@ -659,10 +653,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
+						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).Build(),
 					},
 				},
 				{
@@ -671,10 +662,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8181)},
-						},
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(8181).Build(),
 					},
 				},
 			},
@@ -754,14 +742,14 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(81)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(81).
+							Build(),
 					},
 				},
 			},
@@ -855,10 +843,10 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(),
 					},
 				},
 				{
@@ -867,10 +855,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).Build(),
 					},
 				},
 			},

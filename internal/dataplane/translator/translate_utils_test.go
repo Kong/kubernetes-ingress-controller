@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
 func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
@@ -377,20 +378,14 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				},
 				Namespace: "cholpon",
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name: string(blueObjName),
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: int32(port),
-						},
-					},
-					{
-						Name: string(redObjName),
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: int32(port),
-						},
-					},
+					builder.NewKongstateServiceBackend(string(blueObjName)).
+						WithNamespace(string(cholponNamespace)).
+						WithPortNumber(int(port)).
+						Build(),
+					builder.NewKongstateServiceBackend(string(redObjName)).
+						WithNamespace(string(cholponNamespace)).
+						WithPortNumber(int(port)).
+						Build(),
 				},
 				Parent: &gatewayapi.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
@@ -448,21 +443,14 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				},
 				Namespace: "behbudiy",
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name:      string(blueObjName),
-						Namespace: "cholpon",
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: int32(port),
-						},
-					},
-					{
-						Name: string(redObjName),
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: int32(port),
-						},
-					},
+					builder.NewKongstateServiceBackend(string(blueObjName)).
+						WithNamespace(string(cholponNamespace)).
+						WithPortNumber(int(port)).
+						Build(),
+					builder.NewKongstateServiceBackend(string(redObjName)).
+						WithNamespace("behbudiy").
+						WithPortNumber(int(port)).
+						Build(),
 				},
 				Parent: &gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{
@@ -577,13 +565,10 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				},
 				Namespace: "behbudiy",
 				Backends: []kongstate.ServiceBackend{
-					{
-						Name: string(redObjName),
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: int32(port),
-						},
-					},
+					builder.NewKongstateServiceBackend(string(redObjName)).
+						WithNamespace("behbudiy").
+						WithPortNumber(int(port)).
+						Build(),
 				},
 				Parent: &gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{

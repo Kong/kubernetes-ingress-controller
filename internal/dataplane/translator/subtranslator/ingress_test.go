@@ -112,14 +112,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -185,14 +183,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -259,14 +255,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -333,14 +327,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -407,14 +399,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -480,14 +470,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -553,14 +541,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -698,14 +684,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -841,14 +825,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -930,14 +912,12 @@ func TestTranslateIngress(t *testing.T) {
 							},
 						},
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service1").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 				"default.test-service2.80": {
@@ -973,14 +953,12 @@ func TestTranslateIngress(t *testing.T) {
 							},
 						},
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service2",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service2").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -1073,14 +1051,12 @@ func TestTranslateIngress(t *testing.T) {
 							},
 						},
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "ad-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("ad-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 				"default.mad-service.80": {
@@ -1116,14 +1092,12 @@ func TestTranslateIngress(t *testing.T) {
 							},
 						},
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "mad-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("mad-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -1189,14 +1163,12 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -1271,14 +1243,12 @@ func TestTranslateIngress(t *testing.T) {
 							),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode: kongstate.PortModeByName,
-							Name: "http",
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortName("http").
+							Build(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -1356,12 +1326,13 @@ func TestTranslateIngress(t *testing.T) {
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 						},
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
-						Name:      "svc-facade",
-						Namespace: corev1.NamespaceDefault,
-						PortDef:   PortDefFromPortNumber(8080),
-					}},
+					Backends: []kongstate.ServiceBackend{
+						kongstate.NewServiceBackendForServiceFacade(
+							corev1.NamespaceDefault,
+							"svc-facade",
+							PortDefFromPortNumber(8080),
+						),
+					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "svc-facade",
@@ -1524,12 +1495,13 @@ func TestTranslateIngress(t *testing.T) {
 							},
 						},
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
-						Name:      "svc-facade",
-						Namespace: corev1.NamespaceDefault,
-						PortDef:   PortDefFromPortNumber(8080),
-					}},
+					Backends: []kongstate.ServiceBackend{
+						kongstate.NewServiceBackendForServiceFacade(
+							corev1.NamespaceDefault,
+							"svc-facade",
+							PortDefFromPortNumber(8080),
+						),
+					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "svc-facade",
@@ -1587,7 +1559,8 @@ func TestTranslateIngress(t *testing.T) {
 				})
 			}
 
-			diff := cmp.Diff(tt.expected, translatedServices, checkOnlyIngressMeta, checkOnlyKongServiceFacadeMeta)
+			compareServiceBackend := cmp.AllowUnexported(kongstate.ServiceBackend{})
+			diff := cmp.Diff(tt.expected, translatedServices, checkOnlyIngressMeta, checkOnlyKongServiceFacadeMeta, compareServiceBackend)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

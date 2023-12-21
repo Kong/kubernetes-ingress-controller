@@ -63,10 +63,13 @@ func (t *Translator) ingressRulesFromTCPIngressV1beta1() ingressRules {
 						Retries:        kong.Int(DefaultRetries),
 					},
 					Namespace: ingress.Namespace,
-					Backends: []kongstate.ServiceBackend{{
-						Name:    rule.Backend.ServiceName,
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						kongstate.NewServiceBackendForService(
+							ingress.Namespace,
+							rule.Backend.ServiceName,
+							kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+						),
+					},
 					Parent: ingress,
 				}
 			}
@@ -128,10 +131,13 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 						Host:     kong.String(host),
 						Port:     kong.Int(rule.Backend.ServicePort),
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Name:    rule.Backend.ServiceName,
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						kongstate.NewServiceBackendForService(
+							ingress.Namespace,
+							rule.Backend.ServiceName,
+							kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+						),
+					},
 					Parent: ingress,
 				}
 			}

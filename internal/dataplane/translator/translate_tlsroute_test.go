@@ -60,14 +60,10 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tlsroute.default.tlsroute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(443)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).Build(),
 					},
 				},
 			},
@@ -122,14 +118,10 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tlsroute.default.tlsroute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(443)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							Build(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).Build(),
 					},
 				},
 				{
@@ -137,14 +129,8 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tlsroute.default.tlsroute-1.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service3",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
-						{
-							Name:    "service4",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8443)},
-						},
+						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).Build(),
+						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).Build(),
 					},
 				},
 			},

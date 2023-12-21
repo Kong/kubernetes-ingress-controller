@@ -28,16 +28,20 @@ func backendRefsToKongStateBackends(
 			if backendRef.Port != nil {
 				port = int32(*backendRef.Port)
 			}
-			backend := kongstate.ServiceBackend{
-				Name: string(backendRef.Name),
-				PortDef: kongstate.PortDef{
+			namespace := route.GetNamespace()
+			if backendRef.Namespace != nil {
+				namespace = string(*backendRef.Namespace)
+			}
+			backend := kongstate.NewServiceBackendForService(
+				namespace,
+				string(backendRef.Name),
+				kongstate.PortDef{
 					Mode:   kongstate.PortModeByNumber,
 					Number: port,
 				},
-				Weight: backendRef.Weight,
-			}
-			if backendRef.Namespace != nil {
-				backend.Namespace = string(*backendRef.Namespace)
+			)
+			if backendRef.Weight != nil {
+				backend.SetWeight(*backendRef.Weight)
 			}
 			backends = append(backends, backend)
 		} else {

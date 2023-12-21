@@ -148,7 +148,7 @@ func TestFromIngressV1(t *testing.T) {
 		}
 
 		require.Len(t, snts.Backends, 1)
-		assert.Equal(t, snts.Backends[0].Name, "svc")
+		assert.Equal(t, snts.Backends[0].Name(), "svc")
 
 		require.Contains(t, result.ServiceNameToParent, "my-ns.svc.80")
 		assert.Equal(t, result.ServiceNameToParent["my-ns.svc.80"].GetName(), "baz")

@@ -166,12 +166,13 @@ func translateIngressDefaultBackendResource(
 			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
 		Namespace: ingress.Namespace,
-		Backends: []kongstate.ServiceBackend{{
-			Type:      kongstate.ServiceBackendTypeKongServiceFacade,
-			Name:      resource.Name,
-			Namespace: ingress.Namespace,
-			PortDef:   subtranslator.PortDefFromPortNumber(facade.Spec.Backend.Port),
-		}},
+		Backends: []kongstate.ServiceBackend{
+			kongstate.NewServiceBackendForServiceFacade(
+				ingress.Namespace,
+				resource.Name,
+				subtranslator.PortDefFromPortNumber(facade.Spec.Backend.Port),
+			),
+		},
 		Parent: facade,
 		Routes: []kongstate.Route{*route},
 	}, true
@@ -205,10 +206,9 @@ func translateIngressDefaultBackendService(ingress netv1.Ingress, route *kongsta
 			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
 		Namespace: ingress.Namespace,
-		Backends: []kongstate.ServiceBackend{{
-			Name:    defaultBackend.Service.Name,
-			PortDef: port,
-		}},
+		Backends: []kongstate.ServiceBackend{
+			kongstate.NewServiceBackendForService(ingress.Namespace, defaultBackend.Service.Name, port),
+		},
 		Parent: &ingress,
 		Routes: []kongstate.Route{*route},
 	}, true

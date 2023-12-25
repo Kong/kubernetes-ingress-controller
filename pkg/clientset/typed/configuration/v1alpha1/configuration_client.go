@@ -41,8 +41,8 @@ func (c *ConfigurationV1alpha1Client) IngressClassParameterses(namespace string)
 	return newIngressClassParameterses(c, namespace)
 }
 
-func (c *ConfigurationV1alpha1Client) KongVaults(namespace string) KongVaultInterface {
-	return newKongVaults(c, namespace)
+func (c *ConfigurationV1alpha1Client) KongVaults() KongVaultInterface {
+	return newKongVaults(c)
 }
 
 // NewForConfig creates a new ConfigurationV1alpha1Client for the given config.

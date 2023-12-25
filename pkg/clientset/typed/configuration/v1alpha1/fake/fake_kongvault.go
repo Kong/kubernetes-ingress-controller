@@ -32,7 +32,6 @@ import (
 // FakeKongVaults implements KongVaultInterface
 type FakeKongVaults struct {
 	Fake *FakeConfigurationV1alpha1
-	ns   string
 }
 
 var kongvaultsResource = v1alpha1.SchemeGroupVersion.WithResource("kongvaults")
@@ -42,8 +41,7 @@ var kongvaultsKind = v1alpha1.SchemeGroupVersion.WithKind("KongVault")
 // Get takes name of the kongVault, and returns the corresponding kongVault object, and an error if there is any.
 func (c *FakeKongVaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KongVault, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongvaultsResource, c.ns, name), &v1alpha1.KongVault{})
-
+		Invokes(testing.NewRootGetAction(kongvaultsResource, name), &v1alpha1.KongVault{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeKongVaults) Get(ctx context.Context, name string, options v1.GetOpt
 // List takes label and field selectors, and returns the list of KongVaults that match those selectors.
 func (c *FakeKongVaults) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.KongVaultList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongvaultsResource, kongvaultsKind, c.ns, opts), &v1alpha1.KongVaultList{})
-
+		Invokes(testing.NewRootListAction(kongvaultsResource, kongvaultsKind, opts), &v1alpha1.KongVaultList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeKongVaults) List(ctx context.Context, opts v1.ListOptions) (result 
 // Watch returns a watch.Interface that watches the requested kongVaults.
 func (c *FakeKongVaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(kongvaultsResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(kongvaultsResource, opts))
 }
 
 // Create takes the representation of a kongVault and creates it.  Returns the server's representation of the kongVault, and an error, if there is any.
 func (c *FakeKongVaults) Create(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.CreateOptions) (result *v1alpha1.KongVault, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongvaultsResource, c.ns, kongVault), &v1alpha1.KongVault{})
-
+		Invokes(testing.NewRootCreateAction(kongvaultsResource, kongVault), &v1alpha1.KongVault{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeKongVaults) Create(ctx context.Context, kongVault *v1alpha1.KongVau
 // Update takes the representation of a kongVault and updates it. Returns the server's representation of the kongVault, and an error, if there is any.
 func (c *FakeKongVaults) Update(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (result *v1alpha1.KongVault, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongvaultsResource, c.ns, kongVault), &v1alpha1.KongVault{})
-
+		Invokes(testing.NewRootUpdateAction(kongvaultsResource, kongVault), &v1alpha1.KongVault{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,8 +99,7 @@ func (c *FakeKongVaults) Update(ctx context.Context, kongVault *v1alpha1.KongVau
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeKongVaults) UpdateStatus(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (*v1alpha1.KongVault, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(kongvaultsResource, "status", c.ns, kongVault), &v1alpha1.KongVault{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(kongvaultsResource, "status", kongVault), &v1alpha1.KongVault{})
 	if obj == nil {
 		return nil, err
 	}
@@ -116,14 +109,13 @@ func (c *FakeKongVaults) UpdateStatus(ctx context.Context, kongVault *v1alpha1.K
 // Delete takes name of the kongVault and deletes it. Returns an error if one occurs.
 func (c *FakeKongVaults) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(kongvaultsResource, c.ns, name, opts), &v1alpha1.KongVault{})
-
+		Invokes(testing.NewRootDeleteActionWithOptions(kongvaultsResource, name, opts), &v1alpha1.KongVault{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongvaultsResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(kongvaultsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.KongVaultList{})
 	return err
@@ -132,8 +124,7 @@ func (c *FakeKongVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 // Patch applies the patch and returns the patched kongVault.
 func (c *FakeKongVaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongVault, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongvaultsResource, c.ns, name, pt, data, subresources...), &v1alpha1.KongVault{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(kongvaultsResource, name, pt, data, subresources...), &v1alpha1.KongVault{})
 	if obj == nil {
 		return nil, err
 	}

@@ -8,16 +8,20 @@ metadata:
 spec:
   group: configuration.konghq.com
   names:
+    categories:
+    - kong-ingress-controller
     kind: KongVault
     listKind: KongVaultList
     plural: kongvaults
+    shortNames:
+    - kv
     singular: kongvault
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - description: Name of the backend of the vault
       jsonPath: .spec.backend
-      name: Backend-Type
+      name: Backend Type
       type: string
     - description: Prefix of vault URI to reference the values in the vault
       jsonPath: .spec.prefix

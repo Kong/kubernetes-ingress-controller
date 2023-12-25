@@ -33,7 +33,7 @@ import (
 // KongVaultsGetter has a method to return a KongVaultInterface.
 // A group's client should implement this interface.
 type KongVaultsGetter interface {
-	KongVaults(namespace string) KongVaultInterface
+	KongVaults() KongVaultInterface
 }
 
 // KongVaultInterface has methods to work with KongVault resources.
@@ -53,14 +53,12 @@ type KongVaultInterface interface {
 // kongVaults implements KongVaultInterface
 type kongVaults struct {
 	client rest.Interface
-	ns     string
 }
 
 // newKongVaults returns a KongVaults
-func newKongVaults(c *ConfigurationV1alpha1Client, namespace string) *kongVaults {
+func newKongVaults(c *ConfigurationV1alpha1Client) *kongVaults {
 	return &kongVaults{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -68,7 +66,6 @@ func newKongVaults(c *ConfigurationV1alpha1Client, namespace string) *kongVaults
 func (c *kongVaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KongVault, err error) {
 	result = &v1alpha1.KongVault{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -85,7 +82,6 @@ func (c *kongVaults) List(ctx context.Context, opts v1.ListOptions) (result *v1a
 	}
 	result = &v1alpha1.KongVaultList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -102,7 +98,6 @@ func (c *kongVaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inte
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -113,7 +108,6 @@ func (c *kongVaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inte
 func (c *kongVaults) Create(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.CreateOptions) (result *v1alpha1.KongVault, err error) {
 	result = &v1alpha1.KongVault{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongVault).
@@ -126,7 +120,6 @@ func (c *kongVaults) Create(ctx context.Context, kongVault *v1alpha1.KongVault, 
 func (c *kongVaults) Update(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (result *v1alpha1.KongVault, err error) {
 	result = &v1alpha1.KongVault{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		Name(kongVault.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -141,7 +134,6 @@ func (c *kongVaults) Update(ctx context.Context, kongVault *v1alpha1.KongVault, 
 func (c *kongVaults) UpdateStatus(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (result *v1alpha1.KongVault, err error) {
 	result = &v1alpha1.KongVault{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		Name(kongVault.Name).
 		SubResource("status").
@@ -155,7 +147,6 @@ func (c *kongVaults) UpdateStatus(ctx context.Context, kongVault *v1alpha1.KongV
 // Delete takes name of the kongVault and deletes it. Returns an error if one occurs.
 func (c *kongVaults) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		Name(name).
 		Body(&opts).
@@ -170,7 +161,6 @@ func (c *kongVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("kongvaults").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -183,7 +173,6 @@ func (c *kongVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions
 func (c *kongVaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongVault, err error) {
 	result = &v1alpha1.KongVault{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("kongvaults").
 		Name(name).
 		SubResource(subresources...).

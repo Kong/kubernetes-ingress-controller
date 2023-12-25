@@ -26,13 +26,13 @@ const (
 )
 
 // +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster,shortName=kv,categories=kong-ingress-controller,path=kongvaults
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=kv,categories=kong-ingress-controller
-// +kubebuilder:resource:path=kongvaults
-// +kubebuilder:printcolumn:name="Backend-Type",type=string,JSONPath=`.spec.backend`,description="Name of the backend of the vault"
+// +kubebuilder:printcolumn:name="Backend Type",type=string,JSONPath=`.spec.backend`,description="Name of the backend of the vault"
 // +kubebuilder:printcolumn:name="Prefix",type=string,JSONPath=`.spec.prefix`,description="Prefix of vault URI to reference the values in the vault"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Description",type=string,JSONPath=`.spec.description`,description="Description",priority=1

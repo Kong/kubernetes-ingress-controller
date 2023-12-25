@@ -203,6 +203,18 @@ func ToDeckContent(
 	sort.SliceStable(content.Consumers, func(i, j int) bool {
 		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
 	})
+
+	// convert vaults.
+	for _, v := range k8sState.Vaults {
+		vault := file.FVault{
+			Vault: v.Vault,
+		}
+		content.Vaults = append(content.Vaults, vault)
+	}
+	sort.SliceStable(content.Vaults, func(i, j int) bool {
+		return (*content.Vaults[i].Prefix) > (*content.Vaults[j].Prefix)
+	})
+
 	if len(params.SelectorTags) > 0 {
 		content.Info = &file.Info{
 			SelectorTags: params.SelectorTags,

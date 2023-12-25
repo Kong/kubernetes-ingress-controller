@@ -285,6 +285,19 @@ func setupControllers(
 				StatusQueue:                kubernetesStatusQueue,
 			},
 		},
+		{
+			Enabled: c.KongVaultEnabled,
+			Controller: &configuration.KongV1Alpha1KongVaultReconciler{
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongVault"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				StatusQueue:                kubernetesStatusQueue,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Gateway API Controllers
 		// ---------------------------------------------------------------------------

@@ -247,6 +247,23 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameAnnotation: true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
+	typeNeeded{
+		Group:                            "configuration.konghq.com",
+		Version:                          "v1alpha1",
+		Kind:                             "KongVault",
+		PackageImportAlias:               "kongv1alpha1",
+		PackageAlias:                     "KongV1Alpha1",
+		Package:                          kongv1alpha1,
+		Plural:                           "kongvaults",
+		CacheType:                        "KongVault",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: true,
+		},
+		AcceptsIngressClassNameAnnotation: true,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
 }
 
 var inputRBACPermissionsNeeded = &rbacsNeeded{

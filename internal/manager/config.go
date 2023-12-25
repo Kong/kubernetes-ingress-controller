@@ -109,6 +109,7 @@ type Config struct {
 	ServiceEnabled                bool
 	KongUpstreamPolicyEnabled     bool
 	KongServiceFacadeEnabled      bool
+	KongVaultEnabled              bool
 
 	// Gateway API toggling.
 	GatewayAPIGatewayController        bool
@@ -249,6 +250,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.GatewayAPIHTTPRouteController, "enable-controller-gwapi-httproute", true, "Enable the Gateway API HTTPRoute controller.")
 	flagSet.BoolVar(&c.GatewayAPIReferenceGrantController, "enable-controller-gwapi-reference-grant", true, "Enable the Gateway API ReferenceGrant controller.")
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
+	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",

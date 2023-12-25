@@ -64,6 +64,7 @@ type FakeObjects struct {
 	KongConsumerGroups             []*kongv1beta1.KongConsumerGroup
 	KongUpstreamPolicies           []*kongv1beta1.KongUpstreamPolicy
 	KongServiceFacades             []*incubatorv1alpha1.KongServiceFacade
+	KongVaults                     []*kongv1alpha1.KongVault
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -218,6 +219,13 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	kongVaultStore := cache.NewStore(clusterResourceKeyFunc)
+	for _, v := range objects.KongVaults {
+		err := kongVaultStore.Add(v)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	s = Store{
 		stores: CacheStores{
@@ -243,6 +251,7 @@ func NewFakeStore(
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 			KongUpstreamPolicy:             kongUpstreamPolicyStore,
 			KongServiceFacade:              kongServiceFacade,
+			KongVault:                      kongVaultStore,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
@@ -279,6 +288,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&kongv1.KongIngress{}):                  kongv1.SchemeGroupVersion.WithKind("KongIngress"),
 		reflect.TypeOf(&kongv1.KongConsumer{}):                 kongv1.SchemeGroupVersion.WithKind("KongConsumer"),
 		reflect.TypeOf(&kongv1beta1.KongConsumerGroup{}):       kongv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
+		reflect.TypeOf(&kongv1alpha1.KongVault{}):              kongv1alpha1.SchemeGroupVersion.WithKind(kongv1alpha1.KongVaultKind),
 	}
 
 	out := &bytes.Buffer{}
@@ -321,6 +331,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumerGroups)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongVaults)...)
 
 	for _, obj := range allObjects {
 		if err := fillGVKAndAppendToBuffer(obj.(runtime.Object)); err != nil {

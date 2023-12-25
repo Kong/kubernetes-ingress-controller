@@ -55,6 +55,13 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
+				Vaults: []Vault{
+					{
+						Vault: kong.Vault{
+							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						},
+					},
+				},
 			},
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
@@ -69,6 +76,13 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
+				Vaults: []Vault{
+					{
+						Vault: kong.Vault{
+							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						},
+					},
+				},
 			},
 		},
 	} {

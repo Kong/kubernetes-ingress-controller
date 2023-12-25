@@ -156,6 +156,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - kongvaults
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongvaults/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - tcpingresses
   verbs:
   - get

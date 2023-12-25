@@ -60,6 +60,8 @@ func TestMain(m *testing.M) {
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
 	}
+	// add env for vaults.
+	kongbuilder.WithProxyEnvVar("vault_test_add_header_1", "h1:v1")
 
 	// Pin the Helm chart version.
 	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())

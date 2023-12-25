@@ -13,6 +13,7 @@ resources:
 - bases/configuration.konghq.com_kongplugins.yaml
 - bases/configuration.konghq.com_ingressclassparameterses.yaml
 - bases/configuration.konghq.com_kongupstreampolicies.yaml
+- bases/configuration.konghq.com_kongvaults.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.

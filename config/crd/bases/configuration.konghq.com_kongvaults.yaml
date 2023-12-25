@@ -62,13 +62,8 @@ spec:
             description: KongVaultSpec defines specification of a custom Kong vault.
             properties:
               backend:
-<<<<<<< HEAD
                 description: 'Backend is the type of the backend storing the secrets
                   in the vault. The supported backends of Kong is listed here: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/backends/'
-=======
-                description: Backend is the type of the backend storing the secrets
-                  in the vault.
->>>>>>> caed40dc7 (address comments 1)
                 minLength: 1
                 type: string
               config:

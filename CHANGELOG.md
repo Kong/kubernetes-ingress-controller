@@ -9,6 +9,7 @@ Adding a new version? You'll need three changes:
 --->
  - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.3](#2123)
  - [2.12.2](#2122)
  - [2.12.1](#2121)
  - [2.12.0](#2120)
@@ -380,6 +381,21 @@ Adding a new version? You'll need three changes:
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
+
+## [2.12.3]
+
+> Release date: 2023-12-19
+
+### Fixed
+
+- Fix(manager): set InitCacheSyncDuration to 5s by default and allow it to be configured via `--init-cache-sync-duration` CLI flag
+  [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
+- Don't set `instance_name` of plugin if Kong version is below 3.2.0.
+  [#5250](https://github.com/Kong/kubernetes-ingress-controller/pull/5250)
+- Added `--emit-kubernetes-events` CLI flag to disable the creation of events
+  in translating and applying configurations to Kong.
+  [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
+  [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
 
 ## [2.12.2]
 

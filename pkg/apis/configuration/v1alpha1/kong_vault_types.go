@@ -38,6 +38,9 @@ const (
 // +kubebuilder:printcolumn:name="Description",type=string,JSONPath=`.spec.description`,description="Description",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 
+// KongVault is the schema for kongvaults API which defines a custom Kong vault.
+// A Kong vault is a storage to store sensitive data, where the values can be referenced in configuration of plugins.
+// See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 type KongVault struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,8 +48,11 @@ type KongVault struct {
 	Status            KongVaultStatus `json:"status,omitempty"`
 }
 
+// KongVaultSpec defines specification of a custom Kong vault.
 type KongVaultSpec struct {
 	// Backend is the type of the backend storing the secrets in the vault.
+	// The supported backends of Kong is listed here:
+	// https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/backends/
 	// +kubebuilder:validation:MinLength=1
 	Backend string `json:"backend"`
 	// Prefix is the prefix of vault URI for referencing values in the vault.
@@ -58,6 +64,7 @@ type KongVaultSpec struct {
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
+// KongVaultStatus represents the current status of the KongVault resource.
 type KongVaultStatus struct {
 	// Conditions describe the current conditions of the KongVaultStatus.
 	//
@@ -72,9 +79,9 @@ type KongVaultStatus struct {
 	Conditions []metav1.Condition `json:"conditions"`
 }
 
-// KongVaultList contains a list of KongVault.
 // +kubebuilder:object:root=true
 
+// KongVaultList contains a list of KongVault.
 type KongVaultList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -320,6 +320,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [IngressClassParameters](#ingressclassparameters)
+- [KongVault](#kongvault)
 
 ### IngressClassParameters
 
@@ -335,6 +336,24 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
+
+
+
+
+### KongVault
+
+
+
+KongVault is the schema for kongvaults API which defines a custom Kong vault. A Kong vault is a storage to store sensitive data, where the values can be referenced in configuration of plugins. See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
+
+<!-- kong_vault description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongVault`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongVaultSpec](#kongvaultspec)_ |  |
 
 
 
@@ -355,6 +374,27 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
+
+### KongVaultSpec
+
+
+
+KongVaultSpec defines specification of a custom Kong vault.
+
+
+
+| Field | Description |
+| --- | --- |
+| `backend` _string_ | Backend is the type of the backend storing the secrets in the vault. The supported backends of Kong is listed here: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/backends/ |
+| `prefix` _string_ | Prefix is the prefix of vault URI for referencing values in the vault. |
+| `description` _string_ | Description is the additional information about the vault. |
+| `config` _[JSON](#json)_ | Config is the configuration of the vault. Varies for different backends. |
+
+
+_Appears in:_
+- [KongVault](#kongvault)
+
+
 
 
 ## configuration.konghq.com/v1beta1

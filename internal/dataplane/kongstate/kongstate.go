@@ -247,7 +247,7 @@ func (ks *KongState) FillVaults(
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
 	for _, vault := range s.ListKongVaults() {
-		config, err := rawConfigToConfiguration(vault.Spec.Config.Raw)
+		config, err := RawConfigToConfiguration(vault.Spec.Config.Raw)
 		if err != nil {
 			logger.Error(err, "failed to parse configuration of vault to JSON", "name", vault.Name)
 			failuresCollector.PushResourceFailure(

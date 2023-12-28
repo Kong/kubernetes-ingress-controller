@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -74,6 +75,10 @@ func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayapi.HTT
 }
 
 func (v KongFakeValidator) ValidateIngress(_ context.Context, _ netv1.Ingress) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateVault(_ context.Context, _ kongv1alpha1.KongVault) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

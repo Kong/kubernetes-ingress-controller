@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -96,6 +97,11 @@ var (
 		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongingresses",
 	}
+	kongVaultGVResource = metav1.GroupVersionResource{
+		Group:    kongv1alpha1.SchemeGroupVersion.Group,
+		Version:  kongv1alpha1.SchemeGroupVersion.Version,
+		Resource: "kongvaults",
+	}
 	secretGVResource = metav1.GroupVersionResource{
 		Group:    corev1.SchemeGroupVersion.Group,
 		Version:  corev1.SchemeGroupVersion.Version,
@@ -135,6 +141,8 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
 	case kongIngressGVResource:
 		return h.handleKongIngress(ctx, request, responseBuilder)
+	case kongVaultGVResource:
+		return h.handleKongVault(ctx, request, responseBuilder)
 	case serviceGVResource:
 		return h.handleService(ctx, request, responseBuilder)
 	case ingressGVResource:
@@ -420,6 +428,20 @@ func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.A
 		return nil, err
 	}
 	ok, message, err := h.Validator.ValidateIngress(ctx, ingress)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+}
+
+func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	kongVault := kongv1alpha1.KongVault{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongVault)
+	if err != nil {
+		return nil, err
+	}
+	ok, message, err := h.Validator.ValidateVault(ctx, kongVault)
 	if err != nil {
 		return nil, err
 	}

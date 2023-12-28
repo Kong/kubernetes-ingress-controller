@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -35,6 +36,7 @@ type KongValidator interface {
 	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
+	ValidateVault(ctx context.Context, vault kongv1alpha1.KongVault) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string)
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
@@ -49,6 +51,7 @@ type AdminAPIServicesProvider interface {
 	GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool)
 	GetInfoService() (kong.AbstractInfoService, bool)
 	GetRoutesService() (kong.AbstractRouteService, bool)
+	GetVaultsService() (kong.AbstractVaultService, bool)
 }
 
 // ConsumerGetter is an interface for retrieving KongConsumers.
@@ -520,6 +523,28 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 	return true, "", nil
 }
 
+func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault kongv1alpha1.KongVault) (bool, string, error) {
+	// Ignore KongVaults that are being managed by another controller.
+	if !validator.ingressClassMatcher(&k8sKongVault.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
+		return true, "", nil
+	}
+	config, err := kongstate.RawConfigToConfiguration(k8sKongVault.Spec.Config.Raw)
+	if err != nil {
+		return false, fmt.Sprintf(ErrTextVaultConfigUnmarshalFailed, err), nil
+	}
+	kongVault := kong.Vault{
+		Name:        kong.String(k8sKongVault.Spec.Backend),
+		Prefix:      kong.String(k8sKongVault.Spec.Prefix),
+		Description: kong.String(k8sKongVault.Spec.Description),
+		Config:      config,
+	}
+	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
+	if err != nil || errText != "" {
+		return false, errText, err
+	}
+	return true, "", nil
+}
+
 // -----------------------------------------------------------------------------
 // KongHTTPValidator - Private Methods
 // -----------------------------------------------------------------------------
@@ -579,6 +604,21 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	}
 
 	// if there's no client, do not verify with data-plane as there's none available
+	return "", nil
+}
+
+func (validator KongHTTPValidator) validateVaultAgainstGatewaySchema(ctx context.Context, vault kong.Vault) (string, error) {
+	vaultService, hasClient := validator.AdminAPIServicesProvider.GetVaultsService()
+	if !hasClient {
+		return "", nil
+	}
+	isValid, msg, err := vaultService.Validate(ctx, &vault)
+	if err != nil {
+		return ErrTextVaultUnableToValidate, err
+	}
+	if !isValid {
+		return fmt.Sprintf(ErrTextVaultConfigValidationResultInvalid, msg), nil
+	}
 	return "", nil
 }
 

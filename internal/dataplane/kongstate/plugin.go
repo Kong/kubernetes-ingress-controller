@@ -223,7 +223,7 @@ func RawConfigurationWithPatchesToConfiguration(
 			return kong.Configuration{}, err
 		}
 	}
-	return rawConfigToConfiguration(raw)
+	return RawConfigToConfiguration(raw)
 }
 
 // RawConfigurationWithNamespacedPatchesToConfiguration converts config and add patches from configPatches of KongClusterPlugin.
@@ -253,12 +253,12 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 			return kong.Configuration{}, err
 		}
 	}
-	return rawConfigToConfiguration(raw)
+	return RawConfigToConfiguration(raw)
 }
 
-// rawConfigToConfiguration decodes raw JSON to the format of Kong configuration.
+// RawConfigToConfiguration decodes raw JSON to the format of Kong configuration.
 // it is run after all patches applied to the initial config.
-func rawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
+func RawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
 	if len(raw) == 0 {
 		return kong.Configuration{}, nil
 	}

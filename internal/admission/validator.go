@@ -538,6 +538,8 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 		Description: kong.String(k8sKongVault.Spec.Description),
 		Config:      config,
 	}
+	// TODO: /schemas/vaults/test does not check "unique" restraint on `prefix` field.
+	// We may need implement the uniqueness check of `prefix`.
 	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
 	if err != nil || errText != "" {
 		return false, errText, err

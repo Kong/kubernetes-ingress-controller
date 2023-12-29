@@ -21,7 +21,6 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -37,10 +36,6 @@ var (
 	kongClusterPluginTypeMeta = metav1.TypeMeta{
 		APIVersion: kongv1.GroupVersion.String(),
 		Kind:       "KongClusterPlugin",
-	}
-	kongVaultMeta = metav1.TypeMeta{
-		APIVersion: kongv1alpha1.GroupVersion.String(),
-		Kind:       "KongVault",
 	}
 )
 

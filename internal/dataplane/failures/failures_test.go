@@ -54,11 +54,14 @@ func TestResourceFailure(t *testing.T) {
 		noName.Name = ""
 		_, err = NewResourceFailure(someValidResourceFailureReason, noName)
 		assert.Error(t, err, "expected an empty name object to be rejected")
-
-		noNamespace := validCausingObject()
-		noNamespace.Namespace = ""
-		_, err = NewResourceFailure(someValidResourceFailureReason, noNamespace)
-		assert.Error(t, err, "expected an empty namespace object to be rejected")
+		// REVIEW: should we remove this to allow generating resource failures for cluster scope objects like KongClusterPlugins?
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/5387
+		/*
+			noNamespace := validCausingObject()
+			noNamespace.Namespace = ""
+			_, err = NewResourceFailure(someValidResourceFailureReason, noNamespace)
+			assert.Error(t, err, "expected an empty namespace object to be rejected")
+		*/
 	})
 }
 

@@ -520,6 +520,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 	}
 
 	// TODO: Add FillID() for vaults in go-kong to fill IDs for vaults.
+	// https://github.com/Kong/go-kong/pull/391
 }
 
 // maybeLogKongIngressDeprecationError iterates over services and logs a deprecation error if a service

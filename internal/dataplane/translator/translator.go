@@ -180,6 +180,8 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 		t.registerSuccessfullyTranslatedObject(&result.Consumers[i].K8sKongConsumer)
 	}
 
+	// genereate vaults
+	// REVIEW: add check for Kong gateway enterprise here?
 	result.FillVaults(t.logger, t.storer, t.failuresCollector)
 	for i := range result.Vaults {
 		t.registerSuccessfullyTranslatedObject(result.Vaults[i].K8sKongVault)

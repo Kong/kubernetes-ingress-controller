@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -101,7 +102,7 @@ func (f fakeServicesProvider) GetRoutesService() (kong.AbstractRouteService, boo
 }
 
 func (f fakeServicesProvider) GetVaultsService() (kong.AbstractVaultService, bool) {
-	if f.routeSvc != nil {
+	if f.vaultSvc != nil {
 		return f.vaultSvc, true
 	}
 	return nil, false
@@ -1232,6 +1233,93 @@ type fakeRouteSvc struct {
 func (f *fakeRouteSvc) Validate(context.Context, *kong.Route) (bool, string, error) {
 	if f.shouldFail {
 		return false, "something is wrong with the route", nil
+	}
+	return true, "", nil
+}
+
+func TestValidator_ValidateVault(t *testing.T) {
+	testCases := []struct {
+		name            string
+		kongVault       kongv1alpha1.KongVault
+		validateSvcFail bool
+		expectedOK      bool
+		expectedMessage string
+		expectedError   string
+	}{
+		{
+			name: "valid vault",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-1",
+				},
+			},
+			expectedOK: true,
+		},
+		{
+			name: "vault with invalid(malformed) configuration",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-1",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{{}`),
+					},
+				},
+			},
+			expectedOK:      false,
+			expectedMessage: "failed to unmarshal validate configurations",
+		},
+		{
+			name: "vault with failure in validating service",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-1",
+				},
+			},
+			validateSvcFail: true,
+			expectedOK:      false,
+			expectedMessage: "something is wrong with the vault",
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			validator := KongHTTPValidator{
+				AdminAPIServicesProvider: fakeServicesProvider{
+					vaultSvc: &fakeVaultSvc{
+						shouldFail: tc.validateSvcFail,
+					},
+				},
+				ingressClassMatcher: fakeClassMatcher,
+				Logger:              logr.Discard(),
+			}
+			ok, msg, err := validator.ValidateVault(context.Background(), tc.kongVault)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedOK, ok)
+			assert.Contains(t, msg, tc.expectedMessage)
+		})
+	}
+}
+
+type fakeVaultSvc struct {
+	kong.AbstractVaultService
+	shouldFail bool
+}
+
+func (s fakeVaultSvc) Validate(context.Context, *kong.Vault) (bool, string, error) {
+	if s.shouldFail {
+		return false, "something is wrong with the vault", nil
 	}
 	return true, "", nil
 }

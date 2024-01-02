@@ -26,7 +26,7 @@ func backendRefsToKongStateBackends(
 		if util.IsBackendRefGroupKindSupported(
 			backendRef.Group,
 			backendRef.Kind,
-		) && newRefChecker(backendRef).IsRefAllowedByGrant(allowed) {
+		) && newRefCheckerForRoute(route, backendRef).IsRefAllowedByGrant(allowed) {
 			port := int32(-1)
 			if backendRef.Port != nil {
 				port = int32(*backendRef.Port)

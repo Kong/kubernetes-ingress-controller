@@ -54,6 +54,11 @@ func TestResourceFailure(t *testing.T) {
 		noName.Name = ""
 		_, err = NewResourceFailure(someValidResourceFailureReason, noName)
 		assert.Error(t, err, "expected an empty name object to be rejected")
+
+		noNamespace := validCausingObject()
+		noNamespace.Namespace = ""
+		_, err = NewResourceFailure(someValidResourceFailureReason, noNamespace)
+		assert.NoError(t, err, "expected an empty namespace object to also be accepted")
 	})
 }
 

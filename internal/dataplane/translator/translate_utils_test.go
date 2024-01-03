@@ -8,6 +8,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -314,9 +316,6 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			},
 		},
 	}
-	fakestore, err := store.NewFakeStore(store.FakeObjects{ReferenceGrants: grants})
-	assert.Nil(t, err)
-	p := mustNewTranslator(t, fakestore)
 	// empty since we always want to actually generate a service for tests
 	// static values for the basic string format inputs since nothing interesting happens with them
 	rules := ingressRules{ServiceNameToServices: map[string]kongstate.Service{}}
@@ -328,6 +327,36 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	cholponNamespace := gatewayapi.Namespace("cholpon")
 	serviceKind := gatewayapi.Kind("Service")
 	serviceGroup := gatewayapi.Group("")
+
+	fakestore, err := store.NewFakeStore(store.FakeObjects{
+		ReferenceGrants: grants,
+		// After https://github.com/Kong/kubernetes-ingress-controller/pull/5392
+		// is merged the backendRef will be checked for existence in the store
+		// so we need to add them here.
+		Services: []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      string(redObjName),
+					Namespace: string(cholponNamespace),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      string(blueObjName),
+					Namespace: string(cholponNamespace),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      string(redObjName),
+					Namespace: "behbudiy",
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	p := mustNewTranslator(t, fakestore)
+
 	tests := []struct {
 		msg     string
 		route   client.Object

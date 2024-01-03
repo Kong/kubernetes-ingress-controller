@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -27,6 +28,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		name                 string
 		gateways             []*gatewayapi.Gateway
 		udpRoutes            []*gatewayapi.UDPRoute
+		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
@@ -75,6 +77,14 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
 					},
 				},
 			},
@@ -178,6 +188,20 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -272,6 +296,14 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
 					},
 				},
 			},
@@ -379,6 +411,20 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					Spec:       gatewayapi.UDPRouteSpec{},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -444,6 +490,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
 				Gateways:  tc.gateways,
 				UDPRoutes: tc.udpRoutes,
+				Services:  tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)
@@ -496,6 +543,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		name                 string
 		gateways             []*gatewayapi.Gateway
 		udpRoutes            []*gatewayapi.UDPRoute
+		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
@@ -543,6 +591,14 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
 					},
 				},
 			},
@@ -646,6 +702,20 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -732,6 +802,20 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
 					},
 				},
 			},
@@ -836,6 +920,20 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Spec:       gatewayapi.UDPRouteSpec{},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -897,6 +995,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
 				Gateways:  tc.gateways,
 				UDPRoutes: tc.udpRoutes,
+				Services:  tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)

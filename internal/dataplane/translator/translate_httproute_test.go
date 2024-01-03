@@ -34,10 +34,11 @@ var httprouteGVK = schema.GroupVersionKind{
 }
 
 type testCaseIngressRulesFromHTTPRoutes struct {
-	msg      string
-	routes   []*gatewayapi.HTTPRoute
-	expected func(routes []*gatewayapi.HTTPRoute) ingressRules
-	errs     []error
+	msg          string
+	routes       []*gatewayapi.HTTPRoute
+	storeObjects store.FakeObjects
+	expected     func(routes []*gatewayapi.HTTPRoute) ingressRules
+	errs         []error
 }
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -155,9 +156,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 }
 
 func TestIngressRulesFromHTTPRoutes(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-
 	testCases := []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
@@ -189,6 +187,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					}},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -256,6 +264,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					}},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -320,6 +338,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					}},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -389,6 +417,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					}},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -459,6 +497,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -534,6 +582,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					}},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -617,6 +675,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									builder.NewHTTPBackendRef("fake-service").WithPort(8080).Build(),
 								},
 							},
+						},
+					},
+				},
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
 						},
 					},
 				},
@@ -751,6 +819,28 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									builder.NewHTTPBackendRef("foo-v3").WithPort(8080).WithWeight(10).Build(),
 								},
 							},
+						},
+					},
+				},
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v2",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v3",
 						},
 					},
 				},
@@ -906,6 +996,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -1042,6 +1142,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v2",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -1225,6 +1341,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "foo-v2",
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -1353,6 +1485,9 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.msg, func(t *testing.T) {
+			fakestore, err := store.NewFakeStore(tt.storeObjects)
+			require.NoError(t, err)
+
 			p := mustNewTranslator(t, fakestore)
 
 			ingressRules := newIngressRules()
@@ -1430,11 +1565,6 @@ func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 }
 
 func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-	translator := mustNewTranslator(t, fakestore)
-	translatorWithCombinedServiceRoutes := mustNewTranslator(t, fakestore)
-
 	for _, tt := range []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an HTTPRoute with regex path matches is supported",
@@ -1461,6 +1591,16 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 					}},
 				},
 			}},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-service",
+							Namespace: corev1.NamespaceDefault,
+						},
+					},
+				},
+			},
 			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
@@ -1536,16 +1676,17 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			}
 		}
 
+		fakestore, err := store.NewFakeStore(tt.storeObjects)
+		require.NoError(t, err)
+		translator := mustNewTranslator(t, fakestore)
+		translatorWithCombinedServiceRoutes := mustNewTranslator(t, fakestore)
+
 		t.Run(tt.msg+" using legacy translator", withTranslator(translator))
 		t.Run(tt.msg+" using combined service routes translator", withTranslator(translatorWithCombinedServiceRoutes))
 	}
 }
 
 func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-	translator := mustNewTranslator(t, fakestore)
-	translator.featureFlags.ExpressionRoutes = true
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.GroupVersion.String()}
 
 	testCases := []struct {
@@ -1553,6 +1694,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 		httpRoutes           []*gatewayapi.HTTPRoute
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
+		fakeObjects          store.FakeObjects
 	}{
 		{
 			name: "single HTTPRoute with no hostname and multiple matches",
@@ -1574,6 +1716,16 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 								},
 							},
+						},
+					},
+				},
+			},
+			fakeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
 						},
 					},
 				},
@@ -1643,6 +1795,22 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPBackendRef("service2").WithPort(80).Build(),
 								},
 							},
+						},
+					},
+				},
+			},
+			fakeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service2",
 						},
 					},
 				},
@@ -1766,6 +1934,16 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			fakeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -1797,8 +1975,11 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
-			translator.failuresCollector = failureCollector
+			fakestore, err := store.NewFakeStore(tc.fakeObjects)
+			require.NoError(t, err)
+			translator := mustNewTranslator(t, fakestore)
+			translator.featureFlags.ExpressionRoutes = true
+			translator.failuresCollector = failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 
 			result := newIngressRules()
 			translator.ingressRulesFromHTTPRoutesUsingExpressionRoutes(tc.httpRoutes, &result)
@@ -1828,15 +2009,12 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 }
 
 func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-	translator := mustNewTranslator(t, fakestore)
-	translator.featureFlags.ExpressionRoutes = true
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.GroupVersion.String()}
 
 	testCases := []struct {
 		name                string
 		matchWithPriority   subtranslator.SplitHTTPRouteMatchToKongRoutePriority
+		storeObjects        store.FakeObjects
 		expectedKongService kongstate.Service
 		expectedKongRoute   kongstate.Route
 		expectedError       error
@@ -1869,6 +2047,16 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					MatchIndex: 0,
 				},
 				Priority: 1024,
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+				},
 			},
 			expectedKongService: kongstate.Service{
 				Service: kong.Service{
@@ -1928,6 +2116,16 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					MatchIndex: 1,
 				},
 				Priority: 1024,
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+				},
 			},
 			expectedKongService: kongstate.Service{
 				Service: kong.Service{
@@ -1998,6 +2196,22 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 				},
 				Priority: 1024,
 			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service2",
+						},
+					},
+				},
+			},
 			expectedKongService: kongstate.Service{
 				Service: kong.Service{
 					Name: kong.String("httproute.default.httproute-1._.foo.com.0"),
@@ -2048,6 +2262,16 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 				},
 				Priority: 1024,
 			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+				},
+			},
 			expectedKongService: kongstate.Service{
 				Service: kong.Service{
 					Name: kong.String("httproute.default.httproute-1.a.foo.com.0"),
@@ -2094,6 +2318,16 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 				},
 				Priority: 1024,
 			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service1",
+						},
+					},
+				},
+			},
 			expectedKongService: kongstate.Service{
 				Service: kong.Service{
 					Name: kong.String("httproute.default.httproute-1._.0"),
@@ -2118,12 +2352,17 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			fakestore, err := store.NewFakeStore(tc.storeObjects)
+			require.NoError(t, err)
+			translator := mustNewTranslator(t, fakestore)
+			translator.featureFlags.ExpressionRoutes = true
+
 			match := tc.matchWithPriority.Match
 			tc.expectedKongRoute.Tags = util.GenerateTagsForObject(match.Source)
 			tc.expectedKongRoute.Ingress = util.FromK8sObject(match.Source)
 
 			res := newIngressRules()
-			err := translator.ingressRulesFromSplitHTTPRouteMatchWithPriority(&res, tc.matchWithPriority)
+			err = translator.ingressRulesFromSplitHTTPRouteMatchWithPriority(&res, tc.matchWithPriority)
 			if tc.expectedError != nil {
 				require.ErrorAs(t, err, tc.expectedError)
 				return

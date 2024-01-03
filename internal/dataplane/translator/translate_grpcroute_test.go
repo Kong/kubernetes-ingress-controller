@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -21,16 +22,13 @@ import (
 )
 
 func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-	translator := mustNewTranslator(t, fakestore)
-	translator.featureFlags.ExpressionRoutes = true
 	grpcRouteTypeMeta := metav1.TypeMeta{Kind: "GRPCRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
 
 	testCases := []struct {
 		name                 string
 		grpcRoutes           []*gatewayapi.GRPCRoute
 		expectedKongServices []kongstate.Service
+		services             []*corev1.Service
 		// service name -> routes
 		expectedKongRoutes map[string][]kongstate.Route
 	}{
@@ -82,6 +80,20 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
 					},
 				},
 			},
@@ -234,6 +246,20 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -340,6 +366,20 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service0",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -387,6 +427,14 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		tc := tc
 		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
 			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
+
+			fakestore, err := store.NewFakeStore(store.FakeObjects{
+				GRPCRoutes: tc.grpcRoutes,
+				Services:   tc.services,
+			})
+			require.NoError(t, err)
+			translator := mustNewTranslator(t, fakestore)
+			translator.featureFlags.ExpressionRoutes = true
 			translator.failuresCollector = failureCollector
 
 			result := newIngressRules()

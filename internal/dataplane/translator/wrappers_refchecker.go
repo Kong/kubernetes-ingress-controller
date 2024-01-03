@@ -35,7 +35,7 @@ func (rc refChecker[T]) IsRefAllowedByGrant(
 		}
 
 		// If the namespace is specified but is the same as the route's namespace, then the ref is allowed.
-		if br.Namespace != nil && rc.route.GetNamespace() == string(*br.Namespace) {
+		if rc.route.GetNamespace() == string(*br.Namespace) {
 			return true
 		}
 

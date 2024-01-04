@@ -35,6 +35,11 @@ var kongConsumerTypeMeta = metav1.TypeMeta{
 	Kind:       "KongConsumer",
 }
 
+var serviceTypeMeta = metav1.TypeMeta{
+	APIVersion: "v1",
+	Kind:       "Service",
+}
+
 func TestKongState_SanitizedCopy(t *testing.T) {
 	testedFields := sets.New[string]()
 	for _, tt := range []struct {
@@ -779,10 +784,10 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				KongConsumers: tc.k8sConsumers,
 			})
 			logger := zapr.NewLogger(zap.NewNop())
-			failureCollector := failures.NewResourceFailuresCollector(logger)
+			failuresCollector := failures.NewResourceFailuresCollector(logger)
 
 			state := KongState{}
-			state.FillConsumersAndCredentials(logger, store, failureCollector)
+			state.FillConsumersAndCredentials(logger, store, failuresCollector)
 			// compare translated consumers.
 			require.Len(t, state.Consumers, len(tc.expectedKongStateConsumers))
 			// compare fields. Since we only test for translating a single consumer, we only compare the first one if exists.
@@ -796,7 +801,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			}
 			// check for expected translation failures.
 			if len(tc.expectedTranslationFailureMessages) > 0 {
-				translationFailures := failureCollector.PopResourceFailures()
+				translationFailures := failuresCollector.PopResourceFailures()
 				for nsName, expectedMessage := range tc.expectedTranslationFailureMessages {
 					relatedFailures := lo.Filter(translationFailures, func(f failures.ResourceFailure, _ int) bool {
 						for _, obj := range f.CausingObjects() {
@@ -1304,6 +1309,100 @@ func TestFillVaults(t *testing.T) {
 
 			// TODO: check translation failures after we implement translation failure events for cluster scoped objects:
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/5387
+		})
+	}
+}
+
+func TestFillOverridesFailures(t *testing.T) {
+	tests := []struct {
+		name                               string
+		state                              *KongState
+		want                               Service
+		expectedTranslationFailureMessages map[k8stypes.NamespacedName]string
+	}{
+		{
+			name: "service protocol set to valid value",
+			state: &KongState{
+				Services: []Service{
+					{
+						Namespace: "default",
+						K8sServices: map[string]*corev1.Service{
+							"test": {
+								TypeMeta: serviceTypeMeta,
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "default",
+									Annotations: map[string]string{
+										"konghq.com/protocol": "wss",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					Protocol: kong.String("wss"),
+				},
+			},
+		},
+		{
+			name: "service protocol set to invalid value",
+			state: &KongState{
+				Services: []Service{
+					{
+						Namespace: "default",
+						K8sServices: map[string]*corev1.Service{
+							"test": {
+								TypeMeta: serviceTypeMeta,
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "default",
+									Annotations: map[string]string{
+										"konghq.com/protocol": "djnfkgjfgn",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					Protocol: kong.String("http"),
+				},
+			},
+			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "test"}: "konghq.com/protocol annotation has invalid value: djnfkgjfgn",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{})
+			require.NoError(t, err)
+			logger := zapr.NewLogger(zap.NewNop())
+			failuresCollector := failures.NewResourceFailuresCollector(logger)
+			tt.state.FillOverrides(logger, store, failuresCollector)
+			if len(tt.expectedTranslationFailureMessages) > 0 {
+				translationFailures := failuresCollector.PopResourceFailures()
+				for nsName, expectedMessage := range tt.expectedTranslationFailureMessages {
+					relatedFailures := lo.Filter(translationFailures, func(f failures.ResourceFailure, _ int) bool {
+						for _, obj := range f.CausingObjects() {
+							if obj.GetNamespace() == nsName.Namespace && obj.GetName() == nsName.Name {
+								return true
+							}
+						}
+						return false
+					})
+
+					assert.Truef(t, lo.ContainsBy(relatedFailures, func(f failures.ResourceFailure) bool {
+						return strings.Contains(f.Message(), expectedMessage)
+					}), "should find expected translation failure caused by Service %s: should contain '%s'",
+						nsName.String(), expectedMessage)
+				}
+			}
 		})
 	}
 }

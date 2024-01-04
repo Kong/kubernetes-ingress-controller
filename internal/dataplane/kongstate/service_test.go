@@ -186,7 +186,7 @@ func TestOverrideService(t *testing.T) {
 func TestNilServiceOverrideDoesntPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		var nilService *Service
-		nilService.override()
+		nilService.override() //nolint:errcheck
 	})
 }
 
@@ -527,6 +527,6 @@ func TestServiceOverride_DeterministicOrderWhenMoreThan1KubernetesService(t *tes
 
 	// We expect default/service-3 to be the last one to be processed effectively overriding the previous annotations.
 	const expectedRetries = 3
-	service.override()
+	require.NoError(t, service.override())
 	require.Equal(t, expectedRetries, *service.Service.Retries)
 }

@@ -12,10 +12,13 @@ func TestValidateProtocol(t *testing.T) {
 		input  string
 		result bool
 	}{
+		{"", true},
 		{"http", true},
 		{"https", true},
 		{"grpc", true},
 		{"grpcs", true},
+		{"ws", true},
+		{"wss", true},
 		{"tls", true},
 		{"tcp", true},
 		{"tls_passthrough", true},

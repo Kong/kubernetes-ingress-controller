@@ -193,6 +193,13 @@ func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
 	}
 }
 
+// servicesAsObjects returns a corev1.Service as a client.Object. It's used as a helper with lo.Map to return something
+// acceptable to functions that accept multiple client.Objects, since simply expanding the Service slice results in a
+// compiler error.
+func servicesAsObjects(svc *corev1.Service, _ int) client.Object {
+	return svc
+}
+
 func (ks *KongState) FillOverrides(
 	logger logr.Logger,
 	s store.Storer,
@@ -200,10 +207,19 @@ func (ks *KongState) FillOverrides(
 ) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
-		ks.Services[i].override()
+		if err := ks.Services[i].override(); err != nil {
+			servicesGroup := lo.Values(ks.Services[i].K8sServices)
+			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
+		}
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
+			// routes nested under Services here do not include their original parent object info in kongstate. translators
+			// convert this into a util.K8sObjectInfo, which includes name/namespace/GVK as strings. unfortunately we can't
+			// really convert this into a client.Object for use with the failures collector, and plumbing the original object
+			// down into the kongstate route copy looked a bit annoying. protocol validation for routes instead lives in the
+			// HTTPRoute and Ingress translators (these may override to ws/wss, whereas the others are expected to derive
+			// their protcol from the resource type alone.
 			ks.Services[i].Routes[j].override(logger)
 		}
 	}
@@ -218,7 +234,6 @@ func (ks *KongState) FillUpstreamOverrides(
 ) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
-		servicesAsObjects := func(svc *corev1.Service, _ int) client.Object { return svc }
 
 		// In case `konghq.com/override` annotation is set on any of the services, we should log a deprecation error.
 		maybeLogKongIngressDeprecationError(logger, servicesGroup)

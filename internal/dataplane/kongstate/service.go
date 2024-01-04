@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -160,9 +161,9 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 }
 
 // override sets Service fields using Kubernetes Service annotations.
-func (s *Service) override() {
+func (s *Service) override() error {
 	if s == nil {
-		return
+		return nil
 	}
 
 	// Apply overrides from Kubernetes Service annotations. As we keep them in a map, let's first sort its keys to ensure
@@ -172,10 +173,15 @@ func (s *Service) override() {
 	for _, serviceName := range servicesNames {
 		svc := s.K8sServices[serviceName]
 		s.overrideByAnnotation(svc.Annotations)
+		protocol := annotations.ExtractProtocolName(svc.Annotations)
+		if !util.ValidateProtocol(protocol) {
+			return fmt.Errorf("%s annotation has invalid value: %s", annotations.AnnotationPrefix+annotations.ProtocolKey, protocol)
+		}
 	}
 
 	if s.Protocol != nil && (*s.Protocol == "grpc" || *s.Protocol == "grpcs") {
 		// grpc(s) doesn't accept a path
 		s.Path = nil
 	}
+	return nil
 }

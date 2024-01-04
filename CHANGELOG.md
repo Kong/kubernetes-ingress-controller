@@ -129,9 +129,13 @@ Adding a new version? You'll need three changes:
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
   enforce `KongUpstreamPolicy` status.
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
-- Add CRD `KongVault` to reperesent a custom Kong vault for storing senstive
-  data used in plugin configurations.
+- New CRD `KongVault` to reperesent a custom Kong vault for storing senstive
+  data used in plugin configurations. Now users can create a `KongVault` to
+  create a custom Kong vault and reference the values in configurations of
+  plugins. Reference of using Kong vaults: [Kong vault]
   [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
+  [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
+
 
 ### Fixed
 
@@ -164,6 +168,8 @@ Adding a new version? You'll need three changes:
     [#5137](https://github.com/Kong/kubernetes-ingress-controller/pull/5137)
   - `KongPlugin` and `KongClusterPlugin` now enforce `plugin` to be immutable.
     [#5142](https://github.com/Kong/kubernetes-ingress-controller/pull/5142)
+
+[Kong vault]: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 ## [3.0.1]
 

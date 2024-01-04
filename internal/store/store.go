@@ -692,7 +692,6 @@ func (s Store) ListKongVaults() []*kongv1alpha1.KongVault {
 			kongVaults = append(kongVaults, kongVault)
 		}
 	}
-	s.logger.V(util.DebugLevel).Info("listed kong vaults", "number", len(kongVaults))
 	return kongVaults
 }
 

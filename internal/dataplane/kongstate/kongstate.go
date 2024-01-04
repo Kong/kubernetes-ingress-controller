@@ -256,7 +256,6 @@ func (ks *KongState) FillVaults(
 			)
 			continue
 		}
-		logger.V(util.DebugLevel).Info("add vault to kongstate", "name", vault.Name)
 		ks.Vaults = append(ks.Vaults, Vault{
 			Vault: kong.Vault{
 				Name:        kong.String(vault.Spec.Backend),
@@ -519,8 +518,13 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 		}
 	}
 
-	// TODO: Add FillID() for vaults in go-kong to fill IDs for vaults.
-	// https://github.com/Kong/go-kong/pull/391
+	for valutIndex, vault := range ks.Vaults {
+		if err := vault.FillID(); err != nil {
+			logger.Error(err, "Failed to fill ID for vault", "vault_name", vault.FriendlyName())
+		} else {
+			ks.Vaults[valutIndex] = vault
+		}
+	}
 }
 
 // maybeLogKongIngressDeprecationError iterates over services and logs a deprecation error if a service

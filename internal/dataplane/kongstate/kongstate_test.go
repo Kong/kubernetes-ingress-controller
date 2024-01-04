@@ -926,6 +926,37 @@ func TestKongState_FillIDs(t *testing.T) {
 				require.NotEmpty(t, s.Consumers[0].ID)
 			},
 		},
+		{
+			name: "fills consumer, consumer group, vault IDs",
+			state: KongState{
+				Consumers: []Consumer{
+					{
+						Consumer: kong.Consumer{
+							Username: kong.String("user.0"),
+						},
+					},
+				},
+				ConsumerGroups: []ConsumerGroup{
+					{
+						ConsumerGroup: kong.ConsumerGroup{
+							Name: kong.String("cg.0"),
+						},
+					},
+				},
+				Vaults: []Vault{
+					{
+						Vault: kong.Vault{
+							Prefix: kong.String("vault.0"),
+						},
+					},
+				},
+			},
+			expect: func(t *testing.T, s KongState) {
+				require.NotEmpty(t, s.Consumers[0].ID)
+				require.NotEmpty(t, s.ConsumerGroups[0].ID)
+				require.NotEmpty(t, s.Vaults[0].ID)
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -93,6 +93,23 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedValue: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
 			},
 		},
+		"--gateway-to-reconcile": {
+			{
+				Input: "namespace/gatewayname",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.GatewayToReconcile
+				},
+				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "gatewayname"}),
+			},
+			{
+				Input:                 "namespace/",
+				ExpectedErrorContains: "name cannot be empty",
+			},
+			{
+				Input:                 "/name",
+				ExpectedErrorContains: "namespace cannot be empty",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {

@@ -19,6 +19,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
@@ -542,7 +543,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -813,7 +814,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1048,7 +1049,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1270,7 +1271,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -1300,7 +1301,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			WithScheme(scheme.Scheme).
 			Build()
 
-		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute)
+		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute, controllers.OptionalNamespacedName{})
 		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
 	})
 }

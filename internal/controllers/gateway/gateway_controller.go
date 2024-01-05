@@ -58,6 +58,10 @@ type GatewayReconciler struct { //nolint:revive
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	// It's resolved on SetupWithManager call.
 	enableReferenceGrant bool
+
+	// If GatewayNN is set,
+	// only resources managed by the specified Gateway are reconciled.
+	GatewayNN controllers.OptionalNamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -173,6 +177,15 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		)
 		return false
 	}
+
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
+		if gatewayToReconcile.Namespace != gateway.Namespace || gatewayToReconcile.Name != gateway.Name {
+			return false
+		}
+	}
+
 	gatewayClass := &gatewayapi.GatewayClass{}
 	if err := r.Client.Get(context.Background(), client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
@@ -326,6 +339,13 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Gateway", req.NamespacedName)
+
+	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
+		if req.Namespace != gatewayToReconcile.Namespace || req.Name != gatewayToReconcile.Name {
+			r.Log.V(util.DebugLevel).Info("The request does not match the specified Gateway and will be skipped.", "gateway", gatewayToReconcile.String())
+			return ctrl.Result{}, nil
+		}
+	}
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.

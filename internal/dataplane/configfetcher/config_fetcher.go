@@ -94,7 +94,7 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	}
 	if goodKongState != nil {
 		if cf.fillIDs {
-			goodKongState.FillIDs(logger)
+			goodKongState.FillIDs(logger, "")
 		}
 		cf.lastValidState = goodKongState
 		logger.V(util.DebugLevel).Info("Last good configuration fetched from Kong node", "url", clientUsed.BaseRootURL())

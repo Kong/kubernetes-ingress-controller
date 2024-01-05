@@ -181,6 +181,7 @@ func Run(
 	configTranslator, err := translator.NewTranslator(
 		logger,
 		storer,
+		c.KongWorkspace,
 		translatorFeatureFlags,
 	)
 	if err != nil {

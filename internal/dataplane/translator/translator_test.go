@@ -4907,7 +4907,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 }
 
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
-	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer,
+	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer, "",
 		FeatureFlags{
 			// We'll assume these are true for all tests.
 			FillIDs:                           true,

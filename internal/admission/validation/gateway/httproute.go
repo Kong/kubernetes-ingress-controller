@@ -7,6 +7,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -35,6 +36,10 @@ func ValidateHTTPRoute(
 	// validate that no unsupported features are in use
 	if err := validateHTTPRouteFeatures(httproute, translatorFeatures); err != nil {
 		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
+	}
+
+	if err := validation.ValidateRouteSourceAnnotations(httproute); err != nil {
+		return false, fmt.Sprintf("HTTPRoute has invalid Kong annotations: %s", err), nil
 	}
 
 	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)

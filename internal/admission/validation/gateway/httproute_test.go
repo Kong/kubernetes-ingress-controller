@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
@@ -538,6 +539,47 @@ func TestValidateHTTPRoute(t *testing.T) {
 			}},
 			valid:         false,
 			validationMsg: "HTTPRoute spec did not pass validation: rules[0].backendRefs[0]: filters in backendRef is unsupported",
+		},
+		{
+			msg: "invalid protocols",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ProtocolsKey: "ohno",
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{},
+				},
+			},
+			gateways: []*gatewayapi.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{{
+						Name:     "http",
+						Port:     80,
+						Protocol: (gatewayapi.HTTPProtocolType),
+						AllowedRoutes: &gatewayapi.AllowedRoutes{
+							Kinds: []gatewayapi.RouteGroupKind{{
+								Group: &group,
+								Kind:  "HTTPRoute",
+							}},
+						},
+					}},
+				},
+			}},
+			valid:         false,
+			validationMsg: "HTTPRoute has invalid Kong annotations: invalid konghq.com/protocols value: ohno",
 		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {

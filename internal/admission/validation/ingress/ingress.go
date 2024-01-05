@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
@@ -32,6 +33,11 @@ func ValidateIngress(
 		errMsgs           []string
 		failuresCollector = failures.NewResourceFailuresCollector(logger)
 	)
+
+	if err := validation.ValidateRouteSourceAnnotations(ingress); err != nil {
+		return false, fmt.Sprintf("Ingress has invalid Kong annotations: %s", err), nil
+	}
+
 	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, storer) {
 		kg := kg
 		// Validate by using feature of Kong Gateway.

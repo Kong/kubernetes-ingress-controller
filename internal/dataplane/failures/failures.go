@@ -41,13 +41,11 @@ func NewResourceFailure(reason string, causingObjects ...client.Object) (Resourc
 		if obj.GetName() == "" {
 			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no name", gvk.String())
 		}
-		// REVIEW: should we remove this to allow generating resource failures for cluster scope objects like KongClusterPlugins?
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/5387
-		/*
-			if obj.GetNamespace() == "" {
-				return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no namespace", gvk.String())
-			}
-		*/
+
+		if obj.GetNamespace() == "" {
+			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no namespace", gvk.String())
+		}
+
 	}
 
 	return ResourceFailure{

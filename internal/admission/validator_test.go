@@ -1274,7 +1274,7 @@ func TestValidator_ValidateVault(t *testing.T) {
 				},
 			},
 			expectedOK:      false,
-			expectedMessage: "failed to unmarshal validate configurations",
+			expectedMessage: "failed to unmarshal vault configuration",
 		},
 		{
 			name: "vault with failure in validating service",

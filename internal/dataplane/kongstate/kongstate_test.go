@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1277,59 +1276,6 @@ func TestFillVaults(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "one valid KongVault with correct ingress class, and one invalid KongVault",
-			kongVaults: []*kongv1alpha1.KongVault{
-				{
-					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
-					},
-					Spec: kongv1alpha1.KongVaultSpec{
-						Backend: "env",
-						Prefix:  "env-1",
-						Config: apiextensionsv1.JSON{
-							Raw: []byte(`{}`),
-						},
-					},
-				},
-				{
-					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-invalid",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
-					},
-					Spec: kongv1alpha1.KongVaultSpec{
-						Backend: "env",
-						Prefix:  "env-invalid",
-						Config: apiextensionsv1.JSON{
-							Raw: []byte(`{{}`),
-						},
-					},
-				},
-			},
-			expectedTranslatedVaults: []Vault{
-				{
-					Vault: kong.Vault{
-						Name:   kong.String("env"),
-						Prefix: kong.String("env-1"),
-					},
-					K8sKongVault: &kongv1alpha1.KongVault{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "vault-1",
-						},
-					},
-				},
-			},
-			expectedTranslationFailures: map[string]string{
-				"vault-invalid": "failed to parse configuration of vault",
-			},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -1356,19 +1302,8 @@ func TestFillVaults(t *testing.T) {
 				)
 			}
 
-			translationFailures := f.PopResourceFailures()
-			assert.Len(t, translationFailures, len(tc.expectedTranslationFailures), "should have expected number of translation failures")
-			for vaultName, msg := range tc.expectedTranslationFailures {
-				require.Truef(t, lo.ContainsBy(translationFailures, func(translationFailure failures.ResourceFailure) bool {
-					objects := translationFailure.CausingObjects()
-					if len(objects) != 1 && objects[0].GetName() != vaultName {
-						return false
-					}
-					return strings.Contains(translationFailure.Message(), msg)
-				}),
-					"cannot find expected translation failure message %q for KongVault %q",
-					msg, vaultName)
-			}
+			// TODO: check translation failures after we implement translation failure events for cluster scoped objects:
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/5387
 		})
 	}
 }

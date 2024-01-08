@@ -256,20 +256,6 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 	return RawConfigToConfiguration(raw)
 }
 
-// RawConfigToConfiguration decodes raw JSON to the format of Kong configuration.
-// it is run after all patches applied to the initial config.
-func RawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
-	if len(raw) == 0 {
-		return kong.Configuration{}, nil
-	}
-	var kongConfig kong.Configuration
-	err := json.Unmarshal(raw, &kongConfig)
-	if err != nil {
-		return kong.Configuration{}, err
-	}
-	return kongConfig, nil
-}
-
 // NamespacedSecretToConfiguration fetches specified value from given namespace, secret and key,
 // then parse the value to Kong plugin configurations.
 // Exported primarily to be used in admission validators.

@@ -64,7 +64,6 @@ func (f IntField) String() string {
 // https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
 
 const (
-	FieldNetPort    IntField = "net.port"
 	FieldNetDstPort IntField = "net.dst.port"
 )
 

@@ -501,6 +501,8 @@ func (ks *KongState) FillPlugins(
 // that supports the FillID method (these are Service, Route, Consumer and Consumer
 // Group). It makes their IDs deterministic, enabling their correct identification
 // in external systems (e.g. Konnect Analytics).
+// The workspace parameter is used for guarantee that the ID is unique across all workspaces,
+// as required by Kong gateway.
 func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 	for svcIndex, svc := range ks.Services {
 		if err := svc.FillID(workspace); err != nil {

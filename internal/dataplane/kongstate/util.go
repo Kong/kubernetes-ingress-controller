@@ -1,9 +1,11 @@
 package kongstate
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -82,4 +84,18 @@ func prettyPrintServiceList(services []*corev1.Service) string {
 		serviceList = append(serviceList, svc.Namespace+"/"+svc.Name)
 	}
 	return strings.Join(serviceList, ", ")
+}
+
+// RawConfigToConfiguration decodes raw JSON to the format of Kong configuration.
+// it is run after all patches applied to the initial config.
+func RawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
+	if len(raw) == 0 {
+		return kong.Configuration{}, nil
+	}
+	var kongConfig kong.Configuration
+	err := json.Unmarshal(raw, &kongConfig)
+	if err != nil {
+		return kong.Configuration{}, err
+	}
+	return kongConfig, nil
 }

@@ -50,6 +50,7 @@ type CacheStores struct {
 	KongUpstreamPolicy             cache.Store
 	IngressClassParametersV1alpha1 cache.Store
 	KongServiceFacade              cache.Store
+	KongVault                      cache.Store
 
 	l *sync.RWMutex
 }
@@ -82,6 +83,7 @@ func NewCacheStores() CacheStores {
 		KongUpstreamPolicy:             cache.NewStore(keyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(keyFunc),
 		KongServiceFacade:              cache.NewStore(keyFunc),
+		KongVault:                      cache.NewStore(clusterResourceKeyFunc),
 
 		l: &sync.RWMutex{},
 	}
@@ -188,6 +190,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.IngressClassParametersV1alpha1.Get(obj)
 	case *incubatorv1alpha1.KongServiceFacade:
 		return c.KongServiceFacade.Get(obj)
+	case *kongv1alpha1.KongVault:
+		return c.KongVault.Get(obj)
 	}
 	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
 }
@@ -252,6 +256,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.IngressClassParametersV1alpha1.Add(obj)
 	case *incubatorv1alpha1.KongServiceFacade:
 		return c.KongServiceFacade.Add(obj)
+	case *kongv1alpha1.KongVault:
+		return c.KongVault.Add(obj)
 	default:
 		return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
 	}
@@ -317,6 +323,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.IngressClassParametersV1alpha1.Delete(obj)
 	case *incubatorv1alpha1.KongServiceFacade:
 		return c.KongServiceFacade.Delete(obj)
+	case *kongv1alpha1.KongVault:
+		return c.KongVault.Delete(obj)
 	default:
 		return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
 	}

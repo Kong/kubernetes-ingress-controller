@@ -23,9 +23,11 @@ webhooks:
     - UPDATE
     resources:
     - kongconsumers
+    - kongconsumergroups
     - kongplugins
     - kongclusterplugins
     - kongingresses
+    - kongvaults
     scope: '*'
   - apiGroups:
     - ""

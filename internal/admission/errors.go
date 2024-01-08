@@ -14,6 +14,9 @@ const (
 	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"
 	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
 	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
+	ErrTextVaultConfigUnmarshalFailed         = "failed to unmarshal vault configuration: %v"
+	ErrTextVaultUnableToValidate              = "unable to validate vault on Kong gateway"
+	ErrTextVaultConfigValidationResultInvalid = "vault configuration in invalid: %s"
 )
 
 const (

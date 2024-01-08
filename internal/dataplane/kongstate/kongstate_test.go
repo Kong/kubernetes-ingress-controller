@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -25,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -55,6 +57,13 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
+				Vaults: []Vault{
+					{
+						Vault: kong.Vault{
+							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						},
+					},
+				},
 			},
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
@@ -69,6 +78,13 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
+				Vaults: []Vault{
+					{
+						Vault: kong.Vault{
+							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						},
+					},
+				},
 			},
 		},
 	} {
@@ -909,6 +925,37 @@ func TestKongState_FillIDs(t *testing.T) {
 				require.NotEmpty(t, s.Consumers[0].ID)
 			},
 		},
+		{
+			name: "fills consumer, consumer group, vault IDs",
+			state: KongState{
+				Consumers: []Consumer{
+					{
+						Consumer: kong.Consumer{
+							Username: kong.String("user.0"),
+						},
+					},
+				},
+				ConsumerGroups: []ConsumerGroup{
+					{
+						ConsumerGroup: kong.ConsumerGroup{
+							Name: kong.String("cg.0"),
+						},
+					},
+				},
+				Vaults: []Vault{
+					{
+						Vault: kong.Vault{
+							Prefix: kong.String("vault.0"),
+						},
+					},
+				},
+			},
+			expect: func(t *testing.T, s KongState) {
+				require.NotEmpty(t, s.Consumers[0].ID)
+				require.NotEmpty(t, s.ConsumerGroups[0].ID)
+				require.NotEmpty(t, s.Vaults[0].ID)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1137,6 +1184,126 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			kongState.FillUpstreamOverrides(s, logr.Discard(), failuresCollector)
 			require.Equal(t, tc.expectedUpstream, kongState.Upstreams[0].Upstream)
 			require.ElementsMatch(t, tc.expectedFailures, failuresCollector.PopResourceFailures())
+		})
+	}
+}
+
+func TestFillVaults(t *testing.T) {
+	kongVaultTypeMeta := metav1.TypeMeta{
+		APIVersion: kongv1alpha1.GroupVersion.String(),
+		Kind:       "KongVault",
+	}
+	testCases := []struct {
+		name                     string
+		kongVaults               []*kongv1alpha1.KongVault
+		expectedTranslatedVaults []Vault
+		// name of KongVault -> failure message
+		expectedTranslationFailures map[string]string
+	}{
+		{
+			name: "single valid KongVault",
+			kongVaults: []*kongv1alpha1.KongVault{
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "",
+						Name:      "vault-1",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-1",
+					},
+				},
+			},
+			expectedTranslatedVaults: []Vault{
+				{
+					Vault: kong.Vault{
+						Name:   kong.String("env"),
+						Prefix: kong.String("env-1"),
+					},
+					K8sKongVault: &kongv1alpha1.KongVault{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "vault-1",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "one valid KongVault with correct ingress class, and one KongVault with other ingress class",
+			kongVaults: []*kongv1alpha1.KongVault{
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-1",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-1",
+					},
+				},
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-2",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: "other-ingress-class",
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-2",
+					},
+				},
+			},
+			expectedTranslatedVaults: []Vault{
+				{
+					Vault: kong.Vault{
+						Name:   kong.String("env"),
+						Prefix: kong.String("env-1"),
+					},
+					K8sKongVault: &kongv1alpha1.KongVault{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "vault-1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := store.NewFakeStore(store.FakeObjects{
+				KongVaults: tc.kongVaults,
+			})
+
+			require.NoError(t, err)
+			logger := testr.New(t)
+			f := failures.NewResourceFailuresCollector(logger)
+			ks := &KongState{}
+			ks.FillVaults(logger, s, f)
+
+			assert.Len(t, ks.Vaults, len(tc.expectedTranslatedVaults), "should have expected number of translated vaults")
+			for _, expectedVault := range tc.expectedTranslatedVaults {
+				assert.Truef(t, lo.ContainsBy(ks.Vaults, func(v Vault) bool {
+					return (v.Name != nil && *v.Name == *expectedVault.Name) &&
+						(v.Prefix != nil && *v.Prefix == *expectedVault.Prefix) &&
+						(v.K8sKongVault != nil && v.K8sKongVault.Name == expectedVault.K8sKongVault.Name)
+				}),
+					"cannot find translated vault for KongVault %q", expectedVault.K8sKongVault.Name,
+				)
+			}
+
+			// TODO: check translation failures after we implement translation failure events for cluster scoped objects:
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/5387
 		})
 	}
 }

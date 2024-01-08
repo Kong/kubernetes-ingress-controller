@@ -31,6 +31,7 @@ type KongState struct {
 	Plugins        []Plugin
 	Consumers      []Consumer
 	ConsumerGroups []ConsumerGroup
+	Vaults         []Vault
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -59,6 +60,7 @@ func (ks *KongState) SanitizedCopy() *KongState {
 			return
 		}(),
 		ConsumerGroups: ks.ConsumerGroups,
+		Vaults:         ks.Vaults,
 	}
 }
 
@@ -236,6 +238,34 @@ func (ks *KongState) FillUpstreamOverrides(
 		} else if kongUpstreamPolicy != nil {
 			ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
 		}
+	}
+}
+
+func (ks *KongState) FillVaults(
+	logger logr.Logger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+) {
+	for _, vault := range s.ListKongVaults() {
+		config, err := RawConfigToConfiguration(vault.Spec.Config.Raw)
+		if err != nil {
+			logger.Error(err, "failed to parse configuration of vault to JSON", "name", vault.Name)
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("failed to parse configuration of vault %s to JSON: %v", vault.Name, err),
+				vault,
+			)
+			continue
+		}
+		ks.Vaults = append(ks.Vaults, Vault{
+			Vault: kong.Vault{
+				Name:        kong.String(vault.Spec.Backend),
+				Description: kong.String(vault.Spec.Description),
+				Prefix:      kong.String(vault.Spec.Prefix),
+				Config:      config,
+				Tags:        util.GenerateTagsForObject(vault),
+			},
+			K8sKongVault: vault.DeepCopy(),
+		})
 	}
 }
 
@@ -485,6 +515,14 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 			logger.Error(err, "Failed to fill ID for consumer group", "consumer_group_name", *consumerGroup.Name)
 		} else {
 			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup
+		}
+	}
+
+	for valutIndex, vault := range ks.Vaults {
+		if err := vault.FillID(); err != nil {
+			logger.Error(err, "Failed to fill ID for vault", "vault_name", vault.FriendlyName())
+		} else {
+			ks.Vaults[valutIndex] = vault
 		}
 	}
 }

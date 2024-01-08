@@ -69,6 +69,7 @@ type Storer interface {
 	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
 	GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error)
 	GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error)
+	GetKongVault(name string) (*kongv1alpha1.KongVault, error)
 
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
@@ -88,6 +89,7 @@ type Storer interface {
 	ListKongConsumers() []*kongv1.KongConsumer
 	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
 	ListCACerts() ([]*corev1.Secret, error)
+	ListKongVaults() []*kongv1alpha1.KongVault
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -571,6 +573,18 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, e
 	return obj.(*gatewayapi.Gateway), nil
 }
 
+// GetKongVault returns kongvault resource having specified name.
+func (s Store) GetKongVault(name string) (*kongv1alpha1.KongVault, error) {
+	p, exists, err := s.stores.KongVault.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongVault %v not found", name)}
+	}
+	return p.(*kongv1alpha1.KongVault), nil
+}
+
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
 // annotation.
 func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
@@ -668,6 +682,17 @@ func (s Store) ListCACerts() ([]*corev1.Secret, error) {
 		return nil, err
 	}
 	return secrets, nil
+}
+
+func (s Store) ListKongVaults() []*kongv1alpha1.KongVault {
+	var kongVaults []*kongv1alpha1.KongVault
+	for _, obj := range s.stores.KongVault.List() {
+		kongVault, ok := obj.(*kongv1alpha1.KongVault)
+		if ok && s.isValidIngressClass(&kongVault.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			kongVaults = append(kongVaults, kongVault)
+		}
+	}
+	return kongVaults
 }
 
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or

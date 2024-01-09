@@ -5,6 +5,7 @@ import (
 
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
@@ -68,8 +69,10 @@ func (b *KongstateServiceBackendBuilder) MustBuild() kongstate.ServiceBackend {
 
 	s, err := kongstate.NewServiceBackend(
 		b.t,
-		b.namespace,
-		b.name,
+		k8stypes.NamespacedName{
+			Namespace: b.namespace,
+			Name:      b.name,
+		},
 		b.portDef,
 	)
 	if err != nil {

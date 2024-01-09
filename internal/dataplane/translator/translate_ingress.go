@@ -8,6 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -152,8 +153,10 @@ func translateIngressDefaultBackendResource(
 	}
 
 	serviceBackend, err := kongstate.NewServiceBackendForServiceFacade(
-		ingress.Namespace,
-		resource.Name,
+		k8stypes.NamespacedName{
+			Namespace: facade.Namespace,
+			Name:      facade.Name,
+		},
 		subtranslator.PortDefFromPortNumber(facade.Spec.Backend.Port),
 	)
 	if err != nil {
@@ -198,7 +201,13 @@ func translateIngressDefaultBackendService(
 		defaultBackend.Service.Name,
 		port.CanonicalString(),
 	)
-	serviceBackend, err := kongstate.NewServiceBackendForService(ingress.Namespace, defaultBackend.Service.Name, port)
+	serviceBackend, err := kongstate.NewServiceBackendForService(
+		k8stypes.NamespacedName{
+			Namespace: ingress.Namespace,
+			Name:      defaultBackend.Service.Name,
+		},
+		port,
+	)
 	if err != nil {
 		failuresCollector.PushResourceFailure(fmt.Sprintf("failed to create ServiceBackend for default backend: %s", err), &ingress)
 		return kongstate.Service{}, false

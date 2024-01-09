@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/kong/go-kong/kong"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -48,8 +49,10 @@ func (t *Translator) ingressRulesFromTCPIngressV1beta1() ingressRules {
 			}
 
 			serviceBackend, err := kongstate.NewServiceBackendForService(
-				ingress.Namespace,
-				rule.Backend.ServiceName,
+				k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      rule.Backend.ServiceName,
+				},
 				kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
 			)
 			if err != nil {
@@ -127,8 +130,10 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 			}
 
 			serviceBackend, err := kongstate.NewServiceBackendForService(
-				ingress.Namespace,
-				rule.Backend.ServiceName,
+				k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      rule.Backend.ServiceName,
+				},
 				kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
 			)
 			if err != nil {

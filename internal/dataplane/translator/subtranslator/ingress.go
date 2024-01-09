@@ -331,8 +331,10 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(
 ) (kongstate.Service, error) {
 	if m.backend.isServiceFacade() {
 		serviceBackend, err := kongstate.NewServiceBackendForServiceFacade(
-			m.parentIngress.GetNamespace(),
-			m.backend.name,
+			k8stypes.NamespacedName{
+				Namespace: m.parentIngress.GetNamespace(),
+				Name:      m.backend.name,
+			},
 			portDef,
 		)
 		if err != nil {
@@ -358,8 +360,10 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(
 	}
 
 	serviceBackend, err := kongstate.NewServiceBackendForService(
-		m.parentIngress.GetNamespace(),
-		m.backend.name,
+		k8stypes.NamespacedName{
+			Namespace: m.parentIngress.GetNamespace(),
+			Name:      m.backend.name,
+		},
 		portDef,
 	)
 	if err != nil {

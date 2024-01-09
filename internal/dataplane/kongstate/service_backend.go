@@ -5,6 +5,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 // ServiceBackendType is the type of the backend.
@@ -22,53 +23,48 @@ type ServiceBackends []ServiceBackend
 
 // ServiceBackend represents a backend for a Kong Service. It can be a Kubernetes Service or a KongServiceFacade.
 type ServiceBackend struct {
-	backendType ServiceBackendType
-	name        string
-	namespace   string
-	portDef     PortDef
-	weight      *int
+	backendType    ServiceBackendType
+	namespacedName k8stypes.NamespacedName
+	portDef        PortDef
+	weight         *int
 }
 
 // NewServiceBackend creates a new ServiceBackend with an arbitrary backend type.
 func NewServiceBackend(
 	t ServiceBackendType,
-	namespace string,
-	name string,
+	nn k8stypes.NamespacedName,
 	portDef PortDef,
 ) (ServiceBackend, error) {
 	if t == "" {
 		return ServiceBackend{}, errors.New("backend type cannot be empty")
 	}
-	if namespace == "" {
+	if nn.Namespace == "" {
 		return ServiceBackend{}, errors.New("namespace cannot be empty")
 	}
-	if name == "" {
+	if nn.Name == "" {
 		return ServiceBackend{}, errors.New("name cannot be empty")
 	}
 	return ServiceBackend{
-		backendType: t,
-		namespace:   namespace,
-		name:        name,
-		portDef:     portDef,
+		backendType:    t,
+		namespacedName: nn,
+		portDef:        portDef,
 	}, nil
 }
 
 // NewServiceBackendForService creates a new ServiceBackend for a Kubernetes Service.
-func NewServiceBackendForService(namespace, name string, portDef PortDef) (ServiceBackend, error) {
+func NewServiceBackendForService(nn k8stypes.NamespacedName, portDef PortDef) (ServiceBackend, error) {
 	return NewServiceBackend(
 		ServiceBackendTypeKubernetesService,
-		namespace,
-		name,
+		nn,
 		portDef,
 	)
 }
 
 // NewServiceBackendForServiceFacade creates a new ServiceBackend for a KongServiceFacade.
-func NewServiceBackendForServiceFacade(namespace, name string, portDef PortDef) (ServiceBackend, error) {
+func NewServiceBackendForServiceFacade(nn k8stypes.NamespacedName, portDef PortDef) (ServiceBackend, error) {
 	return NewServiceBackend(
 		ServiceBackendTypeKongServiceFacade,
-		namespace,
-		name,
+		nn,
 		portDef,
 	)
 }
@@ -80,12 +76,12 @@ func (s *ServiceBackend) SetWeight(weight int32) {
 
 // Name returns the name of the backend resource (Service or KongServiceFacade).
 func (s *ServiceBackend) Name() string {
-	return s.name
+	return s.namespacedName.Name
 }
 
 // Namespace returns the namespace of the backend resource (Service or KongServiceFacade).
 func (s *ServiceBackend) Namespace() string {
-	return s.namespace
+	return s.namespacedName.Namespace
 }
 
 // PortDef returns the port definition of the backend.

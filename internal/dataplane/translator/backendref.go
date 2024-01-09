@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -35,8 +36,10 @@ func backendRefsToKongStateBackends(
 				namespace = string(*backendRef.Namespace)
 			}
 			backend, err := kongstate.NewServiceBackendForService(
-				namespace,
-				string(backendRef.Name),
+				k8stypes.NamespacedName{
+					Namespace: namespace,
+					Name:      string(backendRef.Name),
+				},
 				kongstate.PortDef{
 					Mode:   kongstate.PortModeByNumber,
 					Number: port,

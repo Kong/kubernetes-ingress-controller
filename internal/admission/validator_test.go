@@ -1241,6 +1241,7 @@ func TestValidator_ValidateVault(t *testing.T) {
 	testCases := []struct {
 		name            string
 		kongVault       kongv1alpha1.KongVault
+		storerObjects   store.FakeObjects
 		validateSvcFail bool
 		expectedOK      bool
 		expectedMessage string
@@ -1277,6 +1278,37 @@ func TestValidator_ValidateVault(t *testing.T) {
 			expectedMessage: "failed to unmarshal vault configuration",
 		},
 		{
+			name: "vault with duplicate prefix",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-dupe",
+				},
+			},
+			storerObjects: store.FakeObjects{
+				KongVaults: []*kongv1alpha1.KongVault{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "vault-0",
+							Annotations: map[string]string{
+								annotations.IngressClassKey: annotations.DefaultIngressClass,
+							},
+						},
+						Spec: kongv1alpha1.KongVaultSpec{
+							Backend: "env",
+							Prefix:  "env-dupe",
+						},
+					},
+				},
+			},
+			validateSvcFail: false,
+			expectedOK:      false,
+			expectedMessage: "spec.prefix 'env-dupe' is duplicate with existing KongVault",
+		},
+		{
 			name: "vault with failure in validating service",
 			kongVault: kongv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1295,12 +1327,14 @@ func TestValidator_ValidateVault(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{
 				AdminAPIServicesProvider: fakeServicesProvider{
 					vaultSvc: &fakeVaultSvc{
 						shouldFail: tc.validateSvcFail,
 					},
 				},
+				Storer:              storer,
 				ingressClassMatcher: fakeClassMatcher,
 				Logger:              logr.Discard(),
 			}

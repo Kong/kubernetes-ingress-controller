@@ -537,7 +537,7 @@ func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 	}
 
 	for valutIndex, vault := range ks.Vaults {
-		if err := vault.FillID(); err != nil {
+		if err := vault.FillID(workspace); err != nil {
 			logger.Error(err, "Failed to fill ID for vault", "vault_name", vault.FriendlyName())
 		} else {
 			ks.Vaults[valutIndex] = vault

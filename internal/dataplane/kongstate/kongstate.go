@@ -214,12 +214,13 @@ func (ks *KongState) FillOverrides(
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			// routes nested under Services here do not include their original parent object info in kongstate. translators
-			// convert this into a util.K8sObjectInfo, which includes name/namespace/GVK as strings. unfortunately we can't
+			// Routes, opposed to Services, are not validated in their override method therefore we have no error check here.
+			// Routes nested under Services here do not include their original parent object info in kongstate. Translators
+			// convert this into a util.K8sObjectInfo, which includes name/namespace/GVK as strings. Unfortunately we can't
 			// really convert this into a client.Object for use with the failures collector, and plumbing the original object
-			// down into the kongstate route copy looked a bit annoying. protocol validation for routes instead lives in the
+			// down into the kongstate.Route copy looked a bit annoying. Protocol validation for routes instead lives in the
 			// HTTPRoute and Ingress translators (these may override to ws/wss, whereas the others are expected to derive
-			// their protcol from the resource type alone.
+			// their protcol from the resource type alone).
 			ks.Services[i].Routes[j].override(logger)
 		}
 	}

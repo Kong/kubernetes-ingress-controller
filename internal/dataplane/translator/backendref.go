@@ -64,7 +64,7 @@ func backendRefsToKongStateBackends(
 func loggerForBackendRef(logger logr.Logger, route client.Object, backendRef gatewayapi.BackendRef) logr.Logger {
 	var (
 		namespace = route.GetNamespace()
-		kind      string
+		kind      string = "unknown"
 	)
 	if backendRef.Namespace != nil {
 		namespace = string(*backendRef.Namespace)

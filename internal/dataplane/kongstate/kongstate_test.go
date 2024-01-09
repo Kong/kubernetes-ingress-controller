@@ -1313,7 +1313,7 @@ func TestFillVaults(t *testing.T) {
 	}
 }
 
-func TestFillOverridesFailures(t *testing.T) {
+func TestFillOverrides_ServiceFailures(t *testing.T) {
 	tests := []struct {
 		name                               string
 		state                              *KongState

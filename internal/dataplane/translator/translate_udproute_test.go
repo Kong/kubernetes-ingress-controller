@@ -88,7 +88,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -188,7 +188,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -197,7 +197,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service2").WithPortNumber(81).Build(),
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(81).MustBuild(),
 					},
 				},
 			},
@@ -285,11 +285,11 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(81).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -389,7 +389,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -398,7 +398,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).Build(),
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).MustBuild(),
 					},
 				},
 			},
@@ -556,7 +556,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -653,7 +653,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).Build(),
+						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).MustBuild(),
 					},
 				},
 				{
@@ -662,7 +662,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service2").WithPortNumber(8181).Build(),
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(8181).MustBuild(),
 					},
 				},
 			},
@@ -745,11 +745,11 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(81).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -846,7 +846,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -855,7 +855,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 						Protocol: kong.String("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).Build(),
+						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).MustBuild(),
 					},
 				},
 			},

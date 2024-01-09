@@ -56,7 +56,7 @@ func (b *KongstateServiceBackendBuilder) WithType(t kongstate.ServiceBackendType
 	return b
 }
 
-func (b *KongstateServiceBackendBuilder) Build() kongstate.ServiceBackend {
+func (b *KongstateServiceBackendBuilder) MustBuild() kongstate.ServiceBackend {
 	// Default to Kubernetes Service backend type if not specified.
 	if b.t == "" {
 		b.t = kongstate.ServiceBackendTypeKubernetesService

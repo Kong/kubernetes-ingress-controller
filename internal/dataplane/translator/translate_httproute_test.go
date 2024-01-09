@@ -207,7 +207,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
@@ -274,7 +274,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
@@ -338,7 +338,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
@@ -407,7 +407,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
@@ -477,7 +477,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
@@ -552,7 +552,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -640,7 +640,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created for this service
@@ -680,7 +680,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(8080).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(8080).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{
@@ -774,8 +774,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).Build(),
-								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).Build(),
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).MustBuild(),
+								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -819,8 +819,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(8080).WithWeight(90).Build(),
-								builder.NewKongstateServiceBackend("foo-v3").WithPortNumber(8080).WithWeight(10).Build(),
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(8080).WithWeight(90).MustBuild(),
+								builder.NewKongstateServiceBackend("foo-v3").WithPortNumber(8080).WithWeight(10).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -924,7 +924,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -1061,8 +1061,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).Build(),
-								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).Build(),
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).MustBuild(),
+								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -1243,8 +1243,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).Build(),
-								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).Build(),
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).MustBuild(),
+								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -1479,7 +1479,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
@@ -1587,7 +1587,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -1656,7 +1656,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -1667,7 +1667,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -1678,7 +1678,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -1689,7 +1689,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -1775,7 +1775,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -1875,7 +1875,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1._.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -1934,7 +1934,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1.foo.com.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -2003,8 +2003,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1._.foo.com.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).WithWeight(10).Build(),
-					builder.NewKongstateServiceBackend("service2").WithPortNumber(80).WithWeight(20).Build(),
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).WithWeight(10).MustBuild(),
+					builder.NewKongstateServiceBackend("service2").WithPortNumber(80).WithWeight(20).MustBuild(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -2053,7 +2053,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1.a.foo.com.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{
@@ -2099,7 +2099,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Name: kong.String("httproute.default.httproute-1._.0"),
 				},
 				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).Build(),
+					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
 				},
 			},
 			expectedKongRoute: kongstate.Route{

@@ -381,11 +381,11 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					builder.NewKongstateServiceBackend(string(blueObjName)).
 						WithNamespace(string(cholponNamespace)).
 						WithPortNumber(int(port)).
-						Build(),
+						MustBuild(),
 					builder.NewKongstateServiceBackend(string(redObjName)).
 						WithNamespace(string(cholponNamespace)).
 						WithPortNumber(int(port)).
-						Build(),
+						MustBuild(),
 				},
 				Parent: &gatewayapi.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
@@ -446,11 +446,11 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					builder.NewKongstateServiceBackend(string(blueObjName)).
 						WithNamespace(string(cholponNamespace)).
 						WithPortNumber(int(port)).
-						Build(),
+						MustBuild(),
 					builder.NewKongstateServiceBackend(string(redObjName)).
 						WithNamespace("behbudiy").
 						WithPortNumber(int(port)).
-						Build(),
+						MustBuild(),
 				},
 				Parent: &gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{
@@ -568,7 +568,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					builder.NewKongstateServiceBackend(string(redObjName)).
 						WithNamespace("behbudiy").
 						WithPortNumber(int(port)).
-						Build(),
+						MustBuild(),
 				},
 				Parent: &gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{

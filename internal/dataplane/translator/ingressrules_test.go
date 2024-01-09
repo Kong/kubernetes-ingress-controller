@@ -261,10 +261,10 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			backends: kongstate.ServiceBackends{
 				builder.NewKongstateServiceBackend("test-service1").
 					WithNamespace(corev1.NamespaceDefault).
-					Build(),
+					MustBuild(),
 				builder.NewKongstateServiceBackend("test-service2").
 					WithNamespace(corev1.NamespaceDefault).
-					Build(),
+					MustBuild(),
 			},
 			services: []*corev1.Service{
 				{
@@ -316,10 +316,10 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			backends: kongstate.ServiceBackends{
 				builder.NewKongstateServiceBackend("test-service1").
 					WithNamespace(corev1.NamespaceDefault).
-					Build(),
+					MustBuild(),
 				builder.NewKongstateServiceBackend("test-service2").
 					WithNamespace(corev1.NamespaceDefault).
-					Build(),
+					MustBuild(),
 			},
 			services: []*corev1.Service{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -614,9 +614,9 @@ func TestPopulateServices(t *testing.T) {
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("k8s-service-to-skip1").
-							WithNamespace("test-namespace").Build(),
+							WithNamespace("test-namespace").MustBuild(),
 						builder.NewKongstateServiceBackend("k8s-service-to-skip2").
-							WithNamespace("test-namespace").Build(),
+							WithNamespace("test-namespace").MustBuild(),
 					},
 				},
 				"service-to-keep": {
@@ -626,9 +626,9 @@ func TestPopulateServices(t *testing.T) {
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("k8s-service-to-keep1").
-							WithNamespace("test-namespace").Build(),
+							WithNamespace("test-namespace").MustBuild(),
 						builder.NewKongstateServiceBackend("k8s-service-to-keep2").
-							WithNamespace("test-namespace").Build(),
+							WithNamespace("test-namespace").MustBuild(),
 					},
 				},
 			},
@@ -685,7 +685,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			backend: builder.NewKongstateServiceBackend("test-service").
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectedService: testService(nil),
 		},
 		{
@@ -694,7 +694,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			backend: builder.NewKongstateServiceBackend("test-service").
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectErrorContains: "Service test-namespace/test-service not found",
 		},
 		{
@@ -727,7 +727,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectedService: testService(map[string]string{
 				"common":  "common-from-facade",
 				"facade":  "facade-from-facade",
@@ -769,7 +769,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectedService: testService(map[string]string{
 				"common": "common-from-facade",
 				"facade": "facade-from-facade",
@@ -809,7 +809,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectErrorContains: "Service test-namespace/not-existing-service not found",
 		},
 		{
@@ -819,7 +819,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectErrorContains: "KongServiceFacade test-namespace/not-existing-service-facade not found",
 		},
 	}
@@ -882,7 +882,7 @@ func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
 		WithNamespace("test-namespace").
 		WithPortNumber(80).
 		WithType(kongstate.ServiceBackendTypeKongServiceFacade).
-		Build()
+		MustBuild()
 
 	translatedObjectsCollector := NewObjectsCollector()
 	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, backend, translatedObjectsCollector)

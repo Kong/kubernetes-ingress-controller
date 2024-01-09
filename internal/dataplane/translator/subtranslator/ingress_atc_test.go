@@ -97,7 +97,7 @@ func TestTranslateIngressATC(t *testing.T) {
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("test-service").
 							WithNamespace(corev1.NamespaceDefault).
-							WithPortNumber(80).Build(),
+							WithPortNumber(80).MustBuild(),
 					},
 					Parent: expectedParentIngress(),
 				},
@@ -171,7 +171,7 @@ func TestTranslateIngressATC(t *testing.T) {
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("test-service").
 							WithNamespace(corev1.NamespaceDefault).
-							WithPortNumber(80).Build(),
+							WithPortNumber(80).MustBuild(),
 					},
 					Parent: expectedParentIngress(),
 				},
@@ -256,7 +256,7 @@ func TestTranslateIngressATC(t *testing.T) {
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("test-service").
 							WithNamespace(corev1.NamespaceDefault).
-							WithPortNumber(80).Build(),
+							WithPortNumber(80).MustBuild(),
 					},
 					Parent: &netv1.Ingress{
 						TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
@@ -359,7 +359,7 @@ func TestTranslateIngressATC(t *testing.T) {
 							WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 							WithNamespace(corev1.NamespaceDefault).
 							WithPortNumber(8080).
-							Build(),
+							MustBuild(),
 					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
 						ObjectMeta: metav1.ObjectMeta{

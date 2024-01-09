@@ -83,7 +83,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).Build(),
+						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).MustBuild(),
 					},
 				},
 			},
@@ -159,7 +159,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).Build(),
+							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
 					},
 				},
 			},
@@ -282,7 +282,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).Build(),
+							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
 					},
 				},
 				{
@@ -290,8 +290,8 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tcproute.default.tcproute-2.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).Build(),
-						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).Build(),
+						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
+						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).MustBuild(),
 					},
 				},
 			},

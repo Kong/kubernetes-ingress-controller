@@ -94,7 +94,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -105,7 +105,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -116,7 +116,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -127,7 +127,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -243,7 +243,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -254,7 +254,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 			},
@@ -349,7 +349,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
 							WithPortNumber(80).
-							Build(),
+							MustBuild(),
 					},
 				},
 				{
@@ -357,7 +357,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("grpcroute.default.grpcroute-no-hostnames-no-matches._.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service0").WithPortNumber(80).Build(),
+						builder.NewKongstateServiceBackend("service0").WithPortNumber(80).MustBuild(),
 					},
 				},
 			},

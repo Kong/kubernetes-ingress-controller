@@ -540,15 +540,17 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 	})
 	vaultName, ok := prefixToKongVaultName[k8sKongVault.Spec.Prefix]
 	if ok && vaultName != k8sKongVault.Name {
-		return false, fmt.Sprintf("spec.prefix %q is duplicate with existing KongVault %s",
+		return false, fmt.Sprintf("spec.prefix %q is duplicate with existing KongVault %q",
 			k8sKongVault.Spec.Prefix, vaultName), nil
 	}
 
 	kongVault := kong.Vault{
-		Name:        kong.String(k8sKongVault.Spec.Backend),
-		Prefix:      kong.String(k8sKongVault.Spec.Prefix),
-		Description: kong.String(k8sKongVault.Spec.Description),
-		Config:      config,
+		Name:   kong.String(k8sKongVault.Spec.Backend),
+		Prefix: kong.String(k8sKongVault.Spec.Prefix),
+		Config: config,
+	}
+	if len(k8sKongVault.Spec.Description) > 0 {
+		kongVault.Description = kong.String(k8sKongVault.Spec.Description)
 	}
 	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
 	if err != nil || errText != "" {

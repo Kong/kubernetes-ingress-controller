@@ -1306,7 +1306,7 @@ func TestValidator_ValidateVault(t *testing.T) {
 			},
 			validateSvcFail: false,
 			expectedOK:      false,
-			expectedMessage: "spec.prefix 'env-dupe' is duplicate with existing KongVault",
+			expectedMessage: "spec.prefix \"env-dupe\" is duplicate with existing KongVault",
 		},
 		{
 			name: "vault with failure in validating service",

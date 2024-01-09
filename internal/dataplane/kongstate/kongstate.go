@@ -314,14 +314,17 @@ func (ks *KongState) FillVaults(
 			)
 			continue
 		}
+		kongVault := kong.Vault{
+			Name:   kong.String(vault.Spec.Backend),
+			Prefix: kong.String(vault.Spec.Prefix),
+			Config: config,
+			Tags:   util.GenerateTagsForObject(vault),
+		}
+		if len(vault.Spec.Description) > 0 {
+			kongVault.Description = kong.String(vault.Spec.Description)
+		}
 		ks.Vaults = append(ks.Vaults, Vault{
-			Vault: kong.Vault{
-				Name:        kong.String(vault.Spec.Backend),
-				Description: kong.String(vault.Spec.Description),
-				Prefix:      kong.String(vault.Spec.Prefix),
-				Config:      config,
-				Tags:        util.GenerateTagsForObject(vault),
-			},
+			Vault:        kongVault,
 			K8sKongVault: vault.DeepCopy(),
 		})
 	}

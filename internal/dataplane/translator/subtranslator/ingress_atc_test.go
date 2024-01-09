@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -93,14 +94,11 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						ExpressionRoutes: true,
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).MustBuild(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -170,14 +168,11 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						ExpressionRoutes: true,
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).MustBuild(),
+					},
 					Parent: expectedParentIngress(),
 				},
 			},
@@ -258,14 +253,11 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						ExpressionRoutes: true,
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Name:      "test-service",
-						Namespace: corev1.NamespaceDefault,
-						PortDef: kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("test-service").
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(80).MustBuild(),
+					},
 					Parent: &netv1.Ingress{
 						TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
 						ObjectMeta: metav1.ObjectMeta{
@@ -362,12 +354,13 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						ExpressionRoutes: true,
 					}},
-					Backends: []kongstate.ServiceBackend{{
-						Type:      kongstate.ServiceBackendTypeKongServiceFacade,
-						Name:      "svc-facade",
-						Namespace: corev1.NamespaceDefault,
-						PortDef:   PortDefFromPortNumber(8080),
-					}},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("svc-facade").
+							WithType(kongstate.ServiceBackendTypeKongServiceFacade).
+							WithNamespace(corev1.NamespaceDefault).
+							WithPortNumber(8080).
+							MustBuild(),
+					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "svc-facade",
@@ -444,7 +437,8 @@ func TestTranslateIngressATC(t *testing.T) {
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
-			diff := cmp.Diff(tc.expectedServices, services, checkOnlyIngressMeta, checkOnlyKongServiceFacadeMeta)
+			compareServiceBackend := cmp.AllowUnexported(kongstate.ServiceBackend{})
+			diff := cmp.Diff(tc.expectedServices, services, checkOnlyIngressMeta, checkOnlyKongServiceFacadeMeta, compareServiceBackend)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

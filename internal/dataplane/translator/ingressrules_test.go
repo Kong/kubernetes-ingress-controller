@@ -259,12 +259,12 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			name:      "if all backends have a service then all services will be returned and their annotations recorded",
 			namespace: corev1.NamespaceDefault,
 			backends: kongstate.ServiceBackends{
-				{
-					Name: "test-service1",
-				},
-				{
-					Name: "test-service2",
-				},
+				builder.NewKongstateServiceBackend("test-service1").
+					WithNamespace(corev1.NamespaceDefault).
+					MustBuild(),
+				builder.NewKongstateServiceBackend("test-service2").
+					WithNamespace(corev1.NamespaceDefault).
+					MustBuild(),
 			},
 			services: []*corev1.Service{
 				{
@@ -314,12 +314,12 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			name:      "backends which have no corresponding services will fail to fetch",
 			namespace: corev1.NamespaceDefault,
 			backends: kongstate.ServiceBackends{
-				{
-					Name: "test-service1",
-				},
-				{
-					Name: "test-service2",
-				},
+				builder.NewKongstateServiceBackend("test-service1").
+					WithNamespace(corev1.NamespaceDefault).
+					MustBuild(),
+				builder.NewKongstateServiceBackend("test-service2").
+					WithNamespace(corev1.NamespaceDefault).
+					MustBuild(),
 			},
 			services: []*corev1.Service{{
 				ObjectMeta: metav1.ObjectMeta{
@@ -350,7 +350,7 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 			translatedObjectsCollector := NewObjectsCollector()
 
-			services, annotations := getK8sServicesForBackends(storer, tt.namespace, tt.backends, translatedObjectsCollector, failuresCollector, parent)
+			services, annotations := getK8sServicesForBackends(storer, tt.backends, translatedObjectsCollector, failuresCollector, parent)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
 			var collectedFailures []string
@@ -613,14 +613,10 @@ func TestPopulateServices(t *testing.T) {
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:      "k8s-service-to-skip1",
-							Namespace: "test-namespace",
-						},
-						{
-							Name:      "k8s-service-to-skip2",
-							Namespace: "test-namespace",
-						},
+						builder.NewKongstateServiceBackend("k8s-service-to-skip1").
+							WithNamespace("test-namespace").MustBuild(),
+						builder.NewKongstateServiceBackend("k8s-service-to-skip2").
+							WithNamespace("test-namespace").MustBuild(),
 					},
 				},
 				"service-to-keep": {
@@ -629,14 +625,10 @@ func TestPopulateServices(t *testing.T) {
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:      "k8s-service-to-keep1",
-							Namespace: "test-namespace",
-						},
-						{
-							Name:      "k8s-service-to-keep2",
-							Namespace: "test-namespace",
-						},
+						builder.NewKongstateServiceBackend("k8s-service-to-keep1").
+							WithNamespace("test-namespace").MustBuild(),
+						builder.NewKongstateServiceBackend("k8s-service-to-keep2").
+							WithNamespace("test-namespace").MustBuild(),
 					},
 				},
 			},
@@ -693,7 +685,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			backend: builder.NewKongstateServiceBackend("test-service").
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectedService: testService(nil),
 		},
 		{
@@ -702,7 +694,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			backend: builder.NewKongstateServiceBackend("test-service").
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectErrorContains: "Service test-namespace/test-service not found",
 		},
 		{
@@ -735,7 +727,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectedService: testService(map[string]string{
 				"common":  "common-from-facade",
 				"facade":  "facade-from-facade",
@@ -777,7 +769,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectedService: testService(map[string]string{
 				"common": "common-from-facade",
 				"facade": "facade-from-facade",
@@ -817,7 +809,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectErrorContains: "Service test-namespace/not-existing-service not found",
 		},
 		{
@@ -827,7 +819,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 				WithType(kongstate.ServiceBackendTypeKongServiceFacade).
 				WithNamespace("test-namespace").
 				WithPortNumber(80).
-				Build(),
+				MustBuild(),
 			expectErrorContains: "KongServiceFacade test-namespace/not-existing-service-facade not found",
 		},
 	}
@@ -836,7 +828,7 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore := lo.Must(store.NewFakeStore(tc.storerObjects))
 			translatedObjectsCollector := NewObjectsCollector()
-			service, err := resolveKubernetesServiceForBackend(fakeStore, tc.ingressNamespace, tc.backend, translatedObjectsCollector)
+			service, err := resolveKubernetesServiceForBackend(fakeStore, tc.backend, translatedObjectsCollector)
 			if tc.expectErrorContains != "" {
 				require.ErrorContains(t, err, tc.expectErrorContains)
 				return
@@ -890,10 +882,10 @@ func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
 		WithNamespace("test-namespace").
 		WithPortNumber(80).
 		WithType(kongstate.ServiceBackendTypeKongServiceFacade).
-		Build()
+		MustBuild()
 
 	translatedObjectsCollector := NewObjectsCollector()
-	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, "test-namespace", backend, translatedObjectsCollector)
+	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, backend, translatedObjectsCollector)
 	require.NoError(t, err)
 	require.Equal(t, svcCopy, svc, "service stored in cache should not be modified")
 	require.Equal(t, resolvedService.Annotations, map[string]string{

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -20,6 +21,8 @@ func backendRefsToKongStateBackends(
 	backends := kongstate.ServiceBackends{}
 
 	for _, backendRef := range backendRefs {
+		logger := loggerForBackendRef(logger, route, backendRef)
+
 		if util.IsBackendRefGroupKindSupported(
 			backendRef.Group,
 			backendRef.Kind,
@@ -28,16 +31,25 @@ func backendRefsToKongStateBackends(
 			if backendRef.Port != nil {
 				port = int32(*backendRef.Port)
 			}
-			backend := kongstate.ServiceBackend{
-				Name: string(backendRef.Name),
-				PortDef: kongstate.PortDef{
+			namespace := route.GetNamespace()
+			if backendRef.Namespace != nil {
+				namespace = string(*backendRef.Namespace)
+			}
+			backend, err := kongstate.NewServiceBackendForService(
+				k8stypes.NamespacedName{
+					Namespace: namespace,
+					Name:      string(backendRef.Name),
+				},
+				kongstate.PortDef{
 					Mode:   kongstate.PortModeByNumber,
 					Number: port,
 				},
-				Weight: backendRef.Weight,
+			)
+			if err != nil {
+				logger.Error(err, "failed to create ServiceBackend for backendRef")
 			}
-			if backendRef.Namespace != nil {
-				backend.Namespace = string(*backendRef.Namespace)
+			if backendRef.Weight != nil {
+				backend.SetWeight(*backendRef.Weight)
 			}
 			backends = append(backends, backend)
 		} else {
@@ -45,29 +57,33 @@ func backendRefsToKongStateBackends(
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and
 			// that remain viable (because they still have some permissible backendRefs)
-			var (
-				namespace = route.GetNamespace()
-				kind      string
-			)
-			if backendRef.Namespace != nil {
-				namespace = string(*backendRef.Namespace)
-			}
-			if backendRef.Kind != nil {
-				kind = string(*backendRef.Kind)
-			}
-
-			objName := fmt.Sprintf("%s %s/%s",
-				route.GetObjectKind().GroupVersionKind().String(),
-				route.GetNamespace(),
-				route.GetName())
-			logger.Error(nil, "Object requested backendRef to target, but no ReferenceGrant permits it, skipping...",
-				"object_name", objName,
-				"target_kind", kind,
-				"target_namespace", namespace,
-				"target_name", backendRef.Name,
-			)
+			logger.Error(nil, "Object requested backendRef to target, but no ReferenceGrant permits it, skipping...")
 		}
 	}
 
 	return backends
+}
+
+func loggerForBackendRef(logger logr.Logger, route client.Object, backendRef gatewayapi.BackendRef) logr.Logger {
+	var (
+		namespace = route.GetNamespace()
+		kind      = "unknown"
+	)
+	if backendRef.Namespace != nil {
+		namespace = string(*backendRef.Namespace)
+	}
+	if backendRef.Kind != nil {
+		kind = string(*backendRef.Kind)
+	}
+
+	objName := fmt.Sprintf("%s %s/%s",
+		route.GetObjectKind().GroupVersionKind().String(),
+		route.GetNamespace(),
+		route.GetName())
+	return logger.WithValues(
+		"object_name", objName,
+		"target_kind", kind,
+		"target_namespace", namespace,
+		"target_name", backendRef.Name,
+	)
 }

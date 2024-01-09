@@ -336,22 +336,15 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 			var targets []kongstate.Target
 			for _, backend := range service.Backends {
 				// gather the Kubernetes service for the backend
-				backendNamespace := backend.Namespace
-				if backendNamespace == "" {
-					// if the backend namespace isn't specified, it's in the same namespace as the referee route (which is,
-					// somewhat confusingly, the _service_ namespace in serviceMap services, as historically there was no option
-					// to reference services outside the route namespace, and we could always stuff the route namespace into the
-					// placeholder service.
-					backendNamespace = service.Namespace
-				}
+				backendNamespace := backend.Namespace()
 
-				backendName := backend.Name
-				if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
+				backendName := backend.Name()
+				if backend.IsServiceFacade() {
 					// In the case of KongServiceFacade we need to look it up to determine the backing Kubernetes Service.
-					svcFacade, err := t.storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+					svcFacade, err := t.storer.GetKongServiceFacade(backend.Namespace(), backend.Name())
 					if err != nil {
 						t.registerTranslationFailure(
-							fmt.Sprintf("couldn't get KongServiceFacade %s: %v", backend.Name, err),
+							fmt.Sprintf("couldn't get KongServiceFacade %s: %v", backend.Name(), err),
 							service.Parent,
 						)
 						continue
@@ -368,7 +361,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				}
 
 				// determine the port for the backend
-				port, err := findPort(k8sService, backend.PortDef)
+				port, err := findPort(k8sService, backend.PortDef())
 				if err != nil {
 					t.registerTranslationFailure(
 						fmt.Sprintf("can't find port for backend kubernetes service: %v", err),
@@ -389,19 +382,19 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 
 				// if weights were set for the backend then that weight needs to be
 				// distributed equally among all the targets.
-				if backend.Weight != nil && len(newTargets) != 0 {
+				if weight, weightPresent := backend.Weight().Get(); weightPresent && len(newTargets) != 0 {
 					// initialize the weight of the target based on the weight of the backend
 					// which governs that target (and potentially more). If the weight of the
 					// backend is 0 then this indicates an intention to drop all targets from
 					// this backend from the load-balancer and is a special situation where
 					// all derived targets will receive a weight of 0.
-					targetWeight := int(*backend.Weight)
+					targetWeight := weight
 
 					// if the backend governing this target is not set to a weight of 0,
 					// all targets derived from the backend split the weight, therefore
 					// equally splitting the traffic load.
-					if *backend.Weight != 0 {
-						targetWeight = int(*backend.Weight) / len(newTargets)
+					if weight != 0 {
+						targetWeight = weight / len(newTargets)
 						// minimum weight of 1 if weight zero was not specifically set.
 						if targetWeight == 0 {
 							targetWeight = 1

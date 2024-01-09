@@ -43,33 +43,6 @@ func (p *PortDef) CanonicalString() string {
 	return ImplicitPort
 }
 
-// ServiceBackendType is the type of the backend.
-type ServiceBackendType string
-
-const (
-	// ServiceBackendTypeKongServiceFacade means that the backend is an incubatorv1alpha1.KongServiceFacade.
-	ServiceBackendTypeKongServiceFacade ServiceBackendType = "KongServiceFacade"
-)
-
-type ServiceBackend struct {
-	// Type is the type of the backend. If left empty, it is assumed to be a Kubernetes Service.
-	Type ServiceBackendType
-
-	// Name is the name of the backend resource (Service or KongServiceFacade).
-	Name string
-
-	// Namespace is the namespace of the backend resource (Service or KongServiceFacade).
-	Namespace string
-
-	// PortDef is the port definition of the backend.
-	PortDef PortDef
-
-	// Weight is the weight of the backend used for load-balancing.
-	Weight *int32
-}
-
-type ServiceBackends []ServiceBackend
-
 // Target is a wrapper around Target object in Kong.
 type Target struct {
 	kong.Target

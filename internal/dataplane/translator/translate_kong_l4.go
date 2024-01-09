@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/kong/go-kong/kong"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -47,6 +48,22 @@ func (t *Translator) ingressRulesFromTCPIngressV1beta1() ingressRules {
 				r.SNIs = kong.StringSlice(host)
 			}
 
+			serviceBackend, err := kongstate.NewServiceBackendForService(
+				k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      rule.Backend.ServiceName,
+				},
+				kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+			)
+			if err != nil {
+				t.logger.Error(err, "failed to create ServiceBackend for TCPIngress rule",
+					"ingress_name", ingress.Name,
+					"ingress_namespace", ingress.Namespace,
+					"rule_idx", i,
+				)
+				continue
+			}
+
 			serviceName := fmt.Sprintf("%s.%s.%d", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
 			service, ok := result.ServiceNameToServices[serviceName]
 			if !ok {
@@ -63,11 +80,8 @@ func (t *Translator) ingressRulesFromTCPIngressV1beta1() ingressRules {
 						Retries:        kong.Int(DefaultRetries),
 					},
 					Namespace: ingress.Namespace,
-					Backends: []kongstate.ServiceBackend{{
-						Name:    rule.Backend.ServiceName,
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
-					}},
-					Parent: ingress,
+					Backends:  []kongstate.ServiceBackend{serviceBackend},
+					Parent:    ingress,
 				}
 			}
 			service.Routes = append(service.Routes, r)
@@ -115,6 +129,22 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 				},
 			}
 
+			serviceBackend, err := kongstate.NewServiceBackendForService(
+				k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      rule.Backend.ServiceName,
+				},
+				kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
+			)
+			if err != nil {
+				t.logger.Error(err, "failed to create ServiceBackend for UDPIngress rule",
+					"ingress_name", ingress.Name,
+					"ingress_namespace", ingress.Namespace,
+					"rule_idx", i,
+				)
+				continue
+			}
+
 			// generate the kong Service backend for the UDPIngress rules
 			host := fmt.Sprintf("%s.%s.%d.svc", rule.Backend.ServiceName, ingress.Namespace, rule.Backend.ServicePort)
 			serviceName := fmt.Sprintf("%s.%s.%d.udp", ingress.Namespace, rule.Backend.ServiceName, rule.Backend.ServicePort)
@@ -128,11 +158,8 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 						Host:     kong.String(host),
 						Port:     kong.Int(rule.Backend.ServicePort),
 					},
-					Backends: []kongstate.ServiceBackend{{
-						Name:    rule.Backend.ServiceName,
-						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
-					}},
-					Parent: ingress,
+					Backends: []kongstate.ServiceBackend{serviceBackend},
+					Parent:   ingress,
 				}
 			}
 			service.Routes = append(service.Routes, route)

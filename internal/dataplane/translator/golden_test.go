@@ -226,7 +226,7 @@ func runTranslatorGoldenTest(t *testing.T, tc translatorGoldenTestCase) {
 	p, err := translator.NewTranslator(logger, s, tc.featureFlags)
 	require.NoError(t, err, "failed creating translator")
 
-	// Build the Kong configuration.
+	// MustBuild the Kong configuration.
 	result := p.BuildKongConfig()
 	targetConfig := deckgen.ToDeckContent(context.Background(),
 		logger,

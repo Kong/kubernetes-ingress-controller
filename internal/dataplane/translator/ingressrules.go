@@ -72,14 +72,7 @@ func (ir *ingressRules) populateServices(
 		// collect all the Kubernetes services configured for the service backends,
 		// and all annotations with our prefix in use across all services (when applicable).
 		serviceParent := ir.ServiceNameToParent[key]
-		k8sServices, seenKongAnnotations := getK8sServicesForBackends(
-			s,
-			service.Namespace,
-			service.Backends,
-			translatedObjectsCollector,
-			failuresCollector,
-			serviceParent,
-		)
+		k8sServices, seenKongAnnotations := getK8sServicesForBackends(s, service.Backends, translatedObjectsCollector, failuresCollector, serviceParent)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
@@ -154,7 +147,7 @@ func (ir *ingressRules) generateKongServiceTags(
 	// For single-backend Services we ...
 	if len(k8sServices) == 1 {
 		// ... either use the parent object of the Service when its backend is a KongServiceFacade ...
-		if len(service.Backends) == 1 && service.Backends[0].Type == kongstate.ServiceBackendTypeKongServiceFacade {
+		if len(service.Backends) == 1 && service.Backends[0].IsServiceFacade() {
 			return util.GenerateTagsForObject(service.Parent)
 		}
 		// ... or use the backing Kubernetes Service.
@@ -290,7 +283,6 @@ func (s SNIs) Hosts() []string {
 
 func getK8sServicesForBackends(
 	storer store.Storer,
-	namespace string,
 	backends kongstate.ServiceBackends,
 	translatedObjectsCollector *ObjectsCollector,
 	failuresCollector *failures.ResourceFailuresCollector,
@@ -304,7 +296,7 @@ func getK8sServicesForBackends(
 	// retreieve that backend and capture any Kong annotations its using.
 	k8sServices := make([]*corev1.Service, 0, len(backends))
 	for _, backend := range backends {
-		k8sService, err := resolveKubernetesServiceForBackend(storer, namespace, backend, translatedObjectsCollector)
+		k8sService, err := resolveKubernetesServiceForBackend(storer, backend, translatedObjectsCollector)
 		if err != nil {
 			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to resolve Kubernetes Service for backend: %s", err), parent)
 			continue
@@ -327,25 +319,19 @@ func getK8sServicesForBackends(
 
 func resolveKubernetesServiceForBackend(
 	storer store.Storer,
-	ingressNamespace string,
 	backend kongstate.ServiceBackend,
 	translatedObjectsCollector *ObjectsCollector,
 ) (*corev1.Service, error) {
-	backendNamespace := ingressNamespace
-	if backend.Namespace != "" {
-		backendNamespace = backend.Namespace
-	}
-
 	// In case of KongServiceFacade, we need to fetch it to determine the Kubernetes Service backing it.
 	// We also want to use its annotations as they override the annotations of the Kubernetes Service.
-	if backend.Type == kongstate.ServiceBackendTypeKongServiceFacade {
-		svcFacade, err := storer.GetKongServiceFacade(backend.Namespace, backend.Name)
+	if backend.IsServiceFacade() {
+		svcFacade, err := storer.GetKongServiceFacade(backend.Namespace(), backend.Name())
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch KongServiceFacade %s/%s: %w", backend.Namespace, backend.Name, err)
+			return nil, fmt.Errorf("failed to fetch KongServiceFacade %s/%s: %w", backend.Namespace(), backend.Name(), err)
 		}
-		k8sService, err := storer.GetService(backendNamespace, svcFacade.Spec.Backend.Name)
+		k8sService, err := storer.GetService(backend.Namespace(), svcFacade.Spec.Backend.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backendNamespace, svcFacade.Spec.Backend.Name, err)
+			return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backend.Namespace(), svcFacade.Spec.Backend.Name, err)
 		}
 
 		// Make a copy of the Kubernetes Service to avoid mutating the cache (the k8sService we
@@ -368,9 +354,9 @@ func resolveKubernetesServiceForBackend(
 	}
 
 	// In case of Kubernetes Service, we just need to fetch it.
-	k8sService, err := storer.GetService(backendNamespace, backend.Name)
+	k8sService, err := storer.GetService(backend.Namespace(), backend.Name())
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backendNamespace, backend.Name, err)
+		return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backend.Namespace(), backend.Name(), err)
 	}
 	return k8sService, nil
 }

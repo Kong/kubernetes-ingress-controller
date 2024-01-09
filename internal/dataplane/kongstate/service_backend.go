@@ -15,7 +15,7 @@ const (
 	ServiceBackendTypeKongServiceFacade ServiceBackendType = "KongServiceFacade"
 
 	// ServiceBackendTypeKubernetesService means that the backend is a Kubernetes Service.
-	ServiceBackendTypeKubernetesService ServiceBackendType = "KongService"
+	ServiceBackendTypeKubernetesService ServiceBackendType = "KubernetesService"
 )
 
 type ServiceBackends []ServiceBackend

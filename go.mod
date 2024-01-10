@@ -30,8 +30,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.1.0
-	// TODO: update to the latest release after go-kong releases.
-	github.com/kong/go-kong v0.49.1-0.20240105061447-3888dc3e1697
+	github.com/kong/go-kong v0.50.0
 	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.43.0
 	github.com/lithammer/dedent v1.1.0

@@ -86,6 +86,8 @@ Adding a new version? You'll need three changes:
   in translating and applying configurations to Kong.
   [#5296](https://github.com/Kong/kubernetes-ingress-controller/pull/5296)
   [#5299](https://github.com/Kong/kubernetes-ingress-controller/pull/5299)
+- Added `-init-cache-sync-duration` CLI flag. This flag configures how long the controller waits for Kubernetes resources to populate at startup before generating the initial Kong configuration. It also fixes a bug that removed the default 5 second wait period.
+  [#5238](https://github.com/Kong/kubernetes-ingress-controller/pull/5238)
 
 ## [3.0.1]
 

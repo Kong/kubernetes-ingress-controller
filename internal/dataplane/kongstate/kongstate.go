@@ -501,16 +501,18 @@ func (ks *KongState) FillPlugins(
 // that supports the FillID method (these are Service, Route, Consumer and Consumer
 // Group). It makes their IDs deterministic, enabling their correct identification
 // in external systems (e.g. Konnect Analytics).
-func (ks *KongState) FillIDs(logger logr.Logger) {
+// The workspace parameter is used for guarantee that the ID is unique across all workspaces,
+// as required by Kong gateway.
+func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 	for svcIndex, svc := range ks.Services {
-		if err := svc.FillID(); err != nil {
+		if err := svc.FillID(workspace); err != nil {
 			logger.Error(err, "Failed to fill ID for service", "service_name", *svc.Name)
 		} else {
 			ks.Services[svcIndex] = svc
 		}
 
 		for routeIndex, route := range svc.Routes {
-			if err := route.FillID(); err != nil {
+			if err := route.FillID(workspace); err != nil {
 				logger.Error(err, "Failed to fill ID for route", "route_name", *route.Name)
 			} else {
 				ks.Services[svcIndex].Routes[routeIndex] = route
@@ -519,7 +521,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 	}
 
 	for consumerIndex, consumer := range ks.Consumers {
-		if err := consumer.FillID(); err != nil {
+		if err := consumer.FillID(workspace); err != nil {
 			logger.Error(err, "Failed to fill ID for consumer", "consumer_name", consumer.FriendlyName())
 		} else {
 			ks.Consumers[consumerIndex] = consumer
@@ -527,7 +529,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 	}
 
 	for consumerGroupIndex, consumerGroup := range ks.ConsumerGroups {
-		if err := consumerGroup.FillID(); err != nil {
+		if err := consumerGroup.FillID(workspace); err != nil {
 			logger.Error(err, "Failed to fill ID for consumer group", "consumer_group_name", *consumerGroup.Name)
 		} else {
 			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup
@@ -535,7 +537,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 	}
 
 	for valutIndex, vault := range ks.Vaults {
-		if err := vault.FillID(); err != nil {
+		if err := vault.FillID(workspace); err != nil {
 			logger.Error(err, "Failed to fill ID for vault", "vault_name", vault.FriendlyName())
 		} else {
 			ks.Vaults[valutIndex] = vault

@@ -965,7 +965,7 @@ func TestKongState_FillIDs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.state.FillIDs(zapr.NewLogger(zap.NewNop()))
+			tc.state.FillIDs(zapr.NewLogger(zap.NewNop()), "")
 			tc.expect(t, tc.state)
 		})
 	}

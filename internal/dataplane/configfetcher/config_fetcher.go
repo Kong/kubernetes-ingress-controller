@@ -34,12 +34,15 @@ type DefaultKongLastGoodConfigFetcher struct {
 	// - Services, Routes, and Consumers - based on their names. It ensures that IDs remain
 	// stable across restarts of the controller.
 	fillIDs bool
+	// workspace is the workspace name used in generating deterministic IDs. Only used when fillIDs = true.
+	workspace string
 }
 
-func NewDefaultKongLastGoodConfigFetcher(fillIDs bool) *DefaultKongLastGoodConfigFetcher {
+func NewDefaultKongLastGoodConfigFetcher(fillIDs bool, workspace string) *DefaultKongLastGoodConfigFetcher {
 	return &DefaultKongLastGoodConfigFetcher{
-		config:  dump.Config{},
-		fillIDs: fillIDs,
+		config:    dump.Config{},
+		fillIDs:   fillIDs,
+		workspace: workspace,
 	}
 }
 
@@ -94,7 +97,7 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	}
 	if goodKongState != nil {
 		if cf.fillIDs {
-			goodKongState.FillIDs(logger)
+			goodKongState.FillIDs(logger, cf.workspace)
 		}
 		cf.lastValidState = goodKongState
 		logger.V(util.DebugLevel).Info("Last good configuration fetched from Kong node", "url", clientUsed.BaseRootURL())

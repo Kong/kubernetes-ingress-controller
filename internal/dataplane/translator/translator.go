@@ -88,6 +88,7 @@ type LicenseGetter interface {
 type Translator struct {
 	logger        logr.Logger
 	storer        store.Storer
+	workspace     string
 	licenseGetter LicenseGetter
 	featureFlags  FeatureFlags
 
@@ -100,6 +101,7 @@ type Translator struct {
 func NewTranslator(
 	logger logr.Logger,
 	storer store.Storer,
+	workspace string,
 	featureFlags FeatureFlags,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
@@ -113,6 +115,7 @@ func NewTranslator(
 	return &Translator{
 		logger:                     logger,
 		storer:                     storer,
+		workspace:                  workspace,
 		featureFlags:               featureFlags,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
@@ -216,7 +219,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 
 	if t.featureFlags.FillIDs {
 		// generate IDs for Kong entities
-		result.FillIDs(t.logger)
+		result.FillIDs(t.logger, t.workspace)
 	}
 
 	return KongConfigBuildingResult{

@@ -181,6 +181,7 @@ func Run(
 	configTranslator, err := translator.NewTranslator(
 		logger,
 		storer,
+		c.KongWorkspace,
 		translatorFeatureFlags,
 	)
 	if err != nil {
@@ -194,7 +195,7 @@ func Run(
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
-	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs)
+	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),

@@ -155,6 +155,9 @@ Adding a new version? You'll need three changes:
   [#5303](https://github.com/Kong/kubernetes-ingress-controller/pull/5303)
 - Allow the `ws` and `wss` Enterprise protocol values for protocol annotations.
   [#5399](https://github.com/Kong/kubernetes-ingress-controller/pull/5399)
+- Add a `workspace` paramater in filling IDs of Kong entities to avoid
+  duplicate IDs cross different workspaces.
+  [#5401](https://github.com/Kong/kubernetes-ingress-controller/pull/5401) 
 
 ### Changed
 

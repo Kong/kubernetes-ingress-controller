@@ -58,7 +58,7 @@ func TestResourceFailure(t *testing.T) {
 		noNamespace := validCausingObject()
 		noNamespace.Namespace = ""
 		_, err = NewResourceFailure(someValidResourceFailureReason, noNamespace)
-		assert.Error(t, err, "expected an empty namespace object to be rejected")
+		assert.NoError(t, err, "expected an empty namespace object to also be accepted")
 	})
 }
 

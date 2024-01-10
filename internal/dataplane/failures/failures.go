@@ -41,11 +41,6 @@ func NewResourceFailure(reason string, causingObjects ...client.Object) (Resourc
 		if obj.GetName() == "" {
 			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no name", gvk.String())
 		}
-
-		if obj.GetNamespace() == "" {
-			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no namespace", gvk.String())
-		}
-
 	}
 
 	return ResourceFailure{

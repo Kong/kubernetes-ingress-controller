@@ -923,123 +923,124 @@ func TestValidationWebhook(t *testing.T) {
 		})
 	}
 
-	t.Log("verifying the validation of KongVaults on creation")
+	t.Run("verify validation webhook on creating KongVaults", func(t *testing.T) {
+		// Only Kong EE have the API `POST /schemas/vaults/validate`,
+		// so we create a subtest scope and only run it with Kong enterprise.
+		RunWhenKongEnterprise(t) //nolint: contextcheck
 
-	testCases := []struct {
-		name          string
-		kongVault     *kongv1alpha1.KongVault
-		errorOnCreate bool
-	}{
-		{
-			name: "should pass the validation if the configuration is correct",
-			kongVault: &kongv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-valid",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
+		testCases := []struct {
+			name          string
+			kongVault     *kongv1alpha1.KongVault
+			errorOnCreate bool
+		}{
+			{
+				name: "should pass the validation if the configuration is correct",
+				kongVault: &kongv1alpha1.KongVault{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-valid",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-				},
-				Spec: kongv1alpha1.KongVaultSpec{
-					Backend:     "env",
-					Prefix:      "env-test",
-					Description: "test env vault",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{"prefix":"kong_vault_test_"}`),
-					},
-				},
-			},
-		},
-		{
-			name: "should also pass the validation if the description is empty",
-			kongVault: &kongv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-empty-description",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Spec: kongv1alpha1.KongVaultSpec{
-					Backend: "env",
-					Prefix:  "env-empty-desc",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{"prefix":"kong_vault_test_"}`),
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend:     "env",
+						Prefix:      "env-test",
+						Description: "test env vault",
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{"prefix":"kong_vault_test_"}`),
+						},
 					},
 				},
 			},
-		},
-		{
-			name: "should fail the validation if the backend is not supported by Kong gateway",
-			kongVault: &kongv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-unsupported-backend",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
+			{
+				name: "should also pass the validation if the description is empty",
+				kongVault: &kongv1alpha1.KongVault{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-empty-description",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-				},
-				Spec: kongv1alpha1.KongVaultSpec{
-					Backend:     "env1",
-					Prefix:      "unsupported-backend",
-					Description: "test env vault",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{"prefix":"kong-env-test"}`),
-					},
-				},
-			},
-			errorOnCreate: true,
-		},
-		{
-			name: "should fail the validation if the spec.config does not pass the schema check of Kong gateway",
-			kongVault: &kongv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-invalid-config",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Spec: kongv1alpha1.KongVaultSpec{
-					Backend:     "env",
-					Prefix:      "invalid-config",
-					Description: "test env vault",
-					Config: apiextensionsv1.JSON{
-						Raw: []byte(`{"prefix":"kong-env-test","foo":"bar"}`),
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-empty-desc",
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{"prefix":"kong_vault_test_"}`),
+						},
 					},
 				},
 			},
-			errorOnCreate: true,
-		},
-		{
-			name: "should fail the validation if spec.prefix is duplicate",
-			kongVault: &kongv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-dupe",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
+			{
+				name: "should fail the validation if the backend is not supported by Kong gateway",
+				kongVault: &kongv1alpha1.KongVault{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-unsupported-backend",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend:     "env1",
+						Prefix:      "unsupported-backend",
+						Description: "test env vault",
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{"prefix":"kong-env-test"}`),
+						},
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
-					Backend:     "env",
-					Prefix:      "env-background",
-					Description: "test env vault",
-				},
+				errorOnCreate: true,
 			},
-			errorOnCreate: true,
-		},
-	}
-
-	t.Log("running test cases for validation on creating KongVault")
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			// Only Kong EE have the API `POST /schemas/vaults/validate`, so we only run it with Kong enterprise.
-			RunWhenKongEnterprise(t) //nolint: contextcheck
-			_, err := kongClient.ConfigurationV1alpha1().KongVaults().Create(ctx, tc.kongVault, metav1.CreateOptions{})
-			if tc.errorOnCreate {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
+			{
+				name: "should fail the validation if the spec.config does not pass the schema check of Kong gateway",
+				kongVault: &kongv1alpha1.KongVault{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-invalid-config",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend:     "env",
+						Prefix:      "invalid-config",
+						Description: "test env vault",
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{"prefix":"kong-env-test","foo":"bar"}`),
+						},
+					},
+				},
+				errorOnCreate: true,
+			},
+			{
+				name: "should fail the validation if spec.prefix is duplicate",
+				kongVault: &kongv1alpha1.KongVault{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-dupe",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend:     "env",
+						Prefix:      "env-background",
+						Description: "test env vault",
+					},
+				},
+				errorOnCreate: true,
+			},
+		}
+		t.Log("running test cases for validation on creating KongVault")
+		for _, tc := range testCases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				_, err := kongClient.ConfigurationV1alpha1().KongVaults().Create(ctx, tc.kongVault, metav1.CreateOptions{})
+				if tc.errorOnCreate {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	})
 }
 
 func ensureWebhookService(ctx context.Context, t *testing.T, name string) {

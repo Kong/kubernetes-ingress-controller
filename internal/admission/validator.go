@@ -535,13 +535,12 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 
 	// list existing KongVaults and reject if the spec.prefix is duplicate with another `KongVault`.
 	existingKongVaults := validator.Storer.ListKongVaults()
-	prefixToKongVaultName := lo.SliceToMap(existingKongVaults, func(v *kongv1alpha1.KongVault) (string, string) {
-		return v.Spec.Prefix, v.Name
+	dupeVault, hasDupe := lo.Find(existingKongVaults, func(v *kongv1alpha1.KongVault) bool {
+		return v.Spec.Prefix == k8sKongVault.Spec.Prefix && v.Name != k8sKongVault.Name
 	})
-	vaultName, ok := prefixToKongVaultName[k8sKongVault.Spec.Prefix]
-	if ok && vaultName != k8sKongVault.Name {
+	if hasDupe {
 		return false, fmt.Sprintf("spec.prefix %q is duplicate with existing KongVault %q",
-			k8sKongVault.Spec.Prefix, vaultName), nil
+			k8sKongVault.Spec.Prefix, dupeVault.Name), nil
 	}
 
 	kongVault := kong.Vault{

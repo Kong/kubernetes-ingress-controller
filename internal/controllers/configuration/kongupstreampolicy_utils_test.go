@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
@@ -37,6 +38,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		name                             string
 		kongUpstreamPolicy               kongv1beta1.KongUpstreamPolicy
 		inputObjects                     []client.Object
+		objectsConfiguredInDataPlane     bool
 		expectedKongUpstreamPolicyStatus gatewayapi.PolicyStatus
 		updated                          bool
 	}{
@@ -100,6 +102,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
+			objectsConfiguredInDataPlane: true,
 			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
@@ -116,6 +119,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
 							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
+							},
 						},
 					},
 					{
@@ -131,6 +139,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Type:   string(gatewayapi.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -161,6 +174,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 									Status: metav1.ConditionTrue,
 									Reason: string(gatewayapi.PolicyReasonAccepted),
 								},
+								{
+									Type:   string(gatewayapi.GatewayConditionProgrammed),
+									Status: metav1.ConditionTrue,
+									Reason: string(gatewayapi.GatewayReasonProgrammed),
+								},
 							},
 						},
 						{
@@ -176,6 +194,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 									Type:   string(gatewayapi.PolicyConditionAccepted),
 									Status: metav1.ConditionTrue,
 									Reason: string(gatewayapi.PolicyReasonAccepted),
+								},
+								{
+									Type:   string(gatewayapi.GatewayConditionProgrammed),
+									Status: metav1.ConditionTrue,
+									Reason: string(gatewayapi.GatewayReasonProgrammed),
 								},
 							},
 						},
@@ -234,6 +257,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
+			objectsConfiguredInDataPlane: true,
 			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
@@ -250,6 +274,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
 							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
+							},
 						},
 					},
 					{
@@ -265,6 +294,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Type:   string(gatewayapi.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -332,6 +366,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
+			objectsConfiguredInDataPlane: true,
 			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
@@ -347,6 +382,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Type:   string(gatewayapi.PolicyConditionAccepted),
 								Status: metav1.ConditionFalse,
 								Reason: string(gatewayapi.PolicyReasonConflicted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionFalse,
+								Reason: string(gatewayapi.GatewayReasonPending),
 							},
 						},
 					},
@@ -418,6 +458,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
+			objectsConfiguredInDataPlane: true,
 			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
@@ -433,6 +474,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Type:   string(gatewayapi.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -487,6 +533,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			},
+			objectsConfiguredInDataPlane: true,
 			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
@@ -503,6 +550,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
 							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
+							},
 						},
 					},
 					{
@@ -518,6 +570,107 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 								Type:   string(gatewayapi.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
 								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
+							},
+						},
+					},
+				},
+			},
+			updated: true,
+		},
+		{
+			name: "service and kong service facade not configured in data plane, programmed=false",
+			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      policyName,
+					Namespace: testNamespace,
+				},
+			},
+			inputObjects: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: testNamespace,
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+						},
+						CreationTimestamp: metav1.Now(),
+					},
+				},
+				&incubatorv1alpha1.KongServiceFacade{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-facade-1",
+						Namespace: testNamespace,
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+						},
+						CreationTimestamp: metav1.Time{
+							Time: metav1.Now().Add(10 * time.Second),
+						},
+					},
+				},
+				&gatewayapi.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httpRoute",
+						Namespace: testNamespace,
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("svc-1").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			objectsConfiguredInDataPlane: false,
+			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
+				Ancestors: []gatewayapi.PolicyAncestorStatus{
+					{
+						AncestorRef: gatewayapi.ParentReference{
+							Group:     lo.ToPtr(gatewayapi.Group("core")),
+							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Name:      gatewayapi.ObjectName("svc-1"),
+						},
+						ControllerName: gatewaycontroller.GetControllerName(),
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionFalse,
+								Reason: string(gatewayapi.GatewayReasonPending),
+							},
+						},
+					},
+					{
+						AncestorRef: gatewayapi.ParentReference{
+							Group:     lo.ToPtr(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
+							Kind:      lo.ToPtr(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Name:      gatewayapi.ObjectName("svc-facade-1"),
+						},
+						ControllerName: gatewaycontroller.GetControllerName(),
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionFalse,
+								Reason: string(gatewayapi.GatewayReasonPending),
 							},
 						},
 					},
@@ -543,6 +696,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 
 			reconciler := KongUpstreamPolicyReconciler{
 				Client:                   fakeClient,
+				DataplaneClient:          DataPlaneStatusClientMock{ObjectsConfigured: tc.objectsConfiguredInDataPlane},
 				KongServiceFacadeEnabled: true,
 			}
 
@@ -558,6 +712,15 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			assert.Empty(t, cmp.Diff(tc.expectedKongUpstreamPolicyStatus, newPolicy.Status, ignoreLastTransitionTime))
 		})
 	}
+}
+
+type DataPlaneStatusClientMock struct {
+	controllers.DataPlane
+	ObjectsConfigured bool
+}
+
+func (d DataPlaneStatusClientMock) KubernetesObjectIsConfigured(client.Object) bool {
+	return d.ObjectsConfigured
 }
 
 func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T) {
@@ -709,21 +872,28 @@ func TestBuildPolicyStatus(t *testing.T) {
 		Status: metav1.ConditionTrue,
 		Reason: string(gatewayapi.PolicyReasonAccepted),
 	}
+	programmedCondition := metav1.Condition{
+		Type:   string(gatewayapi.GatewayConditionProgrammed),
+		Status: metav1.ConditionTrue,
+		Reason: string(gatewayapi.GatewayReasonProgrammed),
+	}
 
 	serviceStatus := func(name string, creationTimestamp time.Time) ancestorStatus {
 		return ancestorStatus{
-			namespacedName:    k8stypes.NamespacedName{Namespace: "default", Name: name},
-			ancestorKind:      upstreamPolicyAncestorKindService,
-			acceptedCondition: acceptedCondition,
-			creationTimestamp: metav1.NewTime(creationTimestamp),
+			namespacedName:      k8stypes.NamespacedName{Namespace: "default", Name: name},
+			ancestorKind:        upstreamPolicyAncestorKindService,
+			acceptedCondition:   acceptedCondition,
+			programmedCondition: programmedCondition,
+			creationTimestamp:   metav1.NewTime(creationTimestamp),
 		}
 	}
 	serviceFacadeStatus := func(name string, creationTimestamp time.Time) ancestorStatus {
 		return ancestorStatus{
-			namespacedName:    k8stypes.NamespacedName{Namespace: "default", Name: name},
-			ancestorKind:      upstreamPolicyAncestorKindKongServiceFacade,
-			acceptedCondition: acceptedCondition,
-			creationTimestamp: metav1.NewTime(creationTimestamp),
+			namespacedName:      k8stypes.NamespacedName{Namespace: "default", Name: name},
+			ancestorKind:        upstreamPolicyAncestorKindKongServiceFacade,
+			acceptedCondition:   acceptedCondition,
+			programmedCondition: programmedCondition,
+			creationTimestamp:   metav1.NewTime(creationTimestamp),
 		}
 	}
 
@@ -738,6 +908,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 			ControllerName: gatewaycontroller.GetControllerName(),
 			Conditions: []metav1.Condition{
 				acceptedCondition,
+				programmedCondition,
 			},
 		}
 	}
@@ -752,6 +923,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 			ControllerName: gatewaycontroller.GetControllerName(),
 			Conditions: []metav1.Condition{
 				acceptedCondition,
+				programmedCondition,
 			},
 		}
 	}
@@ -872,6 +1044,21 @@ func TestIsSupportedHTTPRouteBackendRef(t *testing.T) {
 				Kind: lo.ToPtr(gatewayapi.Kind("UnsupportedKind")),
 			},
 			expected: false,
+		},
+		{
+			name: "empty group",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("")),
+				Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+			},
+			expected: true,
+		},
+		{
+			name: "empty group with nil kind",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("")),
+			},
+			expected: true,
 		},
 	}
 

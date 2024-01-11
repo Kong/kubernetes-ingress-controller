@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -37,6 +39,7 @@ type KongUpstreamPolicyReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
 
 	// KongServiceFacadeEnabled determines whether the controller should populate the KongUpstreamPolicy's ancestor
 	// status for KongServiceFacades.
@@ -68,6 +71,15 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		return err
 	}
 
+	// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
+	// of the HTTPRoute.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
+		handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
+	); err != nil {
+		return err
+	}
+
 	if r.KongServiceFacadeEnabled {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &incubatorv1alpha1.KongServiceFacade{}),
@@ -78,10 +90,40 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		}
 	}
 
-	return c.Watch(
+	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &kongv1beta1.KongUpstreamPolicy{}),
 		&handler.EnqueueRequestForObject{},
-	)
+	); err != nil {
+		return err
+	}
+
+	if r.StatusQueue != nil {
+		// Watch for notifications on the status queue from Services and KongServiceFacades as their status change
+		// needs to be propagated to the KongUpstreamPolicy's ancestor Programmed status.
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Version: "v1",
+				Kind:    "Service",
+			})},
+			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
+			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
+		); err != nil {
+			return err
+		}
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Version: incubatorv1alpha1.SchemeGroupVersion.Version,
+				Group:   incubatorv1alpha1.SchemeGroupVersion.Group,
+				Kind:    incubatorv1alpha1.KongServiceFacadeKind,
+			})},
+			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
+			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
@@ -210,6 +252,56 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPolicyForObject(ctx context.Co
 			},
 		},
 	}
+}
+
+// getUpstreamPoliciesForHTTPRouteServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
+// the Services of an HTTPRoute.
+func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(ctx context.Context, obj client.Object) []reconcile.Request {
+	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
+	if !ok {
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, rule := range httpRoute.Spec.Rules {
+		for _, br := range rule.BackendRefs {
+			if !isSupportedHTTPRouteBackendRef(br.BackendRef) {
+				continue
+			}
+
+			namespace := httpRoute.Namespace
+			if br.BackendRef.Namespace != nil {
+				namespace = string(*br.BackendRef.Namespace)
+			}
+			service := &corev1.Service{}
+			if err := r.Client.Get(ctx, k8stypes.NamespacedName{
+				Namespace: namespace,
+				Name:      string(br.BackendRef.Name),
+			}, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					r.Log.Error(err, "Failed to retrieve Service in watch predicates",
+						"Service", fmt.Sprintf("%s/%s", namespace, string(br.BackendRef.Name)),
+					)
+				}
+				continue
+			}
+
+			if service.Annotations == nil {
+				continue
+			}
+			upstreamPolicy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+			if !ok {
+				continue
+			}
+			requests = append(requests, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: httpRoute.Namespace,
+					Name:      upstreamPolicy,
+				},
+			})
+		}
+	}
+	return requests
 }
 
 // doesObjectReferUpstreamPolicy filters out all the objects not referencing KongUpstreamPolicies.

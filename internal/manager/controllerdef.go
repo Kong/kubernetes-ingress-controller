@@ -270,6 +270,7 @@ func setupControllers(
 					DataplaneClient:          dataplaneClient,
 					CacheSyncTimeout:         c.CacheSyncTimeout,
 					KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+					StatusQueue:              kubernetesStatusQueue,
 				},
 			},
 		},

@@ -13,8 +13,12 @@ import (
 // with the Kong dataplane.
 type DataPlane interface {
 	DataPlaneClient
+	DataPlaneStatusClient
 
 	Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error)
+}
+
+type DataPlaneStatusClient interface {
 	AreKubernetesObjectReportsEnabled() bool
 	KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus
 	KubernetesObjectIsConfigured(obj client.Object) bool

@@ -4887,6 +4887,93 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 				{Name: "consumer", Namespace: "bar"},
 			},
 		},
+		{
+			name: "Ingress using Services and KongServiceFacades annotated with KongUpstreamPolicy",
+			objectsInStore: store.FakeObjects{
+				KongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "upstream-policy1",
+							Namespace: "bar",
+						},
+					},
+				},
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "bar",
+							Annotations: map[string]string{
+								kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							Ports: []corev1.ServicePort{
+								{
+									Port: 80,
+								},
+							},
+						},
+					},
+				},
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service-facade1",
+							Namespace: "bar",
+							Annotations: map[string]string{
+								kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
+							},
+						},
+						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+								Name: "service1",
+								Port: 80,
+							},
+						},
+					},
+				},
+				IngressesV1: []*netv1.Ingress{
+					builder.NewIngress("ingress1", "kong").
+						WithNamespace("bar").
+						WithRules(netv1.IngressRule{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/service",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service1",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+										{
+											Path: "/service-facade",
+											Backend: netv1.IngressBackend{
+												Resource: &corev1.TypedLocalObjectReference{
+													Name:     "service-facade1",
+													Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												},
+											},
+										},
+									},
+								},
+							},
+						}).
+						Build(),
+				},
+			},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
+				{Name: "ingress1", Namespace: "bar"},
+				{Name: "service1", Namespace: "bar"},
+				{Name: "service-facade1", Namespace: "bar"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

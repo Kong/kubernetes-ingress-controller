@@ -128,8 +128,12 @@ Adding a new version? You'll need three changes:
   - using filters in backendRefs of rules
   [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
-  enforce `KongUpstreamPolicy` status.
+  enforce `KongUpstreamPolicy` status. 
+  The controller will set an ancestor status in `KongUpstreamPolicy` status for 
+  each of its ancestors (i.e. `Service` or `KongServiceFacade`) with the `Accepted`
+  condition.
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
+  [#5428](https://github.com/Kong/kubernetes-ingress-controller/pull/5428)
 - New CRD `KongVault` to reperesent a custom Kong vault for storing senstive
   data used in plugin configurations. Now users can create a `KongVault` to
   create a custom Kong vault and reference the values in configurations of

@@ -16,63 +16,68 @@ import (
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 const maxNAncestors = 16
 
-type serviceStatus struct {
-	service           corev1.Service
+// upstreamPolicyAncestorKind represents kind of KongUpstreamPolicy ancestor (Service or KongServiceFacade).
+type upstreamPolicyAncestorKind string
+
+const (
+	upstreamPolicyAncestorKindService           upstreamPolicyAncestorKind = "Service"
+	upstreamPolicyAncestorKindKongServiceFacade upstreamPolicyAncestorKind = "KongServiceFacade"
+)
+
+// ancestorStatus represents the status of an ancestor (Service or KongServiceFacade).
+// A collection of all ancestors' statuses is used to build the KongUpstreamPolicy status.
+type ancestorStatus struct {
+	namespacedName    k8stypes.NamespacedName
+	ancestorKind      upstreamPolicyAncestorKind
 	acceptedCondition metav1.Condition
+	creationTimestamp metav1.Time
 }
 
-// -----------------------------------------------------------------------------
-// KongUpstreamPolicy Controller - Reconciler Helpers
-// -----------------------------------------------------------------------------
+// serviceKey is used as a key for indexing Services by "namespace/name".
+type serviceKey string
+
+// servicesSet is a set of serviceKeys.
+type servicesSet map[serviceKey]struct{}
 
 // enforceKongUpstreamPolicyStatus gets a list of services (ancestors) along with their desired status and enforce them
 // in the KongUpstreamPolicy status.
-func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx context.Context, oldPolicy *kongv1beta1.KongUpstreamPolicy) (bool, error) {
-	// get all the services that reference this UpstreamPolicy
-	services := &corev1.ServiceList{}
-	err := r.List(ctx, services,
-		client.InNamespace(oldPolicy.Namespace),
-		client.MatchingFields{
-			upstreamPolicyIndexKey: oldPolicy.Name,
-		},
-	)
-	if err != nil {
-		return false, err
-	}
-
-	// build the desired KongUpstreamPolicy status
-	servicesStatus, err := r.buildServicesStatus(ctx, k8stypes.NamespacedName{
+func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(
+	ctx context.Context,
+	oldPolicy *kongv1beta1.KongUpstreamPolicy,
+) (bool, error) {
+	policyNN := k8stypes.NamespacedName{
 		Namespace: oldPolicy.Namespace,
 		Name:      oldPolicy.Name,
-	}, services.Items)
+	}
+
+	// Get all objects (Services and KongServiceFacades) that reference this KongUpstreamPolicy.
+	services, err := r.getServicesReferencingUpstreamPolicy(ctx, policyNN)
+	if err != nil {
+		return false, err
+	}
+	serviceFacades, err := r.maybeGetServiceFacadesReferencingUpstreamPolicy(ctx, policyNN)
 	if err != nil {
 		return false, err
 	}
 
-	newPolicyStatus := gatewayapi.PolicyStatus{}
-	if len(servicesStatus) > 0 {
-		newPolicyStatus.Ancestors = make([]gatewayapi.PolicyAncestorStatus, 0, len(servicesStatus))
+	// Build the status for each ancestor.
+	ancestorsStatus, err := r.buildAncestorsStatus(ctx, services, serviceFacades)
+	if err != nil {
+		return false, err
 	}
-	for _, ss := range servicesStatus {
-		newPolicyStatus.Ancestors = append(newPolicyStatus.Ancestors,
-			gatewayapi.PolicyAncestorStatus{
-				AncestorRef: gatewayapi.ParentReference{
-					Group:     lo.ToPtr(gatewayapi.Group("core")),
-					Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-					Namespace: lo.ToPtr(gatewayapi.Namespace(ss.service.Namespace)),
-					Name:      gatewayapi.ObjectName(ss.service.Name),
-				},
-				ControllerName: gatewaycontroller.GetControllerName(),
-				Conditions: []metav1.Condition{
-					ss.acceptedCondition,
-				},
-			},
-		)
+
+	// Build the desired KongUpstreamPolicy status.
+	newPolicyStatus, err := r.buildPolicyStatus(policyNN, ancestorsStatus)
+	if err != nil {
+		return false, err
 	}
+
+	// If the status is not updated, we don't need to patch the KongUpstreamPolicy.
 	if isStatusUpdated := isPolicyStatusUpdated(oldPolicy.Status, newPolicyStatus); !isStatusUpdated {
 		newPolicy := oldPolicy.DeepCopy()
 		newPolicy.Status = newPolicyStatus
@@ -81,73 +86,132 @@ func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx conte
 	return false, nil
 }
 
-// indexedServiceStatus is a serviceStatus with an index associated to enable preserving the order of the services.
-type indexedServiceStatus struct {
-	index int
-	data  serviceStatus
+func (r *KongUpstreamPolicyReconciler) getServicesReferencingUpstreamPolicy(
+	ctx context.Context,
+	upstreamPolicyNN k8stypes.NamespacedName,
+) ([]corev1.Service, error) {
+	services := &corev1.ServiceList{}
+	err := r.List(ctx, services,
+		client.InNamespace(upstreamPolicyNN.Namespace),
+		client.MatchingFields{
+			upstreamPolicyIndexKey: upstreamPolicyNN.Name,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing Services: %w", err)
+	}
+	return services.Items, nil
 }
 
-// buildServicesStatus creates a list of services with their conditions associated.
-func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, upstreamPolicyNN k8stypes.NamespacedName, services []corev1.Service) ([]serviceStatus, error) {
-	// sort the services by creationTimestamp
-	sort.Slice(services, func(i, j int) bool {
-		return services[i].CreationTimestamp.Before(&services[j].CreationTimestamp)
-	})
+// maybeGetServiceFacadesReferencingUpstreamPolicy returns a list of KongServiceFacades that reference the given KongUpstreamPolicy.
+// Skips the lookup if KongServiceFacade is not enabled.
+func (r *KongUpstreamPolicyReconciler) maybeGetServiceFacadesReferencingUpstreamPolicy(
+	ctx context.Context,
+	upstreamPolicyNN k8stypes.NamespacedName,
+) ([]incubatorv1alpha1.KongServiceFacade, error) {
+	if !r.KongServiceFacadeEnabled {
+		// KongServiceFacade is not enabled, so we don't need to check for it.
+		return nil, nil
+	}
+	serviceFacades := &incubatorv1alpha1.KongServiceFacadeList{}
+	err := r.List(ctx, serviceFacades,
+		client.InNamespace(upstreamPolicyNN.Namespace),
+		client.MatchingFields{
+			upstreamPolicyIndexKey: upstreamPolicyNN.Name,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing KongServiceFacades: %w", err)
+	}
+	return serviceFacades.Items, nil
+}
 
-	// prepare a service mapping to be used in subsequent operations
-	mappedServices := make(map[string]indexedServiceStatus)
-	for i, service := range services {
-		if i < maxNAncestors {
-			acceptedCondition := metav1.Condition{
-				Type:               string(gatewayapi.PolicyConditionAccepted),
-				Status:             metav1.ConditionTrue,
-				Reason:             string(gatewayapi.PolicyReasonAccepted),
-				LastTransitionTime: metav1.Now(),
-			}
-			mappedServices[buildServiceReference(service.Namespace, service.Name)] = indexedServiceStatus{
-				index: i,
-				data: serviceStatus{
-					service:           service,
-					acceptedCondition: acceptedCondition,
-				},
-			}
-		} else {
-			r.Log.Info(fmt.Sprintf("kongUpstreamPolicy %s/%s status has already %d ancestors, cannot set service %s/%s as an ancestor in the status",
-				upstreamPolicyNN.Namespace,
-				upstreamPolicyNN.Name,
-				maxNAncestors,
-				service.Namespace,
-				service.Name))
-		}
+// buildAncestorsStatus creates a list of services with their conditions associated.
+func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
+	ctx context.Context,
+	services []corev1.Service,
+	serviceFacades []incubatorv1alpha1.KongServiceFacade,
+) ([]ancestorStatus, error) {
+	// Check if any Services have conflicts. We do not verify conflicts for KongServiceFacades as there's
+	// no scenario in which they would have one.
+	conflictedServices, err := r.getConflictedServices(ctx, services)
+	if err != nil {
+		return nil, err
 	}
 
-	for serviceKey, serviceStatus := range mappedServices {
+	// Prepare conditions.
+	acceptedCondition := metav1.Condition{
+		Type:               string(gatewayapi.PolicyConditionAccepted),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gatewayapi.PolicyReasonAccepted),
+		LastTransitionTime: metav1.Now(),
+	}
+	conflictedCondition := metav1.Condition{
+		Type:               string(gatewayapi.PolicyConditionAccepted),
+		Status:             metav1.ConditionFalse,
+		Reason:             string(gatewayapi.PolicyReasonConflicted),
+		LastTransitionTime: metav1.Now(),
+	}
+
+	// Build the status for each ancestor (Services and KongServiceFacades).
+	ancestorsStatus := make([]ancestorStatus, 0, len(services)+len(serviceFacades))
+	for _, service := range services {
+		condition := acceptedCondition
+		if _, isConflicted := conflictedServices[buildServiceReference(service.Namespace, service.Name)]; isConflicted {
+			// If the service is conflicted, we will use the conflictedCondition.
+			condition = conflictedCondition
+		}
+		ancestorsStatus = append(ancestorsStatus, ancestorStatus{
+			namespacedName: k8stypes.NamespacedName{
+				Namespace: service.Namespace,
+				Name:      service.Name,
+			},
+			ancestorKind:      upstreamPolicyAncestorKindService,
+			acceptedCondition: condition,
+		})
+	}
+	for _, serviceFacade := range serviceFacades {
+		ancestorsStatus = append(ancestorsStatus, ancestorStatus{
+			namespacedName: k8stypes.NamespacedName{
+				Namespace: serviceFacade.Namespace,
+				Name:      serviceFacade.Name,
+			},
+			ancestorKind:      upstreamPolicyAncestorKindKongServiceFacade,
+			acceptedCondition: acceptedCondition,
+		})
+	}
+
+	return ancestorsStatus, nil
+}
+
+// getConflictedServices returns a set of services that have conflicts.
+func (r *KongUpstreamPolicyReconciler) getConflictedServices(ctx context.Context, services []corev1.Service) (servicesSet, error) {
+	// Prepare a mapping for efficient lookups if a Service uses this KongUpstreamPolicy.
+	upstreamPolicyServices := make(servicesSet)
+	for _, service := range services {
+		upstreamPolicyServices[buildServiceReference(service.Namespace, service.Name)] = struct{}{}
+	}
+
+	conflictedServices := make(servicesSet)
+	for serviceKey := range upstreamPolicyServices {
 		// We fetch all the HTTPRoutes that reference this service.
 		httpRoutes := &gatewayapi.HTTPRouteList{}
 		err := r.List(ctx, httpRoutes,
 			client.MatchingFields{
-				routeBackendRefServiceNameIndexKey: serviceKey,
+				routeBackendRefServiceNameIndexKey: string(serviceKey),
 			},
 		)
 		if err != nil {
 			return nil, err
 		}
-
 		hasConflict := lo.ContainsBy(httpRoutes.Items, func(httpRoute gatewayapi.HTTPRoute) bool {
-			return httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(httpRoute, mappedServices, serviceKey)
+			return httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(httpRoute, upstreamPolicyServices, serviceKey)
 		})
 		if hasConflict {
-			serviceStatus.data.acceptedCondition.Status = metav1.ConditionFalse
-			serviceStatus.data.acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
-			mappedServices[serviceKey] = serviceStatus
+			conflictedServices[serviceKey] = struct{}{}
 		}
 	}
-
-	servicesStatus := make([]serviceStatus, len(mappedServices))
-	for _, ms := range mappedServices {
-		servicesStatus[ms.index] = ms.data
-	}
-	return servicesStatus, nil
+	return conflictedServices, nil
 }
 
 // httpRouteHasUpstreamPolicyConflictedBackendRefsWithService checks if there's any HTTPRoute's rule that uses multiple backendRefs
@@ -155,8 +219,8 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 // If so, that means that we have a conflict because we cannot apply multiple KongUpstreamPolicy to the same Kong Service.
 func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
 	httpRoute gatewayapi.HTTPRoute,
-	upstreamPolicyServices map[string]indexedServiceStatus,
-	serviceKey string,
+	upstreamPolicyServices servicesSet,
+	serviceKey serviceKey,
 ) bool {
 	backendRefsUsedWithThisService := getAllBackendRefsUsedWithService(httpRoute, serviceKey)
 	hasAnyBackendRefNotUsingSameUpstreamPolicy := lo.ContainsBy(backendRefsUsedWithThisService, func(br gatewayapi.HTTPBackendRef) bool {
@@ -172,7 +236,7 @@ func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
 }
 
 // getAllBackendRefsUsedWithService returns HTTPRoute's backendRefs that use the given service (excluding the given service).
-func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey string) []gatewayapi.HTTPBackendRef {
+func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey serviceKey) []gatewayapi.HTTPBackendRef {
 	var backendRefs []gatewayapi.HTTPBackendRef
 	for _, rule := range httpRoute.Spec.Rules {
 		// We will look for a backendRef that matches the given service and keep its index if found.
@@ -198,9 +262,67 @@ func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey
 	return backendRefs
 }
 
-// -----------------------------------------------------------------------------
-// KongUpstreamPolicy Controller - Helpers
-// -----------------------------------------------------------------------------
+func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
+	upstreamPolicyNN k8stypes.NamespacedName,
+	ancestorsStatus []ancestorStatus,
+) (gatewayapi.PolicyStatus, error) {
+	// Sort the ancestors by creation timestamp and keep only the oldest ones.
+	sort.Slice(ancestorsStatus, func(i, j int) bool {
+		return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
+	})
+	if len(ancestorsStatus) > maxNAncestors {
+		r.Log.Info("status has too many ancestors, the newest ones will be ignored",
+			"KongUpstreamPolicy", upstreamPolicyNN.String(),
+			"ancestorsCount", len(ancestorsStatus),
+			"maxAllowedAncestors", maxNAncestors,
+		)
+		ancestorsStatus = ancestorsStatus[:maxNAncestors]
+	}
+
+	// Populate the KongUpstreamPolicy status with the ancestors' statuses.
+	policyStatus := gatewayapi.PolicyStatus{}
+	if len(ancestorsStatus) > 0 {
+		policyStatus.Ancestors = make([]gatewayapi.PolicyAncestorStatus, 0, len(ancestorsStatus))
+	}
+	for _, ss := range ancestorsStatus {
+		ancestorRef, err := ancestorRef(ss.namespacedName, ss.ancestorKind)
+		if err != nil {
+			return gatewayapi.PolicyStatus{}, fmt.Errorf("failed to build ancestor reference: %w", err)
+		}
+		policyStatus.Ancestors = append(policyStatus.Ancestors,
+			gatewayapi.PolicyAncestorStatus{
+				AncestorRef:    ancestorRef,
+				ControllerName: gatewaycontroller.GetControllerName(),
+				Conditions: []metav1.Condition{
+					ss.acceptedCondition,
+				},
+			},
+		)
+	}
+
+	return policyStatus, nil
+}
+
+func ancestorRef(nn k8stypes.NamespacedName, kind upstreamPolicyAncestorKind) (gatewayapi.ParentReference, error) {
+	switch kind {
+	case upstreamPolicyAncestorKindService:
+		return gatewayapi.ParentReference{
+			Group:     lo.ToPtr(gatewayapi.Group("core")),
+			Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+			Namespace: lo.ToPtr(gatewayapi.Namespace(nn.Namespace)),
+			Name:      gatewayapi.ObjectName(nn.Name),
+		}, nil
+	case upstreamPolicyAncestorKindKongServiceFacade:
+		return gatewayapi.ParentReference{
+			Group:     lo.ToPtr(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
+			Kind:      lo.ToPtr(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+			Namespace: lo.ToPtr(gatewayapi.Namespace(nn.Namespace)),
+			Name:      gatewayapi.ObjectName(nn.Name),
+		}, nil
+	}
+
+	return gatewayapi.ParentReference{}, fmt.Errorf("unknown ancestor kind %q", kind)
+}
 
 func isPolicyStatusUpdated(oldStatus, newStatus gatewayapi.PolicyStatus) bool {
 	if len(oldStatus.Ancestors) != len(newStatus.Ancestors) {
@@ -232,11 +354,8 @@ func isPolicyStatusUpdated(oldStatus, newStatus gatewayapi.PolicyStatus) bool {
 	return true
 }
 
-func backendRefToServiceRef(routeNamespace string, br gatewayapi.BackendRef) string {
-	if br.Group != nil && *br.Group != "" && *br.Group != "core" {
-		return ""
-	}
-	if br.Kind != nil && *br.Kind != "" && *br.Kind != "Service" {
+func backendRefToServiceRef(routeNamespace string, br gatewayapi.BackendRef) serviceKey {
+	if !isSupportedHTTPRouteBackendRef(br) {
 		return ""
 	}
 	namespace := routeNamespace
@@ -246,6 +365,14 @@ func backendRefToServiceRef(routeNamespace string, br gatewayapi.BackendRef) str
 	return buildServiceReference(namespace, string(br.Name))
 }
 
-func buildServiceReference(namespace, name string) string {
-	return fmt.Sprintf("%s/%s", namespace, name)
+func buildServiceReference(namespace, name string) serviceKey {
+	return serviceKey(fmt.Sprintf("%s/%s", namespace, name))
+}
+
+func isSupportedHTTPRouteBackendRef(br gatewayapi.BackendRef) bool {
+	if br.Group != nil && *br.Group == "core" || br.Group == nil &&
+		br.Kind != nil && *br.Kind == "Service" || br.Kind == nil {
+		return true
+	}
+	return false
 }

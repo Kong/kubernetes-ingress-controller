@@ -211,7 +211,6 @@ Adding a new version? You'll need three changes:
 - 🚀 Support for [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateways/) is now GA!
   - You only need to install Gateway API CRDs to use GA features of Gateway API with KIC.
   - Check the [Ingress to Gateway migration guide] to learn how to start using Gateway API already.
-- 🏎️ Performance boosting expression router is now the default for DB-less mode.
 - 📈 Gateway Discovery feature is enabled by default both in DB-less and DB mode, allowing for scaling
   your gateways independently of the controller.
 - 📖 Brand-new docs: [The KIC docs] have been totally revamped to be Gateway API first, and every single guide
@@ -268,10 +267,6 @@ Adding a new version? You'll need three changes:
   compontents to avoid caching unnecessary Secrets. The `kongCredType` field is
   still supported but is now deprecated.
   See the [Migrate Credential Type Labels] guide to see how to update your `Secrets` smoothly.
-- The `expressions` router is now the default for DB-less mode. This is not
-  expected to functionally affect routing, but may affect performance for
-  some configurations.
-  [#4934](https://github.com/Kong/kubernetes-ingress-controller/pull/4934)
 - `KongIngress` is now entirely deprecated and will be removed in a future release.
   Its fields that were previously deprecated (`proxy` and `route`) are now not allowed to be set.
   They must be migrated to annotations. `upstream` field is deprecated - it's recommended

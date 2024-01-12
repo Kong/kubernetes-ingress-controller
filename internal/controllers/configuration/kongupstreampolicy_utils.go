@@ -133,7 +133,7 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 			return nil, err
 		}
 
-		_, hasConflict := lo.Find(httpRoutes.Items, func(httpRoute gatewayapi.HTTPRoute) bool {
+		hasConflict := lo.ContainsBy(httpRoutes.Items, func(httpRoute gatewayapi.HTTPRoute) bool {
 			return httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(httpRoute, mappedServices, serviceKey)
 		})
 		if hasConflict {
@@ -159,7 +159,7 @@ func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
 	serviceKey string,
 ) bool {
 	backendRefsUsedWithThisService := getAllBackendRefsUsedWithService(httpRoute, serviceKey)
-	_, hasAnyBackendRefNotUsingSameUpstreamPolicy := lo.Find(backendRefsUsedWithThisService, func(br gatewayapi.HTTPBackendRef) bool {
+	hasAnyBackendRefNotUsingSameUpstreamPolicy := lo.ContainsBy(backendRefsUsedWithThisService, func(br gatewayapi.HTTPBackendRef) bool {
 		serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
 		if serviceRef == "" {
 			return false
@@ -175,7 +175,6 @@ func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
 func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey string) []gatewayapi.HTTPBackendRef {
 	var backendRefs []gatewayapi.HTTPBackendRef
 	for _, rule := range httpRoute.Spec.Rules {
-		rule := rule
 		// We will look for a backendRef that matches the given service and keep its index if found.
 		backendRefMatchingServiceIdx := mo.None[int]()
 		for i, br := range rule.BackendRefs {
@@ -189,8 +188,11 @@ func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey
 		if matchingIdx, ok := backendRefMatchingServiceIdx.Get(); ok {
 			// We found a backendRef that matches the given service. We will keep all the backendRefs that are together
 			// with this backendRef in the rule.
-			backendRefs = append(backendRefs, rule.BackendRefs[:matchingIdx]...)
-			backendRefs = append(backendRefs, rule.BackendRefs[matchingIdx+1:]...)
+
+			// Below we're suppressing nolintlint to not force `//nolint` instead of `// nolint`. This is to allow
+			// correctly suppressing looppointer which expects the latter.
+			backendRefs = append(backendRefs, rule.BackendRefs[:matchingIdx]...)   // nolint:nolintlint,looppointer // We do not keep the reference to rule.BackendRefs, but copy it.
+			backendRefs = append(backendRefs, rule.BackendRefs[matchingIdx+1:]...) // nolint:nolintlint,looppointer // We do not keep the reference to rule.BackendRefs, but copy it.
 		}
 	}
 	return backendRefs

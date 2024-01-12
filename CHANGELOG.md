@@ -314,10 +314,6 @@ Adding a new version? You'll need three changes:
 
 ### Changed
 
-- The `expressions` router is now the default for DB-less mode in tests and dev configurations.
-  This is not expected to functionally affect routing, but may affect performance for
-  some configurations.
-  [#4934](https://github.com/Kong/kubernetes-ingress-controller/pull/4934)
 - Update paths of Konnect APIs from `runtime_groups/*` to `control-planes/*`.
   [#4566](https://github.com/Kong/kubernetes-ingress-controller/pull/4566)
 - Docker images now use UID and GID 1000 to match Kong images. This should have

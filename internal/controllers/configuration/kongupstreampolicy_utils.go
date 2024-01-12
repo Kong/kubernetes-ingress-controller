@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -80,17 +81,18 @@ func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(ctx conte
 	return false, nil
 }
 
+// indexedServiceStatus is a serviceStatus with an index associated to enable preserving the order of the services.
+type indexedServiceStatus struct {
+	index int
+	data  serviceStatus
+}
+
 // buildServicesStatus creates a list of services with their conditions associated.
 func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, upstreamPolicyNN k8stypes.NamespacedName, services []corev1.Service) ([]serviceStatus, error) {
 	// sort the services by creationTimestamp
 	sort.Slice(services, func(i, j int) bool {
 		return services[i].CreationTimestamp.Before(&services[j].CreationTimestamp)
 	})
-
-	type indexedServiceStatus struct {
-		index int
-		data  serviceStatus
-	}
 
 	// prepare a service mapping to be used in subsequent operations
 	mappedServices := make(map[string]indexedServiceStatus)
@@ -120,6 +122,7 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 	}
 
 	for serviceKey, serviceStatus := range mappedServices {
+		// We fetch all the HTTPRoutes that reference this service.
 		httpRoutes := &gatewayapi.HTTPRouteList{}
 		err := r.List(ctx, httpRoutes,
 			client.MatchingFields{
@@ -130,23 +133,13 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 			return nil, err
 		}
 
-		for _, httpRoute := range httpRoutes.Items {
-			for _, rule := range httpRoute.Spec.Rules {
-				if len(rule.BackendRefs) == 0 {
-					continue
-				}
-				for _, br := range rule.BackendRefs {
-					serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
-					if serviceRef == "" {
-						continue
-					}
-					if _, ok := mappedServices[serviceRef]; !ok {
-						serviceStatus.data.acceptedCondition.Status = metav1.ConditionFalse
-						serviceStatus.data.acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
-						mappedServices[serviceKey] = serviceStatus
-					}
-				}
-			}
+		hasConflict := lo.ContainsBy(httpRoutes.Items, func(httpRoute gatewayapi.HTTPRoute) bool {
+			return httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(httpRoute, mappedServices, serviceKey)
+		})
+		if hasConflict {
+			serviceStatus.data.acceptedCondition.Status = metav1.ConditionFalse
+			serviceStatus.data.acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
+			mappedServices[serviceKey] = serviceStatus
 		}
 	}
 
@@ -155,6 +148,54 @@ func (r *KongUpstreamPolicyReconciler) buildServicesStatus(ctx context.Context, 
 		servicesStatus[ms.index] = ms.data
 	}
 	return servicesStatus, nil
+}
+
+// httpRouteHasUpstreamPolicyConflictedBackendRefsWithService checks if there's any HTTPRoute's rule that uses multiple backendRefs
+// AND they're not all using the same KongUpstreamPolicy.
+// If so, that means that we have a conflict because we cannot apply multiple KongUpstreamPolicy to the same Kong Service.
+func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
+	httpRoute gatewayapi.HTTPRoute,
+	upstreamPolicyServices map[string]indexedServiceStatus,
+	serviceKey string,
+) bool {
+	backendRefsUsedWithThisService := getAllBackendRefsUsedWithService(httpRoute, serviceKey)
+	hasAnyBackendRefNotUsingSameUpstreamPolicy := lo.ContainsBy(backendRefsUsedWithThisService, func(br gatewayapi.HTTPBackendRef) bool {
+		serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
+		if serviceRef == "" {
+			return false
+		}
+		// If the serviceRef is not in the upstreamPolicyServices, it means it doesn't use this KongUpstreamPolicy.
+		_, ok := upstreamPolicyServices[serviceRef]
+		return !ok
+	})
+	return hasAnyBackendRefNotUsingSameUpstreamPolicy
+}
+
+// getAllBackendRefsUsedWithService returns HTTPRoute's backendRefs that use the given service (excluding the given service).
+func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey string) []gatewayapi.HTTPBackendRef {
+	var backendRefs []gatewayapi.HTTPBackendRef
+	for _, rule := range httpRoute.Spec.Rules {
+		// We will look for a backendRef that matches the given service and keep its index if found.
+		backendRefMatchingServiceIdx := mo.None[int]()
+		for i, br := range rule.BackendRefs {
+			serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
+			if serviceRef == serviceKey {
+				// We found a backendRef that matches the given service, no need to look further.
+				backendRefMatchingServiceIdx = mo.Some(i)
+				break
+			}
+		}
+		if matchingIdx, ok := backendRefMatchingServiceIdx.Get(); ok {
+			// We found a backendRef that matches the given service. We will keep all the backendRefs that are together
+			// with this backendRef in the rule.
+
+			// Below we're suppressing nolintlint to not force `//nolint` instead of `// nolint`. This is to allow
+			// correctly suppressing looppointer which expects the latter.
+			backendRefs = append(backendRefs, rule.BackendRefs[:matchingIdx]...)   // nolint:nolintlint,looppointer // We do not keep the reference to rule.BackendRefs, but copy it.
+			backendRefs = append(backendRefs, rule.BackendRefs[matchingIdx+1:]...) // nolint:nolintlint,looppointer // We do not keep the reference to rule.BackendRefs, but copy it.
+		}
+	}
+	return backendRefs
 }
 
 // -----------------------------------------------------------------------------

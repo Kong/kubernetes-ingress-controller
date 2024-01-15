@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -16,9 +17,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -1198,6 +1201,7 @@ func TestFillVaults(t *testing.T) {
 		APIVersion: kongv1alpha1.GroupVersion.String(),
 		Kind:       "KongVault",
 	}
+	now := time.Now()
 	testCases := []struct {
 		name                     string
 		kongVaults               []*kongv1alpha1.KongVault
@@ -1281,6 +1285,94 @@ func TestFillVaults(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "KongVault with invalid configuration is rejected",
+			kongVaults: []*kongv1alpha1.KongVault{
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "vault-invalid",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-1",
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{{}`),
+						},
+					},
+				},
+			},
+			expectedTranslationFailures: map[string]string{
+				"vault-invalid": `failed to parse configuration of vault "vault-invalid" to JSON`,
+			},
+		},
+		{
+			name: "multiple KongVaults with same spec.prefix, only one translated and translation failure for the other",
+			kongVaults: []*kongv1alpha1.KongVault{
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "vault-0-newer",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-1",
+					},
+				},
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "vault-1",
+						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-1",
+					},
+				},
+				{
+					TypeMeta: kongVaultTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "vault-2",
+						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-1",
+					},
+				},
+			},
+			expectedTranslatedVaults: []Vault{
+				{
+					Vault: kong.Vault{
+						Name:   kong.String("env"),
+						Prefix: kong.String("env-1"),
+					},
+					K8sKongVault: &kongv1alpha1.KongVault{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "vault-1",
+						},
+					},
+				},
+			},
+			expectedTranslationFailures: map[string]string{
+				"vault-0-newer": `spec.prefix "env-1" is duplicate`,
+				"vault-2":       `spec.prefix "env-1" is duplicate`,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1307,8 +1399,17 @@ func TestFillVaults(t *testing.T) {
 				)
 			}
 
-			// TODO: check translation failures after we implement translation failure events for cluster scoped objects:
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/5387
+			translationFailures := f.PopResourceFailures()
+			for name, message := range tc.expectedTranslationFailures {
+				assert.Truef(t, lo.ContainsBy(translationFailures, func(failure failures.ResourceFailure) bool {
+					return strings.Contains(failure.Message(), message) &&
+						lo.ContainsBy(failure.CausingObjects(), func(obj client.Object) bool {
+							return obj.GetName() == name
+						})
+				}),
+					"cannot find expected translation failure for KongVault %s", name,
+				)
+			}
 		})
 	}
 }

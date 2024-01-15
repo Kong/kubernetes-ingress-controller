@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -257,17 +258,57 @@ func (ks *KongState) FillUpstreamOverrides(
 	}
 }
 
+// compareKongVault compares two `KongVault`s when they have the same `spec.prefix`.
+// When 2 or more KongVaults have the same prefix, only one of them is translated.
+// It returns true when v1 has higher priority then v2, by the following order:
+// - The one created earlier (earlier `creationTimestamp`) takes precedence.
+// - If the creationTimestamp equals, the one with smaller lexical order (`<` for strings) takes precedence.
+func compareKongVault(v1, v2 *kongv1alpha1.KongVault) bool {
+	if v1.CreationTimestamp.Before(&v2.CreationTimestamp) {
+		return true
+	}
+	if v2.CreationTimestamp.Before(&v1.CreationTimestamp) {
+		return false
+	}
+	// None of them can be seen created before the other (equal or not comparable), compare by lexical order of name.
+	return v1.Name < v2.Name
+}
+
 func (ks *KongState) FillVaults(
 	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
-	for _, vault := range s.ListKongVaults() {
+	// List all vaults and reject the KongVaults with duplicate prefix to prevent invalid Kong configuration generated.
+	allKongVaults := s.ListKongVaults()
+	prefixToKongVault := map[string]*kongv1alpha1.KongVault{}
+	for _, vault := range allKongVaults {
+		prefix := vault.Spec.Prefix
+		existingVault, ok := prefixToKongVault[prefix]
+		if !ok {
+			prefixToKongVault[prefix] = vault
+			continue
+		}
+		// ok == true, which means we have KongVaults with same spec.prefix
+		if compareKongVault(existingVault, vault) {
+			// the one already in the map has higher priority, the current KongVault is rejected.
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("spec.prefix %q is duplicate", prefix), vault,
+			)
+		} else {
+			// the current vault has the higher priority, the existing one is rejected and taken out of the map.
+			prefixToKongVault[prefix] = vault
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("spec.prefix %q is duplicate", prefix), existingVault,
+			)
+		}
+	}
+
+	for _, vault := range prefixToKongVault {
 		config, err := RawConfigToConfiguration(vault.Spec.Config.Raw)
 		if err != nil {
-			logger.Error(err, "failed to parse configuration of vault to JSON", "name", vault.Name)
 			failuresCollector.PushResourceFailure(
-				fmt.Sprintf("failed to parse configuration of vault %s to JSON: %v", vault.Name, err),
+				fmt.Sprintf("failed to parse configuration of vault %q to JSON: %v", vault.Name, err),
 				vault,
 			)
 			continue

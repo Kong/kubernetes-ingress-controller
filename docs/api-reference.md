@@ -397,7 +397,7 @@ KongVaultSpec defines specification of a custom Kong vault.
 | Field | Description |
 | --- | --- |
 | `backend` _string_ | Backend is the type of the backend storing the secrets in the vault. The supported backends of Kong is listed here: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/backends/ |
-| `prefix` _string_ | Prefix is the prefix of vault URI for referencing values in the vault. |
+| `prefix` _string_ | Prefix is the prefix of vault URI for referencing values in the vault. It is immutable after created. |
 | `description` _string_ | Description is the additional information about the vault. |
 | `config` _[JSON](#json)_ | Config is the configuration of the vault. Varies for different backends. |
 

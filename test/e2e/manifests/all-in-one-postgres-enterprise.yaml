@@ -2239,7 +2239,7 @@ spec:
                 type: string
               prefix:
                 description: Prefix is the prefix of vault URI for referencing values
-                  in the vault.
+                  in the vault. It is immutable after created.
                 minLength: 1
                 type: string
             required:
@@ -2343,6 +2343,9 @@ spec:
         required:
         - spec
         type: object
+        x-kubernetes-validations:
+        - message: The spec.prefix field is immutable
+          rule: self.spec.prefix == oldSelf.spec.prefix
     served: true
     storage: true
     subresources:

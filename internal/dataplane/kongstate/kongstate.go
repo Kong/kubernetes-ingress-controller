@@ -307,6 +307,7 @@ func (ks *KongState) FillVaults(
 	for _, vault := range prefixToKongVault {
 		config, err := RawConfigToConfiguration(vault.Spec.Config.Raw)
 		if err != nil {
+			logger.Error(err, "failed to parse configuration of vault to JSON", "name", vault.Name)
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("failed to parse configuration of vault %q to JSON: %v", vault.Name, err),
 				vault,

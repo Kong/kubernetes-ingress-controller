@@ -133,9 +133,14 @@ Adding a new version? You'll need three changes:
 - New CRD `KongVault` to reperesent a custom Kong vault for storing senstive
   data used in plugin configurations. Now users can create a `KongVault` to
   create a custom Kong vault and reference the values in configurations of
-  plugins. Reference of using Kong vaults: [Kong vault]
+  plugins. Reference of using Kong vaults: [Kong vault]. Since the prefix of
+  Kong vault is restrained unique, the `spec.prefix` field is set to immutable,
+  and only one of multiple `KongVault`s with the same `spec.prefix` will get
+  translated. Translation failiure events will be recorded for others with
+  duplicating `spec.prefix`.  
   [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
   [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
+  [#5435](https://github.com/Kong/kubernetes-ingress-controller/pull/5435)
 
 
 ### Fixed

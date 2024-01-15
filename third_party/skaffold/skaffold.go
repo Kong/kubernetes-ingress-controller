@@ -1,5 +1,6 @@
 //go:build third_party
 
+// skaffold is extracted to its own package to avoid issues with its stale dependencies.
 package skaffold
 
 import (

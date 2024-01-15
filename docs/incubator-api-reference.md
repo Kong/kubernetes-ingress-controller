@@ -14,7 +14,13 @@ Package v1alpha1 contains API Schema definitions for the incubator.ingress-contr
 
 
 
-KongServiceFacade allows creating separate Kong Services for a single Kubernetes Service. It can be used as Kubernetes Ingress' backend (via its path's `backend.resource` field). It's designed to enable creating two "virtual" Services in Kong that will point to the same Kubernetes Service, but will have different configuration (e.g. different set of plugins, different load balancing algorithm, etc.). <br /><br /> KongServiceFacade requires `kubernetes.io/ingress.class` annotation with a value matching the ingressClass of the Kong Ingress Controller (`kong` by default) to be reconciled.
+KongServiceFacade allows creating separate Kong Services for a single Kubernetes
+Service. It can be used as Kubernetes Ingress' backend (via its path's `backend.resource`
+field). It's designed to enable creating two "virtual" Services in Kong that will point
+to the same Kubernetes Service, but will have different configuration (e.g. different
+set of plugins, different load balancing algorithm, etc.).<br /><br />
+KongServiceFacade requires `kubernetes.io/ingress.class` annotation with a value
+matching the ingressClass of the Kong Ingress Controller (`kong` by default) to be reconciled.
 
 <!-- kong_service_facade description placeholder -->
 
@@ -32,7 +38,8 @@ KongServiceFacade allows creating separate Kong Services for a single Kubernetes
 
 
 
-KongServiceFacadeBackend is a reference to a Kubernetes Service that is used as a backend for a Kong Service Facade.
+KongServiceFacadeBackend is a reference to a Kubernetes Service
+that is used as a backend for a Kong Service Facade.
 
 
 

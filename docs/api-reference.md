@@ -118,7 +118,9 @@ KongPlugin is the Schema for the kongplugins API.
 
 
 
-ConfigPatch is a JSON patch (RFC6902) to add values from Secret to the generated configuration. It is an equivalent of the following patch: `{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.
+ConfigPatch is a JSON patch (RFC6902) to add values from Secret to the generated configuration.
+It is an equivalent of the following patch:
+`{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.
 
 
 
@@ -156,7 +158,9 @@ _Appears in:_
 
 
 
-KongIngressRoute contains KongIngress route configuration. It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`. Deprecated: use Ingress' annotations instead.
+KongIngressRoute contains KongIngress route configuration.
+It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
+Deprecated: use Ingress' annotations instead.
 
 
 
@@ -182,7 +186,9 @@ _Appears in:_
 
 
 
-KongIngressService contains KongIngress service configuration. It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress. Deprecated: use Service's annotations instead.
+KongIngressService contains KongIngress service configuration.
+It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
+Deprecated: use Service's annotations instead.
 
 
 
@@ -203,7 +209,8 @@ _Appears in:_
 
 
 
-KongIngressUpstream contains KongIngress upstream configuration. It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
+KongIngressUpstream contains KongIngress upstream configuration.
+It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
 
 
 
@@ -234,7 +241,8 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-KongProtocol is a valid Kong protocol. This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
+KongProtocol is a valid Kong protocol.
+This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
 
 
 
@@ -249,7 +257,8 @@ _Appears in:_
 
 
 
-NamespacedConfigPatch is a JSON patch to add values from secrets to KongClusterPlugin to the generated configuration of plugin in Kong.
+NamespacedConfigPatch is a JSON patch to add values from secrets to KongClusterPlugin
+to the generated configuration of plugin in Kong.
 
 
 
@@ -344,7 +353,9 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 
 
-KongVault is the schema for kongvaults API which defines a custom Kong vault. A Kong vault is a storage to store sensitive data, where the values can be referenced in configuration of plugins. See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
+KongVault is the schema for kongvaults API which defines a custom Kong vault.
+A Kong vault is a storage to store sensitive data, where the values can be referenced in configuration of plugins.
+See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 <!-- kong_vault description placeholder -->
 
@@ -427,7 +438,19 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 
 
 
-KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. <br /><br /> Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object), and it is applied to Kong Upstream objects created by the controller. <br /><br /> It can be attached to Services. To attach it to a Service, it has to be annotated with `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy object in the same namespace as the Service. <br /><br /> When attached to a Service, it will affect all Kong Upstreams created for the Service. <br /><br /> When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy. <br /><br /> Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly. In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
+KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
+Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.<br /><br />
+Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
+and it is applied to Kong Upstream objects created by the controller.<br /><br />
+It can be attached to Services. To attach it to a Service, it has to be annotated with
+`konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy
+object in the same namespace as the Service.<br /><br />
+When attached to a Service, it will affect all Kong Upstreams created for the Service.<br /><br />
+When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST
+be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy.<br /><br />
+Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly.
+In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are
+used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
 
 <!-- kong_upstream_policy description placeholder -->
 
@@ -495,7 +518,8 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-HashInput is the input for consistent-hashing load balancing algorithm. Can be one of: "ip", "consumer", "path".
+HashInput is the input for consistent-hashing load balancing algorithm.
+Can be one of: "ip", "consumer", "path".
 
 
 
@@ -526,7 +550,8 @@ _Appears in:_
 
 
 
-IngressRule represents a rule to apply against incoming requests. Matching is performed based on an (optional) SNI and port.
+IngressRule represents a rule to apply against incoming requests.
+Matching is performed based on an (optional) SNI and port.
 
 
 
@@ -587,7 +612,8 @@ _Appears in:_
 
 
 
-KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm. Only one of the fields must be set.
+KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm.
+Only one of the fields must be set.
 
 
 
@@ -666,7 +692,8 @@ _Appears in:_
 
 
 
-KongUpstreamPassiveHealthcheck configures passive checks around passive health checks.
+KongUpstreamPassiveHealthcheck configures passive checks around
+passive health checks.
 
 
 
@@ -723,7 +750,9 @@ _Appears in:_
 
 
 
-UDPIngressRule represents a rule to apply against incoming requests wherein no Host matching is available for request routing, only the port is used to match requests.
+UDPIngressRule represents a rule to apply against incoming requests
+wherein no Host matching is available for request routing, only the port
+is used to match requests.
 
 
 

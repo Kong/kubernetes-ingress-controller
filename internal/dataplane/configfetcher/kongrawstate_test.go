@@ -94,6 +94,14 @@ func TestKongRawStateToKongState(t *testing.T) {
 						CustomID: kong.String("customID"),
 					},
 				},
+				ConsumerGroups: []*kong.ConsumerGroupObject{
+					{
+						ConsumerGroup: &kong.ConsumerGroup{
+							ID:   kong.String("consumerGroup"),
+							Name: kong.String("consumerGroup"),
+						},
+					},
+				},
 				KeyAuths: []*kong.KeyAuth{
 					{
 						ID:  kong.String("keyAuth"),
@@ -209,6 +217,13 @@ func TestKongRawStateToKongState(t *testing.T) {
 						Cert: kong.String("cert"),
 					},
 				},
+				ConsumerGroups: []kongstate.ConsumerGroup{
+					{
+						ConsumerGroup: kong.ConsumerGroup{
+							Name: kong.String("consumerGroup"),
+						},
+					},
+				},
 				Consumers: []kongstate.Consumer{
 					{
 						Consumer: kong.Consumer{
@@ -315,7 +330,6 @@ func ensureAllKongRawStateFieldsAreTested(t *testing.T, testedFields []string) {
 	kongRawStateFieldsKICDoesntSupport := []string{
 		// These are fields that KIC explicitly doesn't support.
 		"SNIs",
-		"ConsumerGroups",
 		"CustomEntities",
 		"Vaults",
 		"RBACRoles",

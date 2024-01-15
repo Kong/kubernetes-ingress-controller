@@ -36,6 +36,10 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		}
 	}
 
+	for _, cg := range rawstate.ConsumerGroups {
+		kongState.ConsumerGroups = append(kongState.ConsumerGroups, kongstate.ConsumerGroup{ConsumerGroup: sanitizeConsumerGroup(*cg.ConsumerGroup)})
+	}
+
 	targets := make(map[string][]*kong.Target)
 	for _, u := range rawstate.Targets {
 		if u.Upstream != nil && u.Upstream.ID != nil {
@@ -271,6 +275,12 @@ func sanitizeConsumer(consumer kong.Consumer) kong.Consumer {
 	consumer.ID = nil
 	consumer.CreatedAt = nil
 	return consumer
+}
+
+func sanitizeConsumerGroup(consumerGroup kong.ConsumerGroup) kong.ConsumerGroup {
+	consumerGroup.ID = nil
+	consumerGroup.CreatedAt = nil
+	return consumerGroup
 }
 
 type authT interface {

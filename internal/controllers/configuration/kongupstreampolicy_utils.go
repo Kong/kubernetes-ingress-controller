@@ -370,9 +370,8 @@ func buildServiceReference(namespace, name string) serviceKey {
 }
 
 func isSupportedHTTPRouteBackendRef(br gatewayapi.BackendRef) bool {
-	if br.Group != nil && *br.Group == "core" || br.Group == nil &&
-		br.Kind != nil && *br.Kind == "Service" || br.Kind == nil {
-		return true
-	}
-	return false
+	groupIsCoreOrNil := br.Group == nil || *br.Group == "core"
+	kindIsServiceOrNil := br.Kind == nil || *br.Kind == "Service"
+	// We only support core Services.
+	return groupIsCoreOrNil && kindIsServiceOrNil
 }

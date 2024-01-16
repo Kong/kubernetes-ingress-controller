@@ -809,3 +809,75 @@ func TestBuildPolicyStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestIsSupportedHTTPRouteBackendRef(t *testing.T) {
+	testCases := []struct {
+		name       string
+		backendRef gatewayapi.BackendObjectReference
+		expected   bool
+	}{
+		{
+			name: "core service backend ref",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("core")),
+				Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+			},
+			expected: true,
+		},
+		{
+			name: "core service with nil group",
+			backendRef: gatewayapi.BackendObjectReference{
+				Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+			},
+			expected: true,
+		},
+		{
+			name: "core service with nil kind",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("core")),
+			},
+			expected: true,
+		},
+		{
+			name:       "core service with nil group and kind",
+			backendRef: gatewayapi.BackendObjectReference{},
+			expected:   true,
+		},
+		{
+			name: "core group unsupported kind",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("core")),
+				Kind:  lo.ToPtr(gatewayapi.Kind("UnsupportedKind")),
+			},
+			expected: false,
+		},
+		{
+			name: "service unsupported group",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("unsupported")),
+				Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+			},
+			expected: false,
+		},
+		{
+			name: "unsupported group",
+			backendRef: gatewayapi.BackendObjectReference{
+				Group: lo.ToPtr(gatewayapi.Group("unsupported")),
+			},
+			expected: false,
+		},
+		{
+			name: "unsupported kind",
+			backendRef: gatewayapi.BackendObjectReference{
+				Kind: lo.ToPtr(gatewayapi.Kind("UnsupportedKind")),
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, isSupportedHTTPRouteBackendRef(gatewayapi.BackendRef{BackendObjectReference: tc.backendRef}))
+		})
+	}
+}

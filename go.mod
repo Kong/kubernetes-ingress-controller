@@ -29,8 +29,8 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.5.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.2.0
-	github.com/kong/go-kong v0.50.0
+	github.com/kong/go-database-reconciler v1.2.1-0.20240117034731-49daaa527034
+	github.com/kong/go-kong v0.50.1-0.20240117034051-bc8ff7587e1e
 	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.43.0
 	github.com/lithammer/dedent v1.1.0
@@ -201,7 +201,7 @@ require (
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
 	golang.org/x/sync v0.6.0

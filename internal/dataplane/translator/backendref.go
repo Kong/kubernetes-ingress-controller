@@ -43,7 +43,7 @@ func backendRefsToKongStateBackends(
 		}
 
 		if backendRef.Kind == nil {
-      // This should never happen as the default value defined by Gateway API is 'Service'. Checking just in case.
+			// This should never happen as the default value defined by Gateway API is 'Service'. Checking just in case.
 			logger.Error(nil, "Object requested backendRef to target, but no Kind was specified, skipping...")
 			continue
 		}
@@ -56,10 +56,9 @@ func backendRefsToKongStateBackends(
 			err = fmt.Errorf("unsupported kind %q, only 'Service' is supported", *backendRef.Kind)
 		}
 		if err != nil {
-			switch errors.As(err, &store.NotFoundError{}) {
-			case true:
-				logger.Error(nil, "Object requested backendRef to target, but it does not exist, skipping...")
-			case false:
+			if errors.As(err, &store.NotFoundError{}) {
+				logger.Error(err, "Object requested backendRef to target, but it does not exist, skipping...")
+			} else {
 				logger.Error(err, "Object requested backendRef to target, but an error occurred, skipping...")
 			}
 			continue

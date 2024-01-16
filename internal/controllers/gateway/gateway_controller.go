@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"time"
@@ -53,6 +54,9 @@ type GatewayReconciler struct { //nolint:revive
 
 	PublishServiceRef    k8stypes.NamespacedName
 	PublishServiceUDPRef mo.Option[k8stypes.NamespacedName]
+
+	AddressOverrides    []string
+	AddressOverridesUDP []string
 
 	// If enableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
@@ -499,7 +503,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's metadata.
 	debug(log, gateway, "Determining listener configurations from publish services")
-	var combinedAddresses []gatewayapi.GatewayAddress
+	var combinedAddresses []gatewayapi.GatewayStatusAddress
 	var combinedListeners []gatewayapi.Listener
 	for _, svc := range gatewayServices {
 		kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
@@ -515,17 +519,23 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		combinedListeners = append(combinedListeners, kongListeners...)
 	}
 
-	if !reflect.DeepEqual(gateway.Spec.Addresses, combinedAddresses) {
-		debug(log, gateway, "Updating addresses to match Kong proxy Services")
-		gateway.Spec.Addresses = combinedAddresses
-		if err := r.Update(ctx, gateway); err != nil {
-			if apierrors.IsConflict(err) {
-				// if there's a conflict that's normal just requeue to retry, no need to make noise.
-				return ctrl.Result{Requeue: true}, nil
+	// This handles PublishStatusAddress(UDP) override config support, which allows users to set an arbitrary string to
+	// use in place of the proxy Service addresses, usually because there's another proxy in front of Kong and the
+	// addresses associated with the proxy Service aren't actually where you want to direct external clients.
+	combinedOverrideAddresses := append(r.AddressOverrides, r.AddressOverridesUDP...)
+	if len(combinedOverrideAddresses) > 0 {
+		overrides := make([]gatewayapi.GatewayStatusAddress, len(combinedOverrideAddresses))
+		for i, stringAddr := range combinedOverrideAddresses {
+			addr := gatewayapi.GatewayStatusAddress{
+				Value: stringAddr,
+				Type:  lo.ToPtr(gatewayapi.HostnameAddressType),
 			}
-			return ctrl.Result{}, err
+			if ip := net.ParseIP(stringAddr); ip != nil {
+				addr.Type = lo.ToPtr(gatewayapi.IPAddressType)
+			}
+			overrides[i] = addr
 		}
-		return ctrl.Result{}, nil // dont requeue here because spec update will trigger new reconciliation
+		combinedAddresses = overrides
 	}
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
@@ -546,7 +556,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is
 	// a given and we can simply update spec to status.
 	debug(log, gateway, "Updating the gateway status if necessary")
-	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses)
+	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses, combinedAddresses)
 	if err != nil {
 		if apierrors.IsConflict(err) {
 			// if there's a conflict that's normal just requeue to retry, no need to make noise.
@@ -624,7 +634,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	log logr.Logger,
 	svc *corev1.Service,
 ) (
-	[]gatewayapi.GatewayAddress,
+	[]gatewayapi.GatewayStatusAddress,
 	[]gatewayapi.Listener,
 	error,
 ) {
@@ -639,7 +649,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	gatewayHostAddrType := gatewayapi.HostnameAddressType
 
 	// for all service types we're going to capture the ClusterIP
-	addresses := make([]gatewayapi.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
+	addresses := make([]gatewayapi.GatewayStatusAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayapi.Listener, 0, len(svc.Spec.Ports))
 	protocolToRouteGroupKind := map[corev1.Protocol]gatewayapi.RouteGroupKind{
 		corev1.ProtocolTCP: {Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("TCPRoute")},
@@ -674,13 +684,13 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		// are often the most common address used for traffic.
 		for _, ingress := range svc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
-				addresses = append([]gatewayapi.GatewayAddress{{
+				addresses = append([]gatewayapi.GatewayStatusAddress{{
 					Type:  &gatewayIPAddrType,
 					Value: ingress.IP,
 				}}, addresses...)
 			}
 			if ingress.Hostname != "" {
-				addresses = append([]gatewayapi.GatewayAddress{{
+				addresses = append([]gatewayapi.GatewayStatusAddress{{
 					Type:  &gatewayHostAddrType,
 					Value: ingress.Hostname,
 				}}, addresses...)
@@ -776,14 +786,11 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	gateway *gatewayapi.Gateway,
 	listenerStatuses []gatewayapi.ListenerStatus,
+	addresses []gatewayapi.GatewayStatusAddress,
 ) (bool, error) {
 	if !isGatewayProgrammed(gateway) {
-		saddrs := make([]gatewayapi.GatewayStatusAddress, 0, len(gateway.Spec.Addresses))
-		for _, addr := range gateway.Spec.Addresses {
-			saddrs = append(saddrs, gatewayapi.GatewayStatusAddress(addr))
-		}
 		gateway.Status.Listeners = listenerStatuses
-		gateway.Status.Addresses = saddrs
+		gateway.Status.Addresses = addresses
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayapi.GatewayConditionProgrammed),
 			Status:             metav1.ConditionTrue,

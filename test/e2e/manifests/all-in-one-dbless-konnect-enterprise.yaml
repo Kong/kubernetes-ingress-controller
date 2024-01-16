@@ -2238,8 +2238,9 @@ spec:
                 description: Description is the additional information about the vault.
                 type: string
               prefix:
-                description: Prefix is the prefix of vault URI for referencing values
-                  in the vault. It is immutable after created.
+                description: |-
+                  Prefix is the prefix of vault URI for referencing values in the vault.
+                  It is immutable after created.
                 minLength: 1
                 type: string
             required:

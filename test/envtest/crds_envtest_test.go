@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -764,6 +765,21 @@ func TestCRDValidations(t *testing.T) {
 					"Using both configFrom and configPatches fields is not allowed.")
 			},
 		},
+		{
+			name: "KongVault - changing spec.prefix is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, _ string) {
+				vault := &kongv1alpha1.KongVault{
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-0",
+					},
+				}
+				require.NoError(t, createKongVault(ctx, ctrlClient, vault))
+				vault.Spec.Prefix = "env-1"
+				assert.ErrorContains(t, updateKongVault(ctx, ctrlClient, vault),
+					"The spec.prefix field is immutable")
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -934,4 +950,14 @@ func updateKongClusterPlugin(ctx context.Context, client client.Client, ns strin
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Update(ctx, plugin)
+}
+
+func createKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
+	vault.GenerateName = "test-"
+	return c.Create(ctx, vault)
+}
+
+func updateKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
+	vault.GenerateName = "test-"
+	return c.Update(ctx, vault)
 }

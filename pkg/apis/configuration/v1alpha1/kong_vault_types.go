@@ -37,6 +37,7 @@ const (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Description",type=string,JSONPath=`.spec.description`,description="Description",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="self.spec.prefix == oldSelf.spec.prefix", message="The spec.prefix field is immutable"
 
 // KongVault is the schema for kongvaults API which defines a custom Kong vault.
 // A Kong vault is a storage to store sensitive data, where the values can be referenced in configuration of plugins.
@@ -56,6 +57,7 @@ type KongVaultSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	Backend string `json:"backend"`
 	// Prefix is the prefix of vault URI for referencing values in the vault.
+	// It is immutable after created.
 	// +kubebuilder:validation:MinLength=1
 	Prefix string `json:"prefix"`
 	// Description is the additional information about the vault.

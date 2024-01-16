@@ -90,7 +90,6 @@ func WithGatewayAPIControllers() func(cfg *manager.Config) {
 
 func WithPublishService(namespace string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.PublishStatusAddress = []string{"127.0.0.1"}
 		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
 			Name:      PublishServiceName,
 			Namespace: namespace,
@@ -98,9 +97,10 @@ func WithPublishService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
-func WithPublishStatusAddress(address string) func(cfg *manager.Config) {
+func WithPublishStatusAddress(addresses []string, udps []string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.PublishStatusAddress = []string{address}
+		cfg.PublishStatusAddress = addresses
+		cfg.PublishStatusAddressUDP = udps
 	}
 }
 

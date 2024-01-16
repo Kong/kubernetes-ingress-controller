@@ -87,7 +87,7 @@ func generateKongServiceFromBackendRefWithName(
 		Namespace: gatewayapi.Namespace(route.GetNamespace()),
 	}, grants)
 
-	backends := backendRefsToKongStateBackends(logger, route, backendRefs, allowed)
+	backends := backendRefsToKongStateBackends(logger, storer, route, backendRefs, allowed)
 
 	// the service host needs to be a resolvable name due to legacy logic so we'll
 	// use the anchor backendRef as the basis for the name

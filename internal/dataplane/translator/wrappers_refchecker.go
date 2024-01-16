@@ -1,17 +1,22 @@
 package translator
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 // refChecker is a wrapper type that facilitates checking whether a backenRef is allowed
 // by a referenceGrantTo set.
 type refChecker[T gatewayapi.BackendRefT] struct {
+	route      client.Object
 	backendRef T
 }
 
-func newRefChecker[T gatewayapi.BackendRefT](ref T) refChecker[T] {
+// newRefCheckerForRoute returns a refChecker for the provided route and backendRef.
+func newRefCheckerForRoute[T gatewayapi.BackendRefT](route client.Object, ref T) refChecker[T] {
 	return refChecker[T]{
+		route:      route,
 		backendRef: ref,
 	}
 }
@@ -26,6 +31,11 @@ func (rc refChecker[T]) IsRefAllowedByGrant(
 	switch br := (interface{})(rc.backendRef).(type) {
 	case gatewayapi.BackendRef:
 		if br.Namespace == nil {
+			return true
+		}
+
+		// If the namespace is specified but is the same as the route's namespace, then the ref is allowed.
+		if rc.route.GetNamespace() == string(*br.Namespace) {
 			return true
 		}
 

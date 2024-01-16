@@ -141,7 +141,6 @@ Adding a new version? You'll need three changes:
   [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
   [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
 
-
 ### Fixed
 
 - Validators of `KongPlugin` and `KongClusterPlugin` will not return `500` on
@@ -165,6 +164,9 @@ Adding a new version? You'll need three changes:
   [#5401](https://github.com/Kong/kubernetes-ingress-controller/pull/5401)
 - Support properly ConsumerGroups when fallback to the last valid configuration.
   [#5438](https://github.com/Kong/kubernetes-ingress-controller/pull/5438)
+- When specifying Gateway API Routes' `backendRef`s with namespace specified, those
+  refs are checked for existence and allowed if they exist.
+  [#5392](https://github.com/Kong/kubernetes-ingress-controller/pull/5392)
 
 ### Changed
 

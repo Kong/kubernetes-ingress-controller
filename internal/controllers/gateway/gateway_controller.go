@@ -55,7 +55,9 @@ type GatewayReconciler struct { //nolint:revive
 	PublishServiceRef    k8stypes.NamespacedName
 	PublishServiceUDPRef mo.Option[k8stypes.NamespacedName]
 
-	AddressOverrides    []string
+	// AddressOverrides are addresses to use in Gateway status instead of the PublishServiceRef addresses.
+	AddressOverrides []string
+	// AddressOverridesUDP are addresses to use in Gateway status instead of the PublishServiceUDPRef addresses.
 	AddressOverridesUDP []string
 
 	// If enableReferenceGrant is true, controller will watch ReferenceGrants

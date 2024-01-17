@@ -29,8 +29,8 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.5.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.2.1-0.20240117034731-49daaa527034
-	github.com/kong/go-kong v0.50.1-0.20240117034051-bc8ff7587e1e
+	github.com/kong/go-database-reconciler v1.2.0
+	github.com/kong/go-kong v0.50.1-0.20240116014626-19b8bfa0c9dc
 	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.43.0
 	github.com/lithammer/dedent v1.1.0

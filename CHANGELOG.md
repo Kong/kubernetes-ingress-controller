@@ -149,6 +149,9 @@ Adding a new version? You'll need three changes:
 - Added flag `--gateway-to-reconcile` to set KIC to only reconcile
   the specified Gateway resource in Kubernetes.
   [#5405](https://github.com/Kong/kubernetes-ingress-controller/pull/5405)
+- Log the details in response fron Konnect when failed to push configuration
+  to Konnect.
+  [#5448](https://github.com/Kong/kubernetes-ingress-controller/pull/5448)
 
 ### Fixed
 

@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -511,11 +512,26 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 			c.logger.Error(err, "Skipped pushing configuration to Konnect")
 		} else {
 			c.logger.Error(err, "Failed pushing configuration to Konnect")
+			logKonnectErrors(c.logger, err)
 		}
 		return err
 	}
 
 	return nil
+}
+
+// logKonnectErrors logs details of each error response returned from Konnect API.
+func logKonnectErrors(logger logr.Logger, err error) {
+	if apiErrors := deckerrors.ExtractAPIErrors(err); len(apiErrors) > 0 {
+		for _, apiErr := range apiErrors {
+			// TODO: log the CRUD operation (op type, entity kind and entity name)
+			// after we pass them in certain structures in GDR:
+			// https://github.com/Kong/go-database-reconciler/issues/41
+			logger.Error(apiErr, "Failed to send request to Konnect",
+				"details", apiErr.Details(),
+			)
+		}
+	}
 }
 
 func (c *KongClient) sendToClient(

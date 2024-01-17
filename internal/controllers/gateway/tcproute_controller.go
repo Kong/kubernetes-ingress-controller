@@ -44,6 +44,10 @@ type TCPRouteReconciler struct {
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
+
+	// If GatewayNN is set,
+	// only resources managed by the specified Gateway are reconciled.
+	GatewayNN controllers.OptionalNamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -140,6 +144,14 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 	gateways := make(map[string]map[string]struct{})
 	for _, gateway := range gatewayList.Items {
 		if string(gateway.Spec.GatewayClassName) == gwc.Name {
+			// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+			if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
+				if gatewayToReconcile.Namespace != gateway.Namespace || gatewayToReconcile.Name != gateway.Name {
+					continue
+				}
+			}
+
 			_, ok := gateways[gateway.Namespace]
 			if !ok {
 				gateways[gateway.Namespace] = make(map[string]struct{})
@@ -212,6 +224,14 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj cl
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
+	}
+
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
+		if gatewayToReconcile.Namespace != gw.Namespace || gatewayToReconcile.Name != gw.Name {
+			return nil
+		}
 	}
 
 	// map all TCPRoute objects
@@ -290,7 +310,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the TCPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, tcproute, "Retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tcproute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tcproute, r.GatewayNN)
 	if err != nil {
 		if err.Error() == unsupportedGW {
 			debug(log, tcproute, "Unsupported route found, processing to verify whether it was ever supported")

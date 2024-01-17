@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -125,7 +126,9 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 // Gateway APIs route object (e.g. HTTPRoute, TCPRoute, e.t.c.) from the provided cached
 // client if they match this controller. If there are no gateways present for this route
 // OR the present gateways are references to missing objects, this will return a unsupportedGW error.
-func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logger logr.Logger, mgrc client.Client, route T) ([]supportedGatewayWithCondition, error) {
+//
+// There is a parameter `specifiedGW` here, which is used to specific the gateway.
+func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName) ([]supportedGatewayWithCondition, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(route)
 	if err != nil {
@@ -144,6 +147,14 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 			namespace = string(*parentRef.Namespace)
 		}
 		name := string(parentRef.Name)
+
+		// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+		if gatewayToReconcile, ok := specifiedGW.Get(); ok {
+			namespace = gatewayToReconcile.Namespace
+			name = gatewayToReconcile.Name
+
+		}
 
 		// pull the Gateway object from the cached client
 		gateway := gatewayapi.Gateway{}

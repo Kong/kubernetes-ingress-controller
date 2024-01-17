@@ -146,7 +146,9 @@ Adding a new version? You'll need three changes:
   [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
   [#5435](https://github.com/Kong/kubernetes-ingress-controller/pull/5435)
   [#5412](https://github.com/Kong/kubernetes-ingress-controller/pull/5412)
-
+- Added flag `--gateway-to-reconcile` to set KIC to only reconcile
+  the specified Gateway resource in Kubernetes.
+  [#5405](https://github.com/Kong/kubernetes-ingress-controller/pull/5405)
 
 ### Fixed
 

@@ -3,6 +3,7 @@ package envtest
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -85,6 +86,19 @@ func WithGatewayAPIControllers() func(cfg *manager.Config) {
 		cfg.GatewayAPIGatewayController = true
 		cfg.GatewayAPIHTTPRouteController = true
 		cfg.GatewayAPIReferenceGrantController = true
+	}
+}
+
+func WithGatewayToReconcile(gatewayNN string) func(cfg *manager.Config) {
+	parts := strings.SplitN(gatewayNN, "/", 3)
+	if len(parts) != 2 {
+		panic("the expected format if namespace/name")
+	}
+	return func(cfg *manager.Config) {
+		cfg.GatewayToReconcile = mo.Some(k8stypes.NamespacedName{
+			Namespace: parts[0],
+			Name:      parts[1],
+		})
 	}
 }
 

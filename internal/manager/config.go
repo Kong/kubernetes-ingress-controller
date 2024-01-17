@@ -116,6 +116,9 @@ type Config struct {
 	GatewayAPIHTTPRouteController      bool
 	GatewayAPIReferenceGrantController bool
 
+	// KIC can only reconciling the specified Gateway.
+	GatewayToReconcile OptionalNamespacedName
+
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
 
@@ -249,6 +252,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.GatewayAPIGatewayController, "enable-controller-gwapi-gateway", true, "Enable the Gateway API Gateway controller.")
 	flagSet.BoolVar(&c.GatewayAPIHTTPRouteController, "enable-controller-gwapi-httproute", true, "Enable the Gateway API HTTPRoute controller.")
 	flagSet.BoolVar(&c.GatewayAPIReferenceGrantController, "enable-controller-gwapi-reference-grant", true, "Enable the Gateway API ReferenceGrant controller.")
+	flagSet.Var(flags.NewValidatedValue(&c.GatewayToReconcile, namespacedNameFromFlagValue, nnTypeNameOverride), "gateway-to-reconcile",
+		`Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway.`)
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
 	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
 

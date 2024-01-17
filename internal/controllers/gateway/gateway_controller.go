@@ -522,8 +522,8 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// This handles PublishStatusAddress(UDP) override config support, which allows users to set an arbitrary string to
 	// use in place of the proxy Service addresses, usually because there's another proxy in front of Kong and the
 	// addresses associated with the proxy Service aren't actually where you want to direct external clients.
-	combinedOverrideAddresses := append(r.AddressOverrides, r.AddressOverridesUDP...)
-	if len(combinedOverrideAddresses) > 0 {
+	if len(r.AddressOverrides)+len(r.AddressOverridesUDP) > 0 {
+		combinedOverrideAddresses := append(r.AddressOverrides, r.AddressOverridesUDP...)
 		overrides := make([]gatewayapi.GatewayStatusAddress, len(combinedOverrideAddresses))
 		for i, stringAddr := range combinedOverrideAddresses {
 			addr := gatewayapi.GatewayStatusAddress{

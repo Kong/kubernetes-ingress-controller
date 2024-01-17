@@ -532,14 +532,25 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 	if err != nil {
 		return false, fmt.Sprintf(ErrTextVaultConfigUnmarshalFailed, err), nil
 	}
-	kongVault := kong.Vault{
-		Name:        kong.String(k8sKongVault.Spec.Backend),
-		Prefix:      kong.String(k8sKongVault.Spec.Prefix),
-		Description: kong.String(k8sKongVault.Spec.Description),
-		Config:      config,
+
+	// list existing KongVaults and reject if the spec.prefix is duplicate with another `KongVault`.
+	existingKongVaults := validator.Storer.ListKongVaults()
+	dupeVault, hasDupe := lo.Find(existingKongVaults, func(v *kongv1alpha1.KongVault) bool {
+		return v.Spec.Prefix == k8sKongVault.Spec.Prefix && v.Name != k8sKongVault.Name
+	})
+	if hasDupe {
+		return false, fmt.Sprintf("spec.prefix %q is duplicate with existing KongVault %q",
+			k8sKongVault.Spec.Prefix, dupeVault.Name), nil
 	}
-	// TODO: /schemas/vaults/test does not check "unique" restraint on `prefix` field:
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/5395
+
+	kongVault := kong.Vault{
+		Name:   kong.String(k8sKongVault.Spec.Backend),
+		Prefix: kong.String(k8sKongVault.Spec.Prefix),
+		Config: config,
+	}
+	if len(k8sKongVault.Spec.Description) > 0 {
+		kongVault.Description = kong.String(k8sKongVault.Spec.Description)
+	}
 	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
 	if err != nil || errText != "" {
 		return false, errText, err

@@ -522,14 +522,25 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 
 // logKonnectErrors logs details of each error response returned from Konnect API.
 func logKonnectErrors(logger logr.Logger, err error) {
-	if apiErrors := deckerrors.ExtractAPIErrors(err); len(apiErrors) > 0 {
-		for _, apiErr := range apiErrors {
+	if crudActionErrors := deckerrors.ExtractCRUDActionErrors(err); len(crudActionErrors) > 0 {
+		for _, actionErr := range crudActionErrors {
 			// TODO: log the CRUD operation (op type, entity kind and entity name)
 			// after we pass them in certain structures in GDR:
 			// https://github.com/Kong/go-database-reconciler/issues/41
-			logger.Error(apiErr, "Failed to send request to Konnect",
-				"details", apiErr.Details(),
-			)
+			apiErr := &kong.APIError{}
+			if errors.As(actionErr.Err, &apiErr) {
+				logger.Error(actionErr, "Failed to send request to Konnect",
+					"operation_type", actionErr.OperationType.String(),
+					"entity_kind", actionErr.Kind,
+					"entity_name", actionErr.Name,
+					"details", apiErr.Details())
+			} else {
+				logger.Error(actionErr, "Failed to send request to Konnect",
+					"operation_type", actionErr.OperationType.String(),
+					"entity_kind", actionErr.Kind,
+					"entity_name", actionErr.Name,
+				)
+			}
 		}
 	}
 }

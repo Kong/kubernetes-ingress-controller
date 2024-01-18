@@ -40,7 +40,6 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		WithUpdateStatus(),
 		WithHealthProbePort(healthProbePort),
 		WithPublishService(ns.Name),
-		WithPublishStatusAddress("http://localhost:8080"),
 		WithKongServiceFacadeFeatureEnabled(),
 	)
 

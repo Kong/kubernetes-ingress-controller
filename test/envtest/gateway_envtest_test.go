@@ -20,6 +20,47 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
+func TestGatewayAddressOverride(t *testing.T) {
+	t.Parallel()
+
+	scheme := Scheme(t, WithGatewayAPI, WithKong)
+	envcfg := Setup(t, scheme)
+	ctrlClient := NewControllerClient(t, scheme, envcfg)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	expected := []string{"10.0.0.1", "10.0.0.2"}
+	udp := []string{"10.0.0.3", "10.0.0.4"}
+	gw := deployGateway(ctx, t, ctrlClient)
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithPublishService(gw.Namespace),
+		WithPublishStatusAddress(expected, udp),
+		WithGatewayFeatureEnabled,
+		WithGatewayAPIControllers(),
+	)
+
+	allExpected := append(expected, udp...)
+	require.Eventually(t, func() bool {
+		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, &gw)
+		if err != nil {
+			t.Logf("Failed to get gateway %s/%s: %v", gw.Namespace, gw.Name, err)
+			return false
+		}
+
+		expectedCount := 0
+		unexpectedCount := 0
+		for _, addr := range gw.Status.Addresses {
+			if _, ok := lo.Find(allExpected, func(i string) bool { return i == addr.Value }); ok {
+				expectedCount++
+			} else {
+				unexpectedCount++
+			}
+		}
+		return expectedCount == len(allExpected) && unexpectedCount == 0
+	}, time.Minute, time.Second, "did not find override addresses only in status")
+}
+
 // TestGatewayReconciliation_MoreThan100Routes verifies that if we create more
 // than 100 HTTPRoutes, they all get reconciled and correctly attached to a
 // Gateway's listener.

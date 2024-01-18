@@ -176,6 +176,15 @@ Adding a new version? You'll need three changes:
 - When specifying Gateway API Routes' `backendRef`s with namespace specified, those
   refs are checked for existence and allowed if they exist.
   [#5392](https://github.com/Kong/kubernetes-ingress-controller/pull/5392)
+- Unmanaged Gateway mode honors the `--publish-status-address(-udp)` flags. If
+  set, the controller will set these addresses in the Gateway status addresses
+  instead of the proxy service/publish service addresses. The controller _no
+  longer sets addresses in the Gateway spec addresses_. Review of the official
+  specification indicated that the spec addresses are for user address
+  requests, and that implementations can and should set status addresses to a
+  different set of addresses if they assign addresses other than the requested
+  set.
+  [#5445](https://github.com/Kong/kubernetes-ingress-controller/pull/5445)
 
 ### Changed
 

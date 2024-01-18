@@ -91,7 +91,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 			addrs[ing.IP] = true
 			addrs[ing.Hostname] = true
 		}
-		for _, addr := range gw.Spec.Addresses {
+		for _, addr := range gw.Status.Addresses {
 			if _, ok := addrs[addr.Value]; !ok {
 				return false
 			}
@@ -99,11 +99,11 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		return true
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway status gets updated to match the publish service")
+	t.Log("verifying that the gateway listeners status match the spec listeners")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
+		return len(gw.Status.Listeners) == len(gw.Spec.Listeners)
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway receives a final programmed condition once reconciliation completes")

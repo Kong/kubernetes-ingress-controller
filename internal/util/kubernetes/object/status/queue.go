@@ -76,9 +76,9 @@ func (q *Queue) Subscribe(gvk schema.GroupVersionKind) chan event.GenericEvent {
 
 // createSubscriptionForKind creates a new subscription channel for the provided object GVK and returns it.
 func (q *Queue) createSubscriptionForKind(gvk schema.GroupVersionKind) chan event.GenericEvent {
+	newSubscriptionCh := make(chan event.GenericEvent, q.subscriptionBufferSize)
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	newSubscriptionCh := make(chan event.GenericEvent, q.subscriptionBufferSize)
 	q.subscriptions[gvk.String()] = append(q.subscriptions[gvk.String()], newSubscriptionCh)
 	return newSubscriptionCh
 }

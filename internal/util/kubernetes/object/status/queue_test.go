@@ -53,13 +53,13 @@ func TestQueue(t *testing.T) {
 
 	t.Log("verifying that events can be subscribed to for new object kinds")
 	ingCH := q.Subscribe(ing1.GroupVersionKind())
-	assert.Len(t, q.subscriptions, 1, "internally a single channel should be created for the object kind")
+	assert.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 1, "internally a single channel should be created for the object kind")
 	t.Logf("%+v", q.subscriptions)
 	assert.Len(t, ingCH, 0, "the underlying channel should be empty")
 
 	t.Log("verifying an object can have an event published for it")
 	q.Publish(ing1)
-	assert.Len(t, q.subscriptions, 1, "a channel was already created for the consumer: no more should be created")
+	assert.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 1, "a channel was already created for the consumer: no more should be created")
 	assert.Len(t, ingCH, 1, "the underlying channel should now contain one event")
 
 	t.Log("verifying a published event can be consumed by the consumer")
@@ -68,7 +68,7 @@ func TestQueue(t *testing.T) {
 
 	t.Log("verifying publishing different named objects for kinds that have already been seen")
 	q.Publish(ing2)
-	assert.Len(t, q.subscriptions, 1, "a channel was already created for the object kind: no more should be created")
+	assert.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 1, "a channel was already created for the object kind: no more should be created")
 	assert.Len(t, ingCH, 1, "the underlying channel should now contain one event")
 
 	t.Log("verifying that objects of new kinds can be published into the queue")
@@ -113,6 +113,15 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, ingCH, 0)
 	assert.Len(t, tcpCH, 0)
 	assert.Len(t, udpCH, 0)
+
+	t.Log("verifying that multiple consumers can be subscribed to the same object kind and receive events")
+	ingCH2 := q.Subscribe(ing1.GroupVersionKind())
+	require.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 2, "a second channel should have been created for the object kind")
+	q.Publish(ing1)
+	require.Len(t, ingCH, 1, "the first consumer should have received an event")
+	require.Len(t, ingCH2, 1, "the second consumer should have received an event")
+	assert.Equal(t, event.GenericEvent{Object: ing1}, <-ingCH)
+	assert.Equal(t, event.GenericEvent{Object: ing1}, <-ingCH2)
 }
 
 // the GVKs for objects need to be initialized manually in the unit testing

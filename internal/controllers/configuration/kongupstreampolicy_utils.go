@@ -19,6 +19,8 @@ import (
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
+// maxNAncestors is the maximum number of ancestors that can be stored in the KongUpstreamPolicy status.
+// This is a limitation of the Gateway API.
 const maxNAncestors = 16
 
 // upstreamPolicyAncestorKind represents kind of KongUpstreamPolicy ancestor (Service or KongServiceFacade).
@@ -32,10 +34,11 @@ const (
 // ancestorStatus represents the status of an ancestor (Service or KongServiceFacade).
 // A collection of all ancestors' statuses is used to build the KongUpstreamPolicy status.
 type ancestorStatus struct {
-	namespacedName    k8stypes.NamespacedName
-	ancestorKind      upstreamPolicyAncestorKind
-	acceptedCondition metav1.Condition
-	creationTimestamp metav1.Time
+	namespacedName      k8stypes.NamespacedName
+	ancestorKind        upstreamPolicyAncestorKind
+	acceptedCondition   metav1.Condition
+	programmedCondition metav1.Condition
+	creationTimestamp   metav1.Time
 }
 
 // serviceKey is used as a key for indexing Services by "namespace/name".
@@ -146,38 +149,61 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 		Reason:             string(gatewayapi.PolicyReasonAccepted),
 		LastTransitionTime: metav1.Now(),
 	}
-	conflictedCondition := metav1.Condition{
-		Type:               string(gatewayapi.PolicyConditionAccepted),
-		Status:             metav1.ConditionFalse,
-		Reason:             string(gatewayapi.PolicyReasonConflicted),
+	programmedCondition := metav1.Condition{
+		Type:               string(gatewayapi.GatewayConditionProgrammed),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gatewayapi.GatewayReasonProgrammed),
 		LastTransitionTime: metav1.Now(),
 	}
 
 	// Build the status for each ancestor (Services and KongServiceFacades).
 	ancestorsStatus := make([]ancestorStatus, 0, len(services)+len(serviceFacades))
 	for _, service := range services {
-		condition := acceptedCondition
+		service := service
+		acceptedCondition := acceptedCondition
+		programmedCondition := programmedCondition
+
 		if _, isConflicted := conflictedServices[buildServiceReference(service.Namespace, service.Name)]; isConflicted {
-			// If the service is conflicted, we will use the conflictedCondition.
-			condition = conflictedCondition
+			// If the Service is conflicted, we change both conditions to False.
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayapi.GatewayReasonPending)
 		}
+
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(&service) {
+			// If the Service is not configured, we change it to False.
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayapi.GatewayReasonPending)
+		}
+
 		ancestorsStatus = append(ancestorsStatus, ancestorStatus{
 			namespacedName: k8stypes.NamespacedName{
 				Namespace: service.Namespace,
 				Name:      service.Name,
 			},
-			ancestorKind:      upstreamPolicyAncestorKindService,
-			acceptedCondition: condition,
+			ancestorKind:        upstreamPolicyAncestorKindService,
+			acceptedCondition:   acceptedCondition,
+			programmedCondition: programmedCondition,
 		})
 	}
 	for _, serviceFacade := range serviceFacades {
+		serviceFacade := serviceFacade
+		programmedCondition := programmedCondition
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(&serviceFacade) {
+			// If the KongServiceFacade is not configured, we change it to False.
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayapi.GatewayReasonPending)
+		}
+
 		ancestorsStatus = append(ancestorsStatus, ancestorStatus{
 			namespacedName: k8stypes.NamespacedName{
 				Namespace: serviceFacade.Namespace,
 				Name:      serviceFacade.Name,
 			},
-			ancestorKind:      upstreamPolicyAncestorKindKongServiceFacade,
-			acceptedCondition: acceptedCondition,
+			ancestorKind:        upstreamPolicyAncestorKindKongServiceFacade,
+			acceptedCondition:   acceptedCondition,
+			programmedCondition: programmedCondition,
 		})
 	}
 
@@ -262,6 +288,9 @@ func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey
 	return backendRefs
 }
 
+// buildPolicyStatus builds the KongUpstreamPolicy status from the ancestors' statuses.
+// It ensures that the number of ancestors is not greater than the maximum allowed by the Gateway API
+// and that the oldest ancestors are kept.
 func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 	upstreamPolicyNN k8stypes.NamespacedName,
 	ancestorsStatus []ancestorStatus,
@@ -271,7 +300,7 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 		return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
 	})
 	if len(ancestorsStatus) > maxNAncestors {
-		r.Log.Info("status has too many ancestors, the newest ones will be ignored",
+		r.Log.Info("status has more ancestors than the Gateway API permits, the newest ones will be ignored",
 			"KongUpstreamPolicy", upstreamPolicyNN.String(),
 			"ancestorsCount", len(ancestorsStatus),
 			"maxAllowedAncestors", maxNAncestors,
@@ -295,6 +324,7 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 				ControllerName: gatewaycontroller.GetControllerName(),
 				Conditions: []metav1.Condition{
 					ss.acceptedCondition,
+					ss.programmedCondition,
 				},
 			},
 		)
@@ -370,8 +400,12 @@ func buildServiceReference(namespace, name string) serviceKey {
 }
 
 func isSupportedHTTPRouteBackendRef(br gatewayapi.BackendRef) bool {
-	groupIsCoreOrNil := br.Group == nil || *br.Group == "core"
+	groupIsCoreOrNilOrEmpty := br.Group == nil || *br.Group == "core" || *br.Group == ""
 	kindIsServiceOrNil := br.Kind == nil || *br.Kind == "Service"
+
 	// We only support core Services.
-	return groupIsCoreOrNil && kindIsServiceOrNil
+	// For Group the specification says when it's unspecified (nil or empty string), core API group should be inferred.
+	// For Kind nil case should never happen as it defaults on the API level to 'Service'. We can safely consider
+	// nil to be treated as 'Service' if it would happen for any reason.
+	return groupIsCoreOrNilOrEmpty && kindIsServiceOrNil
 }

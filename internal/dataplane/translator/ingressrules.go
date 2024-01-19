@@ -358,6 +358,10 @@ func resolveKubernetesServiceForBackend(
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Service %s/%s: %w", backend.Namespace(), backend.Name(), err)
 	}
+
+	// After Kubernetes Service is fetched successfully, we can consider it a translated object.
+	translatedObjectsCollector.Add(k8sService)
+
 	return k8sService, nil
 }
 

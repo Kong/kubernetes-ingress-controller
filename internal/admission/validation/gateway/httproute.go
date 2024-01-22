@@ -6,8 +6,11 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
+	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -31,45 +34,41 @@ func ValidateHTTPRoute(
 	routesValidator routeValidator,
 	translatorFeatures translator.FeatureFlags,
 	httproute *gatewayapi.HTTPRoute,
-	attachedGateways ...*gatewayapi.Gateway,
+	managerClient client.Client,
 ) (bool, string, error) {
-	// validate that no unsupported features are in use
+	// Validate that the route has valid parentRefs.
+	if err := ValidateHTTPRouteParentRefs(httproute); err != nil {
+		return false, fmt.Sprintf("HTTPRoute has invalid parentRefs: %s", err), nil
+	}
+
+	// Check if route is managed by this controller. If not, we don't need to validate it.
+	routeIsManaged, err := ensureHTTPRouteIsManagedByController(ctx, httproute, managerClient)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to determine whether HTTPRoute is managed by %q controller: %w",
+			gatewaycontroller.GetControllerName(), err)
+	}
+	if !routeIsManaged {
+		return true, "", nil
+	}
+
+	// Validate that no unsupported features are in use.
 	if err := validateHTTPRouteFeatures(httproute, translatorFeatures); err != nil {
 		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
 	}
 
+	// Validate that the route uses only supported annotations.
 	if err := validation.ValidateRouteSourceAnnotations(httproute); err != nil {
 		return false, fmt.Sprintf("HTTPRoute has invalid Kong annotations: %s", err), nil
 	}
 
-	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)
-	for _, gateway := range attachedGateways {
-		// TODO: validate that the namespace is supported by the linked Gateway objects
-		//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/2080
-
-		// determine the parentRef for this gateway
-		parentRef, err := getParentRefForHTTPRouteGateway(httproute, gateway)
-		if err != nil {
-			return false, fmt.Sprintf("Couldn't determine parentRefs for httproute: %s", err), nil
-		}
-
-		// gather the relevant gateway listeners for the httproute
-		listeners, err := getListenersForHTTPRouteValidation(parentRef.SectionName, gateway)
-		if err != nil {
-			return false, fmt.Sprintf("Couldn't find gateway listeners for httproute: %s", err), nil
-		}
-
-		// perform validation of this route against it's linked gateway listeners
-		for _, listener := range listeners {
-			if err := validateHTTPRouteListener(listener); err != nil {
-				return false, fmt.Sprintf("HTTPRoute linked Gateway listeners did not pass validation: %s", err), nil
-			}
-		}
-	}
-
+	// Validate that the route is valid against Kong Gateway.
 	ok, msg := validateWithKongGateway(ctx, routesValidator, translatorFeatures, httproute)
 	return ok, msg, nil
 }
+
+// -----------------------------------------------------------------------------
+// Validation - HTTPRoute - Private Functions
+// -----------------------------------------------------------------------------
 
 // ValidateHTTPRouteParentRefs checks the group/kind of each parentRef in spec and allows only
 // empty or `gateway.networking.k8s.io.Gateway`.
@@ -90,31 +89,48 @@ func ValidateHTTPRouteParentRefs(httproute *gatewayapi.HTTPRoute) error {
 	return nil
 }
 
-// -----------------------------------------------------------------------------
-// Validation - HTTPRoute - Private Functions
-// -----------------------------------------------------------------------------
-
-// validateHTTPRouteListener verifies that a given HTTPRoute is configured properly
-// for a given gateway listener which it is linked to.
-func validateHTTPRouteListener(listener *gatewayapi.Listener) error {
-	// verify that the listener supports HTTPRoute objects
-	if listener.AllowedRoutes != nil && // if there are no allowed routes, assume all are allowed
-		len(listener.AllowedRoutes.Kinds) > 0 { // if there are no allowed kinds, assume all are allowed
-		// search each of the allowedRoutes in the listener to verify that HTTPRoute is supported
-		supported := false
-		for _, allowedKind := range listener.AllowedRoutes.Kinds {
-			if allowedKind.Kind == "HTTPRoute" {
-				supported = true
-			}
+// ensureHTTPRouteIsManagedByController checks whether the provided HTTPRoute is managed by this controller implementation.
+func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewayapi.HTTPRoute, managerClient client.Client) (bool, error) {
+	// In order to be sure whether an HTTPRoute resource is managed by this
+	// controller we ignore references to Gateway resources that do not exist.
+	for _, parentRef := range httproute.Spec.ParentRefs {
+		// Determine the namespace of the gateway referenced via parentRef. If no
+		// explicit namespace is provided, assume the namespace of the route.
+		namespace := httproute.Namespace
+		if parentRef.Namespace != nil {
+			namespace = string(*parentRef.Namespace)
 		}
 
-		// verify that we found a supported kind
-		if !supported {
-			return fmt.Errorf("HTTPRoute not supported by listener %s", listener.Name)
+		// gather the Gateway resource referenced by parentRef and fail validation
+		// if there is no such Gateway resource.
+		gateway := gatewayapi.Gateway{}
+		if err := managerClient.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      string(parentRef.Name),
+		}, &gateway); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get Gateway: %w", err)
+		}
+
+		// Pull the referenced GatewayClass object from the Gateway.
+		gatewayClass := gatewayapi.GatewayClass{}
+		if err := managerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get GatewayClass: %w", err)
+		}
+
+		// Determine ultimately whether the Gateway is managed by this controller implementation.
+		if gatewayClass.Spec.ControllerName == gatewaycontroller.GetControllerName() {
+			return true, nil
 		}
 	}
 
-	return nil
+	// If we get here, the HTTPRoute is not managed by this controller.
+	return false, nil
 }
 
 // validateHTTPRouteFeatures checks for features that are not supported by this
@@ -177,70 +193,6 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 // -----------------------------------------------------------------------------
 // Validation - HTTPRoute - Private Utility Functions
 // -----------------------------------------------------------------------------
-
-// getParentRefForHTTPRouteGateway extracts an existing parentRef from an HTTPRoute
-// which links to the provided Gateway if available. If the provided Gateway is not
-// actually referenced by parentRef in the provided HTTPRoute this is considered
-// invalid input and will produce an error.
-func getParentRefForHTTPRouteGateway(httproute *gatewayapi.HTTPRoute, gateway *gatewayapi.Gateway) (*gatewayapi.ParentReference, error) {
-	// search all the parentRefs on the HTTPRoute to find one that matches the Gateway
-	for _, ref := range httproute.Spec.ParentRefs {
-		// determine the namespace for the gateway reference
-		namespace := httproute.Namespace
-		if ref.Namespace != nil {
-			namespace = string(*ref.Namespace)
-		}
-
-		// match the gateway with its parentRef
-		if gateway.Namespace == namespace && gateway.Name == string(ref.Name) {
-			copyRef := ref
-			return &copyRef, nil
-		}
-	}
-
-	// if no matches could be found then the input is invalid
-	return nil, fmt.Errorf("no parentRef matched gateway %s/%s", gateway.Namespace, gateway.Name)
-}
-
-// getListenersForHTTPRouteValidation determines if ALL http listeners should be used for validation
-// or if only a select listener should be considered.
-func getListenersForHTTPRouteValidation(sectionName *gatewayapi.SectionName, gateway *gatewayapi.Gateway) ([]*gatewayapi.Listener, error) {
-	var listenersForValidation []*gatewayapi.Listener
-	if sectionName != nil {
-		// only one specified listener is in use, only need to validate the
-		// route against that listener.
-		for _, listener := range gateway.Spec.Listeners {
-			if string(listener.Name) == string(*sectionName) {
-				listenerCopy := listener
-				listenersForValidation = append(listenersForValidation, &listenerCopy)
-			}
-		}
-
-		// if the sectionName isn't empty, we need to verify that we actually found
-		// a listener which matched it, otherwise the object is invalid.
-		if len(listenersForValidation) == 0 {
-			return nil, fmt.Errorf("sectionname referenced listener %s was not found on gateway %s/%s", *sectionName, gateway.Namespace, gateway.Name)
-		}
-	} else {
-		// no specific listener was chosen, so we'll simply validate against
-		// all HTTP listeners on the Gateway.
-		for _, listener := range gateway.Spec.Listeners {
-			if (listener.Protocol) == gatewayapi.HTTPProtocolType ||
-				(listener.Protocol) == gatewayapi.HTTPSProtocolType {
-				listenerCopy := listener
-				listenersForValidation = append(listenersForValidation, &listenerCopy)
-			}
-		}
-	}
-
-	// if for some reason the gateway has no listeners (it may be under active provisioning)
-	// the HTTPRoute fails validation because it has no listeners that can be used.
-	if len(listenersForValidation) == 0 {
-		return nil, fmt.Errorf("no listeners could be found for gateway %s/%s", gateway.Namespace, gateway.Name)
-	}
-
-	return listenersForValidation, nil
-}
 
 func validateWithKongGateway(
 	ctx context.Context, routesValidator routeValidator, translatorFeatures translator.FeatureFlags, httproute *gatewayapi.HTTPRoute,

@@ -48,7 +48,7 @@ func commonHTTPRouteValidationTestCases(
 			},
 		},
 		{
-			Name: "a httproute linked to a non-existent gateway fails validation",
+			Name: "a httproute linked to a non-existent gateway passes validation",
 			Route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
@@ -62,7 +62,6 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErrSubstring: `fake-gateway not found`,
 		},
 		{
 			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",

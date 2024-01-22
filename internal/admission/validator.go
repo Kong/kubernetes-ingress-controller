@@ -439,61 +439,12 @@ func (validator KongHTTPValidator) ValidateGateway(
 func (validator KongHTTPValidator) ValidateHTTPRoute(
 	ctx context.Context, httproute gatewayapi.HTTPRoute,
 ) (bool, string, error) {
-	if err := gatewayvalidation.ValidateHTTPRouteParentRefs(&httproute); err != nil {
-		return false, fmt.Sprintf("HTTPRoute has invalid parentRef: %s", err), nil
-	}
-	// in order to be sure whether or not an HTTPRoute resource is managed by this
-	// controller we disallow references to Gateway resources that do not exist.
-	var managedGateways []*gatewayapi.Gateway
-	for _, parentRef := range httproute.Spec.ParentRefs {
-		// determine the namespace of the gateway referenced via parentRef. If no
-		// explicit namespace is provided, assume the namespace of the route.
-		namespace := httproute.Namespace
-		if parentRef.Namespace != nil {
-			namespace = string(*parentRef.Namespace)
-		}
-
-		// gather the Gateway resource referenced by parentRef and fail validation
-		// if there is no such Gateway resource.
-		gateway := gatewayapi.Gateway{}
-		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      string(parentRef.Name),
-		}, &gateway); err != nil {
-			if apierrors.IsNotFound(err) {
-				return false, fmt.Sprintf("referenced gateway %s/%s not found", namespace, parentRef.Name), nil
-			}
-			return false, "", err
-		}
-
-		// pull the referenced GatewayClass object from the Gateway
-		gatewayClass := gatewayapi.GatewayClass{}
-		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
-			if apierrors.IsNotFound(err) {
-				return false, fmt.Sprintf("referenced gatewayclass %s not found", gateway.Spec.GatewayClassName), nil
-			}
-			return false, "", err
-		}
-
-		// determine ultimately whether the Gateway is managed by this controller implementation
-		if gatewayClass.Spec.ControllerName == gatewaycontroller.GetControllerName() {
-			managedGateways = append(managedGateways, &gateway)
-		}
-	}
-
-	// if there are no managed Gateways this is not a supported HTTPRoute
-	if len(managedGateways) == 0 {
-		return true, "", nil
-	}
-
-	// Now that we know whether or not the HTTPRoute is linked to a managed
-	// Gateway we can run it through full validation.
 	var routeValidator routeValidator = noOpRoutesValidator{}
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
 	return gatewayvalidation.ValidateHTTPRoute(
-		ctx, routeValidator, validator.TranslatorFeatures, &httproute, managedGateways...,
+		ctx, routeValidator, validator.TranslatorFeatures, &httproute, validator.ManagerClient,
 	)
 }
 

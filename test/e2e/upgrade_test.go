@@ -185,6 +185,9 @@ func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version 
 
 	ctx := context.Background()
 
+	t.Log("negotiating docker API version")
+	dockerc.NegotiateAPIVersion(ctx)
+
 	t.Logf("pulling docker image %s to inspect it", image)
 	_, err = dockerc.ImagePull(ctx, image, types.ImagePullOptions{})
 	require.NoError(t, err)

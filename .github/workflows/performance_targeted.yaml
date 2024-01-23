@@ -1,5 +1,5 @@
-name: e2e tests (targeted)
-run-name: e2e tests (targeted), branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+name: performance tests (targeted)
+run-name: performance tests (targeted), branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
 
 concurrency:
   # Limit the concurrency of e2e tests to run only 1 workflow for ref (branch).
@@ -14,26 +14,10 @@ on:
         description: KIC Docker image to test with. If empty, builds an image from the dispatch branch.
         type: string
         required: false
-      run-gke:
-        description: Run E2E tests on GKE as well as on Kind.
-        type: boolean
-        default: false
-      run-istio:
-        description: Run Istio E2E tests.
-        type: boolean
-        default: false
-      run-performance:
-        description: Run performance E2E tests
-        type: boolean
-        default: false
       res-number-for-perf:
         description: The number of resource for performance tests
         type: string
         default: 10000
-      all-supported-k8s-versions:
-        description: Run tests against all supported Kubernetes versions. Otherwise, only against the latest one.
-        type: boolean
-        default: false
       pr-number:
         description: PR number to post a comment in. If empty, no comment is posted.
         type: string
@@ -49,19 +33,15 @@ jobs:
       # Sadly this is not readily available in github's context.
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.inputs.pr-number }}
-      RUN_GKE: ${{ inputs.run-gke }}
+      RES_NUM: ${{ inputs.res-number-for-perf }}
     steps:
       - uses: actions/checkout@v4
       - run: |
-          if [ "${RUN_GKE}" == "true" ]; then
-            MSG="E2E (targeted) tests with KIND-based and GKE-based clusters were started at ${URL}"
-          else
-            MSG="E2E (targeted) tests with KIND-based clusters were started at ${URL}"
-          fi
+          MSG="performance (targeted) tests with KIND-based clusters were started at ${URL} the number of test resources is ${RES_NUM}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
-      # Remove the 'ci/run-e2e' label from the PR to prevent the `e2e_trigger_via_label.yaml`
-      # workflow from running the `e2e_targeted.yaml` again.
-      - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
+      # Remove the 'ci/run-performance' label from the PR to prevent the `performance_trigger_via_label.yaml`
+      # workflow from running the `performance_targeted.yaml` again.
+      - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-performance
 
   build-image:
     if: ${{ inputs.controller-image == '' }}
@@ -92,37 +72,16 @@ jobs:
   run:
     needs: choose-image
     if: ${{ !cancelled() }}
-    uses: ./.github/workflows/_e2e_tests.yaml
+    uses: ./.github/workflows/_performance_tests.yaml
     secrets: inherit
     with:
       kic-image: ${{ needs.choose-image.outputs.image }}
       load-local-image: ${{ inputs.controller-image == '' }}
-      run-gke: ${{ inputs.run-gke }}
-      run-istio: ${{ inputs.run-istio }}
-      run-performance: ${{ inputs.run-performance }}
       res-number-for-perf: ${{ inputs.res-number-for-perf }}
-      all-supported-k8s-versions: ${{ inputs.all-supported-k8s-versions }}
-
-  run-unreleased-kong:
-    needs: choose-image
-    if: ${{ !cancelled() }}
-    uses: ./.github/workflows/_e2e_tests.yaml
-    secrets: inherit
-    with:
-      kic-image: ${{ needs.choose-image.outputs.image }}
-      load-local-image: ${{ inputs.controller-image == '' }}
-      kong-image: kong/kong-gateway-dev:nightly
-      # these do not honor the inputs, as this job is intended to be a minimal
-      # test against unreleased kong images, with the main run covering the
-      # other test conditions
-      all-supported-k8s-versions: false
-      run-gke: false
-      run-istio: false
-      run-performance: false
 
   test-reports:
     needs: run
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit
     with:
-      coverage: false # E2E tests do not generate coverage reports
+      coverage: false

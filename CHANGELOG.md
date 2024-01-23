@@ -201,6 +201,14 @@ Adding a new version? You'll need three changes:
     [#5137](https://github.com/Kong/kubernetes-ingress-controller/pull/5137)
   - `KongPlugin` and `KongClusterPlugin` now enforce `plugin` to be immutable.
     [#5142](https://github.com/Kong/kubernetes-ingress-controller/pull/5142)
+- `HTTPRoute` does no longer get rejected by the admission webhook when:
+  - There's no `Gateway`'s `Listener` with `AllowedRoutes` matching the `HTTPRoute`.
+  - There's no `Gateway`'s `Listener` with `Protocol` matching the `HTTPRoute`.
+  - There's no `Gateway`'s `Listener` matching `HTTPRoute`'s `ParentRef`'s `SectionName`.
+  All of these are validated by the controller and the results are reported in a `HTTPRoute`'s 
+  `Accepted` condition reported for a `Gateway`.
+  [#5469](https://github.com/Kong/kubernetes-ingress-controller/pull/5469)
+  
 
 [Kong vault]: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 

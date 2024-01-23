@@ -532,6 +532,44 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					},
 				},
 			},
+			{
+				name:  "HTTPRoute does not get accepted if Listener doesn't match route's protocol",
+				route: basicHTTPRoute(),
+				objects: []client.Object{
+					func() *gatewayapi.Gateway {
+						gw := gatewayWithHTTP80Ready()
+						// Using matching Listener name, but wrong protocol.
+						gw.Spec.Listeners = builder.NewListener("http").WithPort(80).UDP().IntoSlice()
+						return gw
+					}(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					},
+				},
+			},
+			{
+				name:  "HTTPRoute does not get accepted if Listener doesn't match route's section name",
+				route: basicHTTPRoute(),
+				objects: []client.Object{
+					func() *gatewayapi.Gateway {
+						gw := gatewayWithHTTP80Ready()
+						// Using Listener's name not matching Route's section name.
+						gw.Spec.Listeners = builder.NewListener("not-http").WithPort(80).HTTP().IntoSlice()
+						return gw
+					}(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+					},
+				},
+			},
 		}
 
 		for _, tt := range tests {

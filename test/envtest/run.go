@@ -17,7 +17,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -197,14 +196,10 @@ func RunManager(
 	go func() {
 		defer wg.Done()
 
-		var configDumps util.ConfigDumpDiagnostic
-		if cfg.EnableConfigDumps {
-			diag, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
-			require.NoError(t, err)
-			configDumps = diag.ConfigDumps
-		}
+		diagServer, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
+		require.NoError(t, err)
 
-		require.NoError(t, manager.Run(ctx, &cfg, configDumps, logger))
+		require.NoError(t, manager.Run(ctx, &cfg, diagServer.ConfigDumps(), logger))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()

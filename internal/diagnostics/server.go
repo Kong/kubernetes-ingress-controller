@@ -16,30 +16,71 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// Server is an HTTP server running exposing the pprof profiling tool, and processing diagnostic dumps of Kong configurations.
-type Server struct {
-	Logger           logr.Logger
-	ProfilingEnabled bool
-	ConfigDumps      util.ConfigDumpDiagnostic
-	ConfigLock       *sync.RWMutex
-}
-
-var (
-	successfulConfigDump file.Content
-	failedConfigDump     file.Content
-)
-
 const (
 	defaultHTTPReadHeaderTimeout = 10 * time.Second
+
+	// diagnosticConfigBufferDepth is the size of the channel buffer for receiving diagnostic
+	// config dumps from the proxy sync loop. The chosen size is essentially arbitrary: we don't
+	// expect that the receive end will get backlogged (it only assigns the value to a local
+	// variable) but do want a small amount of leeway to account for goroutine scheduling, so it
+	// is not zero.
+	diagnosticConfigBufferDepth = 3
 )
+
+// Server is an HTTP server running exposing the pprof profiling tool, and processing diagnostic dumps of Kong configurations.
+type Server struct {
+	logger           logr.Logger
+	profilingEnabled bool
+	configDumps      util.ConfigDumpDiagnostic
+
+	successfulConfigDump file.Content
+	failedConfigDump     file.Content
+	configLock           *sync.RWMutex
+}
+
+// ServerConfig contains configuration for the diagnostics server.
+type ServerConfig struct {
+	// ProfilingEnabled enables profiling endpoints.
+	ProfilingEnabled bool
+
+	// ConfigDumpsEnabled enables config dumps endpoints.
+	ConfigDumpsEnabled bool
+
+	// DumpSensitiveConfig makes config dumps to include sensitive information.
+	DumpSensitiveConfig bool
+}
+
+// NewServer creates a diagnostics server ready to start listening.
+func NewServer(logger logr.Logger, cfg ServerConfig) Server {
+	s := Server{
+		logger:           logger,
+		profilingEnabled: cfg.ProfilingEnabled,
+		configLock:       &sync.RWMutex{},
+	}
+
+	if cfg.ConfigDumpsEnabled {
+		s.configDumps = util.ConfigDumpDiagnostic{
+			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
+			Configs:               make(chan util.ConfigDump, diagnosticConfigBufferDepth),
+		}
+	}
+
+	return s
+}
+
+// ConfigDumps returns an object allowing dumping succeeded and failed configuration updates.
+// It will return a zero value of the type in case the config dumps are not enabled.
+func (s *Server) ConfigDumps() util.ConfigDumpDiagnostic {
+	return s.configDumps
+}
 
 // Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context, port int) error {
 	mux := http.NewServeMux()
-	if s.ConfigDumps != (util.ConfigDumpDiagnostic{}) {
+	if s.configDumps != (util.ConfigDumpDiagnostic{}) {
 		s.installDumpHandlers(mux)
 	}
-	if s.ProfilingEnabled {
+	if s.profilingEnabled {
 		installProfilingHandlers(mux)
 	}
 
@@ -56,17 +97,17 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 		err := httpServer.ListenAndServe()
 		if err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
-				s.Logger.Error(err, "Could not start diagnostics server")
+				s.logger.Error(err, "Could not start diagnostics server")
 				errChan <- err
 			}
 		}
 	}()
 
-	s.Logger.Info("Diagnostics server is starting to listen", "addr", port)
+	s.logger.Info("Diagnostics server is starting to listen", "addr", port)
 
 	select {
 	case <-ctx.Done():
-		s.Logger.Info("Shutting down diagnostics server")
+		s.logger.Info("Shutting down diagnostics server")
 		return httpServer.Shutdown(context.Background()) //nolint:contextcheck
 	case err := <-errChan:
 		return err
@@ -77,20 +118,20 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
-		case dump := <-s.ConfigDumps.Configs:
-			s.ConfigLock.Lock()
+		case dump := <-s.configDumps.Configs:
+			s.configLock.Lock()
 			if dump.Failed {
-				failedConfigDump = dump.Config
+				s.failedConfigDump = dump.Config
 			} else {
-				successfulConfigDump = dump.Config
+				s.successfulConfigDump = dump.Config
 			}
-			s.ConfigLock.Unlock()
+			s.configLock.Unlock()
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
-				s.Logger.Error(err, "Shutting down diagnostic config collection: context completed with error")
+				s.logger.Error(err, "Shutting down diagnostic config collection: context completed with error")
 				return
 			}
-			s.Logger.V(util.InfoLevel).Info("Shutting down diagnostic config collection: context completed")
+			s.logger.V(util.InfoLevel).Info("Shutting down diagnostic config collection: context completed")
 			return
 		}
 	}
@@ -113,8 +154,8 @@ func installProfilingHandlers(mux *http.ServeMux) {
 
 // installDumpHandlers adds the config dump webservice to the given mux.
 func (s *Server) installDumpHandlers(mux *http.ServeMux) {
-	mux.HandleFunc("/debug/config/successful", s.lastConfig(&successfulConfigDump))
-	mux.HandleFunc("/debug/config/failed", s.lastConfig(&failedConfigDump))
+	mux.HandleFunc("/debug/config/successful", s.handleLastValidConfig)
+	mux.HandleFunc("/debug/config/failed", s.handleLastFailedConfig)
 }
 
 // redirectTo redirects request to a certain destination.
@@ -124,13 +165,20 @@ func redirectTo(to string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func (s *Server) lastConfig(config *file.Content) func(rw http.ResponseWriter, req *http.Request) {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		s.ConfigLock.RLock()
-		if err := json.NewEncoder(rw).Encode(*config); err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-		}
-		s.ConfigLock.RUnlock()
+func (s *Server) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	s.configLock.RLock()
+	if err := json.NewEncoder(rw).Encode(s.successfulConfigDump); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
 	}
+	s.configLock.RUnlock()
+}
+
+func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	s.configLock.RLock()
+	if err := json.NewEncoder(rw).Encode(s.failedConfigDump); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+	s.configLock.RUnlock()
 }

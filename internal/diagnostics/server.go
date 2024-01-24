@@ -168,17 +168,17 @@ func redirectTo(to string) func(http.ResponseWriter, *http.Request) {
 func (s *Server) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	s.configLock.RLock()
+	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(s.successfulConfigDump); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
-	s.configLock.RUnlock()
 }
 
 func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	s.configLock.RLock()
+	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(s.failedConfigDump); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
-	s.configLock.RUnlock()
 }

@@ -2,22 +2,11 @@ package rootcmd
 
 import (
 	"context"
-	"sync"
 
 	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-)
-
-const (
-	// DiagnosticConfigBufferDepth is the size of the channel buffer for receiving diagnostic
-	// config dumps from the proxy sync loop. The chosen size is essentially arbitrary: we don't
-	// expect that the receive end will get backlogged (it only assigns the value to a local
-	// variable) but do want a small amount of leeway to account for goroutine scheduling, so it
-	// is not zero.
-	DiagnosticConfigBufferDepth = 3
 )
 
 // StartDiagnosticsServer starts a goroutine that handles requests for the diagnostics server.
@@ -33,17 +22,11 @@ func StartDiagnosticsServer(
 	}
 	logger.Info("Starting diagnostics server")
 
-	s := diagnostics.Server{
-		Logger:           logger,
-		ProfilingEnabled: c.EnableProfiling,
-		ConfigLock:       &sync.RWMutex{},
-	}
-	if c.EnableConfigDumps {
-		s.ConfigDumps = util.ConfigDumpDiagnostic{
-			DumpsIncludeSensitive: c.DumpSensitiveConfig,
-			Configs:               make(chan util.ConfigDump, DiagnosticConfigBufferDepth),
-		}
-	}
+	s := diagnostics.NewServer(logger, diagnostics.ServerConfig{
+		ProfilingEnabled:    c.EnableProfiling,
+		ConfigDumpsEnabled:  c.EnableConfigDumps,
+		DumpSensitiveConfig: c.DumpSensitiveConfig,
+	})
 	go func() {
 		if err := s.Listen(ctx, port); err != nil {
 			logger.Error(err, "Unable to start diagnostics server")

@@ -40,5 +40,5 @@ func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) e
 		return fmt.Errorf("failed to start diagnostics server: %w", err)
 	}
 
-	return manager.Run(ctx, c, diag.ConfigDumps, logger)
+	return manager.Run(ctx, c, diag.ConfigDumps(), logger)
 }

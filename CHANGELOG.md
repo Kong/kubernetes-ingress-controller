@@ -193,6 +193,11 @@ Adding a new version? You'll need three changes:
   different set of addresses if they assign addresses other than the requested
   set.
   [#5445](https://github.com/Kong/kubernetes-ingress-controller/pull/5445)
+- Fixed a potential race condition that could occur when fetching the last applied
+  or failed-to-be-applied config from the diagnostics server. The race could occur
+  if the config was being updated while the HTTP endpoint was being hit at the same
+  time.
+  [#5474](https://github.com/Kong/kubernetes-ingress-controller/pull/5474)
 
 ### Changed
 

@@ -51,6 +51,10 @@ func ValidateHTTPRoute(
 		return true, "", nil
 	}
 
+	if err := validateHTTPRouteTimeoutBackendRequest(httproute); err != nil {
+		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
+	}
+
 	// Validate that no unsupported features are in use.
 	if err := validateHTTPRouteFeatures(httproute, translatorFeatures); err != nil {
 		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
@@ -146,11 +150,6 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 	)
 
 	for ruleIndex, rule := range httproute.Spec.Rules {
-		// Rule timeout is not supported.
-		// TODO: remove the check after https://github.com/Kong/kubernetes-ingress-controller/issues/4914 fixed.
-		if rule.Timeouts != nil {
-			return fmt.Errorf("rules[%d]: rule timeout is unsupported", ruleIndex)
-		}
 		// Filters URLRewrite, RequestMirror are not supported.
 		for filterIndex, filter := range rule.Filters {
 			if _, unsupported := unsupportedFilterMap[filter.Type]; unsupported {
@@ -240,4 +239,28 @@ func validateWithKongGateway(
 
 func validationMsg(errMsgs []string) string {
 	return fmt.Sprintf("HTTPRoute failed schema validation: %s", strings.Join(errMsgs, ", "))
+}
+
+func validateHTTPRouteTimeoutBackendRequest(httproute *gatewayapi.HTTPRoute) error {
+	// TODO: remove the validate after we figure out how to handle granular timeout settings
+	// (allowing setting timeouts per rule and not enforcing the same timeout for every HTTPRoute's rule).
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5451
+
+	var firstTimeoutFound *gatewayapi.Duration
+	for _, rule := range httproute.Spec.Rules {
+		if firstTimeoutFound != nil {
+			if rule.Timeouts == nil {
+				return fmt.Errorf("timeout is set for one of the rules, but not set for another")
+			}
+			if rule.Timeouts != nil && *rule.Timeouts.BackendRequest != *firstTimeoutFound {
+				return fmt.Errorf("timeout is set for one of the rules, but a different value is set in another rule")
+			}
+		} else {
+			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+				firstTimeoutFound = rule.Timeouts.BackendRequest
+			}
+		}
+	}
+
+	return nil
 }

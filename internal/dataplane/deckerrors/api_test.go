@@ -41,7 +41,7 @@ func TestExtractAPIErrors(t *testing.T) {
 		{
 			name:     "deck array of errors with no api error",
 			input:    deckutils.ErrArray{Errors: []error{genericErr, genericErr}},
-			expected: nil,
+			expected: []*kong.APIError{},
 		},
 		{
 			name:     "deck array of errors with an api error among generic ones",

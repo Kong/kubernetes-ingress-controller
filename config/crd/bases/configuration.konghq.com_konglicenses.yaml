@@ -1,0 +1,122 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: konglicenses.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+    - kong-ingress-controller
+    kind: KongLicense
+    listKind: KongLicenseList
+    plural: konglicenses
+    shortNames:
+    - kl
+    singular: konglicense
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: KongLicense stores a Kong enterprise license to apply to managed
+          Kong gateway instances.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          enabled:
+            description: Enabled is set to true to let controllers (like KIC) to reconcile
+              it.
+            type: boolean
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          rawLicenseString:
+            description: RawLicenseString is the raw content of the license in string
+              format.
+            type: string
+          status:
+            description: Status is the status of the KongLicense being processed by
+              controllers.
+            properties:
+              parents:
+                items:
+                  description: KongLicenseParentStatus is the status of owning KongLicense
+                    being processed in the controller in ControllerRef field.
+                  properties:
+                    configured:
+                      description: Configured is set to true if the controller applied
+                        the content of the license on managed Kong gateway.
+                      type: boolean
+                    controllerRef:
+                      description: |-
+                        ControllerRef is the reference of the "controller" to reconcile this KongLicense.
+                        It is usually the name of (KIC/KGO) pod that reconciles it.
+                      properties:
+                        group:
+                          description: |-
+                            Group is the group of referent.
+                            It should be empty if the referent is in "core" group (like pod.)
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        kind:
+                          description: Kind is the kind of the referent.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                          type: string
+                        name:
+                          description: Name is the name of the referent.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace is the namespace of the referent.
+                            It should be empty if the referent is cluster scoped.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    phase:
+                      description: Phase is the phase of the KongLicense being reconciled
+                        on the controller present in ControllerRef.
+                      type: string
+                    reason:
+                      description: Reason is the reason why the KongLicense stays
+                        in this phase.
+                      type: string
+                  required:
+                  - configured
+                  - controllerRef
+                  - phase
+                  - reason
+                  type: object
+                type: array
+            type: object
+        required:
+        - enabled
+        - rawLicenseString
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

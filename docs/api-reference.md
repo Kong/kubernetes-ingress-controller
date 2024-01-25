@@ -329,6 +329,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [IngressClassParameters](#ingressclassparameters)
+- [KongLicense](#konglicense)
 - [KongVault](#kongvault)
 
 ### IngressClassParameters
@@ -345,6 +346,25 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
+
+
+
+
+### KongLicense
+
+
+
+KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
+
+<!-- kong_license description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongLicense`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `rawLicenseString` _string_ | RawLicenseString is the raw content of the license in string format. |
+| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC) to reconcile it. |
 
 
 
@@ -369,6 +389,25 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 
 
+### ControllerReference
+
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _[Group](#group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod.) |
+| `kind` _[Kind](#kind)_ | Kind is the kind of the referent. |
+| `namespace` _[Namespace](#namespace)_ | Namespace is the namespace of the referent. It should be empty if the referent is cluster scoped. |
+| `name` _[ObjectName](#objectname)_ | Name is the name of the referent. |
+
+
+_Appears in:_
+- [KongLicenseParentStatus](#konglicenseparentstatus)
+
 ### IngressClassParametersSpec
 
 
@@ -385,6 +424,40 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
+
+### KongLicenseParentStatus
+
+
+
+KongLicenseParentStatus is the status of owning KongLicense being processed in the controller in ControllerRef field.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controllerRef` _[ControllerReference](#controllerreference)_ | ControllerRef is the reference of the "controller" to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
+| `configured` _boolean_ | Configured is set to true if the controller applied the content of the license on managed Kong gateway. |
+| `phase` _[KongLicensePhase](#konglicensephase)_ | Phase is the phase of the KongLicense being reconciled on the controller present in ControllerRef. |
+| `reason` _string_ | Reason is the reason why the KongLicense stays in this phase. |
+
+
+_Appears in:_
+- [KongLicenseStatus](#konglicensestatus)
+
+### KongLicensePhase
+
+_Underlying type:_ `string`
+
+
+
+
+
+
+
+_Appears in:_
+- [KongLicenseParentStatus](#konglicenseparentstatus)
+
+
 
 ### KongVaultSpec
 

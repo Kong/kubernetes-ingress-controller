@@ -110,15 +110,6 @@ func NewSynchronizer(logger logr.Logger, client Client, opts ...SynchronizerOpti
 //
 // To stop the server, the provided context must be Done().
 func (p *Synchronizer) Start(ctx context.Context) error {
-	select {
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2315
-	// This is a temporary mitigation to allow some time for controllers to
-	// populate their dataplaneClient cache.
-	case <-time.After(p.initWaitPeriod):
-	case <-ctx.Done():
-		return fmt.Errorf("Synchronizer Start() interrupted: %w", ctx.Err())
-	}
-
 	// unsure if it makes sense to do this _after_ the lock for any particular reason
 	if sync := p.cache.WaitForCacheSync(ctx); sync == false {
 		return fmt.Errorf("cache did not sync, aborting")

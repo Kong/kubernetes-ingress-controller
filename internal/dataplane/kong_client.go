@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -511,11 +512,34 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 			c.logger.Error(err, "Skipped pushing configuration to Konnect")
 		} else {
 			c.logger.Error(err, "Failed pushing configuration to Konnect")
+			logKonnectErrors(c.logger, err)
 		}
 		return err
 	}
 
 	return nil
+}
+
+// logKonnectErrors logs details of each error response returned from Konnect API.
+func logKonnectErrors(logger logr.Logger, err error) {
+	if crudActionErrors := deckerrors.ExtractCRUDActionErrors(err); len(crudActionErrors) > 0 {
+		for _, actionErr := range crudActionErrors {
+			apiErr := &kong.APIError{}
+			if errors.As(actionErr.Err, &apiErr) {
+				logger.Error(actionErr, "Failed to send request to Konnect",
+					"operation_type", actionErr.OperationType.String(),
+					"entity_kind", actionErr.Kind,
+					"entity_name", actionErr.Name,
+					"details", apiErr.Details())
+			} else {
+				logger.Error(actionErr, "Failed to send request to Konnect",
+					"operation_type", actionErr.OperationType.String(),
+					"entity_kind", actionErr.Kind,
+					"entity_name", actionErr.Name,
+				)
+			}
+		}
+	}
 }
 
 func (c *KongClient) sendToClient(

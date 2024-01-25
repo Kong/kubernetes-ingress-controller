@@ -157,6 +157,9 @@ Adding a new version? You'll need three changes:
   It's only possible to set the same timeout for each rule in a single `HTTPRoute`. Other settings
   will be rejected by the admission webhook validation.
   [#5243](https://github.com/Kong/kubernetes-ingress-controller/pull/5243)
+- Log the details in response fron Konnect when failed to push configuration
+  to Konnect.
+  [#5453](https://github.com/Kong/kubernetes-ingress-controller/pull/5453)
 
 ### Fixed
 

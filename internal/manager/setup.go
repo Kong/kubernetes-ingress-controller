@@ -154,6 +154,7 @@ func setupDataplaneSynchronizer(
 		dataplaneClient,
 		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
 		dataplane.WithInitCacheSyncDuration(initCacheSyncWait),
+		dataplane.WithCache(mgr.GetCache()),
 	)
 	if err != nil {
 		return nil, err

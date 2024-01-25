@@ -198,6 +198,9 @@ Adding a new version? You'll need three changes:
   if the config was being updated while the HTTP endpoint was being hit at the same
   time.
   [#5474](https://github.com/Kong/kubernetes-ingress-controller/pull/5474)
+- Stale `HTTPRoute`'s parent statuses are now removed when the `HTTPRoute` no longer
+  defines a parent `Gateway` in its `spec.parentRefs`.
+  [#5477](https://github.com/Kong/kubernetes-ingress-controller/pull/5477)
 
 ### Changed
 

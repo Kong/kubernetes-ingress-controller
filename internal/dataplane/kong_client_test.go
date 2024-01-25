@@ -680,7 +680,9 @@ func setupTestKongClient(
 	logger := zapr.NewLogger(zap.NewNop())
 	timeout := time.Second
 	diagnostic := util.ConfigDumpDiagnostic{}
-	config := sendconfig.Config{}
+	config := sendconfig.Config{
+		SanitizeKonnectConfigDumps: true,
+	}
 
 	if eventRecorder == nil {
 		eventRecorder = mocks.NewEventRecorder()
@@ -883,4 +885,46 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 			assert.Equal(t, tc.expectedLastKongState, s)
 		})
 	}
+}
+
+func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
+	ctx := context.Background()
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{mustSampleGatewayClient(t)},
+		konnectClient:  mustSampleKonnectClient(t),
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+	configBuilder.kongState = &kongstate.KongState{
+		Certificates: []kongstate.Certificate{
+			{
+				Certificate: kong.Certificate{
+					ID:  kong.String("new_cert"),
+					Key: kong.String(`private-key-string`), // This should be redacted.
+				},
+			},
+		},
+	}
+
+	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
+	kongClient := setupTestKongClient(
+		t,
+		updateStrategyResolver,
+		clientsProvider,
+		configChangeDetector,
+		configBuilder,
+		nil,
+		kongRawStateGetter,
+	)
+
+	err := kongClient.Update(ctx)
+	require.NoError(t, err)
+
+	konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(clientsProvider.konnectClient.BaseRootURL())
+	require.True(t, ok, "expected Konnect to be updated")
+	require.Len(t, konnectContent.Content.Certificates, 1, "expected Konnect to have 1 certificate")
+	cert := konnectContent.Content.Certificates[0]
+	require.NotNil(t, cert.Key, "expected Konnect to have certificate key")
+	require.Equal(t, "{vault://redacted-value}", *cert.Key, "expected Konnect to have redacted certificate key")
 }

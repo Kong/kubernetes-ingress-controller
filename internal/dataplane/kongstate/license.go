@@ -1,6 +1,8 @@
 package kongstate
 
-import "github.com/kong/go-kong/kong"
+import (
+	"github.com/kong/go-kong/kong"
+)
 
 // License represents the license object in Kong.
 type License struct {

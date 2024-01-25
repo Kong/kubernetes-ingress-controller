@@ -7,7 +7,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var redactedString = kong.String("REDACTED")
+// redactedString is used to redact sensitive values in the KongState.
+// It uses a vault URI to pass Konnect Admin API validations (e.g. when a TLS key is expected, it's only possible
+// to pass a valid key or a vault URI).
+var redactedString = kong.String("{vault://redacted-value}")
 
 // KeyAuth represents a key-auth credential.
 type KeyAuth struct {

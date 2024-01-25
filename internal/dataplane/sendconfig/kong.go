@@ -37,6 +37,9 @@ type Config struct {
 
 	// ExpressionRoutes indicates whether to use Kong's expression routes.
 	ExpressionRoutes bool
+
+	// SanitizeKonnectConfigDumps indicates whether to sanitize Konnect config dumps.
+	SanitizeKonnectConfigDumps bool
 }
 
 // Init sets up variables that need external calls.

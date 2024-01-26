@@ -116,13 +116,14 @@ func Run(
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:            kongSemVersion,
-		InMemory:           dbMode.IsDBLessMode(),
-		Concurrency:        c.Concurrency,
-		FilterTags:         c.FilterTags,
-		SkipCACertificates: c.SkipCACertificates,
-		EnableReverseSync:  c.EnableReverseSync,
-		ExpressionRoutes:   dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		Version:                    kongSemVersion,
+		InMemory:                   dbMode.IsDBLessMode(),
+		Concurrency:                c.Concurrency,
+		FilterTags:                 c.FilterTags,
+		SkipCACertificates:         c.SkipCACertificates,
+		EnableReverseSync:          c.EnableReverseSync,
+		ExpressionRoutes:           dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		SanitizeKonnectConfigDumps: featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 

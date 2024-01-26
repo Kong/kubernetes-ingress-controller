@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -361,6 +362,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-kongservicefacade=false;"+
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
+			"feature-sanitizekonnectconfigdumps=false;"+
 			"hn=%s;"+
 			"kv=3.4.1;"+
 			"rf=traditional;"+
@@ -386,7 +388,11 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		k8sVersion.GitVersion,
 		"v"+semver.String(),
 	)
-	return report == expectedReport
+	if diff := cmp.Diff(expectedReport, report); diff != "" {
+		t.Logf("telemetry report mismatch (-want +got):\n%s", diff)
+		return false
+	}
+	return true
 }
 
 // removeStanzaFromReport removes stanza from report. Report contains stanzas like:

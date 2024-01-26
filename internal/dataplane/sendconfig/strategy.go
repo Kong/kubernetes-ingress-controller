@@ -93,7 +93,6 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 		return NewUpdateStrategyDBModeKonnect(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:         true,
 				KonnectControlPlane: client.KonnectControlPlane(),
 			},
 			r.config.Version,

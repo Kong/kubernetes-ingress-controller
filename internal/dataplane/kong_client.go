@@ -550,6 +550,11 @@ func (c *KongClient) sendToClient(
 ) (string, error) {
 	logger := c.logger.WithValues("url", client.AdminAPIClient().BaseRootURL())
 
+	// If the client is Konnect and the feature flag is turned on,
+	// we should sanitize the configuration before sending it out.
+	if client.IsKonnect() && config.SanitizeKonnectConfigDumps {
+		s = s.SanitizedCopy()
+	}
 	deckGenParams := deckgen.GenerateDeckContentParams{
 		SelectorTags:                    config.FilterTags,
 		ExpressionRoutes:                config.ExpressionRoutes,

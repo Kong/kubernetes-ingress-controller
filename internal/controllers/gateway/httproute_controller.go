@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -795,5 +796,12 @@ func parentReferenceKey(routeNamespace string, parentRef gatewayapi.ParentRefere
 	if parentRef.SectionName != nil {
 		sectionName = string(*parentRef.SectionName)
 	}
-	return fmt.Sprintf("%s/%s/%s", namespace, parentRef.Name, sectionName)
+	portNumber := ""
+	if parentRef.Port != nil {
+		portNumber = strconv.Itoa(int(*parentRef.Port))
+	}
+
+	// We intentionally do not take into account Kind and Group here as we only support Gateways
+	// and that's the only kind we should be getting here thanks to the admission webhook validation.
+	return fmt.Sprintf("%s/%s/%s/%s", namespace, parentRef.Name, sectionName, portNumber)
 }

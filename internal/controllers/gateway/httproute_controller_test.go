@@ -158,3 +158,70 @@ func TestEnsureNoStaleParentStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestParentReferenceKey(t *testing.T) {
+	const routeNamespace = "route-ns"
+	testCases := []struct {
+		name     string
+		ref      gatewayapi.ParentReference
+		expected string
+	}{
+		{
+			name: "only name",
+			ref: gatewayapi.ParentReference{
+				Name: "foo",
+			},
+			expected: "route-ns/foo//",
+		},
+		{
+			name: "name with namespace",
+			ref: gatewayapi.ParentReference{
+				Name:      "foo",
+				Namespace: lo.ToPtr(gatewayapi.Namespace("bar")),
+			},
+			expected: "bar/foo//",
+		},
+		{
+			name: "name with port number",
+			ref: gatewayapi.ParentReference{
+				Name: "foo",
+				Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+			},
+			expected: "route-ns/foo//1234",
+		},
+		{
+			name: "name with section name",
+			ref: gatewayapi.ParentReference{
+				Name:        "foo",
+				SectionName: lo.ToPtr(gatewayapi.SectionName("section")),
+			},
+			expected: "route-ns/foo/section/",
+		},
+		{
+			name: "all fields",
+			ref: gatewayapi.ParentReference{
+				Name:        "foo",
+				Namespace:   lo.ToPtr(gatewayapi.Namespace("bar")),
+				Port:        lo.ToPtr(gatewayapi.PortNumber(1234)),
+				SectionName: lo.ToPtr(gatewayapi.SectionName("section")),
+			},
+			expected: "bar/foo/section/1234",
+		},
+		{
+			name: "group and kind are ignored",
+			ref: gatewayapi.ParentReference{
+				Name:  "foo",
+				Group: lo.ToPtr(gatewayapi.Group("group")),
+				Kind:  lo.ToPtr(gatewayapi.Kind("kind")),
+			},
+			expected: "route-ns/foo//",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := parentReferenceKey(routeNamespace, tc.ref)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}

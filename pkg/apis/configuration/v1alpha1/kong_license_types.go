@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // +genclient
@@ -26,34 +25,55 @@ type KongLicense struct {
 
 // KongLicenseStatus stores the status of the KongLicense being processesed in each controller that reconciles it.
 type KongLicenseStatus struct {
-	KongLicenseParentStatuses []KongLicenseParentStatus `json:"parents,omitempty"`
+	// +listType=map
+	// +listMapKey=controllerName
+	KongLicenseControllerStatuses []KongLicenseControllerStatus `json:"controllers,omitempty"`
 }
 
-// KongLicenseParentStatus is the status of owning KongLicense being processed in the controller in ControllerRef field.
-type KongLicenseParentStatus struct {
-	// ControllerRef is the reference of the "controller" to reconcile this KongLicense.
+// KongLicenseControllerStatus is the status of owning KongLicense being processed
+// identified by the controllerName field.
+type KongLicenseControllerStatus struct {
+	// ControllerName is an identifier of the controller to reconcile this KongLicense.
+	// Should be unique in the list of controller statuses.
+	ControllerName string `json:"controllerName"`
+	// ControllerRef is the reference of the controller to reconcile this KongLicense.
 	// It is usually the name of (KIC/KGO) pod that reconciles it.
-	ControllerRef ControllerReference `json:"controllerRef"`
+	ControllerRef *ControllerReference `json:"controllerRef,omitempty"`
 	// Configured is set to true if the controller applied the content of the license on managed Kong gateway.
 	Configured bool `json:"configured"`
-	// Phase is the phase of the KongLicense being reconciled on the controller present in ControllerRef.
-	Phase KongLicensePhase `json:"phase"`
-	// Reason is the reason why the KongLicense stays in this phase.
-	Reason string `json:"reason"`
-	// TODO: add a field to annotate the controller type?
+	// Conditions describe the current conditions of the KongLicense on the controller.
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+// TODO: copy validation notes from the gateway api package to run the same validation?
+
+// Group refers to a Kubernetes Group. It must either be an empty string or a
+// RFC 1123 subdomain.
+type Group string
+
+// Kind refers to a kubernetes kind.
+type Kind string
+
+// Namespace refers to a Kubernetes namespace.
+type Namespace string
+
+// ObjectName refers to the name of a Kubernetes object.
+type ObjectName string
 
 type ControllerReference struct {
 	// Group is the group of referent.
 	// It should be empty if the referent is in "core" group (like pod.)
-	Group *gatewayv1.Group `json:"group,omitempty"`
+	Group *Group `json:"group,omitempty"`
 	// Kind is the kind of the referent.
-	Kind *gatewayv1.Kind `json:"kind,omitempty"`
+	Kind *Kind `json:"kind,omitempty"`
 	// Namespace is the namespace of the referent.
 	// It should be empty if the referent is cluster scoped.
-	Namespace *gatewayv1.Namespace `json:"namespace,omitempty"`
+	Namespace *Namespace `json:"namespace,omitempty"`
 	// Name is the name of the referent.
-	Name gatewayv1.ObjectName `json:"name"`
+	Name ObjectName `json:"name"`
 }
 
 type KongLicensePhase string

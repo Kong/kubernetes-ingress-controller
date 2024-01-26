@@ -406,7 +406,21 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 
 _Appears in:_
-- [KongLicenseParentStatus](#konglicenseparentstatus)
+- [KongLicenseControllerStatus](#konglicensecontrollerstatus)
+
+### Group
+
+_Underlying type:_ `string`
+
+Group refers to a Kubernetes Group. It must either be an empty string or a
+RFC 1123 subdomain.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
 
 ### IngressClassParametersSpec
 
@@ -425,37 +439,40 @@ _Appears in:_
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
 
-### KongLicenseParentStatus
+### Kind
+
+_Underlying type:_ `string`
+
+Kind refers to a kubernetes kind.
 
 
 
-KongLicenseParentStatus is the status of owning KongLicense being processed in the controller in ControllerRef field.
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
+
+### KongLicenseControllerStatus
+
+
+
+KongLicenseControllerStatus is the status of owning KongLicense being processed
+identified by the controllerName field.
 
 
 
 | Field | Description |
 | --- | --- |
-| `controllerRef` _[ControllerReference](#controllerreference)_ | ControllerRef is the reference of the "controller" to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
+| `controllerName` _string_ | ControllerName is an identifier of the controller to reconcile this KongLicense. Should be unique in the list of controller statuses. |
+| `controllerRef` _[ControllerReference](#controllerreference)_ | ControllerRef is the reference of the controller to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
 | `configured` _boolean_ | Configured is set to true if the controller applied the content of the license on managed Kong gateway. |
-| `phase` _[KongLicensePhase](#konglicensephase)_ | Phase is the phase of the KongLicense being reconciled on the controller present in ControllerRef. |
-| `reason` _string_ | Reason is the reason why the KongLicense stays in this phase. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongLicense on the controller. |
 
 
 _Appears in:_
 - [KongLicenseStatus](#konglicensestatus)
 
-### KongLicensePhase
 
-_Underlying type:_ `string`
-
-
-
-
-
-
-
-_Appears in:_
-- [KongLicenseParentStatus](#konglicenseparentstatus)
 
 
 
@@ -479,6 +496,32 @@ _Appears in:_
 - [KongVault](#kongvault)
 
 
+
+### Namespace
+
+_Underlying type:_ `string`
+
+Namespace refers to a Kubernetes namespace.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
+
+### ObjectName
+
+_Underlying type:_ `string`
+
+ObjectName refers to the name of a Kubernetes object.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
 
 
 ## configuration.konghq.com/v1beta1

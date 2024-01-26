@@ -11,8 +11,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
-// +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.Enabled`,description="Enabled to configure on Kong gateway instances"
-// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.enabled`,description="Enabled to configure on Kong gateway instances"
 
 // KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
 type KongLicense struct {

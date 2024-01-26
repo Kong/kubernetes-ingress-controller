@@ -21,6 +21,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
@@ -312,6 +313,24 @@ func Run(
 			return fmt.Errorf("could not add license agent to manager: %w", err)
 		}
 		configTranslator.InjectLicenseGetter(agent)
+	}
+
+	if c.KongLicenseEnabled && !c.Konnect.LicenseSynchronizationEnabled {
+		setupLog.Info("Starting KongLicense controller")
+		licenseController :=
+			&configuration.KongV1Alpha1KongLicenseReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
+				Scheme:           mgr.GetScheme(),
+				LicenseCache:     configuration.NewLicenseCache(),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				StatusQueue:      kubernetesStatusQueue,
+			}
+		err := licenseController.SetupWithManager(mgr)
+		if err != nil {
+			return fmt.Errorf("failed to start KongLicense controller: %v", err)
+		}
+		configTranslator.InjectLicenseGetter(licenseController)
 	}
 
 	if c.AnonymousReports {

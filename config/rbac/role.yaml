@@ -124,6 +124,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - konglicenses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - konglicenses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - kongplugins
   verbs:
   - get

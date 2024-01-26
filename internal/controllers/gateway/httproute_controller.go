@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -417,6 +419,14 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	// Ensure we have no status for no-longer defined parentRefs.
+	if wasAnyStatusRemoved := ensureNoStaleParentStatus(httproute); wasAnyStatusRemoved {
+		if err := r.Status().Update(ctx, httproute); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// the referenced gateway object(s) for the HTTPRoute needs to be ready
 	// before we'll attempt any configurations of it. If it's not we'll
 	// requeue the object and wait until all supported gateways are ready.
@@ -751,4 +761,47 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 // SetLogger sets the logger.
 func (r *HTTPRouteReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
+}
+
+// ensureNoStaleParentStatus removes any status references to Gateways that are no longer in the HTTPRoute's parentRefs
+// and returns true if any status was removed.
+func ensureNoStaleParentStatus(httproute *gatewayapi.HTTPRoute) (wasAnyStatusRemoved bool) {
+	// Create a map of currently defined parentRefs for fast lookup.
+	currentlyDefinedParentRefs := make(map[string]struct{})
+	for _, parentRef := range httproute.Spec.ParentRefs {
+		currentlyDefinedParentRefs[parentReferenceKey(httproute.Namespace, parentRef)] = struct{}{}
+	}
+
+	for parentIdx, parentStatus := range httproute.Status.Parents {
+		// Don't touch statuses from other controllers.
+		if parentStatus.ControllerName != GetControllerName() {
+			continue
+		}
+		// Remove the status if the parentRef is no longer defined.
+		if _, ok := currentlyDefinedParentRefs[parentReferenceKey(httproute.Namespace, parentStatus.ParentRef)]; !ok {
+			httproute.Status.Parents = slices.Delete(httproute.Status.Parents, parentIdx, parentIdx+1)
+			wasAnyStatusRemoved = true
+		}
+	}
+	return wasAnyStatusRemoved
+}
+
+// parentReferenceKey returns a string key for a parentRef of a route. It can be used for indexing a map.
+func parentReferenceKey(routeNamespace string, parentRef gatewayapi.ParentReference) string {
+	namespace := routeNamespace
+	if parentRef.Namespace != nil {
+		namespace = string(*parentRef.Namespace)
+	}
+	sectionName := ""
+	if parentRef.SectionName != nil {
+		sectionName = string(*parentRef.SectionName)
+	}
+	portNumber := ""
+	if parentRef.Port != nil {
+		portNumber = strconv.Itoa(int(*parentRef.Port))
+	}
+
+	// We intentionally do not take into account Kind and Group here as we only support Gateways
+	// and that's the only kind we should be getting here thanks to the admission webhook validation.
+	return fmt.Sprintf("%s/%s/%s/%s", namespace, parentRef.Name, sectionName, portNumber)
 }

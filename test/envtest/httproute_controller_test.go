@@ -27,13 +27,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
+const (
+	waitDuration = 5 * time.Second
+	tickDuration = 100 * time.Millisecond
+)
+
 func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	t.Parallel()
-
-	const (
-		waitDuration = 5 * time.Second
-		tickDuration = 100 * time.Millisecond
-	)
 
 	scheme := Scheme(t, WithGatewayAPI)
 	cfg := Setup(t, scheme)
@@ -263,6 +263,120 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
 	}
+}
+
+func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
+	t.Parallel()
+
+	scheme := Scheme(t, WithGatewayAPI)
+	cfg := Setup(t, scheme)
+	client := NewControllerClient(t, scheme, cfg)
+
+	reconciler := &gateway.HTTPRouteReconciler{
+		Client:          client,
+		DataplaneClient: mocks.Dataplane{},
+	}
+
+	// We use a deferred cancel to stop the manager and not wait for its timeout.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ns := CreateNamespace(ctx, t, client)
+	nsRoute := CreateNamespace(ctx, t, client)
+
+	StartReconcilers(ctx, t, client.Scheme(), cfg, reconciler)
+
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+
+	gw := gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     gatewayapi.SectionName("http"),
+					Port:     gatewayapi.PortNumber(80),
+					Protocol: gatewayapi.HTTPProtocolType,
+					AllowedRoutes: &gatewayapi.AllowedRoutes{
+						Namespaces: &gatewayapi.RouteNamespaces{
+							From: lo.ToPtr(gatewayapi.NamespacesFromAll),
+						},
+					},
+				},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      uuid.NewString(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gw))
+
+	route := gatewayapi.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsRoute.Name,
+			Name:      uuid.NewString(),
+		},
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name:      gatewayapi.ObjectName(gw.Name),
+					Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+				}},
+			},
+			Rules: []gatewayapi.HTTPRouteRule{{
+				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
+			}},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &route))
+
+	// Status has to be updated separately.
+	route.Status = gatewayapi.HTTPRouteStatus{
+		RouteStatus: gatewayapi.RouteStatus{
+			Parents: []gatewayapi.RouteParentStatus{
+				{
+					ParentRef: gatewayapi.ParentReference{
+						Name: "other-gw-name",
+					},
+					ControllerName: gateway.GetControllerName(),
+				},
+			},
+		},
+	}
+	require.NoError(t, client.Status().Update(ctx, &route))
+
+	require.Eventually(t, func() bool {
+		err := client.Get(ctx, k8stypes.NamespacedName{Name: route.Name, Namespace: route.Namespace}, &route)
+		if err != nil {
+			t.Logf("failed to get HTTPRoute %s/%s: %v", route.Namespace, route.Name, err)
+			return false
+		}
+
+		if staleStatusFound := lo.ContainsBy(route.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
+			return ps.ParentRef.Name == "other-gw-name"
+		}); staleStatusFound {
+			t.Log("found stale status for parent other-gw-name")
+			return false
+		}
+
+		return true
+	}, waitDuration, tickDuration, "expected stale status to be removed from HTTPRoute")
 }
 
 func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn k8stypes.NamespacedName) string {

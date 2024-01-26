@@ -57,7 +57,10 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: kong.String("secret")}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
+				Plugins: []Plugin{{
+					SensitiveFieldsMeta: PluginSensitiveFieldsMetadata{WholeConfigIsSensitive: true},
+					Plugin:              kong.Plugin{ID: kong.String("1"), Config: kong.Configuration{"secret": "secretValue"}},
+				}},
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
 				}},
@@ -78,7 +81,10 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1")}}},
+				Plugins: []Plugin{{
+					SensitiveFieldsMeta: PluginSensitiveFieldsMetadata{WholeConfigIsSensitive: true},
+					Plugin:              kong.Plugin{ID: kong.String("1"), Config: kong.Configuration{"secret": *redactedString}},
+				}},
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
 				}},

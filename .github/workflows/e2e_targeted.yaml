@@ -22,14 +22,6 @@ on:
         description: Run Istio E2E tests.
         type: boolean
         default: false
-      run-performance:
-        description: Run performance E2E tests
-        type: boolean
-        default: false
-      res-number-for-perf:
-        description: The number of resource for performance tests
-        type: string
-        default: 10000
       all-supported-k8s-versions:
         description: Run tests against all supported Kubernetes versions. Otherwise, only against the latest one.
         type: boolean
@@ -99,8 +91,6 @@ jobs:
       load-local-image: ${{ inputs.controller-image == '' }}
       run-gke: ${{ inputs.run-gke }}
       run-istio: ${{ inputs.run-istio }}
-      run-performance: ${{ inputs.run-performance }}
-      res-number-for-perf: ${{ inputs.res-number-for-perf }}
       all-supported-k8s-versions: ${{ inputs.all-supported-k8s-versions }}
 
   run-unreleased-kong:
@@ -118,7 +108,6 @@ jobs:
       all-supported-k8s-versions: false
       run-gke: false
       run-istio: false
-      run-performance: false
 
   test-reports:
     needs: run

@@ -496,6 +496,17 @@ test.e2e: gotestsum
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
+.PHONY: test.performance
+test.performance: gotestsum
+	GOFLAGS="-tags=performance_tests" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		-run $(E2E_TEST_RUN) \
+		-parallel $(NCPU) \
+		-timeout $(E2E_TEST_TIMEOUT) \
+		./test/e2e/...
+
 .PHONY: test.istio
 test.istio: gotestsum
 	ISTIO_TEST_ENABLED="true" \

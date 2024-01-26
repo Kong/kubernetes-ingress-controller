@@ -1,4 +1,4 @@
-//go:build e2e_tests || istio_tests
+//go:build e2e_tests || istio_tests || performance_tests
 
 package e2e
 

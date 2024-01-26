@@ -918,8 +918,7 @@ func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
 		kongRawStateGetter,
 	)
 
-	err := kongClient.Update(ctx)
-	require.NoError(t, err)
+	require.NoError(t, kongClient.Update(ctx))
 
 	konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(clientsProvider.konnectClient.BaseRootURL())
 	require.True(t, ok, "expected Konnect to be updated")

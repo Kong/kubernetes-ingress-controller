@@ -96,7 +96,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: diagnostics-e2e-tests
+          name: diagnostics-performance-tests
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 

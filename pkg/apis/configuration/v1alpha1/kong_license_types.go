@@ -18,6 +18,8 @@ type KongLicense struct {
 	// RawLicenseString is the raw content of the license in string format.
 	RawLicenseString string `json:"rawLicenseString"`
 	// Enabled is set to true to let controllers (like KIC) to reconcile it.
+	// Default value is true to apply the license by default.
+	// +kubebuilder:default=true
 	Enabled bool `json:"enabled"`
 	// Status is the status of the KongLicense being processed by controllers.
 	Status KongLicenseStatus `json:"status,omitempty"`
@@ -52,15 +54,28 @@ type KongLicenseControllerStatus struct {
 
 // Group refers to a Kubernetes Group. It must either be an empty string or a
 // RFC 1123 subdomain.
+// +kubebuilder:validation:MaxLength=253
+// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 type Group string
 
 // Kind refers to a kubernetes kind.
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
 type Kind string
 
-// Namespace refers to a Kubernetes namespace.
+// Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
+// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
 type Namespace string
 
 // ObjectName refers to the name of a Kubernetes object.
+// Object names can have a variety of forms, including RFC1123 subdomains,
+// RFC 1123 labels, or RFC 1035 labels.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=253
 type ObjectName string
 
 type ControllerReference struct {

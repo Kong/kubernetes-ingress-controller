@@ -364,7 +364,7 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 | `kind` _string_ | `KongLicense`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `rawLicenseString` _string_ | RawLicenseString is the raw content of the license in string format. |
-| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC) to reconcile it. |
+| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC) to reconcile it. Default value is true to apply the license by default. |
 
 
 
@@ -501,7 +501,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-Namespace refers to a Kubernetes namespace.
+Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
 
 
 
@@ -515,6 +515,8 @@ _Appears in:_
 _Underlying type:_ `string`
 
 ObjectName refers to the name of a Kubernetes object.
+Object names can have a variety of forms, including RFC1123 subdomains,
+RFC 1123 labels, or RFC 1035 labels.
 
 
 

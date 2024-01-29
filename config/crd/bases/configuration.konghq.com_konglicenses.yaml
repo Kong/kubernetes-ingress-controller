@@ -32,8 +32,10 @@ spec:
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           enabled:
-            description: Enabled is set to true to let controllers (like KIC) to reconcile
-              it.
+            default: true
+            description: |-
+              Enabled is set to true to let controllers (like KIC) to reconcile it.
+              Default value is true to apply the license by default.
             type: boolean
           kind:
             description: |-
@@ -155,17 +157,27 @@ spec:
                           description: |-
                             Group is the group of referent.
                             It should be empty if the referent is in "core" group (like pod.)
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         kind:
                           description: Kind is the kind of the referent.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                           type: string
                         name:
                           description: Name is the name of the referent.
+                          maxLength: 253
+                          minLength: 1
                           type: string
                         namespace:
                           description: |-
                             Namespace is the namespace of the referent.
                             It should be empty if the referent is cluster scoped.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                       required:
                       - name

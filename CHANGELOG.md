@@ -166,6 +166,9 @@ Adding a new version? You'll need three changes:
 - Kong Plugin's `config` field now is sanitized when it contains sensitive data
   sourced from a Secret (i.e. `configFrom` or `configPatches` is used).
   [#5495](https://github.com/Kong/kubernetes-ingress-controller/pull/5495)
+- New CRD `KongLicense` to represent a Kong enterprise license to apply to
+  managed Kong gateway enterprise instances.
+  [#5487](https://github.com/Kong/kubernetes-ingress-controller/pull/5487)
 
 ### Fixed
 

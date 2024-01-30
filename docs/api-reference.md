@@ -329,6 +329,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [IngressClassParameters](#ingressclassparameters)
+- [KongLicense](#konglicense)
 - [KongVault](#kongvault)
 
 ### IngressClassParameters
@@ -345,6 +346,25 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
+
+
+
+
+### KongLicense
+
+
+
+KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
+
+<!-- kong_license description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongLicense`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `rawLicenseString` _string_ | RawLicenseString is a string with the raw content of the license. |
+| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
 
 
 
@@ -369,6 +389,39 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 
 
+### ControllerReference
+
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _[Group](#group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod). |
+| `kind` _[Kind](#kind)_ | Kind is the kind of the referent. By default the nil kind means kind Pod. |
+| `namespace` _[Namespace](#namespace)_ | Namespace is the namespace of the referent. It should be empty if the referent is cluster scoped. |
+| `name` _[ObjectName](#objectname)_ | Name is the name of the referent. |
+
+
+_Appears in:_
+- [KongLicenseControllerStatus](#konglicensecontrollerstatus)
+
+### Group
+
+_Underlying type:_ `string`
+
+Group refers to a Kubernetes Group. It must either be an empty string or a
+RFC 1123 subdomain.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
+
 ### IngressClassParametersSpec
 
 
@@ -385,6 +438,42 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
+
+### Kind
+
+_Underlying type:_ `string`
+
+Kind refers to a Kubernetes kind.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
+
+### KongLicenseControllerStatus
+
+
+
+KongLicenseControllerStatus is the status of owning KongLicense being processed
+identified by the controllerName field.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controllerName` _string_ | ControllerName is an identifier of the controller to reconcile this KongLicense. Should be unique in the list of controller statuses. |
+| `controllerRef` _[ControllerReference](#controllerreference)_ | ControllerRef is the reference of the controller to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongLicense on the controller. |
+
+
+_Appears in:_
+- [KongLicenseStatus](#konglicensestatus)
+
+
+
+
 
 ### KongVaultSpec
 
@@ -406,6 +495,34 @@ _Appears in:_
 - [KongVault](#kongvault)
 
 
+
+### Namespace
+
+_Underlying type:_ `string`
+
+Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
+
+### ObjectName
+
+_Underlying type:_ `string`
+
+ObjectName refers to the name of a Kubernetes object.
+Object names can have a variety of forms, including RFC1123 subdomains,
+RFC 1123 labels, or RFC 1035 labels.
+
+
+
+
+
+_Appears in:_
+- [ControllerReference](#controllerreference)
 
 
 ## configuration.konghq.com/v1beta1

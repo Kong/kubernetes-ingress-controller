@@ -486,7 +486,14 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		r.Log.V(util.DebugLevel).Info("Determining service for ref", "ref", ref)
 		svc, err := r.determineServiceForGateway(ctx, ref)
 		if err != nil {
-			log.Error(err, "Could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
+			const annotation = annotations.AnnotationPrefix + annotations.GatewayPublishServiceKey
+			log.Error(
+				err,
+				fmt.Sprintf("One of publish services defined in Gateway's %q annotation didn't match controller manager's configuration", annotation),
+				"namespace", gateway.Namespace,
+				"name", gateway.Name,
+				"service", ref,
+			)
 			return ctrl.Result{Requeue: true}, err
 		}
 		if svc != nil {
@@ -637,8 +644,12 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
 		name = r.PublishServiceUDPRef.MustGet()
 	default:
-		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s or %s",
-			ref, r.PublishServiceRef.String(), r.PublishServiceUDPRef.OrEmpty())
+		configuredServiceRefs := []string{fmt.Sprintf("%q", r.PublishServiceRef)}
+		if udpRef, ok := r.PublishServiceUDPRef.Get(); ok {
+			configuredServiceRefs = append(configuredServiceRefs, fmt.Sprintf("%q [udp]", udpRef))
+		}
+		return nil, fmt.Errorf("publish service reference %q from Gateway's annotations did not match configured controller manager's publish services (%s)",
+			ref, strings.Join(configuredServiceRefs, ", "))
 	}
 
 	// retrieve the service for the kong gateway
@@ -647,7 +658,13 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 		r.Log.V(util.DebugLevel).Info("Service not configured, discarding it", "ref", ref)
 		return nil, nil
 	}
-	return svc, r.Client.Get(ctx, name, svc)
+	if err := r.Client.Get(ctx, name, svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("publish service %q couldn't be found: %w", name, err)
+		}
+		return nil, fmt.Errorf("publish service %q couldn't be retrieved: %w", name, err)
+	}
+	return svc, nil
 }
 
 // determineL4ListenersFromService generates L4 addresses and listeners for a

@@ -91,6 +91,7 @@ jobs:
           NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
           # multiple kind clusters within a single job, so only 1 is allowed at a time.
           GOTESTSUM_JUNITFILE: "performance-tests.xml"
+          E2E_TEST_TIMEOUT: 90m
 
       - name: upload diagnostics
         if: ${{ always() }}

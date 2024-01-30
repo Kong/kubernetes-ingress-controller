@@ -486,7 +486,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		r.Log.V(util.DebugLevel).Info("Determining service for ref", "ref", ref)
 		svc, err := r.determineServiceForGateway(ctx, ref)
 		if err != nil {
-			annotation := annotations.AnnotationPrefix + annotations.GatewayPublishServiceKey
+			const annotation = annotations.AnnotationPrefix + annotations.GatewayPublishServiceKey
 			log.Error(
 				err,
 				fmt.Sprintf("One of publish services defined in Gateway's %q annotation didn't match controller manager's configuration", annotation),
@@ -663,7 +663,6 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 			return nil, fmt.Errorf("publish service %q couldn't be found: %w", name, err)
 		}
 		return nil, fmt.Errorf("publish service %q couldn't be retrieved: %w", name, err)
-
 	}
 	return svc, nil
 }

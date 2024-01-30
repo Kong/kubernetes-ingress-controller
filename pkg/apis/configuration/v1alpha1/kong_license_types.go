@@ -80,7 +80,7 @@ type ObjectName string
 
 type ControllerReference struct {
 	// Group is the group of referent.
-	// It should be empty if the referent is in "core" group (like pod.)
+	// It should be empty if the referent is in "core" group (like pod).
 	Group *Group `json:"group,omitempty"`
 	// Kind is the kind of the referent.
 	// By default the nil kind means kind Pod.

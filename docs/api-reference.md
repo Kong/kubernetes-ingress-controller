@@ -399,7 +399,7 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 | Field | Description |
 | --- | --- |
-| `group` _[Group](#group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod.) |
+| `group` _[Group](#group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod). |
 | `kind` _[Kind](#kind)_ | Kind is the kind of the referent. By default the nil kind means kind Pod. |
 | `namespace` _[Namespace](#namespace)_ | Namespace is the namespace of the referent. It should be empty if the referent is cluster scoped. |
 | `name` _[ObjectName](#objectname)_ | Name is the name of the referent. |

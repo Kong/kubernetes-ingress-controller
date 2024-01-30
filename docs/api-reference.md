@@ -363,8 +363,8 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongLicense`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `rawLicenseString` _string_ | RawLicenseString is the raw content of the license in string format. |
-| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC) to reconcile it. Default value is true to apply the license by default. |
+| `rawLicenseString` _string_ | RawLicenseString is a string with the raw content of the license. |
+| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
 
 
 
@@ -400,7 +400,7 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 | Field | Description |
 | --- | --- |
 | `group` _[Group](#group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod.) |
-| `kind` _[Kind](#kind)_ | Kind is the kind of the referent. |
+| `kind` _[Kind](#kind)_ | Kind is the kind of the referent. By default the nil kind means kind Pod. |
 | `namespace` _[Namespace](#namespace)_ | Namespace is the namespace of the referent. It should be empty if the referent is cluster scoped. |
 | `name` _[ObjectName](#objectname)_ | Name is the name of the referent. |
 
@@ -443,7 +443,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-Kind refers to a kubernetes kind.
+Kind refers to a Kubernetes kind.
 
 
 
@@ -465,7 +465,6 @@ identified by the controllerName field.
 | --- | --- |
 | `controllerName` _string_ | ControllerName is an identifier of the controller to reconcile this KongLicense. Should be unique in the list of controller statuses. |
 | `controllerRef` _[ControllerReference](#controllerreference)_ | ControllerRef is the reference of the controller to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
-| `configured` _boolean_ | Configured is set to true if the controller applied the content of the license on managed Kong gateway. |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongLicense on the controller. |
 
 

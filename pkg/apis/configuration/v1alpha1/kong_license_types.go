@@ -7,17 +7,20 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced,shortName=kl,categories=kong-ingress-controller,path=konglicenses
+// +kubebuilder:resource:scope=Cluster,shortName=kl,categories=kong-ingress-controller,path=konglicenses
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.Enabled`,description="Enabled to configure on Kong gateway instances"
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 
 // KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
 type KongLicense struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// RawLicenseString is the raw content of the license in string format.
+	// RawLicenseString is a string with the raw content of the license.
 	RawLicenseString string `json:"rawLicenseString"`
-	// Enabled is set to true to let controllers (like KIC) to reconcile it.
+	// Enabled is set to true to let controllers (like KIC or KGO) to reconcile it.
 	// Default value is true to apply the license by default.
 	// +kubebuilder:default=true
 	Enabled bool `json:"enabled"`
@@ -41,16 +44,13 @@ type KongLicenseControllerStatus struct {
 	// ControllerRef is the reference of the controller to reconcile this KongLicense.
 	// It is usually the name of (KIC/KGO) pod that reconciles it.
 	ControllerRef *ControllerReference `json:"controllerRef,omitempty"`
-	// Configured is set to true if the controller applied the content of the license on managed Kong gateway.
-	Configured bool `json:"configured"`
 	// Conditions describe the current conditions of the KongLicense on the controller.
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
-
-// TODO: copy validation notes from the gateway api package to run the same validation?
 
 // Group refers to a Kubernetes Group. It must either be an empty string or a
 // RFC 1123 subdomain.
@@ -58,7 +58,7 @@ type KongLicenseControllerStatus struct {
 // +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 type Group string
 
-// Kind refers to a kubernetes kind.
+// Kind refers to a Kubernetes kind.
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=63
 // +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
@@ -83,6 +83,7 @@ type ControllerReference struct {
 	// It should be empty if the referent is in "core" group (like pod.)
 	Group *Group `json:"group,omitempty"`
 	// Kind is the kind of the referent.
+	// By default the nil kind means kind Pod.
 	Kind *Kind `json:"kind,omitempty"`
 	// Namespace is the namespace of the referent.
 	// It should be empty if the referent is cluster scoped.

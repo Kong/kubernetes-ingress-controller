@@ -170,7 +170,7 @@ spec:
                         group:
                           description: |-
                             Group is the group of referent.
-                            It should be empty if the referent is in "core" group (like pod.)
+                            It should be empty if the referent is in "core" group (like pod).
                           maxLength: 253
                           pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string

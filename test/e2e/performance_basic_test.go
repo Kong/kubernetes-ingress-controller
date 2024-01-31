@@ -5,6 +5,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -27,23 +28,111 @@ import (
 
 var (
 	defaultResNum = 10000
-	resNumStr     = os.Getenv("PERF_RES_NUMBER")
+	// resourcesNumberString is the number of resource rules to be created
+	// if not set, defaultResNum will be used
+	resourcesNumberString = os.Getenv("PERF_RES_NUMBER")
+
+	consumerUsername = "consumer-key-auth-name-%d"
+
+	// rulesTpl is the template of resource rules to be created
+	// %d is the index of the resource rule
+	// In order to simplify the testing process,
+	// individual secrets are not specifically assigned for each consumer here.
+	// Instead, a fixed secret `consumer-key-auth-secret` is used.
+	rulesTpl = `
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-ingress-%d
+  annotations:
+    konghq.com/plugins: auth-plugin-%d
+spec:
+  ingressClassName: kong
+  rules:
+  - host: example-%d.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: httpbin
+            port:
+              number: 80
+        path: /get
+        pathType: Exact
+
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: auth-plugin-%d
+  annotations:
+    kubernetes.io/ingress.class: kong
+plugin: key-auth
+
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer-%d
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: %s
+credentials:
+- consumer-key-auth-secret-%d
+
+---
+apiVersion: v1
+data:
+  key: %s
+kind: Secret
+metadata:
+  labels:
+    konghq.com/credential: key-auth
+  name: consumer-key-auth-secret-%d
+type: Opaque
+
+`
+
+	updatedIngressTpl = `
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-ingress-%d
+  annotations:
+    konghq.com/plugins: auth-plugin-%d
+spec:
+  ingressClassName: kong
+  rules:
+  - host: example-%d.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: httpbin
+            port:
+              number: 80
+        path: /ip
+        pathType: Exact
+
+`
 )
 
 // -----------------------------------------------------------------------------
 // E2E Performance tests
 // -----------------------------------------------------------------------------
 
-// TestBasicHTTPRoute will create a basic HTTP route and test its functionality
-// against a Kong proxy. This test will be used to measure the performance of
-// the KIC with OpenTelemetry.
-func TestBasicPerf(t *testing.T) {
+// TestResourceApplyAndUpdatePerf tests the performance of KIC,
+// when creat a specified number of resources, how long does it take for them to take effect in the Gateway.
+// And when update one of the resources, how long does it take for the update to take effect in the Gateway.
+func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
 	ctx, env := setupE2ETest(t)
 
-	if resNumStr != "" {
-		if num, err := strconv.Atoi(resNumStr); err == nil {
+	if resourcesNumberString != "" {
+		if num, err := strconv.Atoi(resourcesNumberString); err == nil {
 			defaultResNum = num
 		}
 	}
@@ -64,44 +153,23 @@ func TestBasicPerf(t *testing.T) {
 
 	kubeconfig := getTemporaryKubeconfig(t, env)
 
-	ingressTpl := `
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: test-ingress-%d
-spec:
-  ingressClassName: kong
-  rules:
-  - host: example-%d.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: httpbin
-            port:
-              number: 80
-        path: /get
-        pathType: Exact
-
-`
-
-	ingressYaml := ""
+	resourceYaml := ""
 	for i := 0; i < defaultResNum; i++ {
-		ingressYaml += fmt.Sprintf(ingressTpl, i, i)
+		resourceYaml += fmt.Sprintf(rulesTpl, i, i, i, i, i, fmt.Sprintf(consumerUsername, i), i, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, i))), i)
 	}
 
 	startTime := time.Now()
-	err = applyResourceWithKubectl(ctx, t, kubeconfig, ingressYaml)
+	err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
 	require.NoError(t, err)
 	completionTime := time.Now()
+	t.Logf("time to apply %d rules(including Ingress, plugin, and consumer): %v", defaultResNum, completionTime.Sub(startTime))
 
 	t.Log("getting kong proxy IP after LB provisioning")
 	proxyURLForDefaultIngress := "http://" + getKongProxyIP(ctx, t, env)
 
 	t.Log("waiting for routes from Ingress to be operational")
 
-	// create wait group to wait for all ingress rules to take effect
+	// create wait group to wait for all resource rules to take effect
 	randomList := getRandomList(defaultResNum)
 	var wg sync.WaitGroup
 	wg.Add(len(randomList))
@@ -111,7 +179,7 @@ spec:
 			defer wg.Done()
 
 			require.Eventually(t, func() bool {
-				return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "get", fmt.Sprintf("example-%d.com", i))
+				return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "get", i)
 			}, ingressWait, time.Millisecond*500)
 		}(i)
 	}
@@ -120,45 +188,23 @@ spec:
 
 	effectTime := time.Now()
 
-	t.Logf("time to apply %d ingress rules: %v", defaultResNum, completionTime.Sub(startTime))
 	t.Logf("time to make %d ingress rules take effect: %v", defaultResNum, effectTime.Sub(completionTime))
 
-	updatedIngressTpl := `
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: test-ingress-%d
-spec:
-  ingressClassName: kong
-  rules:
-  - host: example-%d.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: httpbin
-            port:
-              number: 80
-        path: /ip
-        pathType: Exact
-
-`
 	rand.Seed(time.Now().UnixNano())
 	randomInt := rand.Intn(10000)
 
 	startTime = time.Now()
-	err = applyResourceWithKubectl(ctx, t, kubeconfig, fmt.Sprintf(updatedIngressTpl, randomInt, randomInt))
+	err = applyResourceWithKubectl(ctx, t, kubeconfig, fmt.Sprintf(updatedIngressTpl, randomInt, randomInt, randomInt))
 	require.NoError(t, err)
 	completionTime = time.Now()
 
 	require.Eventually(t, func() bool {
-		return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "ip", fmt.Sprintf("example-%d.com", randomInt))
+		return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "ip", randomInt)
 	}, ingressWait, time.Millisecond*500)
 
 	effectTime = time.Now()
 
-	t.Logf("time to apply 1 ingress rules when %d ingress exists: %v", defaultResNum, completionTime.Sub(startTime))
+	t.Logf("time to update 1 ingress rules when %d ingress exists: %v", defaultResNum, completionTime.Sub(startTime))
 	t.Logf("time to make 1 ingress rules take effect when %d ingress exists: %v", defaultResNum, effectTime.Sub(completionTime))
 
 }
@@ -174,10 +220,11 @@ func getRandomList(n int) []int {
 	return randPerm
 }
 
-func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxyIP, path, hostname string) bool {
+func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxyIP, path string, index int) bool {
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/%s", proxyIP, path), nil)
 	require.NoError(t, err)
-	req.Host = hostname
+	req.Host = fmt.Sprintf("example-%d.com", index)
+	req.Header.Set("apikey", fmt.Sprintf(consumerUsername, index))
 
 	resp, err := client.Do(req)
 	if err != nil {

@@ -19,7 +19,7 @@ go 1.21.6
 // toolchain go1.21.0
 
 require (
-	cloud.google.com/go/container v1.30.0
+	cloud.google.com/go/container v1.30.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/blang/semver/v4 v4.0.0
@@ -97,8 +97,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.22.0 // indirect
 	go4.org/netipx v0.0.0-20230728184502-ec4c8b891b28 // indirect
 	golang.org/x/net v0.20.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240122161410-6c6643bf1457 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240122161410-6c6643bf1457 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
 	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 )

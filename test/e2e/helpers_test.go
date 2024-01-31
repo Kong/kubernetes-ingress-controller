@@ -411,6 +411,9 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	for i := range service.Spec.Ports {
+		service.Spec.Ports[i].AppProtocol = lo.ToPtr("http")
+	}
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {

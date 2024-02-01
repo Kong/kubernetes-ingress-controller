@@ -3,15 +3,19 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,9 +44,25 @@ type KongV1Alpha1KongLicenseReconciler struct {
 	LicenseCache     cache.Store
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
+	// ControllerName is the name of the controller to use in `controllerName` field in controller status item.
+	ControllerName string
 
-	controllerName string
+	chosenLicenseLock sync.RWMutex
+	chosenLicense     *kongv1alpha1.KongLicense
 }
+
+const (
+	// LicenseControllerType annotates the controller type.
+	LicenseControllerType = "konghq.com/kong-ingress-controller"
+)
+
+const (
+	ConditionTypeProgrammed = "Programmed"
+	// ConditionReasonPickedAsLatest represents that the KongLicense being picked as the newest one.
+	ConditionReasonPickedAsLatest = "PickedAsLatest"
+	// ConditionReasonReplacedByNewer represents that the KongLicense is replaced by other one that is newer.
+	ConditionReasonReplacedByNewer = "ReplacedByNewer"
+)
 
 var _ controllers.Reconciler = &KongV1Alpha1KongLicenseReconciler{}
 
@@ -109,33 +129,86 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 		if apierrors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
+			_, objectExistsInCache, err := r.LicenseCache.Get(obj)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if objectExistsInCache {
+				// Delete the object in the cache first.
+				log.V(util.DebugLevel).Info("KongLicense deleted in cluster, delete it in cache")
+				if err := r.LicenseCache.Delete(obj); err != nil {
+					return ctrl.Result{}, err
+				}
 
-			return ctrl.Result{}, r.LicenseCache.Delete(obj)
+				// Then pick the effective license in KongLicenses remaining in cache.
+				chosenLicense := r.pickLicenseInCache()
+				r.setChosenLicense(chosenLicense)
+				if chosenLicense != nil {
+					log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
+					err := r.ensureControllerStatusProgrammedCondition(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(util.DebugLevel).Info("Reconciling resource", "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongLicense", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongLicense")
 
 		_, objectExistsInCache, err := r.LicenseCache.Get(obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
+			// Delete the object in the cache first.
 			if err := r.LicenseCache.Delete(obj); err != nil {
 				return ctrl.Result{}, err
+			}
+
+			// Then pick the effective license in KongLicenses remaining in cache.
+			chosenLicense := r.pickLicenseInCache()
+			r.setChosenLicense(chosenLicense)
+			if chosenLicense != nil {
+				log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
+				err := r.ensureControllerStatusProgrammedCondition(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
+				if err != nil {
+					return ctrl.Result{}, err
+				}
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// update the kong Admin API with the changes
+	// Add the new/updated KongLicense to cache.
 	if err := r.LicenseCache.Add(obj); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Trigger a compare on stored KongLicenses in cache and pick the newest.
+	chosenLicense := r.pickLicenseInCache()
+	if chosenLicense.Name == obj.Name {
+		log.V(util.DebugLevel).Info("Picked KongLicense being reconciled", "name", obj.Name)
+		err := r.ensureControllerStatusProgrammedCondition(ctx, obj, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		oldChosenLicense := r.getChosenLicense()
+		if oldChosenLicense != nil && oldChosenLicense.Name != chosenLicense.Name {
+			r.Log.V(util.DebugLevel).Info("Originally picked KongLicense replaced", "name", oldChosenLicense.Name)
+			err := r.ensureControllerStatusProgrammedCondition(ctx, oldChosenLicense, metav1.ConditionFalse, ConditionReasonReplacedByNewer, "Replaced by newer created KongLicense")
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		r.setChosenLicense(chosenLicense)
 	}
 
 	return ctrl.Result{}, nil
@@ -149,17 +222,20 @@ func isKongLicenseEnabled(obj client.Object) bool {
 	return kongLicense.Enabled
 }
 
+// compareKongLicense returns true if license1 is newer than license2 (compared by metadata.creationTimestamp).
+// If the creationTimestamp equals or not comparable, returns the one with lexical smaller name.
 func compareKongLicense(license1, license2 *kongv1alpha1.KongLicense) bool {
-	if license1.CreationTimestamp.Before(&license2.CreationTimestamp) {
+	if license1.CreationTimestamp.After(license2.CreationTimestamp.Time) {
 		return true
 	}
-	if license2.CreationTimestamp.Before(&license1.CreationTimestamp) {
+	if license2.CreationTimestamp.After(license1.CreationTimestamp.Time) {
 		return false
 	}
 	return license1.Name < license2.Name
 }
 
-func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License] {
+// pickLicenseInCache picks the newest license in the cache.
+func (r *KongV1Alpha1KongLicenseReconciler) pickLicenseInCache() *kongv1alpha1.KongLicense {
 	licenseList := r.LicenseCache.List()
 	var chosenLicense *kongv1alpha1.KongLicense
 	for _, obj := range licenseList {
@@ -171,13 +247,93 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License]
 			chosenLicense = license
 		}
 	}
+	return chosenLicense
+}
+
+// setChosenLicense sets the chosen effective KongLicense copy in the cache.
+func (r *KongV1Alpha1KongLicenseReconciler) setChosenLicense(l *kongv1alpha1.KongLicense) {
+	r.chosenLicenseLock.Lock()
+	defer r.chosenLicenseLock.Unlock()
+	r.chosenLicense = l.DeepCopy()
+}
+
+// getChosenLicense fetches the the chosen effective KongLicense in the cache.
+func (r *KongV1Alpha1KongLicenseReconciler) getChosenLicense() *kongv1alpha1.KongLicense {
+	r.chosenLicenseLock.RLock()
+	defer r.chosenLicenseLock.RUnlock()
+	return r.chosenLicense
+}
+
+// ensureControllerStatusProgrammedCondition updates the "programmed" condition
+// in the controller status item managed by the reconciler if required.
+func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCondition(
+	ctx context.Context, license *kongv1alpha1.KongLicense,
+	programmedStatus metav1.ConditionStatus,
+	reason string, message string,
+) error {
+	// Get the latest status of target KongLicense.
+	err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: license.Name}, license)
+	if err != nil {
+		return fmt.Errorf("failed to get latest version of KongLicense %s: %w", license.Name, err)
+	}
+
+	fullControllerName := LicenseControllerType + ":" + r.ControllerName
+	// Find the managed controller status item and append new item when absent.
+	// TODO: check the length limit of controller status list.
+	controllerStatus, controllerIndex, found := lo.FindIndexOf(license.Status.KongLicenseControllerStatuses, func(controllerStatus kongv1alpha1.KongLicenseControllerStatus) bool {
+		return controllerStatus.ControllerName == fullControllerName
+	})
+	if !found {
+		wantedControllerStatus := kongv1alpha1.KongLicenseControllerStatus{
+			ControllerName: fullControllerName,
+			Conditions: []metav1.Condition{
+				{
+					Type:               ConditionTypeProgrammed,
+					LastTransitionTime: metav1.Now(),
+					Status:             programmedStatus,
+					Reason:             reason,
+				},
+			},
+		}
+		license.Status.KongLicenseControllerStatuses = append(license.Status.KongLicenseControllerStatuses, wantedControllerStatus)
+		return r.Client.Status().Update(ctx, license)
+	}
+
+	wantedCondition := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		LastTransitionTime: metav1.Now(),
+		Status:             programmedStatus,
+		Reason:             reason,
+		Message:            message,
+	}
+	// Find the "programmed" condition in the conditions list.
+	// TODO: check the length limit of condition list.
+	programmedCondition, conditionIndex, found := lo.FindIndexOf(controllerStatus.Conditions, func(condition metav1.Condition) bool {
+		return condition.Type == ConditionTypeProgrammed
+	})
+	if !found {
+		license.Status.KongLicenseControllerStatuses[controllerIndex].Conditions = append(
+			license.Status.KongLicenseControllerStatuses[controllerIndex].Conditions, wantedCondition,
+		)
+		return r.Client.Status().Update(ctx, license)
+	}
+	if programmedCondition.Status != programmedStatus {
+		license.Status.KongLicenseControllerStatuses[controllerIndex].Conditions[conditionIndex] = wantedCondition
+		return r.Client.Status().Update(ctx, license)
+	}
+
+	return nil
+}
+
+// GetLicense is the interface to get the license in Kong configuration format to use in translator.
+func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License] {
+	chosenLicense := r.getChosenLicense()
 	if chosenLicense == nil {
-		r.Log.V(util.DebugLevel).Info("No available KongLicenses found in cluster")
+		r.Log.V(util.DebugLevel).Info("No KongLicense available")
 		return mo.None[kong.License]()
 	}
-	// convert chosen KongLicense to kong.License
-	// TODO: validate the license against Kong gateway.
 	r.Log.V(util.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
+	// TODO: Validate KongLicense on Kong gateway.
 	return mo.Some(kong.License{
 		ID:      kong.String(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
 		Payload: kong.String(chosenLicense.RawLicenseString),

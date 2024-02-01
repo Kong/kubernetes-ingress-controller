@@ -314,21 +314,21 @@ func Run(
 		}
 		configTranslator.InjectLicenseGetter(agent)
 	}
-
+	// enable KongLicense controller if license synchornizition from Konnect is disabled.
 	if c.KongLicenseEnabled && !c.Konnect.LicenseSynchronizationEnabled {
 		setupLog.Info("Starting KongLicense controller")
-		licenseController :=
-			&configuration.KongV1Alpha1KongLicenseReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
-				Scheme:           mgr.GetScheme(),
-				LicenseCache:     configuration.NewLicenseCache(),
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				StatusQueue:      kubernetesStatusQueue,
-			}
+		licenseController := &configuration.KongV1Alpha1KongLicenseReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
+			Scheme:           mgr.GetScheme(),
+			LicenseCache:     configuration.NewLicenseCache(),
+			CacheSyncTimeout: c.CacheSyncTimeout,
+			StatusQueue:      kubernetesStatusQueue,
+			ControllerName:   c.LeaderElectionID,
+		}
 		err := licenseController.SetupWithManager(mgr)
 		if err != nil {
-			return fmt.Errorf("failed to start KongLicense controller: %v", err)
+			return fmt.Errorf("failed to start KongLicense controller: %w", err)
 		}
 		configTranslator.InjectLicenseGetter(licenseController)
 	}

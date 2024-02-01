@@ -252,3 +252,9 @@ Please see [TESTING.md](./TESTING.md) for a detailed description of testing KIC.
 ## Releasing
 
 See [RELEASE.md](./RELEASE.md).
+
+## Contributor Badge
+
+If your Pull Request to Kong/kubernetes-ingress-controller was accepted, and it fixes a bug, adds functionality, or makes it significantly easier to use or understand KIC, congratulations! You are eligible to receive a digital Contributor Badge! Go ahead and fill out the [Contributors Submissions form](https://goo.gl/forms/5w6mxLaE4tz2YM0L2).
+
+*Badges expire after 1 year, at which point you may submit a new contribution to renew the badge.* 

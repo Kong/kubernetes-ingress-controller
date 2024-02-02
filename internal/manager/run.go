@@ -326,7 +326,10 @@ func Run(
 			StatusQueue:      kubernetesStatusQueue,
 			ControllerName:   c.LeaderElectionID,
 		}
-		err := licenseController.SetupWithManager(mgr)
+		dynamicLicenseController := configuration.WrapKongLicenseReconcilerToDynamicCRDController(
+			ctx, mgr, licenseController,
+		)
+		err := dynamicLicenseController.SetupWithManager(mgr)
 		if err != nil {
 			return fmt.Errorf("failed to start KongLicense controller: %w", err)
 		}

@@ -19,3 +19,10 @@ func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Co
 	}
 	return ctx
 }
+
+func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+	if !testenv.KongEnterpriseEnabled() {
+		t.Skip("skipping, Kong enterprise is required")
+	}
+	return ctx
+}

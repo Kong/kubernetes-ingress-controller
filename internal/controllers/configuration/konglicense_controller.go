@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -344,4 +345,24 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License]
 		ID:      kong.String(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
 		Payload: kong.String(chosenLicense.RawLicenseString),
 	})
+}
+
+// WrapKongLicenseReconcilerToDynamicCRDController wraps KongLicenseReconciler to DynamicCRDController
+// to watch precense of KongLicense CRD to avoid aborts if KongLicense is not installed when controller initialized.
+// REVIEW: Is there a better way to resolve that?
+func WrapKongLicenseReconcilerToDynamicCRDController(
+	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconciler) *crds.DynamicCRDController {
+	return &crds.DynamicCRDController{
+		Manager:          mgr,
+		Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KongUpstreamPolicy"),
+		CacheSyncTimeout: r.CacheSyncTimeout,
+		RequiredCRDs: []schema.GroupVersionResource{
+			{
+				Group:    kongv1alpha1.GroupVersion.Group,
+				Version:  kongv1alpha1.GroupVersion.Version,
+				Resource: "konglicenses",
+			},
+		},
+		Controller: r,
+	}
 }

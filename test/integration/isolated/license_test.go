@@ -25,7 +25,7 @@ func TestKongLicense(t *testing.T) {
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.Kind, testlabels.KindKongLicense).
-		// TODO: Add a "Skip" condition to enable the run when non-enterprise image used.
+		Setup(SkipIfEnterpriseNotEnabled).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
 		Assess(
 			"Expect No Licenses found before creating KongLicense resource",

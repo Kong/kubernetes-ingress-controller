@@ -3433,6 +3433,8 @@ spec:
           value: /dev/stderr
         - name: KONG_ROUTER_FLAVOR
           value: expressions
+        - name: KONG_UPSTREAM_KEEPALIVE_MAX_REQUESTS
+          value: "1000"
         image: kong/kong-gateway:3.5
         lifecycle:
           preStop:

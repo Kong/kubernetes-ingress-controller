@@ -3445,8 +3445,6 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        - name: KONG_UPSTREAM_KEEPALIVE_MAX_REQUESTS
-          value: "1000"
         image: kong:3.5
         lifecycle:
           preStop:

@@ -34,10 +34,6 @@ spec:
           value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
         - name: KONG_ADMIN_LISTEN
           value: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
-        # Forcing Gateway to not use the same keepalive TCP connection for more than 1000 requests.
-        # Workaround for https://github.com/Kong/kubernetes-ingress-controller/issues/5498.
-        - name: KONG_UPSTREAM_KEEPALIVE_MAX_REQUESTS
-          value: "1000"
         ports:
         - containerPort: 8001
           name: admin

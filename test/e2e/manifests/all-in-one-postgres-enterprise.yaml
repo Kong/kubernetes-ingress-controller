@@ -3357,8 +3357,6 @@ spec:
           value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
         - name: KONG_ADMIN_LISTEN
           value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-        - name: KONG_UPSTREAM_KEEPALIVE_MAX_REQUESTS
-          value: "1000"
         - name: KONG_ROUTER_FLAVOR
           value: traditional_compatible
         - name: KONG_DATABASE

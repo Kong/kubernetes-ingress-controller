@@ -73,10 +73,6 @@ spec:
         # router mode in 3.0.0. use `traditional` here for full compatibility.
         - name: KONG_ROUTER_FLAVOR
           value: expressions
-        # Forcing Gateway to not use the same keepalive TCP connection for more than 1000 requests.
-        # Workaround for https://github.com/Kong/kubernetes-ingress-controller/issues/5498.
-        - name: KONG_UPSTREAM_KEEPALIVE_MAX_REQUESTS
-          value: "1000"
         lifecycle:
           preStop:
             exec:

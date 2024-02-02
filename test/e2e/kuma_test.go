@@ -7,18 +7,21 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kuma"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, env := setupE2ETest(t, kuma.New())
+	ctx, env := setupE2ETest(t, buildKumaAddon(t))
 
 	t.Log("deploying kong components")
 	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
@@ -40,7 +43,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
 
-	ctx, env := setupE2ETest(t, kuma.New())
+	ctx, env := setupE2ETest(t, buildKumaAddon(t))
 
 	t.Log("deploying kong components")
 	deployments := ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
@@ -61,6 +64,21 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyKuma(ctx, t, env)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+}
+
+// buildKumaAddon returns a Kuma addon with mTLS enabled and the version specified in the test dependencies file.
+func buildKumaAddon(t *testing.T) *kuma.Addon {
+	rawKumaVersion, err := testenv.GetDependencyVersion("e2e.kuma")
+	require.NoError(t, err)
+
+	kumaVersion, err := semver.Parse(rawKumaVersion)
+	require.NoError(t, err)
+
+	t.Logf("Installing Kuma addon, version=%s", kumaVersion)
+	return kuma.NewBuilder().
+		WithMTLS().
+		WithVersion(kumaVersion).
+		Build()
 }
 
 func verifyKuma(ctx context.Context, t *testing.T, env environments.Environment) {

@@ -102,6 +102,9 @@ func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPa
 // GetKongLicenses fetches all licenses applied to Kong gateway.
 func GetKongLicenses(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) ([]*kong.License, error) {
 	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
+	if err != nil {
+		return nil, err
+	}
 	kc, err := kong.NewClient(lo.ToPtr(proxyAdminURL.String()), httpClient)
 	if err != nil {
 		return nil, err

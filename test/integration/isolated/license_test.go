@@ -1,3 +1,5 @@
+//go:build integration_tests
+
 package isolated
 
 import (
@@ -28,7 +30,6 @@ func TestKongLicense(t *testing.T) {
 		Assess(
 			"Expect No Licenses found before creating KongLicense resource",
 			func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-
 				adminURL := GetAdminURLFromCtx(ctx)
 				require.NotNil(t, adminURL, "Should get URL to access Kong gateway admin APIs from context")
 				licenses, err := helpers.GetKongLicenses(ctx, adminURL, consts.KongTestPassword)

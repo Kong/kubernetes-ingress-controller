@@ -62,6 +62,8 @@ const (
 	ConditionReasonPickedAsLatest = "PickedAsLatest"
 	// ConditionReasonReplacedByNewer represents that the KongLicense is replaced by other one that is newer.
 	ConditionReasonReplacedByNewer = "ReplacedByNewer"
+	// maxConditionNum is the maximum number of condition items in the controller status.
+	maxConditionNum = 8
 )
 
 var _ controllers.Reconciler = &KongV1Alpha1KongLicenseReconciler{}
@@ -279,7 +281,6 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 
 	fullControllerName := LicenseControllerType + ":" + r.ControllerName
 	// Find the managed controller status item and append new item when absent.
-	// TODO: check the length limit of controller status list.
 	controllerStatus, controllerIndex, found := lo.FindIndexOf(license.Status.KongLicenseControllerStatuses, func(controllerStatus kongv1alpha1.KongLicenseControllerStatus) bool {
 		return controllerStatus.ControllerName == fullControllerName
 	})
@@ -306,12 +307,16 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 		Reason:             reason,
 		Message:            message,
 	}
-	// Find the "programmed" condition in the conditions list.
-	// TODO: check the length limit of condition list.
+	// Find the "programmed" condition in the condition list.
 	programmedCondition, conditionIndex, found := lo.FindIndexOf(controllerStatus.Conditions, func(condition metav1.Condition) bool {
 		return condition.Type == ConditionTypeProgrammed
 	})
 	if !found {
+		// Return error if the number of conditions already reached the limit.
+		if len(license.Status.KongLicenseControllerStatuses) >= maxConditionNum {
+			return fmt.Errorf("already %d condition items in controller status exceeding the limit %d, cannot add new item",
+				len(license.Status.KongLicenseControllerStatuses), maxConditionNum)
+		}
 		license.Status.KongLicenseControllerStatuses[controllerIndex].Conditions = append(
 			license.Status.KongLicenseControllerStatuses[controllerIndex].Conditions, wantedCondition,
 		)

@@ -33,7 +33,7 @@ import (
 // KongLicensesGetter has a method to return a KongLicenseInterface.
 // A group's client should implement this interface.
 type KongLicensesGetter interface {
-	KongLicenses(namespace string) KongLicenseInterface
+	KongLicenses() KongLicenseInterface
 }
 
 // KongLicenseInterface has methods to work with KongLicense resources.
@@ -53,14 +53,12 @@ type KongLicenseInterface interface {
 // kongLicenses implements KongLicenseInterface
 type kongLicenses struct {
 	client rest.Interface
-	ns     string
 }
 
 // newKongLicenses returns a KongLicenses
-func newKongLicenses(c *ConfigurationV1alpha1Client, namespace string) *kongLicenses {
+func newKongLicenses(c *ConfigurationV1alpha1Client) *kongLicenses {
 	return &kongLicenses{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -68,7 +66,6 @@ func newKongLicenses(c *ConfigurationV1alpha1Client, namespace string) *kongLice
 func (c *kongLicenses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KongLicense, err error) {
 	result = &v1alpha1.KongLicense{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -85,7 +82,6 @@ func (c *kongLicenses) List(ctx context.Context, opts v1.ListOptions) (result *v
 	}
 	result = &v1alpha1.KongLicenseList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -102,7 +98,6 @@ func (c *kongLicenses) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -113,7 +108,6 @@ func (c *kongLicenses) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 func (c *kongLicenses) Create(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.CreateOptions) (result *v1alpha1.KongLicense, err error) {
 	result = &v1alpha1.KongLicense{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongLicense).
@@ -126,7 +120,6 @@ func (c *kongLicenses) Create(ctx context.Context, kongLicense *v1alpha1.KongLic
 func (c *kongLicenses) Update(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.UpdateOptions) (result *v1alpha1.KongLicense, err error) {
 	result = &v1alpha1.KongLicense{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		Name(kongLicense.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -141,7 +134,6 @@ func (c *kongLicenses) Update(ctx context.Context, kongLicense *v1alpha1.KongLic
 func (c *kongLicenses) UpdateStatus(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.UpdateOptions) (result *v1alpha1.KongLicense, err error) {
 	result = &v1alpha1.KongLicense{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		Name(kongLicense.Name).
 		SubResource("status").
@@ -155,7 +147,6 @@ func (c *kongLicenses) UpdateStatus(ctx context.Context, kongLicense *v1alpha1.K
 // Delete takes name of the kongLicense and deletes it. Returns an error if one occurs.
 func (c *kongLicenses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		Name(name).
 		Body(&opts).
@@ -170,7 +161,6 @@ func (c *kongLicenses) DeleteCollection(ctx context.Context, opts v1.DeleteOptio
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("konglicenses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -183,7 +173,6 @@ func (c *kongLicenses) DeleteCollection(ctx context.Context, opts v1.DeleteOptio
 func (c *kongLicenses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongLicense, err error) {
 	result = &v1alpha1.KongLicense{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("konglicenses").
 		Name(name).
 		SubResource(subresources...).

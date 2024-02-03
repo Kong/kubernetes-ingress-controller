@@ -7,12 +7,14 @@ on:
 
 jobs:
   ensure-nightly-image-was-built:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
       - name: Check if image built this night exists
         run: docker pull kong/nightly-ingress-controller:$(date +%Y-%m-%d)
 
   e2e-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs: ensure-nightly-image-was-built
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
@@ -23,6 +25,7 @@ jobs:
       run-istio: true
 
   e2e-tests-unreleased-kong:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs: ensure-nightly-image-was-built
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
@@ -41,6 +44,7 @@ jobs:
       run-istio: false
 
   integration-tests-unreleased-kong:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
     with:
@@ -53,6 +57,7 @@ jobs:
       log-output-file:  /tmp/integration-tests-kic-logs
 
   test-reports:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs:
       - e2e-tests
       - e2e-tests-unreleased-kong
@@ -63,6 +68,7 @@ jobs:
       coverage: false # E2E tests do not generate coverage reports
 
   notify-on-slack:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs:
       - ensure-nightly-image-was-built

@@ -24,16 +24,19 @@ on:
         type: boolean
         default: false
       run-gke:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
         description: Run E2E tests on GKE as well as on Kind.
         type: boolean
         default: false
       run-istio:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
         description: Run Istio E2E tests.
         type: boolean
         default: false
 
 jobs:
   setup-e2e-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     outputs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
@@ -71,9 +74,11 @@ jobs:
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
 
   dependencies-versions:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     outputs:
-      kind: ${{ steps.set-versions.outputs.kind }}
+      kind:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }} ${{ steps.set-versions.outputs.kind }}
       gke: ${{ steps.set-versions.outputs.gke }}
       istio: ${{ steps.set-versions.outputs.istio }}
     steps:

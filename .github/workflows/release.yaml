@@ -20,6 +20,7 @@ on:
 
 jobs:
   verify-manifest-tag:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     outputs:
       fullversion_tag: ${{ steps.semver_parser.outputs.fullversion }}
@@ -53,6 +54,7 @@ jobs:
         run: make verify.versions
 
   build-push-images:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     environment: 'Docker Push'
     needs: verify-manifest-tag
     runs-on: ubuntu-latest
@@ -133,6 +135,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
 
   test-e2e:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs: [verify-manifest-tag, build-push-images]
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
@@ -141,6 +144,7 @@ jobs:
       all-supported-k8s-versions: true
 
   publish-release:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs: [build-push-images, test-e2e]
     steps:
@@ -171,6 +175,7 @@ jobs:
         makeLatest: ${{ github.event.inputs.latest == 'true' }}
 
   update-latest-branch:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     if: github.event.inputs.latest == 'true'
     needs:

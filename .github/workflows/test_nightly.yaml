@@ -25,6 +25,7 @@ env:
 
 jobs:
   post-comment-in-pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: (contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch') && github.event.pull_request.number != ''
     runs-on: ubuntu-latest
     env:
@@ -43,6 +44,7 @@ jobs:
           gh pr edit ${PR_NUMBER} --remove-label ci/run-nightly
 
   integration-tests-enterprise-postgres-nightly:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -89,6 +91,7 @@ jobs:
         if-no-files-found: ignore
 
   integration-tests-enterprise-dbless-nightly:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -134,6 +137,7 @@ jobs:
         if-no-files-found: ignore
 
   integration-tests-postgres-nightly:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -170,6 +174,7 @@ jobs:
         if-no-files-found: ignore
 
   integration-tests-dbless-nightly:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:

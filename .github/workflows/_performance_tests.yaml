@@ -26,6 +26,7 @@ on:
 
 jobs:
   performance:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

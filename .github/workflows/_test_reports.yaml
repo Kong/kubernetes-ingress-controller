@@ -8,6 +8,7 @@ on:
   workflow_call:
     inputs:
       coverage:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
         description: Whether to upload coverage to Codecov.
         type: boolean
         default: true
@@ -43,6 +44,7 @@ jobs:
           verbose: true
 
   buildpulse-report:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ inputs.buildpulse && !cancelled() }}
     runs-on: ubuntu-latest
     steps:

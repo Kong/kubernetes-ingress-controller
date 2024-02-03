@@ -25,6 +25,7 @@ on:
 
 jobs:
   post-comment-in-pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ github.event.inputs.pr-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -36,7 +37,8 @@ jobs:
       RES_NUM: ${{ inputs.res-number-for-perf }}
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - run:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }} |
           MSG="performance (targeted) tests with KIND-based clusters were started at ${URL} the number of test resources is ${RES_NUM}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
       # Remove the 'ci/run-performance' label from the PR to prevent the `performance_trigger_via_label.yaml`
@@ -44,6 +46,7 @@ jobs:
       - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-performance
 
   build-image:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ inputs.controller-image == '' }}
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit
@@ -51,6 +54,7 @@ jobs:
   # We need to pick an image to use for the tests. If the input specified one, we use that. Otherwise, we use the one
   # built by the previous job.
   choose-image:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs: build-image
@@ -80,6 +84,7 @@ jobs:
       res-number-for-perf: ${{ inputs.res-number-for-perf }}
 
   test-reports:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs: run
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit

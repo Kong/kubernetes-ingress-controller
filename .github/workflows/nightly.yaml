@@ -7,6 +7,7 @@ on:
 
 jobs:
   build-push-images:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     environment: 'Docker Push'
     runs-on: ubuntu-latest
     steps:

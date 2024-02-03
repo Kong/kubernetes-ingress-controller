@@ -33,6 +33,7 @@ on:
 
 jobs:
   post-comment-in-pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ github.event.inputs.pr-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -44,7 +45,8 @@ jobs:
       RUN_GKE: ${{ inputs.run-gke }}
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - run:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }} |
           if [ "${RUN_GKE}" == "true" ]; then
             MSG="E2E (targeted) tests with KIND-based and GKE-based clusters were started at ${URL}"
           else
@@ -56,6 +58,7 @@ jobs:
       - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
 
   build-image:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ inputs.controller-image == '' }}
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit
@@ -63,6 +66,7 @@ jobs:
   # We need to pick an image to use for the tests. If the input specified one, we use that. Otherwise, we use the one
   # built by the previous job.
   choose-image:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs: build-image
@@ -94,6 +98,7 @@ jobs:
       all-supported-k8s-versions: ${{ inputs.all-supported-k8s-versions }}
 
   run-unreleased-kong:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs: choose-image
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/_e2e_tests.yaml
@@ -110,6 +115,7 @@ jobs:
       run-istio: false
 
   test-reports:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs: run
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit

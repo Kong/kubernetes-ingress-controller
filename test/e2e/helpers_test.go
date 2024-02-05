@@ -417,6 +417,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		// Ref: https://github.com/Kong/kubernetes-ingress-controller/issues/5498
 		service.Spec.Ports[i].AppProtocol = lo.ToPtr("http")
 	}
+
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {

@@ -145,14 +145,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 				}
 
 				// Then pick the effective license in KongLicenses remaining in cache.
-				chosenLicense := r.pickLicenseInCache()
-				r.setChosenLicense(chosenLicense)
-				if chosenLicense != nil {
-					log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
-					err := r.ensureControllerStatusProgrammedCondition(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
-					if err != nil {
-						return ctrl.Result{}, err
-					}
+				if err := r.repickLicenseOnDelete(ctx, obj); err != nil {
+					return ctrl.Result{}, err
 				}
 			}
 			return ctrl.Result{}, nil
@@ -176,14 +170,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 			}
 
 			// Then pick the effective license in KongLicenses remaining in cache.
-			chosenLicense := r.pickLicenseInCache()
-			r.setChosenLicense(chosenLicense)
-			if chosenLicense != nil {
-				log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
-				err := r.ensureControllerStatusProgrammedCondition(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
-				if err != nil {
-					return ctrl.Result{}, err
-				}
+			if err := r.repickLicenseOnDelete(ctx, obj); err != nil {
+				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
@@ -217,6 +205,25 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 
 	return ctrl.Result{}, nil
 }
+
+// GetLicense is the interface to get the license in Kong configuration format to use in translator.
+func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License] {
+	chosenLicense := r.getChosenLicense()
+	if chosenLicense == nil {
+		r.Log.V(util.DebugLevel).Info("No KongLicense available")
+		return mo.None[kong.License]()
+	}
+	r.Log.V(util.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
+	// TODO: Validate KongLicense on Kong gateway.
+	return mo.Some(kong.License{
+		ID:      kong.String(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
+		Payload: kong.String(chosenLicense.RawLicenseString),
+	})
+}
+
+// -----------------------------------------------------------------------------
+// KongV1Alpha1 KongLicense - Private Methods of Reconciler
+// -----------------------------------------------------------------------------
 
 func isKongLicenseEnabled(obj client.Object) bool {
 	kongLicense, ok := obj.(*kongv1alpha1.KongLicense)
@@ -254,6 +261,12 @@ func (r *KongV1Alpha1KongLicenseReconciler) pickLicenseInCache() *kongv1alpha1.K
 	return chosenLicense
 }
 
+// fullControllerName returns the full controllerName used in the controller status item
+// combined with constant type and reconciler's own controller name.
+func (r *KongV1Alpha1KongLicenseReconciler) fullControllerName() string {
+	return LicenseControllerType + "/" + r.ControllerName
+}
+
 // setChosenLicense sets the chosen effective KongLicense copy in the cache.
 func (r *KongV1Alpha1KongLicenseReconciler) setChosenLicense(l *kongv1alpha1.KongLicense) {
 	r.chosenLicenseLock.Lock()
@@ -266,6 +279,20 @@ func (r *KongV1Alpha1KongLicenseReconciler) getChosenLicense() *kongv1alpha1.Kon
 	r.chosenLicenseLock.RLock()
 	defer r.chosenLicenseLock.RUnlock()
 	return r.chosenLicense
+}
+
+func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Context, deletedLicense *kongv1alpha1.KongLicense) error {
+	oldChosenLicense := r.getChosenLicense()
+	// Trigger a repick of license if the originally chosen license is deleted.
+	if oldChosenLicense.Name == deletedLicense.Name {
+		chosenLicense := r.pickLicenseInCache()
+		r.setChosenLicense(chosenLicense)
+		if chosenLicense != nil {
+			r.Log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
+			return r.ensureControllerStatusProgrammedCondition(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
+		}
+	}
+	return nil
 }
 
 // ensureControllerStatusProgrammedCondition updates the "programmed" condition
@@ -281,7 +308,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 		return fmt.Errorf("failed to get latest version of KongLicense %s: %w", license.Name, err)
 	}
 
-	fullControllerName := LicenseControllerType + ":" + r.ControllerName
+	fullControllerName := r.fullControllerName()
 	// Find the managed controller status item and append new item when absent.
 	controllerStatus, controllerIndex, found := lo.FindIndexOf(license.Status.KongLicenseControllerStatuses, func(controllerStatus kongv1alpha1.KongLicenseControllerStatus) bool {
 		return controllerStatus.ControllerName == fullControllerName
@@ -332,26 +359,12 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 	return nil
 }
 
-// GetLicense is the interface to get the license in Kong configuration format to use in translator.
-func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License] {
-	chosenLicense := r.getChosenLicense()
-	if chosenLicense == nil {
-		r.Log.V(util.DebugLevel).Info("No KongLicense available")
-		return mo.None[kong.License]()
-	}
-	r.Log.V(util.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
-	// TODO: Validate KongLicense on Kong gateway.
-	return mo.Some(kong.License{
-		ID:      kong.String(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
-		Payload: kong.String(chosenLicense.RawLicenseString),
-	})
-}
-
 // WrapKongLicenseReconcilerToDynamicCRDController wraps KongLicenseReconciler to DynamicCRDController
 // to watch precense of KongLicense CRD to avoid aborts if KongLicense is not installed when controller initialized.
 // REVIEW: Is there a better way to resolve that?
 func WrapKongLicenseReconcilerToDynamicCRDController(
-	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconciler) *crds.DynamicCRDController {
+	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconciler,
+) *crds.DynamicCRDController {
 	return &crds.DynamicCRDController{
 		Manager:          mgr,
 		Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KongUpstreamPolicy"),

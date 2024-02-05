@@ -265,6 +265,8 @@ github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161102-891d46eaef
 github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161102-891d46eaef6f/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
 github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161743-711ae3966c1b h1:boBmxgZ1Ay/fhEyz7YUmFFO5U7qVbb97iJwfgM3FNtk=
 github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161743-711ae3966c1b/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
+github.com/kong/kubernetes-testing-framework v0.44.1-0.20240205140522-212122cacfa5 h1:nSgV3SzFAQsom2g0EO6uLfhnETsszML6GdzO8j/ttwQ=
+github.com/kong/kubernetes-testing-framework v0.44.1-0.20240205140522-212122cacfa5/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=

@@ -18,8 +18,7 @@ import (
 
 func NewKumaAddon() *kuma.Addon {
 	return kuma.NewBuilder().
-		WithMTLS().
-		WithVersion(semver.MustParse("2.5.1")).
+		WithVersion(semver.MustParse("2.6.0")).
 		Build()
 }
 

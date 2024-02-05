@@ -259,14 +259,8 @@ github.com/kong/go-kong v0.51.1-0.20240125175037-0c077f5b9ac7 h1:/iV93Gwv410lIeJ
 github.com/kong/go-kong v0.51.1-0.20240125175037-0c077f5b9ac7/go.mod h1:YNkLvjxfOqS+BZ1J2YWOy/83wc26JM5QJbAukoeg1sY=
 github.com/kong/kubernetes-telemetry v0.1.3 h1:Hz2tkHGIIUqbn1x46QRDmmNjbEtJyxyOvHSPne3uPto=
 github.com/kong/kubernetes-telemetry v0.1.3/go.mod h1:wB7o8dOKa5R396CyiU0sPa8am/g3c5DKd/qrn/Vmb+k=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202145146-bfaba2de4ca0 h1:E2x6ZjxqzsfZrtBbEYEGuW62bw7d5A61C1NcEmTGcEc=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202145146-bfaba2de4ca0/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161102-891d46eaef6f h1:pGecga5/RPhm+/MHtP44fKNT5HfAc3VQG1o9OkbuB4U=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161102-891d46eaef6f/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161743-711ae3966c1b h1:boBmxgZ1Ay/fhEyz7YUmFFO5U7qVbb97iJwfgM3FNtk=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240202161743-711ae3966c1b/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240205140522-212122cacfa5 h1:nSgV3SzFAQsom2g0EO6uLfhnETsszML6GdzO8j/ttwQ=
-github.com/kong/kubernetes-testing-framework v0.44.1-0.20240205140522-212122cacfa5/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
+github.com/kong/kubernetes-testing-framework v0.44.1-0.20240205142508-67728343fd9d h1:cacVtkZkeePd6lxwlScIKpWjijCJDqwHc/OLaQ8lfCs=
+github.com/kong/kubernetes-testing-framework v0.44.1-0.20240205142508-67728343fd9d/go.mod h1:5sfsKs6kF3UiVkQWI8TrX5ZrOTWw6sv/lSVs5JaMJ40=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=

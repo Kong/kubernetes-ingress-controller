@@ -34,6 +34,9 @@ e2e:
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.17.8'
 
+  # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
+  kuma: '2.6.0'
+
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm

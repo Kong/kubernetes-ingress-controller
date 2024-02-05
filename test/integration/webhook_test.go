@@ -36,10 +36,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
-// extraWebhookNamespace is an additional namespace used by tests when needing
-// to run tests that need multiple namespaces.
-const extraWebhookNamespace = "webhookextra"
-
 // highEndConsumerUsageCount indicates a number of consumers with credentials
 // that we consider a large number and is used to generate background
 // consumers for testing validation (since validation relies on listing all
@@ -50,21 +46,18 @@ func TestValidationWebhook(t *testing.T) {
 	ctx := context.Background()
 
 	t.Parallel()
-	ns := helpers.Namespace(ctx, t, env)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
 	t.Log("creating an extra namespace for testing global consumer credentials validation")
-	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), extraWebhookNamespace))
-	defer func() {
-		if err := env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, extraWebhookNamespace, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	extraWebhookNamespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	require.NoError(t, err)
+	cleaner.AddNamespace(extraWebhookNamespace)
+	extraWebhookNamespaceName := extraWebhookNamespace.Name
 
 	ensureAdmissionRegistration(
 		ctx,
@@ -136,15 +129,9 @@ func TestValidationWebhook(t *testing.T) {
 					"password":     "testpass",
 				},
 			}
-			_, err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Create(ctx, credential, metav1.CreateOptions{})
+			credSecret, err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespaceName).Create(ctx, credential, metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer func() {
-				if err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
-					if !apierrors.IsNotFound(err) {
-						assert.NoError(t, err)
-					}
-				}
-			}()
+			cleaner.Add(credSecret)
 		}
 	}
 
@@ -167,20 +154,15 @@ func TestValidationWebhook(t *testing.T) {
 			consumer.Credentials = append(consumer.Credentials, credentialName)
 		}
 		assert.Eventually(t, func() bool {
-			_, err = kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Create(ctx, consumer, metav1.CreateOptions{})
+			created, err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespaceName).Create(ctx, consumer, metav1.CreateOptions{})
 			if err != nil {
 				t.Logf("Failed to create consumer, will retry: %s", err)
+				return false
 			}
-			return err == nil
+			cleaner.Add(created)
+			return true
 		}, time.Second*10, time.Second*1)
 		require.NoError(t, err)
-		defer func() {
-			if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumerName, metav1.DeleteOptions{}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					assert.NoError(t, err)
-				}
-			}
-		}()
 	}
 
 	t.Log("creating some static credentials in an extra namespace which will be used to test global validation")
@@ -206,16 +188,9 @@ func TestValidationWebhook(t *testing.T) {
 			},
 		},
 	} {
-		secret, err = env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Create(ctx, secret, metav1.CreateOptions{})
+		secret, err = env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
 		require.NoError(t, err)
-		secretName := secret.Name
-		defer func() {
-			if err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Delete(ctx, secretName, metav1.DeleteOptions{}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					assert.NoError(t, err)
-				}
-			}
-		}()
+		cleaner.Add(secret)
 	}
 
 	t.Log("creating a static consumer in an extra namespace which will be used to test global validation")
@@ -234,15 +209,9 @@ func TestValidationWebhook(t *testing.T) {
 			"tuxcreds2",
 		},
 	}
-	consumer, err = kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Create(ctx, consumer, metav1.CreateOptions{})
+	consumer, err = kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespaceName).Create(ctx, consumer, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumer.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(consumer)
 
 	t.Log("testing consumer credentials validation")
 	for _, tt := range []struct {
@@ -455,23 +424,8 @@ func TestValidationWebhook(t *testing.T) {
 			for _, credential := range tt.credentials {
 				credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})
 				require.NoError(t, err)
-				credentialName := credential.Name
-				defer func() {
-					if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
-						if !apierrors.IsNotFound(err) {
-							assert.NoError(t, err)
-						}
-					}
-				}()
+				cleaner.Add(credential)
 			}
-
-			defer func() {
-				if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, tt.consumer.Name, metav1.DeleteOptions{}); err != nil {
-					if !apierrors.IsNotFound(err) {
-						assert.NoError(t, err)
-					}
-				}
-			}()
 
 			consumer, err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, tt.consumer, metav1.CreateOptions{})
 			if tt.wantErr {
@@ -480,6 +434,7 @@ func TestValidationWebhook(t *testing.T) {
 					"got error string %q, want a superstring of %q", err.Error(), tt.wantPartialErr)
 			} else {
 				require.NoError(t, err, fmt.Sprintf("consumer %s should create successfully", consumer.Name))
+				cleaner.Add(consumer)
 			}
 		})
 	}
@@ -527,13 +482,7 @@ func TestValidationWebhook(t *testing.T) {
 	}
 	validConsumerLinkedToValidCredentials, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToValidCredentials, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(validConsumerLinkedToValidCredentials)
 
 	t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
 	validCredential.Data["value"] = []byte("newpassword")
@@ -703,14 +652,12 @@ func TestValidationWebhook(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
+			createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
 			require.NoError(t, err)
-			_, err = kongClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, tt.KongPlugin, metav1.CreateOptions{})
+			cleaner.Add(createdSecret)
+			createdPlugin, err := kongClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, tt.KongPlugin, metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer func() {
-				err := kongClient.ConfigurationV1().KongPlugins(ns.Name).Delete(ctx, tt.KongPlugin.Name, metav1.DeleteOptions{})
-				require.NoError(t, err)
-			}()
+			cleaner.Add(createdPlugin)
 
 			_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, tt.secretAfter, metav1.UpdateOptions{})
 			if tt.errorOnUpdate {
@@ -904,14 +851,12 @@ func TestValidationWebhook(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
+			createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
 			require.NoError(t, err)
-			_, err = kongClient.ConfigurationV1().KongClusterPlugins().Create(ctx, tt.kongClusterPlugin, metav1.CreateOptions{})
+			cleaner.Add(createdSecret)
+			createdKCP, err := kongClient.ConfigurationV1().KongClusterPlugins().Create(ctx, tt.kongClusterPlugin, metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer func() {
-				err := kongClient.ConfigurationV1().KongClusterPlugins().Delete(ctx, tt.kongClusterPlugin.Name, metav1.DeleteOptions{})
-				require.NoError(t, err)
-			}()
+			cleaner.Add(createdKCP)
 
 			_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, tt.secretAfter, metav1.UpdateOptions{})
 			if tt.errorOnUpdate {
@@ -1114,6 +1059,7 @@ func ensureAdmissionRegistration(ctx context.Context, t *testing.T, namespace, c
 				{
 					Name:                    "validations.kong.konghq.com",
 					FailurePolicy:           lo.ToPtr(admregv1.Ignore),
+					TimeoutSeconds:          lo.ToPtr(int32(30)),
 					SideEffects:             lo.ToPtr(admregv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					Rules:                   rules,

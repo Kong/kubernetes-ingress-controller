@@ -83,7 +83,6 @@ func kongLicenseKeyFunc(obj interface{}) (string, error) {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// TODO: it fails when KongLicense CRD is absent. How should we fix it? By wrapping with DynamicCRDController?
 	c, err := controller.New("KongV1Alpha1KongLicense", mgr, controller.Options{
 		Reconciler: r,
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {

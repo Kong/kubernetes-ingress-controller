@@ -66,6 +66,13 @@ func TestKongLicenseController(t *testing.T) {
 	}, waitTime, tickTime, "The Programmed condition in controller status should be true")
 
 	t.Log("Wait for a second and create a new KongLicense, then verify it replaces the old one")
+	// We're waiting specifically for 1 second because Kubernetes object's CreationTimestamp is stored with a seconds-level
+	// precision. If we create the new KongLicense immediately after the old one, the CreationTimestamps will be the same
+	// and the controller will not pick up the new one as the latest.
+	// The controller should always pick up only a single KongLicense with the latest CreationTimestamp to be used for
+	// configuring Gateways. That one KongLicense should have Programmed condition set to true, while all others should
+	// have it set to false.
+	// CreationTimestamp precision upstream issue: https://github.com/kubernetes/kubernetes/issues/81026
 	time.Sleep(time.Second)
 	kongLicense2 := &kongv1alpha1.KongLicense{
 		ObjectMeta: metav1.ObjectMeta{

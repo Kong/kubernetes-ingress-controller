@@ -152,6 +152,7 @@ jobs:
             echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=${kong_ee_tag}" >> $GITHUB_ENV
             echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}" >> $GITHUB_ENV
+            echo "TEST_KONG_ENTERPRISE=true" >> $GITHUB_ENV
           else
             echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=${kong_oss_tag}" >> $GITHUB_ENV

@@ -24,12 +24,9 @@ spec:
       name: Age
       type: date
     - description: Enabled to configure on Kong gateway instances
-      jsonPath: .Enabled
+      jsonPath: .enabled
       name: Enabled
       type: boolean
-    - jsonPath: .status.conditions[?(@.type=="Programmed")].status
-      name: Programmed
-      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

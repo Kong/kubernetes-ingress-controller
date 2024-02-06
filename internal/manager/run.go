@@ -30,9 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
@@ -290,28 +288,22 @@ func Run(
 		}
 	}
 
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
-	// This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
-	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but
-	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
-	// the client and makes it available to all Konnect-related subsystems.
-	if c.Konnect.LicenseSynchronizationEnabled {
-		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect)
-		if err != nil {
-			return fmt.Errorf("failed creating konnect client: %w", err)
-		}
-		setupLog.Info("Starting license agent")
-		agent := license.NewAgent(
-			konnectLicenseAPIClient,
-			ctrl.LoggerFrom(ctx).WithName("license-agent"),
-			license.WithInitialPollingPeriod(c.Konnect.InitialLicensePollingPeriod),
-			license.WithPollingPeriod(c.Konnect.LicensePollingPeriod),
-		)
-		err = mgr.Add(agent)
-		if err != nil {
-			return fmt.Errorf("could not add license agent to manager: %w", err)
-		}
-		configTranslator.InjectLicenseGetter(agent)
+	// Setup and inject license getter.
+	licenseGetter, err := setupLicenseGetter(
+		ctx,
+		c,
+		setupLog,
+		mgr,
+		kubernetesStatusQueue,
+	)
+	if err != nil {
+		setupLog.Error(err, "Failed to create a license getter from configuration")
+		return err
+	}
+	if licenseGetter != nil {
+		setupLog.Info("Inject license getter to config translator",
+			"license_getter_type", fmt.Sprintf("%T", licenseGetter))
+		configTranslator.InjectLicenseGetter(licenseGetter)
 	}
 
 	if c.AnonymousReports {

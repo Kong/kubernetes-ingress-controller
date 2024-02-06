@@ -167,8 +167,14 @@ Adding a new version? You'll need three changes:
   sourced from a Secret (i.e. `configFrom` or `configPatches` is used).
   [#5495](https://github.com/Kong/kubernetes-ingress-controller/pull/5495)
 - New CRD `KongLicense` to represent a Kong enterprise license to apply to
-  managed Kong gateway enterprise instances.
+  managed Kong gateway enterprise instances. The `Enabled` field of `KongLicense`
+  (set to `True` if not present) need to be set to true to get reconciled.
+  If there are multiple `KongLicense`s in the cluster, the newest one
+  (with latest `metadata.creationTimestamp`) is chosen. The `KongLicense`
+  controller is disabled when synchoroniztion of license with Konnect is turned
+  on. When sync license with Konnect is turned on, licenses from Konnect are used.  
   [#5487](https://github.com/Kong/kubernetes-ingress-controller/pull/5487)
+  [#5514](https://github.com/Kong/kubernetes-ingress-controller/pull/5514)
 
 ### Fixed
 

@@ -42,8 +42,8 @@ func (c *ConfigurationV1alpha1Client) IngressClassParameterses(namespace string)
 	return newIngressClassParameterses(c, namespace)
 }
 
-func (c *ConfigurationV1alpha1Client) KongLicenses(namespace string) KongLicenseInterface {
-	return newKongLicenses(c, namespace)
+func (c *ConfigurationV1alpha1Client) KongLicenses() KongLicenseInterface {
+	return newKongLicenses(c)
 }
 
 func (c *ConfigurationV1alpha1Client) KongVaults() KongVaultInterface {

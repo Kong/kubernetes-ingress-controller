@@ -108,7 +108,6 @@ func TestKongLicenseController(t *testing.T) {
 		return findConditionInControllerStatus(
 			kongLicense1, fullControllerName, conditionProgrammed, metav1.ConditionTrue)
 	}, waitTime, tickTime, "The Programmed condition in controller status should be back to true after the new one deleted")
-
 }
 
 func findConditionInControllerStatus(

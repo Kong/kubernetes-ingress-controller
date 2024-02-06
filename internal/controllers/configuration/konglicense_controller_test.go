@@ -116,7 +116,7 @@ func TestKongLicenseController_pickLicense(t *testing.T) {
 			if tc.expectedNil {
 				require.Nil(t, chosenLicense, "Should get no license")
 			} else {
-				require.NotNil(t, chosenLicense, "Should return an availble license")
+				require.NotNil(t, chosenLicense, "Should return an available license")
 				require.Equal(t, tc.chosenLicenseName, chosenLicense.Name,
 					"Should choose expected KongLicense")
 			}

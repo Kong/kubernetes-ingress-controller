@@ -83,6 +83,11 @@ func (t *Translator) ingressRulesFromHTTPRoute(result *ingressRules, httproute *
 			service.Routes = append(service.Routes, routes...)
 		}
 
+		// translate rewrite uri based routes when RewriteURIs is enabled.
+		if err := subtranslator.MaybeRewriteURI(&service, t.featureFlags.RewriteURIs); err != nil {
+			return err
+		}
+
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service
 		result.ServiceNameToParent[serviceName] = httproute

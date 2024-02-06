@@ -1772,6 +1772,142 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	}
 }
 
+func TestIngressRulesFromHTTPRoutes_Rewrite(t *testing.T) {
+	for _, tt := range []testCaseIngressRulesFromHTTPRoutes{
+		{
+			msg: "a single HTTPRoute with a rewrite annotation",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-httproute",
+						Namespace: corev1.NamespaceDefault,
+						Annotations: map[string]string{
+							"konghq.com/rewrite": "replace.uri-$1",
+						},
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayapi.HTTPRouteRule{{
+							Matches: []gatewayapi.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathRegex("/(.*)").Build(),
+							},
+							BackendRefs: []gatewayapi.HTTPBackendRef{{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: gatewayapi.ObjectName("fake-service"),
+										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+										Kind: util.StringToGatewayAPIKindPtr("Service"),
+									},
+								},
+							}},
+						}},
+					},
+				},
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: corev1.NamespaceDefault,
+							Name:      "fake-service",
+						},
+					},
+				},
+			},
+			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.basic-httproute.0": routes[0],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.basic-httproute.0": {
+							Service: kong.Service{ // only 1 service should be created
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.basic-httproute.0"),
+								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
+							},
+							Namespace: "default",
+							Routes: []kongstate.Route{{ // only 1 route should be created
+								Route: kong.Route{
+									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										kong.String("~/(.*)"),
+									},
+									PreserveHost: kong.Bool(true),
+									Protocols: []*string{
+										kong.String("http"),
+										kong.String("https"),
+									},
+									StripPath: lo.ToPtr(false),
+									Tags: []*string{
+										kong.String("k8s-name:basic-httproute"),
+										kong.String("k8s-namespace:default"),
+										kong.String("k8s-kind:HTTPRoute"),
+										kong.String("k8s-group:gateway.networking.k8s.io"),
+										kong.String("k8s-version:v1beta1"),
+									},
+								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Plugins: []kong.Plugin{
+									{
+										Name: kong.String("request-transformer"),
+										Config: kong.Configuration{
+											"replace": map[string]string{
+												"uri": "replace.uri-$(uri_captures[1])",
+											},
+										},
+									},
+								},
+							}},
+							Parent: routes[0],
+						},
+					},
+				}
+			},
+		},
+	} {
+		withTranslator := func(tran *Translator) func(t *testing.T) {
+			return func(t *testing.T) {
+				ingressRules := newIngressRules()
+
+				var errs []error
+				for _, httproute := range tt.routes {
+					// initialize the HTTPRoute object
+					httproute.SetGroupVersionKind(httprouteGVK)
+
+					// generate the ingress rules
+					err := tran.ingressRulesFromHTTPRoute(&ingressRules, httproute)
+					if err != nil {
+						errs = append(errs, err)
+					}
+				}
+
+				// verify that we receive the expected values
+				expectedIngressRules := tt.expected(tt.routes)
+				assert.Equal(t, expectedIngressRules, ingressRules)
+
+				// verify that we receive any and all expected errors
+				assert.Equal(t, tt.errs, errs)
+			}
+		}
+
+		fakestore, err := store.NewFakeStore(tt.storeObjects)
+		require.NoError(t, err)
+		translator := mustNewTranslator(t, fakestore)
+		translator.featureFlags.RewriteURIs = true
+
+		t.Run(tt.msg+" using translator", withTranslator(translator))
+	}
+}
+
 func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.GroupVersion.String()}
 

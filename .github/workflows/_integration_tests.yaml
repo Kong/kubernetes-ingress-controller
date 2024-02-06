@@ -119,13 +119,16 @@ jobs:
             router-flavor: 'traditional'
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
           # Experimental tests, in the future all integration tests will be migrated to them.
+          # Set enterprise to 'true' to enable isolated integration test cases requiring enterprise features.
           - name: isolated-dbless
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"
+            enterprise: true
           - name: isolated-dbless-expression-router
             router-flavor: expressions
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"
+            enterprise: true
 
     steps:
       - uses: Kong/kong-license@master

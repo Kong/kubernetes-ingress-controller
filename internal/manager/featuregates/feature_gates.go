@@ -67,6 +67,6 @@ func GetFeatureGatesDefaults() FeatureGates {
 		FillIDsFeature:             true,
 		RewriteURIsFeature:         false,
 		KongServiceFacade:          false,
-		SanitizeKonnectConfigDumps: false,
+		SanitizeKonnectConfigDumps: true,
 	}
 }

@@ -161,8 +161,10 @@ Adding a new version? You'll need three changes:
   to Konnect.
   [#5453](https://github.com/Kong/kubernetes-ingress-controller/pull/5453)
 - Added `SanitizeKonnectConfigDumps` feature gate allowing to enable sanitizing
-  sensitive data in Konnect configuration dumps.
+  sensitive data (like TLS private keys, Secret-sourced Plugins configuration, etc.) 
+  in Konnect configuration dumps. It's turned on by default.
   [#5489](https://github.com/Kong/kubernetes-ingress-controller/pull/5489)
+  [#5573](https://github.com/Kong/kubernetes-ingress-controller/pull/5573)
 - Kong Plugin's `config` field now is sanitized when it contains sensitive data
   sourced from a Secret (i.e. `configFrom` or `configPatches` is used).
   [#5495](https://github.com/Kong/kubernetes-ingress-controller/pull/5495)

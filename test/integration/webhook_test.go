@@ -1115,6 +1115,7 @@ func ensureAdmissionRegistration(ctx context.Context, t *testing.T, namespace, c
 					Name:                    "validations.kong.konghq.com",
 					FailurePolicy:           lo.ToPtr(admregv1.Ignore),
 					SideEffects:             lo.ToPtr(admregv1.SideEffectClassNone),
+					TimeoutSeconds:          lo.ToPtr(int32(30)),
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					Rules:                   rules,
 					ClientConfig: admregv1.WebhookClientConfig{

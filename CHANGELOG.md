@@ -82,6 +82,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Added
+
+- Add the RewriteURIs functionality to HTTPRoutes by reusing the code used for Ingress by using `konghq.com/rewrite`.
+  Feature gate RewriteURIs still required.
+  [#5576](https://github.com/Kong/kubernetes-ingress-controller/pull/5576)
+
 ## [3.1.0]
 
 > Release date: 2024-02-07

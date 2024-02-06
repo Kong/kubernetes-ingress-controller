@@ -213,7 +213,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License]
 		return mo.None[kong.License]()
 	}
 	r.Log.V(util.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
-	// TODO: Validate KongLicense on Kong gateway.
+	// TODO: Validate KongLicense on Kong gateway:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5566
 	return mo.Some(kong.License{
 		ID:      kong.String(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
 		Payload: kong.String(chosenLicense.RawLicenseString),
@@ -360,7 +361,6 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 
 // WrapKongLicenseReconcilerToDynamicCRDController wraps KongLicenseReconciler to DynamicCRDController
 // to watch precense of KongLicense CRD to avoid aborts if KongLicense is not installed when controller initialized.
-// REVIEW: Is there a better way to resolve that?
 func WrapKongLicenseReconcilerToDynamicCRDController(
 	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconciler,
 ) *crds.DynamicCRDController {

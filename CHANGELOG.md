@@ -90,7 +90,7 @@ Adding a new version? You'll need three changes:
 
 - 🔒 Kong Gateway's [secret vaults](kong-vault) now become a first-class citizen for Kubernetes users
   thanks to the new `KongVault` CRD.
-- 🔒 Providing Enterprise license to KIC-managed Kong Gateways becomes much easier thanks to the new `KongLicense` CRD
+- 🔒 Providing an Enterprise license to KIC-managed Kong Gateways becomes much easier thanks to the new `KongLicense` CRD
   which is used to dynamically provision all the replicas with the latest license found in the cluster.
 - ✨ Populating a single field of `KongPlugin`'s configuration with use of a Kubernetes Secret becomes possible thanks 
   to the new `KongPlugin`'s `configPatches` field.

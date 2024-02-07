@@ -221,6 +221,11 @@ Adding a new version? You'll need three changes:
 - Stale `HTTPRoute`'s parent statuses are now removed when the `HTTPRoute` no longer
   defines a parent `Gateway` in its `spec.parentRefs`.
   [#5477](https://github.com/Kong/kubernetes-ingress-controller/pull/5477)
+- `expressions` router flavor can now successfully be now used with Konnect synchronization
+  turned on. The controller will no longer populate disallowed `regex_priority` and `path_handling`
+  Kong Route's fields when the router flavor is `expressions` that were causing Konnect to reject
+  the configuration.
+  [#5581](https://github.com/Kong/kubernetes-ingress-controller/pull/5581)
 
 ### Changed
 

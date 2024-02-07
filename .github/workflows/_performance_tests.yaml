@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: performance-tests-results
-          path: "/tmp/kic-per/*.txt"
+          path: "/tmp/kic-perf/*.txt"
           if-no-files-found: ignore
 
   performance-target:
@@ -203,5 +203,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: performance-tests-results
-          path: "/tmp/kic-per/*.txt"
+          path: "/tmp/kic-perf/*.txt"
           if-no-files-found: ignore

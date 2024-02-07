@@ -111,8 +111,6 @@ jobs:
 
       - name: drawing
         run: |
-          ls -R perf-results
-
           cat perf-results/all_resource_apply*.txt >> result_of_all_resource_apply
           uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to apply to cluster" result_of_all_resource_apply
 

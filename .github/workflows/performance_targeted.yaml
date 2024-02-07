@@ -114,13 +114,13 @@ jobs:
           ls -R perf-results
 
           cat perf-results/all_resource_apply*.txt >> result_of_all_resource_apply
-          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(s) cost for all routes to apply to cluster" result_of_all_resource_apply 
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to apply to cluster" result_of_all_resource_apply
 
           cat perf-results/all_resource_take_effect*.txt >> result_of_all_resource_take_effect
-          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(s) cost for all routes to take effect." result_of_all_resource_take_effect 
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to take effect." result_of_all_resource_take_effect
 
           cat perf-results/one_resource_update*.txt >> result_of_one_resource_update
-          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(s) cost for all routes to take effect." result_of_one_resource_update 
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress." result_of_one_resource_update
 
           cat perf-results/one_resource_take_effect*.txt >> result_of_one_resource_take_effect
-          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(s) cost for all routes to take effect." result_of_one_resource_take_effect 
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress to take effect." result_of_one_resource_take_effect

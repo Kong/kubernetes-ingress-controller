@@ -17,7 +17,7 @@ on:
       res-number-for-perf:
         description: The number of resource for performance tests
         type: string
-        default: 10000
+        required: false
       pr-number:
         description: PR number to post a comment in. If empty, no comment is posted.
         type: string

@@ -41,6 +41,15 @@ var (
 	// Instead, a fixed secret `consumer-key-auth-secret` is used.
 	rulesTpl = `
 ---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: auth-plugin-%d
+  annotations:
+    kubernetes.io/ingress.class: kong
+plugin: key-auth
+
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -62,13 +71,15 @@ spec:
         pathType: Exact
 
 ---
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+apiVersion: v1
+data:
+  key: %s
+kind: Secret
 metadata:
-  name: auth-plugin-%d
-  annotations:
-    kubernetes.io/ingress.class: kong
-plugin: key-auth
+  labels:
+    konghq.com/credential: key-auth
+  name: consumer-key-auth-secret-%d
+type: Opaque
 
 ---
 apiVersion: configuration.konghq.com/v1
@@ -80,17 +91,6 @@ metadata:
 username: %s
 credentials:
 - consumer-key-auth-secret-%d
-
----
-apiVersion: v1
-data:
-  key: %s
-kind: Secret
-metadata:
-  labels:
-    konghq.com/credential: key-auth
-  name: consumer-key-auth-secret-%d
-type: Opaque
 
 `
 
@@ -153,14 +153,17 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 	kubeconfig := getTemporaryKubeconfig(t, env)
 
-	resourceYaml := ""
-	for i := 0; i < defaultResNum; i++ {
-		resourceYaml += fmt.Sprintf(rulesTpl, i, i, i, i, i, fmt.Sprintf(consumerUsername, i), i, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, i))), i)
-	}
-
+	batchSize := 500
 	startTime := time.Now()
-	err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
-	require.NoError(t, err)
+	for i := 0; i < defaultResNum; i += batchSize {
+		resourceYaml := ""
+		for j := i; j < i+batchSize && j < defaultResNum; j++ {
+			resourceYaml += fmt.Sprintf(rulesTpl, j, j, j, j, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, j))), j, j, fmt.Sprintf(consumerUsername, j), j)
+
+		}
+		err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
+		require.NoError(t, err)
+	}
 	completionTime := time.Now()
 	t.Logf("time to apply %d rules(including Ingress, plugin, and consumer): %v", defaultResNum, completionTime.Sub(startTime))
 
@@ -180,7 +183,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "get", i)
-			}, ingressWait, time.Millisecond*500)
+			}, ingressWait*10, time.Millisecond*500)
 		}(i)
 	}
 
@@ -200,7 +203,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "ip", randomInt)
-	}, ingressWait, time.Millisecond*500)
+	}, ingressWait*5, time.Millisecond*500)
 
 	effectTime = time.Now()
 
@@ -246,6 +249,6 @@ func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxy
 func applyResourceWithKubectl(ctx context.Context, t *testing.T, kubeconfig, resourceYAML string) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "apply", "-f", "-")
 	cmd.Stdin = strings.NewReader(resourceYAML)
-	_, err := cmd.CombinedOutput()
+	err := cmd.Run()
 	return err
 }

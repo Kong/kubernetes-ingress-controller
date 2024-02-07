@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        resource-number: [1000, 5000, 10000]
+        resource-number: [1000, 2500, 5000]
       fail-fast: false
     steps:
       - name: Download built image artifact
@@ -191,3 +191,10 @@ jobs:
         with:
           name: tests-report
           path: "*-tests.xml"
+
+      - name: collect performance test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-tests-results
+          path: "/tmp/kic-per/*.txt"
+          if-no-files-found: ignore

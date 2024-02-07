@@ -117,6 +117,12 @@ spec:
         pathType: Exact
 
 `
+
+	// Use the following file to store the time-consuming reports for each action.
+	allResourceApplyReport      = "all_resource_apply_%d.txt"
+	allResourceTakeEffectReport = "all_resource_take_effect_%d.txt"
+	oneResourceUpdateReport     = "one_resource_update_%d.txt"
+	oneResourceTakeEffectReport = "one_resource_take_effect_%d.txt"
 )
 
 // -----------------------------------------------------------------------------
@@ -166,6 +172,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	}
 	completionTime := time.Now()
 	t.Logf("time to apply %d rules(including Ingress, plugin, and consumer): %v", defaultResNum, completionTime.Sub(startTime))
+	writeResultToTempFile(t, allResourceApplyReport, defaultResNum, int(completionTime.Sub(startTime).Seconds()))
 
 	t.Log("getting kong proxy IP after LB provisioning")
 	proxyURLForDefaultIngress := "http://" + getKongProxyIP(ctx, t, env)
@@ -192,6 +199,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	effectTime := time.Now()
 
 	t.Logf("time to make %d ingress rules take effect: %v", defaultResNum, effectTime.Sub(completionTime))
+	writeResultToTempFile(t, allResourceTakeEffectReport, defaultResNum, int(effectTime.Sub(completionTime).Seconds()))
 
 	rand.Seed(time.Now().UnixNano())
 	randomInt := rand.Intn(10000)
@@ -209,6 +217,8 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 	t.Logf("time to update 1 ingress rules when %d ingress exists: %v", defaultResNum, completionTime.Sub(startTime))
 	t.Logf("time to make 1 ingress rules take effect when %d ingress exists: %v", defaultResNum, effectTime.Sub(completionTime))
+	writeResultToTempFile(t, oneResourceUpdateReport, defaultResNum, int(completionTime.Sub(startTime).Seconds()))
+	writeResultToTempFile(t, oneResourceTakeEffectReport, defaultResNum, int(effectTime.Sub(completionTime).Seconds()))
 
 }
 
@@ -251,4 +261,29 @@ func applyResourceWithKubectl(ctx context.Context, t *testing.T, kubeconfig, res
 	cmd.Stdin = strings.NewReader(resourceYAML)
 	err := cmd.Run()
 	return err
+}
+
+// we will store the result in the `/tmp/kic-perf/` directory
+func writeResultToTempFile(t *testing.T, filename string, resourceNum, time int) {
+	// create a file to /tmp/kic-perf/all_apply.txt
+	// if the file already exists, it will be overwritten
+	// if the file does not exist, it will be created
+	defaultResultDir := "/tmp/kic-perf/"
+	if err := os.MkdirAll(defaultResultDir, 0755); err != nil {
+		t.Logf("failed to create directory: %v", err)
+		return
+	}
+
+	file, err := os.Create(defaultResultDir + fmt.Sprintf(filename, resourceNum))
+	if err != nil {
+		t.Logf("failed to create file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%d %d", resourceNum, time))
+	if err != nil {
+		t.Logf("failed to write to file: %v", err)
+		return
+	}
 }

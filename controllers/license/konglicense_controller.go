@@ -1,4 +1,4 @@
-package configuration
+package license
 
 import (
 	"context"
@@ -45,16 +45,20 @@ type KongV1Alpha1KongLicenseReconciler struct {
 	LicenseCache     cache.Store
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
-	// ControllerName is the name of the controller to use in `controllerName` field in controller status item.
-	ControllerName string
+	// ControllerName is the part of field status.controllers[].controllerName: "LicenseControllerType/ControllerName".
+	LicenseControllerType string
+	// ElectionID is the part of field status.controllers[].controllerName: "LicenseControllerType/ElectionID".
+	// This is unique identifier of the controller instance. When not specified, the field will be set to
+	// status.controllers[].controllerName: "LicenseControllerType".
+	ElectionID mo.Option[string]
 
 	chosenLicenseLock sync.RWMutex
 	chosenLicense     *kongv1alpha1.KongLicense
 }
 
 const (
-	// LicenseControllerType annotates the controller type.
-	LicenseControllerType = "konghq.com/kong-ingress-controller"
+	// LicenseControllerTypeKIC annotates the controller type.
+	LicenseControllerTypeKIC = "konghq.com/kong-ingress-controller"
 )
 
 const (
@@ -264,7 +268,10 @@ func (r *KongV1Alpha1KongLicenseReconciler) pickLicenseInCache() *kongv1alpha1.K
 // fullControllerName returns the full controllerName used in the controller status item
 // combined with constant type and reconciler's own controller name.
 func (r *KongV1Alpha1KongLicenseReconciler) fullControllerName() string {
-	return LicenseControllerType + "/" + r.ControllerName
+	if cn, ok := r.ElectionID.Get(); ok {
+		return r.LicenseControllerType + "/" + cn
+	}
+	return r.LicenseControllerType
 }
 
 // setChosenLicense sets the chosen effective KongLicense copy in the cache.
@@ -360,7 +367,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 }
 
 // WrapKongLicenseReconcilerToDynamicCRDController wraps KongLicenseReconciler to DynamicCRDController
-// to watch precense of KongLicense CRD to avoid aborts if KongLicense is not installed when controller initialized.
+// to watch presence of KongLicense CRD to avoid aborts if KongLicense is not installed when controller initialized.
 func WrapKongLicenseReconcilerToDynamicCRDController(
 	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconciler,
 ) *crds.DynamicCRDController {

@@ -7,11 +7,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
+	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
@@ -23,20 +24,21 @@ func TestKongLicenseController(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reconciler := &configuration.KongV1Alpha1KongLicenseReconciler{
-		Client:         ctrlClient,
-		Log:            logr.Discard(),
-		Scheme:         scheme,
-		LicenseCache:   configuration.NewLicenseCache(),
-		ControllerName: "test",
+	reconciler := &ctrllicense.KongV1Alpha1KongLicenseReconciler{
+		Client:                ctrlClient,
+		Log:                   logr.Discard(),
+		Scheme:                scheme,
+		LicenseCache:          ctrllicense.NewLicenseCache(),
+		LicenseControllerType: ctrllicense.LicenseControllerTypeKIC,
+		ElectionID:            mo.Some("test"),
 	}
 	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
 
 	const (
 		waitTime            = 3 * time.Second
 		tickTime            = 100 * time.Millisecond
-		fullControllerName  = configuration.LicenseControllerType + "/test"
-		conditionProgrammed = "Programmed"
+		fullControllerName  = ctrllicense.LicenseControllerTypeKIC + "/test"
+		conditionProgrammed = ctrllicense.ConditionTypeProgrammed
 	)
 
 	t.Log("Create a KongLicense and verify that it is reconciled")

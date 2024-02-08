@@ -477,10 +477,12 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault kongv1alpha1.KongVault) (bool, string, error) {
 	// Ignore KongVaults that are being managed by another controller.
 	if !validator.ingressClassMatcher(&k8sKongVault.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
+		validator.Logger.Info("KongVault is not managed by this controller")
 		return true, "", nil
 	}
 	config, err := kongstate.RawConfigToConfiguration(k8sKongVault.Spec.Config.Raw)
 	if err != nil {
+		validator.Logger.Error(err, "Failed to unmarshal KongVault config")
 		return false, fmt.Sprintf(ErrTextVaultConfigUnmarshalFailed, err), nil
 	}
 
@@ -490,6 +492,7 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 		return v.Spec.Prefix == k8sKongVault.Spec.Prefix && v.Name != k8sKongVault.Name
 	})
 	if hasDupe {
+		validator.Logger.Info("KongVault has duplicate prefix with another KongVault")
 		return false, fmt.Sprintf("spec.prefix %q is duplicate with existing KongVault %q",
 			k8sKongVault.Spec.Prefix, dupeVault.Name), nil
 	}
@@ -502,9 +505,10 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 	if len(k8sKongVault.Spec.Description) > 0 {
 		kongVault.Description = kong.String(k8sKongVault.Spec.Description)
 	}
-	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
-	if err != nil || errText != "" {
-		return false, errText, err
+	errText := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
+	if errText != "" {
+		validator.Logger.Info("KongVault validation against gateway schema failed", "error", errText)
+		return false, errText, nil
 	}
 	return true, "", nil
 }
@@ -571,19 +575,19 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	return "", nil
 }
 
-func (validator KongHTTPValidator) validateVaultAgainstGatewaySchema(ctx context.Context, vault kong.Vault) (string, error) {
+func (validator KongHTTPValidator) validateVaultAgainstGatewaySchema(ctx context.Context, vault kong.Vault) string {
 	vaultService, hasClient := validator.AdminAPIServicesProvider.GetVaultsService()
 	if !hasClient {
-		return "", nil
+		return ""
 	}
 	isValid, msg, err := vaultService.Validate(ctx, &vault)
 	if err != nil {
-		return ErrTextVaultUnableToValidate, err
+		return fmt.Sprintf("%s: %s", ErrTextVaultUnableToValidate, err)
 	}
 	if !isValid {
-		return fmt.Sprintf(ErrTextVaultConfigValidationResultInvalid, msg), nil
+		return fmt.Sprintf(ErrTextVaultConfigValidationResultInvalid, msg)
 	}
-	return "", nil
+	return ""
 }
 
 type managerClientSecretGetter struct {

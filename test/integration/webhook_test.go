@@ -933,7 +933,7 @@ func TestValidationWebhook(t *testing.T) {
 	t.Run("verify validation webhook on creating KongVaults", func(t *testing.T) {
 		// Only Kong EE have the API `POST /schemas/vaults/validate`,
 		// so we create a subtest scope and only run it with Kong enterprise.
-		RunWhenKongEnterprise(t) // nolint: contextcheck
+		RunWhenKongEnterprise(t)
 
 		testCases := []struct {
 			name                string

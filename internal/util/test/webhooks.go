@@ -35,9 +35,10 @@ var admissionWebhookListenHost = getHostIPbyType(getHostType())
 type hostType string
 
 const (
-	hostTypeColima hostType = "colima"
-	hostTypeLima   hostType = "lima"
-	defaultDocker  hostType = "defaultDocker"
+	hostTypeColima   hostType = "colima"
+	hostTypeLima     hostType = "lima"
+	hostTypeOrbstack hostType = "orbstack"
+	defaultDocker    hostType = "defaultDocker"
 )
 
 func getHostIPbyType(ht hostType) string {
@@ -50,6 +51,8 @@ func getHostIPbyType(ht hostType) string {
 		return "192.168.105.1"
 	case defaultDocker:
 		return "172.17.0.1"
+	case hostTypeOrbstack:
+		return "198.19.248.254"
 	default:
 		panic("unsupported host type")
 	}
@@ -67,8 +70,8 @@ func getHostType() hostType {
 	case strings.Contains(output, "colima"):
 		return hostTypeColima
 	case strings.Contains(output, "lima"):
-		return hostTypeLima
-	default:
-		return defaultDocker
+	case strings.Contains(output, "orbstack"):
+		return hostTypeOrbstack
 	}
+	return defaultDocker
 }

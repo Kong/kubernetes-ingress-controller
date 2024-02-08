@@ -244,694 +244,702 @@ func TestValidationWebhook(t *testing.T) {
 		}
 	}()
 
-	t.Log("testing consumer credentials validation")
-	for _, tt := range []struct {
-		name           string
-		consumer       *kongv1.KongConsumer
-		credentials    []*corev1.Secret
-		wantErr        bool
-		wantPartialErr string
-	}{
-		{
-			name: "a consumer with no credentials should pass validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "testconsumer",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: uuid.NewString(),
-				CustomID: uuid.NewString(),
-			},
-			credentials: nil,
-			wantErr:     false,
-		},
-		{
-			name: "a consumer with valid credentials should pass validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username:    "electron",
-				CustomID:    uuid.NewString(),
-				Credentials: []string{"electronscreds"},
-			},
-			credentials: []*corev1.Secret{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "electronscreds",
-				},
-				StringData: map[string]string{
-					"kongCredType": "basic-auth",
-					"username":     "electron",
-					"password":     "testpass",
-				},
-			}},
-			wantErr: false,
-		},
-		{
-			name: "a consumer with duplicate credentials which are NOT constrained should pass validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "proton",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"protonscreds1",
-					"protonscreds2",
-				},
-			},
-			credentials: []*corev1.Secret{
-				{
+	t.Run("consumer credentials validation", func(t *testing.T) {
+		for _, tt := range []struct {
+			name           string
+			consumer       *kongv1.KongConsumer
+			credentials    []*corev1.Secret
+			wantErr        bool
+			wantPartialErr string
+		}{
+			{
+				name: "a consumer with no credentials should pass validation",
+				consumer: &kongv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "protonscreds1",
+						Name: "testconsumer",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					Username: uuid.NewString(),
+					CustomID: uuid.NewString(),
+				},
+				credentials: nil,
+				wantErr:     false,
+			},
+			{
+				name: "a consumer with valid credentials should pass validation",
+				consumer: &kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: uuid.NewString(),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					Username:    "electron",
+					CustomID:    uuid.NewString(),
+					Credentials: []string{"electronscreds"},
+				},
+				credentials: []*corev1.Secret{{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "electronscreds",
 					},
 					StringData: map[string]string{
 						"kongCredType": "basic-auth",
-						"username":     "proton",
+						"username":     "electron",
 						"password":     "testpass",
 					},
-				},
-				{
+				}},
+				wantErr: false,
+			},
+			{
+				name: "a consumer with duplicate credentials which are NOT constrained should pass validation",
+				consumer: &kongv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "protonscreds2",
+						Name: uuid.NewString(),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "electron", // username is unique constrained
-						"password":     "testpass", // password is not unique constrained
+					Username: "proton",
+					CustomID: uuid.NewString(),
+					Credentials: []string{
+						"protonscreds1",
+						"protonscreds2",
 					},
 				},
+				credentials: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "protonscreds1",
+						},
+						StringData: map[string]string{
+							"kongCredType": "basic-auth",
+							"username":     "proton",
+							"password":     "testpass",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "protonscreds2",
+						},
+						StringData: map[string]string{
+							"kongCredType": "basic-auth",
+							"username":     "electron", // username is unique constrained
+							"password":     "testpass", // password is not unique constrained
+						},
+					},
+				},
+				wantErr: false,
 			},
-			wantErr: false,
-		},
-		{
-			name: "a consumer referencing credentials secrets which do not yet exist should fail validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "repairedlawnmower",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"nonexistentcreds",
-				},
-			},
-			wantErr:        true,
-			wantPartialErr: "not found",
-		},
-		{
-			name: "a consumer with duplicate credentials which ARE constrained should fail validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "brokenshovel",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "neutron",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"neutronscreds1",
-					"neutronscreds2",
-				},
-			},
-			credentials: []*corev1.Secret{
-				{
+			{
+				name: "a consumer referencing credentials secrets which do not yet exist should fail validation",
+				consumer: &kongv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "neutronscreds1",
+						Name: uuid.NewString(),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "neutron",
-						"password":     "testpass",
+					Username: "repairedlawnmower",
+					CustomID: uuid.NewString(),
+					Credentials: []string{
+						"nonexistentcreds",
 					},
 				},
-				{
+				wantErr:        true,
+				wantPartialErr: "not found",
+			},
+			{
+				name: "a consumer with duplicate credentials which ARE constrained should fail validation",
+				consumer: &kongv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "neutronscreds2",
+						Name: "brokenshovel",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "neutron", // username is unique constrained
-						"password":     "testpass",
+					Username: "neutron",
+					CustomID: uuid.NewString(),
+					Credentials: []string{
+						"neutronscreds1",
+						"neutronscreds2",
 					},
 				},
+				credentials: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "neutronscreds1",
+						},
+						StringData: map[string]string{
+							"kongCredType": "basic-auth",
+							"username":     "neutron",
+							"password":     "testpass",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "neutronscreds2",
+						},
+						StringData: map[string]string{
+							"kongCredType": "basic-auth",
+							"username":     "neutron", // username is unique constrained
+							"password":     "testpass",
+						},
+					},
+				},
+				wantErr:        true,
+				wantPartialErr: "unique key constraint violated for username",
 			},
-			wantErr:        true,
-			wantPartialErr: "unique key constraint violated for username",
-		},
-		{
-			name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "reasonablehammer",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"reasonablehammer",
-				},
-			},
-			credentials: []*corev1.Secret{
-				{
+			{
+				name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
+				consumer: &kongv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "reasonablehammer",
+						Name: uuid.NewString(),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "reasonablehammer",
-						"password":     "testpass", // not unique constrained, so even though someone else is using this password this should pass
+					Username: "reasonablehammer",
+					CustomID: uuid.NewString(),
+					Credentials: []string{
+						"reasonablehammer",
 					},
 				},
+				credentials: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "reasonablehammer",
+						},
+						StringData: map[string]string{
+							"kongCredType": "basic-auth",
+							"username":     "reasonablehammer",
+							"password":     "testpass", // not unique constrained, so even though someone else is using this password this should pass
+						},
+					},
+				},
+				wantErr: false,
 			},
-			wantErr: false,
-		},
-		{
-			name: "a consumer that provides credentials that are in violation of unique constraints globally against other existing consumers should fail validation",
-			consumer: &kongv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Username: "unreasonablehammer",
-				CustomID: uuid.NewString(),
-				Credentials: []string{
-					"unreasonablehammer",
-				},
-			},
-			credentials: []*corev1.Secret{
-				{
+			{
+				name: "a consumer that provides credentials that are in violation of unique constraints globally against other existing consumers should fail validation",
+				consumer: &kongv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "unreasonablehammer",
+						Name: uuid.NewString(),
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
 					},
-					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "tux1", // unique constrained with previous created static consumer credentials
-						"password":     "testpass",
+					Username: "unreasonablehammer",
+					CustomID: uuid.NewString(),
+					Credentials: []string{
+						"unreasonablehammer",
 					},
 				},
+				credentials: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "unreasonablehammer",
+						},
+						StringData: map[string]string{
+							"kongCredType": "basic-auth",
+							"username":     "tux1", // unique constrained with previous created static consumer credentials
+							"password":     "testpass",
+						},
+					},
+				},
+				wantErr:        true,
+				wantPartialErr: "unique key constraint violated for username",
 			},
-			wantErr:        true,
-			wantPartialErr: "unique key constraint violated for username",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			for _, credential := range tt.credentials {
-				credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})
-				require.NoError(t, err)
-				credentialName := credential.Name
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				for _, credential := range tt.credentials {
+					credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})
+					require.NoError(t, err)
+					credentialName := credential.Name
+					defer func() {
+						if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
+							if !apierrors.IsNotFound(err) {
+								assert.NoError(t, err)
+							}
+						}
+					}()
+				}
+
 				defer func() {
-					if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
+					if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, tt.consumer.Name, metav1.DeleteOptions{}); err != nil {
 						if !apierrors.IsNotFound(err) {
 							assert.NoError(t, err)
 						}
 					}
 				}()
-			}
 
-			defer func() {
-				if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, tt.consumer.Name, metav1.DeleteOptions{}); err != nil {
-					if !apierrors.IsNotFound(err) {
-						assert.NoError(t, err)
-					}
+				consumer, err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, tt.consumer, metav1.CreateOptions{})
+				if tt.wantErr {
+					require.Error(t, err, fmt.Sprintf("consumer %s should fail to create", consumer.Name))
+					assert.True(t, strings.Contains(err.Error(), tt.wantPartialErr),
+						"got error string %q, want a superstring of %q", err.Error(), tt.wantPartialErr)
+				} else {
+					require.NoError(t, err, fmt.Sprintf("consumer %s should create successfully", consumer.Name))
 				}
-			}()
-
-			consumer, err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, tt.consumer, metav1.CreateOptions{})
-			if tt.wantErr {
-				require.Error(t, err, fmt.Sprintf("consumer %s should fail to create", consumer.Name))
-				assert.True(t, strings.Contains(err.Error(), tt.wantPartialErr),
-					"got error string %q, want a superstring of %q", err.Error(), tt.wantPartialErr)
-			} else {
-				require.NoError(t, err, fmt.Sprintf("consumer %s should create successfully", consumer.Name))
-			}
-		})
-	}
-
-	t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer fails validation")
-	invalidCredential := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "brokenfence",
-		},
-		StringData: map[string]string{
-			"kongCredType": "invalid-auth", // not a valid credential type
-			"username":     "brokenfence",
-			"password":     "testpass",
-		},
-	}
-	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidCredential, metav1.CreateOptions{})
-	require.ErrorContains(t, err, "invalid credential type")
-
-	t.Log("creating a valid credential secret to be referenced by a KongConsumer")
-	validCredential, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "brokenfence",
-		},
-		StringData: map[string]string{
-			"kongCredType": "basic-auth",
-			"username":     "brokenfence",
-			"password":     "testpass",
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	t.Log("verifying that valid credentials assigned to a consumer pass validation")
-	validConsumerLinkedToValidCredentials := &kongv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Username: "brokenfence",
-		CustomID: uuid.NewString(),
-		Credentials: []string{
-			"brokenfence",
-		},
-	}
-	validConsumerLinkedToValidCredentials, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToValidCredentials, metav1.CreateOptions{})
-	require.NoError(t, err)
-	defer func() {
-		if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
+			})
 		}
-	}()
+	})
 
-	t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
-	validCredential.Data["value"] = []byte("newpassword")
-	validCredential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	t.Run("verify credentials validation", func(t *testing.T) {
+		t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer fails validation")
+		invalidCredential := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "brokenfence",
+			},
+			StringData: map[string]string{
+				"kongCredType": "invalid-auth", // not a valid credential type
+				"username":     "brokenfence",
+				"password":     "testpass",
+			},
+		}
+		_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidCredential, metav1.CreateOptions{})
+		require.ErrorContains(t, err, "invalid credential type")
 
-	t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
-	validCredential.Data["kongCredType"] = []byte("invalid-auth")
-	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid credential type")
+		t.Log("creating a valid credential secret to be referenced by a KongConsumer")
+		validCredential, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "brokenfence",
+			},
+			StringData: map[string]string{
+				"kongCredType": "basic-auth",
+				"username":     "brokenfence",
+				"password":     "testpass",
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
 
-	t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
-	require.NoError(t, kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}))
-	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
-	require.ErrorContains(t, err, "invalid credential type")
-
-	t.Log("verifying that a JWT credential which has keys with missing values fails validation")
-	invalidJWTName := uuid.NewString()
-	invalidJWT := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: invalidJWTName,
-		},
-		StringData: map[string]string{
-			"kongCredType":   "jwt",
-			"algorithm":      "RS256",
-			"key":            "",
-			"rsa_public_key": "",
-			"secret":         "",
-		},
-	}
-	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidJWT, metav1.CreateOptions{})
-	require.ErrorContains(t, err, "some fields were invalid due to missing data: rsa_public_key, key, secret")
-
-	t.Log("verifying that the validation fails when secret generates invalid plugin configuration for KongPlugin")
-	for _, tt := range []struct {
-		name          string
-		KongPlugin    *kongv1.KongPlugin
-		secretBefore  *corev1.Secret
-		secretAfter   *corev1.Secret
-		errorOnUpdate bool
-		errorContains string
-	}{
-		{
-			name: "should fail the validation if secret used in ConfigFrom of KongPlugin generates invalid plugin configuration",
-			KongPlugin: &kongv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "rate-limiting-invalid-config-from",
-				},
-				PluginName: "rate-limiting",
-				ConfigFrom: &kongv1.ConfigSource{
-					SecretValue: kongv1.SecretValueFromSource{
-						Secret: "conf-secret-invalid-config",
-						Key:    "rate-limiting-config",
-					},
+		t.Log("verifying that valid credentials assigned to a consumer pass validation")
+		validConsumerLinkedToValidCredentials := &kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: uuid.NewString(),
+				Annotations: map[string]string{
+					annotations.IngressClassKey: consts.IngressClass,
 				},
 			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "conf-secret-invalid-config",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
-				},
+			Username: "brokenfence",
+			CustomID: uuid.NewString(),
+			Credentials: []string{
+				"brokenfence",
 			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "conf-secret-invalid-config",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
-				},
-			},
-			errorOnUpdate: true,
-			errorContains: "Change on secret will generate invalid configuration for KongPlugin",
-		},
-		{
-			name: "should fail the validation if the secret is used in ConfigPatches of KongPlugin and generates invalid config",
-			KongPlugin: &kongv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "rate-limiting-invalid-config-patches",
-				},
-				PluginName: "rate-limiting",
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
-				},
-				ConfigPatches: []kongv1.ConfigPatch{
-					{
-						Path: "/minute",
-						ValueFrom: kongv1.ConfigSource{
-							SecretValue: kongv1.SecretValueFromSource{
-								Secret: "conf-secret-invalid-field",
-								Key:    "rate-limiting-config-minutes",
-							},
-						},
-					},
-				},
-			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "conf-secret-invalid-field",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config-minutes": []byte("10"),
-				},
-			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "conf-secret-invalid-field",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config-minutes": []byte(`"10"`),
-				},
-			},
-			errorOnUpdate: true,
-			errorContains: "Change on secret will generate invalid configuration for KongPlugin",
-		},
-		{
-			name: "should pass the validation if the secret used in ConfigPatches of KongPlugin and generates valid config",
-			KongPlugin: &kongv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "rate-limiting-valid-config",
-				},
-				PluginName: "rate-limiting",
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
-				},
-				ConfigPatches: []kongv1.ConfigPatch{
-					{
-						Path: "/minute",
-						ValueFrom: kongv1.ConfigSource{
-							SecretValue: kongv1.SecretValueFromSource{
-								Secret: "conf-secret-valid-field",
-								Key:    "rate-limiting-config-minutes",
-							},
-						},
-					},
-				},
-			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "conf-secret-valid-field",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config-minutes": []byte(`10`),
-				},
-			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "conf-secret-valid-field",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config-minutes": []byte(`15`),
-				},
-			},
-			errorOnUpdate: false,
-		},
-	} {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
-			require.NoError(t, err)
-			_, err = kongClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, tt.KongPlugin, metav1.CreateOptions{})
-			require.NoError(t, err)
-			defer func() {
-				err := kongClient.ConfigurationV1().KongPlugins(ns.Name).Delete(ctx, tt.KongPlugin.Name, metav1.DeleteOptions{})
-				require.NoError(t, err)
-			}()
-
-			_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, tt.secretAfter, metav1.UpdateOptions{})
-			if tt.errorOnUpdate {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.errorContains)
-			} else {
-				require.NoError(t, err)
+		}
+		validConsumerLinkedToValidCredentials, err = kongClient.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, validConsumerLinkedToValidCredentials, metav1.CreateOptions{})
+		require.NoError(t, err)
+		defer func() {
+			if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					assert.NoError(t, err)
+				}
 			}
-		})
-	}
+		}()
 
-	t.Log("verifying that the validation fails when secret generates invalid plugin configuration for KongClusterPlugin")
-	for _, tt := range []struct {
-		name              string
-		kongClusterPlugin *kongv1.KongClusterPlugin
-		secretBefore      *corev1.Secret
-		secretAfter       *corev1.Secret
-		errorOnUpdate     bool
-		errorContains     string
-	}{
-		{
-			name: "should pass the validation if the secret used in ConfigFrom of KongClusterPlugin generates valid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-valid",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				PluginName: "rate-limiting",
-				ConfigFrom: &kongv1.NamespacedConfigSource{
-					SecretValue: kongv1.NamespacedSecretValueFromSource{
+		t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
+		validCredential.Data["value"] = []byte("newpassword")
+		validCredential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
+		validCredential.Data["kongCredType"] = []byte("invalid-auth")
+		_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid credential type")
+
+		t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
+		require.NoError(t, kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToValidCredentials.Name, metav1.DeleteOptions{}))
+		_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, validCredential, metav1.UpdateOptions{})
+		require.ErrorContains(t, err, "invalid credential type")
+
+		t.Log("verifying that a JWT credential which has keys with missing values fails validation")
+		invalidJWTName := uuid.NewString()
+		invalidJWT := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: invalidJWTName,
+			},
+			StringData: map[string]string{
+				"kongCredType":   "jwt",
+				"algorithm":      "RS256",
+				"key":            "",
+				"rsa_public_key": "",
+				"secret":         "",
+			},
+		}
+		_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, invalidJWT, metav1.CreateOptions{})
+		require.ErrorContains(t, err, "some fields were invalid due to missing data: rsa_public_key, key, secret")
+	})
+
+	t.Run("verify validation fails when secret generates invalid plugin configuration for KongPlugin", func(t *testing.T) {
+		for _, tt := range []struct {
+			name          string
+			KongPlugin    *kongv1.KongPlugin
+			secretBefore  *corev1.Secret
+			secretAfter   *corev1.Secret
+			errorOnUpdate bool
+			errorContains string
+		}{
+			{
+				name: "should fail the validation if secret used in ConfigFrom of KongPlugin generates invalid plugin configuration",
+				KongPlugin: &kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ns.Name,
-						Secret:    "cluster-conf-secret-valid",
-						Key:       "rate-limiting-config",
+						Name:      "rate-limiting-invalid-config-from",
+					},
+					PluginName: "rate-limiting",
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
+							Secret: "conf-secret-invalid-config",
+							Key:    "rate-limiting-config",
+						},
 					},
 				},
-			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-valid",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
-				},
-			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-valid",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":10}`),
-				},
-			},
-			errorOnUpdate: false,
-		},
-		{
-			name: "should fail the validation if the secret in ConfigFrom of KongClusterPlugin generates invalid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-invalid",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				PluginName: "rate-limiting",
-				ConfigFrom: &kongv1.NamespacedConfigSource{
-					SecretValue: kongv1.NamespacedSecretValueFromSource{
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ns.Name,
-						Secret:    "cluster-conf-secret-invalid",
-						Key:       "rate-limiting-config",
+						Name:      "conf-secret-invalid-config",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
 					},
 				},
-			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-invalid",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
-				},
-			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-invalid",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
-				},
-			},
-			errorOnUpdate: true,
-			errorContains: "Change on secret will generate invalid configuration for KongClusterPlugin",
-		},
-		{
-			name: "should pass the validation if the secret in ConfigPatches of KongClusterPlugin generates valid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-valid-config-patches",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "conf-secret-invalid-config",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
 					},
 				},
-				PluginName: "rate-limiting",
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
-				},
-				ConfigPatches: []kongv1.NamespacedConfigPatch{
-					{
-						Path: "/minute",
-						ValueFrom: kongv1.NamespacedConfigSource{
-							SecretValue: kongv1.NamespacedSecretValueFromSource{
-								Namespace: ns.Namespace,
-								Secret:    "cluster-conf-secret-valid-patch",
-								Key:       "rate-limiting-minute",
+				errorOnUpdate: true,
+				errorContains: "Change on secret will generate invalid configuration for KongPlugin",
+			},
+			{
+				name: "should fail the validation if the secret is used in ConfigPatches of KongPlugin and generates invalid config",
+				KongPlugin: &kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "rate-limiting-invalid-config-patches",
+					},
+					PluginName: "rate-limiting",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
+					},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/minute",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Secret: "conf-secret-invalid-field",
+									Key:    "rate-limiting-config-minutes",
+								},
 							},
 						},
 					},
 				},
-			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-valid-patch",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-minute": []byte(`5`),
-				},
-			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-valid-patch",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-minute": []byte(`10`),
-				},
-			},
-			errorOnUpdate: false,
-		},
-		{
-			name: "should fail the validation if the secret in ConfigPatches of KongClusterPlugin generates invalid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-invalid-config-patches",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "conf-secret-invalid-field",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config-minutes": []byte("10"),
 					},
 				},
-				PluginName: "rate-limiting",
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "conf-secret-invalid-field",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config-minutes": []byte(`"10"`),
+					},
 				},
-				ConfigPatches: []kongv1.NamespacedConfigPatch{
-					{
-						Path: "/minute",
-						ValueFrom: kongv1.NamespacedConfigSource{
-							SecretValue: kongv1.NamespacedSecretValueFromSource{
-								Namespace: ns.Name,
-								Secret:    "cluster-conf-secret-invalid-patch",
-								Key:       "rate-limiting-minute",
+				errorOnUpdate: true,
+				errorContains: "Change on secret will generate invalid configuration for KongPlugin",
+			},
+			{
+				name: "should pass the validation if the secret used in ConfigPatches of KongPlugin and generates valid config",
+				KongPlugin: &kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "rate-limiting-valid-config",
+					},
+					PluginName: "rate-limiting",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
+					},
+					ConfigPatches: []kongv1.ConfigPatch{
+						{
+							Path: "/minute",
+							ValueFrom: kongv1.ConfigSource{
+								SecretValue: kongv1.SecretValueFromSource{
+									Secret: "conf-secret-valid-field",
+									Key:    "rate-limiting-config-minutes",
+								},
 							},
 						},
 					},
 				},
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "conf-secret-valid-field",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config-minutes": []byte(`10`),
+					},
+				},
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "conf-secret-valid-field",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config-minutes": []byte(`15`),
+					},
+				},
+				errorOnUpdate: false,
 			},
-			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-invalid-patch",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-minute": []byte(`5`),
-				},
-			},
-			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "cluster-conf-secret-invalid-patch",
-				},
-				Data: map[string][]byte{
-					"rate-limiting-minute": []byte(`"10"`),
-				},
-			},
-			errorOnUpdate: true,
-			errorContains: "Change on secret will generate invalid configuration for KongClusterPlugin",
-		},
-	} {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
-			require.NoError(t, err)
-			_, err = kongClient.ConfigurationV1().KongClusterPlugins().Create(ctx, tt.kongClusterPlugin, metav1.CreateOptions{})
-			require.NoError(t, err)
-			defer func() {
-				err := kongClient.ConfigurationV1().KongClusterPlugins().Delete(ctx, tt.kongClusterPlugin.Name, metav1.DeleteOptions{})
-				require.NoError(t, err)
-			}()
+		} {
+			tt := tt
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
 
-			_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, tt.secretAfter, metav1.UpdateOptions{})
-			if tt.errorOnUpdate {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.errorContains)
-			} else {
+				_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
 				require.NoError(t, err)
-			}
-		})
-	}
+				_, err = kongClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, tt.KongPlugin, metav1.CreateOptions{})
+				require.NoError(t, err)
+				defer func() {
+					err := kongClient.ConfigurationV1().KongPlugins(ns.Name).Delete(ctx, tt.KongPlugin.Name, metav1.DeleteOptions{})
+					require.NoError(t, err)
+				}()
+
+				_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, tt.secretAfter, metav1.UpdateOptions{})
+				if tt.errorOnUpdate {
+					require.Error(t, err)
+					require.Contains(t, err.Error(), tt.errorContains)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	})
+
+	t.Run("verify validation fails when secret generates invalid plugin configuration for KongClusterPlugin", func(t *testing.T) {
+		for _, tt := range []struct {
+			name              string
+			kongClusterPlugin *kongv1.KongClusterPlugin
+			secretBefore      *corev1.Secret
+			secretAfter       *corev1.Secret
+			errorOnUpdate     bool
+			errorContains     string
+		}{
+			{
+				name: "should pass the validation if the secret used in ConfigFrom of KongClusterPlugin generates valid configuration",
+				kongClusterPlugin: &kongv1.KongClusterPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-rate-limiting-valid",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					PluginName: "rate-limiting",
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Namespace: ns.Name,
+							Secret:    "cluster-conf-secret-valid",
+							Key:       "rate-limiting-config",
+						},
+					},
+				},
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-valid",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
+					},
+				},
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-valid",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":10}`),
+					},
+				},
+				errorOnUpdate: false,
+			},
+			{
+				name: "should fail the validation if the secret in ConfigFrom of KongClusterPlugin generates invalid configuration",
+				kongClusterPlugin: &kongv1.KongClusterPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-rate-limiting-invalid",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					PluginName: "rate-limiting",
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Namespace: ns.Name,
+							Secret:    "cluster-conf-secret-invalid",
+							Key:       "rate-limiting-config",
+						},
+					},
+				},
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-invalid",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
+					},
+				},
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-invalid",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
+					},
+				},
+				errorOnUpdate: true,
+				errorContains: "Change on secret will generate invalid configuration for KongClusterPlugin",
+			},
+			{
+				name: "should pass the validation if the secret in ConfigPatches of KongClusterPlugin generates valid configuration",
+				kongClusterPlugin: &kongv1.KongClusterPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-rate-limiting-valid-config-patches",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					PluginName: "rate-limiting",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
+					},
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/minute",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: ns.Namespace,
+									Secret:    "cluster-conf-secret-valid-patch",
+									Key:       "rate-limiting-minute",
+								},
+							},
+						},
+					},
+				},
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-valid-patch",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-minute": []byte(`5`),
+					},
+				},
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-valid-patch",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-minute": []byte(`10`),
+					},
+				},
+				errorOnUpdate: false,
+			},
+			{
+				name: "should fail the validation if the secret in ConfigPatches of KongClusterPlugin generates invalid configuration",
+				kongClusterPlugin: &kongv1.KongClusterPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-rate-limiting-invalid-config-patches",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: consts.IngressClass,
+						},
+					},
+					PluginName: "rate-limiting",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
+					},
+					ConfigPatches: []kongv1.NamespacedConfigPatch{
+						{
+							Path: "/minute",
+							ValueFrom: kongv1.NamespacedConfigSource{
+								SecretValue: kongv1.NamespacedSecretValueFromSource{
+									Namespace: ns.Name,
+									Secret:    "cluster-conf-secret-invalid-patch",
+									Key:       "rate-limiting-minute",
+								},
+							},
+						},
+					},
+				},
+				secretBefore: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-invalid-patch",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-minute": []byte(`5`),
+					},
+				},
+				secretAfter: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      "cluster-conf-secret-invalid-patch",
+					},
+					Data: map[string][]byte{
+						"rate-limiting-minute": []byte(`"10"`),
+					},
+				},
+				errorOnUpdate: true,
+				errorContains: "Change on secret will generate invalid configuration for KongClusterPlugin",
+			},
+		} {
+			tt := tt
+			t.Run(tt.name, func(t *testing.T) {
+				_, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tt.secretBefore, metav1.CreateOptions{})
+				require.NoError(t, err)
+				_, err = kongClient.ConfigurationV1().KongClusterPlugins().Create(ctx, tt.kongClusterPlugin, metav1.CreateOptions{})
+				require.NoError(t, err)
+				defer func() {
+					err := kongClient.ConfigurationV1().KongClusterPlugins().Delete(ctx, tt.kongClusterPlugin.Name, metav1.DeleteOptions{})
+					require.NoError(t, err)
+				}()
+
+				_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, tt.secretAfter, metav1.UpdateOptions{})
+				if tt.errorOnUpdate {
+					require.Error(t, err)
+					require.Contains(t, err.Error(), tt.errorContains)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	})
 
 	t.Run("verify validation webhook on creating KongVaults", func(t *testing.T) {
 		// Only Kong EE have the API `POST /schemas/vaults/validate`,
 		// so we create a subtest scope and only run it with Kong enterprise.
-		RunWhenKongEnterprise(t) //nolint: contextcheck
+		RunWhenKongEnterprise(t) // nolint: contextcheck
 
 		testCases := []struct {
-			name          string
-			kongVault     *kongv1alpha1.KongVault
-			errorOnCreate bool
+			name                string
+			kongVault           *kongv1alpha1.KongVault
+			errorOnCreate       bool
+			expectErrorContains string
 		}{
 			{
 				name: "should pass the validation if the configuration is correct",
@@ -988,7 +996,8 @@ func TestValidationWebhook(t *testing.T) {
 						},
 					},
 				},
-				errorOnCreate: true,
+				errorOnCreate:       true,
+				expectErrorContains: "vault configuration in invalid: schema violation (name: vault 'env1' is not installed)",
 			},
 			{
 				name: "should fail the validation if the spec.config does not pass the schema check of Kong gateway",
@@ -1008,7 +1017,8 @@ func TestValidationWebhook(t *testing.T) {
 						},
 					},
 				},
-				errorOnCreate: true,
+				errorOnCreate:       true,
+				expectErrorContains: "vault configuration in invalid: schema violation (config.foo: unknown field)",
 			},
 			{
 				name: "should fail the validation if spec.prefix is duplicate",
@@ -1025,16 +1035,22 @@ func TestValidationWebhook(t *testing.T) {
 						Description: "test env vault",
 					},
 				},
-				errorOnCreate: true,
+				errorOnCreate:       true,
+				expectErrorContains: `spec.prefix "env-background" is duplicate with existing KongVault "vault-background"`,
 			},
 		}
 		t.Log("running test cases for validation on creating KongVault")
 		for _, tc := range testCases {
 			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
+				start := time.Now()
+				t.Logf("creating KongVault START %s", start)
 				_, err := kongClient.ConfigurationV1alpha1().KongVaults().Create(ctx, tc.kongVault, metav1.CreateOptions{})
+				stop := time.Now()
+				t.Logf("creating KongVault STOP %s, took: %s", stop, stop.Sub(start))
 				if tc.errorOnCreate {
 					require.Error(t, err)
+					require.Contains(t, err.Error(), tc.expectErrorContains)
 				} else {
 					require.NoError(t, err)
 				}
@@ -1113,7 +1129,7 @@ func ensureAdmissionRegistration(ctx context.Context, t *testing.T, namespace, c
 			Webhooks: []admregv1.ValidatingWebhook{
 				{
 					Name:                    "validations.kong.konghq.com",
-					FailurePolicy:           lo.ToPtr(admregv1.Ignore),
+					FailurePolicy:           lo.ToPtr(admregv1.Fail),
 					SideEffects:             lo.ToPtr(admregv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					Rules:                   rules,

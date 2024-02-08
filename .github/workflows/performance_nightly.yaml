@@ -36,8 +36,8 @@ jobs:
 
   test-reports:
     needs:
-      - e2e-tests
-      - e2e-tests-unreleased-kong
+      - performance-tests
+      - performance-tests-unreleased-kong
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit
     with:

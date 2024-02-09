@@ -45,7 +45,7 @@ func TestIngressGRPC(t *testing.T) {
 				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
 			}),
 		)).
-		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -159,7 +159,7 @@ func TestIngressGRPC(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("checking whether Ingress status is updated and gRPC traffic is properly routed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("checking whether Ingress status is updated and gRPC traffic is properly routed", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("waiting for updated ingress status to include IP")
 			assert.Eventually(t, func() bool {
 				cluster := GetClusterFromCtx(ctx)
@@ -214,13 +214,13 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 			kongClients, err := clientset.NewForConfig(cluster.Config())
 			require.NoError(t, err)
 			return SetInCtxForT(ctx, t, kongClients)
 		}).
-		WithSetup("deploying KongServiceFacade exposed via Ingress", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploying KongServiceFacade exposed via Ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -351,7 +351,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetProxyURLFromCtx(ctx)
 			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)

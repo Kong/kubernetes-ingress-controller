@@ -70,7 +70,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGatewayClass),
 		predicate.Funcs{
-			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
+			GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
 			CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
 			UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
 			DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },

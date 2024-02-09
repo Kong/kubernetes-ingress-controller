@@ -31,7 +31,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
-		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			manifestPath := examplesManifestPath("kong-service-facade.yaml")
 
 			b, err := os.ReadFile(manifestPath)
@@ -65,7 +65,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 			helpers.WaitForDeploymentRollout(ctx, t, cluster, "default", "httpbin-deployment")
 			return ctx
 		}).
-		Assess("basic-auth and key-auth plugins are applied to KongServiceFacades as expected", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("basic-auth and key-auth plugins are applied to KongServiceFacades as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			var (
 				proxyURL = GetProxyURLFromCtx(ctx)
 

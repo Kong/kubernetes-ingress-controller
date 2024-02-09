@@ -103,7 +103,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 			retry.Delay(tickTime),
 			retry.DelayType(retry.FixedDelay),
 			retry.LastErrorOnly(true),
-			retry.OnRetry(func(n uint, err error) {
+			retry.OnRetry(func(_ uint, err error) {
 				t.Logf("failed validating Kong version: %v", err)
 			}),
 			retry.RetryIf(func(err error) bool {

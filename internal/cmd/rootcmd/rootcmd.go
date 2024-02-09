@@ -26,7 +26,7 @@ func Execute() {
 func GetRootCmd(cfg *manager.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		PersistentPreRunE: bindEnvVars,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return Run(cmd.Context(), cfg, os.Stderr)
 		},
 		SilenceUsage: true,
@@ -42,7 +42,7 @@ func GetVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Show JSON version information",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			type Version struct {
 				Release string `json:"release"`
 				Repo    string `json:"repo"`

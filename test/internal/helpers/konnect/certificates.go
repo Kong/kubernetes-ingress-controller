@@ -19,7 +19,7 @@ func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string) (ce
 	t.Helper()
 
 	rgConfigClient, err := cpc.NewClientWithResponses(fmt.Sprintf(konnectControlPlanesConfigBaseURLFmt, cpID), cpc.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
+		func(_ context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+accessToken())
 			return nil
 		}),

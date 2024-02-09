@@ -375,7 +375,7 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 		retry.DelayType(retry.FixedDelay),
 		retry.Attempts(0), // We're using a context with timeout, so we don't need to limit the number of attempts.
 		retry.LastErrorOnly(true),
-		retry.OnRetry(func(n uint, err error) {
+		retry.OnRetry(func(_ uint, err error) {
 			logger.Info("Retrying Kubernetes API readiness check after error", "error", err.Error())
 		}),
 	)

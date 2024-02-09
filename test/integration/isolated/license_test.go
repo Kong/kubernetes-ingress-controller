@@ -29,7 +29,7 @@ func TestKongLicense(t *testing.T) {
 		WithSetup("deploy kong addon into cluster", featureSetup()).
 		Assess(
 			"Expect No Licenses found before creating KongLicense resource",
-			func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				adminURL := GetAdminURLFromCtx(ctx)
 				require.NotNil(t, adminURL, "Should get URL to access Kong gateway admin APIs from context")
 				licenses, err := helpers.GetKongLicenses(ctx, adminURL, consts.KongTestPassword)
@@ -40,7 +40,7 @@ func TestKongLicense(t *testing.T) {
 			},
 		).Assess(
 		"Expect Licenses available when KongLicense created",
-		func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			licenseString, err := ktfkong.GetLicenseJSONFromEnv()
 			require.NoError(t, err)
 

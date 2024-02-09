@@ -59,7 +59,7 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	predicateFuncs := predicate.NewPredicateFuncs(r.shouldReconcileSecret)
 	// we should always try to delete secrets in caches when they are deleted in cluster.
-	predicateFuncs.DeleteFunc = func(event event.DeleteEvent) bool { return true }
+	predicateFuncs.DeleteFunc = func(_ event.DeleteEvent) bool { return true }
 	return c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},

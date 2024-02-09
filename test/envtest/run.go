@@ -11,6 +11,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
@@ -24,6 +25,12 @@ import (
 const (
 	// PublishServiceName is the name of the publish service used in Gateway API tests.
 	PublishServiceName = "publish-svc"
+
+	// ManagerStartupWaitTime is the time to wait for the manager to start.
+	ManagerStartupWaitTime = 5 * time.Second
+
+	// ManagerStartupWaitInterval is the interval to wait for the manager to start.
+	ManagerStartupWaitInterval = time.Millisecond
 )
 
 // ConfigForEnvConfig prepares a manager.Config for use in tests
@@ -160,6 +167,20 @@ func WithKongServiceFacadeFeatureEnabled() func(cfg *manager.Config) {
 	}
 }
 
+func WithKongAdminURLs(urls ...string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.KongAdminURLs = urls
+	}
+}
+
+func WithAdmissionWebhookEnabled(key, cert []byte, addr string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.AdmissionServer.ListenAddr = addr
+		cfg.AdmissionServer.Key = string(key)
+		cfg.AdmissionServer.Cert = string(cert)
+	}
+}
+
 // AdminAPIOptFns wraps a variadic list of mocks.AdminAPIHandlerOpt and returns
 // a slice containing all of them.
 // The purpose of this is func is to make the call sites a bit less verbose.
@@ -207,4 +228,19 @@ func RunManager(
 	})
 
 	return cfg, logs
+}
+
+// WaitForManagerStart waits for the manager to start.
+func WaitForManagerStart(t *testing.T, logs observerLogs) {
+	t.Log("Waiting for manager to start")
+	require.Eventually(t, func() bool {
+		const expectedLog = "Starting manager"
+		if !lo.ContainsBy(logs.All(), func(item observer.LoggedEntry) bool {
+			return strings.Contains(item.Message, expectedLog)
+		}) {
+			t.Logf("Manager has not started yet, waiting for log: %q", expectedLog)
+			return false
+		}
+		return true
+	}, ManagerStartupWaitTime, ManagerStartupWaitInterval)
 }

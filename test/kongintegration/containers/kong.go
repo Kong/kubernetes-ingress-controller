@@ -72,7 +72,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 		container: kongC,
 	}
 	t.Cleanup(func() {
-		assert.NoError(t, kongC.Terminate(ctx))
+		assert.NoError(t, kongC.Terminate(context.Background()))
 	})
 
 	adminURL, err := url.Parse(kong.AdminURL(ctx, t))

@@ -26,7 +26,7 @@ const (
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
 func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 	cpClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
+		func(_ context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
 		}),

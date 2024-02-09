@@ -159,7 +159,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 	testCases := []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
-			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
+			expected: func(_ []*gatewayapi.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs:      newSecretNameToSNIs(),
 					ServiceNameToParent:   map[string]client.Object{},

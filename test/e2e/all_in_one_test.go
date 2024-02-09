@@ -311,7 +311,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 1)
 
 	t.Log("misconfigure the ingress")
-	reconfigureExistingIngress(ctx, t, env, ingress, func(i *netv1.Ingress) {
+	reconfigureExistingIngress(ctx, t, env, ingress, func(_ *netv1.Ingress) {
 		ingress.Spec.Rules[0].HTTP.Paths[0].Path = badEchoPath
 	})
 

@@ -33,7 +33,7 @@ func TestExampleUDPRoute(t *testing.T) {
 			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		Assess("deploying to cluster works and deployed coredns responds to UDP queries",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 				cluster := GetClusterFromCtx(ctx)
 				proxyUDPURL := GetUDPURLFromCtx(ctx)

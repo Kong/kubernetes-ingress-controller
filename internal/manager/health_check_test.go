@@ -18,10 +18,10 @@ import (
 )
 
 func TestHealthCheckServer(t *testing.T) {
-	passChecker := func(req *http.Request) error {
+	passChecker := func(_ *http.Request) error {
 		return nil
 	}
-	failChecker := func(req *http.Request) error {
+	failChecker := func(_ *http.Request) error {
 		return errors.New("you shall not pass")
 	}
 

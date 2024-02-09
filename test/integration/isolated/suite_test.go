@@ -123,7 +123,7 @@ func TestMain(m *testing.M) {
 	tenv.BeforeEachFeature(
 		// TODO: Prevent a data race by using a mutex explicitly when first creating the client.
 		// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/4848
-		func(ctx context.Context, c *envconf.Config, t *testing.T, f features.Feature) (context.Context, error) {
+		func(ctx context.Context, c *envconf.Config, _ *testing.T, _ features.Feature) (context.Context, error) {
 			l.Lock()
 			defer l.Unlock()
 			_, err = c.NewClient()

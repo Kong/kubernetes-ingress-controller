@@ -178,7 +178,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("basic test - route status and connectivity", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("basic test - route status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
@@ -198,7 +198,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("verify behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("removing the parentrefs from the TCPRoute")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
@@ -246,7 +246,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("verify behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
@@ -336,7 +336,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify behavior with many backends", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("verify behavior with many backends", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)

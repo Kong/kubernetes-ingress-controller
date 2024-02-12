@@ -49,6 +49,9 @@ func runKongEnterpriseHandlingVaultValidationCorrectly(ctx context.Context, t *t
 		})
 		if err != nil {
 			t.Logf("Vault validation endpoint malfunction discovered: %s. Retrying...", err)
+			if err := kongContainer.Terminate(ctx); err != nil {
+				t.Logf("Failed to terminate Kong container: %s", err)
+			}
 			return false
 		}
 

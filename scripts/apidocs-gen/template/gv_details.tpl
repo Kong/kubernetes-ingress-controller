@@ -14,8 +14,13 @@
 {{- /* Display exported Kinds first */ -}}
 {{- range $gv.SortedKinds -}}
 {{- $typ := $gv.TypeForKind . }}
-{{ template "type" $typ }}
+{{- $isKind := true -}}
+{{ template "type" (dict "type" $typ "isKind" $isKind) }}
 {{ end -}}
+
+### Types
+
+In this section you will find types that the CRDs rely on.
 
 {{- /* Display Types that are not exported Kinds */ -}}
 {{- range $typ := $gv.SortedTypes -}}
@@ -26,7 +31,7 @@
 {{- end -}}
 {{- end -}}
 {{- if not $isKind }}
-{{ template "type" $typ }}
+{{ template "type" (dict "type" $typ "isKind" $isKind) }}
 {{ end -}}
 {{- end }}
 

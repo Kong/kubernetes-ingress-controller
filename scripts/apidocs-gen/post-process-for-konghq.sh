@@ -28,5 +28,5 @@ echo "<!-- vale on -->" >> "${POST_PROCESSED_DOC}"
 
 # Replace all description placeholders with proper include directives
 sed -i -r \
-  's/<!-- (.*) description placeholder -->/{% include md\/kic\/crd-ref\/\1_description.md kong_version=page.kong_version %}/' \
+  's/<!-- \(.*\) description placeholder -->/{% include md\/kic\/crd-ref\/\1_description.md kong_version=page.kong_version %}/' \
   "${POST_PROCESSED_DOC}"

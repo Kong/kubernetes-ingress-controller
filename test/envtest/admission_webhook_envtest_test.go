@@ -179,6 +179,8 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 	ctrlClient client.Client,
 	vaultPrefix string,
 ) {
+	t.Helper()
+
 	name := uuid.NewString()
 	require.NoError(t, ctrlClient.Create(ctx, &kongv1alpha1.KongVault{
 		ObjectMeta: metav1.ObjectMeta{

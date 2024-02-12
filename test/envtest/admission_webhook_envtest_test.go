@@ -3,11 +3,9 @@ package envtest
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -163,7 +161,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := createVaultWithRetry(ctx, t, ctrlClient, tc.kongVault)
+			err := ctrlClient.Create(ctx, tc.kongVault)
 			if tc.expectErrorContains != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.expectErrorContains)
@@ -197,7 +195,7 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 			Description: "vault description",
 		},
 	}
-	err := createVaultWithRetry(ctx, t, ctrlClient, vault)
+	err := ctrlClient.Create(ctx, vault)
 	require.NoError(t, err)
 
 	t.Logf("Waiting for KongVault %s to be programmed...", name)
@@ -211,29 +209,5 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 			return c.Type == "Programmed"
 		})
 		return ok && programmed.Status == metav1.ConditionTrue
-	}, time.Second, time.Millisecond*20, "KongVault %s was expected to be programmed", name)
-}
-
-// createVaultWithRetry creates a KongVault and retries if the Gateway returns 405 status code.
-// It's a known bug on the Gateway side - Gateways can randomly return 405 status code when validating a Vault entity.
-// Once https://konghq.atlassian.net/browse/KAG-3699 is solved we should drop this retry logic.
-func createVaultWithRetry(
-	ctx context.Context,
-	t *testing.T,
-	ctrlClient client.Client,
-	vault *kongv1alpha1.KongVault,
-) error {
-	t.Helper()
-
-	return retry.Do(func() error { return ctrlClient.Create(ctx, vault) },
-		retry.RetryIf(func(err error) bool {
-			return strings.Contains(err.Error(), "HTTP status 405")
-		}),
-		retry.OnRetry(func(n uint, _ error) {
-			t.Logf("HTTP status 405 returned from Kong Gateway, retrying (n=%d)...", n)
-		}),
-		retry.LastErrorOnly(true),
-		retry.MaxDelay(time.Second*5),
-		retry.Attempts(100),
-	)
+	}, 5*time.Second, time.Millisecond*20, "KongVault %s was expected to be programmed", name)
 }

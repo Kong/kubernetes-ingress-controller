@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/cprint"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -22,10 +23,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -436,16 +437,17 @@ func setupLicenseGetter(
 	// Enable KongLicense controller if license synchornizition from Konnect is disabled.
 	if c.KongLicenseEnabled && !c.Konnect.LicenseSynchronizationEnabled {
 		setupLog.Info("Starting KongLicense controller")
-		licenseController := &configuration.KongV1Alpha1KongLicenseReconciler{
-			Client:           mgr.GetClient(),
-			Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
-			Scheme:           mgr.GetScheme(),
-			LicenseCache:     configuration.NewLicenseCache(),
-			CacheSyncTimeout: c.CacheSyncTimeout,
-			StatusQueue:      statusQueue,
-			ControllerName:   c.LeaderElectionID,
+		licenseController := &ctrllicense.KongV1Alpha1KongLicenseReconciler{
+			Client:                mgr.GetClient(),
+			Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
+			Scheme:                mgr.GetScheme(),
+			LicenseCache:          ctrllicense.NewLicenseCache(),
+			CacheSyncTimeout:      c.CacheSyncTimeout,
+			StatusQueue:           statusQueue,
+			ElectionID:            mo.Some(c.LeaderElectionID),
+			LicenseControllerType: ctrllicense.LicenseControllerTypeKIC,
 		}
-		dynamicLicenseController := configuration.WrapKongLicenseReconcilerToDynamicCRDController(
+		dynamicLicenseController := ctrllicense.WrapKongLicenseReconcilerToDynamicCRDController(
 			ctx, mgr, licenseController,
 		)
 		err := dynamicLicenseController.SetupWithManager(mgr)

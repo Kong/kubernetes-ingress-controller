@@ -232,15 +232,11 @@ func RunManager(
 
 // WaitForManagerStart waits for the manager to start.
 func WaitForManagerStart(t *testing.T, logs observerLogs) {
-	t.Log("Waiting for manager to start")
+	t.Log("Waiting for manager to start...")
 	require.Eventually(t, func() bool {
 		const expectedLog = "Starting manager"
-		if !lo.ContainsBy(logs.All(), func(item observer.LoggedEntry) bool {
+		return lo.ContainsBy(logs.All(), func(item observer.LoggedEntry) bool {
 			return strings.Contains(item.Message, expectedLog)
-		}) {
-			t.Logf("Manager has not started yet, waiting for log: %q", expectedLog)
-			return false
-		}
-		return true
+		})
 	}, ManagerStartupWaitTime, ManagerStartupWaitInterval)
 }

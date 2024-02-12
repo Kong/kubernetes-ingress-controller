@@ -196,20 +196,16 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 		},
 	}))
 
-	require.Eventually(t, func() bool {
+	t.Logf("Waiting for KongVault %s to be programmed...", name)
+	require.Eventuallyf(t, func() bool {
 		kv := &kongv1alpha1.KongVault{}
 		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Name: name}, kv)
 		if err != nil {
-			t.Logf("Failed to get KongVault: %v", err)
 			return false
 		}
 		programmed, ok := lo.Find(kv.Status.Conditions, func(c metav1.Condition) bool {
 			return c.Type == "Programmed"
 		})
-		if !ok || programmed.Status != metav1.ConditionTrue {
-			t.Log("KongVault created for duplicate prefix check has not been programmed yet")
-			return false
-		}
-		return true
-	}, time.Second, time.Millisecond*20)
+		return ok && programmed.Status == metav1.ConditionTrue
+	}, time.Second, time.Millisecond*20, "KongVault %s was expected to be programmed", name)
 }

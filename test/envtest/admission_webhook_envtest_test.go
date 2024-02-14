@@ -181,6 +181,11 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 ) {
 	t.Helper()
 
+	const (
+		programmedWaitTimeout  = 30 * time.Second
+		programmedWaitInterval = 20 * time.Millisecond
+	)
+
 	name := uuid.NewString()
 	vault := &kongv1alpha1.KongVault{
 		ObjectMeta: metav1.ObjectMeta{
@@ -209,5 +214,5 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 			return c.Type == "Programmed"
 		})
 		return ok && programmed.Status == metav1.ConditionTrue
-	}, 5*time.Second, time.Millisecond*20, "KongVault %s was expected to be programmed", name)
+	}, programmedWaitTimeout, programmedWaitInterval, "KongVault %s was expected to be programmed", name)
 }

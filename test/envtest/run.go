@@ -201,7 +201,7 @@ func RunManager(
 	envcfg *rest.Config,
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
 	modifyCfgFns ...func(cfg *manager.Config),
-) (manager.Config, observerLogs) {
+) (manager.Config, LogsObserver) {
 	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
 
 	for _, modifyCfgFn := range modifyCfgFns {
@@ -230,12 +230,16 @@ func RunManager(
 	return cfg, logs
 }
 
-// WaitForManagerStart waits for the manager to start.
-func WaitForManagerStart(t *testing.T, logs observerLogs) {
+// WaitForManagerStart waits for the manager to start. The indication of the manager starting is
+// the "Starting manager" log entry that is emitted just before the manager starts.
+// Note: We cannot rely here on the manager's readiness probe because it returns 200 OK as soon as it
+// starts listening which happens before the manager actually starts.
+func WaitForManagerStart(t *testing.T, logsObserver LogsObserver) {
+	t.Helper()
 	t.Log("Waiting for manager to start...")
 	require.Eventually(t, func() bool {
 		const expectedLog = "Starting manager"
-		return lo.ContainsBy(logs.All(), func(item observer.LoggedEntry) bool {
+		return lo.ContainsBy(logsObserver.All(), func(item observer.LoggedEntry) bool {
 			return strings.Contains(item.Message, expectedLog)
 		})
 	}, ManagerStartupWaitTime, ManagerStartupWaitInterval)

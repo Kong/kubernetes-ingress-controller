@@ -72,7 +72,10 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 		container: kongC,
 	}
 	t.Cleanup(func() {
-		assert.NoError(t, kongC.Terminate(ctx))
+		// If the container is already terminated, we don't need to terminate it again.
+		if kongC.IsRunning() {
+			assert.NoError(t, kongC.Terminate(context.Background()))
+		}
 	})
 
 	adminURL, err := url.Parse(kong.AdminURL(ctx, t))
@@ -127,6 +130,10 @@ func (c Kong) ProxyURL(ctx context.Context, t *testing.T) string {
 	port, err := c.container.MappedPort(ctx, kongProxyPort)
 	require.NoError(t, err)
 	return fmt.Sprintf("http://localhost:%s", port.Port())
+}
+
+func (c Kong) Terminate(ctx context.Context) error {
+	return c.container.Terminate(ctx)
 }
 
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and

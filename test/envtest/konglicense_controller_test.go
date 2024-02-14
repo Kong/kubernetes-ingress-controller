@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -16,6 +17,11 @@ import (
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
+const (
+	waitTime = 3 * time.Second
+	tickTime = 100 * time.Millisecond
+)
+
 func TestKongLicenseController(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	cfg := Setup(t, scheme)
@@ -24,19 +30,20 @@ func TestKongLicenseController(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reconciler := &ctrllicense.KongV1Alpha1KongLicenseReconciler{
-		Client:                ctrlClient,
-		Log:                   logr.Discard(),
-		Scheme:                scheme,
-		LicenseCache:          ctrllicense.NewLicenseCache(),
-		LicenseControllerType: ctrllicense.LicenseControllerTypeKIC,
-		ElectionID:            mo.Some("test"),
-	}
+	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconcilerWithoutLicenseValidation(
+		ctrlClient,
+		logr.Discard(),
+		scheme,
+		ctrllicense.NewLicenseCache(),
+		time.Second,
+		nil,
+		ctrllicense.LicenseControllerTypeKIC,
+		mo.Some("test"),
+	)
+
 	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
 
 	const (
-		waitTime            = 3 * time.Second
-		tickTime            = 100 * time.Millisecond
 		fullControllerName  = ctrllicense.LicenseControllerTypeKIC + "/test"
 		conditionProgrammed = ctrllicense.ConditionTypeProgrammed
 	)
@@ -117,6 +124,85 @@ func TestKongLicenseController(t *testing.T) {
 		return findConditionInControllerStatus(
 			kongLicense1, fullControllerName, conditionProgrammed, metav1.ConditionTrue)
 	}, waitTime, tickTime, "The Programmed condition in controller status should be back to true after the new one deleted")
+}
+
+func TestKongLicenseControllerValidation(t *testing.T) {
+	scheme := Scheme(t, WithKong)
+	cfg := Setup(t, scheme)
+	ctrlClient := NewControllerClient(t, scheme, cfg)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	const (
+		controllerName = "test-controller"
+		validLicense   = "valid-license-for-testing"
+	)
+	licenseValidator := func(licenseRaw string) error {
+		if licenseRaw == validLicense {
+			return nil
+		}
+		return errors.New("invalid signature")
+	}
+	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
+		ctrlClient,
+		logr.Discard(),
+		scheme,
+		ctrllicense.NewLicenseCache(),
+		time.Second,
+		nil,
+		controllerName,
+		mo.None[string](),
+		licenseValidator,
+	)
+	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
+
+	t.Log("Create a KongLicense and verify that it is reconciled")
+	kongLicense1 := &kongv1alpha1.KongLicense{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "license-1",
+		},
+		RawLicenseString: "invalid-license-for-testing",
+		Enabled:          true,
+	}
+	err := ctrlClient.Create(ctx, kongLicense1)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Name: kongLicense1.Name}, kongLicense1)
+		require.NoError(t, err, "Should not have error in getting the latest status")
+		return findConditionInControllerStatus(
+			kongLicense1, controllerName, ctrllicense.ConditionTypeLicenseValid, metav1.ConditionFalse,
+		)
+	}, waitTime, tickTime, "The Programmed condition for LicenseValid in controller status should be set to False")
+	require.Eventually(t, func() bool {
+		l, ok := reconciler.GetLicense().Get()
+		if !ok {
+			return false
+		}
+		isValid, ok := l.IsValid.Get()
+		return ok && !isValid
+	}, waitTime, tickTime, "Should return that license is invalid in GetLicense method")
+
+	kongLicense1.RawLicenseString = "valid-license-for-testing"
+	err = ctrlClient.Update(ctx, kongLicense1)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Name: kongLicense1.Name}, kongLicense1)
+		require.NoError(t, err, "Should not have error in getting the latest status")
+		return findConditionInControllerStatus(
+			kongLicense1, controllerName, ctrllicense.ConditionTypeLicenseValid, metav1.ConditionTrue,
+		)
+	}, waitTime, tickTime, "The Programmed condition for LicenseValid in controller status should be set to True")
+	require.Eventually(t, func() bool {
+		l, ok := reconciler.GetLicense().Get()
+		if !ok {
+			return false
+		}
+		isValid, ok := l.IsValid.Get()
+		return ok && isValid
+	}, waitTime, tickTime, "Should return that license is valid in GetLicense method")
 }
 
 func findConditionInControllerStatus(

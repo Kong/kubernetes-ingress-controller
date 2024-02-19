@@ -64,7 +64,8 @@ func (f IntField) String() string {
 // https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
 
 const (
-	FieldNetDstPort IntField = "net.dst.port"
+	FieldNetDstPort          IntField = "net.dst.port"
+	FieldHTTPPathSegmentsLen IntField = "http.path.segments.len"
 )
 
 // HTTPHeaderField extracts the value of an HTTP header from the request.
@@ -91,4 +92,31 @@ func (f HTTPQueryField) FieldType() FieldType {
 
 func (f HTTPQueryField) String() string {
 	return "http.queries." + f.QueryParamName
+}
+
+// HTTPPathSingleSegmentField represensts a single segment of HTTP path with 0 based index.
+type HTTPPathSingleSegmentField struct {
+	Index int
+}
+
+func (f HTTPPathSingleSegmentField) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f HTTPPathSingleSegmentField) String() string {
+	return fmt.Sprintf("http.path.segments.%d", f.Index)
+}
+
+// HTTPPathSegmentIntervalField represents a closed interval of segments in HTTP path.
+type HTTPPathSegmentIntervalField struct {
+	Start int
+	End   int
+}
+
+func (f HTTPPathSegmentIntervalField) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f HTTPPathSegmentIntervalField) String() string {
+	return fmt.Sprintf("http.path.segments.%d_%d", f.Start, f.End)
 }

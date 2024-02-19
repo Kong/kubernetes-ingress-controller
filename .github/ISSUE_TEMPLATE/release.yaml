@@ -63,6 +63,13 @@ body:
       - label: Mark the PR ready for review.
       - label: Inform and ping the @Kong/team-k8s via slack of impending release with a link to the release PR.
       - label: Ensure that [KGO](https://github.com/Kong/gateway-operator) works with the released version of KIC. Update and release it if needed.
+- type: checkboxes
+  id: release_charts
+  attributes:
+    label: "**For major/minor releases only** Bump charts' dependencies"
+    options:
+      - label: Bump the KIC version in the [`kong/kong` Helm chart](https://github.com/Kong/charts/blob/main/charts/kong/values.yaml#L528) and release a new version of the chart.
+      - label: After `kong/kong` is released, bump the dependency on `kong/kong` chart in the [`kong/ingress` Helm chart](https://github.com/Kong/charts/blob/main/charts/ingress/Chart.yaml#L15) and release a new version of the chart.
 - type: textarea
   id: conformance_tests_report
   attributes:

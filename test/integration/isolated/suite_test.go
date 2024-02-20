@@ -306,7 +306,8 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
-			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
+			// Use fixed election namespace because RBAC roles for leader election are in the namespace
+			fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
 			fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)

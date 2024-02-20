@@ -82,6 +82,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- When managed Kong gateways are OSS edition, KIC will not apply licenses to
+  the Kong gateway instances to avoid invalid configurations.
+  [#5640](https://github.com/Kong/kubernetes-ingress-controller/pull/5640)
+
 ## [3.1.0]
 
 > Release date: 2024-02-07

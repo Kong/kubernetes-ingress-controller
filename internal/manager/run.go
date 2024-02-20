@@ -172,6 +172,7 @@ func Run(
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,
+		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
 	)
 
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))

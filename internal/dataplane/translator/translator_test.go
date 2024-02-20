@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -4671,9 +4672,10 @@ func TestNewFeatureFlags(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		featureGates     map[string]bool
-		routerFlavor     dpconf.RouterFlavor
-		updateStatusFlag bool
+		featureGates      map[string]bool
+		routerFlavor      dpconf.RouterFlavor
+		updateStatusFlag  bool
+		enterpriseEdition bool
 
 		expectedFeatureFlags FeatureFlags
 	}{
@@ -4694,11 +4696,22 @@ func TestNewFeatureFlags(t *testing.T) {
 				ExpressionRoutes: true,
 			},
 		},
+		{
+			name: "ServiceFacade enabled and enterprise edition",
+			featureGates: map[string]bool{
+				featuregates.KongServiceFacade: true,
+			},
+			enterpriseEdition: true,
+			expectedFeatureFlags: FeatureFlags{
+				EnterpriseEdition: true,
+				KongServiceFacade: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag)
+			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 		})
@@ -4716,7 +4729,7 @@ func (m *mockLicenseGetter) GetLicense() mo.Option[kong.License] {
 func TestTranslator_License(t *testing.T) {
 	s, _ := store.NewFakeStore(store.FakeObjects{})
 	p := mustNewTranslator(t, s)
-
+	p.featureFlags.EnterpriseEdition = true
 	t.Run("no license is populated by default", func(t *testing.T) {
 		result := p.BuildKongConfig()
 		require.Empty(t, result.KongState.Licenses)
@@ -4741,6 +4754,19 @@ func TestTranslator_License(t *testing.T) {
 		license := result.KongState.Licenses[0]
 		require.Equal(t, "license-id", *license.ID)
 		require.Equal(t, "license-payload", *license.Payload)
+	})
+
+	t.Run("no license is populated when license getter returns a license but enterprise edition is false", func(t *testing.T) {
+		p.featureFlags.EnterpriseEdition = false
+		licenseGetterWithLicense := &mockLicenseGetter{
+			license: mo.Some(kong.License{
+				ID:      lo.ToPtr("license-id"),
+				Payload: lo.ToPtr("license-payload"),
+			}),
+		}
+		p.InjectLicenseGetter(licenseGetterWithLicense)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.KongState.Licenses)
 	})
 }
 

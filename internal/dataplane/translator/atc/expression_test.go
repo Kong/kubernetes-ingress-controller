@@ -50,12 +50,37 @@ func TestGenerateExpression(t *testing.T) {
 			expression: `(http.headers.x_kong_test == "test") && (http.host =^ ".konghq.com") && (tls.sni =^ ".konghq.com")`,
 		},
 		{
+			name: "HTTP query match predicates",
+			matcher: And(
+				NewPredicateHTTPQuery("foo", OpEqual, "1"),
+				NewPredicateHTTPQuery("bar", OpEqual, "2"),
+			),
+			expression: `(http.queries.foo == "1") && (http.queries.bar == "2")`,
+		},
+		{
+			name: "HTTP path segments match",
+			matcher: And(
+				// matches /api/namespaces/*/services/** .
+				NewPredicateHTTPPathSegmentLength(OpGreaterThan, 4),
+				NewPredicateHTTPPathSegmentInterval(0, 1, OpEqual, "api/namespaces"),
+				NewPredicateHTTPPathSingleSegment(3, OpEqual, "services"),
+			),
+			expression: `(http.path.segments.len > 4) && (http.path.segments.0_1 == "api/namespaces") && (http.path.segments.3 == "services")`,
+		},
+		{
 			name: "multiple predicates connected by OR(||)",
 			matcher: Or(
 				NewPredicateHTTPPath(OpEqual, "/foo"),
 				NewPredicateHTTPPath(OpPrefixMatch, "/foo/"),
 			),
 			expression: `(http.path == "/foo") || (http.path ^= "/foo/")`,
+		},
+		{
+			name: "negate a single predicate using NOT",
+			matcher: Not(
+				NewPredicateNetProtocol(OpEqual, "http"),
+			),
+			expression: `!(net.protocol == "http")`,
 		},
 		{
 			name: "multiple predicates connected by complex concatation of AND/OR",
@@ -67,6 +92,35 @@ func TestGenerateExpression(t *testing.T) {
 				),
 			).And(NewPredicateHTTPPath(OpEqual, "/foo")),
 			expression: `(http.host == "test.konghq.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/foo")`,
+		},
+		{
+			name: "NOT matcher in submatchers of AND/OR matcher",
+			matcher: And(
+				Not(
+					Or(
+						NewPredicateHTTPMethod(OpEqual, "CONNECT"),
+						NewPredicateHTTPMethod(OpEqual, "OPTIONS"),
+					),
+				),
+				NewPredicateHTTPPath(OpEqual, "/foo/bar"),
+			),
+			expression: `(!((http.method == "CONNECT") || (http.method == "OPTIONS"))) && (http.path == "/foo/bar")`,
+		},
+		{
+			name: "negate complex matcher with AND/OR using NOT",
+			matcher: Not(
+				Or(
+					And(
+						NewPrediacteHTTPHost(OpEqual, "foo.konghq.com"),
+						NewPredicateHTTPPath(OpEqual, "/index.html"),
+					),
+					And(
+						NewPrediacteHTTPHost(OpEqual, "bar.konghq.com"),
+						NewPredicateHTTPPath(OpEqual, "/index"),
+					),
+				),
+			),
+			expression: `!(((http.host == "foo.konghq.com") && (http.path == "/index.html")) || ((http.host == "bar.konghq.com") && (http.path == "/index")))`,
 		},
 		{
 			name:       "empty Or matcher",
@@ -117,6 +171,11 @@ func TestGenerateExpression(t *testing.T) {
 		{
 			name:       "nil Or",
 			matcher:    (*OrMatcher)(nil),
+			expression: "",
+		},
+		{
+			name:       "nil Not",
+			matcher:    (*NotMatcher)(nil),
 			expression: "",
 		},
 	}

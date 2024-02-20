@@ -51,6 +51,9 @@ type FeatureFlags struct {
 	// ExpressionRoutes indicates whether to translate Kubernetes objects to expression based Kong Routes.
 	ExpressionRoutes bool
 
+	// EnterpriseEdition indicates whether to translate objects that are only available in the Kong enterprise edition.
+	EnterpriseEdition bool
+
 	// FillIDs enables the translator to fill in the IDs fields of Kong entities - Services, Routes, and Consumers - based
 	// on their names. It ensures that IDs remain stable across restarts of the controller.
 	FillIDs bool
@@ -66,10 +69,12 @@ func NewFeatureFlags(
 	featureGates featuregates.FeatureGates,
 	routerFlavor dpconf.RouterFlavor,
 	updateStatusFlag bool,
+	enterpriseEdition bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
 		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		EnterpriseEdition:                 enterpriseEdition,
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
@@ -210,7 +215,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	// populate CA certificates in Kong
 	result.CACertificates = t.getCACerts()
 
-	if t.licenseGetter != nil {
+	if t.licenseGetter != nil && t.featureFlags.EnterpriseEdition {
 		optionalLicense := t.licenseGetter.GetLicense()
 		if l, ok := optionalLicense.Get(); ok {
 			result.Licenses = append(result.Licenses, kongstate.License{License: l})

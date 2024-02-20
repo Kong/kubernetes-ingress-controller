@@ -51,7 +51,7 @@ type FeatureFlags struct {
 	// ExpressionRoutes indicates whether to translate Kubernetes objects to expression based Kong Routes.
 	ExpressionRoutes bool
 
-	// EnterpriseEdition indicates whether to translate objects that are only available in Kong enterpreise edition.
+	// EnterpriseEdition indicates whether to translate objects that are only available in the Kong enterprise edition.
 	EnterpriseEdition bool
 
 	// FillIDs enables the translator to fill in the IDs fields of Kong entities - Services, Routes, and Consumers - based

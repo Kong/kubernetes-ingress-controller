@@ -437,16 +437,17 @@ func setupLicenseGetter(
 	// Enable KongLicense controller if license synchornizition from Konnect is disabled.
 	if c.KongLicenseEnabled && !c.Konnect.LicenseSynchronizationEnabled {
 		setupLog.Info("Starting KongLicense controller")
-		licenseController := &ctrllicense.KongV1Alpha1KongLicenseReconciler{
-			Client:                mgr.GetClient(),
-			Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
-			Scheme:                mgr.GetScheme(),
-			LicenseCache:          ctrllicense.NewLicenseCache(),
-			CacheSyncTimeout:      c.CacheSyncTimeout,
-			StatusQueue:           statusQueue,
-			ElectionID:            mo.Some(c.LeaderElectionID),
-			LicenseControllerType: ctrllicense.LicenseControllerTypeKIC,
-		}
+		licenseController := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
+			mgr.GetClient(),
+			ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
+			mgr.GetScheme(),
+			ctrllicense.NewLicenseCache(),
+			c.CacheSyncTimeout,
+			statusQueue,
+			ctrllicense.LicenseControllerTypeKIC,
+			mo.Some(c.LeaderElectionID),
+			mo.None[ctrllicense.ValidatorFunc](),
+		)
 		dynamicLicenseController := ctrllicense.WrapKongLicenseReconcilerToDynamicCRDController(
 			ctx, mgr, licenseController,
 		)

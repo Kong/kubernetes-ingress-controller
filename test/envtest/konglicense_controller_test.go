@@ -30,7 +30,7 @@ func TestKongLicenseController(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconcilerWithoutLicenseValidation(
+	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
 		ctrlClient,
 		logr.Discard(),
 		scheme,
@@ -39,6 +39,7 @@ func TestKongLicenseController(t *testing.T) {
 		nil,
 		ctrllicense.LicenseControllerTypeKIC,
 		mo.Some("test"),
+		mo.None[ctrllicense.ValidatorFunc](),
 	)
 
 	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
@@ -138,12 +139,14 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 		controllerName = "test-controller"
 		validLicense   = "valid-license-for-testing"
 	)
-	licenseValidator := func(licenseRaw string) error {
-		if licenseRaw == validLicense {
-			return nil
-		}
-		return errors.New("invalid signature")
-	}
+	licenseValidator := ctrllicense.ValidatorFunc(
+		func(licenseRaw string) error {
+			if licenseRaw == validLicense {
+				return nil
+			}
+			return errors.New("invalid signature")
+		},
+	)
 	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
 		ctrlClient,
 		logr.Discard(),
@@ -153,7 +156,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 		nil,
 		controllerName,
 		mo.None[string](),
-		licenseValidator,
+		mo.Some(licenseValidator),
 	)
 	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
 
@@ -176,7 +179,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 		)
 	}, waitTime, tickTime, "The Programmed condition for LicenseValid in controller status should be set to False")
 	require.Eventually(t, func() bool {
-		l, ok := reconciler.GetLicense().Get()
+		l, ok := reconciler.GetValidatedLicense().Get()
 		if !ok {
 			return false
 		}
@@ -196,7 +199,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 		)
 	}, waitTime, tickTime, "The Programmed condition for LicenseValid in controller status should be set to True")
 	require.Eventually(t, func() bool {
-		l, ok := reconciler.GetLicense().Get()
+		l, ok := reconciler.GetValidatedLicense().Get()
 		if !ok {
 			return false
 		}

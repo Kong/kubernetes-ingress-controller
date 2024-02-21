@@ -36,9 +36,15 @@ import (
 // KongV1Alpha1 KongLicense - Reconciler
 // -----------------------------------------------------------------------------
 
-// NewKongV1Alpha1KongLicenseReconciler creates a new KongV1Alpha1KongLicenseReconciler,
-// that provides functionality for validating the license. The method `GetLicense` returns
-// the license and its validity.
+// ValidatorFunc is the function type used to validate the license string by KongV1Alpha1KongLicenseReconciler.
+type ValidatorFunc func(rawLicenseString string) error
+
+// NewKongV1Alpha1KongLicenseReconciler creates a new KongV1Alpha1KongLicenseReconciler.
+// It can validate the license and set conditions accordingly when licenseValidator is provided.
+// Based on whether it returns an error it sets
+// `status.status.controllers[].controllerName.conditions[].type`: "LicenseValid" to "True" or "False"
+// according with other fields of the condition. Field `message` is set to the returned error message.
+// If not provided, the whole validation step is skipped.
 func NewKongV1Alpha1KongLicenseReconciler(
 	client client.Client,
 	log logr.Logger,
@@ -48,7 +54,7 @@ func NewKongV1Alpha1KongLicenseReconciler(
 	statusQueue *status.Queue,
 	licenseControllerType string,
 	electionID mo.Option[string],
-	licenseValidator func(rawLicenseString string) error,
+	licenseValidator mo.Option[ValidatorFunc],
 ) *KongV1Alpha1KongLicenseReconciler {
 	return &KongV1Alpha1KongLicenseReconciler{
 		Client:                client,
@@ -59,42 +65,8 @@ func NewKongV1Alpha1KongLicenseReconciler(
 		StatusQueue:           statusQueue,
 		LicenseControllerType: licenseControllerType,
 		ElectionID:            electionID,
-		LicenseValidator:      licenseValidator,
+		licenseValidator:      licenseValidator.OrEmpty(),
 	}
-}
-
-// NewKongV1Alpha1KongLicenseReconcilerWithoutLicenseValidation creates a new
-// KongV1Alpha1KongLicenseReconcilerWithoutValidation, that method `GetLicense`
-// returns only the license. It does not check the license validity.
-func NewKongV1Alpha1KongLicenseReconcilerWithoutLicenseValidation(
-	client client.Client,
-	log logr.Logger,
-	scheme *runtime.Scheme,
-	licenseCache cache.Store,
-	cacheSyncTimeout time.Duration,
-	statusQueue *status.Queue,
-	licenseControllerType string,
-	electionID mo.Option[string],
-) *KongV1Alpha1KongLicenseReconcilerWithoutValidation {
-	return &KongV1Alpha1KongLicenseReconcilerWithoutValidation{
-		KongV1Alpha1KongLicenseReconciler: NewKongV1Alpha1KongLicenseReconciler(
-			client, log, scheme, licenseCache, cacheSyncTimeout, statusQueue, licenseControllerType, electionID, nil,
-		),
-	}
-}
-
-// KongV1Alpha1KongLicenseReconcilerWithoutValidation is a wrapper of KongV1Alpha1KongLicenseReconciler
-// that disables the license validation and its method `GetLicense` returns only the license.
-type KongV1Alpha1KongLicenseReconcilerWithoutValidation struct {
-	*KongV1Alpha1KongLicenseReconciler
-}
-
-func (l *KongV1Alpha1KongLicenseReconcilerWithoutValidation) GetLicense() mo.Option[kong.License] {
-	unpackedL, ok := l.KongV1Alpha1KongLicenseReconciler.GetLicense().Get()
-	if !ok {
-		return mo.None[kong.License]()
-	}
-	return mo.Some(unpackedL.License)
 }
 
 // KongV1Alpha1KongLicenseReconciler reconciles KongLicense resources.
@@ -113,12 +85,7 @@ type KongV1Alpha1KongLicenseReconciler struct {
 	// status.controllers[].controllerName: "LicenseControllerType".
 	ElectionID mo.Option[string]
 
-	// LicenseValidator is the function to validate the license string, based on whether it returns an error
-	// it sets `status.status.controllers[].controllerName.conditions[].type`: "LicenseValid" to "True" or "False"
-	// according with other fields of the condition. Field `message` is set to the error message.
-	// If not provided, the whole condition is skipped. See constructors for more details.
-	LicenseValidator func(rawLicenseString string) error
-
+	licenseValidator  func(rawLicenseString string) error
 	chosenLicenseLock sync.RWMutex
 	chosenLicense     *kongv1alpha1.KongLicense
 }
@@ -265,7 +232,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 	chosenLicense := r.pickLicenseInCache()
 	if chosenLicense.Name == obj.Name {
 		log.V(util.DebugLevel).Info("Picked KongLicense being reconciled", "name", obj.Name)
-		err := r.ensureControllerStatusProgrammedCondition(ctx, obj, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
+		err := r.ensureControllerStatusConditions(ctx, obj, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -273,7 +240,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 		oldChosenLicense := r.getChosenLicense()
 		if oldChosenLicense != nil && oldChosenLicense.Name != chosenLicense.Name {
 			r.Log.V(util.DebugLevel).Info("Originally picked KongLicense replaced", "name", oldChosenLicense.Name)
-			err := r.ensureControllerStatusProgrammedCondition(ctx, oldChosenLicense, metav1.ConditionFalse, ConditionReasonReplacedByNewer, "Replaced by newer created KongLicense")
+			err := r.ensureControllerStatusConditions(ctx, oldChosenLicense, metav1.ConditionFalse, ConditionReasonReplacedByNewer, "Replaced by newer created KongLicense")
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -284,13 +251,18 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 	return ctrl.Result{}, nil
 }
 
+// License is a wrapper for kong.License that include the information about its validity.
+// Field IsValid is set to true if the license is valid, otherwise it's set to false.
+// If it's not set at all, it means that the license validation is not configured,
+// thus the information about the license validity is not available.
 type License struct {
 	License kong.License
 	IsValid mo.Option[bool]
 }
 
-// GetLicense is the interface to get the license in Kong configuration format to use in translator.
-func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[License] {
+// GetValidatedLicense is the interface to get the license in Kong configuration format and information
+// about its validity when if validator has been configured.
+func (r *KongV1Alpha1KongLicenseReconciler) GetValidatedLicense() mo.Option[License] {
 	chosenLicense := r.getChosenLicense()
 	if chosenLicense == nil {
 		r.Log.V(util.DebugLevel).Info("No KongLicense available")
@@ -298,8 +270,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[License] {
 	}
 	r.Log.V(util.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
 	isValid := mo.None[bool]()
-	if r.LicenseValidator != nil {
-		isValid = mo.Some(r.LicenseValidator(chosenLicense.RawLicenseString) == nil)
+	if r.licenseValidator != nil {
+		isValid = mo.Some(r.licenseValidator(chosenLicense.RawLicenseString) == nil)
 	}
 	return mo.Some(License{
 		License: kong.License{
@@ -308,6 +280,17 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[License] {
 		},
 		IsValid: isValid,
 	})
+}
+
+// GetLicense returns the license in Kong configuration format. It does not check the license validity.
+// This method is provided to implement the translator.LicenseGetter interface (use case where information
+// about validity is not required). When the info about validity is required, use method GetValidatedLicense.
+func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License] {
+	unpackedL, ok := r.GetValidatedLicense().Get()
+	if !ok {
+		return mo.None[kong.License]()
+	}
+	return mo.Some(unpackedL.License)
 }
 
 // -----------------------------------------------------------------------------
@@ -381,7 +364,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Co
 		r.setChosenLicense(chosenLicense)
 		if chosenLicense != nil {
 			r.Log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
-			return r.ensureControllerStatusProgrammedCondition(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
+			return r.ensureControllerStatusConditions(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
 		}
 	}
 	return nil
@@ -412,16 +395,16 @@ func setLicenseValidityCondition(ks *[]metav1.Condition, licenseValidationError 
 	setCondition(metav1.ConditionTrue, ConditionReasonLicenseValid, "")
 }
 
-// ensureControllerStatusProgrammedCondition updates the "programmed" condition
+// ensureControllerStatusConditions updates the "programmed" condition
 // in the controller status item managed by the reconciler if required.
-func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCondition(
+// If licenseValidator is provided, it also updates the "LicenseValid" condition.
+func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 	ctx context.Context, license *kongv1alpha1.KongLicense,
 	programmedStatus metav1.ConditionStatus,
 	reason string, message string,
 ) error {
 	// Get the latest status of target KongLicense.
-	err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: license.Name}, license)
-	if err != nil {
+	if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: license.Name}, license); err != nil {
 		return fmt.Errorf("failed to get latest version of KongLicense %s: %w", license.Name, err)
 	}
 
@@ -438,8 +421,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 		controllerIndex = 0
 	}
 	ctrlManagedConditions := &license.Status.KongLicenseControllerStatuses[controllerIndex].Conditions
-	if r.LicenseValidator != nil {
-		setLicenseValidityCondition(ctrlManagedConditions, r.LicenseValidator(license.RawLicenseString))
+	if r.licenseValidator != nil {
+		setLicenseValidityCondition(ctrlManagedConditions, r.licenseValidator(license.RawLicenseString))
 	}
 
 	wantedCondition := metav1.Condition{
@@ -474,7 +457,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusProgrammedCond
 // WrapKongLicenseReconcilerToDynamicCRDController wraps KongLicenseReconciler to DynamicCRDController
 // to watch presence of KongLicense CRD to avoid aborts if KongLicense is not installed when controller initialized.
 func WrapKongLicenseReconcilerToDynamicCRDController(
-	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconcilerWithoutValidation,
+	ctx context.Context, mgr ctrl.Manager, r *KongV1Alpha1KongLicenseReconciler,
 ) *crds.DynamicCRDController {
 	return &crds.DynamicCRDController{
 		Manager:          mgr,

@@ -151,9 +151,13 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 		// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 		if gatewayToReconcile, ok := specifiedGW.Get(); ok {
-			namespace = gatewayToReconcile.Namespace
-			name = gatewayToReconcile.Name
-
+			parentNamespace := route.GetNamespace()
+			if parentRef.Namespace != nil {
+				parentNamespace = string(*parentRef.Namespace)
+			}
+			if !(parentNamespace == gatewayToReconcile.Namespace && string(parentRef.Name) == gatewayToReconcile.Name) {
+				continue
+			}
 		}
 
 		// pull the Gateway object from the cached client

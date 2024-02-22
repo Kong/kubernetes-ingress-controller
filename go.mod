@@ -30,10 +30,14 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
 <<<<<<< HEAD
+<<<<<<< HEAD
 	github.com/kong/go-database-reconciler v1.8.0
 =======
 	github.com/kong/go-database-reconciler v1.7.1-0.20240221102039-151cdbac3ff8
 >>>>>>> 8d71e6581 (update gdr)
+=======
+	github.com/kong/go-database-reconciler v1.7.1-0.20240222084949-7f5e401eed00
+>>>>>>> 7975ce01b (update gdr)
 	github.com/kong/go-kong v0.51.1-0.20240125175037-0c077f5b9ac7
 	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.46.0

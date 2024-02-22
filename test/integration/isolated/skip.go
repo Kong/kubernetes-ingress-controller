@@ -26,3 +26,10 @@ func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Co
 	}
 	return ctx
 }
+
+func SkipIfDBBacked(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+	if testenv.DBMode() != testenv.DBModeOff {
+		t.Skip("skipping, DBLess mode is required")
+	}
+	return ctx
+}

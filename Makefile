@@ -455,6 +455,13 @@ test.integration.isolated.dbless:
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.out
 
+.PHONY: test.integration.isolated.postgres
+test.integration.isolated.postgres:
+	@$(MAKE) _test.integration.isolated \
+		GOTAGS="integration_tests" \
+		DBMODE=postgres \
+		COVERAGE_OUT=coverage.postgres.out
+
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@$(MAKE) _test.integration \

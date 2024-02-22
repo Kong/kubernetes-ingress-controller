@@ -124,6 +124,10 @@ jobs:
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"
             enterprise: true
+          - name: isolated-postgres
+            test: isolated.postgres
+            feature_gates: "GatewayAlpha=true"
+            enterprise: true
           - name: isolated-dbless-expression-router
             router-flavor: expressions
             test: isolated.dbless

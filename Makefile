@@ -460,8 +460,7 @@ test.integration.isolated.postgres:
 	@$(MAKE) _test.integration.isolated \
 		GOTAGS="integration_tests" \
 		DBMODE=postgres \
-		COVERAGE_OUT=coverage.dbless.out
-
+		COVERAGE_OUT=coverage.postgres.out
 
 .PHONY: test.integration.dbless
 test.integration.dbless:

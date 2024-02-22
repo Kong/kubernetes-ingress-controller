@@ -6,7 +6,7 @@ toolchain go1.21.0
 
 require (
 	github.com/elastic/crd-ref-docs v0.0.10
-	github.com/go-delve/delve v1.22.0
+	github.com/go-delve/delve v1.22.1
 	github.com/golangci/golangci-lint v1.56.2
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/kyoh86/looppointer v0.2.1
@@ -72,8 +72,7 @@ require (
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.4 // indirect
 	github.com/go-critic/go-critic v0.11.1 // indirect
-	github.com/go-delve/gore v0.11.6 // indirect
-	github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d // indirect
+	github.com/go-delve/liner v1.2.3-0.20231231155935-4726ab1d7f62 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/zapr v1.2.0 // indirect

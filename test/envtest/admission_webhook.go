@@ -1,15 +1,17 @@
 package envtest
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 func setupValidatingWebhookConfiguration(
@@ -18,24 +20,27 @@ func setupValidatingWebhookConfiguration(
 	webhookServerListenPort int,
 	cert []byte,
 	ctrlClient client.Client,
-	rules ...admregv1.RuleWithOperations,
 ) {
-	webhookConfig := admregv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{Name: "kong-vault-admission-webhook"},
-		Webhooks: []admregv1.ValidatingWebhook{
-			{
-				Name:                    "kong-vault-admission-webhook.konghq.com",
-				FailurePolicy:           lo.ToPtr(admregv1.Fail),
-				SideEffects:             lo.ToPtr(admregv1.SideEffectClassNone),
-				TimeoutSeconds:          lo.ToPtr[int32](30),
-				AdmissionReviewVersions: []string{"v1"},
-				ClientConfig: admregv1.WebhookClientConfig{
-					URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", webhookServerListenPort)),
-					CABundle: cert,
-				},
-				Rules: rules,
-			},
-		},
+	webhookConfig := validatingWebhookConfigWithClientConfig(t, admregv1.WebhookClientConfig{
+		URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", webhookServerListenPort)),
+		CABundle: cert,
+	})
+	require.NoError(t, ctrlClient.Create(ctx, webhookConfig))
+}
+
+func validatingWebhookConfigWithClientConfig(t *testing.T, clientConfig admregv1.WebhookClientConfig) *admregv1.ValidatingWebhookConfiguration {
+	file, err := os.ReadFile("../../config/webhook/manifests.yaml")
+	require.NoError(t, err)
+	file = bytes.ReplaceAll(file, []byte("---"), []byte("")) // We're only expecting one document in the file.
+
+	// Load the webhook configuration from the generated manifest.
+	webhookConfig := &admregv1.ValidatingWebhookConfiguration{}
+	require.NoError(t, yaml.Unmarshal(file, webhookConfig))
+
+	// Set the client config.
+	for i := range webhookConfig.Webhooks {
+		webhookConfig.Webhooks[i].ClientConfig = clientConfig
 	}
-	require.NoError(t, ctrlClient.Create(ctx, &webhookConfig))
+
+	return webhookConfig
 }

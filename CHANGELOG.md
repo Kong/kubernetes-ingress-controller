@@ -84,6 +84,12 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Managed Gateways now trigger gateway reconciliation loops, but do not get their
+  status updated, they only become part of the configuration published to Kong.
+  [#5662](https://github.com/Kong/kubernetes-ingress-controller/pull/5662)
+
 ### Fixed
 
 - When managed Kong gateways are OSS edition, KIC will not apply licenses to

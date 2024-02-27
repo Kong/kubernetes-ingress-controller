@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -47,14 +46,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		WithUpdateStatus(),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient, admregv1.RuleWithOperations{
-		Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-		Rule: admregv1.Rule{
-			APIGroups:   []string{"configuration.konghq.com"},
-			APIVersions: []string{"v1alpha1"},
-			Resources:   []string{"kongvaults"},
-		},
-	})
+	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	const prefixForDuplicationTest = "duplicate-prefix"
 	prepareKongVaultAlreadyProgrammedInGateway(ctx, t, ctrlClient, prefixForDuplicationTest)

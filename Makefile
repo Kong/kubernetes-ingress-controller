@@ -210,7 +210,7 @@ CRD_INCUBATOR_GEN_PATHS ?= ./pkg/apis/incubator/...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
-manifests: manifests.crds manifests.rbac manifests.single
+manifests: manifests.crds manifests.rbac manifests.webhook manifests.single
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -222,6 +222,10 @@ manifests.rbac: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/"
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
+
+.PHONY: manifests.webhook
+manifests.webhook: controller-gen ## Generate ValidatingWebhookConfiguration.
+	$(CONTROLLER_GEN) webhook paths="./internal/admission/..." output:webhook:artifacts:config=config/webhook
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks

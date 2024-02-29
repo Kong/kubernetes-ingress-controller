@@ -73,8 +73,8 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 	notBefore := time.Now()
 	notAfter := notBefore.AddDate(1, 0, 0)
 	if options.Expired {
-		notBefore = notBefore.AddDate(-1, 0, 0)
-		notAfter = notAfter.AddDate(-1, 0, 0)
+		notBefore = notBefore.AddDate(-2, 0, 0)
+		notAfter = notAfter.AddDate(-2, 0, 0)
 	}
 
 	// Create a self-signed X.509 certificate.

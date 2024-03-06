@@ -76,7 +76,7 @@ func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) e
 
 			if !ok {
 				if err == nil {
-					return fmt.Errorf("%w", ErrAdminAPIUnreachable)
+					return ErrAdminAPITagsDisabled
 				}
 				return fmt.Errorf("%w: %w", ErrAdminAPIUnreachable, err)
 			}

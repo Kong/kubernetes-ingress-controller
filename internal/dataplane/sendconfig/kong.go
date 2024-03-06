@@ -2,6 +2,7 @@ package sendconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/blang/semver/v4"
@@ -9,6 +10,11 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+)
+
+var (
+	ErrAdminAPIUnreachable  = errors.New("Kong Admin API is unreachable")
+	ErrAdminAPITagsDisabled = errors.New("Kong Admin API does not support tags")
 )
 
 // Config gathers parameters that are needed for sending configuration to Kong Admin APIs.
@@ -47,13 +53,18 @@ func (c *Config) Init(
 	ctx context.Context,
 	logger logr.Logger,
 	kongClients []*adminapi.Client,
-) {
+) error {
 	if err := tagsFilteringEnabled(ctx, kongClients); err != nil {
-		logger.Error(err, "Tag filtering disabled")
-		c.FilterTags = nil
-	} else {
-		logger.Info("Tag filtering enabled", "tags", c.FilterTags)
+		if errors.Is(err, ErrAdminAPITagsDisabled) {
+			logger.Error(err, "Tag filtering disabled")
+			c.FilterTags = nil
+			return nil
+		}
+		return err
 	}
+
+	logger.Info("Tag filtering enabled", "tags", c.FilterTags)
+	return nil
 }
 
 func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) error {
@@ -62,11 +73,12 @@ func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) e
 		cl := cl
 		errg.Go(func() error {
 			ok, err := cl.AdminAPIClient().Tags.Exists(ctx)
-			if err != nil {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.BaseRootURL(), err)
-			}
+
 			if !ok {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.BaseRootURL())
+				if err == nil {
+					return fmt.Errorf("%w", ErrAdminAPIUnreachable)
+				}
+				return fmt.Errorf("%w: %w", ErrAdminAPIUnreachable, err)
 			}
 			return nil
 		})

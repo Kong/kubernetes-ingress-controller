@@ -123,7 +123,9 @@ func Run(
 		ExpressionRoutes:           dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		SanitizeKonnectConfigDumps: featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
 	}
-	kongConfig.Init(ctx, setupLog, initialKongClients)
+	if err := kongConfig.Init(ctx, setupLog, initialKongClients); err != nil {
+		return fmt.Errorf("unable to check if tags filtering is enabled: %w", err)
+	}
 
 	setupLog.Info("Configuring and building the controller manager")
 	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)

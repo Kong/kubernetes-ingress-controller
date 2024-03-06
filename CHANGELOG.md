@@ -83,6 +83,13 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- When initializing the controller, if the admin API is unreachable, the controller
+  fails fast rather than disabling tags. [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
+
 ## [3.1.1]
 
 ### Added

@@ -497,7 +497,7 @@ func PathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath) []*string {
 }
 
 func flattenMultipleSlashes(path string) string {
-	var out []rune
+	out := make([]rune, 0, len(path))
 	in := []rune(path)
 	for i := 0; i < len(in); i++ {
 		c := in[i]

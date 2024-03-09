@@ -216,12 +216,14 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Cert
 			certsSeen[current.identifier] = current
 		}
 	}
-	var res []kongstate.Certificate
+	res := make([]kongstate.Certificate, 0, len(certsSeen))
 	for _, cw := range certsSeen {
 		sort.SliceStable(cw.cert.SNIs, func(i, j int) bool {
 			return strings.Compare(*cw.cert.SNIs[i], *cw.cert.SNIs[j]) < 0
 		})
-		res = append(res, kongstate.Certificate{Certificate: cw.cert})
+		res = append(res, kongstate.Certificate{
+			Certificate: cw.cert,
+		})
 	}
 	return res
 }

@@ -48,7 +48,7 @@ func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 }
 
 func getSNIs(names []*string) []kong.SNI {
-	var snis []kong.SNI
+	snis := make([]kong.SNI, 0, len(names))
 	for _, name := range names {
 		snis = append(snis, kong.SNI{
 			Name: kong.String(*name),

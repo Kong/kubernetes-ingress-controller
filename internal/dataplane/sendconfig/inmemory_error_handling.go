@@ -90,7 +90,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		return nil, nil
 	}
 
-	var resourceErrors []ResourceError
+	var resourceErrors []ResourceError //nolint:prealloc
 	var configError ConfigError
 
 	err := json.Unmarshal(body, &configError)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"testing"
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 
@@ -31,10 +32,14 @@ func not(fn func() bool) func() bool {
 	}
 }
 
-func urlResolvesSuccessfullyFn(ctx context.Context, proxyUDPURL *url.URL) func() bool {
+func urlResolvesSuccessfullyFn(ctx context.Context, t *testing.T, proxyUDPURL *url.URL) func() bool {
 	return func() bool {
 		resolver := createResolver(proxyUDPURL)
 		_, err := resolver.LookupHost(ctx, "kernel.org")
+		if err != nil {
+			t.Logf("failed to resolve kernel.org using resolver %s: %v", proxyUDPURL, err)
+		}
+
 		return err == nil
 	}
 }

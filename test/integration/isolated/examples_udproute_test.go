@@ -50,7 +50,7 @@ func TestExampleUDPRoute(t *testing.T) {
 				cleaner.AddManifest(s)
 
 				t.Logf("verifying that the UDPRoute becomes routable")
-				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
+				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, t, proxyUDPURL), consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).

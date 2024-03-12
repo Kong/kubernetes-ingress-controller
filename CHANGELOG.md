@@ -84,6 +84,12 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly. [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
+
 ## [3.1.2]
 
 > Release date: 2024-03-08

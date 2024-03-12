@@ -23,7 +23,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - gateways
   sideEffects: None
@@ -46,7 +45,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - httproutes
   sideEffects: None
@@ -68,7 +66,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - ingresses
   sideEffects: None
@@ -90,7 +87,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - kongclusterplugins
   sideEffects: None
@@ -112,7 +108,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - kongconsumergroups
   sideEffects: None
@@ -155,7 +150,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - kongingresses
   sideEffects: None
@@ -177,7 +171,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - kongplugins
   sideEffects: None
@@ -199,7 +192,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - kongvaults
   sideEffects: None
@@ -242,7 +234,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - services
   sideEffects: None

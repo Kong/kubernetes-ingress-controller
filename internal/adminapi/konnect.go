@@ -60,9 +60,6 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 	if err != nil {
 		return nil, err
 	}
-	// Konnect supports tags, we don't need to verify that.
-	client.Tags = tagsStub{}
-
 	return NewKonnectClient(client, c.ControlPlaneID), nil
 }
 
@@ -97,12 +94,4 @@ func EnsureKonnectConnection(ctx context.Context, client *kong.Client, logger lo
 	}
 
 	return nil
-}
-
-// tagsStub replaces a default Tags service in the go-kong's Client for Konnect clients.
-// It will always tell tags are supported, which is true for Konnect Control Plane Admin API.
-type tagsStub struct{}
-
-func (t tagsStub) Exists(context.Context) (bool, error) {
-	return true, nil
 }

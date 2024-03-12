@@ -123,7 +123,6 @@ func Run(
 		ExpressionRoutes:           dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		SanitizeKonnectConfigDumps: featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
 	}
-	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("Configuring and building the controller manager")
 	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)

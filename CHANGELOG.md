@@ -88,8 +88,7 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- When initializing the controller, if the admin API is unreachable, the controller
-  fails fast rather than disabling tags. [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
+- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly. [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
 
 ## [3.1.2]
 

@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/elastic/crd-ref-docs v0.0.10
+	github.com/elastic/crd-ref-docs v0.0.11
 	github.com/go-delve/delve v1.22.1
 	github.com/golangci/golangci-lint v1.56.2
 	github.com/jstemmer/go-junit-report/v2 v2.1.0

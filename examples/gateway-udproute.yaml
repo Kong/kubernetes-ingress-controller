@@ -2,81 +2,41 @@
 # Follow these instructions to install them before using this example:
 # https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns
-data:
-  Corefile: |-
-    .:53 {
-        errors
-        health {
-           lameduck 5s
-        }
-        ready
-        kubernetes cluster.local in-addr.arpa ip6.arpa {
-           pods insecure
-           fallthrough in-addr.arpa ip6.arpa
-           ttl 30
-        }
-        forward . /etc/resolv.conf {
-           max_concurrent 1000
-        }
-        cache 30
-        loop
-        reload
-        loadbalance
-    }
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: coredns
+  name: udpecho
   labels:
-    app: coredns
+    app: udpecho
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: coredns
+      app: udpecho
   template:
     metadata:
       labels:
-        app: coredns
+        app: udpecho
     spec:
       containers:
-      - args:
-        - -conf
-        - /etc/coredns/Corefile
-        image: registry.k8s.io/coredns/coredns:v1.8.6
-        imagePullPolicy: IfNotPresent
-        name: coredns
+      - name: udpecho
+        image: kong/go-echo:0.3.0
         ports:
-        - containerPort: 53
-          protocol: UDP
-        volumeMounts:
-        - mountPath: /etc/coredns
-          name: config-volume
-      volumes:
-      - configMap:
-          defaultMode: 420
-          items:
-          - key: Corefile
-            path: Corefile
-          name: coredns
-        name: config-volume
+        - containerPort: 1026
+        env:
+        - name: POD_NAME
+          value: udproute-example-manifest
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: coredns
+  name: udpecho
 spec:
   ports:
-  - port: 53
+  - port: 9999
     protocol: UDP
-    targetPort: 53
+    targetPort: 1026
   selector:
-    app: coredns
+    app: udpecho
   type: ClusterIP
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -98,18 +58,18 @@ spec:
   - name: http
     protocol: HTTP
     port: 80
-  - name: dns
+  - name: udp
     protocol: UDP
-    port: 53
+    port: 9999
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
-  name: coredns
+  name: udpecho
 spec:
   parentRefs:
   - name: kong
   rules:
   - backendRefs:
-    - name: coredns
-      port: 53
+    - name: udpecho
+      port: 9999

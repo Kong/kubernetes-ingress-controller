@@ -197,7 +197,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
-	return isGatewayClassControlledAndUnmanaged(gatewayClass)
+	return isGatewayClassControlled(gatewayClass)
 }
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
@@ -212,7 +212,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 		)
 		return false
 	}
-	return isGatewayClassControlledAndUnmanaged(gatewayClass)
+	return isGatewayClassControlled(gatewayClass)
 }
 
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
@@ -278,7 +278,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
-		if isGatewayClassControlledAndUnmanaged(gatewayClass) {
+		if isGatewayClassControlled(gatewayClass) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: k8stypes.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -417,23 +417,26 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	// ensure that the GatewayClass matches the ControllerName and is unmanaged.
+	// ensure that the GatewayClass matches the ControllerName.
 	// This check has already been performed by predicates, but we need to ensure this condition
 	// as the reconciliation loop may be triggered by objects in which predicates we
-	// cannot check the ControllerName and the unmanaged mode (e.g., ReferenceGrants).
-	if !isGatewayClassControlledAndUnmanaged(gwc) {
+	// cannot check the ControllerName (e.g., ReferenceGrants).
+	if !isGatewayClassControlled(gwc) {
 		return reconcile.Result{}, nil
 	}
 
-	// reconciliation assumes unmanaged mode, in the future we may have a slot here for
-	// other gateway management modes.
-	result, err := r.reconcileUnmanagedGateway(ctx, log, gateway)
-	// reconcileUnmanagedGateway has side effects and modifies the referenced gateway object. dataplane updates must
-	// happen afterwards
-	if err == nil {
+	if isGatewayClassUnmanaged(gwc.Annotations) {
+		// The Gateway has to be reconciled by KIC only if it is unmanaged.
+		if result, err := r.reconcileUnmanagedGateway(ctx, log, gateway); err != nil {
+			return result, err
+		}
+	}
+
+	// If the Gateway has been accepted (by KIC or the managing controller), the dataplane update must be performed.
+	if isGatewayAccepted(gateway) {
 		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
 			debug(log, gateway, "Failed to update object in data-plane, requeueing")
-			return result, err
+			return ctrl.Result{}, err
 		}
 
 		referredSecretNames := listSecretNamesReferredByGateway(gateway)
@@ -441,13 +444,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
 			gateway, referredSecretNames); err != nil {
 			if apierrors.IsNotFound(err) {
-				result.Requeue = true
-				return result, nil
+				return ctrl.Result{Requeue: true}, nil
 			}
-			return result, err
 		}
 	}
-	return result, err
+	return ctrl.Result{}, nil
 }
 
 // reconcileUnmanagedGateway reconciles a Gateway that is configured for unmanaged mode,
@@ -503,7 +504,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
-	if !isGatewayScheduled(gateway) {
+	if !isGatewayAccepted(gateway) {
 		info(log, gateway, "Marking gateway as accepted")
 		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayapi.GatewayConditionAccepted),

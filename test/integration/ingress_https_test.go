@@ -61,7 +61,7 @@ func TestHTTPSRedirect(t *testing.T) {
 
 	t.Log("waiting for Ingress to be operational and properly redirect")
 	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 		Timeout: time.Second * 3,

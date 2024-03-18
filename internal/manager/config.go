@@ -110,6 +110,7 @@ type Config struct {
 	KongUpstreamPolicyEnabled     bool
 	KongServiceFacadeEnabled      bool
 	KongVaultEnabled              bool
+	KongLicenseEnabled            bool
 
 	// Gateway API toggling.
 	GatewayAPIGatewayController        bool
@@ -256,6 +257,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway.`)
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
 	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
+	flagSet.BoolVar(&c.KongLicenseEnabled, "enable-controller-kong-license", true, "Enable the KongLicense controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",

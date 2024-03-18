@@ -44,5 +44,6 @@ and not CLI flags.
 # Add the generated doc content
 cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
 
-# Turn the linter back on
+# Turn the linter back on. Add a newline first, otherwise parsing breaks.
+echo "" >> "${POST_PROCESSED_DOC}"
 echo "<!-- vale on -->" >> "${POST_PROCESSED_DOC}"

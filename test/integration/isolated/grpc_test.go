@@ -44,7 +44,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTPS", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTPS", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			// On purpose omit protocol annotation to test defaulting to "grpcs" that is preserved to not break users' configs.
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
@@ -167,7 +167,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("checking if GRPCRoute is linked correctly and client can connect properly to the exposed service", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("checking if GRPCRoute is linked correctly and client can connect properly to the exposed service", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetProxyURLFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)

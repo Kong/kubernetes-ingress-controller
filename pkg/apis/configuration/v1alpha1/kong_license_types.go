@@ -5,14 +5,14 @@ import (
 )
 
 // +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=kl,categories=kong-ingress-controller,path=konglicenses
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
-// +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.Enabled`,description="Enabled to configure on Kong gateway instances"
-// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.enabled`,description="Enabled to configure on Kong gateway instances"
 
 // KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
 type KongLicense struct {

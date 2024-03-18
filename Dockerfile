@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.21.6 as builder
+FROM golang:1.22.0 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -22,6 +22,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
+COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile .

@@ -80,7 +80,7 @@ func TestMetricsAreServed(t *testing.T) {
 					retry.DelayType(retry.BackOffDelay),
 					retry.Attempts(0), // We're using a context with timeout, so we don't need to limit the number of attempts.
 					retry.LastErrorOnly(true),
-					retry.OnRetry(func(n uint, err error) {
+					retry.OnRetry(func(_ uint, err error) {
 						t.Logf("metric %s not present yet, err: %v", metric, err.Error())
 					}),
 				),

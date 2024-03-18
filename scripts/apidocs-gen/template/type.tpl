@@ -1,8 +1,13 @@
 {{- define "type" -}}
-{{- $type := . -}}
+{{- $type := $.type -}}
+{{- $isKind := $.isKind -}}
 {{- if markdownShouldRenderType $type -}}
 
+{{- if $isKind -}}
 ### {{ $type.Name }}
+{{ else -}}
+#### {{ $type.Name }}
+{{ end -}}
 
 {{ if $type.IsAlias }}_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType  }}`{{ end }}
 

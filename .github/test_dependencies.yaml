@@ -1,50 +1,60 @@
 e2e:
   kind:
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.29.1'
+    - 'v1.29.2'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.28.0'
+    - 'v1.28.7'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.27.3'
+    - 'v1.27.11'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.26.6'
+    - 'v1.26.14'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.25.11'
+    - 'v1.25.16'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.29.1'
+    - '1.29.2'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.29.1'
+      kind: 'v1.29.2'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.20.2'
+      istio: '1.21.0'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.28.0'
+      kind: 'v1.28.7'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
-      istio: '1.19.6'
+      istio: '1.19.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.27.3'
+      kind: 'v1.27.11'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.18.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.26.6'
+      kind: 'v1.26.14'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.17.8'
+
+  # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
+  kuma: '2.6.2'
 
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.35.0'
+    kong: '2.38.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.29.1'
+  kind: 'v1.29.2'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.5.0'
+  kong-oss: '3.6.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.5.0.3'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.5.0'
+  kong-oss: '3.6.1'
+
+envtests:
+  # Because of a bug that was introduced in Kong EE 3.5 (https://konghq.atlassian.net/browse/KAG-3699),
+  # we need to stick to 3.4 in order to make our KongVault validation tests stable.
+  # This version should be bumped to the current one once the bug is fixed.
+  # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
+  kong-ee: '3.4.3.4'

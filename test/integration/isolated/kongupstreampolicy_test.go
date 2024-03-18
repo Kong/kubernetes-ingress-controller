@@ -37,7 +37,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
-		WithSetup("prepare clients", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("prepare clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 
 			kongClients, err := clientset.NewForConfig(cluster.Config())
@@ -50,7 +50,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 
 			return ctx
 		}).
-		WithSetup("deploy required resources", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploy required resources", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -226,7 +226,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("all ancestors are Accepted and Programmed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("all ancestors are Accepted and Programmed", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			namespace := GetNamespaceForT(ctx, t)
 			clients := GetFromCtxForT[*clientset.Clientset](ctx, t)
 
@@ -275,7 +275,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("when HTTPRoute rule uses Services with different KongUpstreamPolicies, the Services are not Accepted and Programmed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("when HTTPRoute rule uses Services with different KongUpstreamPolicies, the Services are not Accepted and Programmed", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			clients := GetFromCtxForT[*clientset.Clientset](ctx, t)

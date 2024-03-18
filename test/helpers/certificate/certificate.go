@@ -14,39 +14,39 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
-type SelfSignedCertificateOptions struct {
+type selfSignedCertificateOptions struct {
 	CommonName string
 	DNSNames   []string
 	CATrue     bool
 	Expired    bool
 }
 
-type SelfSignedCertificateOptionsDecorator func(SelfSignedCertificateOptions) SelfSignedCertificateOptions
+type SelfSignedCertificateOption func(selfSignedCertificateOptions) selfSignedCertificateOptions
 
-func WithCommonName(commonName string) SelfSignedCertificateOptionsDecorator {
-	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
+func WithCommonName(commonName string) SelfSignedCertificateOption {
+	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.CommonName = commonName
 		return opts
 	}
 }
 
-func WithDNSNames(dnsNames ...string) SelfSignedCertificateOptionsDecorator {
-	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
+func WithDNSNames(dnsNames ...string) SelfSignedCertificateOption {
+	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.DNSNames = append(opts.DNSNames, dnsNames...)
 		return opts
 	}
 }
 
 // WithCATrue allows to use returned certificate to sign other certificates (uses BasicConstraints extension).
-func WithCATrue() SelfSignedCertificateOptionsDecorator {
-	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
+func WithCATrue() SelfSignedCertificateOption {
+	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.CATrue = true
 		return opts
 	}
 }
 
-func WithAlreadyExpired() SelfSignedCertificateOptionsDecorator {
-	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
+func WithAlreadyExpired() SelfSignedCertificateOption {
+	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.Expired = true
 		return opts
 	}
@@ -54,14 +54,14 @@ func WithAlreadyExpired() SelfSignedCertificateOptionsDecorator {
 
 // MustGenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
 // Certificate is self-signed thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecorator) tls.Certificate {
+func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.Certificate {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate RSA key: %s", err))
 	}
 
-	options := SelfSignedCertificateOptions{
+	options := selfSignedCertificateOptions{
 		CommonName: "",
 		DNSNames:   []string{},
 	}
@@ -73,8 +73,8 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 	notBefore := time.Now()
 	notAfter := notBefore.AddDate(1, 0, 0)
 	if options.Expired {
-		notBefore = notBefore.AddDate(-1, 0, 0)
-		notAfter = notAfter.AddDate(-1, 0, 0)
+		notBefore = notBefore.AddDate(-2, 0, 0)
+		notAfter = notAfter.AddDate(-2, 0, 0)
 	}
 
 	// Create a self-signed X.509 certificate.
@@ -112,7 +112,7 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 // MustGenerateSelfSignedCertPEMFormat generates self-signed certificate
 // and returns certificate and key in PEM format. Certificate is self-signed
 // thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCertificateOptionsDecorator) (cert []byte, key []byte) {
+func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCertificateOption) (cert []byte, key []byte) {
 	tlsCert := MustGenerateSelfSignedCert(decorators...)
 
 	certBlock := &pem.Block{

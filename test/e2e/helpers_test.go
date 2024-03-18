@@ -42,6 +42,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	conststest "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -104,6 +105,9 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 	env, err := builder.WithAddons(addons...).Build(ctx)
 	require.NoError(t, err)
 	logClusterInfo(t, env.Cluster())
+
+	t.Logf("deploying KIC Incubator CRDs from %s (since they are not packaged with base CRDs)", conststest.IncubatorCRDKustomizeDir)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), conststest.IncubatorCRDKustomizeDir))
 
 	t.Cleanup(func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -417,6 +421,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		// Ref: https://github.com/Kong/kubernetes-ingress-controller/issues/5498
 		service.Spec.Ports[i].AppProtocol = lo.ToPtr("http")
 	}
+
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {

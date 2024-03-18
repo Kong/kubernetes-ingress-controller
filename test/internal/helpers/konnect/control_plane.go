@@ -26,7 +26,7 @@ import (
 func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
 	rgClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
+		func(_ context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+accessToken())
 			return nil
 		}),

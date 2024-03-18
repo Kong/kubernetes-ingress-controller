@@ -131,7 +131,7 @@ func TestValidatedValue_WithDefault(t *testing.T) {
 		flagSet := createFlagSet()
 
 		var cs customStringer
-		flagSet.Var(flags.NewValidatedValue(&cs, func(s string) (customStringer, error) {
+		flagSet.Var(flags.NewValidatedValue(&cs, func(_ string) (customStringer, error) {
 			return customStringer{}, nil
 		}, flags.WithDefault(customStringer{})), "flag-with-default", "")
 
@@ -154,7 +154,7 @@ func TestValidatedValue_Type(t *testing.T) {
 	t.Run("struct", func(t *testing.T) {
 		type customType struct{}
 		var customTypeVar customType
-		vv := flags.NewValidatedValue(&customTypeVar, func(s string) (customType, error) {
+		vv := flags.NewValidatedValue(&customTypeVar, func(_ string) (customType, error) {
 			return customType{}, nil
 		})
 		require.Equal(t, "flags_test.customType", vv.Type())
@@ -163,7 +163,7 @@ func TestValidatedValue_Type(t *testing.T) {
 	t.Run("overridden type name", func(t *testing.T) {
 		type customType struct{}
 		var customTypeVar customType
-		vv := flags.NewValidatedValue(&customTypeVar, func(s string) (customType, error) {
+		vv := flags.NewValidatedValue(&customTypeVar, func(_ string) (customType, error) {
 			return customType{}, nil
 		}, flags.WithTypeNameOverride[customType]("custom-type-override"))
 		require.Equal(t, "custom-type-override", vv.Type())

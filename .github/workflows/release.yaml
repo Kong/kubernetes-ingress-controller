@@ -24,7 +24,7 @@ jobs:
     outputs:
       fullversion_tag: ${{ steps.semver_parser.outputs.fullversion }}
     steps:
-      - uses: mukunku/tag-exists-action@v1.5.0
+      - uses: mukunku/tag-exists-action@v1.6.0
         id: check-tag
         name: check if tag already exists
         with:

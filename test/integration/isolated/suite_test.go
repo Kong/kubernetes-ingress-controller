@@ -123,7 +123,7 @@ func TestMain(m *testing.M) {
 	tenv.BeforeEachFeature(
 		// TODO: Prevent a data race by using a mutex explicitly when first creating the client.
 		// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/4848
-		func(ctx context.Context, c *envconf.Config, t *testing.T, f features.Feature) (context.Context, error) {
+		func(ctx context.Context, c *envconf.Config, _ *testing.T, _ features.Feature) (context.Context, error) {
 			l.Lock()
 			defer l.Unlock()
 			_, err = c.NewClient()
@@ -306,7 +306,9 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
-			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
+			// Use fixed election namespace `kong` because RBAC roles for leader election are in the namespace,
+			// so we create resources for leader election in the namespace to make sure that KIC can operate these resources.
+			fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
 			fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)

@@ -88,6 +88,8 @@ linters-settings:
       alias: incubator${1}
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
       alias: dpconf
+    - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
+      alias: ctrllicense
   forbidigo:
     exclude-godoc-examples: false
     forbid:

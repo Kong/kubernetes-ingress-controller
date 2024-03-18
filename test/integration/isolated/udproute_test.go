@@ -241,7 +241,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("Gateway gets linked to the UDPRoute via status",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 				namespace := GetNamespaceForT(ctx, t)
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
@@ -257,7 +257,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("DNS lookups work",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
 				proxyUDPURL := GetUDPURLFromCtx(ctx)
 
@@ -267,7 +267,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("removing UDPRoute parentRef removes the configuration from the Gateway",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 				namespace := GetNamespaceForT(ctx, t)
 				udprouteClient := gatewayClient.GatewayV1alpha2().UDPRoutes(namespace)
@@ -299,7 +299,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("restoring UDPRoute parentRef bring the configuration back",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 				namespace := GetNamespaceForT(ctx, t)
 				udprouteClient := gatewayClient.GatewayV1alpha2().UDPRoutes(namespace)
@@ -328,7 +328,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("removing the GatewayClass unlinks the UDPRoute",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
 				proxyUDPURL := GetUDPURLFromCtx(ctx)
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
@@ -348,7 +348,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("putting back the GatewayClass restores the configuration",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
 				proxyUDPURL := GetUDPURLFromCtx(ctx)
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
@@ -373,7 +373,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("removing the Gateway removes the link to UDPRoute",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
 				proxyUDPURL := GetUDPURLFromCtx(ctx)
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
@@ -393,7 +393,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("putting the Gateway back brings back the configuration",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 				namespace := GetNamespaceForT(ctx, t)
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
@@ -593,7 +593,7 @@ func TestUDPRoute(t *testing.T) {
 				return ctx
 			}).
 		Assess("using a port in UDPRoute not define in Gateway Listeners does not get the UDPRoute active",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				namespace := GetNamespaceForT(ctx, t)
 				gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 				udproute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)

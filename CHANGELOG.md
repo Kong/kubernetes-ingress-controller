@@ -7,6 +7,9 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.1.2](#312)
+ - [3.1.1](#311)
+ - [3.1.0](#310)
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
@@ -83,9 +86,82 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Fixed
+
+- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly. [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
+
+## [3.1.2]
+
+> Release date: 2024-03-08
+
+### Fixed
+
+- When managed Kong gateways are OSS edition, KIC will not apply licenses to
+  the Kong gateway instances to avoid invalid configurations.
+  [#5640](https://github.com/Kong/kubernetes-ingress-controller/pull/5640)
+
+## [3.1.1]
+
+> Release date: 2024-02-29
+
 ### Added
 
-- Added `configPatches` field to KongPlugin and KongClusterPlugin to 
+- Managed `Gateway`s now get reconciled by the `Gateway` controller, but do not
+  get their status updated, they only become part of the configuration published
+  to Kong.
+  [#5662](https://github.com/Kong/kubernetes-ingress-controller/pull/5662)
+
+### Fixed
+
+- Fixed an issue where single-`Gateway` mode did not actually filter out routes
+  associated with other `Gateway`s in the controller class.
+  [#5642](https://github.com/Kong/kubernetes-ingress-controller/pull/5642)
+
+## [3.1.0]
+
+> Release date: 2024-02-07
+
+### Highlights
+
+- 🔒 Kong Gateway's [secret vaults][kong-vault] now become a first-class citizen for Kubernetes users thanks to the new
+  `KongVault` CRD. _See [Kong Vault guide][vault-guide] and [CRDs reference][crds-ref] for more details._
+- 🔒 Providing an Enterprise license to KIC-managed Kong Gateways becomes much easier thanks to the new `KongLicense`
+  CRD which is used to dynamically provision all the replicas with the latest license found in the cluster. _See
+  [Enterprise License][license-guide] and [CRDs reference][crds-ref] for more details._
+- ✨ Populating a single field of `KongPlugin`'s configuration with use of a Kubernetes Secret becomes possible thanks
+  to the new `KongPlugin`'s `configPatches` field. _See [Using Kubernetes Secrets in Plugins][secrets-in-plugins-guide]
+  and [CRDs reference][crds-ref] for more details._
+- 🔒 All sensitive information stored in the cluster is now sanitized while sending configuration to Konnect.
+
+[crds-ref]: https://docs.konghq.com/kubernetes-ingress-controller/latest/reference/custom-resources/
+[vault-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/security/kong-vault/
+[license-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/license/
+[secrets-in-plugins-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/security/plugin-secrets/
+
+### Added
+
+- New CRD `KongVault` to represent a custom Kong vault for storing sensitive
+  data used in plugin configurations. Now users can create a `KongVault` to
+  create a custom Kong vault and reference the values in configurations of
+  plugins. Reference of using Kong vaults: [Kong vault](kong-vault). Since the prefix of
+  Kong vault is restrained unique, the `spec.prefix` field is set to immutable,
+  and only one of multiple `KongVault`s with the same `spec.prefix` will get
+  translated. Translation failiure events will be recorded for others with
+  duplicating `spec.prefix`.
+  [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
+  [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
+  [#5435](https://github.com/Kong/kubernetes-ingress-controller/pull/5435)
+  [#5412](https://github.com/Kong/kubernetes-ingress-controller/pull/5412)
+- New CRD `KongLicense` to represent a Kong enterprise license to apply to
+  managed Kong gateway enterprise instances. The `Enabled` field of `KongLicense`
+  (set to `True` if not present) need to be set to true to get reconciled.
+  If there are multiple `KongLicense`s in the cluster, the newest one
+  (with latest `metadata.creationTimestamp`) is chosen. The `KongLicense`
+  controller is disabled when synchoroniztion of license with Konnect is turned
+  on. When sync license with Konnect is turned on, licenses from Konnect are used.  
+  [#5487](https://github.com/Kong/kubernetes-ingress-controller/pull/5487)
+  [#5514](https://github.com/Kong/kubernetes-ingress-controller/pull/5514)
+- Added `configPatches` field to KongPlugin and KongClusterPlugin to
   support populating configuration fields from Secret values. An item in
   `configPatches` defines a JSON patch to add a field on the path in its `path`
   and value from the value in the secret given in `valueFrom`. The JSON patches
@@ -93,6 +169,14 @@ Adding a new version? You'll need three changes:
   `configFrom` is not present.
   [#5158](https://github.com/Kong/kubernetes-ingress-controller/pull/5158)
   [#5208](https://github.com/Kong/kubernetes-ingress-controller/pull/5208)
+- Added `SanitizeKonnectConfigDumps` feature gate allowing to enable sanitizing
+  sensitive data (like TLS private keys, Secret-sourced Plugins configuration, etc.)
+  in Konnect configuration dumps. It's turned on by default.
+  [#5489](https://github.com/Kong/kubernetes-ingress-controller/pull/5489)
+  [#5573](https://github.com/Kong/kubernetes-ingress-controller/pull/5573)
+- Kong Plugin's `config` field now is sanitized when it contains sensitive data
+  sourced from a Secret (i.e. `configFrom` or `configPatches` is used).
+  [#5495](https://github.com/Kong/kubernetes-ingress-controller/pull/5495)
 - `KongServiceFacade` CRD allowing creating Kong Services directly from Kubernetes using
   Kubernetes Services as their backends. `KongServiceFacade` can be used as a backend in
   Kubernetes Ingress. This API is highly experimental and is not distributed by default.
@@ -135,18 +219,6 @@ Adding a new version? You'll need three changes:
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
   [#5428](https://github.com/Kong/kubernetes-ingress-controller/pull/5428)
   [#5444](https://github.com/Kong/kubernetes-ingress-controller/pull/5444)
-- New CRD `KongVault` to reperesent a custom Kong vault for storing senstive
-  data used in plugin configurations. Now users can create a `KongVault` to
-  create a custom Kong vault and reference the values in configurations of
-  plugins. Reference of using Kong vaults: [Kong vault]. Since the prefix of
-  Kong vault is restrained unique, the `spec.prefix` field is set to immutable,
-  and only one of multiple `KongVault`s with the same `spec.prefix` will get
-  translated. Translation failiure events will be recorded for others with
-  duplicating `spec.prefix`. 
-  [#5354](https://github.com/Kong/kubernetes-ingress-controller/pull/5354)
-  [#5384](https://github.com/Kong/kubernetes-ingress-controller/pull/5384)
-  [#5435](https://github.com/Kong/kubernetes-ingress-controller/pull/5435)
-  [#5412](https://github.com/Kong/kubernetes-ingress-controller/pull/5412)
 - Added flag `--gateway-to-reconcile` to set KIC to only reconcile
   the specified Gateway resource in Kubernetes.
   [#5405](https://github.com/Kong/kubernetes-ingress-controller/pull/5405)
@@ -160,15 +232,6 @@ Adding a new version? You'll need three changes:
 - Log the details in response from Konnect when failed to push configuration
   to Konnect.
   [#5453](https://github.com/Kong/kubernetes-ingress-controller/pull/5453)
-- Added `SanitizeKonnectConfigDumps` feature gate allowing to enable sanitizing
-  sensitive data in Konnect configuration dumps.
-  [#5489](https://github.com/Kong/kubernetes-ingress-controller/pull/5489)
-- Kong Plugin's `config` field now is sanitized when it contains sensitive data
-  sourced from a Secret (i.e. `configFrom` or `configPatches` is used).
-  [#5495](https://github.com/Kong/kubernetes-ingress-controller/pull/5495)
-- New CRD `KongLicense` to represent a Kong enterprise license to apply to
-  managed Kong gateway enterprise instances.
-  [#5487](https://github.com/Kong/kubernetes-ingress-controller/pull/5487)
 
 ### Fixed
 
@@ -213,6 +276,11 @@ Adding a new version? You'll need three changes:
 - Stale `HTTPRoute`'s parent statuses are now removed when the `HTTPRoute` no longer
   defines a parent `Gateway` in its `spec.parentRefs`.
   [#5477](https://github.com/Kong/kubernetes-ingress-controller/pull/5477)
+- `expressions` router flavor can now successfully be used with Konnect synchronization
+  turned on. The controller will no longer populate disallowed `regex_priority` and `path_handling`
+  Kong Route's fields when the router flavor is `expressions` that were causing Konnect to reject
+  the configuration.
+  [#5581](https://github.com/Kong/kubernetes-ingress-controller/pull/5581)
 
 ### Changed
 
@@ -232,12 +300,11 @@ Adding a new version? You'll need three changes:
   - There's no `Gateway`'s `Listener` with `AllowedRoutes` matching the `HTTPRoute`.
   - There's no `Gateway`'s `Listener` with `Protocol` matching the `HTTPRoute`.
   - There's no `Gateway`'s `Listener` matching `HTTPRoute`'s `ParentRef`'s `SectionName`.
-  All of these are validated by the controller and the results are reported in a `HTTPRoute`'s 
+  All of these are validated by the controller and the results are reported in a `HTTPRoute`'s
   `Accepted` condition reported for a `Gateway`.
   [#5469](https://github.com/Kong/kubernetes-ingress-controller/pull/5469)
-  
 
-[Kong vault]: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
+[kong-vault]: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
 ## [3.0.2]
 
@@ -3246,6 +3313,10 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.1...v3.1.2
+[3.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.0...v3.1.1
+[3.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.2...v3.1.0
+[3.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
 [2.12.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.1...v2.12.2

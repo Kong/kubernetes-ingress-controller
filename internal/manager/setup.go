@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/cprint"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -22,6 +23,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
@@ -29,9 +31,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -393,4 +398,65 @@ func AdminAPIClientFromServiceDiscovery(
 	}
 
 	return clients, nil
+}
+
+// setupLicenseGetter sets up a license getter to get Kong license from Konnect or `KongLicense` CRD.
+// If synchoroniztion license from Konnect is enabled, it sets up and returns a Konnect license agent.
+// If controller of `KongLicense` CRD is enabled and sync license with Konnect is disabled,
+// it starts and returns a KongLicense controller.
+func setupLicenseGetter(
+	ctx context.Context,
+	c *Config,
+	setupLog logr.Logger,
+	mgr manager.Manager,
+	statusQueue *status.Queue,
+) (translator.LicenseGetter, error) {
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
+	// This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
+	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but
+	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
+	// the client and makes it available to all Konnect-related subsystems.
+	if c.Konnect.LicenseSynchronizationEnabled {
+		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating konnect client: %w", err)
+		}
+		setupLog.Info("Starting license agent")
+		agent := license.NewAgent(
+			konnectLicenseAPIClient,
+			ctrl.LoggerFrom(ctx).WithName("license-agent"),
+			license.WithInitialPollingPeriod(c.Konnect.InitialLicensePollingPeriod),
+			license.WithPollingPeriod(c.Konnect.LicensePollingPeriod),
+		)
+		err = mgr.Add(agent)
+		if err != nil {
+			return nil, fmt.Errorf("could not add license agent to manager: %w", err)
+		}
+		return agent, nil
+	}
+	// Enable KongLicense controller if license synchornizition from Konnect is disabled.
+	if c.KongLicenseEnabled && !c.Konnect.LicenseSynchronizationEnabled {
+		setupLog.Info("Starting KongLicense controller")
+		licenseController := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
+			mgr.GetClient(),
+			ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
+			mgr.GetScheme(),
+			ctrllicense.NewLicenseCache(),
+			c.CacheSyncTimeout,
+			statusQueue,
+			ctrllicense.LicenseControllerTypeKIC,
+			mo.Some(c.LeaderElectionID),
+			mo.None[ctrllicense.ValidatorFunc](),
+		)
+		dynamicLicenseController := ctrllicense.WrapKongLicenseReconcilerToDynamicCRDController(
+			ctx, mgr, licenseController,
+		)
+		err := dynamicLicenseController.SetupWithManager(mgr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to start KongLicense controller: %w", err)
+		}
+		return licenseController, nil
+	}
+
+	return nil, nil
 }

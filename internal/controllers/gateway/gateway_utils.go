@@ -48,9 +48,9 @@ func setGatewayCondition(gateway *gatewayapi.Gateway, newCondition metav1.Condit
 	gateway.Status.Conditions = newConditions
 }
 
-// isGatewayScheduled returns boolean whether or not the gateway object was scheduled
+// isGatewayAccepted returns boolean whether or not the gateway object was accepted
 // previously by the gateway controller.
-func isGatewayScheduled(gateway *gatewayapi.Gateway) bool {
+func isGatewayAccepted(gateway *gatewayapi.Gateway) bool {
 	return util.CheckCondition(
 		gateway.Status.Conditions,
 		util.ConditionType(gatewayapi.GatewayConditionAccepted),
@@ -75,18 +75,17 @@ func isGatewayProgrammed(gateway *gatewayapi.Gateway) bool {
 // Warning: this function is used for both GatewayClasses and Gateways.
 // The former uses "true" as the value, whereas the latter uses "namespace/service" CSVs for the proxy services.
 
-// isObjectUnmanaged returns boolean if the object is configured
+// isGatewayClassUnmanaged returns boolean if the object is configured
 // for unmanaged mode.
-func isObjectUnmanaged(anns map[string]string) bool {
+func isGatewayClassUnmanaged(anns map[string]string) bool {
 	annotationValue := annotations.ExtractUnmanagedGatewayClassMode(anns)
 	return annotationValue != ""
 }
 
-// isGatewayClassControlledAndUnmanaged returns boolean if the GatewayClass
+// isGatewayClassControlled returns boolean if the GatewayClass
 // is controlled by this controller and is configured for unmanaged mode.
-func isGatewayClassControlledAndUnmanaged(gatewayClass *gatewayapi.GatewayClass) bool {
-	isUnmanaged := isObjectUnmanaged(gatewayClass.Annotations)
-	return gatewayClass.Spec.ControllerName == GetControllerName() && isUnmanaged
+func isGatewayClassControlled(gatewayClass *gatewayapi.GatewayClass) bool {
+	return gatewayClass.Spec.ControllerName == GetControllerName()
 }
 
 // pruneGatewayStatusConds cleans out old status conditions if the Gateway currently has more

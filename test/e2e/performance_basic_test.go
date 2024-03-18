@@ -41,6 +41,15 @@ var (
 	// Instead, a fixed secret `consumer-key-auth-secret` is used.
 	rulesTpl = `
 ---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: auth-plugin-%d
+  annotations:
+    kubernetes.io/ingress.class: kong
+plugin: key-auth
+
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -62,13 +71,15 @@ spec:
         pathType: Exact
 
 ---
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
+apiVersion: v1
+data:
+  key: %s
+kind: Secret
 metadata:
-  name: auth-plugin-%d
-  annotations:
-    kubernetes.io/ingress.class: kong
-plugin: key-auth
+  labels:
+    konghq.com/credential: key-auth
+  name: consumer-key-auth-secret-%d
+type: Opaque
 
 ---
 apiVersion: configuration.konghq.com/v1
@@ -80,17 +91,6 @@ metadata:
 username: %s
 credentials:
 - consumer-key-auth-secret-%d
-
----
-apiVersion: v1
-data:
-  key: %s
-kind: Secret
-metadata:
-  labels:
-    konghq.com/credential: key-auth
-  name: consumer-key-auth-secret-%d
-type: Opaque
 
 `
 
@@ -117,6 +117,12 @@ spec:
         pathType: Exact
 
 `
+
+	// Use the following file to store the time-consuming reports for each action.
+	allResourceApplyReport      = "all_resource_apply_%d.txt"
+	allResourceTakeEffectReport = "all_resource_take_effect_%d.txt"
+	oneResourceUpdateReport     = "one_resource_update_%d.txt"
+	oneResourceTakeEffectReport = "one_resource_take_effect_%d.txt"
 )
 
 // -----------------------------------------------------------------------------
@@ -153,16 +159,20 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 	kubeconfig := getTemporaryKubeconfig(t, env)
 
-	resourceYaml := ""
-	for i := 0; i < defaultResNum; i++ {
-		resourceYaml += fmt.Sprintf(rulesTpl, i, i, i, i, i, fmt.Sprintf(consumerUsername, i), i, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, i))), i)
-	}
-
+	batchSize := 500
 	startTime := time.Now()
-	err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
-	require.NoError(t, err)
+	for i := 0; i < defaultResNum; i += batchSize {
+		resourceYaml := ""
+		for j := i; j < i+batchSize && j < defaultResNum; j++ {
+			resourceYaml += fmt.Sprintf(rulesTpl, j, j, j, j, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, j))), j, j, fmt.Sprintf(consumerUsername, j), j)
+
+		}
+		err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
+		require.NoError(t, err)
+	}
 	completionTime := time.Now()
 	t.Logf("time to apply %d rules(including Ingress, plugin, and consumer): %v", defaultResNum, completionTime.Sub(startTime))
+	writeResultToTempFile(t, allResourceApplyReport, defaultResNum, int(completionTime.Sub(startTime).Milliseconds()))
 
 	t.Log("getting kong proxy IP after LB provisioning")
 	proxyURLForDefaultIngress := "http://" + getKongProxyIP(ctx, t, env)
@@ -180,7 +190,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "get", i)
-			}, ingressWait, time.Millisecond*500)
+			}, ingressWait*10, time.Millisecond*500)
 		}(i)
 	}
 
@@ -189,6 +199,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	effectTime := time.Now()
 
 	t.Logf("time to make %d ingress rules take effect: %v", defaultResNum, effectTime.Sub(completionTime))
+	writeResultToTempFile(t, allResourceTakeEffectReport, defaultResNum, int(effectTime.Sub(completionTime).Milliseconds()))
 
 	rand.Seed(time.Now().UnixNano())
 	randomInt := rand.Intn(10000)
@@ -200,12 +211,14 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "ip", randomInt)
-	}, ingressWait, time.Millisecond*500)
+	}, ingressWait*5, time.Millisecond*500)
 
 	effectTime = time.Now()
 
 	t.Logf("time to update 1 ingress rules when %d ingress exists: %v", defaultResNum, completionTime.Sub(startTime))
 	t.Logf("time to make 1 ingress rules take effect when %d ingress exists: %v", defaultResNum, effectTime.Sub(completionTime))
+	writeResultToTempFile(t, oneResourceUpdateReport, defaultResNum, int(completionTime.Sub(startTime).Milliseconds()))
+	writeResultToTempFile(t, oneResourceTakeEffectReport, defaultResNum, int(effectTime.Sub(completionTime).Milliseconds()))
 
 }
 
@@ -246,6 +259,31 @@ func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxy
 func applyResourceWithKubectl(ctx context.Context, t *testing.T, kubeconfig, resourceYAML string) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "apply", "-f", "-")
 	cmd.Stdin = strings.NewReader(resourceYAML)
-	_, err := cmd.CombinedOutput()
+	err := cmd.Run()
 	return err
+}
+
+// we will store the result in the `/tmp/kic-perf/` directory
+func writeResultToTempFile(t *testing.T, filename string, resourceNum, time int) {
+	// create a file to /tmp/kic-perf/all_apply.txt
+	// if the file already exists, it will be overwritten
+	// if the file does not exist, it will be created
+	defaultResultDir := "/tmp/kic-perf/"
+	if err := os.MkdirAll(defaultResultDir, 0755); err != nil {
+		t.Logf("failed to create directory: %v", err)
+		return
+	}
+
+	file, err := os.Create(defaultResultDir + fmt.Sprintf(filename, resourceNum))
+	if err != nil {
+		t.Logf("failed to create file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%d %d\n", resourceNum, time))
+	if err != nil {
+		t.Logf("failed to write to file: %v", err)
+		return
+	}
 }

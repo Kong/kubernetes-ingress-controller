@@ -210,7 +210,7 @@ CRD_INCUBATOR_GEN_PATHS ?= ./pkg/apis/incubator/...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
-manifests: manifests.crds manifests.rbac manifests.single
+manifests: manifests.crds manifests.rbac manifests.webhook manifests.single
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -219,9 +219,13 @@ manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResour
 
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
-	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/"
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/" paths="./controllers/license/"
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
+
+.PHONY: manifests.webhook
+manifests.webhook: controller-gen ## Generate ValidatingWebhookConfiguration.
+	$(CONTROLLER_GEN) webhook paths="./internal/admission/..." output:webhook:artifacts:config=config/webhook
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
@@ -454,6 +458,13 @@ test.integration.isolated.dbless:
 		GOTAGS="integration_tests" \
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.out
+
+.PHONY: test.integration.isolated.postgres
+test.integration.isolated.postgres:
+	@$(MAKE) _test.integration.isolated \
+		GOTAGS="integration_tests" \
+		DBMODE=postgres \
+		COVERAGE_OUT=coverage.postgres.out
 
 .PHONY: test.integration.dbless
 test.integration.dbless:

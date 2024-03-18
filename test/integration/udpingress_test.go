@@ -108,7 +108,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	t.Log("configurating a net.Resolver to resolve DNS via the proxy")
 	resolver := &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{
 				Timeout: time.Second * 5,
 			}

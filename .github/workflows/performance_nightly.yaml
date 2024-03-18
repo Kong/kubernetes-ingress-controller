@@ -1,0 +1,63 @@
+name: performance tests (nightly)
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ensure-nightly-image-was-built:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if image built this night exists
+        run: docker pull kong/nightly-ingress-controller:$(date +%Y-%m-%d)
+
+  performance-tests:
+    needs: ensure-nightly-image-was-built
+    uses: ./.github/workflows/_performance_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: kong/nightly-ingress-controller:nightly
+
+  performance-tests-unreleased-kong:
+    needs: ensure-nightly-image-was-built
+    uses: ./.github/workflows/_performance_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: kong/nightly-ingress-controller:nightly
+      # TODO: Previously we've used kong/kong:amd64-latest but that image reports
+      # its version (through AdminAPI / endpoint) as SHA instead of a semver.
+      # This breaks KIC's Admin root configuration verification on startup.
+      # To unblock this, we're switching to kong/kong-gateway-dev:nightly because
+      # it reports the next release to be released as semver in the version field.
+      # ref: https://github.com/Kong/kubernetes-ingress-controller/issues/4014
+      kong-image: kong/kong-gateway-dev:nightly
+      kong-effective-version: "3.4.1"
+
+  test-reports:
+    needs:
+      - performance-tests
+      - performance-tests-unreleased-kong
+    uses: ./.github/workflows/_test_reports.yaml
+    secrets: inherit
+    with:
+      coverage: false
+
+  notify-on-slack:
+    runs-on: ubuntu-latest
+    needs:
+      - ensure-nightly-image-was-built
+      - performance-tests
+      - performance-tests-unreleased-kong
+      - test-reports
+    if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
+    steps:
+      - name: Notify on Slack for failures of performance tests run automatically at night
+        uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          # Since notify-on-slack is triggered on failure (if statement), we can hardcode this.
+          status: failure
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: ':red_circle: performance tests failed for nightly run, please check why.'

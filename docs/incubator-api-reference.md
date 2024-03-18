@@ -9,9 +9,7 @@
 Package v1alpha1 contains API Schema definitions for the incubator.ingress-controller.konghq.com v1alpha1 API group.
 
 - [KongServiceFacade](#kongservicefacade)
-
 ### KongServiceFacade
-
 
 
 KongServiceFacade allows creating separate Kong Services for a single Kubernetes
@@ -33,9 +31,10 @@ matching the ingressClass of the Kong Ingress Controller (`kong` by default) to 
 
 
 
+### Types
 
-### KongServiceFacadeBackend
-
+In this section you will find types that the CRDs rely on.
+#### KongServiceFacadeBackend
 
 
 KongServiceFacadeBackend is a reference to a Kubernetes Service
@@ -52,8 +51,7 @@ that is used as a backend for a Kong Service Facade.
 _Appears in:_
 - [KongServiceFacadeSpec](#kongservicefacadespec)
 
-### KongServiceFacadeSpec
-
+#### KongServiceFacadeSpec
 
 
 KongServiceFacadeSpec defines the desired state of KongServiceFacade.

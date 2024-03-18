@@ -16,7 +16,7 @@ import (
 func createResolver(proxyUDPURL *url.URL) *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{
 				Timeout: consts.WaitTick,
 			}

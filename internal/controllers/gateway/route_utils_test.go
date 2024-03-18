@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -1341,6 +1342,134 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 
 		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute, controllers.OptionalNamespacedName{})
 		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
+	})
+
+	t.Run("single Gateway", func(t *testing.T) {
+		namedGateway := func(name string) *gatewayapi.Gateway {
+			return &gatewayapi.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "test-namespace",
+					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "test-gatewayclass",
+					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
+				},
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
+						{
+							Name: "http",
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Status: metav1.ConditionTrue,
+								},
+							},
+							SupportedKinds: supportedRouteGroupKinds,
+						},
+					},
+				},
+			}
+		}
+
+		basicHTTPRoute := func(gateway string) *gatewayapi.HTTPRoute {
+			return &gatewayapi.HTTPRoute{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: "test-namespace",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Group: &goodGroup,
+								Kind:  &goodKind,
+								Name:  gatewayapi.ObjectName(gateway),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							BackendRefs: []gatewayapi.HTTPBackendRef{
+								builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+							},
+						},
+					},
+				},
+			}
+		}
+
+		tests := []struct {
+			name        string
+			route       *gatewayapi.HTTPRoute
+			expected    []expected
+			expectedErr error
+			objects     []client.Object
+		}{
+			{
+				name:  "HTTPRoute with bound Gateway parent is accepted",
+				route: basicHTTPRoute("good-gateway"),
+				objects: []client.Object{
+					namedGateway("good-gateway"),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					},
+				},
+			},
+			{
+				name:  "HTTPRoute with other parent Gateway finds no matching Gateways",
+				route: basicHTTPRoute("bad-gateway"),
+				objects: []client.Object{
+					namedGateway("bad-gateway"),
+					gatewayClass,
+					namespace,
+				},
+				expected:    []expected{},
+				expectedErr: fmt.Errorf("no supported Gateway found for route"),
+			},
+		}
+
+		for _, tt := range tests {
+			tt := tt
+			t.Run(tt.name, func(t *testing.T) {
+				fakeClient := fakeclient.
+					NewClientBuilder().
+					WithScheme(scheme.Scheme).
+					WithObjects(tt.objects...).
+					Build()
+
+				got, err := getSupportedGatewayForRoute(
+					context.Background(),
+					logr.Discard(),
+					fakeClient,
+					tt.route,
+					mo.Some(k8stypes.NamespacedName{
+						Namespace: namespace.Name,
+						Name:      "good-gateway",
+					}),
+				)
+				if tt.expectedErr != nil {
+					require.Equal(t, tt.expectedErr, err)
+				} else {
+					require.NoError(t, err)
+				}
+				require.Len(t, got, len(tt.expected))
+
+				for i := range got {
+					assert.Equalf(t, "test-namespace", got[i].gateway.Namespace, "gateway namespace #%d", i)
+					assert.Equalf(t, "good-gateway", got[i].gateway.Name, "gateway name #%d", i)
+					assert.Equalf(t, tt.expected[i].listenerName, got[i].listenerName, "listenerName #%d", i)
+					assert.Equalf(t, tt.expected[i].condition, got[i].condition, "condition #%d", i)
+				}
+			})
+		}
 	})
 }
 

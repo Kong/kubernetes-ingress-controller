@@ -99,7 +99,7 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 		return false
 	}
 
-	return isGatewayClassControlledAndUnmanaged(gatewayClass)
+	return isGatewayClassControlled(gatewayClass)
 }
 
 // -----------------------------------------------------------------------------
@@ -125,7 +125,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	log.V(util.DebugLevel).Info("Processing gatewayclass", "name", req.Name)
 
-	if isGatewayClassControlledAndUnmanaged(gwc) {
+	if isGatewayClassControlled(gwc) {
 		alreadyAccepted := util.CheckCondition(
 			gwc.Status.Conditions,
 			util.ConditionType(gatewayapi.GatewayClassConditionStatusAccepted),

@@ -1,0 +1,239 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: gateways.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: httproutes.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - httproutes
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: ingresses.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kongclusterplugins.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongclusterplugins
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kongconsumergroups.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongconsumergroups
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kongconsumers.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongconsumers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kongingresses.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongingresses
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kongplugins.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongplugins
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kongvaults.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongvaults
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: secrets.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: services.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - services
+  sideEffects: None

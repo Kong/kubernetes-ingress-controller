@@ -96,9 +96,6 @@ func TestTranslatorsGoldenTestsOutputs_Konnect(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	defaultOutputsPaths := lo.Filter(allGoldenTestsOutputsPaths(t), func(path string, _ int) bool {
-		return strings.Contains(path, "default_")
-	})
 
 	cpID := konnect.CreateTestControlPlane(ctx, t)
 	cert, key := konnect.CreateClientCertificate(ctx, t, cpID)
@@ -108,7 +105,7 @@ func TestTranslatorsGoldenTestsOutputs_Konnect(t *testing.T) {
 		KonnectControlPlane: cpID,
 	}, semver.MustParse("3.5.0"), 10)
 
-	for _, goldenTestOutputPath := range defaultOutputsPaths {
+	for _, goldenTestOutputPath := range allGoldenTestsOutputsPaths(t) {
 		t.Run(goldenTestOutputPath, func(t *testing.T) {
 			ensureGoldenTestOutputIsAccepted(ctx, t, goldenTestOutputPath, updateStrategy)
 		})

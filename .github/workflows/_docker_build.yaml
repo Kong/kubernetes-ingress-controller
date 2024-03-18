@@ -39,7 +39,7 @@ jobs:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
-      - uses: benjlevesque/short-sha@v2.2
+      - uses: benjlevesque/short-sha@v3.0
         id: short-sha
 
       - name: Add standard tag

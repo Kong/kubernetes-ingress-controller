@@ -22,10 +22,102 @@ on:
       res-number-for-perf:
         description: The number of resource for performance tests
         type: string
-        default: 10000
 
 jobs:
-  performance:
+  performance-matrix:
+    if: ${{ inputs.res-number-for-perf == '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        resource-number: [1000, 2500, 5000]
+      fail-fast: false
+    steps:
+      - name: Download built image artifact
+        if: ${{ inputs.load-local-image }}
+        uses: actions/download-artifact@v3
+        with:
+          name: kic-image
+          path: /tmp
+
+      - name: Load built image
+        if: ${{ inputs.load-local-image }}
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a
+
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: split image and tag
+        id: split
+        env:
+          KONG: ${{ inputs.kong-image }}
+          CONTROLLER: ${{ inputs.controller-image }}
+        run: |
+          if [ "${{ inputs.kong-image }}" != "" ]; then
+            export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
+            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
+            echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
+            echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
+          fi
+          if [ "${{ inputs.kic-image }}" != "" ]; then
+            export kic_image=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[1]}')
+            export kic_tag=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[2]}')
+            echo "kic-image=$kic_image" >> $GITHUB_OUTPUT
+            echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: run performance tests
+        run: make test.performance
+        env:
+          TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
+          TEST_CONTROLLER_TAG: ${{ steps.split.outputs.kic-tag }}
+          TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
+          TEST_KONG_IMAGE: ${{ steps.split.outputs.kong-image }}
+          TEST_KONG_TAG: ${{ steps.split.outputs.kong-tag }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          PERF_RES_NUMBER: ${{ matrix.resource-number }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
+          GOTESTSUM_JUNITFILE: "performance-tests.xml"
+          E2E_TEST_TIMEOUT: 180m
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnostics-performance-tests
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
+
+      - name: collect performance test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-tests-results
+          path: "/tmp/kic-perf/*.txt"
+          if-no-files-found: ignore
+
+  performance-target:
+    if: ${{ inputs.res-number-for-perf != '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -91,7 +183,7 @@ jobs:
           NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
           # multiple kind clusters within a single job, so only 1 is allowed at a time.
           GOTESTSUM_JUNITFILE: "performance-tests.xml"
-          E2E_TEST_TIMEOUT: 90m
+          E2E_TEST_TIMEOUT: 180m
 
       - name: upload diagnostics
         if: ${{ always() }}
@@ -106,3 +198,10 @@ jobs:
         with:
           name: tests-report
           path: "*-tests.xml"
+
+      - name: collect performance test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-tests-results
+          path: "/tmp/kic-perf/*.txt"
+          if-no-files-found: ignore

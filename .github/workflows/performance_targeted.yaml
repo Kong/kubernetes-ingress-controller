@@ -17,7 +17,7 @@ on:
       res-number-for-perf:
         description: The number of resource for performance tests
         type: string
-        default: 10000
+        required: false
       pr-number:
         description: PR number to post a comment in. If empty, no comment is posted.
         type: string
@@ -36,6 +36,8 @@ jobs:
       RES_NUM: ${{ inputs.res-number-for-perf }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: |
           MSG="performance (targeted) tests with KIND-based clusters were started at ${URL} the number of test resources is ${RES_NUM}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
@@ -85,3 +87,39 @@ jobs:
     secrets: inherit
     with:
       coverage: false
+
+  performance-reports:
+    runs-on: ubuntu-latest
+    needs: run
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+          bundler-cache: true
+      - name: install uplot
+        run: |
+          gem install youplot
+
+      - name: download performance test results
+        uses: actions/download-artifact@v3
+        with:
+          name: performance-tests-results
+          path: perf-results
+
+      - name: drawing
+        run: |
+          cat perf-results/all_resource_apply*.txt >> result_of_all_resource_apply
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to apply to cluster" result_of_all_resource_apply
+
+          cat perf-results/all_resource_take_effect*.txt >> result_of_all_resource_take_effect
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to take effect." result_of_all_resource_take_effect
+
+          cat perf-results/one_resource_update*.txt >> result_of_one_resource_update
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress." result_of_one_resource_update
+
+          cat perf-results/one_resource_take_effect*.txt >> result_of_one_resource_take_effect
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress to take effect." result_of_one_resource_take_effect

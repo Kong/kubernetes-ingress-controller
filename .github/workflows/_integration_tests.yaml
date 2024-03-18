@@ -119,13 +119,20 @@ jobs:
             router-flavor: 'traditional'
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
           # Experimental tests, in the future all integration tests will be migrated to them.
+          # Set enterprise to 'true' to enable isolated integration test cases requiring enterprise features.
           - name: isolated-dbless
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"
+            enterprise: true
+          - name: isolated-postgres
+            test: isolated.postgres
+            feature_gates: "GatewayAlpha=true"
+            enterprise: true
           - name: isolated-dbless-expression-router
             router-flavor: expressions
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"
+            enterprise: true
 
     steps:
       - uses: Kong/kong-license@master
@@ -149,6 +156,7 @@ jobs:
             echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=${kong_ee_tag}" >> $GITHUB_ENV
             echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}" >> $GITHUB_ENV
+            echo "TEST_KONG_ENTERPRISE=true" >> $GITHUB_ENV
           else
             echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=${kong_oss_tag}" >> $GITHUB_ENV

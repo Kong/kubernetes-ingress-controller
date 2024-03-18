@@ -994,7 +994,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				ingressClassMatcher: func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool {
 					return false // Always return false, we'll use Spec.IngressClassName matcher.
 				},
-				ingressV1ClassMatcher: func(ingress *netv1.Ingress, matching annotations.ClassMatching) bool {
+				ingressV1ClassMatcher: func(ingress *netv1.Ingress, _ annotations.ClassMatching) bool {
 					return *ingress.Spec.IngressClassName == annotations.DefaultIngressClass
 				},
 				Logger: logr.Discard(),

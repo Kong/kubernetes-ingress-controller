@@ -6,6 +6,7 @@ on:
 
 jobs:
   fossa-scan:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     environment: "FOSSA"
     runs-on: ubuntu-latest
     steps:

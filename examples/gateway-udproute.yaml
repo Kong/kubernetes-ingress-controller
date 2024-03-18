@@ -42,7 +42,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  name: kong
+  name: example-udproute
   annotations:
     konghq.com/gatewayclass-unmanaged: "true"
 spec:
@@ -51,9 +51,9 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: kong
+  name: example-udproute
 spec:
-  gatewayClassName: kong
+  gatewayClassName: example-udproute
   listeners:
   - name: http
     protocol: HTTP
@@ -68,7 +68,7 @@ metadata:
   name: udpecho
 spec:
   parentRefs:
-  - name: kong
+  - name: example-udproute
   rules:
   - backendRefs:
     - name: udpecho

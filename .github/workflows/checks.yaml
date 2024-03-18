@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Check if PR is up to date, if it is skip workflows for this ref
         id: 'up-to-date'
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')

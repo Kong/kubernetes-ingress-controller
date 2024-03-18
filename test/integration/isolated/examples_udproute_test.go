@@ -9,7 +9,6 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
@@ -43,14 +42,14 @@ func TestExampleUDPRoute(t *testing.T) {
 
 				t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
 				b, err := os.ReadFile(udpRouteExampleManifests)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 
 				s := string(b)
-				require.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, s))
+				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, s))
 				cleaner.AddManifest(s)
 
 				t.Logf("verifying that the UDPRoute becomes routable")
-				require.EventuallyWithT(t, func(c *assert.CollectT) {
+				assert.EventuallyWithT(t, func(c *assert.CollectT) {
 					assert.NoError(
 						c, test.EchoResponds(test.ProtocolUDP, proxyUDPURL, "udproute-example-manifest"),
 					)

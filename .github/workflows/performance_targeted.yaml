@@ -36,8 +36,6 @@ jobs:
       RES_NUM: ${{ inputs.res-number-for-perf }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - run: |
           MSG="performance (targeted) tests with KIND-based clusters were started at ${URL} the number of test resources is ${RES_NUM}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
@@ -93,8 +91,6 @@ jobs:
     needs: run
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: setup ruby
         uses: ruby/setup-ruby@v1
         with:

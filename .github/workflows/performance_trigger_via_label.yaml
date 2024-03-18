@@ -18,8 +18,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+
     # Do not run e2e tests on GKE-based clusters for specific PR, because currently
     # there is no way to use an image built from PR's code for those tests.
     # https://github.com/Kong/kubernetes-testing-framework/issues/587

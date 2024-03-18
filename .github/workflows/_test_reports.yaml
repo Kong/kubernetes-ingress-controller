@@ -23,8 +23,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: collect test coverage artifacts
         id: download-coverage
@@ -48,8 +46,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: download tests report
         id: download-coverage

@@ -15,18 +15,16 @@ func GetFeatureGates() string {
 	//
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5373
 	tag := ControllerTag()
-	if tag != "" {
-		// Currently, the latest version is 3.0.x, once 3.1.x is released,
-		// we can remove this logic.
-		if tag == "latest" {
+	if tag == "" || tag == "latest" || tag == "nightly" {
+		return consts.DefaultFeatureGates
+	}
+
+	if v, err := semver.Make(tag); err == nil {
+		minVersion, _ := semver.ParseRange("<3.1.x")
+		if minVersion(v) {
 			return "GatewayAlpha=true"
 		}
-		if v, err := semver.Make(tag); err == nil {
-			minVersion, _ := semver.ParseRange("<3.1.x")
-			if minVersion(v) {
-				return "GatewayAlpha=true"
-			}
-		}
 	}
+
 	return consts.DefaultFeatureGates
 }

@@ -9,8 +9,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5

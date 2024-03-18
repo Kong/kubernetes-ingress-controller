@@ -39,8 +39,6 @@ jobs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - id: setup_golang
         name: setup golang
@@ -77,10 +75,7 @@ jobs:
       gke: ${{ steps.set-versions.outputs.gke }}
       istio: ${{ steps.set-versions.outputs.istio }}
     steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
       - id: set-versions
         name: Set versions
@@ -121,8 +116,6 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -207,8 +200,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -313,8 +304,6 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5

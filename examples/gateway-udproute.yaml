@@ -3,9 +3,15 @@
 # https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong-udproute
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: coredns
+  namespace: kong-udproute
 data:
   Corefile: |-
     .:53 {
@@ -32,6 +38,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: coredns
+  namespace: kong-udproute
   labels:
     app: coredns
 spec:
@@ -70,6 +77,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: coredns
+  namespace: kong-udproute
 spec:
   ports:
   - port: 53
@@ -92,6 +100,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: kong
+  namespace: kong-udproute
 spec:
   gatewayClassName: kong
   listeners:
@@ -106,6 +115,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
   name: coredns
+  namespace: kong-udproute
 spec:
   parentRefs:
   - name: kong

@@ -51,7 +51,17 @@ func TestGRPCRouteExample(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(
+				// NOTE: "kong-grpcroute" namespace is chosen for test specificially for the reason
+				// to isolate the test from the default namespace and avoid any potential conflicts
+				// with other tests. This namespace is hardcoded in the UDPRoute manifest.
+				// Usage of "default" namespace has caused flakiness in the past because other example
+				// manifests also use "kong" Gateway and those could overwrite each other.
+				// We could potentially overwrite the namespace in the client context but that
+				// can ony be done in ktf's https://github.com/Kong/kubernetes-testing-framework/blob/2f5b03bcf9c28f5fa11d20d85ba2c24c87650513/pkg/utils/kubernetes/generators/kubeconfig.go#L33-L36
+				// which is not currently configurable.
+				helpers.ControllerManagerOptAdditionalWatchNamespace("kong-grpcroute"),
+			),
 			withKongProxyEnvVars(map[string]string{
 				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
 			}),

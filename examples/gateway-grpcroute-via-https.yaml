@@ -3,9 +3,15 @@
 # https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong-grpcroute
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: grpcbin-via-https
+  namespace: kong-grpcroute
   labels:
     app: grpcbin-via-https
   annotations:
@@ -22,6 +28,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grpcbin-via-https
+  namespace: kong-grpcroute
 spec:
   replicas: 1
   selector:
@@ -42,6 +49,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: grpcroute-example
+  namespace: kong-grpcroute
 data:
   tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMvakNDQW9TZ0F3SUJBZ0lVVkw2VVlWRGRINnBlVk5TT25Pa0N1WXlobXJzd0NnWUlLb1pJemowRUF3SXcKZ2JReEN6QUpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlEQXBEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIREExVApZVzRnUm5KaGJtTnBjMk52TVJNd0VRWURWUVFLREFwTGIyNW5MQ0JKYm1NdU1SZ3dGZ1lEVlFRTERBOVVaV0Z0CklFdDFZbVZ5Ym1WMFpYTXhIakFjQmdOVkJBTU1GWFJzYzNKdmRYUmxMbXR2Ym1jdVpYaGhiWEJzWlRFcE1DY0cKQ1NxR1NJYjNEUUVKQVJZYWRHVnpkRUIwYkhOeWIzVjBaUzVyYjI1bkxtVjRZVzF3YkdVd0lCY05Nakl3TmpFMgpNakV4TWpJNFdoZ1BNakV5TWpBMU1qTXlNVEV5TWpoYU1JRzBNUXN3Q1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFCkNBd0tRMkZzYVdadmNtNXBZVEVXTUJRR0ExVUVCd3dOVTJGdUlFWnlZVzVqYVhOamJ6RVRNQkVHQTFVRUNnd0sKUzI5dVp5d2dTVzVqTGpFWU1CWUdBMVVFQ3d3UFZHVmhiU0JMZFdKbGNtNWxkR1Z6TVI0d0hBWURWUVFEREJWMApiSE55YjNWMFpTNXJiMjVuTG1WNFlXMXdiR1V4S1RBbkJna3Foa2lHOXcwQkNRRVdHblJsYzNSQWRHeHpjbTkxCmRHVXVhMjl1Wnk1bGVHRnRjR3hsTUhZd0VBWUhLb1pJemowQ0FRWUZLNEVFQUNJRFlnQUVRZWNmenN4bVB3QzAKNnVOczNreWlMRGI2YnJuZ000WnRHWGd3Y0dEMzkzY2JZbWF1bmZCUFJ0eHFoNzZSS2RTOXd6cTRxK29COGRQcwpRS2dCTmhsSlRyK2lGSDlEaTdiQlpGY1lxeCtTbk5VWFowZEROQmJXNHJQVlRKSFF2ZG9ubzFNd1VUQWRCZ05WCkhRNEVGZ1FVK09PVmJxTWN1K3lYb21aZm5aNTRMZ0lSTm80d0h3WURWUjBqQkJnd0ZvQVUrT09WYnFNY3UreVgKb21aZm5aNTRMZ0lSTm80d0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBS0JnZ3Foa2pPUFFRREFnTm9BREJsQWpCdQpQTXErVCtpVEoweU52bGRZcEIzQmZkSWhydjBFSlE5QUxiQjE2bkp3RjkxWVY2WUU3bWROUDVyTlZub1owbkFDCk1RRG1uSXBpcE1hd2pKV3BmU1BTWlMxL2lBcno4WXVCcm9XckdGWFA2Mmx3aENVcDhSWndlTm5yTG1tYi9BZWsKeTNvPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
   tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JRzJBZ0VBTUJBR0J5cUdTTTQ5QWdFR0JTdUJCQUFpQklHZU1JR2JBZ0VCQkRERFJuZGdQWVphb25WdXFIaXUKNXV1WVdJK0ExNkJZTG9VQm5ZMC85Qkw5VTBzNDdHN0xDL2IwNXdFLzdVUEpFQktoWkFOaUFBUkI1eC9PekdZLwpBTFRxNDJ6ZVRLSXNOdnB1dWVBemhtMFplREJ3WVBmM2R4dGlacTZkOEU5RzNHcUh2cEVwMUwzRE9yaXI2Z0h4CjAreEFxQUUyR1VsT3Y2SVVmME9MdHNGa1Z4aXJINUtjMVJkblIwTTBGdGJpczlWTWtkQzkyaWM9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
@@ -60,6 +68,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: kong
+  namespace: kong-grpcroute
 spec:
   gatewayClassName: kong
   listeners:
@@ -74,6 +83,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: GRPCRoute
 metadata:
   name: grpcbin-via-https
+  namespace: kong-grpcroute
 spec:
   parentRefs:
   - name: kong

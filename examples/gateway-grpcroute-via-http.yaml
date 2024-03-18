@@ -3,9 +3,15 @@
 # https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong-grpcroute
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: grpcbin-via-http
+  namespace: kong-grpcroute
   labels:
     app: grpcbin-via-http
   annotations:
@@ -22,6 +28,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grpcbin-via-http
+  namespace: kong-grpcroute
 spec:
   replicas: 1
   selector:
@@ -51,6 +58,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: kong
+  namespace: kong-grpcroute
 spec:
   gatewayClassName: kong
   listeners:
@@ -62,6 +70,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: GRPCRoute
 metadata:
   name: grpcbin-via-http
+  namespace: kong-grpcroute
 spec:
   parentRefs:
   - name: kong

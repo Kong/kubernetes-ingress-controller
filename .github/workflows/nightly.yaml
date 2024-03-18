@@ -40,7 +40,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5.5.0
+        uses: docker/metadata-action@v5.5.1
         with:
           images: kong/nightly-ingress-controller
           tags: ${{ steps.tags-standard.outputs.TAGS_STANDARD }}

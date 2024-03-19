@@ -48,14 +48,16 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	// Helpers used in this test.
 	requireNoResponse := func(tcpGatewayURL string) {
-		assert.Eventually(t, func() bool {
+		t.Helper()
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			err := test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, "irrelevant")
-			return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
+			assert.True(c, errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET), "unexpected error: %v", err)
 		}, consts.IngressWait, consts.WaitTick)
 	}
 	requireResponse := func(tcpGatewayURL, expectedMsg string) {
-		assert.Eventually(t, func() bool {
-			return test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, expectedMsg) == nil
+		t.Helper()
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.NoError(c, test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, expectedMsg))
 		}, consts.IngressWait, consts.WaitTick)
 	}
 
@@ -92,7 +94,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner.Add(gateway)
 
 			t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
-			container1 := generators.NewContainer("tcpecho-1", test.EchoImage, test.EchoTCPPort)
+			container1 := generators.NewContainer(service1Name, test.EchoImage, test.EchoTCPPort)
 			// App go-echo sends a "Running on Pod <UUID>." immediately on connecting.
 			container1.Env = []corev1.EnvVar{
 				{
@@ -106,7 +108,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner.Add(deployment1)
 
 			t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
-			container2 := generators.NewContainer("tcpecho-2", test.EchoImage, test.EchoTCPPort)
+			container2 := generators.NewContainer(service2Name, test.EchoImage, test.EchoTCPPort)
 			// App go-echo sends a "Running on Pod <UUID>." immediately on connecting.
 			container2.Env = []corev1.EnvVar{
 				{
@@ -198,7 +200,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("verifying behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("removing the parentrefs from the TCPRoute")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
@@ -246,7 +248,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("verifying behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
@@ -336,7 +338,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify behavior with many backends", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("verifying behavior with many backends", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)

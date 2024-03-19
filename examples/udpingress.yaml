@@ -1,6 +1,5 @@
 # Usage:
 #
-# This example sets up a coredns deployment which can be proxied to via Kong UDPIngress.
 # In order to use this example make sure you're running the controller manager with the
 # following flags set:
 #
@@ -17,93 +16,53 @@
 # And then create a service configured best according to your environment to expose this port
 # on the proxy container or use a shortcut like `kubectl expose <options>`.
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns
-data:
-  Corefile: |-
-    .:53 {
-        errors
-        health {
-           lameduck 5s
-        }
-        ready
-        kubernetes cluster.local in-addr.arpa ip6.arpa {
-           pods insecure
-           fallthrough in-addr.arpa ip6.arpa
-           ttl 30
-        }
-        forward . /etc/resolv.conf {
-           max_concurrent 1000
-        }
-        cache 30
-        loop
-        reload
-        loadbalance
-    }
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: coredns
+  name: example-udpingress-udpecho
   labels:
-    app: coredns
+    app: example-udpingress-udpecho
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: coredns
+      app: example-udpingress-udpecho
   template:
     metadata:
       labels:
-        app: coredns
+        app: example-udpingress-udpecho
     spec:
       containers:
-      - args:
-        - -conf
-        - /etc/coredns/Corefile
-        image: registry.k8s.io/coredns/coredns:v1.8.6
-        imagePullPolicy: IfNotPresent
-        name: coredns
+      - name: example-udpingress-udpecho
+        image: kong/go-echo:0.3.0
         ports:
-        - containerPort: 53
-          protocol: UDP
-        volumeMounts:
-        - mountPath: /etc/coredns
-          name: config-volume
-      volumes:
-      - configMap:
-          defaultMode: 420
-          items:
-          - key: Corefile
-            path: Corefile
-          name: coredns
-        name: config-volume
+        - containerPort: 1026
+        env:
+        - name: POD_NAME
+          value: udpingress-example-manifest
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: coredns
+  name: example-udpingress-udpecho
 spec:
   ports:
-  - port: 53
+  - port: 8888
     protocol: UDP
-    targetPort: 53
+    targetPort: 1026
   selector:
-    app: coredns
+    app: example-udpingress-udpecho
   type: ClusterIP
 ---
 apiVersion: configuration.konghq.com/v1beta1
 kind: UDPIngress
 metadata:
-  name: minudp
+  name: example-udpingress
   annotations:
     kubernetes.io/ingress.class: "kong"
 spec:
   rules:
   - backend:
-      serviceName: coredns
-      servicePort: 53
+      serviceName: example-udpingress-udpecho
+      servicePort: 8888
     port: 9999
 ---

@@ -49,13 +49,13 @@ func TestTCPRouteEssentials(t *testing.T) {
 	// Helpers used in this test.
 	requireNoResponse := func(tcpGatewayURL string) {
 		assert.Eventually(t, func() bool {
-			err := test.TCPEchoResponds(tcpGatewayURL, "irrelevant")
+			err := test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, "irrelevant")
 			return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 		}, consts.IngressWait, consts.WaitTick)
 	}
 	requireResponse := func(tcpGatewayURL, expectedMsg string) {
 		assert.Eventually(t, func() bool {
-			return test.TCPEchoResponds(tcpGatewayURL, expectedMsg) == nil
+			return test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, expectedMsg) == nil
 		}, consts.IngressWait, consts.WaitTick)
 	}
 
@@ -221,7 +221,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			t.Log("verifying that the tcpecho is no longer responding")
 			defer func() {
 				if t.Failed() {
-					err := test.TCPEchoResponds(tcpGatewayURL, test1UUID)
+					err := test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, test1UUID)
 					t.Logf("no longer responding check failure state: eof=%v, reset=%v, err=%v",
 						errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
 				}

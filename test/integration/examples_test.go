@@ -99,7 +99,7 @@ func TestTCPRouteExample(t *testing.T) {
 
 	t.Log("verifying that TCPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest") == nil
+		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest") == nil
 	}, ingressWait, waitTick)
 }
 

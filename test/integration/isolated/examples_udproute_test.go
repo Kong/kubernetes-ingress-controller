@@ -5,7 +5,6 @@ package isolated
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -13,6 +12,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
@@ -32,25 +32,28 @@ func TestExampleUDPRoute(t *testing.T) {
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
-		Assess("deploying to cluster works and deployed coredns responds to UDP queries",
+		Assess("deploying to cluster works and udp traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 				cluster := GetClusterFromCtx(ctx)
-				proxyUDPURL := GetUDPURLFromCtx(ctx)
+				// GetUDPURLFromCtx returns the URL of the UDP service, but with http prefix
+				// http://<IP>:<PORT> (bug in KTF), taking the Host part trims scheme part.
+				proxyUDPURL := GetUDPURLFromCtx(ctx).Host
 
 				t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
 				b, err := os.ReadFile(udpRouteExampleManifests)
 				assert.NoError(t, err)
 
-				// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
-				// destination service port. Once parentRef port functionality is stable, we should remove this
 				s := string(b)
-				s = strings.ReplaceAll(s, "port: 53", "port: 9999")
 				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, s))
 				cleaner.AddManifest(s)
 
 				t.Logf("verifying that the UDPRoute becomes routable")
-				assert.Eventually(t, urlResolvesSuccessfullyFn(ctx, proxyUDPURL), consts.IngressWait, consts.WaitTick)
+				assert.EventuallyWithT(t, func(c *assert.CollectT) {
+					assert.NoError(
+						c, test.EchoResponds(test.ProtocolUDP, proxyUDPURL, "udproute-example-manifest"),
+					)
+				}, consts.IngressWait, consts.WaitTick)
 
 				return ctx
 			}).

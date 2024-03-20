@@ -22,6 +22,7 @@ on:
 
 jobs:
   prepare-tags:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     outputs:
       tags: ${{ steps.merge-tags.outputs.tags }}
@@ -70,6 +71,7 @@ jobs:
           echo "tags: ${{ steps.merge-tags.outputs.tags }}"
 
   build:
+    timeout-minutes: ${{ vars.GHA_EXTENDED_TIMEOUT_MINUTES }}
     runs-on: ubuntu-latest
     needs: prepare-tags
     outputs:

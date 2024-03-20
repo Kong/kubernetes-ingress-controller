@@ -5,6 +5,7 @@ on:
 
 jobs:
   kongintegration-tests:
+    timeout-minutes: ${{ vars.GHA_EXTENDED_TIMEOUT_MINUTES }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

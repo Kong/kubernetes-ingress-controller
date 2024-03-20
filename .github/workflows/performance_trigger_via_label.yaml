@@ -7,8 +7,8 @@ on:
 
 jobs:
   trigger-performance-tests-targeted:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     if: contains(github.event.*.labels.*.name, 'ci/run-performance')
-
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

@@ -17,7 +17,7 @@ on:
       kong-effective-version:
         description: Effective semantic version of Kong Gateway Docker image. If not given, the semantic version will be parsed from the image tag.
         type: string
-        required: false 
+        required: false
       e2e-controller-image-repo:
         description: KIC Docker image for E2E tests (repository).
         type: string
@@ -35,6 +35,7 @@ on:
 
 jobs:
   startup-issue-comment:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     if: ${{ github.event.inputs.issue-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -82,6 +83,7 @@ jobs:
       log-output-file:  /tmp/integration-tests-kic-logs
 
   on-finish-comment-or-close-issue:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     needs:
     - startup-issue-comment
     - run-e2e-tests

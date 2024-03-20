@@ -5,6 +5,7 @@ on:
 
 jobs:
   unit-tests:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

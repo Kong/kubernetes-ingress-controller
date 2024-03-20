@@ -34,6 +34,7 @@ on:
 
 jobs:
   setup-e2e-tests:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     outputs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
@@ -69,6 +70,7 @@ jobs:
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
 
   dependencies-versions:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     outputs:
       kind: ${{ steps.set-versions.outputs.kind }}
@@ -90,6 +92,7 @@ jobs:
           echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml | jq -c)" >> $GITHUB_OUTPUT
 
   kind:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs:
@@ -186,6 +189,7 @@ jobs:
           path: "*-tests.xml"
 
   gke:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     if: ${{ inputs.run-gke }}
     environment: "gcloud"
     runs-on: ubuntu-latest
@@ -215,7 +219,7 @@ jobs:
       - name: check availability of KIC image
         id: check_kic_image
         if: ${{ inputs.kic-image != '' }}
-        # We have to check whether the image passed in inputs is available in the docker hub. 
+        # We have to check whether the image passed in inputs is available in the docker hub.
         # If it's not, we'll fall back to a nightly image later.
         run: (docker manifest inspect ${{ inputs.kic-image }} && echo "kic_image=${{ inputs.kic-image }}" >> $GITHUB_OUTPUT) || true
 
@@ -235,7 +239,7 @@ jobs:
             export kic_image_repo=$(echo ${{ steps.check_kic_image.outputs.kic_image }} | awk '{split($0,a,":"); print a[1]}')
             export kic_image_tag=$(echo ${{ steps.check_kic_image.outputs.kic_image }} | awk '{split($0,a,":"); print a[2]}')
             echo "kic-image=$kic_image_repo" >> $GITHUB_OUTPUT
-            echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT  
+            echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT
           else
             # See the https://github.com/Kong/kubernetes-testing-framework/issues/587 TODO below.
             # If we add local image GKE support, we can get rid of this fallback.
@@ -281,6 +285,7 @@ jobs:
           path: "*-tests.xml"
 
   istio:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     if: ${{ inputs.run-istio }}
     runs-on: ubuntu-latest
     needs: dependencies-versions

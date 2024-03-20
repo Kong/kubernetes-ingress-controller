@@ -6,6 +6,7 @@ on:
 
 jobs:
   label:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     steps:
       - uses: pmalek/verify-pr-label-action@v1.4.5

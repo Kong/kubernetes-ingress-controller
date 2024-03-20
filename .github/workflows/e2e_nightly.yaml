@@ -7,6 +7,7 @@ on:
 
 jobs:
   ensure-nightly-image-was-built:
+    timeout-minutes: ${{ vars.GHA_EXTENDED_TIMEOUT_MINUTES }}
     runs-on: ubuntu-latest
     steps:
       - name: Check if image built this night exists
@@ -64,6 +65,7 @@ jobs:
 
   notify-on-slack:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     needs:
       - ensure-nightly-image-was-built
       - e2e-tests

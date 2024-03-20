@@ -7,6 +7,7 @@ on:
 
 jobs:
   gcloud:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     environment: gcloud
     runs-on: ubuntu-latest
     steps:
@@ -24,6 +25,7 @@ jobs:
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
   konnect:
+    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

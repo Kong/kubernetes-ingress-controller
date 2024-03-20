@@ -7,8 +7,8 @@ on:
 
 jobs:
   trigger-e2e-tests-targeted:
+    timeout-minutes: ${{ vars.GHA_EXTENDED_TIMEOUT_MINUTES }}
     if: contains(github.event.*.labels.*.name, 'ci/run-e2e')
-
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

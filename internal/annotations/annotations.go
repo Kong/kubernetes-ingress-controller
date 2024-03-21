@@ -56,6 +56,7 @@ const (
 	ResponseBuffering    = "/response-buffering"
 	HostAliasesKey       = "/host-aliases"
 	RegexPrefixKey       = "/regex-prefix"
+	SegmentPrefixKey     = "/segment-prefix"
 	ConnectTimeoutKey    = "/connect-timeout"
 	WriteTimeoutKey      = "/write-timeout"
 	ReadTimeoutKey       = "/read-timeout"
@@ -210,6 +211,10 @@ func ExtractPreserveHost(anns map[string]string) string {
 
 func ExtractRegexPrefix(anns map[string]string) string {
 	return anns[AnnotationPrefix+RegexPrefixKey]
+}
+
+func ExtractSegmentPrefix(anns map[string]string) string {
+	return anns[AnnotationPrefix+SegmentPrefixKey]
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

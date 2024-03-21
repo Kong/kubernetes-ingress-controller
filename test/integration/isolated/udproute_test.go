@@ -195,11 +195,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			)
 
 			t.Log("verifying that the udpecho is responding properly")
-			// GetUDPURLFromCtx returns the URL of the UDP service, but with http prefix
-			// http://<IP>:<PORT> (bug in KTF), taking the Host part trims scheme part.
-			// https://github.com/Kong/kubernetes-testing-framework/issues/1007
-			udpGatewayURL := GetUDPURLFromCtx(ctx).Host
-			ctx = SetInCtxForT(ctx, t, udpGatewayURL)
+			udpGatewayURL := GetUDPURLFromCtx(ctx)
 			requireResponse(udpGatewayURL, test1UUID)
 
 			return ctx
@@ -209,7 +205,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			udpGatewayURL := GetFromCtxForT[string](ctx, t)
+			udpGatewayURL := GetUDPURLFromCtx(ctx)
 
 			oldParentRefs := udpRoute.Spec.ParentRefs
 			assert.Eventually(t, func() bool {
@@ -256,7 +252,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
-			udpGatewayURL := GetFromCtxForT[string](ctx, t)
+			udpGatewayURL := GetUDPURLFromCtx(ctx)
 
 			t.Log("deleting the GatewayClass")
 			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -346,7 +342,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
-			udpGatewayURL := GetFromCtxForT[string](ctx, t)
+			udpGatewayURL := GetUDPURLFromCtx(ctx)
 
 			t.Log("adding an additional backendRef to the UDPRoute")
 			assert.Eventually(t, func() bool {

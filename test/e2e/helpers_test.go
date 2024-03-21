@@ -21,6 +21,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -70,7 +71,7 @@ const (
 	namespace        = "kong"
 	adminServiceName = "kong-admin-lb"
 
-	tcpListenerPort = 8888
+	tcpListenerPort = ktfkong.DefaultTCPServicePort
 
 	// controllerDeploymentName is the name of the controller deployment in all manifests variants.
 	controllerDeploymentName = "ingress-kong"

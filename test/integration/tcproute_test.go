@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -160,10 +159,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("verifying that only the local tcpecho is responding without a ReferenceGrant")
 	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, testUUID1) == nil
 	}, ingressWait*2, waitTick)
 	require.Never(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, testUUID2) == nil
 	}, time.Second*10, time.Second)
 
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
@@ -204,10 +203,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("verifying that requests reach both the local and remote namespace echo instances")
 	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, testUUID1) == nil
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, testUUID2) == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("testing specific name references")
@@ -222,7 +221,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, testUUID2) == nil
 	}, ingressWait*2, waitTick)
 
 	t.Logf("testing incorrect name does not match")
@@ -232,6 +231,6 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) != nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, testUUID2) != nil
 	}, ingressWait, waitTick)
 }

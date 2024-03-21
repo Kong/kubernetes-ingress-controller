@@ -8,12 +8,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,7 +78,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 		Spec: kongv1beta1.TCPIngressSpec{
 			Rules: []kongv1beta1.IngressRule{
 				{
-					Port: 8888,
+					Port: ktfkong.DefaultTCPServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: service.Name,
 						ServicePort: 80,
@@ -109,10 +109,9 @@ func TestTCPIngressEssentials(t *testing.T) {
 	}, statusWait, waitTick, true)
 
 	t.Logf("verifying TCP Ingress %s operational", tcp.Name)
-	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyURL.Hostname()))
-	require.NoError(t, err)
+	tcpProxyURL := fmt.Sprintf("http://%s:", proxyTCPURL)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL.String())
+		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL)
 		if err != nil {
 			return false
 		}
@@ -132,7 +131,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	t.Logf("tearing down TCPIngress %s and ensuring that the relevant backend routes are removed", tcp.Name)
 	require.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL.String())
+		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL)
 		if err != nil {
 			return true
 		}
@@ -200,7 +199,7 @@ func TestTCPIngressTLS(t *testing.T) {
 			Rules: []kongv1beta1.IngressRule{
 				{
 					Host: testServiceSuffixes[0] + ".example",
-					Port: 8899,
+					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[0]].Name,
 						ServicePort: test.EchoTCPPort,
@@ -208,7 +207,7 @@ func TestTCPIngressTLS(t *testing.T) {
 				},
 				{
 					Host: testServiceSuffixes[1] + ".example",
-					Port: 8899,
+					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[1]].Name,
 						ServicePort: test.EchoTCPPort,
@@ -233,7 +232,7 @@ func TestTCPIngressTLS(t *testing.T) {
 			Rules: []kongv1beta1.IngressRule{
 				{
 					Host: testServiceSuffixes[2] + ".example",
-					Port: 8899,
+					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[2]].Name,
 						ServicePort: test.EchoTCPPort,
@@ -245,11 +244,10 @@ func TestTCPIngressTLS(t *testing.T) {
 	tcpY, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcpY, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(tcpY)
-
 	for _, i := range testServiceSuffixes {
 		t.Logf("verifying TCP Ingress for %s.example operational", i)
 		require.Eventually(t, func() bool {
-			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
+			conn, err := tls.Dial("tcp", proxyTLSURL, &tls.Config{
 				InsecureSkipVerify: true,
 				ServerName:         fmt.Sprintf("%s.example", i),
 			})
@@ -280,7 +278,7 @@ func TestTCPIngressTLS(t *testing.T) {
 
 	t.Logf("verifying TCP Ingress routes to new upstream after update")
 	require.Eventually(t, func() bool {
-		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
+		conn, err := tls.Dial("tcp", proxyTLSURL, &tls.Config{
 			InsecureSkipVerify: true,
 			ServerName:         fmt.Sprintf("%s.example", testServiceSuffixes[0]),
 		})
@@ -444,7 +442,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 			Rules: []kongv1beta1.IngressRule{
 				{
 					Host: "redis.example",
-					Port: 8899,
+					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: service.Name,
 						ServicePort: 6379,
@@ -459,18 +457,18 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 
 	t.Log("verifying TCP Ingress for redis.example operational")
 	require.Eventually(t, func() bool {
-		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
+		conn, err := tls.Dial("tcp", proxyTLSURL, &tls.Config{
 			InsecureSkipVerify: true,
 			ServerName:         "redis.example",
 		})
 		if err != nil {
-			t.Logf("failed to connect to %s:8899, error %v, retrying...", proxyURL.Hostname(), err)
+			t.Logf("failed to connect to %s, error %v, retrying...", proxyTLSURL, err)
 			return false
 		}
 		defer conn.Close()
 		err = conn.Handshake()
 		if err != nil {
-			t.Logf("failed to do tls handshake to %s:8899, error %v, retrying...", proxyURL.Hostname(), err)
+			t.Logf("failed to do tls handshake to %s, error %v, retrying...", proxyTLSURL, err)
 			return false
 		}
 		cert := conn.ConnectionState().PeerCertificates[0]

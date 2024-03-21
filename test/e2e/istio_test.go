@@ -149,7 +149,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace.Name, ingress))
 
 	t.Log("retrieving the kong proxy URL")
-	proxyURL, err := kongAddon.ProxyURL(ctx, env.Cluster())
+	proxyURL, err := kongAddon.ProxyHTTPURL(ctx, env.Cluster())
 	require.NoError(t, err)
 
 	t.Log("waiting for routes from Ingress to be operational")

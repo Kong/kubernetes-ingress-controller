@@ -5,7 +5,6 @@ package isolated
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"syscall"
 	"testing"
@@ -194,8 +193,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			)
 
 			t.Log("verifying that the tcpecho is responding properly")
-			tcpGatewayURL := fmt.Sprintf("%s:%d", GetProxyURLFromCtx(ctx).Hostname(), ktfkong.DefaultTCPServicePort)
-			ctx = SetInCtxForT(ctx, t, tcpGatewayURL)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 			requireResponse(tcpGatewayURL, test1UUID)
 
 			return ctx
@@ -205,7 +203,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			tcpGatewayURL := GetFromCtxForT[string](ctx, t)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			oldParentRefs := tcpRoute.Spec.ParentRefs
 			assert.Eventually(t, func() bool {
@@ -252,7 +250,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
-			tcpGatewayURL := GetFromCtxForT[string](ctx, t)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("deleting the GatewayClass")
 			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -342,7 +340,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
-			tcpGatewayURL := GetFromCtxForT[string](ctx, t)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("adding an additional backendRef to the TCPRoute")
 			assert.Eventually(t, func() bool {

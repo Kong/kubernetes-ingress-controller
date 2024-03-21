@@ -36,10 +36,7 @@ func TestExampleUDPRoute(t *testing.T) {
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 				cluster := GetClusterFromCtx(ctx)
-				// GetUDPURLFromCtx returns the URL of the UDP service, but with http prefix
-				// http://<IP>:<PORT> (bug in KTF), taking the Host part trims scheme part.
-				// https://github.com/Kong/kubernetes-testing-framework/issues/1007
-				proxyUDPURL := GetUDPURLFromCtx(ctx).Host
+				proxyUDPURL := GetUDPURLFromCtx(ctx)
 
 				t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
 				b, err := os.ReadFile(udpRouteExampleManifests)

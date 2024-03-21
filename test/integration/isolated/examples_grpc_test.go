@@ -21,8 +21,9 @@ import (
 
 func TestGRPCRouteExample(t *testing.T) {
 	testGRPC := func(ctx context.Context, t *testing.T, manifestName string, gatewayPort int, hostname string, enableTLS bool) {
+		t.Helper()
 		cluster := GetClusterFromCtx(ctx)
-		proxyURL := GetProxyURLFromCtx(ctx)
+		proxyURL := GetHTTPURLFromCtx(ctx)
 		manifestPath := examplesManifestPath(manifestName)
 		t.Logf("applying yaml manifest %s", manifestPath)
 		b, err := os.ReadFile(manifestPath)
@@ -31,14 +32,11 @@ func TestGRPCRouteExample(t *testing.T) {
 		assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
 
 		t.Log("verifying that GRPCRoute becomes routable")
-		assert.Eventually(t, func() bool {
-			if err := grpcEchoResponds(
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			err := grpcEchoResponds(
 				ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), gatewayPort), hostname, "kong", enableTLS,
-			); err != nil {
-				t.Log(err)
-				return false
-			}
-			return true
+			)
+			assert.NoError(c, err)
 		}, consts.IngressWait, consts.WaitTick)
 
 		t.Logf("deleting yaml manifest %s", manifestPath)

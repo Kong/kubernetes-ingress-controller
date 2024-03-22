@@ -8,6 +8,7 @@ const (
 	KindGRPCRoute          = "GRPCRoute"
 	KindIngress            = "Ingress"
 	KindKongServiceFacade  = "KongServiceFacade"
+	KindKongUDPIngress     = "UDPIngress"
 	KindKongUpstreamPolicy = "KongUpstreamPolicy"
 	KindKongLicense        = "KongLicense"
 )

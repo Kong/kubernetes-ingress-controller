@@ -67,7 +67,7 @@ func TestHTTPSRedirect(t *testing.T) {
 		Timeout: time.Second * 3,
 	}
 	assert.Eventually(t, func() bool {
-		resp, err := client.Get(fmt.Sprintf("%s/test_https_redirect", proxyURL))
+		resp, err := client.Get(fmt.Sprintf("%s/test_https_redirect", proxyHTTPURL))
 		if err != nil {
 			return false
 		}
@@ -88,14 +88,10 @@ func TestHTTPSIngress(t *testing.T) {
 	}
 	testTransport := http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == "foo.example:443" {
-				addr = fmt.Sprintf("%s:443", proxyURL.Hostname())
-			}
-			if addr == "bar.example:443" {
-				addr = fmt.Sprintf("%s:443", proxyURL.Hostname())
-			}
-			if addr == "baz.example:443" {
-				addr = fmt.Sprintf("%s:443", proxyURL.Hostname())
+			switch addr {
+			case "foo.example:443", "bar.example:443", "baz.example:443":
+				addr = proxyHTTPSURL.Host
+			default:
 			}
 			return dialer.DialContext(ctx, network, addr)
 		},

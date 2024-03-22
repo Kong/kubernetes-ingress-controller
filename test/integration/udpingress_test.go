@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strings"
 	"sync"
@@ -112,7 +111,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			d := net.Dialer{
 				Timeout: time.Second * 5,
 			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
+			return d.DialContext(ctx, network, proxyUDPURL)
 		},
 	}
 
@@ -126,8 +125,11 @@ func TestUDPIngressEssentials(t *testing.T) {
 		ingresses := curIng.Status.LoadBalancer.Ingress
 		for _, ingress := range ingresses {
 			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-				proxyUDPIP := strings.Split(proxyUDPURL.Hostname(), ":")[0]
-				if ingress.IP == proxyUDPIP {
+				ip, _, err := net.SplitHostPort(proxyUDPURL)
+				if err != nil {
+					return false
+				}
+				if ingress.IP == ip {
 					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
 					return true
 				}
@@ -258,7 +260,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
+		_, _, err := dnsUDPClient.Exchange(query, proxyUDPURL)
 		return err == nil
 	}, ingressWait, waitTick)
 
@@ -305,13 +307,13 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 
 	t.Logf("checking DNS to resolve via TCPIngress %s", tcp.Name)
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:8888", proxyURL.Hostname()))
+		_, _, err := dnsTCPClient.Exchange(query, proxyTCPURL)
 		return err == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s still works also", udp.Name)
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
+		_, _, err := dnsUDPClient.Exchange(query, proxyUDPURL)
 		return err == nil
 	}, ingressWait, waitTick)
 
@@ -319,7 +321,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), ktfkong.DefaultUDPServicePort))
+		_, _, err := dnsUDPClient.Exchange(query, proxyUDPURL)
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
 				return true
@@ -331,7 +333,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	t.Logf("tearing down TCPIngress %s and ensuring backends are torn down", tcp.Name)
 	assert.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsTCPClient.Exchange(query, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort))
+		_, _, err := dnsTCPClient.Exchange(query, proxyTCPURL)
 		if err != nil {
 			if strings.Contains(err.Error(), "connection reset by peer") {
 				return true

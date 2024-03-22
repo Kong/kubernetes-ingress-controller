@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -189,7 +190,7 @@ func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version 
 	dockerc.NegotiateAPIVersion(ctx)
 
 	t.Logf("pulling docker image %s to inspect it", image)
-	_, err = dockerc.ImagePull(ctx, image, types.ImagePullOptions{})
+	_, err = dockerc.ImagePull(ctx, image, dockerimage.PullOptions{})
 	require.NoError(t, err)
 
 	t.Logf("inspecting docker image %s", image)

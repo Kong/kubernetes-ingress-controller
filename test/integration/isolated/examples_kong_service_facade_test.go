@@ -67,7 +67,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 		}).
 		Assess("basic-auth and key-auth plugins are applied to KongServiceFacades as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			var (
-				proxyURL = GetProxyURLFromCtx(ctx)
+				proxyURL = GetHTTPURLFromCtx(ctx)
 
 				keyAuthSecuredEndpoint = fmt.Sprintf("%s%s", proxyURL, "/alpha")
 				keyAuthValidKey        = "alice-password"

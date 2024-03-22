@@ -256,16 +256,36 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			return ctx
 		}
 		ctx = SetAdminURLInCtx(ctx, proxyAdminURL)
+
 		proxyUDPURL, err := kongAddon.ProxyUDPURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
 		ctx = SetUDPURLInCtx(ctx, proxyUDPURL)
-		proxyURL, err := kongAddon.ProxyURL(ctx, cluster)
+
+		proxyTCPURL, err := kongAddon.ProxyTCPURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
-		ctx = SetProxyURLInCtx(ctx, proxyURL)
+		ctx = SetTCPURLInCtx(ctx, proxyTCPURL)
+
+		proxyTLSURL, err := kongAddon.ProxyTLSURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetTLSURLInCtx(ctx, proxyTLSURL)
+
+		proxyHTTPURL, err := kongAddon.ProxyHTTPURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetHTTPURLInCtx(ctx, proxyHTTPURL)
+
+		proxyHTTPSURL, err := kongAddon.ProxyHTTPSURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetHTTPSURLInCtx(ctx, proxyHTTPSURL)
 
 		if !assert.NoError(t, retry.Do(
 			func() error {

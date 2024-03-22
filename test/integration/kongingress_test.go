@@ -70,7 +70,7 @@ func TestServiceOverrides(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		// Even though the HTTP client has a timeout of 10s, it should never be hit,
 		// we expect a 504 from the proxy within 1000ms
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyHTTPURL))
 		if err != nil {
 			return false
 		}
@@ -89,7 +89,7 @@ func TestServiceOverrides(t *testing.T) {
 
 	t.Logf("ensuring that Service %s overrides are eventually removed", service.Name)
 	assert.Eventually(t, func() bool {
-		url := fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL)
+		url := fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyHTTPURL)
 		resp, err := helpers.DefaultHTTPClient().Get(url)
 		if err != nil {
 			t.Logf("failed issuing http GET for %q: %v", url, err)

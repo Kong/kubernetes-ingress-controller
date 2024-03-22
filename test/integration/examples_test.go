@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -99,7 +98,7 @@ func TestTCPRouteExample(t *testing.T) {
 
 	t.Log("verifying that TCPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest") == nil
+		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, "tcproute-example-manifest") == nil
 	}, ingressWait, waitTick)
 }
 
@@ -124,9 +123,11 @@ func TestTLSRouteExample(t *testing.T) {
 	cleaner.AddManifest(string(b))
 
 	t.Log("verifying that TLSRoute becomes routable")
-	require.Eventually(t, func() bool {
-		return tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
-			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true) == nil
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		err := tlsEchoResponds(
+			proxyTLSURL, "tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true,
+		)
+		assert.NoError(c, err)
 	}, ingressWait, waitTick)
 }
 
@@ -211,7 +212,7 @@ func TestUDPIngressExample(t *testing.T) {
 	t.Log("verifying that the UDPIngress resource becomes routable")
 	dnsUDPClient := new(dns.Client)
 	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
+		_, _, err := dnsUDPClient.Exchange(query, proxyUDPURL)
 		return err == nil
 	}, ingressWait, waitTick)
 }

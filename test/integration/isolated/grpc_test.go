@@ -168,7 +168,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			return ctx
 		}).
 		Assess("checking if GRPCRoute is linked correctly and client can connect properly to the exposed service", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetProxyURLFromCtx(ctx)
+			grpcAddr := GetHTTPSURLFromCtx(ctx).Host // For GRPC, we use the same address as for HTTPS, but without the scheme (https://).
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			grpcRoute := GetFromCtxForT[*gatewayapi.GRPCRoute](ctx, t)
@@ -182,7 +182,6 @@ func TestGRPCRouteEssentials(t *testing.T) {
 				consts.IngressWait, consts.WaitTick,
 			)
 
-			grpcAddr := fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort)
 			t.Log("waiting for routes from GRPCRoute to become operational")
 			assert.Eventually(t, func() bool {
 				err := grpcEchoResponds(ctx, grpcAddr, testHostname, "kong", true)

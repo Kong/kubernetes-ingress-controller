@@ -174,21 +174,19 @@ func TestIngressGRPC(t *testing.T) {
 			}, consts.StatusWait, consts.WaitTick)
 
 			verifyEchoResponds := func(hostname string) {
-				// Kong Gateway uses different ports for HTTP and HTTPS traffic.
+				// Kong Gateway uses different ports for HTTP and HTTPS traffic,
+				// but in typical setup both ports are exposed on the same IP address.
 				proxyPort := ktfkong.DefaultProxyTLSServicePort
 				tlsEnabled := true
 				if hostname == "" {
 					proxyPort = ktfkong.DefaultProxyHTTPPort
 					tlsEnabled = false
 				}
-				assert.Eventually(t, func() bool {
-					if err := grpcEchoResponds(
-						ctx, fmt.Sprintf("%s:%d", GetProxyURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", tlsEnabled,
-					); err != nil {
-						t.Log(err)
-						return false
-					}
-					return true
+				assert.EventuallyWithT(t, func(c *assert.CollectT) {
+					err := grpcEchoResponds(
+						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", tlsEnabled,
+					)
+					assert.NoError(c, err)
 				}, consts.IngressWait, consts.WaitTick)
 			}
 			t.Log("verifying service connectivity via HTTPS (gRPCS)")
@@ -352,7 +350,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 			return ctx
 		}).
 		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetProxyURLFromCtx(ctx)
+			proxyURL := GetHTTPURLFromCtx(ctx)
 			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)
 				helpers.EventuallyGETPath(

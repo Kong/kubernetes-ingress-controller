@@ -61,9 +61,9 @@ func TestCustomVault(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -120,9 +120,9 @@ func TestCustomVault(t *testing.T) {
 	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	require.Eventuallyf(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()

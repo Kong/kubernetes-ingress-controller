@@ -95,29 +95,65 @@ func GetRunIDFromCtx(ctx context.Context) string {
 type _udpURL struct{}
 
 // SetUDPURLInCtx sets the UDP URL in the context.
-func SetUDPURLInCtx(ctx context.Context, url *url.URL) context.Context {
+func SetUDPURLInCtx(ctx context.Context, url string) context.Context {
 	return setInCtx(ctx, _udpURL{}, url)
 }
 
 // GetUDPURLFromCtx gets the UDP URL from the context.
-func GetUDPURLFromCtx(ctx context.Context) *url.URL {
-	u := ctx.Value(_udpURL{})
+func GetUDPURLFromCtx(ctx context.Context) string {
+	return ctx.Value(_udpURL{}).(string)
+}
+
+type _tlsURL struct{}
+
+// SetTLSURLInCtx sets the TLS URL in the context.
+func SetTLSURLInCtx(ctx context.Context, url string) context.Context {
+	return setInCtx(ctx, _tlsURL{}, url)
+}
+
+// GetTLSURLFromCtx gets the TLS URL from the context.
+func GetTLSURLFromCtx(ctx context.Context) string {
+	return ctx.Value(_tlsURL{}).(string)
+}
+
+type _tcpURL struct{}
+
+// SetTCPURLInCtx sets the TCP URL in the context.
+func SetTCPURLInCtx(ctx context.Context, url string) context.Context {
+	return setInCtx(ctx, _tcpURL{}, url)
+}
+
+// GetTCPURLFromCtx gets the TCP URL from the context.
+func GetTCPURLFromCtx(ctx context.Context) string {
+	return ctx.Value(_tcpURL{}).(string)
+}
+
+type _proxyHTTPURL struct{}
+
+// SetHTTPURLInCtx sets the proxy URL in the context.
+func SetHTTPURLInCtx(ctx context.Context, url *url.URL) context.Context {
+	return setInCtx(ctx, _proxyHTTPURL{}, url)
+}
+
+// GetHTTPURLFromCtx gets the proxy URL from the context.
+func GetHTTPURLFromCtx(ctx context.Context) *url.URL {
+	u := ctx.Value(_proxyHTTPURL{})
 	if u == nil {
 		return nil
 	}
 	return u.(*url.URL)
 }
 
-type _proxyURL struct{}
+type _proxyHTTPSURL struct{}
 
-// SetProxyURLInCtx sets the proxy URL in the context.
-func SetProxyURLInCtx(ctx context.Context, url *url.URL) context.Context {
-	return setInCtx(ctx, _proxyURL{}, url)
+// SetHTTPSURLInCtx sets the proxy URL in the context.
+func SetHTTPSURLInCtx(ctx context.Context, url *url.URL) context.Context {
+	return setInCtx(ctx, _proxyHTTPSURL{}, url)
 }
 
-// GetProxyURLFromCtx gets the proxy URL from the context.
-func GetProxyURLFromCtx(ctx context.Context) *url.URL {
-	u := ctx.Value(_proxyURL{})
+// GetHTTPSURLFromCtx gets the proxy URL from the context.
+func GetHTTPSURLFromCtx(ctx context.Context) *url.URL {
+	u := ctx.Value(_proxyHTTPSURL{})
 	if u == nil {
 		return nil
 	}

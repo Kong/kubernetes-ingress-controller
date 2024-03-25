@@ -3,6 +3,7 @@ package credentials
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,10 +32,20 @@ func ValidateCredentials(secret *corev1.Secret) error {
 		return fmt.Errorf("invalid credential type %s", credentialType)
 	}
 
+	// Check if we're dealing with a JWT credential with an HMAC algorithm.
+	// In this case, the rsa_public_key field is not required.
+	algo, hasAlgo := secret.Data["algorithm"]
+	ignoreMissingRSAPublicKey := credentialType == "jwt" && hasAlgo && algoIsHMAC(string(algo))
+
 	// verify that all required fields are present
 	var missingFields []string
 	var missingDataFields []string
 	for _, field := range CredTypeToFields[credentialType] {
+		// Ignore missing rsa_public_key for jwt credentials with HMAC algorithm
+		if field == "rsa_public_key" && ignoreMissingRSAPublicKey {
+			continue
+		}
+
 		// verify whether the required field is missing
 		requiredData, ok := secret.Data[field]
 		if !ok {
@@ -170,4 +181,8 @@ func (cs Index) add(newCred Credential) error {
 	cs[newCred.Type][newCred.Key][newCred.Value] = struct{}{}
 
 	return nil
+}
+
+func algoIsHMAC(algo string) bool {
+	return slices.Contains([]string{"HS256", "HS384", "HS512"}, algo)
 }

@@ -47,7 +47,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	gatewayName := uuid.NewString()
 
 	// Helpers used in this test.
-	requireNoResponse := func(udpGatewayURL string) {
+	requireNoResponse := func(t *testing.T, udpGatewayURL string) {
 		t.Helper()
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			// For UDP lack of response (a timeout) means that we can't reach a service.
@@ -55,7 +55,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.True(c, os.IsTimeout(err), "unexpected error: %v", err)
 		}, consts.IngressWait, consts.WaitTick)
 	}
-	requireResponse := func(udpGatewayURL, expectedMsg string) {
+	requireResponse := func(t *testing.T, udpGatewayURL, expectedMsg string) {
 		t.Helper()
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.NoError(c, test.EchoResponds(test.ProtocolUDP, udpGatewayURL, expectedMsg))
@@ -196,7 +196,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 			t.Log("verifying that the udpecho is responding properly")
 			udpGatewayURL := GetUDPURLFromCtx(ctx)
-			requireResponse(udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
 
 			return ctx
 		}).
@@ -228,7 +228,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 						errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
 				}
 			}()
-			requireNoResponse(udpGatewayURL)
+			requireNoResponse(t, udpGatewayURL)
 
 			t.Log("putting the parentRefs back")
 			assert.Eventually(t, func() bool {
@@ -244,7 +244,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-			requireResponse(udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
 
 			return ctx
 		}).
@@ -262,7 +262,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the GatewayClass now removed")
-			requireNoResponse(udpGatewayURL)
+			requireNoResponse(t, udpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
 			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -273,7 +273,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the GatewayClass again triggers reconciliation of UDPRoutes and the route becomes available again")
-			requireResponse(udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
 
 			t.Log("deleting the Gateway")
 			assert.NoError(t, gatewayClient.GatewayV1().Gateways(namespace).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
@@ -283,7 +283,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the Gateway now removed")
-			requireNoResponse(udpGatewayURL)
+			requireNoResponse(t, udpGatewayURL)
 
 			t.Log("putting the Gateway back")
 			_, err = helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
@@ -301,7 +301,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
-			requireResponse(udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
 
 			t.Log("deleting both GatewayClass and Gateway rapidly")
 			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
@@ -312,7 +312,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the UDPRoute does not get orphaned with the GatewayClass and Gateway gone")
-			requireNoResponse(udpGatewayURL)
+			requireNoResponse(t, udpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
 			_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -334,7 +334,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
-			requireResponse(udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
 
 			return ctx
 		}).
@@ -368,8 +368,8 @@ func TestUDPRouteEssentials(t *testing.T) {
 			}, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the UDPRoute is now load-balanced between two services")
-			requireResponse(udpGatewayURL, test1UUID)
-			requireResponse(udpGatewayURL, test2UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test2UUID)
 
 			t.Log("testing port matching")
 			t.Log("putting the Gateway back")
@@ -387,7 +387,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Log("verifying that the UDPRoute responds before specifying a port not existent in Gateway")
-			requireResponse(udpGatewayURL, test1UUID)
+			requireResponse(t, udpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
 			assert.Eventually(t, func() bool {
@@ -403,7 +403,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the UDPRoute does not respond after specifying a port not existent in Gateway")
-			requireNoResponse(udpGatewayURL)
+			requireNoResponse(t, udpGatewayURL)
 			return ctx
 		}).
 		Teardown(featureTeardown())

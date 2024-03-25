@@ -118,7 +118,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("basic test - UDPIngress status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("basic test - status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			udpGatewayURL := GetUDPURLFromCtx(ctx)
 			ingressClient := GetFromCtxForT[*clientset.Clientset](ctx, t).ConfigurationV1beta1().UDPIngresses(GetNamespaceForT(ctx, t))
 
@@ -141,7 +141,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("test teardown - UDPIngress deletion", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("deletion removes config from Kong Gateway", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			ingressClient := GetFromCtxForT[*clientset.Clientset](ctx, t).ConfigurationV1beta1().UDPIngresses(GetNamespaceForT(ctx, t))
 
 			t.Log("deleting UDPIngress")

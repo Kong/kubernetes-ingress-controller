@@ -57,7 +57,6 @@ func TestUDPIngressEssentials(t *testing.T) {
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
 		WithSetup("configure a udpecho Deployment and Service", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			// kongClient, err := gatewayclient.NewForConfig(cfg.Client().RESTConfig())
 			kongClient, err := clientset.NewForConfig(cfg.Client().RESTConfig())
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, kongClient)

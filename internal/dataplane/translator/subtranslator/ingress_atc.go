@@ -1,6 +1,7 @@
 package subtranslator
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -28,7 +29,7 @@ var (
 
 const IngressDefaultBackendPriority RoutePriorityType = 0
 
-func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
+func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() (*kongstate.Route, error) {
 	// '_' is not allowed in a host, so use '_' to replace a possible occurrence of  '*' since '*' is not allowed in Kong.
 	ingressHost := strings.ReplaceAll(m.ingressHost, "*", "_")
 	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{
@@ -77,9 +78,16 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 		pathRegexPrefix = ControllerPathRegexPrefix
 	}
 	pathSegmentPrefix := annotations.ExtractSegmentPrefix(ingressAnnotations)
+	if pathRegexPrefix == pathSegmentPrefix {
+		return nil, fmt.Errorf("cannot use the same prefix %s for regex match and segment match", pathRegexPrefix)
+	}
 
 	for _, path := range m.paths {
-		pathMatchers = append(pathMatchers, pathMatcherFromIngressPath(path, pathRegexPrefix, pathSegmentPrefix))
+		pathMatcher, err := pathMatcherFromIngressPath(path, pathRegexPrefix, pathSegmentPrefix)
+		if err != nil {
+			return nil, err
+		}
+		pathMatchers = append(pathMatchers, pathMatcher)
 	}
 	routeMatcher.And(atc.Or(pathMatchers...))
 
@@ -106,34 +114,34 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 
 	priority := calculateExpressionRoutePriority(m.paths, pathRegexPrefix, m.ingressHost, ingressAnnotations)
 	atc.ApplyExpression(&route.Route, routeMatcher, priority)
-	return route
+	return route, nil
 }
 
 // pathMatcherFromIngressPath translate ingress path into matcher to match the path.
-func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPathPrefix string, segmentPathPrefix string) atc.Matcher {
+func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPathPrefix string, segmentPathPrefix string) (atc.Matcher, error) {
 	switch *httpIngressPath.PathType {
 	// Prefix paths.
 	case netv1.PathTypePrefix:
 		base := strings.Trim(httpIngressPath.Path, "/")
 		if base == "" {
 			// empty string in prefix path matches prefix "/".
-			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
+			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"), nil
 		}
 		return atc.Or(
 			// otherwise, match /<path>/* or /<path>.
 			atc.NewPredicateHTTPPath(atc.OpEqual, "/"+base),
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"+base+"/"),
-		)
+		), nil
 	// Exact paths.
 	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(httpIngressPath.Path, "/")
-		return atc.NewPredicateHTTPPath(atc.OpEqual, "/"+relative)
+		return atc.NewPredicateHTTPPath(atc.OpEqual, "/"+relative), nil
 	// Implementation Specific match. treat it as regex match if it begins with a regex prefix (/~ by default),
 	// otherwise generate a prefix match.
 	case netv1.PathTypeImplementationSpecific:
 		// empty path. matches prefix "/" to match any path.
 		if httpIngressPath.Path == "" {
-			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
+			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"), nil
 		}
 		// regex match.
 		if regexPathPrefix != "" && strings.HasPrefix(httpIngressPath.Path, regexPathPrefix) {
@@ -145,20 +153,20 @@ func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPath
 			if !strings.HasPrefix(regex, "^") {
 				regex = "^" + regex
 			}
-			return atc.NewPredicateHTTPPath(atc.OpRegexMatch, regex)
+			return atc.NewPredicateHTTPPath(atc.OpRegexMatch, regex), nil
 		}
 		// segment match path.
 		if segmentPathPrefix != "" && strings.HasPrefix(httpIngressPath.Path, segmentPathPrefix) {
 			segmentMatchingPath := strings.TrimPrefix(httpIngressPath.Path, segmentPathPrefix)
 			return pathSegmentMatcherFromIngressMatch(segmentMatchingPath)
 		}
-		return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, httpIngressPath.Path)
+		return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, httpIngressPath.Path), nil
 	}
-
-	return nil
+	// Should not reach here.
+	return nil, nil
 }
 
-func pathSegmentMatcherFromIngressMatch(path string) atc.Matcher {
+func pathSegmentMatcherFromIngressMatch(path string) (atc.Matcher, error) {
 	path = strings.Trim(path, "/")
 	segments := strings.Split(path, "/")
 	predicates := make([]atc.Matcher, 0)
@@ -173,14 +181,21 @@ func pathSegmentMatcherFromIngressMatch(path string) atc.Matcher {
 	predicates = append(predicates, segmentLenPredicate)
 
 	for index, segment := range segments {
-		if segment == "*" || segment == "**" {
+		if segment == "**" {
+			if index != numSegments-1 {
+				return nil, fmt.Errorf("'**' can only appear on the last segment")
+			}
 			continue
 		}
+		if segment == "*" {
+			continue
+		}
+
 		segment = strings.ReplaceAll(segment, "\\*", "*")
 		predicates = append(predicates, atc.NewPredicateHTTPPathSingleSegment(index, atc.OpEqual, segment))
 	}
 
-	return atc.And(predicates...)
+	return atc.And(predicates...), nil
 }
 
 // headerMatcherFromHeaders generates matcher to match headers in HTTP requests.

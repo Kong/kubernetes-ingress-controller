@@ -35,7 +35,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	testUUID := uuid.NewString()
 
 	// Helpers used in this test.
-	requireNoResponse := func(udpGatewayURL string) {
+	requireNoResponse := func(t *testing.T, udpGatewayURL string) {
 		t.Helper()
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			// For UDP lack of response (a timeout) means that we can't reach a service.
@@ -43,7 +43,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			assert.True(c, os.IsTimeout(err), "unexpected error: %v", err)
 		}, consts.IngressWait, consts.WaitTick)
 	}
-	requireResponse := func(udpGatewayURL, expectedMsg string) {
+	requireResponse := func(t *testing.T, udpGatewayURL, expectedMsg string) {
 		t.Helper()
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.NoError(c, test.EchoResponds(test.ProtocolUDP, udpGatewayURL, expectedMsg))
@@ -65,7 +65,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			namespace := GetNamespaceForT(ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 
-			t.Log("creating a udpecho pod to test UDPRoute traffic routing")
+			t.Log("creating a udpecho Deployment and Service")
 			container := generators.NewContainer(serviceName, test.EchoImage, test.EchoUDPPort)
 			// App go-echo sends a "Running on Pod <UUID>." immediately on connecting.
 			container.Env = []corev1.EnvVar{
@@ -136,17 +136,17 @@ func TestUDPIngressEssentials(t *testing.T) {
 			}, consts.StatusWait, consts.WaitTick)
 
 			t.Log("verifying that the udpecho is responding properly")
-			requireResponse(udpGatewayURL, testUUID)
+			requireResponse(t, udpGatewayURL, testUUID)
 
 			return ctx
 		}).
-		Assess("deletion removes config from Kong Gateway", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("test teardown - UDPIngress deletion", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			ingressClient := GetFromCtxForT[*clientset.Clientset](ctx, t).ConfigurationV1beta1().UDPIngresses(GetNamespaceForT(ctx, t))
 
 			t.Log("deleting UDPIngress")
 			assert.NoError(t, ingressClient.Delete(ctx, udpIngressName, metav1.DeleteOptions{}))
 			t.Log("verifying that traffic is no longer routed")
-			requireNoResponse(GetUDPURLFromCtx(ctx))
+			requireNoResponse(t, GetUDPURLFromCtx(ctx))
 			return ctx
 		}).
 		Teardown(featureTeardown())

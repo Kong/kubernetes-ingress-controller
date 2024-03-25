@@ -84,6 +84,13 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [3.1.3]
+
+### Fixed
+
+- Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
+  [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
+
 ## [3.1.2]
 
 > Release date: 2024-03-08

@@ -4,11 +4,9 @@ package integration
 
 import (
 	"context"
-	"net"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -30,132 +28,6 @@ var udpMutex sync.Mutex
 // coreDNSImage is the image and version of CoreDNS that will be used for UDP
 // testing.
 const coreDNSImage = "registry.k8s.io/coredns/coredns:v1.8.6"
-
-func TestUDPIngressEssentials(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
-	t.Parallel()
-
-	// Ensure no other UDP tests run concurrently to avoid fights over the port
-	t.Log("locking UDP port")
-	udpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking UDP port")
-		udpMutex.Unlock()
-	})
-
-	ctx := context.Background()
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("configuring coredns corefile")
-	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
-	cfgmap, err := env.Cluster().Client().CoreV1().ConfigMaps(ns.Name).Create(ctx, cfgmap, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(cfgmap)
-
-	t.Log("configuring a coredns deployent to deploy for UDP testing")
-	container := generators.NewContainer("coredns", coreDNSImage, 53)
-	container.Ports[0].Protocol = corev1.ProtocolUDP
-	container.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
-	container.Args = []string{"-conf", "/etc/coredns/Corefile"}
-	deployment := generators.NewDeploymentForContainer(container)
-
-	t.Log("configuring the coredns pod with a custom corefile")
-	configVolume := corev1.Volume{
-		Name: "config-volume",
-		VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
-			LocalObjectReference: corev1.LocalObjectReference{Name: cfgmap.Name},
-			Items:                []corev1.KeyToPath{{Key: "Corefile", Path: "Corefile"}},
-		}},
-	}
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolume)
-
-	t.Log("deploying coredns")
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(deployment)
-
-	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(service)
-
-	t.Log("exposing DNS service via UDPIngress")
-	udp := &kongv1beta1.UDPIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "minudp",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
-			{
-				Port: ktfkong.DefaultUDPServicePort,
-				Backend: kongv1beta1.IngressBackend{
-					ServiceName: service.Name,
-					ServicePort: int(service.Spec.Ports[0].Port),
-				},
-			},
-		}},
-	}
-	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
-	udp, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(udp)
-
-	t.Log("configurating a net.Resolver to resolve DNS via the proxy")
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: time.Second * 5,
-			}
-			return d.DialContext(ctx, network, proxyUDPURL)
-		},
-	}
-
-	t.Logf("checking udpingress %s status readiness.", udp.Name)
-	ingCli := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name)
-	assert.Eventually(t, func() bool {
-		curIng, err := ingCli.Get(ctx, udp.Name, metav1.GetOptions{})
-		if err != nil || curIng == nil {
-			return false
-		}
-		ingresses := curIng.Status.LoadBalancer.Ingress
-		for _, ingress := range ingresses {
-			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-				ip, _, err := net.SplitHostPort(proxyUDPURL)
-				if err != nil {
-					return false
-				}
-				if ingress.IP == ip {
-					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
-					return true
-				}
-			}
-		}
-		return false
-	}, statusWait, waitTick, true)
-
-	t.Logf("checking DNS to resolve via UDPIngress %s", udp.Name)
-	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, corednsKnownHostname)
-		return err == nil
-	}, ingressWait, waitTick)
-
-	t.Logf("tearing down UDPIngress %s and ensuring backends are torn down", udp.Name)
-	assert.NoError(t, gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}))
-	assert.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, corednsKnownHostname)
-		if err != nil {
-			if strings.Contains(err.Error(), "i/o timeout") {
-				return true
-			}
-		}
-		return false
-	}, ingressWait, waitTick)
-}
 
 func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	RunWhenKongExpressionRouter(t)

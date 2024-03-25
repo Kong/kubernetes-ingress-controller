@@ -623,6 +623,8 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 		regexPrefix   string
 		segmentPrefix string
 		expression    string
+		expectError   bool
+		errorContains string
 	}{
 		{
 			name: "simple prefix match",
@@ -726,6 +728,16 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 			expression:    `http.path.segments.len >= 0`,
 		},
 		{
+			name: "segment match with ** in the middle segments should be invalid",
+			path: netv1.HTTPIngressPath{
+				Path:     "/!/a/**/b",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/!",
+			expectError:   true,
+			errorContains: "'**' can only appear on the last segment",
+		},
+		{
 			name: "empty implementation specific (non-regex) match",
 			path: netv1.HTTPIngressPath{
 				Path:     "",
@@ -742,8 +754,14 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 			if regexPrefix == "" {
 				regexPrefix = ControllerPathRegexPrefix
 			}
-			matcher := pathMatcherFromIngressPath(tc.path, regexPrefix, tc.segmentPrefix)
-			require.Equal(t, tc.expression, matcher.Expression())
+			matcher, err := pathMatcherFromIngressPath(tc.path, regexPrefix, tc.segmentPrefix)
+			if !tc.expectError {
+				require.NoError(t, err)
+				require.Equal(t, tc.expression, matcher.Expression())
+			} else {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errorContains)
+			}
 		})
 	}
 }

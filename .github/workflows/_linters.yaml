@@ -15,6 +15,10 @@ jobs:
         with:
           go-version-file: third_party/go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: Run lint
         env:
           # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.

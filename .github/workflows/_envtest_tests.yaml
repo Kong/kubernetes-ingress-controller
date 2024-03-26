@@ -15,6 +15,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: run envtest tests
         run: make test.envtest.pretty
         env:

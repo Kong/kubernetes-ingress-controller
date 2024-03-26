@@ -46,6 +46,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: run conformance tests
         run: make test.conformance
         env:

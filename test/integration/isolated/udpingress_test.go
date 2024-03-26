@@ -5,7 +5,6 @@ package isolated
 import (
 	"context"
 	"net"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -35,20 +34,6 @@ func TestUDPIngressEssentials(t *testing.T) {
 	testUUID := uuid.NewString()
 
 	// Helpers used in this test.
-	requireNoResponse := func(t *testing.T, udpGatewayURL string) {
-		t.Helper()
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			// For UDP lack of response (a timeout) means that we can't reach a service.
-			err := test.EchoResponds(test.ProtocolUDP, udpGatewayURL, "irrelevant")
-			assert.True(c, os.IsTimeout(err), "unexpected error: %v", err)
-		}, consts.IngressWait, consts.WaitTick)
-	}
-	requireResponse := func(t *testing.T, udpGatewayURL, expectedMsg string) {
-		t.Helper()
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.NoError(c, test.EchoResponds(test.ProtocolUDP, udpGatewayURL, expectedMsg))
-		}, consts.IngressWait, consts.WaitTick)
-	}
 
 	f := features.
 		New("essentials").
@@ -136,7 +121,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			}, consts.StatusWait, consts.WaitTick)
 
 			t.Log("verifying that the udpecho is responding properly")
-			requireResponse(t, udpGatewayURL, testUUID)
+			assertEventuallyResponseUDP(t, udpGatewayURL, testUUID)
 
 			return ctx
 		}).
@@ -146,7 +131,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 			t.Log("deleting UDPIngress")
 			assert.NoError(t, ingressClient.Delete(ctx, udpIngressName, metav1.DeleteOptions{}))
 			t.Log("verifying that traffic is no longer routed")
-			requireNoResponse(t, GetUDPURLFromCtx(ctx))
+			assertEventuallyNoResponseUDP(t, GetUDPURLFromCtx(ctx))
 			return ctx
 		}).
 		Teardown(featureTeardown())

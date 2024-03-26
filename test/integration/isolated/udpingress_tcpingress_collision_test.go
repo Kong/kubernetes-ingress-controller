@@ -4,11 +4,7 @@ package isolated
 
 import (
 	"context"
-	"errors"
-	"io"
-	"os"
 	"strconv"
-	"syscall"
 	"testing"
 
 	"github.com/google/uuid"
@@ -27,7 +23,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
 )
 
@@ -40,29 +35,6 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		tcpIngressName      = "tcp-echo-ingress"
 	)
 	testUUID := uuid.NewString()
-
-	// Helpers used in this test.
-	requireNoResponse := func(t *testing.T, protocol test.Protocol, udpGatewayURL string) {
-		t.Helper()
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			err := test.EchoResponds(protocol, udpGatewayURL, "irrelevant")
-			switch protocol {
-			case test.ProtocolUDP:
-				// For UDP lack of response (a timeout) means that we can't reach a service.
-				assert.True(c, os.IsTimeout(err), "unexpected error for UDP: %v", err)
-			case test.ProtocolTCP:
-				assert.True(c, errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET), "unexpected error for TCP: %v", err)
-			default:
-				assert.FailNow(c, "unsupported protocol: %v", protocol)
-			}
-		}, consts.IngressWait, consts.WaitTick)
-	}
-	requireResponse := func(t *testing.T, protocol test.Protocol, udpGatewayURL, expectedMsg string) {
-		t.Helper()
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.NoError(c, test.EchoResponds(protocol, udpGatewayURL, expectedMsg))
-		}, consts.IngressWait, consts.WaitTick)
-	}
 
 	f := features.
 		New("essentials").
@@ -170,9 +142,9 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		}).
 		Assess("basic test - status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("verifying that the udpecho is responding properly")
-			requireResponse(t, test.ProtocolUDP, GetUDPURLFromCtx(ctx), testUUID)
+			assertEventuallyResponseUDP(t, GetUDPURLFromCtx(ctx), testUUID)
 			t.Log("verifying that the tcpecho is responding properly")
-			requireResponse(t, test.ProtocolTCP, GetTCPURLFromCtx(ctx), testUUID)
+			assertEventuallyResponseTCP(t, GetTCPURLFromCtx(ctx), testUUID)
 
 			return ctx
 		}).
@@ -185,9 +157,9 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			t.Log("deleting TCPIngress")
 			assert.NoError(t, confV1Beta1Client.TCPIngresses(namespace).Delete(ctx, tcpIngressName, metav1.DeleteOptions{}))
 			t.Log("verifying that traffic is no longer routed to udpecho")
-			requireNoResponse(t, test.ProtocolUDP, GetUDPURLFromCtx(ctx))
+			assertEventuallyNoResponseUDP(t, GetUDPURLFromCtx(ctx))
 			t.Log("verifying that traffic is no longer routed to tcpecho")
-			requireNoResponse(t, test.ProtocolTCP, GetTCPURLFromCtx(ctx))
+			assertEventuallyNoResponseTCP(t, GetTCPURLFromCtx(ctx))
 
 			return ctx
 		}).

@@ -52,7 +52,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 	f := features.
 		New("essentials").
-		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
+		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindKongUDPIngress).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).

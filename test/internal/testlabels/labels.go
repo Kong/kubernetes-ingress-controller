@@ -9,6 +9,7 @@ const (
 	KindIngress            = "Ingress"
 	KindKongServiceFacade  = "KongServiceFacade"
 	KindKongUDPIngress     = "UDPIngress"
+	KindKongTCPIngress     = "TCPIngress"
 	KindKongUpstreamPolicy = "KongUpstreamPolicy"
 	KindKongLicense        = "KongLicense"
 )

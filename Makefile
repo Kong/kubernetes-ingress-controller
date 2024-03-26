@@ -70,7 +70,7 @@ kustomize: mise ## Download kustomize locally if necessary.
 	@$(MISE) plugin install --yes -q kustomize
 	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
 
-CLIENT_GEN_VERSION = $(shell yq -ojson -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
+CLIENT_GEN_VERSION = $(shell yq -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
 client-gen: mise ## Download client-gen locally if necessary.
@@ -774,3 +774,12 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in $KUBECONFIG.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
+
+renovate:
+	docker run --rm -ti -e LOG_LEVEL=debug \
+		-e GITHUB_COM_TOKEN="$(shell gh auth token)" \
+		-e DOCKER_HUB_PASSWORD="" \
+		-v /tmp:/tmp \
+		-v $(shell pwd):/usr/src/app \
+		docker.io/renovate/renovate:full \
+		renovate --platform=local

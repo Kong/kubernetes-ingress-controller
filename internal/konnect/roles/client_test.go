@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 )
 
 const (
@@ -23,8 +24,13 @@ func newMockRolesServer(t *testing.T) *httptest.Server {
 		token := r.Header.Get("Authorization")
 		require.Equal(t, "Bearer "+testToken, token)
 	}
+	requireUserAgent := func(r *http.Request) {
+		userAgent := r.Header.Get("User-Agent")
+		require.Equal(t, metadata.UserAgent(), userAgent)
+	}
 
 	mux.HandleFunc("/users/me", func(w http.ResponseWriter, r *http.Request) {
+		requireUserAgent(r)
 		requireToken(r)
 
 		w.WriteHeader(http.StatusOK)
@@ -41,6 +47,7 @@ func newMockRolesServer(t *testing.T) *httptest.Server {
 	})
 
 	mux.HandleFunc("/users/"+currentUserID+"/assigned-roles/", func(w http.ResponseWriter, r *http.Request) {
+		requireUserAgent(r)
 		requireToken(r)
 
 		switch r.Method {
@@ -73,6 +80,7 @@ func newMockRolesServer(t *testing.T) *httptest.Server {
 		   ]
 		}`))
 		case http.MethodDelete:
+			requireUserAgent(r)
 			w.WriteHeader(http.StatusNoContent)
 		default:
 			t.Errorf("unexpected method %s", r.Method)

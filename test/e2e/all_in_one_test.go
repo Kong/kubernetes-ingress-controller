@@ -12,10 +12,8 @@ import (
 	"testing"
 	"time"
 
-	gokong "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
@@ -355,7 +354,7 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 			localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, pod.Name, "8444")
 			address := fmt.Sprintf("https://localhost:%d", localPort)
 
-			kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+			kongClient, err := adminapi.NewKongAPIClient(address, client)
 			require.NoError(t, err)
 
 			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)

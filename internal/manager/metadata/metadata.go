@@ -1,7 +1,9 @@
 // Package metadata includes metadata variables for logging and reporting.
 package metadata
 
-import "strings"
+import (
+	"strings"
+)
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Versioning Information
@@ -38,4 +40,8 @@ func projectNameFromRepo(repo string) string {
 		return NotSet
 	}
 	return projectName
+}
+
+func UserAgent() string {
+	return "kong-ingress-controller/" + Release
 }

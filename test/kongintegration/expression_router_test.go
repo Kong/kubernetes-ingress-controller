@@ -12,9 +12,9 @@ import (
 
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -32,7 +32,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 	ctx := context.Background()
 
 	kongC := containers.NewKong(ctx, t)
-	kongClient, err := kong.NewClient(lo.ToPtr(kongC.AdminURL(ctx, t)), helpers.DefaultHTTPClient())
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), helpers.DefaultHTTPClient())
 	require.NoError(t, err)
 
 	httpBinC := containers.NewHTTPBin(ctx, t)

@@ -92,6 +92,8 @@ Adding a new version? You'll need three changes:
   [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
 - Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
   [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
+- Set proper User-Agent for request made to Kong and Konnect.
+  [#5753](https://github.com/Kong/kubernetes-ingress-controller/pull/5753)
 
 ## [3.1.2]
 

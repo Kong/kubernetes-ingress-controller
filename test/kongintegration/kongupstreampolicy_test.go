@@ -13,6 +13,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -32,7 +33,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 	ctx := context.Background()
 
 	kongC := containers.NewKong(ctx, t)
-	kongClient, err := kong.NewClient(lo.ToPtr(kongC.AdminURL(ctx, t)), &http.Client{})
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), &http.Client{})
 	require.NoError(t, err)
 	updateStrategy := sendconfig.NewUpdateStrategyInMemory(
 		kongClient,

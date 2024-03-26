@@ -13,6 +13,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
@@ -43,7 +44,7 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	c := &http.Client{}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
-	c.Transport = transport
+	c.Transport = useragent.NewTransport(transport)
 
 	return &Client{
 		address:        cfg.Address,

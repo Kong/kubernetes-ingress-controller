@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
 )
 
 const (
@@ -43,6 +45,7 @@ func NewRole(id, entityID string) (Role, error) {
 }
 
 func NewClient(httpClient *http.Client, baseURL string, personalAccessToken string) *Client {
+	httpClient.Transport = useragent.NewTransport(httpClient.Transport)
 	return &Client{
 		baseURL:             baseURL,
 		httpClient:          httpClient,

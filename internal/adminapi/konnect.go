@@ -11,7 +11,6 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
@@ -42,7 +41,7 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}
 	if clientCertificate == nil {
-		return nil, fmt.Errorf("client ceritficate is missing")
+		return nil, fmt.Errorf("client certificate is missing")
 	}
 
 	tlsConfig := tls.Config{
@@ -51,8 +50,8 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
-	client, err := kong.NewClient(
-		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID)),
+	client, err := NewKongAPIClient(
+		fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID),
 		&http.Client{
 			Transport: transport,
 		},

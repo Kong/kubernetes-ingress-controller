@@ -17,7 +17,7 @@ const (
 	// NetworkingFamily is the label key used to store the networking family of
 	// resources that are being tests.
 	//
-	// Possible, values: "gatewaypi", "ingress".
+	// Possible, values: "gatewayapi", "ingress".
 	NetworkingFamily           = "networkingfamily"
 	NetworkingFamilyGatewayAPI = "gatewayapi"
 	NetworkingFamilyIngress    = "ingress"

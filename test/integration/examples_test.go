@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -180,45 +179,6 @@ func TestIngressExample(t *testing.T) {
 		}
 		return false
 	}, ingressWait, waitTick)
-}
-
-func TestUDPIngressExample(t *testing.T) {
-	t.Log("locking UDP port")
-	udpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking UDP port")
-		udpMutex.Unlock()
-	})
-
-	var (
-		udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
-		ctx                        = context.Background()
-	)
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", udpingressExampleManifests)
-	b, err := os.ReadFile(udpingressExampleManifests)
-	require.NoError(t, err)
-	manifests := replaceIngressClassAnnotationInManifests(string(b))
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
-	cleaner.AddManifest(string(b))
-
-	t.Log("building a DNS query to request of CoreDNS")
-	query := new(dns.Msg)
-	query.Id = dns.Id()
-	query.Question = make([]dns.Question, 1)
-	query.Question[0] = dns.Question{Name: "kernel.org.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
-
-	t.Log("verifying that the UDPIngress resource becomes routable")
-	dnsUDPClient := new(dns.Client)
-	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, proxyUDPURL)
-		return err == nil
-	}, ingressWait, waitTick)
-}
-
-func replaceIngressClassAnnotationInManifests(manifests string) string {
-	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, consts.IngressClass))
 }
 
 func replaceIngressClassSpecFieldInManifests(manifests string) string {

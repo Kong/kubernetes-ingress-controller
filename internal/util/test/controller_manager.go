@@ -101,7 +101,7 @@ func DeployControllerManagerForCluster(
 
 	// render all controller manager flag options
 	controllerManagerFlags := []string{
-		fmt.Sprintf("--kong-admin-url=%s", proxyAdminURL.String()),
+		fmt.Sprintf("--kong-admin-url=%s", proxyAdminURL),
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
 		"--log-format=text",

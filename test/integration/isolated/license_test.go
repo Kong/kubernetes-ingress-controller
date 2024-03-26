@@ -26,9 +26,6 @@ func TestKongLicense(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.Kind, testlabels.KindKongLicense).
 		Setup(SkipIfEnterpriseNotEnabled).
-		// TODO: enable the test with DB backed mode after fixed syncing license with DB backed Kong gateways
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/5644
-		Setup(SkipIfDBBacked).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
 		Assess(
 			"Expect No Licenses found before creating KongLicense resource",

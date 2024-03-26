@@ -72,6 +72,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 		KongClient:      s.client,
 		SilenceWarnings: true,
 		IsKonnect:       s.isKonnect,
+		IncludeLicenses: true,
 	})
 	if err != nil {
 		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err), nil, nil

@@ -334,6 +334,7 @@ func ensureAllKongRawStateFieldsAreTested(t *testing.T, testedFields []string) {
 		"Vaults",
 		"RBACRoles",
 		"RBACEndpointPermissions",
+		"Licenses",
 	}
 	allKongRawStateFields := func() []string {
 		var fields []string

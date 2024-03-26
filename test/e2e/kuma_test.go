@@ -67,7 +67,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 
 // buildKumaAddon returns a Kuma addon with mTLS enabled and the version specified in the test dependencies file.
 func buildKumaAddon(t *testing.T) *kuma.Addon {
-	const rawKumaVersion = "2.6.0"
+	const rawKumaVersion = "2.5.4"
 
 	kumaVersion, err := semver.Parse(rawKumaVersion)
 	require.NoError(t, err)

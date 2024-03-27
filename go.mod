@@ -32,7 +32,7 @@ require (
 	github.com/kong/deck v1.26.1
 	github.com/kong/go-kong v0.48.0
 	github.com/kong/kubernetes-telemetry v0.1.1
-	github.com/kong/kubernetes-testing-framework v0.39.1
+	github.com/kong/kubernetes-testing-framework v0.39.2-0.20240327202446-20b270f85f42
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.56
 	github.com/mitchellh/mapstructure v1.5.0

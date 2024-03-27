@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   benchmark:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Run Go benchmarks
     runs-on: ubuntu-latest
     steps:

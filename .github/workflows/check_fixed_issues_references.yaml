@@ -7,7 +7,7 @@ on:
 
 jobs:
     check_issues_state:
-      timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+      timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
       runs-on: ubuntu-latest
       permissions:
         issues: read
@@ -20,7 +20,7 @@ jobs:
           run: ./hack/check_fixed_issues_references.sh
 
     notify-on-slack:
-      timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+      timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
       runs-on: ubuntu-latest
       needs:
         - check_issues_state

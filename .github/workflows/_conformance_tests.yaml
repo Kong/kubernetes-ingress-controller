@@ -11,7 +11,7 @@ on:
 
 jobs:
   dependencies-versions:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     outputs:
       helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
@@ -25,7 +25,7 @@ jobs:
           echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
 
   conformance-tests:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     needs: dependencies-versions

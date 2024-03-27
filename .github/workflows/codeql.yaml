@@ -19,7 +19,7 @@ on:
 
 jobs:
   analyze:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: analyze
     runs-on: ubuntu-latest
     permissions:

@@ -25,7 +25,7 @@ on:
 
 jobs:
   post-comment-in-pr:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ github.event.inputs.pr-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -52,7 +52,7 @@ jobs:
   # We need to pick an image to use for the tests. If the input specified one, we use that. Otherwise, we use the one
   # built by the previous job.
   choose-image:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs: build-image
@@ -89,7 +89,7 @@ jobs:
       coverage: false
 
   performance-reports:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs: run
     steps:

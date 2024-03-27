@@ -35,7 +35,7 @@ on:
 
 jobs:
   startup-issue-comment:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ github.event.inputs.issue-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -83,7 +83,7 @@ jobs:
       log-output-file:  /tmp/integration-tests-kic-logs
 
   on-finish-comment-or-close-issue:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs:
     - startup-issue-comment
     - run-e2e-tests

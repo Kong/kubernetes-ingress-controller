@@ -5,7 +5,7 @@ on:
 
 jobs:
   lint:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

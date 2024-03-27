@@ -25,7 +25,7 @@ on:
 
 jobs:
   performance-matrix:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ inputs.res-number-for-perf == '' }}
     runs-on: ubuntu-latest
     strategy:
@@ -116,7 +116,7 @@ jobs:
           if-no-files-found: ignore
 
   performance-target:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ inputs.res-number-for-perf != '' }}
     runs-on: ubuntu-latest
     strategy:

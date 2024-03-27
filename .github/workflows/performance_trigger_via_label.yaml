@@ -7,7 +7,7 @@ on:
 
 jobs:
   trigger-performance-tests-targeted:
-    timeout-minutes: ${{ vars.GHA_DEFAULT_TIMEOUT }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-performance')
     runs-on: ubuntu-latest
     env:

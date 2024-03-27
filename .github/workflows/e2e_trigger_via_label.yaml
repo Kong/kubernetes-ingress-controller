@@ -7,7 +7,7 @@ on:
 
 jobs:
   trigger-e2e-tests-targeted:
-    timeout-minutes: ${{ vars.GHA_EXTENDED_TIMEOUT_MINUTES }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-e2e')
     runs-on: ubuntu-latest
     env:

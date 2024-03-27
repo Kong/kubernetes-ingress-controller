@@ -45,21 +45,6 @@ func TestTCPRouteEssentials(t *testing.T) {
 	gatewayClassName := uuid.NewString()
 	gatewayName := uuid.NewString()
 
-	// Helpers used in this test.
-	requireNoResponse := func(t *testing.T, tcpGatewayURL string) {
-		t.Helper()
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			err := test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, "irrelevant")
-			assert.True(c, errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET), "unexpected error: %v", err)
-		}, consts.IngressWait, consts.WaitTick)
-	}
-	requireResponse := func(t *testing.T, tcpGatewayURL, expectedMsg string) {
-		t.Helper()
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.NoError(c, test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, expectedMsg))
-		}, consts.IngressWait, consts.WaitTick)
-	}
-
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
@@ -194,7 +179,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			t.Log("verifying that the tcpecho is responding properly")
 			tcpGatewayURL := GetTCPURLFromCtx(ctx)
-			requireResponse(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			return ctx
 		}).
@@ -226,7 +211,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 						errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
 				}
 			}()
-			requireNoResponse(t, tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the parentRefs back")
 			assert.Eventually(t, func() bool {
@@ -242,7 +227,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-			requireResponse(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			return ctx
 		}).
@@ -260,7 +245,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
-			requireNoResponse(t, tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
 			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -271,7 +256,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
-			requireResponse(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("deleting the Gateway")
 			assert.NoError(t, gatewayClient.GatewayV1().Gateways(namespace).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
@@ -281,7 +266,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
-			requireNoResponse(t, tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the Gateway back")
 			_, err = helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
@@ -299,7 +284,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
-			requireResponse(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("deleting both GatewayClass and Gateway rapidly")
 			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
@@ -310,7 +295,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
-			requireNoResponse(t, tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
 			_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -332,7 +317,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
-			requireResponse(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			return ctx
 		}).
@@ -366,8 +351,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 			}, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the TCPRoute is now load-balanced between two services")
-			requireResponse(t, tcpGatewayURL, test1UUID)
-			requireResponse(t, tcpGatewayURL, test2UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test2UUID)
 
 			t.Log("testing port matching")
 			t.Log("putting the Gateway back")
@@ -385,7 +370,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Log("verifying that the TCPRoute responds before specifying a port not existent in Gateway")
-			requireResponse(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
 			assert.Eventually(t, func() bool {
@@ -401,7 +386,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
-			requireNoResponse(t, tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 			return ctx
 		}).
 		Teardown(featureTeardown())

@@ -56,5 +56,5 @@ envtests:
   # Because of a bug that was introduced in Kong EE 3.5 (https://konghq.atlassian.net/browse/KAG-3699),
   # we need to stick to 3.4 in order to make our KongVault validation tests stable.
   # This version should be bumped to the current one once the bug is fixed.
-  # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.6.1.1'
+  # PLEASE DO NOT BUMP THIS VERSION BEFORE KAG-3699 IS FIXED. renovate: datasource=docker depName=kong/kong-gateway versioning=docker
+  kong-ee: '3.4.3.4'

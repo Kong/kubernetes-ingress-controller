@@ -1,6 +1,7 @@
 package parser
 
 import (
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
@@ -23,10 +24,10 @@ func newRefChecker[T types.BackendRefT](ref T) refChecker[T] {
 // allowedRefs is assumed to contain Tos that only match the backendRef's parent's From, as returned by
 // getPermittedForReferenceGrantFrom.
 func (rc refChecker[T]) IsRefAllowedByGrant(
-	allowedRefs map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
+	allowedRefs map[gatewayv1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
 ) bool {
 	switch br := (interface{})(rc.backendRef).(type) {
-	case gatewayv1beta1.BackendRef:
+	case gatewayv1.BackendRef:
 		if br.Namespace == nil {
 			return true
 		}
@@ -39,7 +40,7 @@ func (rc refChecker[T]) IsRefAllowedByGrant(
 			allowedRefs,
 		)
 
-	case gatewayv1beta1.SecretObjectReference:
+	case gatewayv1.SecretObjectReference:
 		if br.Namespace == nil {
 			return true
 		}
@@ -64,13 +65,13 @@ func isRefAllowedByGrant(
 	name string,
 	group string,
 	kind string,
-	allowed map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
+	allowed map[gatewayv1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
 ) bool {
 	if namespace == nil {
 		// local references are always fine
 		return true
 	}
-	for _, to := range allowed[gatewayv1beta1.Namespace(*namespace)] {
+	for _, to := range allowed[gatewayv1.Namespace(*namespace)] {
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {

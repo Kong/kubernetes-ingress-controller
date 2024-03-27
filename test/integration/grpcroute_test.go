@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
@@ -103,15 +103,15 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gateway")
 	testHostname := "cholpon.example"
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1.Gateway) {
 		gw.Spec.Listeners = builder.NewListener("https").
 			HTTPS().
 			WithPort(ktfkong.DefaultProxyTLSServicePort).
 			WithHostname(testHostname).
-			WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+			WithTLSConfig(&gatewayv1.GatewayTLSConfig{
+				CertificateRefs: []gatewayv1.SecretObjectReference{
 					{
-						Name: gatewayv1beta1.ObjectName(secret.Name),
+						Name: gatewayv1.ObjectName(secret.Name),
 					},
 				},
 			}).IntoSlice()
@@ -120,7 +120,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	cleaner.Add(gateway)
 
 	grpcPort := int32(9001)
-	grpcPortNumber := gatewayv1beta1.PortNumber(grpcPort)
+	grpcPortNumber := gatewayv1.PortNumber(grpcPort)
 	t.Log("deploying a minimal GRPC container deployment to test Ingress routes")
 	container := generators.NewContainer("grpcbin", "moul/grpcbin", grpcPort)
 	deployment := generators.NewDeploymentForContainer(container)
@@ -139,9 +139,9 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			Name: "cholpon-grpcroute",
 		},
 		Spec: gatewayv1alpha2.GRPCRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gateway.Name),
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(gateway.Name),
 				}},
 			},
 			Hostnames: []gatewayv1alpha2.Hostname{
@@ -168,8 +168,8 @@ func TestGRPCRouteEssentials(t *testing.T) {
 				},
 				BackendRefs: []gatewayv1alpha2.GRPCBackendRef{{
 					BackendRef: gatewayv1alpha2.BackendRef{
-						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service.Name),
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: gatewayv1.ObjectName(service.Name),
 							Port: &grpcPortNumber,
 						},
 					},
@@ -183,11 +183,11 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	cleaner.Add(grpcRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, grpcRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, grpcRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the grpcroute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, grpcRoute.Name, metav1.ConditionTrue),
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, grpcRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 

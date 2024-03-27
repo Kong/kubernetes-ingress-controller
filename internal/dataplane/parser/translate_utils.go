@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -24,7 +25,7 @@ import (
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch
 // and converts these header matching rules to the format expected by go-kong.
-func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.HTTPHeaderMatch, kongVersion semver.Version) (map[string][]string, error) {
+func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1.HTTPHeaderMatch, kongVersion semver.Version) (map[string][]string, error) {
 	// iterate through each provided header match checking for invalid
 	// options and otherwise converting to kong type format.
 	convertedHeaders := make(map[string][]string)
@@ -33,12 +34,12 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 			return nil, fmt.Errorf("multiple header matches for the same header are not allowed: %s",
 				string(header.Name))
 		}
-		if header.Type != nil && *header.Type == gatewayv1beta1.HeaderMatchRegularExpression {
+		if header.Type != nil && *header.Type == gatewayv1.HeaderMatchRegularExpression {
 			if kongVersion.LT(versions.RegexHeaderVersionCutoff) {
 				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", kongVersion)
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
-		} else if header.Type == nil || *header.Type == gatewayv1beta1.HeaderMatchExact {
+		} else if header.Type == nil || *header.Type == gatewayv1.HeaderMatchExact {
 			convertedHeaders[string(header.Name)] = []string{header.Value}
 		} else {
 			return nil, fmt.Errorf("unknown/unsupported header match type: %s", string(*header.Type))
@@ -54,8 +55,8 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 func getPermittedForReferenceGrantFrom(
 	from gatewayv1beta1.ReferenceGrantFrom,
 	grants []*gatewayv1beta1.ReferenceGrant,
-) map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo {
-	allowed := make(map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo)
+) map[gatewayv1.Namespace][]gatewayv1beta1.ReferenceGrantTo {
+	allowed := make(map[gatewayv1.Namespace][]gatewayv1beta1.ReferenceGrantTo)
 	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
 	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
@@ -63,7 +64,7 @@ func getPermittedForReferenceGrantFrom(
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				allowed[gatewayv1beta1.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayv1beta1.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
+				allowed[gatewayv1.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayv1.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
 			}
 		}
 	}
@@ -80,7 +81,7 @@ func generateKongServiceFromBackendRefWithName(
 	serviceName string,
 	route client.Object,
 	protocol string,
-	backendRefs ...gatewayv1beta1.BackendRef,
+	backendRefs ...gatewayv1.BackendRef,
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
@@ -148,7 +149,7 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 	route client.Object,
 	ruleNumber int,
 	protocol string,
-	backendRefs ...gatewayv1beta1.BackendRef,
+	backendRefs ...gatewayv1.BackendRef,
 ) (kongstate.Service, error) {
 	// the service name needs to uniquely identify this service given it's list of
 	// one or more backends.

@@ -9,7 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -168,9 +168,9 @@ func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayv1alpha2.GRPCHead
 
 	matchers := make([]atc.Matcher, 0, len(headerMatches))
 	for _, headerMatch := range headerMatches {
-		httpHeaderMatch := gatewayv1beta1.HTTPHeaderMatch{
+		httpHeaderMatch := gatewayv1.HTTPHeaderMatch{
 			Type:  headerMatch.Type,
-			Name:  gatewayv1beta1.HTTPHeaderName(headerMatch.Name),
+			Name:  gatewayv1.HTTPHeaderName(headerMatch.Name),
 			Value: headerMatch.Value,
 		}
 		matchers = append(matchers, headerMatcherFromHTTPHeaderMatch(httpHeaderMatch))

@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/blang/semver/v4"
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"

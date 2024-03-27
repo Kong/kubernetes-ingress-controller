@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -34,8 +34,8 @@ var httprouteGVK = schema.GroupVersionKind{
 
 type testCaseIngressRulesFromHTTPRoutes struct {
 	msg      string
-	routes   []*gatewayv1beta1.HTTPRoute
-	expected func(routes []*gatewayv1beta1.HTTPRoute) ingressRules
+	routes   []*gatewayv1.HTTPRoute
+	expected func(routes []*gatewayv1.HTTPRoute) ingressRules
 	errs     []error
 }
 
@@ -44,7 +44,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 	return []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs:      newSecretNameToSNIs(),
 					ServiceNameToParent:   map[string]client.Object{},
@@ -54,25 +54,25 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "an HTTPRoute rule with no matches can be routed if it has hostnames to match on",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-					Hostnames: []gatewayv1beta1.Hostname{
+					Hostnames: []gatewayv1.Hostname{
 						"konghq.com",
 						"www.konghq.com",
 					},
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -123,23 +123,23 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "an HTTPRoute rule with no matches and no hostnames produces a catch-all rule",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					// no hostnames present
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
+					Rules: []gatewayv1.HTTPRouteRule{{
 						// no match rules present
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -186,24 +186,24 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "a single HTTPRoute with one match and one backendRef results in a single service",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin").Build(),
 						},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -254,16 +254,16 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "an HTTPRoute with no rules can't be routed",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs:      newSecretNameToSNIs(),
 					ServiceNameToParent:   map[string]client.Object{},
@@ -276,24 +276,24 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "an HTTPRoute with queryParam matches is not yet supported",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithQueryParam("username", "kong").Build(),
 						},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs:      newSecretNameToSNIs(),
 					ServiceNameToParent:   map[string]client.Object{},
@@ -306,24 +306,24 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "an HTTPRoute with regex path matches is supported",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathRegex("/httpbin$").Build(),
 						},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -374,26 +374,26 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 		},
 		{
 			msg: "an HTTPRoute with exact path matches translates to a terminated Kong regex route",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{
+					Rules: []gatewayv1.HTTPRouteRule{
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathExact("/httpbin").Build(),
 							},
-							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							BackendRefs: []gatewayv1.HTTPBackendRef{
 								builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 							},
 						},
 					},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -449,31 +449,31 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 	return []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs results in a single service",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-1").Build(),
 						},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}, {
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-2").Build(),
 						},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -529,28 +529,28 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 
 		{
 			msg: "a single HTTPRoute with multiple rules with different backendRefs results in a multiple services",
-			routes: []*gatewayv1beta1.HTTPRoute{
+			routes: []*gatewayv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "basic-httproute",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
+					Spec: gatewayv1.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-1").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 								},
 							},
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-2").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("fake-service").WithPort(8080).Build(),
 								},
 							},
@@ -558,7 +558,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					},
 				},
 			},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -650,38 +650,38 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 
 		{
 			msg: "a single HTTPRoute with multiple rules and backendRefs generates consolidated routes",
-			routes: []*gatewayv1beta1.HTTPRoute{
+			routes: []*gatewayv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "basic-httproute",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
+					Spec: gatewayv1.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-1").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
 									builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 								},
 							},
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-2").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
 									builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 								},
 							},
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-2").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("foo-v1").WithPort(8080).WithWeight(90).Build(),
 									builder.NewHTTPBackendRef("foo-v3").WithPort(8080).WithWeight(10).Build(),
 								},
@@ -690,7 +690,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					},
 				},
 			},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -789,27 +789,27 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 
 		{
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs and different filters results in a single service",
-			routes: []*gatewayv1beta1.HTTPRoute{
+			routes: []*gatewayv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "basic-httproute",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
+					Spec: gatewayv1.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/path-0").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 								},
-								Filters: []gatewayv1beta1.HTTPRouteFilter{
+								Filters: []gatewayv1.HTTPRouteFilter{
 									{
-										Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-										RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
-											Add: []gatewayv1beta1.HTTPHeader{
+										Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+										RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+											Add: []gatewayv1.HTTPHeader{
 												{Name: "X-Test-Header-1", Value: "test-value-1"},
 											},
 										},
@@ -817,17 +817,17 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								},
 							},
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 								},
-								Filters: []gatewayv1beta1.HTTPRouteFilter{
+								Filters: []gatewayv1.HTTPRouteFilter{
 									{
-										Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-										RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
-											Add: []gatewayv1beta1.HTTPHeader{
+										Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+										RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+											Add: []gatewayv1.HTTPHeader{
 												{Name: "X-Test-Header-2", Value: "test-value-2"},
 											},
 										},
@@ -838,7 +838,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					},
 				},
 			},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -935,23 +935,23 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 
 		{
 			msg: "a single HTTPRoute with single rule and multiple matches generates consolidated kong route paths",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{
+					Rules: []gatewayv1.HTTPRouteRule{
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								// Two matches eligible for consolidation into a single kong route
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-0").Build(),
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
 								// Other two matches eligible for consolidation, but not with the above two
 								// as they have different methods
-								builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
-								builder.NewHTTPRouteMatch().WithPathPrefix("/path-3").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").WithMethod(gatewayv1.HTTPMethodDelete).Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-3").WithMethod(gatewayv1.HTTPMethodDelete).Build(),
 								// Other two matches eligible for consolidation, but not with the above two
 								// as they have different headers
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-4").
@@ -964,7 +964,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									WithHeader("x-header-1", "x-value-1").
 									Build(),
 							},
-							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							BackendRefs: []gatewayv1.HTTPBackendRef{
 								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
 								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 							},
@@ -972,7 +972,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -1083,26 +1083,26 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 
 		{
 			msg: "a single HTTPRoute with multiple rules and matches generates consolidated kong route paths",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{
+					Rules: []gatewayv1.HTTPRouteRule{
 						// Rule one has four matches, that can be consolidated into two kong routes
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								// Two matches eligible for consolidation into a single kong route
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-0").Build(),
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
 								// Other two matches eligible for consolidation, but not with the above two
 								// as they have different methods
-								builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
-								builder.NewHTTPRouteMatch().WithPathPrefix("/path-3").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").WithMethod(gatewayv1.HTTPMethodDelete).Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-3").WithMethod(gatewayv1.HTTPMethodDelete).Build(),
 							},
-							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							BackendRefs: []gatewayv1.HTTPBackendRef{
 								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
 								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 							},
@@ -1112,11 +1112,11 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 						//	- shares the backend refs with rule one
 						//	- has two matches, that can be consolidated with the first two matches of rule one
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-4").Build(),
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-5").Build(),
 							},
-							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							BackendRefs: []gatewayv1.HTTPBackendRef{
 								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
 								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 							},
@@ -1127,19 +1127,19 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 						//	- has two matches, that potentially could be consolidated with the first match of rule one
 						//	- has a different filter than rule one, thus cannot be consolidated
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-6").Build(),
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-7").Build(),
 							},
-							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							BackendRefs: []gatewayv1.HTTPBackendRef{
 								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
 								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 							},
-							Filters: []gatewayv1beta1.HTTPRouteFilter{
+							Filters: []gatewayv1.HTTPRouteFilter{
 								{
-									Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-									RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
-										Add: []gatewayv1beta1.HTTPHeader{
+									Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+									RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+										Add: []gatewayv1.HTTPHeader{
 											{Name: "X-Test-Header-1", Value: "test-value-1"},
 										},
 									},
@@ -1149,7 +1149,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -1345,19 +1345,19 @@ func TestIngressRulesFromHTTPRoutesWithCombinedServiceRoutes(t *testing.T) {
 func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 	for _, tt := range []struct {
 		msg      string
-		input    *gatewayv1beta1.HTTPRoute
+		input    *gatewayv1.HTTPRoute
 		expected []*string
 	}{
 		{
 			msg:      "an HTTPRoute with no hostnames produces no hostnames",
-			input:    &gatewayv1beta1.HTTPRoute{},
+			input:    &gatewayv1.HTTPRoute{},
 			expected: []*string{},
 		},
 		{
 			msg: "an HTTPRoute with a single hostname produces a list with that one hostname",
-			input: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
+			input: &gatewayv1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Hostnames: []gatewayv1.Hostname{
 						"konghq.com",
 					},
 				},
@@ -1368,9 +1368,9 @@ func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 		},
 		{
 			msg: "an HTTPRoute with multiple hostnames produces a list with the same hostnames",
-			input: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
+			input: &gatewayv1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Hostnames: []gatewayv1.Hostname{
 						"konghq.com",
 						"www.konghq.com",
 						"docs.konghq.com",
@@ -1398,26 +1398,26 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	parserWithCombinedServiceRoutes := mustNewParser(t, fakestore)
 	parserWithCombinedServiceRoutes.featureFlags.RegexPathPrefix = true
 	parserWithCombinedServiceRoutes.featureFlags.CombinedServiceRoutes = true
-	httpPort := gatewayv1beta1.PortNumber(80)
+	httpPort := gatewayv1.PortNumber(80)
 
 	for _, tt := range []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an HTTPRoute with regex path matches is supported",
-			routes: []*gatewayv1beta1.HTTPRoute{{
+			routes: []*gatewayv1.HTTPRoute{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "basic-httproute",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
+				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathRegex("/httpbin$").Build(),
 						},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
+						BackendRefs: []gatewayv1.HTTPBackendRef{{
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName("fake-service"),
 									Port: &httpPort,
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
@@ -1426,7 +1426,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 					}},
 				},
 			}},
-			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+			expected: func(routes []*gatewayv1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
@@ -1512,7 +1512,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	parser := mustNewParser(t, fakestore)
 	parser.featureFlags.CombinedServiceRoutes = true
 	parser.featureFlags.ExpressionRoutes = true
-	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.SchemeGroupVersion.String()}
+	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1.SchemeGroupVersion.String()}
 
 	newResourceFailure := func(reason string, objects ...client.Object) failures.ResourceFailure {
 		failure, _ := failures.NewResourceFailure(reason, objects...)
@@ -1521,28 +1521,28 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		httpRoutes           []*gatewayv1beta1.HTTPRoute
+		httpRoutes           []*gatewayv1.HTTPRoute
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
 	}{
 		{
 			name: "single HTTPRoute with no hostname and multiple matches",
-			httpRoutes: []*gatewayv1beta1.HTTPRoute{
+			httpRoutes: []*gatewayv1.HTTPRoute{
 				{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "httproute-1",
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+					Spec: gatewayv1.HTTPRouteSpec{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/barr").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -1588,32 +1588,32 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "single HTTPRoute with multiple hostnames and rules",
-			httpRoutes: []*gatewayv1beta1.HTTPRoute{
+			httpRoutes: []*gatewayv1.HTTPRoute{
 				{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "httproute-1",
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{
+					Spec: gatewayv1.HTTPRouteSpec{
+						Hostnames: []gatewayv1.Hostname{
 							"foo.com",
 							"*.bar.com",
 						},
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 								},
 							},
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/barr").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service2").WithPort(80).Build(),
 								},
 							},
@@ -1716,7 +1716,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "single HTTPRoute with protocol and SNI annotations",
-			httpRoutes: []*gatewayv1beta1.HTTPRoute{
+			httpRoutes: []*gatewayv1.HTTPRoute{
 				{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1727,16 +1727,16 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 							"konghq.com/snis":      "foo.com",
 						},
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{
+					Spec: gatewayv1.HTTPRouteSpec{
+						Hostnames: []gatewayv1.Hostname{
 							"foo.com",
 						},
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -1773,15 +1773,15 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple HTTPRoutes with translation failures",
-			httpRoutes: []*gatewayv1beta1.HTTPRoute{
+			httpRoutes: []*gatewayv1.HTTPRoute{
 				{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "httproute-no-host-no-rule",
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"no-rule.example"},
+					Spec: gatewayv1.HTTPRouteSpec{
+						Hostnames: []gatewayv1.Hostname{"no-rule.example"},
 					},
 				},
 				{
@@ -1790,16 +1790,16 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						Namespace: "default",
 						Name:      "httproute-1",
 					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{
+					Spec: gatewayv1.HTTPRouteSpec{
+						Hostnames: []gatewayv1.Hostname{
 							"foo.com",
 						},
-						Rules: []gatewayv1beta1.HTTPRouteRule{
+						Rules: []gatewayv1.HTTPRouteRule{
 							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
+								Matches: []gatewayv1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								BackendRefs: []gatewayv1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -1834,7 +1834,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 			expectedFailures: []failures.ResourceFailure{
-				newResourceFailure(translators.ErrRouteValidationNoRules.Error(), &gatewayv1beta1.HTTPRoute{
+				newResourceFailure(translators.ErrRouteValidationNoRules.Error(), &gatewayv1.HTTPRoute{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -1894,7 +1894,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	parser := mustNewParser(t, fakestore)
 	parser.featureFlags.CombinedServiceRoutes = true
 	parser.featureFlags.ExpressionRoutes = true
-	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.SchemeGroupVersion.String()}
+	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1.SchemeGroupVersion.String()}
 
 	testCases := []struct {
 		name                string
@@ -1907,19 +1907,19 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			name: "no hostname",
 			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
 				Match: translators.SplitHTTPRouteMatch{
-					Source: &gatewayv1beta1.HTTPRoute{
+					Source: &gatewayv1.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "httproute-1",
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+						Spec: gatewayv1.HTTPRouteSpec{
+							Rules: []gatewayv1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
+									Matches: []gatewayv1.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 									},
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayv1.HTTPBackendRef{
 										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 									},
 								},
@@ -1959,26 +1959,26 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			name: "precise hostname and filter",
 			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
 				Match: translators.SplitHTTPRouteMatch{
-					Source: &gatewayv1beta1.HTTPRoute{
+					Source: &gatewayv1.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "httproute-1",
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{
+						Spec: gatewayv1.HTTPRouteSpec{
+							Hostnames: []gatewayv1.Hostname{
 								"foo.com",
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayv1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
+									Matches: []gatewayv1.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 									},
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayv1.HTTPBackendRef{
 										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 									},
-									Filters: []gatewayv1beta1.HTTPRouteFilter{
+									Filters: []gatewayv1.HTTPRouteFilter{
 										builder.NewHTTPRouteRequestRedirectFilter().
 											WithRequestRedirectStatusCode(301).
 											WithRequestRedirectHost("bar.com").
@@ -2037,22 +2037,22 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			name: "wildcard hostname with multiple backends",
 			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
 				Match: translators.SplitHTTPRouteMatch{
-					Source: &gatewayv1beta1.HTTPRoute{
+					Source: &gatewayv1.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "httproute-1",
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{
+						Spec: gatewayv1.HTTPRouteSpec{
+							Hostnames: []gatewayv1.Hostname{
 								"*.foo.com",
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayv1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
+									Matches: []gatewayv1.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 									},
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayv1.HTTPBackendRef{
 										builder.NewHTTPBackendRef("service1").WithPort(80).WithWeight(10).Build(),
 										builder.NewHTTPBackendRef("service2").WithPort(80).WithWeight(20).Build(),
 									},
@@ -2100,19 +2100,19 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			name: "precise hostname and no match",
 			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
 				Match: translators.SplitHTTPRouteMatch{
-					Source: &gatewayv1beta1.HTTPRoute{
+					Source: &gatewayv1.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "httproute-1",
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{
+						Spec: gatewayv1.HTTPRouteSpec{
+							Hostnames: []gatewayv1.Hostname{
 								"a.foo.com",
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayv1.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayv1.HTTPBackendRef{
 										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 									},
 								},
@@ -2153,16 +2153,16 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			name: "no hostname and no match",
 			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
 				Match: translators.SplitHTTPRouteMatch{
-					Source: &gatewayv1beta1.HTTPRoute{
+					Source: &gatewayv1.HTTPRoute{
 						TypeMeta: httpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "httproute-1",
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+						Spec: gatewayv1.HTTPRouteSpec{
+							Rules: []gatewayv1.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayv1.HTTPBackendRef{
 										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
 									},
 								},
@@ -2224,7 +2224,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	}
 }
 
-func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInfo {
+func k8sObjectInfoOfHTTPRoute(route *gatewayv1.HTTPRoute) util.K8sObjectInfo {
 	anotations := route.Annotations
 
 	return util.K8sObjectInfo{
@@ -2239,10 +2239,10 @@ func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInf
 	}
 }
 
-func commonRouteSpecMock(parentReferentName string) gatewayv1beta1.CommonRouteSpec {
-	return gatewayv1beta1.CommonRouteSpec{
-		ParentRefs: []gatewayv1beta1.ParentReference{{
-			Name: gatewayv1beta1.ObjectName(parentReferentName),
+func commonRouteSpecMock(parentReferentName string) gatewayv1.CommonRouteSpec {
+	return gatewayv1.CommonRouteSpec{
+		ParentRefs: []gatewayv1.ParentReference{{
+			Name: gatewayv1.ObjectName(parentReferentName),
 		}},
 	}
 }

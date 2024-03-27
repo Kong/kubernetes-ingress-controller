@@ -8,47 +8,47 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestGetParentStatuses(t *testing.T) {
 	t.Run("HTTPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayv1beta1.HTTPRoute
-			want  map[string]*gatewayv1beta1.RouteParentStatus
+			route *gatewayv1.HTTPRoute
+			want  map[string]*gatewayv1.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayv1beta1.HTTPRoute{
+				route: &gatewayv1.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      uuid.NewString(),
 						Namespace: uuid.NewString(),
 					},
-					Status: gatewayv1beta1.HTTPRouteStatus{
-						RouteStatus: gatewayv1beta1.RouteStatus{
-							Parents: []gatewayv1beta1.RouteParentStatus{
+					Status: gatewayv1.HTTPRouteStatus{
+						RouteStatus: gatewayv1.RouteStatus{
+							Parents: []gatewayv1.RouteParentStatus{
 								{
-									ParentRef: gatewayv1beta1.ParentReference{
-										Group:       lo.ToPtr(gatewayv1beta1.Group("group")),
-										Kind:        lo.ToPtr(gatewayv1beta1.Kind("kind")),
-										Namespace:   lo.ToPtr(gatewayv1beta1.Namespace("namespace")),
-										Name:        gatewayv1beta1.ObjectName("name"),
-										SectionName: lo.ToPtr(gatewayv1beta1.SectionName("section1")),
+									ParentRef: gatewayv1.ParentReference{
+										Group:       lo.ToPtr(gatewayv1.Group("group")),
+										Kind:        lo.ToPtr(gatewayv1.Kind("kind")),
+										Namespace:   lo.ToPtr(gatewayv1.Namespace("namespace")),
+										Name:        gatewayv1.ObjectName("name"),
+										SectionName: lo.ToPtr(gatewayv1.SectionName("section1")),
 									},
 								},
 							},
 						},
 					},
 				},
-				want: map[string]*gatewayv1beta1.RouteParentStatus{
+				want: map[string]*gatewayv1.RouteParentStatus{
 					"namespace/name/section1": {
-						ParentRef: gatewayv1beta1.ParentReference{
-							Group:       lo.ToPtr(gatewayv1beta1.Group("group")),
-							Kind:        lo.ToPtr(gatewayv1beta1.Kind("kind")),
-							Namespace:   lo.ToPtr(gatewayv1beta1.Namespace("namespace")),
-							Name:        gatewayv1beta1.ObjectName("name"),
-							SectionName: lo.ToPtr(gatewayv1beta1.SectionName("section1")),
+						ParentRef: gatewayv1.ParentReference{
+							Group:       lo.ToPtr(gatewayv1.Group("group")),
+							Kind:        lo.ToPtr(gatewayv1.Kind("kind")),
+							Namespace:   lo.ToPtr(gatewayv1.Namespace("namespace")),
+							Name:        gatewayv1.ObjectName("name"),
+							SectionName: lo.ToPtr(gatewayv1.SectionName("section1")),
 						},
 					},
 				},

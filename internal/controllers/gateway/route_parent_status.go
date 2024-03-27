@@ -5,7 +5,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
 )
@@ -13,9 +13,9 @@ import (
 // getParentStatuses creates a parent status map for the provided route given the
 // route parent status slice.
 func getParentStatuses[routeT types.RouteT](
-	route routeT, parentStatuses []gatewayv1beta1.RouteParentStatus,
-) map[string]*gatewayv1beta1.RouteParentStatus {
-	m := make(map[string]*gatewayv1beta1.RouteParentStatus)
+	route routeT, parentStatuses []gatewayv1.RouteParentStatus,
+) map[string]*gatewayv1.RouteParentStatus {
+	m := make(map[string]*gatewayv1.RouteParentStatus)
 
 	for _, existingParent := range parentStatuses {
 		parentRef := getParentRef(existingParent)
@@ -42,7 +42,7 @@ func routeParentStatusKey[routeT types.RouteT](
 	}
 
 	switch any(route).(type) {
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		return fmt.Sprintf("%s/%s/%s",
 			namespace,
 			parentRef.GetName(),
@@ -77,8 +77,8 @@ func (p parentRef) GetSectionName() mo.Option[string] {
 }
 
 // getParentRef serves as glue code to generically get parentRef from either
-// gatewayv1alpha2.RouteParentStatus or gatewayv1beta1.RouteParentStatus.
-func getParentRef(parentStatus gatewayv1beta1.RouteParentStatus) parentRef {
+// gatewayv1alpha2.RouteParentStatus or gatewayv1.RouteParentStatus.
+func getParentRef(parentStatus gatewayv1.RouteParentStatus) parentRef {
 	var sectionName *string
 
 	if parentStatus.ParentRef.SectionName != nil {

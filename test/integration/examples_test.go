@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -57,7 +57,7 @@ func TestHTTPRouteExample(t *testing.T) {
 		}
 
 		for _, addr := range obj.Status.Addresses {
-			if addr.Type != nil && *addr.Type == gatewayv1beta1.IPAddressType {
+			if addr.Type != nil && *addr.Type == gatewayv1.IPAddressType {
 				gatewayAddr = addr.Value
 				return true
 			}

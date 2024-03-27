@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -138,7 +138,7 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // in an GRPCRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayv1alpha2.GRPCRoute) []*string {
-	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) *string {
+	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayv1.Hostname, _ int) *string {
 		return lo.ToPtr(string(h))
 	})
 }

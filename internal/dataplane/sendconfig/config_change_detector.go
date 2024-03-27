@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 

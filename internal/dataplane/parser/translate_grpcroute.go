@@ -5,7 +5,7 @@ import (
 
 	"github.com/bombsimon/logrusr/v4"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
@@ -154,8 +154,8 @@ func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	rules.ServiceNameToParent[serviceName] = grpcRoute
 }
 
-func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRef) []gatewayv1beta1.BackendRef {
-	backendRefs := make([]gatewayv1beta1.BackendRef, 0, len(grpcBackendRef))
+func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRef) []gatewayv1.BackendRef {
+	backendRefs := make([]gatewayv1.BackendRef, 0, len(grpcBackendRef))
 
 	for _, hRef := range grpcBackendRef {
 		backendRefs = append(backendRefs, hRef.BackendRef)

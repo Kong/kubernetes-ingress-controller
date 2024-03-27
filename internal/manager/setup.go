@@ -11,7 +11,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
-	"github.com/kong/deck/cprint"
+	"github.com/kong/go-database-reconciler/pkg/cprint"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"

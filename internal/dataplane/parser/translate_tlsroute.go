@@ -6,7 +6,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -109,7 +109,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 	for _, parentStatus := range tlsroute.Status.Parents {
 		parentRef := parentStatus.ParentRef
 
-		if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1beta1.GroupName {
+		if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1.GroupName {
 			continue
 		}
 
@@ -138,7 +138,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 		for _, listener := range gateway.Spec.Listeners {
 			if parentRef.SectionName == nil || listener.Name == *parentRef.SectionName {
 				if listener.TLS != nil && listener.TLS.Mode != nil &&
-					*listener.TLS.Mode == gatewayv1beta1.TLSModePassthrough {
+					*listener.TLS.Mode == gatewayv1.TLSModePassthrough {
 					return true, nil
 				}
 			}

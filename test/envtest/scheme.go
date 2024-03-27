@@ -7,7 +7,7 @@ import (
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
@@ -18,7 +18,7 @@ type SchemeOption func(t *testing.T, s *k8sruntime.Scheme)
 
 // WithGatewayAPI registers the Gateway API types with the scheme.
 func WithGatewayAPI(t *testing.T, s *k8sruntime.Scheme) {
-	require.NoError(t, gatewayv1beta1.AddToScheme(s))
+	require.NoError(t, gatewayv1.AddToScheme(s))
 	require.NoError(t, gatewayv1alpha2.AddToScheme(s))
 }
 

@@ -13,7 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -54,7 +54,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		createdGW gatewayv1beta1.Gateway
+		createdGW gatewayv1.Gateway
 		patch     []byte // optional
 
 		wantCreateErr          bool
@@ -65,19 +65,19 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	}{
 		{
 			name: "valid gateway",
-			createdGW: gatewayv1beta1.Gateway{
+			createdGW: gatewayv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
 						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 					},
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName(unmanagedGatewayClassName),
-					Listeners: []gatewayv1beta1.Listener{{
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: gatewayv1.ObjectName(unmanagedGatewayClassName),
+					Listeners: []gatewayv1.Listener{{
 						Name:     "http",
-						Protocol: gatewayv1beta1.HTTPProtocolType,
-						Port:     gatewayv1beta1.PortNumber(80),
+						Protocol: gatewayv1.HTTPProtocolType,
+						Port:     gatewayv1.PortNumber(80),
 					}},
 				},
 			},

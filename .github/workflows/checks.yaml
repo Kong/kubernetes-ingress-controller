@@ -21,6 +21,7 @@ on:
 
 jobs:
   up-to-date:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.up-to-date.outputs.status }}
@@ -38,6 +39,7 @@ jobs:
 
   # This job is used to check if the secrets are available. If they are not, we'll skip jobs that require them.
   should-run-with-secrets:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs:
     - up-to-date
@@ -55,6 +57,7 @@ jobs:
           fi
 
   tools:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs:
     - up-to-date
@@ -126,6 +129,7 @@ jobs:
   # It allows to use this particular job as a required check for PRs.
   # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
   passed:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs:
       - up-to-date

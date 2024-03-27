@@ -41,6 +41,7 @@ on:
 
 jobs:
   dependencies-versions:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     outputs:
       kind: ${{ steps.set-versions.outputs.kind }}
@@ -60,6 +61,7 @@ jobs:
           echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
 
   integration-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     needs: dependencies-versions
@@ -198,12 +200,12 @@ jobs:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
-      
+
       # upload logs when test failed
-      - name: upload KIC logs 
+      - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
         uses: actions/upload-artifact@v3
-        with: 
+        with:
           name: integration-tests-kic-logs-${{ matrix.name }}
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore

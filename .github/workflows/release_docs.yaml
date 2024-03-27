@@ -9,6 +9,7 @@ on:
 
 jobs:
   create_docs_pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
       - name: Parse semver string

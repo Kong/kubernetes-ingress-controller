@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -42,8 +42,8 @@ func makeTestGRPCRoute(
 			Annotations: annotations,
 		},
 		Spec: gatewayv1alpha2.GRPCRouteSpec{
-			Hostnames: lo.Map(hostnames, func(h string, _ int) gatewayv1beta1.Hostname {
-				return gatewayv1beta1.Hostname(h)
+			Hostnames: lo.Map(hostnames, func(h string, _ int) gatewayv1.Hostname {
+				return gatewayv1.Hostname(h)
 			}),
 			Rules: rules,
 		},

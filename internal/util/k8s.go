@@ -29,7 +29,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
@@ -133,7 +133,7 @@ var backendRefSupportedGroupKinds = map[string]struct{}{
 
 // IsBackendRefGroupKindSupported checks if the GroupKind of the object used as
 // BackendRef for the HTTPRoute is supported.
-func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayv1beta1.Group, gatewayAPIKind *gatewayv1beta1.Kind) bool {
+func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayv1.Group, gatewayAPIKind *gatewayv1.Kind) bool {
 	if gatewayAPIKind == nil {
 		return false
 	}

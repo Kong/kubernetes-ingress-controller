@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -116,7 +116,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	client, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
-	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
+	require.NoError(t, gatewayv1.AddToScheme(client.Scheme()))
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
 	if testenv.ExpressionRoutesEnabled() {
@@ -141,14 +141,14 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
-	gatewayClass := &gatewayv1beta1.GatewayClass{
+	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 			},
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
+		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 	}

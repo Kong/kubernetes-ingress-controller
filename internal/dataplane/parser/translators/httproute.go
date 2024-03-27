@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // KongServiceTranslation is a translation of a single HTTPRoute into metadata
@@ -16,7 +16,7 @@ import (
 // Routes from this object should route traffic to BackendRefs from this object.
 type KongServiceTranslation struct {
 	Name        string
-	BackendRefs []gatewayv1beta1.HTTPBackendRef
+	BackendRefs []gatewayv1.HTTPBackendRef
 	KongRoutes  []KongRouteTranslation
 }
 
@@ -24,8 +24,8 @@ type KongServiceTranslation struct {
 // that can be used to instantiate Kong routes.
 type KongRouteTranslation struct {
 	Name    string
-	Matches []gatewayv1beta1.HTTPRouteMatch
-	Filters []gatewayv1beta1.HTTPRouteFilter
+	Matches []gatewayv1.HTTPRouteMatch
+	Filters []gatewayv1.HTTPRouteFilter
 }
 
 // TranslateHTTPRoute translates a list of HTTPRoutes into a list of HTTPRouteTranslationMeta
@@ -33,7 +33,7 @@ type KongRouteTranslation struct {
 // The translation is done by grouping the HTTPRoutes by their backendRefs.
 // This means that all the rules of a single HTTPRoute will be grouped together
 // if they share the same backendRefs.
-func TranslateHTTPRoute(route *gatewayv1beta1.HTTPRoute) []*KongServiceTranslation {
+func TranslateHTTPRoute(route *gatewayv1.HTTPRoute) []*KongServiceTranslation {
 	index := httpRouteTranslationIndex{}
 	index.setRoute(route)
 	return index.translate()
@@ -45,16 +45,16 @@ func TranslateHTTPRoute(route *gatewayv1beta1.HTTPRoute) []*KongServiceTranslati
 
 // httpRouteTranslationIndex aggregates all rules routing to the same backends group.
 type httpRouteTranslationIndex struct {
-	httpRoute *gatewayv1beta1.HTTPRoute
+	httpRoute *gatewayv1.HTTPRoute
 	rulesMeta []httpRouteRuleMeta
 }
 
-func (i *httpRouteTranslationIndex) setRoute(route *gatewayv1beta1.HTTPRoute) {
+func (i *httpRouteTranslationIndex) setRoute(route *gatewayv1.HTTPRoute) {
 	i.httpRoute = route
 	i.extractRulesMeta(route)
 }
 
-func (i *httpRouteTranslationIndex) extractRulesMeta(route *gatewayv1beta1.HTTPRoute) {
+func (i *httpRouteTranslationIndex) extractRulesMeta(route *gatewayv1.HTTPRoute) {
 	i.rulesMeta = make([]httpRouteRuleMeta, 0, len(route.Spec.Rules))
 
 	for ruleNumber, rule := range route.Spec.Rules {
@@ -103,7 +103,7 @@ func (i *httpRouteTranslationIndex) translateToKongServiceName(rulesMeta []httpR
 	)
 }
 
-func (i *httpRouteTranslationIndex) translateToKongServiceBackends(rulesMeta []httpRouteRuleMeta) []gatewayv1beta1.HTTPBackendRef {
+func (i *httpRouteTranslationIndex) translateToKongServiceBackends(rulesMeta []httpRouteRuleMeta) []gatewayv1.HTTPBackendRef {
 	if len(rulesMeta) == 0 {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (i *httpRouteTranslationIndex) translateToKongServiceRoutes(s *KongServiceT
 
 func (i *httpRouteTranslationIndex) translateToKongRoutes(rulesMeta []httpRouteRuleMeta) []KongRouteTranslation {
 	// All the rules in the group have the same backendRefs and filters.
-	var filters []gatewayv1beta1.HTTPRouteFilter
+	var filters []gatewayv1.HTTPRouteFilter
 	if len(rulesMeta) > 0 {
 		filters = rulesMeta[0].Rule.Filters
 	}
@@ -218,7 +218,7 @@ func groupSliceByKeyFn[T any](vals []T, keyFn func(val T) string) map[string][]T
 // -----------------------------------------------------------------------------
 
 type httpRouteRuleMeta struct {
-	Rule       gatewayv1beta1.HTTPRouteRule
+	Rule       gatewayv1.HTTPRouteRule
 	RuleNumber int
 }
 
@@ -250,7 +250,7 @@ func (m *httpRouteRuleMeta) matches() httpRouteMatchMetaList {
 }
 
 type httpRouteMatchMeta struct {
-	Match       *gatewayv1beta1.HTTPRouteMatch
+	Match       *gatewayv1.HTTPRouteMatch
 	RuleNumber  int
 	MatchNumber int
 }
@@ -271,10 +271,10 @@ func (m httpRouteMatchMeta) getKey() string {
 	// equivalent.
 	//
 	seenHeaders := make(map[string]struct{})
-	headers := make([]gatewayv1beta1.HTTPHeaderMatch, 0, len(m.Match.Headers))
+	headers := make([]gatewayv1.HTTPHeaderMatch, 0, len(m.Match.Headers))
 	for _, header := range m.Match.Headers {
 		name := strings.ToLower(string(header.Name))
-		header.Name = gatewayv1beta1.HTTPHeaderName(strings.ToLower(string(header.Name)))
+		header.Name = gatewayv1.HTTPHeaderName(strings.ToLower(string(header.Name)))
 		if _, ok := seenHeaders[name]; ok {
 			continue
 		}
@@ -292,7 +292,7 @@ func (m httpRouteMatchMeta) getKey() string {
 	// entries with an equivalent query param name MUST be ignored.
 	//
 	seenQueryParams := make(map[string]struct{})
-	queryParams := make([]gatewayv1beta1.HTTPQueryParamMatch, 0, len(m.Match.QueryParams))
+	queryParams := make([]gatewayv1.HTTPQueryParamMatch, 0, len(m.Match.QueryParams))
 	for _, queryParam := range m.Match.QueryParams {
 		if _, ok := seenQueryParams[string(queryParam.Name)]; ok {
 			continue
@@ -302,9 +302,9 @@ func (m httpRouteMatchMeta) getKey() string {
 	}
 
 	keySource := struct {
-		Method  *gatewayv1beta1.HTTPMethod
-		Headers []gatewayv1beta1.HTTPHeaderMatch
-		Query   []gatewayv1beta1.HTTPQueryParamMatch
+		Method  *gatewayv1.HTTPMethod
+		Headers []gatewayv1.HTTPHeaderMatch
+		Query   []gatewayv1.HTTPQueryParamMatch
 	}{
 		m.Match.Method,
 		headers,
@@ -316,8 +316,8 @@ func (m httpRouteMatchMeta) getKey() string {
 
 type httpRouteMatchMetaList []httpRouteMatchMeta
 
-func (l httpRouteMatchMetaList) httpRouteMatches() []gatewayv1beta1.HTTPRouteMatch {
-	matches := make([]gatewayv1beta1.HTTPRouteMatch, 0, len(l))
+func (l httpRouteMatchMetaList) httpRouteMatches() []gatewayv1.HTTPRouteMatch {
+	matches := make([]gatewayv1.HTTPRouteMatch, 0, len(l))
 	for _, matchMeta := range l {
 		matches = append(matches, *matchMeta.Match)
 	}
@@ -351,7 +351,7 @@ func mustMarshalJSON[T any](val T) string {
 
 // GeneratePluginsFromHTTPRouteFilters converts HTTPRouteFilter into Kong plugins.
 // path is the parameter to be used by the redirect plugin, to perform redirection.
-func GeneratePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilter, path string, tags []*string) []kong.Plugin {
+func GeneratePluginsFromHTTPRouteFilters(filters []gatewayv1.HTTPRouteFilter, path string, tags []*string) []kong.Plugin {
 	kongPlugins := make([]kong.Plugin, 0)
 	if len(filters) == 0 {
 		return kongPlugins
@@ -359,18 +359,18 @@ func GeneratePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 
 	for _, filter := range filters {
 		switch filter.Type {
-		case gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier:
+		case gatewayv1.HTTPRouteFilterRequestHeaderModifier:
 			kongPlugins = append(kongPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
 
-		case gatewayv1beta1.HTTPRouteFilterRequestRedirect:
+		case gatewayv1.HTTPRouteFilterRequestRedirect:
 			kongPlugins = append(kongPlugins, generateRequestRedirectKongPlugin(filter.RequestRedirect, path)...)
 
-		case gatewayv1beta1.HTTPRouteFilterResponseHeaderModifier:
+		case gatewayv1.HTTPRouteFilterResponseHeaderModifier:
 			kongPlugins = append(kongPlugins, generateResponseHeaderModifierKongPlugin(filter.ResponseHeaderModifier))
 
-		case gatewayv1beta1.HTTPRouteFilterExtensionRef,
-			gatewayv1beta1.HTTPRouteFilterRequestMirror,
-			gatewayv1beta1.HTTPRouteFilterURLRewrite:
+		case gatewayv1.HTTPRouteFilterExtensionRef,
+			gatewayv1.HTTPRouteFilterRequestMirror,
+			gatewayv1.HTTPRouteFilterURLRewrite:
 			// not supported
 		}
 	}
@@ -385,7 +385,7 @@ func GeneratePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
 // of request redirect filter.
-func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedirectFilter, path string) []kong.Plugin {
+func generateRequestRedirectKongPlugin(modifier *gatewayv1.HTTPRequestRedirectFilter, path string) []kong.Plugin {
 	plugins := make([]kong.Plugin, 2)
 	plugins[0] = kong.Plugin{
 		Name: kong.String("request-termination"),
@@ -405,7 +405,7 @@ func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedir
 		port = int(*modifier.Port)
 	}
 	if modifier.Path != nil &&
-		modifier.Path.Type == gatewayv1beta1.FullPathHTTPPathModifier &&
+		modifier.Path.Type == gatewayv1.FullPathHTTPPathModifier &&
 		modifier.Path.ReplaceFullPath != nil {
 		// only ReplaceFullPath currently supported
 		path = *modifier.Path.ReplaceFullPath
@@ -428,19 +428,19 @@ func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedir
 	return plugins
 }
 
-// generateRequestHeaderModifierKongPlugin converts a gatewayv1beta1.HTTPRequestHeaderFilter into a
+// generateRequestHeaderModifierKongPlugin converts a gatewayv1.HTTPRequestHeaderFilter into a
 // kong.Plugin of type request-transformer.
-func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter) kong.Plugin {
+func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1.HTTPHeaderFilter) kong.Plugin {
 	return generateHeaderModifierKongPlugin(modifier, "request-transformer")
 }
 
-// generateResponseHeaderModifierKongPlugin converts a gatewayv1beta1.HTTPResponseHeaderFilter into a
+// generateResponseHeaderModifierKongPlugin converts a gatewayv1.HTTPResponseHeaderFilter into a
 // kong.Plugin of type response-transformer.
-func generateResponseHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter) kong.Plugin {
+func generateResponseHeaderModifierKongPlugin(modifier *gatewayv1.HTTPHeaderFilter) kong.Plugin {
 	return generateHeaderModifierKongPlugin(modifier, "response-transformer")
 }
 
-func generateHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter, pluginName string) kong.Plugin {
+func generateHeaderModifierKongPlugin(modifier *gatewayv1.HTTPHeaderFilter, pluginName string) kong.Plugin {
 	plugin := kong.Plugin{
 		Name:   kong.String(pluginName),
 		Config: make(kong.Configuration),
@@ -480,6 +480,6 @@ func generateHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter,
 	return plugin
 }
 
-func kongHeaderFormatter(header gatewayv1beta1.HTTPHeader) string {
+func kongHeaderFormatter(header gatewayv1.HTTPHeader) string {
 	return fmt.Sprintf("%s:%s", header.Name, header.Value)
 }

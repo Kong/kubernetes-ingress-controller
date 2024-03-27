@@ -25,7 +25,7 @@ import (
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -261,7 +261,7 @@ func prepareScheme(t *testing.T) *runtime.Scheme {
 	// Note: this has no effect on the object listing because pluralising gateways
 	// does not work.
 	// Ref: https://github.com/kubernetes/kubernetes/pull/110053
-	require.NoError(t, gatewayv1beta1.Install(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 	return scheme
 }
 

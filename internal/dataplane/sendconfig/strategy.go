@@ -3,8 +3,8 @@ package sendconfig
 import (
 	"context"
 
-	"github.com/kong/deck/dump"
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/dump"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
@@ -93,8 +93,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 		return NewUpdateStrategyDBModeKonnect(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:         true,
-				KonnectRuntimeGroup: client.KonnectRuntimeGroup(),
+				SkipCACerts: true,
 			},
 			r.config.Version,
 			r.config.Concurrency,

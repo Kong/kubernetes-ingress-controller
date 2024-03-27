@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
@@ -262,7 +262,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 
 	// In memory kubernetes objects do not have GVK filled in.
 	// Relevant kubernetes issue: https://github.com/kubernetes/kubernetes/issues/80609
-	testObj := &gatewayv1beta1.HTTPRoute{
+	testObj := &gatewayv1.HTTPRoute{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "gateway.networking.k8s.io/v1beta1",
 			Kind:       "HTTPRoute",

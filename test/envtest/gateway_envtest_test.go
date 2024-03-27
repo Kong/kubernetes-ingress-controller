@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -43,7 +43,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 			t.Logf("failed to get gateway %s/%s: %v", gw.Namespace, gw.Name, err)
 			return false
 		}
-		httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gatewayv1beta1.ListenerStatus) bool {
+		httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gatewayv1.ListenerStatus) bool {
 			return listener.Name == "http"
 		})
 		if !ok {
@@ -63,7 +63,7 @@ func createHTTPRoutes(
 	ctx context.Context,
 	t *testing.T,
 	ctrlClient ctrlclient.Client,
-	gw gatewayv1beta1.Gateway,
+	gw gatewayv1.Gateway,
 	numOfRoutes int,
 ) {
 	svc := &corev1.Service{
@@ -85,32 +85,32 @@ func createHTTPRoutes(
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, svc) })
 
 	for i := 0; i < numOfRoutes; i++ {
-		httpPort := gatewayv1beta1.PortNumber(80)
-		pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-		httpRoute := &gatewayv1beta1.HTTPRoute{
+		httpPort := gatewayv1.PortNumber(80)
+		pathMatchPrefix := gatewayv1.PathMatchPathPrefix
+		httpRoute := &gatewayv1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewString(),
 				Namespace: gw.Namespace,
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{
-				CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-					ParentRefs: []gatewayv1beta1.ParentReference{{
-						Name: gatewayv1beta1.ObjectName(gw.Name),
+			Spec: gatewayv1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{{
+						Name: gatewayv1.ObjectName(gw.Name),
 					}},
 				},
-				Rules: []gatewayv1beta1.HTTPRouteRule{{
-					Matches: []gatewayv1beta1.HTTPRouteMatch{
+				Rules: []gatewayv1.HTTPRouteRule{{
+					Matches: []gatewayv1.HTTPRouteMatch{
 						{
-							Path: &gatewayv1beta1.HTTPPathMatch{
+							Path: &gatewayv1.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: kong.String("/test-http-route"),
 							},
 						},
 					},
-					BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-						BackendRef: gatewayv1beta1.BackendRef{
-							BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-								Name: gatewayv1beta1.ObjectName("backend-svc"),
+					BackendRefs: []gatewayv1.HTTPBackendRef{{
+						BackendRef: gatewayv1.BackendRef{
+							BackendObjectReference: gatewayv1.BackendObjectReference{
+								Name: gatewayv1.ObjectName("backend-svc"),
 								Port: &httpPort,
 								Kind: util.StringToGatewayAPIKindPtr("Service"),
 							},

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
@@ -21,27 +21,27 @@ const invalidRegexPath = "/foo[[[["
 
 type testCaseHTTPRouteValidation struct {
 	Name                   string
-	Route                  *gatewayv1beta1.HTTPRoute
+	Route                  *gatewayv1.HTTPRoute
 	WantCreateErrSubstring string
 }
 
 // commonHTTPRouteValidationTestCases returns a list of test cases for validating HTTPRoutes
 // that are common to both traditional and expressions routers (the same error message is returned).
 func commonHTTPRouteValidationTestCases(
-	managedGateway *gatewayv1beta1.Gateway, unmanagedGateway *gatewayv1beta1.Gateway,
+	managedGateway *gatewayv1.Gateway, unmanagedGateway *gatewayv1.Gateway,
 ) []testCaseHTTPRouteValidation {
 	return []testCaseHTTPRouteValidation{
 		{
 			Name: "a valid httproute linked to a managed gateway passes validation",
-			Route: &gatewayv1beta1.HTTPRoute{
+			Route: &gatewayv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1.ObjectName(managedGateway.Name),
 						}},
 					},
 				},
@@ -49,15 +49,15 @@ func commonHTTPRouteValidationTestCases(
 		},
 		{
 			Name: "a httproute linked to a non-existent gateway fails validation",
-			Route: &gatewayv1beta1.HTTPRoute{
+			Route: &gatewayv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1beta1.ObjectName("fake-gateway"),
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1.ObjectName("fake-gateway"),
 						}},
 					},
 				},
@@ -66,20 +66,20 @@ func commonHTTPRouteValidationTestCases(
 		},
 		{
 			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",
-			Route: &gatewayv1beta1.HTTPRoute{
+			Route: &gatewayv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathRegex(invalidRegexPath).Build(),
 						},
 					}},
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Namespace: (*gatewayv1beta1.Namespace)(&unmanagedGateway.Namespace),
-							Name:      gatewayv1beta1.ObjectName(unmanagedGateway.Name),
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&unmanagedGateway.Namespace),
+							Name:      gatewayv1.ObjectName(unmanagedGateway.Name),
 						}},
 					},
 				},
@@ -87,24 +87,24 @@ func commonHTTPRouteValidationTestCases(
 		},
 		{
 			Name: "a httproute with valid regex expressions for a path and a header pass validation",
-			Route: &gatewayv1beta1.HTTPRoute{
+			Route: &gatewayv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-					Rules: []gatewayv1beta1.HTTPRouteRule{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Hostnames: []gatewayv1.Hostname{"foo.com"},
+					Rules: []gatewayv1.HTTPRouteRule{
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathRegex("/path[1-8]").Build(),
 								builder.NewHTTPRouteMatch().WithHeaderRegex("foo", "bar[1-8]").Build(),
 							},
 						},
 					},
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1.ObjectName(managedGateway.Name),
 						}},
 					},
 				},
@@ -117,29 +117,29 @@ func commonHTTPRouteValidationTestCases(
 // The expected error substring is different for traditional and expressions routers, thus it has
 // passed by caller.
 func invalidRegexInPathTestCase(
-	managedGateway *gatewayv1beta1.Gateway, wantCreateErrSubstring string,
+	managedGateway *gatewayv1.Gateway, wantCreateErrSubstring string,
 ) testCaseHTTPRouteValidation {
 	return testCaseHTTPRouteValidation{
 		Name: "a httproute with invalid regex for path does not pass validation",
-		Route: &gatewayv1beta1.HTTPRoute{
+		Route: &gatewayv1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: uuid.NewString(),
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{
-				Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-				Rules: []gatewayv1beta1.HTTPRouteRule{
+			Spec: gatewayv1.HTTPRouteSpec{
+				Hostnames: []gatewayv1.Hostname{"foo.com"},
+				Rules: []gatewayv1.HTTPRouteRule{
 					{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/path-6").Build(),
 							builder.NewHTTPRouteMatch().WithPathRegex(invalidRegexPath).Build(),
 							builder.NewHTTPRouteMatch().WithPathPrefix("/path-7").Build(),
 						},
 					},
 				},
-				CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-					ParentRefs: []gatewayv1beta1.ParentReference{{
-						Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
-						Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{{
+						Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+						Name:      gatewayv1.ObjectName(managedGateway.Name),
 					}},
 				},
 			},
@@ -173,25 +173,25 @@ func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 		invalidRegexInPathTestCase(managedGateway, "regex parse error:\n    ^/foo[[[[\n            ^\nerror: unclosed character class)"),
 		testCaseHTTPRouteValidation{
 			Name: "a httproute with invalid regex for header does not pass validation",
-			Route: &gatewayv1beta1.HTTPRoute{
+			Route: &gatewayv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-					Rules: []gatewayv1beta1.HTTPRouteRule{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Hostnames: []gatewayv1.Hostname{"foo.com"},
+					Rules: []gatewayv1.HTTPRouteRule{
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
+							Matches: []gatewayv1.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-6").Build(),
 								builder.NewHTTPRouteMatch().WithHeaderRegex("foo", "bar[[").Build(),
 								builder.NewHTTPRouteMatch().WithPathPrefix("/path-7").Build(),
 							},
 						},
 					},
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1.ObjectName(managedGateway.Name),
 						}},
 					},
 				},
@@ -207,8 +207,8 @@ func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testing.T) (
 	namespace string,
 	gatewayClient *gatewayclient.Clientset,
-	managedGateway *gatewayv1beta1.Gateway,
-	unmanagedGateway *gatewayv1beta1.Gateway,
+	managedGateway *gatewayv1.Gateway,
+	unmanagedGateway *gatewayv1.Gateway,
 ) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
@@ -235,7 +235,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	require.NoError(t, err)
 
 	t.Log("creating a managed gateway")
-	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
+	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created managed gateway: %q", managedGateway.Name)
 
 	t.Logf("creating an unmanaged gatewayclass")
-	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
+	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1.GatewayClass) {
 		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
@@ -251,7 +251,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created unmanaged gatewayclass: %q", unmanagedGatewayClass.Name)
 
 	t.Log("creating an unmanaged gateway")
-	unmanagedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1beta1.Gateway) {
+	unmanagedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -30,10 +31,10 @@ const (
 )
 
 const (
-	ConditionTypeProgrammed                                                = "Programmed"
-	ConditionReasonProgrammedUnknown   gatewayv1beta1.RouteConditionReason = "Unknown"
-	ConditionReasonConfiguredInGateway gatewayv1beta1.RouteConditionReason = "ConfiguredInGateway"
-	ConditionReasonTranslationError    gatewayv1beta1.RouteConditionReason = "TranslationError"
+	ConditionTypeProgrammed                                           = "Programmed"
+	ConditionReasonProgrammedUnknown   gatewayv1.RouteConditionReason = "Unknown"
+	ConditionReasonConfiguredInGateway gatewayv1.RouteConditionReason = "ConfiguredInGateway"
+	ConditionReasonTranslationError    gatewayv1.RouteConditionReason = "TranslationError"
 )
 
 var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
@@ -86,7 +87,7 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 
 	var refs []gatewayv1alpha2.ParentReference
 	switch r := (interface{})(route).(type) {
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		refs = r.Spec.ParentRefs
 	case *gatewayv1alpha2.UDPRoute:
 		refs = r.Spec.ParentRefs
@@ -106,7 +107,7 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 	}
 
 	switch r := (interface{})(route).(type) {
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		return r.Spec.ParentRefs, nil
 	case *gatewayv1alpha2.UDPRoute:
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
@@ -130,7 +131,7 @@ const (
 	// NOTE: This is already in uptsream, albeit unreleased:
 	// https://github.com/kubernetes-sigs/gateway-api/pull/1516
 	// TODO: swap this out with upstream const when released.
-	RouteReasonNoMatchingParent gatewayv1beta1.RouteConditionReason = "NoMatchingParent"
+	RouteReasonNoMatchingParent gatewayv1.RouteConditionReason = "NoMatchingParent"
 )
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
@@ -158,7 +159,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		name := string(parentRef.Name)
 
 		// pull the Gateway object from the cached client
-		gateway := gatewayv1beta1.Gateway{}
+		gateway := gatewayv1.Gateway{}
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,
@@ -172,7 +173,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		}
 
 		// pull the GatewayClass for the Gateway object from the cached client
-		gatewayClass := gatewayv1beta1.GatewayClass{}
+		gatewayClass := gatewayv1.GatewayClass{}
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Name: string(gateway.Spec.GatewayClassName),
 		}, &gatewayClass); err != nil {
@@ -275,9 +276,9 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				gateway:      &gateway,
 				listenerName: listenerName,
 				condition: metav1.Condition{
-					Type:               string(gatewayv1beta1.RouteConditionAccepted),
+					Type:               string(gatewayv1.RouteConditionAccepted),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(gatewayv1beta1.RouteReasonAccepted),
+					Reason:             string(gatewayv1.RouteReasonAccepted),
 					ObservedGeneration: route.GetGeneration(),
 				},
 			})
@@ -290,7 +291,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			if matchingHostname != nil && *matchingHostname == metav1.ConditionFalse {
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
-				reason = gatewayv1beta1.RouteReasonNoMatchingListenerHostname
+				reason = gatewayv1.RouteReasonNoMatchingListenerHostname
 			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
@@ -300,7 +301,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = RouteReasonNoMatchingParent
 			} else if !allowedByAllowedRoutes || !allowedBySupportedKinds {
-				reason = gatewayv1beta1.RouteReasonNotAllowedByListeners
+				reason = gatewayv1.RouteReasonNotAllowedByListeners
 			}
 
 			var listenerName string
@@ -312,7 +313,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				gateway:      &gateway,
 				listenerName: listenerName,
 				condition: metav1.Condition{
-					Type:               string(gatewayv1beta1.RouteConditionAccepted),
+					Type:               string(gatewayv1.RouteConditionAccepted),
 					Status:             metav1.ConditionFalse,
 					Reason:             string(reason),
 					ObservedGeneration: route.GetGeneration(),
@@ -332,7 +333,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 
 func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, listener Listener) bool {
 	switch r := (any)(route).(type) {
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
 	case *gatewayv1alpha2.TCPRoute:
 		return true
@@ -349,14 +350,14 @@ func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, liste
 
 func routeTypeMatchesListenerType[T types.RouteT](route T, listener Listener) bool {
 	switch (any)(route).(type) {
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		// HTTPRoutes support Terminate only
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
 		if !(listener.Protocol == HTTPProtocolType || listener.Protocol == HTTPSProtocolType) {
 			return false
 		}
-		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModeTerminate {
+		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
 			return false
 		}
 	case *gatewayv1alpha2.TCPRoute:
@@ -366,7 +367,7 @@ func routeTypeMatchesListenerType[T types.RouteT](route T, listener Listener) bo
 		// TCPRoutes support Terminate only
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
-		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModeTerminate {
+		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
 			return false
 		}
 	case *gatewayv1alpha2.UDPRoute:
@@ -384,7 +385,7 @@ func routeTypeMatchesListenerType[T types.RouteT](route T, listener Listener) bo
 		// TLSRoutes currently support Passthrough only
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
-		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModePassthrough {
+		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1.TLSModePassthrough {
 			return false
 		}
 	case *gatewayv1alpha2.GRPCRoute:
@@ -413,7 +414,7 @@ func routeMatchesListenerAllowedRoutes[T types.RouteT](
 
 	if len(listener.AllowedRoutes.Kinds) > 0 {
 		// Find if the route has a type that's within the listener's supported types.
-		_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk gatewayv1beta1.RouteGroupKind) bool {
+		_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk gatewayv1.RouteGroupKind) bool {
 			gvk := route.GetObjectKind().GroupVersionKind()
 			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
 		})
@@ -427,10 +428,10 @@ func routeMatchesListenerAllowedRoutes[T types.RouteT](
 	}
 
 	switch *listener.AllowedRoutes.Namespaces.From {
-	case gatewayv1beta1.NamespacesFromAll:
+	case gatewayv1.NamespacesFromAll:
 		return true, nil
 
-	case gatewayv1beta1.NamespacesFromSame:
+	case gatewayv1.NamespacesFromSame:
 		// If parentRef didn't specify the namespace then we check if
 		// the gateway is from the same namespace as the route
 		if parentRefNamespace == nil {
@@ -439,7 +440,7 @@ func routeMatchesListenerAllowedRoutes[T types.RouteT](
 		// Otherwise compare routes namespace with parentRef's one.
 		return route.GetNamespace() == string(*parentRefNamespace), nil
 
-	case gatewayv1beta1.NamespacesFromSelector:
+	case gatewayv1.NamespacesFromSelector:
 		namespace := corev1.Namespace{}
 		if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
 			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
@@ -479,7 +480,7 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 	listenerFound := false
 
 	// Find listener's status...
-	listenerStatus, ok := lo.Find(lss, func(ls gatewayv1beta1.ListenerStatus) bool {
+	listenerStatus, ok := lo.Find(lss, func(ls gatewayv1.ListenerStatus) bool {
 		if ls.Name != listener.Name {
 			return false
 		}
@@ -487,7 +488,7 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 
 		// Find if the route has a type that's within the supported types, listed
 		// in listener's status.
-		_, ok := lo.Find(ls.SupportedKinds, func(rgk gatewayv1beta1.RouteGroupKind) bool {
+		_, ok := lo.Find(ls.SupportedKinds, func(rgk gatewayv1.RouteGroupKind) bool {
 			// The artificially filled in GVK is needed for testing mostly and for
 			// situations when the object is not coming from the api server.
 			// Related upstream issue: https://github.com/kubernetes/kubernetes/issues/3030
@@ -495,8 +496,8 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 			switch any(route).(type) {
 			case *HTTPRoute:
 				gvk = schema.GroupVersionKind{
-					Group:   gatewayv1beta1.GroupVersion.Group,
-					Version: gatewayv1beta1.GroupVersion.Version,
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
 					Kind:    "HTTPRoute",
 				}
 			default:
@@ -517,7 +518,7 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 
 	// ... and verify if it's programmed.
 	lReadyCond, ok := lo.Find(listenerStatus.Conditions, func(c metav1.Condition) bool {
-		return c.Type == string(gatewayv1beta1.ListenerConditionProgrammed)
+		return c.Type == string(gatewayv1.ListenerConditionProgrammed)
 	})
 	if !ok {
 		return errListenerNotProgrammed
@@ -529,7 +530,7 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 	return nil
 }
 
-func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT](listener gatewayv1beta1.Listener, hostnames []H) bool {
+func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT](listener gatewayv1.Listener, hostnames []H) bool {
 	if len(hostnames) == 0 {
 		return true
 	}
@@ -552,17 +553,17 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT](listener gat
 // isListenerHostnameEffective returns true if the listener can specify an effective
 // hostname to match hostnames in requests.
 // It basically checks if the listener is using any these protocols: HTTP, HTTPS, or TLS.
-func isListenerHostnameEffective(listener gatewayv1beta1.Listener) bool {
-	return listener.Protocol == gatewayv1beta1.HTTPProtocolType ||
-		listener.Protocol == gatewayv1beta1.HTTPSProtocolType ||
-		listener.Protocol == gatewayv1beta1.TLSProtocolType
+func isListenerHostnameEffective(listener gatewayv1.Listener) bool {
+	return listener.Protocol == gatewayv1.HTTPProtocolType ||
+		listener.Protocol == gatewayv1.HTTPSProtocolType ||
+		listener.Protocol == gatewayv1.TLSProtocolType
 }
 
 // filterHostnames accepts a HTTPRoute and returns a version of the same object with only a subset of the
 // hostnames, the ones matching with the listeners' hostname.
 // it returns an error if the intersection of hostname match in httproute and listeners is empty.
-func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayv1beta1.HTTPRoute) (*gatewayv1beta1.HTTPRoute, error) {
-	filteredHostnames := make([]gatewayv1beta1.Hostname, 0)
+func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayv1.HTTPRoute) (*gatewayv1.HTTPRoute, error) {
+	filteredHostnames := make([]gatewayv1.Hostname, 0)
 	// if no hostnames are specified in the route spec, we use the UNION of all hostnames in supported gateways.
 	// if any of supported listener has not specified hostname, the hostnames of HTTPRoute remains empty
 	// to match **ANY** hostname.
@@ -590,13 +591,13 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 // getUnionOfGatewayHostnames returns UNION of hostnames specified in supported gateways.
 // the second return value is true if any hostname could be matched in at least one listener
 // in supported gateways and listeners, so the `HTTPRoute` could match any hostname.
-func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gatewayv1beta1.Hostname, bool) {
-	hostnames := make([]gatewayv1beta1.Hostname, 0)
+func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gatewayv1.Hostname, bool) {
+	hostnames := make([]gatewayv1.Hostname, 0)
 	for _, gateway := range gateways {
 		if gateway.listenerName != "" {
 			if listener := extractListenerSpecFromGateway(
 				gateway.gateway,
-				gatewayv1beta1.SectionName(gateway.listenerName),
+				gatewayv1.SectionName(gateway.listenerName),
 			); listener != nil {
 				// return true if the listener has not specified hostname to match any hostname.
 				if listener.Hostname == nil {
@@ -628,7 +629,7 @@ func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gat
 // - if the httpRoute hostname acts as a wildcard for the listener hostname, return the listener hostname
 // - if the httpRoute hostname is the same of the listener hostname, return it
 // - if none of the above is true, return an empty string.
-func getMinimumHostnameIntersection(gateways []supportedGatewayWithCondition, hostname gatewayv1beta1.Hostname) gatewayv1beta1.Hostname {
+func getMinimumHostnameIntersection(gateways []supportedGatewayWithCondition, hostname gatewayv1.Hostname) gatewayv1.Hostname {
 	for _, gateway := range gateways {
 		for _, listener := range gateway.gateway.Spec.Listeners {
 			// if the listenerName is specified and matches the name of the gateway listener proceed
@@ -659,8 +660,8 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 }
 
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
-func isHTTPReferenceGranted(grantSpec gatewayv1beta1.ReferenceGrantSpec, backendRef gatewayv1beta1.HTTPBackendRef, fromNamespace string) bool {
-	var backendRefGroup gatewayv1beta1.Group
+func isHTTPReferenceGranted(grantSpec gatewayv1beta1.ReferenceGrantSpec, backendRef gatewayv1.HTTPBackendRef, fromNamespace string) bool {
+	var backendRefGroup gatewayv1.Group
 	var backendRefKind Kind
 
 	if backendRef.Group != nil {
@@ -670,7 +671,7 @@ func isHTTPReferenceGranted(grantSpec gatewayv1beta1.ReferenceGrantSpec, backend
 		backendRefKind = *backendRef.Kind
 	}
 	for _, from := range grantSpec.From {
-		if from.Group != gatewayv1beta1.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
+		if from.Group != gatewayv1.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
 			continue
 		}
 
@@ -694,7 +695,7 @@ func sameCondition(a, b metav1.Condition) bool {
 		a.ObservedGeneration == b.ObservedGeneration
 }
 
-func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatus, newCondition metav1.Condition) bool {
+func setRouteParentStatusCondition(parentStatus *gatewayv1.RouteParentStatus, newCondition metav1.Condition) bool {
 	var conditionFound, changed bool
 	for i, condition := range parentStatus.Conditions {
 		if condition.Type == newCondition.Type {
@@ -713,7 +714,7 @@ func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatu
 	return changed
 }
 
-func parentStatusHasProgrammedCondition(parentStatus *gatewayv1beta1.RouteParentStatus) bool {
+func parentStatusHasProgrammedCondition(parentStatus *gatewayv1.RouteParentStatus) bool {
 	for _, condition := range parentStatus.Conditions {
 		if condition.Type == ConditionTypeProgrammed {
 			return true
@@ -767,13 +768,13 @@ func ensureParentsProgrammedCondition[
 					Namespace: lo.ToPtr(Namespace(gateway.Namespace)),
 					Name:      ObjectName(gateway.Name),
 					Kind:      lo.ToPtr(Kind("Gateway")),
-					Group:     lo.ToPtr(Group(gatewayv1beta1.GroupName)),
+					Group:     lo.ToPtr(Group(gatewayv1.GroupName)),
 					SectionName: func() *SectionName {
 						// We don't need to check whether the listener matches route's spec
 						// because that should already be done via getSupportedGatewayForRoute
 						// at this point.
 						if g.listenerName != "" {
-							return lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName))
+							return lo.ToPtr(gatewayv1.SectionName(g.listenerName))
 						}
 						return nil
 					}(),
@@ -879,7 +880,7 @@ func isParentRefEqualToParent[
 	parentRef ParentReference,
 	parent parentT,
 ) bool {
-	if *parentRef.Group != gatewayv1beta1.GroupName {
+	if *parentRef.Group != gatewayv1.GroupName {
 		return false
 	}
 	if *parentRef.Kind != "Gateway" {
@@ -903,9 +904,9 @@ func isParentRefEqualToParent[
 func isRouteAcceptedByListener[T types.RouteT](ctx context.Context,
 	mgrc client.Client,
 	route T,
-	gateway gatewayv1beta1.Gateway,
+	gateway gatewayv1.Gateway,
 	listenerIndex int,
-	parentRef gatewayv1beta1.ParentReference,
+	parentRef gatewayv1.ParentReference,
 ) (bool, error) {
 	// Check if the route matches listener's AllowedRoutes.
 	listener := gateway.Spec.Listeners[listenerIndex]

@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -720,18 +721,18 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1beta1.HTTPRoute{
+	classes := []*gatewayv1.HTTPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{},
+			Spec: gatewayv1.HTTPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{},
+			Spec: gatewayv1.HTTPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
@@ -850,18 +851,18 @@ func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1beta1.Gateway{
+	grants := []*gatewayv1.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.GatewaySpec{},
+			Spec: gatewayv1.GatewaySpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.GatewaySpec{},
+			Spec: gatewayv1.GatewaySpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})

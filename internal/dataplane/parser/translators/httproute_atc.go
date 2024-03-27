@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -47,8 +47,8 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	_, hasRedirectFilter := lo.Find(translation.Filters, func(filter gatewayv1beta1.HTTPRouteFilter) bool {
-		return filter.Type == gatewayv1beta1.HTTPRouteFilterRequestRedirect
+	_, hasRedirectFilter := lo.Find(translation.Filters, func(filter gatewayv1.HTTPRouteFilter) bool {
+		return filter.Type == gatewayv1.HTTPRouteFilterRequestRedirect
 	})
 	// if the rule has request redirect filter(s), we need to generate a route for each match to
 	// attach plugins for the filter.
@@ -112,7 +112,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 	return routes, nil
 }
 
-func generateMatchersFromHTTPRouteMatches(matches []gatewayv1beta1.HTTPRouteMatch) []atc.Matcher {
+func generateMatchersFromHTTPRouteMatches(matches []gatewayv1.HTTPRouteMatch) []atc.Matcher {
 	ret := make([]atc.Matcher, 0, len(matches))
 	for _, match := range matches {
 		matcher := generateMatcherFromHTTPRouteMatch(match)
@@ -121,7 +121,7 @@ func generateMatchersFromHTTPRouteMatches(matches []gatewayv1beta1.HTTPRouteMatc
 	return ret
 }
 
-func generateMatcherFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch) atc.Matcher {
+func generateMatcherFromHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) atc.Matcher {
 	matcher := atc.And()
 
 	if match.Path != nil {
@@ -149,15 +149,15 @@ func appendRegexBeginIfNotExist(regex string) string {
 	return regex
 }
 
-func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1beta1.HTTPPathMatch) atc.Matcher {
+func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1.HTTPPathMatch) atc.Matcher {
 	path := ""
 	if pathMatch.Value != nil {
 		path = *pathMatch.Value
 	}
 	switch *pathMatch.Type {
-	case gatewayv1beta1.PathMatchExact:
+	case gatewayv1.PathMatchExact:
 		return atc.NewPredicateHTTPPath(atc.OpEqual, path)
-	case gatewayv1beta1.PathMatchPathPrefix:
+	case gatewayv1.PathMatchPathPrefix:
 		if path == "" || path == "/" {
 			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
 		}
@@ -168,7 +168,7 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1beta1.HTTPPathMatch) atc.M
 			atc.NewPredicateHTTPPath(atc.OpEqual, path),
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, path+"/"),
 		)
-	case gatewayv1beta1.PathMatchRegularExpression:
+	case gatewayv1.PathMatchRegularExpression:
 		// TODO: for compatibility with kong traditional routes, here we append the ^ prefix to match the path from beginning.
 		// Could we allow the regex to match any part of the path?
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/3983
@@ -178,22 +178,22 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1beta1.HTTPPathMatch) atc.M
 	return nil // should be unreachable
 }
 
-func headerMatcherFromHTTPHeaderMatch(headerMatch gatewayv1beta1.HTTPHeaderMatch) atc.Matcher {
-	matchType := gatewayv1beta1.HeaderMatchExact
+func headerMatcherFromHTTPHeaderMatch(headerMatch gatewayv1.HTTPHeaderMatch) atc.Matcher {
+	matchType := gatewayv1.HeaderMatchExact
 	if headerMatch.Type != nil {
 		matchType = *headerMatch.Type
 	}
 	headerKey := strings.ReplaceAll(strings.ToLower(string(headerMatch.Name)), "-", "_")
 	switch matchType {
-	case gatewayv1beta1.HeaderMatchExact:
+	case gatewayv1.HeaderMatchExact:
 		return atc.NewPredicateHTTPHeader(headerKey, atc.OpEqual, headerMatch.Value)
-	case gatewayv1beta1.HeaderMatchRegularExpression:
+	case gatewayv1.HeaderMatchRegularExpression:
 		return atc.NewPredicateHTTPHeader(headerKey, atc.OpRegexMatch, headerMatch.Value)
 	}
 	return nil // should be unreachable
 }
 
-func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayv1beta1.HTTPHeaderMatch) atc.Matcher {
+func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayv1.HTTPHeaderMatch) atc.Matcher {
 	// sort headerMatches by names to generate a stable output.
 	sort.Slice(headerMatches, func(i, j int) bool {
 		return string(headerMatches[i].Name) < string(headerMatches[j].Name)
@@ -224,9 +224,9 @@ func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]
 }
 
 type SplitHTTPRouteMatch struct {
-	Source     *gatewayv1beta1.HTTPRoute
+	Source     *gatewayv1.HTTPRoute
 	Hostname   string
-	Match      gatewayv1beta1.HTTPRouteMatch
+	Match      gatewayv1.HTTPRouteMatch
 	RuleIndex  int
 	MatchIndex int
 }
@@ -234,7 +234,7 @@ type SplitHTTPRouteMatch struct {
 // SplitHTTPRoute splits HTTPRoutes into matches with at most one hostname, and one rule
 // with exactly one match. It will split one rule with multiple hostnames and multiple matches
 // to one hostname and one match per each HTTPRoute.
-func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
+func SplitHTTPRoute(httproute *gatewayv1.HTTPRoute) []SplitHTTPRouteMatch {
 	splitHTTPRouteByMatch := func(hostname string) []SplitHTTPRouteMatch {
 		ret := []SplitHTTPRouteMatch{}
 		for ruleIndex, rule := range httproute.Spec.Rules {
@@ -242,7 +242,7 @@ func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
 				ret = append(ret, SplitHTTPRouteMatch{
 					Source:     httproute,
 					Hostname:   hostname,
-					Match:      gatewayv1beta1.HTTPRouteMatch{},
+					Match:      gatewayv1.HTTPRouteMatch{},
 					RuleIndex:  ruleIndex,
 					MatchIndex: 0,
 				})
@@ -279,7 +279,7 @@ type SplitHTTPRouteMatchToKongRoutePriority struct {
 type HTTPRoutePriorityTraits struct {
 	PreciseHostname bool
 	HostnameLength  int
-	PathType        gatewayv1beta1.PathMatchType
+	PathType        gatewayv1.PathMatchType
 	PathLength      int
 	HeaderCount     int
 	HasMethodMatch  bool
@@ -392,10 +392,10 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	}
 	priority += RoutePriorityType(t.HostnameLength << HostnameLengthShiftBits)
 
-	if t.PathType == gatewayv1beta1.PathMatchExact {
+	if t.PathType == gatewayv1.PathMatchExact {
 		priority += (1 << ExactPathShiftBits)
 	}
-	if t.PathType == gatewayv1beta1.PathMatchRegularExpression {
+	if t.PathType == gatewayv1.PathMatchRegularExpression {
 		priority += (1 << RegularExpressionPathShiftBits)
 	}
 

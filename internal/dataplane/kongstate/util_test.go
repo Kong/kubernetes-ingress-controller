@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -580,7 +580,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 		},
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's HTTPRoute",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayv1.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "HTTPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",

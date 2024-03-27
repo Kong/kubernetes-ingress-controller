@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

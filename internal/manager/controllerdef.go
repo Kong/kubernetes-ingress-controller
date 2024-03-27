@@ -9,7 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
@@ -313,8 +313,8 @@ func setupControllers(
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/HTTPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "httproutes",
 				}),
 				Controller: &gateway.HTTPRouteReconciler{
@@ -337,8 +337,8 @@ func setupControllers(
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "referencegrants",
 				}),
 				Controller: &gateway.ReferenceGrantReconciler{
@@ -443,13 +443,13 @@ func setupControllers(
 func baseGatewayCRDs() []schema.GroupVersionResource {
 	return []schema.GroupVersionResource{
 		{
-			Group:    gatewayv1beta1.GroupVersion.Group,
-			Version:  gatewayv1beta1.GroupVersion.Version,
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "gateways",
 		},
 		{
-			Group:    gatewayv1beta1.GroupVersion.Group,
-			Version:  gatewayv1beta1.GroupVersion.Version,
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "gatewayclasses",
 		},
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
@@ -107,7 +107,7 @@ func TestGatewayConformance(t *testing.T) {
 
 func ensureTestGatewayClassIsUnmanaged(ctx context.Context, k8sClient client.Client) bool {
 	gwcNamespacedName := k8stypes.NamespacedName{Name: "gatewayclass-observed-generation-bump"}
-	gwc := &gatewayv1beta1.GatewayClass{}
+	gwc := &gatewayv1.GatewayClass{}
 	if err := k8sClient.Get(ctx, gwcNamespacedName, gwc); err != nil {
 		return false
 	}

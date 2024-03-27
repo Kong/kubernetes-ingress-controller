@@ -6,7 +6,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -49,7 +49,7 @@ func Get(fg map[string]bool) (*runtime.Scheme, error) {
 		}
 	}
 	if v, ok := fg[featuregates.GatewayFeature]; ok && v {
-		if err := gatewayv1beta1.Install(scheme); err != nil {
+		if err := gatewayv1.Install(scheme); err != nil {
 			return nil, err
 		}
 	}

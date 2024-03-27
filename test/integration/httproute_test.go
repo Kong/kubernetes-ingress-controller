@@ -18,7 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -51,13 +51,13 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gateway")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
 		gw.Name = gatewayName
 		// add a UDP listener to check the HTTPRoute does not get attached to it.
-		gw.Spec.Listeners = append(gw.Spec.Listeners, gatewayv1beta1.Listener{
+		gw.Spec.Listeners = append(gw.Spec.Listeners, gatewayv1.Listener{
 			Name:     "udp",
-			Protocol: gatewayv1beta1.UDPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultUDPServicePort),
+			Protocol: gatewayv1.UDPProtocolType,
+			Port:     gatewayv1.PortNumber(ktfkong.DefaultUDPServicePort),
 		})
 	})
 	require.NoError(t, err)
@@ -91,12 +91,12 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(kongplugin)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-	httpPort := gatewayv1beta1.PortNumber(80)
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-	pathMatchRegularExpression := gatewayv1beta1.PathMatchRegularExpression
-	pathMatchExact := gatewayv1beta1.PathMatchExact
-	headerMatchRegex := gatewayv1beta1.HeaderMatchRegularExpression
-	httpRoute := &gatewayv1beta1.HTTPRoute{
+	httpPort := gatewayv1.PortNumber(80)
+	pathMatchPrefix := gatewayv1.PathMatchPathPrefix
+	pathMatchRegularExpression := gatewayv1.PathMatchRegularExpression
+	pathMatchExact := gatewayv1.PathMatchExact
+	headerMatchRegex := gatewayv1.HeaderMatchRegularExpression
+	httpRoute := &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
@@ -104,37 +104,37 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 			},
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gateway.Name),
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(gateway.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
-				Matches: []gatewayv1beta1.HTTPRouteMatch{
+			Rules: []gatewayv1.HTTPRouteRule{{
+				Matches: []gatewayv1.HTTPRouteMatch{
 					{
-						Path: &gatewayv1beta1.HTTPPathMatch{
+						Path: &gatewayv1.HTTPPathMatch{
 							Type:  &pathMatchPrefix,
 							Value: kong.String("/test-http-route-essentials"),
 						},
 					},
 					{
-						Path: &gatewayv1beta1.HTTPPathMatch{
+						Path: &gatewayv1.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
 							Value: kong.String(`/2/test-http-route-essentials/regex/\d{3}`),
 						},
 					},
 					{
-						Path: &gatewayv1beta1.HTTPPathMatch{
+						Path: &gatewayv1.HTTPPathMatch{
 							Type:  &pathMatchExact,
 							Value: kong.String(`/3/exact-test-http-route-essentials`),
 						},
 					},
 				},
-				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-					BackendRef: gatewayv1beta1.BackendRef{
-						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service.Name),
+				BackendRefs: []gatewayv1.HTTPBackendRef{{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: gatewayv1.ObjectName(service.Name),
 							Port: &httpPort,
 							Kind: util.StringToGatewayAPIKindPtr("Service"),
 						},
@@ -148,11 +148,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(httpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the httproute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 
@@ -188,8 +188,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1beta1.HTTPRouteMatch{
-			Headers: []gatewayv1beta1.HTTPHeaderMatch{
+		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1.HTTPRouteMatch{
+			Headers: []gatewayv1.HTTPHeaderMatch{
 				{
 					Type:  &headerMatchRegex,
 					Value: `^audio/.*`,
@@ -205,7 +205,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	})
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True'")
-	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, true, gatewayv1beta1.RouteReasonAccepted), statusWait, waitTick)
+	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, true, gatewayv1.RouteReasonAccepted), statusWait, waitTick)
 
 	t.Log("verifying that the Gateway listener have the proper attachedRoutes")
 	require.Eventually(t, ListenersHaveNAttachedRoutesCallback(t, gatewayClient, ns.Name, gatewayName, map[string]int32{
@@ -225,7 +225,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
@@ -241,7 +241,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -251,7 +251,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
 	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
@@ -262,7 +262,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(gwc)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
@@ -272,20 +272,20 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
 	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
@@ -296,7 +296,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -304,7 +304,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("testing port matching....")
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
@@ -316,7 +316,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, func() bool {
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		port81 := gatewayv1beta1.PortNumber(81)
+		port81 := gatewayv1.PortNumber(81)
 		httpRoute.Spec.ParentRefs[0].Port = &port81
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		return err == nil
@@ -343,7 +343,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Log("deploying a new gateway")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
@@ -385,9 +385,9 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	t.Log("adding an HTTPRoute with multi-backend rules")
 	var httpbinWeight int32 = 75
 	var nginxWeight int32 = 25
-	httpPort := gatewayv1beta1.PortNumber(80)
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-	httpRoute := &gatewayv1beta1.HTTPRoute{
+	httpPort := gatewayv1.PortNumber(80)
+	pathMatchPrefix := gatewayv1.PathMatchPathPrefix
+	httpRoute := &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
@@ -395,27 +395,27 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 			},
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gateway.Name),
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(gateway.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{
+			Rules: []gatewayv1.HTTPRouteRule{
 				{
-					Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Matches: []gatewayv1.HTTPRouteMatch{
 						{
-							Path: &gatewayv1beta1.HTTPPathMatch{
+							Path: &gatewayv1.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: kong.String("/test-http-route-multiple-services"),
 							},
 						},
 					},
-					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+					BackendRefs: []gatewayv1.HTTPBackendRef{
 						{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName(service1.Name),
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(service1.Name),
 									Port: &httpPort,
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
@@ -423,9 +423,9 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 							},
 						},
 						{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName(service2.Name),
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(service2.Name),
 									Port: &httpPort,
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
@@ -435,19 +435,19 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 					},
 				},
 				{
-					Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Matches: []gatewayv1.HTTPRouteMatch{
 						{
-							Path: &gatewayv1beta1.HTTPPathMatch{
+							Path: &gatewayv1.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: kong.String("/test-http-route-multiple-services-broken"),
 							},
 						},
 					},
-					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+					BackendRefs: []gatewayv1.HTTPBackendRef{
 						{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName(service1.Name),
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(service1.Name),
 									Port: &httpPort,
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
@@ -455,9 +455,9 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 							},
 						},
 						{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName(service3.Name),
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(service3.Name),
 									Port: &httpPort,
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
@@ -518,7 +518,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
-	listenerHostname := gatewayv1beta1.Hostname("test.specific.io")
+	listenerHostname := gatewayv1.Hostname("test.specific.io")
 
 	t.Log("getting a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -532,7 +532,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	t.Log("deploying a new gateway with specified hostname")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
 		gw.Name = gatewayName
 		for i := range gw.Spec.Listeners {
 			gw.Spec.Listeners[i].Hostname = &listenerHostname
@@ -553,28 +553,28 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("creating an httproute with a same hostname and another unmatched hostname")
-	httpRoute := &gatewayv1beta1.HTTPRoute{
+	httpRoute := &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gateway.Name),
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(gateway.Name),
 				}},
 			},
-			Hostnames: []gatewayv1beta1.Hostname{
-				gatewayv1beta1.Hostname("test.specific.io"),
-				gatewayv1beta1.Hostname("another.specific.io"),
+			Hostnames: []gatewayv1.Hostname{
+				gatewayv1.Hostname("test.specific.io"),
+				gatewayv1.Hostname("another.specific.io"),
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
-				Matches: []gatewayv1beta1.HTTPRouteMatch{
+			Rules: []gatewayv1.HTTPRouteRule{{
+				Matches: []gatewayv1.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathPrefix("/test-http-route-filter-hosts").Build(),
 				},
-				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+				BackendRefs: []gatewayv1.HTTPBackendRef{
 					builder.NewHTTPBackendRef(service.Name).WithPort(80).Build(),
 				},
 			}},
@@ -612,8 +612,8 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			t.Logf("failed getting the HTTPRoute %s: %v", httpRoute.Name, err)
 			return false
 		}
-		httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
-			gatewayv1beta1.Hostname("*.specific.io"),
+		httpRoute.Spec.Hostnames = []gatewayv1.Hostname{
+			gatewayv1.Hostname("*.specific.io"),
 		}
 		httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
 		if err != nil {
@@ -632,8 +632,8 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	t.Logf("update hostname in httproute to an unmatched host")
 	httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
-		gatewayv1beta1.Hostname("another.specific.io"),
+	httpRoute.Spec.Hostnames = []gatewayv1.Hostname{
+		gatewayv1.Hostname("another.specific.io"),
 	}
 	httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
 	require.NoError(t, err)
@@ -643,7 +643,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 		require.NoError(t, err)
 		for _, parent := range currentHTTPRoute.Status.Parents {
 			for _, condition := range parent.Conditions {
-				if condition.Type == string(gatewayv1beta1.RouteReasonAccepted) && condition.Status == metav1.ConditionFalse {
+				if condition.Type == string(gatewayv1.RouteReasonAccepted) && condition.Status == metav1.ConditionFalse {
 					return true
 				}
 			}

@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -80,18 +81,18 @@ type Storer interface {
 	GetIngressClassName() string
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
-	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
+	GetGateway(namespace string, name string) (*gatewayv1.Gateway, error)
 
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
 	ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters
-	ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error)
+	ListHTTPRoutes() ([]*gatewayv1.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
 	ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error)
 	ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error)
-	ListGateways() ([]*gatewayv1beta1.Gateway, error)
+	ListGateways() ([]*gatewayv1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
@@ -254,7 +255,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		return c.HTTPRoute.Get(obj)
 	case *gatewayv1alpha2.UDPRoute:
 		return c.UDPRoute.Get(obj)
@@ -266,7 +267,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.GRPCRoute.Get(obj)
 	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Get(obj)
-	case *gatewayv1beta1.Gateway:
+	case *gatewayv1.Gateway:
 		return c.Gateway.Get(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
@@ -319,7 +320,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		return c.HTTPRoute.Add(obj)
 	case *gatewayv1alpha2.UDPRoute:
 		return c.UDPRoute.Add(obj)
@@ -331,7 +332,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.GRPCRoute.Add(obj)
 	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Add(obj)
-	case *gatewayv1beta1.Gateway:
+	case *gatewayv1.Gateway:
 		return c.Gateway.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
@@ -385,7 +386,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		return c.HTTPRoute.Delete(obj)
 	case *gatewayv1alpha2.UDPRoute:
 		return c.UDPRoute.Delete(obj)
@@ -397,7 +398,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.GRPCRoute.Delete(obj)
 	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Delete(obj)
-	case *gatewayv1beta1.Gateway:
+	case *gatewayv1.Gateway:
 		return c.Gateway.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kong API Support
@@ -551,11 +552,11 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 }
 
 // ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
-func (s Store) ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error) {
-	var httproutes []*gatewayv1beta1.HTTPRoute
+func (s Store) ListHTTPRoutes() ([]*gatewayv1.HTTPRoute, error) {
+	var httproutes []*gatewayv1.HTTPRoute
 	if err := cache.ListAll(s.stores.HTTPRoute, labels.NewSelector(),
 		func(ob interface{}) {
-			httproute, ok := ob.(*gatewayv1beta1.HTTPRoute)
+			httproute, ok := ob.(*gatewayv1.HTTPRoute)
 			if ok {
 				httproutes = append(httproutes, httproute)
 			}
@@ -647,11 +648,11 @@ func (s Store) ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error) {
 }
 
 // ListGateways returns the list of Gateways in the Gateway cache store.
-func (s Store) ListGateways() ([]*gatewayv1beta1.Gateway, error) {
-	var gateways []*gatewayv1beta1.Gateway
+func (s Store) ListGateways() ([]*gatewayv1.Gateway, error) {
+	var gateways []*gatewayv1.Gateway
 	if err := cache.ListAll(s.stores.Gateway, labels.NewSelector(),
 		func(ob interface{}) {
-			gw, ok := ob.(*gatewayv1beta1.Gateway)
+			gw, ok := ob.(*gatewayv1.Gateway)
 			if ok {
 				gateways = append(gateways, gw)
 			}
@@ -887,7 +888,7 @@ func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClas
 }
 
 // GetGateway returns gateway resource having specified namespace and name.
-func (s Store) GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error) {
+func (s Store) GetGateway(namespace string, name string) (*gatewayv1.Gateway, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	obj, exists, err := s.stores.Gateway.GetByKey(key)
 	if err != nil {
@@ -896,7 +897,7 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayv1beta1.Gatewa
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("Gateway %v not found", name)}
 	}
-	return obj.(*gatewayv1beta1.Gateway), nil
+	return obj.(*gatewayv1.Gateway), nil
 }
 
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
@@ -1084,8 +1085,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"):
-		return &gatewayv1beta1.HTTPRoute{
+	case gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"):
+		return &gatewayv1.HTTPRoute{
 			TypeMeta: typeMetaFromGVK(gvk),
 		}, nil
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"):
@@ -1104,7 +1105,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &gatewayv1alpha2.TLSRoute{
 			TypeMeta: typeMetaFromGVK(gvk),
 		}, nil
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"):
+	case gatewayv1.SchemeGroupVersion.WithKind("ReferenceGrant"):
 		return &gatewayv1beta1.ReferenceGrant{
 			TypeMeta: typeMetaFromGVK(gvk),
 		}, nil

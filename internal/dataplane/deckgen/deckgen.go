@@ -6,7 +6,7 @@ import (
 
 	gojson "github.com/goccy/go-json"
 	"github.com/google/go-cmp/cmp"
-	"github.com/kong/deck/file"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 )
 

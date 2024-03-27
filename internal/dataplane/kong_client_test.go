@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/deck/file"
-	"github.com/kong/deck/utils"
+	"github.com/kong/go-database-reconciler/pkg/file"
+	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"

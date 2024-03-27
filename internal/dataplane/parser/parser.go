@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -38,7 +38,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	KindGateway = gatewayv1beta1.Kind("Gateway")
+	KindGateway = gatewayv1.Kind("Gateway")
 
 	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
 	// to enable expression based router of kong.
@@ -527,7 +527,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 		return certs
 	}
 	for _, gateway := range gateways {
-		statuses := make(map[gatewayv1beta1.SectionName]gatewayv1beta1.ListenerStatus, len(gateway.Status.Listeners))
+		statuses := make(map[gatewayv1.SectionName]gatewayv1.ListenerStatus, len(gateway.Status.Listeners))
 		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
 		}
@@ -547,8 +547,8 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 			// Check if listener is marked as programmed
 			if !util.CheckCondition(
 				status.Conditions,
-				util.ConditionType(gatewayv1beta1.ListenerConditionProgrammed),
-				util.ConditionReason(gatewayv1beta1.ListenerReasonProgrammed),
+				util.ConditionType(gatewayv1.ListenerConditionProgrammed),
+				util.ConditionReason(gatewayv1.ListenerReasonProgrammed),
 				metav1.ConditionTrue,
 				gateway.Generation,
 			) {

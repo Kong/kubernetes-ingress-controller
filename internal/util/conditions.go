@@ -2,10 +2,10 @@ package util
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// ConditionType can be any condition type, e.g. `gatewayv1beta1.GatewayConditionProgrammed`.
+// ConditionType can be any condition type, e.g. `gatewayv1.GatewayConditionProgrammed`.
 type ConditionType string
 
-// ConditionReason can be any condition reason, e.g. `gatewayv1beta1.GatewayReasonProgrammed`.
+// ConditionReason can be any condition reason, e.g. `gatewayv1.GatewayReasonProgrammed`.
 type ConditionReason string
 
 // CheckCondition tells if there's a condition matching the given type, reason, and status in conditions.

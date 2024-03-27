@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -105,20 +106,20 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(secret3)
 
-	modePassthrough := gatewayv1beta1.TLSModePassthrough
+	modePassthrough := gatewayv1.TLSModePassthrough
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		otherNamespace := gatewayv1beta1.Namespace(otherNs.Name)
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1.Gateway) {
+		otherNamespace := gatewayv1.Namespace(otherNs.Name)
+		gw.Spec.Listeners = []gatewayv1.Listener{
 			builder.NewListener("tls").
 				TLS().
 				WithPort(ktfkong.DefaultTLSServicePort).
 				WithHostname(tlsRouteHostname).
-				WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+				WithTLSConfig(&gatewayv1.GatewayTLSConfig{
 					Mode: &modePassthrough,
-					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
-							Name: gatewayv1beta1.ObjectName(secrets[0].Name),
+							Name: gatewayv1.ObjectName(secrets[0].Name),
 						},
 					},
 				}).Build(),
@@ -126,11 +127,11 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 				TLS().
 				WithPort(ktfkong.DefaultTLSServicePort).
 				WithHostname(tlsRouteExtraHostname).
-				WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+				WithTLSConfig(&gatewayv1.GatewayTLSConfig{
 					Mode: &modePassthrough,
-					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
-							Name:      gatewayv1beta1.ObjectName(secrets[1].Name),
+							Name:      gatewayv1.ObjectName(secrets[1].Name),
 							Namespace: &otherNamespace,
 						},
 					},
@@ -285,8 +286,8 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	for _, status := range gateway.Status.Listeners {
 		if ok := util.CheckCondition(
 			status.Conditions,
-			util.ConditionType(gatewayv1beta1.ListenerConditionResolvedRefs),
-			util.ConditionReason(gatewayv1beta1.ListenerReasonRefNotPermitted),
+			util.ConditionType(gatewayv1.ListenerConditionResolvedRefs),
+			util.ConditionReason(gatewayv1.ListenerReasonRefNotPermitted),
 			metav1.ConditionFalse,
 			gateway.Generation,
 		); ok {
@@ -353,21 +354,21 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	cleaner.Add(gwc)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
-	modePassthrough := gatewayv1beta1.TLSModePassthrough
+	modePassthrough := gatewayv1.TLSModePassthrough
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
+		hostname := gatewayv1.Hostname(tlsRouteHostname)
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{
+		gw.Spec.Listeners = []gatewayv1.Listener{
 			{
 				Name:     "tls-passthrough",
-				Protocol: gatewayv1beta1.TLSProtocolType,
-				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
+				Protocol: gatewayv1.TLSProtocolType,
+				Port:     gatewayv1.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &hostname,
-				TLS: &gatewayv1beta1.GatewayTLSConfig{
-					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+				TLS: &gatewayv1.GatewayTLSConfig{
+					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
-							Name: gatewayv1beta1.ObjectName(tlsSecretName),
+							Name: gatewayv1.ObjectName(tlsSecretName),
 						},
 					},
 					Mode: &modePassthrough,
@@ -471,7 +472,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback := GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback := GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
@@ -491,7 +492,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -508,7 +509,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the GatewayClass now removed")
@@ -522,7 +523,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TLSRoutes and the route becomes available again")
@@ -539,7 +540,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the Gateway now removed")
@@ -549,19 +550,19 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
+	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
+		hostname := gatewayv1.Hostname(tlsRouteHostname)
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{
+		gw.Spec.Listeners = []gatewayv1.Listener{
 			{
 				Name:     "tls-passthrough",
-				Protocol: gatewayv1beta1.TLSProtocolType,
-				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
+				Protocol: gatewayv1.TLSProtocolType,
+				Port:     gatewayv1.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &hostname,
-				TLS: &gatewayv1beta1.GatewayTLSConfig{
-					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+				TLS: &gatewayv1.GatewayTLSConfig{
+					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
-							Name: gatewayv1beta1.ObjectName(tlsSecretName),
+							Name: gatewayv1.ObjectName(tlsSecretName),
 						},
 					},
 					Mode: &modePassthrough,
@@ -572,7 +573,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TLSRoutes and the route becomes available again")
@@ -632,7 +633,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -644,19 +645,19 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("testing port matching")
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1.Gateway) {
+		hostname := gatewayv1.Hostname(tlsRouteHostname)
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{
+		gw.Spec.Listeners = []gatewayv1.Listener{
 			{
 				Name:     "tls-passthrough",
-				Protocol: gatewayv1beta1.TLSProtocolType,
-				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
+				Protocol: gatewayv1.TLSProtocolType,
+				Port:     gatewayv1.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &hostname,
-				TLS: &gatewayv1beta1.GatewayTLSConfig{
-					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+				TLS: &gatewayv1.GatewayTLSConfig{
+					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
-							Name: gatewayv1beta1.ObjectName(tlsSecretName),
+							Name: gatewayv1.ObjectName(tlsSecretName),
 						},
 					},
 					Mode: &modePassthrough,

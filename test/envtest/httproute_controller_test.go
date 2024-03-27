@@ -18,6 +18,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -69,8 +70,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &svc))
 	StartReconcilers(ctx, t, client.Scheme(), cfg, reconciler)
 
-	gwc := gatewayv1beta1.GatewayClass{
-		Spec: gatewayv1beta1.GatewayClassSpec{
+	gwc := gatewayv1.GatewayClass{
+		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -83,17 +84,17 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
-	gw := gatewayv1beta1.Gateway{
-		Spec: gatewayv1beta1.GatewaySpec{
-			GatewayClassName: gatewayv1beta1.ObjectName(gwc.Name),
-			Listeners: []gatewayv1beta1.Listener{
+	gw := gatewayv1.Gateway{
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: gatewayv1.ObjectName(gwc.Name),
+			Listeners: []gatewayv1.Listener{
 				{
-					Name:     gatewayv1beta1.SectionName("http"),
-					Port:     gatewayv1beta1.PortNumber(80),
-					Protocol: gatewayv1beta1.HTTPProtocolType,
-					AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-						Namespaces: &gatewayv1beta1.RouteNamespaces{
-							From: lo.ToPtr(gatewayv1beta1.NamespacesFromAll),
+					Name:     gatewayv1.SectionName("http"),
+					Port:     gatewayv1.PortNumber(80),
+					Protocol: gatewayv1.HTTPProtocolType,
+					AllowedRoutes: &gatewayv1.AllowedRoutes{
+						Namespaces: &gatewayv1.RouteNamespaces{
+							From: lo.ToPtr(gatewayv1.NamespacesFromAll),
 						},
 					},
 				},
@@ -107,10 +108,10 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gw))
 
 	gwOld := gw.DeepCopy()
-	gw.Status = gatewayv1beta1.GatewayStatus{
-		Addresses: []gatewayv1beta1.GatewayStatusAddress{
+	gw.Status = gatewayv1.GatewayStatus{
+		Addresses: []gatewayv1.GatewayStatusAddress{
 			{
-				Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+				Type:  lo.ToPtr(gatewayv1.IPAddressType),
 				Value: "10.0.0.1",
 			},
 		},
@@ -130,7 +131,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 				ObservedGeneration: gw.Generation,
 			},
 		},
-		Listeners: []gatewayv1beta1.ListenerStatus{
+		Listeners: []gatewayv1.ListenerStatus{
 			{
 				Name: "http",
 				Conditions: []metav1.Condition{
@@ -147,9 +148,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 						LastTransitionTime: metav1.Now(),
 					},
 				},
-				SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+				SupportedKinds: []gatewayv1.RouteGroupKind{
 					{
-						Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
+						Group: lo.ToPtr(gatewayv1.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -158,7 +159,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
-	route := gatewayv1beta1.HTTPRoute{
+	route := gatewayv1.HTTPRoute{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HTTPRoute",
 			APIVersion: "v1beta1",
@@ -167,14 +168,14 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 			Namespace: nsRoute.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name:      gatewayv1beta1.ObjectName(gw.Name),
-					Namespace: lo.ToPtr(gatewayv1beta1.Namespace(ns.Name)),
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name:      gatewayv1.ObjectName(gw.Name),
+					Namespace: lo.ToPtr(gatewayv1.Namespace(ns.Name)),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
+			Rules: []gatewayv1.HTTPRouteRule{{
 				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
 			}},
 		},
@@ -208,9 +209,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		Spec: gatewayv1beta1.ReferenceGrantSpec{
 			From: []gatewayv1beta1.ReferenceGrantFrom{
 				{
-					Group:     gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group),
+					Group:     gatewayv1.Group(gatewayv1.GroupVersion.Group),
 					Kind:      "HTTPRoute",
-					Namespace: gatewayv1beta1.Namespace(nsRoute.Name),
+					Namespace: gatewayv1.Namespace(nsRoute.Name),
 				},
 			},
 			To: []gatewayv1beta1.ReferenceGrantTo{

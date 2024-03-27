@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -125,9 +126,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	for i := 0; i < 2; i++ {
 		_, err = gcl.GatewayV1beta1().GatewayClasses().Create(
 			ctx,
-			&gatewayv1beta1.GatewayClass{
+			&gatewayv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-				Spec: gatewayv1beta1.GatewayClassSpec{
+				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: "test.com/gateway-controller",
 				},
 			},
@@ -177,11 +178,11 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1beta1().Gateways(namespace).Create(
 				ctx,
-				&gatewayv1beta1.Gateway{
+				&gatewayv1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec: gatewayv1beta1.GatewaySpec{
-						GatewayClassName: gatewayv1beta1.ObjectName("test"),
-						Listeners: []gatewayv1beta1.Listener{
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: gatewayv1.ObjectName("test"),
+						Listeners: []gatewayv1.Listener{
 							{
 								Name:     "test",
 								Port:     443,
@@ -196,9 +197,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 
 			_, err = gcl.GatewayV1beta1().HTTPRoutes(namespace).Create(
 				ctx,
-				&gatewayv1beta1.HTTPRoute{
+				&gatewayv1.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec:       gatewayv1beta1.HTTPRouteSpec{},
+					Spec:       gatewayv1.HTTPRouteSpec{},
 				},
 				metav1.CreateOptions{},
 			)

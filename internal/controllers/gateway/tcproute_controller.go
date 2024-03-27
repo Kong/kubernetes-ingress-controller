@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -63,7 +63,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
+		source.Kind(mgr.GetCache(), &gatewayv1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -80,7 +80,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
+		source.Kind(mgr.GetCache(), &gatewayv1.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 	); err != nil {
 		return err
@@ -122,14 +122,14 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // the cached manager client to avoid API overhead.
 func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
+	gwc, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1beta1.GatewayList{}
+	gatewayList := gatewayv1.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -207,7 +207,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 // this kind of problem without having to enqueue extra objects.
 func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1beta1.Gateway)
+	gw, ok := obj.(*gatewayv1.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
@@ -446,18 +446,18 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
-				Group:     (*gatewayv1alpha2.Group)(&gatewayv1beta1.GroupVersion.Group),
+				Group:     (*gatewayv1alpha2.Group)(&gatewayv1.GroupVersion.Group),
 				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      (gatewayv1alpha2.ObjectName)(gateway.gateway.Name),
 			},
 			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1beta1.RouteConditionAccepted),
+				Type:               string(gatewayv1.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: tcproute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.RouteReasonAccepted),
+				Reason:             string(gatewayv1.RouteReasonAccepted),
 			}},
 		}
 

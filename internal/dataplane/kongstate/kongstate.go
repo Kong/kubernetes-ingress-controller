@@ -475,14 +475,14 @@ func (ks *KongState) FillPlugins(
 // in external systems (e.g. Konnect Analytics).
 func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 	for svcIndex, svc := range ks.Services {
-		if err := svc.FillID(); err != nil {
+		if err := svc.FillID(""); err != nil {
 			logger.WithError(err).Errorf("failed to fill ID for service %s", *svc.Name)
 		} else {
 			ks.Services[svcIndex] = svc
 		}
 
 		for routeIndex, route := range svc.Routes {
-			if err := route.FillID(); err != nil {
+			if err := route.FillID(""); err != nil {
 				logger.WithError(err).Errorf("failed to fill ID for route %s", *route.Name)
 			} else {
 				ks.Services[svcIndex].Routes[routeIndex] = route
@@ -491,7 +491,7 @@ func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 	}
 
 	for consumerIndex, consumer := range ks.Consumers {
-		if err := consumer.FillID(); err != nil {
+		if err := consumer.FillID(""); err != nil {
 			logger.WithError(err).Errorf("failed to fill ID for consumer %s", *consumer.Username)
 		} else {
 			ks.Consumers[consumerIndex] = consumer
@@ -499,7 +499,7 @@ func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 	}
 
 	for consumerGroupIndex, consumerGroup := range ks.ConsumerGroups {
-		if err := consumerGroup.FillID(); err != nil {
+		if err := consumerGroup.FillID(""); err != nil {
 			logger.WithError(err).Errorf("failed to fill ID for consumer group %s", *consumerGroup.Name)
 		} else {
 			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup

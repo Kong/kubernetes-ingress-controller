@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	deckutils "github.com/kong/deck/utils"
+	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 

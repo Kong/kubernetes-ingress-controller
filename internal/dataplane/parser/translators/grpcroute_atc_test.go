@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -570,12 +570,12 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 				Match: gatewayv1alpha2.GRPCRouteMatch{
 					Headers: []gatewayv1alpha2.GRPCHeaderMatch{
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
+							Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
 							Name:  gatewayv1alpha2.GRPCHeaderName("key1"),
 							Value: "value1",
 						},
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
+							Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
 							Name:  gatewayv1alpha2.GRPCHeaderName("key2"),
 							Value: "value2",
 						},
@@ -667,7 +667,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Hostnames: []gatewayv1.Hostname{"foo.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -700,7 +700,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
+							Hostnames: []gatewayv1.Hostname{"*.bar.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -762,7 +762,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Hostnames: []gatewayv1.Hostname{"foo.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -796,7 +796,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
+							Hostnames: []gatewayv1.Hostname{"bar.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -860,7 +860,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Hostnames: []gatewayv1.Hostname{"foo.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -893,7 +893,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
+							Hostnames: []gatewayv1.Hostname{"bar.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -957,7 +957,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Hostnames: []gatewayv1.Hostname{"foo.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -997,7 +997,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Hostnames: []gatewayv1.Hostname{"foo.com"},
 							Rules: []gatewayv1alpha2.GRPCRouteRule{
 								{
 									Matches: []gatewayv1alpha2.GRPCRouteMatch{

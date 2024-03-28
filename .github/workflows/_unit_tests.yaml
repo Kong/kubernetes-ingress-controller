@@ -16,6 +16,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: run unit tests
         run: make test.unit
         env:

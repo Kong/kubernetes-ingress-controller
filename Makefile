@@ -44,69 +44,98 @@ _download_tool:
 	(cd third_party && go mod tidy && \
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
-.PHONY: _download_tool_own
-_download_tool_own:
-	(cd third_party/$(TOOL) && \
-		ls ./$(TOOL).go > /dev/null && \
-		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
+TOOLS_VERSIONS_FILE = .tools_versions.yaml
+
+MISE := $(shell which mise)
+.PHONY: mise
+mise:
+	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
 .PHONY: tools
 tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-ref-docs skaffold looppointer.download staticcheck.download
 
-CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
+export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
+
+CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
+CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	@$(MAKE) _download_tool TOOL=controller-gen
+controller-gen: mise ## Download controller-gen locally if necessary.
+	@$(MISE) plugin install --yes -q kube-controller-tools
+	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
-KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
+KUSTOMIZE_VERSION = $(shell yq -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
+KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
 .PHONY: kustomize
-kustomize: ## Download kustomize locally if necessary.
-	@$(MAKE) _download_tool TOOL=kustomize
+kustomize: mise ## Download kustomize locally if necessary.
+	@$(MISE) plugin install --yes -q kustomize
+	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
 
-CLIENT_GEN = $(PROJECT_DIR)/bin/client-gen
+CLIENT_GEN_VERSION = $(shell yq -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
+CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
-client-gen: ## Download client-gen locally if necessary.
-	@$(MAKE) _download_tool TOOL=client-gen
+client-gen: mise ## Download client-gen locally if necessary.
+	@$(MISE) plugin install --yes -q kube-code-generator
+	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
 
-GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
+GOLANGCI_LINT_VERSION = $(shell yq -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
+GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
 .PHONY: golangci-lint.download
-golangci-lint.download: ## Download golangci-lint locally if necessary.
-	@$(MAKE) _download_tool TOOL=golangci-lint
+golangci-lint.download: mise ## Download golangci-lint locally if necessary.
+	@$(MISE) plugin install --yes -q golangci-lint
+	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
+GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
+GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
-	@$(MAKE) _download_tool TOOL=gotestsum
+	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
+	@$(MISE) install -q gotestsum
 
+CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
-	@$(MAKE) _download_tool TOOL=crd-ref-docs
+	GOBIN=$(PROJECT_DIR)/bin go install -v \
+		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
+
+SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
+SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
+.PHONY: skaffold
+skaffold: mise ## Download skaffold locally if necessary.
+	@$(MISE) plugin install --yes -q skaffold
+	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
+
+YQ_VERSION = $(shell yq -ojson -r '.yq' < $(TOOLS_VERSIONS_FILE))
+YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
+.PHONY: yq
+yq: mise # Download yq locally if necessary.
+	@$(MISE) plugin install --yes -q yq
+	@$(MISE) install -q yq@$(YQ_VERSION)
 
 DLV = $(PROJECT_DIR)/bin/dlv
 .PHONY: dlv
 dlv: ## Download dlv locally if necessary.
 	@$(MAKE) _download_tool TOOL=dlv
 
-SETUP_ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
+SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
-setup-envtest: ## Download setup-envtest locally if necessary.
-	@$(MAKE) _download_tool TOOL=setup-envtest
-
-SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
-.PHONY: skaffold
-skaffold: ## Download skaffold locally if necessary.
-	@$(MAKE) _download_tool_own TOOL=skaffold
+setup-envtest: mise ## Download setup-envtest locally if necessary.
+	@$(MISE) plugin install --yes -q setup-envtest https://github.com/pmalek/mise-setup-envtest.git
+	@$(MISE) install setup-envtest@v$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
 	@$(MAKE) _download_tool TOOL=staticcheck
 
-GOJUNIT= $(PROJECT_DIR)/bin/go-junit-report
+GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
+GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report
 .PHONY: go-junit-report
 go-junit-report: ## Download go-junit-report locally if necessary.
-	@$(MAKE) _download_tool TOOL=go-junit-report
+# TODO: Go back to using https://github.com/jwillker/asdf-go-junit-report when https://github.com/jwillker/asdf-go-junit-report/pull/4 merges.
+	@$(MISE) plugin install --yes -q go-junit-report https://github.com/pmalek/asdf-go-junit-report.git
+	@$(MISE) install go-junit-report@v$(GOJUNIT_REPORT_VERSION)
 
 LOOPPOINTER= $(PROJECT_DIR)/bin/looppointer
 .PHONY: looppointer.download
@@ -229,7 +258,7 @@ manifests.webhook: controller-gen ## Generate ValidatingWebhookConfiguration.
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
-	./scripts/build-single-manifests.sh
+	./scripts/build-single-manifests.sh $(KUSTOMIZE)
 
 # ------------------------------------------------------------------------------
 # Build - Generators
@@ -339,7 +368,7 @@ test.conformance: _check.container.environment go-junit-report
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		./test/conformance | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+	$(GOJUNIT_REPORT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 .PHONY: test.integration
 test.integration: test.integration.dbless test.integration.postgres
@@ -432,7 +461,7 @@ _test.integration: _check.container.environment go-junit-report
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
 		./test/integration | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+	$(GOJUNIT_REPORT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 .PHONY: _test.integration.isolated
 _test.integration.isolated: _check.container.environment go-junit-report
@@ -450,7 +479,7 @@ _test.integration.isolated: _check.container.environment go-junit-report
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
 		./test/integration/isolated -args --parallel $(E2E_FRAMEWORK_FLAGS) | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+	$(GOJUNIT_REPORT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 .PHONY: test.integration.isolated.dbless
 test.integration.isolated.dbless:
@@ -548,7 +577,7 @@ _test.kongintegration: gotestsum go-junit-report
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.kongintegration.out \
 		./test/kongintegration | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+	$(GOJUNIT_REPORT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 # ------------------------------------------------------------------------------
 # Operations - Local Deployment
@@ -745,3 +774,12 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in $KUBECONFIG.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
+
+renovate:
+	docker run --rm -ti -e LOG_LEVEL=debug \
+		-e GITHUB_COM_TOKEN="$(shell gh auth token)" \
+		-e DOCKER_HUB_PASSWORD="" \
+		-v /tmp:/tmp \
+		-v $(shell pwd):/usr/src/app \
+		docker.io/renovate/renovate:full \
+		renovate --platform=local

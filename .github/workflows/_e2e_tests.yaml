@@ -159,6 +159,10 @@ jobs:
         if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
         run: docker pull ${{ inputs.kong-image }}
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
@@ -246,6 +250,10 @@ jobs:
             echo "kic-image=kong/nightly-ingress-controller" >> $GITHUB_OUTPUT
             echo "kic-tag=nightly" >> $GITHUB_OUTPUT
           fi
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       - name: run ${{ matrix.test }}
         run: make test.e2e
@@ -339,6 +347,9 @@ jobs:
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       - name: run Istio tests
         run: make test.istio

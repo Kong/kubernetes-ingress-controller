@@ -78,6 +78,9 @@ jobs:
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       - name: run performance tests
         run: make test.performance

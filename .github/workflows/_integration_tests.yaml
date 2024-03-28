@@ -171,6 +171,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}
         env:

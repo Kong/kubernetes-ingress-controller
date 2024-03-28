@@ -35,6 +35,7 @@ type Server struct {
 
 	successfulConfigDump file.Content
 	failedConfigDump     file.Content
+	rawErrBody           []byte
 	configLock           *sync.RWMutex
 }
 
@@ -122,6 +123,7 @@ func (s *Server) receiveConfig(ctx context.Context) {
 			s.configLock.Lock()
 			if dump.Failed {
 				s.failedConfigDump = dump.Config
+				s.rawErrBody = dump.Raw
 			} else {
 				s.successfulConfigDump = dump.Config
 			}
@@ -156,6 +158,7 @@ func installProfilingHandlers(mux *http.ServeMux) {
 func (s *Server) installDumpHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/config/successful", s.handleLastValidConfig)
 	mux.HandleFunc("/debug/config/failed", s.handleLastFailedConfig)
+	mux.HandleFunc("/debug/config/raw-error", s.handleLastErrBody)
 }
 
 // redirectTo redirects request to a certain destination.
@@ -179,6 +182,19 @@ func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request)
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(s.failedConfigDump); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) handleLastErrBody(rw http.ResponseWriter, _ *http.Request) {
+	rw.Header().Set("Content-Type", "text/plain")
+	s.configLock.RLock()
+	defer s.configLock.RUnlock()
+	raw := s.rawErrBody
+	if len(raw) == 0 {
+		raw = []byte("No raw error body available.\n")
+	}
+	if _, err := rw.Write(raw); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }

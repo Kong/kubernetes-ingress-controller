@@ -47,18 +47,18 @@ func PerformUpdate(
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
-) ([]byte, []failures.ResourceFailure, error) {
+) ([]byte, []failures.ResourceFailure, []byte, error) {
 	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
-		return oldSHA, []failures.ResourceFailure{}, err
+		return oldSHA, []failures.ResourceFailure{}, nil, err
 	}
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
 		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
 		if err != nil {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, []failures.ResourceFailure{}, nil, err
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
@@ -66,14 +66,14 @@ func PerformUpdate(
 			} else {
 				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
-			return oldSHA, []failures.ResourceFailure{}, nil
+			return oldSHA, []failures.ResourceFailure{}, nil, nil
 		}
 	}
 
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
-	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
+	err, resourceErrors, rawErrBody, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
 		Content: targetContent,
 		Hash:    newSHA,
 	})
@@ -83,12 +83,12 @@ func PerformUpdate(
 	if err != nil {
 		// Not pushing metrics in case it's an update skip due to a backoff.
 		if errors.As(err, &UpdateSkippedDueToBackoffStrategyError{}) {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, []failures.ResourceFailure{}, rawErrBody, err
 		}
 
 		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, logger)
 		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(resourceFailures), err)
-		return nil, resourceFailures, err
+		return nil, resourceFailures, rawErrBody, err
 	}
 
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
@@ -99,7 +99,7 @@ func PerformUpdate(
 		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
 	}
 
-	return newSHA, nil, nil
+	return newSHA, nil, rawErrBody, nil
 }
 
 // -----------------------------------------------------------------------------

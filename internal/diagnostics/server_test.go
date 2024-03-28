@@ -50,6 +50,7 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 			configsCh <- util.ConfigDump{
 				Config: file.Content{},
 				Failed: failed,
+				Raw:    []byte("fake error body"),
 			}
 		}
 	}()
@@ -71,6 +72,10 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 					_ = resp.Body.Close()
 				}
 				resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/failed", port))
+				if err == nil {
+					_ = resp.Body.Close()
+				}
+				resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/raw-error", port))
 				if err == nil {
 					_ = resp.Body.Close()
 				}

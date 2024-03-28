@@ -54,16 +54,19 @@ func NewUpdateStrategyDBModeKonnect(
 func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (
 	err error,
 	resourceErrors []ResourceError,
+	// this is always empty for DB mode, as it does not have a single config error, and will instead return individual
+	// errors as a deckutils.ErrArray. we need it for the interface signature, however.
+	rawErrBody []byte,
 	resourceErrorsParseErr error,
 ) {
 	cs, err := s.currentState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err), nil, nil
+		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err), nil, nil, nil
 	}
 
 	ts, err := s.targetState(ctx, cs, targetContent.Content)
 	if err != nil {
-		return deckerrors.ConfigConflictError{Err: err}, nil, nil
+		return deckerrors.ConfigConflictError{Err: err}, nil, nil, nil
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -74,15 +77,15 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 		IsKonnect:       s.isKonnect,
 	})
 	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err), nil, nil
+		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err), nil, nil, nil
 	}
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	if errs != nil {
-		return deckutils.ErrArray{Errors: errs}, nil, nil
+		return deckutils.ErrArray{Errors: errs}, nil, nil, nil
 	}
 
-	return nil, nil, nil
+	return nil, nil, nil, nil
 }
 
 func (s UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {

@@ -93,6 +93,13 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 	if err != nil {
 		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)
 	}
+	if len(configError.Flattened) == 0 {
+		if len(configError.Message) > 0 {
+			logger.Error(nil, "config error missing per-resource errors", "message", configError.Message)
+		} else {
+			logger.Error(nil, "config error missing per-resource and message", "message", configError.Message)
+		}
+	}
 	for _, ee := range configError.Flattened {
 		raw := rawResourceError{
 			Name:     ee.Name,

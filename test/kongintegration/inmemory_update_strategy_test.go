@@ -2,6 +2,7 @@ package kongintegration
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -83,15 +84,22 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			"path":                 "value must be null",
 		},
 	}
+	expectedRawErrBody := []byte(`{"code":14,"name":"invalid declarative configuration","fields":{},"message":"declarative config is invalid: {}","flattened_errors":[{"entity_type":"service","entity_name":"test-service","entity_tags":["k8s-name:test-service","k8s-namespace:default","k8s-kind:Service","k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3","k8s-group:","k8s-version:v1"],"errors":[{"type":"field","message":"value must be null","field":"path"},{"type":"entity","message":"failed conditional validation given value of field 'protocol'"}],"entity":{"path":"/test","name":"test-service","protocol":"grpc","tags":["k8s-name:test-service","k8s-namespace:default","k8s-kind:Service","k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3","k8s-group:","k8s-version:v1"],"host":"konghq.com","port":80}}]}`)
+	expectedBody := map[string]interface{}{}
+	require.NoError(t, json.Unmarshal(expectedRawErrBody, &expectedBody))
 
 	require.Eventually(t, func() bool {
-		err, resourceErrors, parseErr := sut.Update(ctx, faultyConfig)
+		err, resourceErrors, rawErrBody, parseErr := sut.Update(ctx, faultyConfig)
 		if err == nil {
 			t.Logf("expected error: %v", err)
 			return false
 		}
 		if len(resourceErrors) == 0 {
 			t.Log("expected resource errors")
+			return false
+		}
+		if len(rawErrBody) == 0 {
+			t.Log("expected error response body")
 			return false
 		}
 		if parseErr != nil {
@@ -108,6 +116,15 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		}
 		if diff := cmp.Diff(expectedResourceError, resourceErr); diff != "" {
 			t.Logf("expected resource error to match, got diff: %s", diff)
+			return false
+		}
+		actualBody := map[string]interface{}{}
+		if err := json.Unmarshal(rawErrBody, &actualBody); err != nil {
+			t.Logf("could not unmarshal error body: %s", err)
+			return false
+		}
+		if diff := cmp.Diff(expectedBody, actualBody); diff != "" {
+			t.Logf("unexpected error body diff: %s", diff)
 			return false
 		}
 

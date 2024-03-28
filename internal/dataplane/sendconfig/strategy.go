@@ -24,6 +24,7 @@ type UpdateStrategy interface {
 	Update(ctx context.Context, targetContent ContentWithHash) (
 		err error,
 		resourceErrors []ResourceError,
+		rawErrorBody []byte,
 		resourceErrorsParseErr error,
 	)
 

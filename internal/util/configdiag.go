@@ -6,6 +6,7 @@ import "github.com/kong/go-database-reconciler/pkg/file"
 type ConfigDump struct {
 	Config file.Content
 	Failed bool
+	Raw    []byte
 }
 
 // ConfigDumpDiagnostic contains settings and channels for receiving diagnostic configuration dumps.

@@ -2,6 +2,9 @@
 # Build the manager binary
 FROM golang:1.22.1 as builder
 
+ARG GOPATH
+ARG GOCACHE
+
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -18,6 +21,7 @@ WORKDIR /workspace
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
@@ -36,6 +40,7 @@ ARG REPO_INFO
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on \

@@ -124,13 +124,10 @@ setup-envtest: mise ## Download setup-envtest locally if necessary.
 	@$(MISE) plugin install --yes -q setup-envtest https://github.com/pmalek/mise-setup-envtest.git
 	@$(MISE) install setup-envtest@v$(SETUP_ENVTEST_VERSION)
 
-STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
-STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
+STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
-# TODO: Use staticcheck plugin without alias aftrer https://github.com/pbr0ck3r/asdf-staticcheck/pull/6 is merged.
-	@$(MISE) plugin install --yes -q staticcheck https://github.com/pmalek/asdf-staticcheck.git
-	@$(MISE) install staticcheck@v$(STATICCHECK_VERSION)
+	@$(MAKE) _download_tool TOOL=staticcheck
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
 GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report

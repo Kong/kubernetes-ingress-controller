@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.1.3](#313)
  - [3.1.2](#312)
  - [3.1.1](#311)
  - [3.1.0](#310)
@@ -86,14 +87,27 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+Nothing yet.
+
+## [3.1.3]
+
+> Release date: 2024-03-28
+
 ### Fixed
 
-- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly.
+- Remove unnecessary tag support check that could incorrectly delete
+  configuration if the check did not execute properly.
   [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
-- Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
+- Do not require `rsa_public_key` field in credential `Secret`s when working
+  with jwt HMAC credentials.
   [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
 - Set proper User-Agent for request made to Kong and Konnect.
   [#5753](https://github.com/Kong/kubernetes-ingress-controller/pull/5753)
+- Do not attempt to retrieve namespace information for errors involving
+  cluster-scoped resources.
+  [#5764](https://github.com/Kong/kubernetes-ingress-controller/pull/5764)
+- Emit a log when recording events.
+  [#5763](https://github.com/Kong/kubernetes-ingress-controller/pull/5763)
 
 ## [3.1.2]
 
@@ -3318,6 +3332,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.2...v3.1.3
 [3.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.1...v3.1.2
 [3.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.2...v3.1.0

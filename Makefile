@@ -317,6 +317,8 @@ container:
 	docker buildx build \
 		-f Dockerfile \
 		--target distroless \
+		--build-arg GOPATH=$(shell go env GOPATH) \
+		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=${TAG} \
 		--build-arg COMMIT=${COMMIT} \
 		--build-arg REPO_INFO=${REPO_INFO} \
@@ -327,6 +329,8 @@ container.debug:
 	docker buildx build \
 		-f Dockerfile.debug \
 		--target debug \
+		--build-arg GOPATH=$(shell go env GOPATH) \
+		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=${TAG}-debug \
 		--build-arg COMMIT=${COMMIT} \
 		--build-arg REPO_INFO=${REPO_INFO} \
@@ -687,7 +691,8 @@ run.skaffold:
 # https://github.com/Kong/kubernetes-ingress-controller/issues/5116 is implemented.
 .PHONY: _skaffold
 _skaffold: skaffold
-	$(SKAFFOLD) $(CMD) --keep-running-on-failure=true --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
+	GOCACHE=$(shell go env GOCACHE) \
+		$(SKAFFOLD) $(CMD) --keep-running-on-failure=true --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
 
 .PHONY: run
 run: install _ensure-namespace

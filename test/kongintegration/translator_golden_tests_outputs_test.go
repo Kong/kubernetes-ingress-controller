@@ -12,11 +12,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-database-reconciler/pkg/file"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
@@ -52,7 +52,8 @@ func TestTranslatorsGoldenTestsOutputs(t *testing.T) {
 		t.Parallel()
 
 		kongC := containers.NewKong(ctx, t, containers.KongWithRouterFlavor("expressions"))
-		kongClient, err := kong.NewClient(kong.String(kongC.AdminURL(ctx, t)), helpers.DefaultHTTPClient())
+
+		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), helpers.DefaultHTTPClient())
 		require.NoError(t, err)
 
 		sut := sendconfig.NewUpdateStrategyInMemory(
@@ -72,7 +73,7 @@ func TestTranslatorsGoldenTestsOutputs(t *testing.T) {
 		t.Parallel()
 
 		kongC := containers.NewKong(ctx, t, containers.KongWithRouterFlavor("traditional"))
-		kongClient, err := kong.NewClient(kong.String(kongC.AdminURL(ctx, t)), helpers.DefaultHTTPClient())
+		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), helpers.DefaultHTTPClient())
 		require.NoError(t, err)
 
 		sut := sendconfig.NewUpdateStrategyInMemory(

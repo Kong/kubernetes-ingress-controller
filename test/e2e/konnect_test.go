@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	gokong "github.com/kong/go-kong/kong"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -312,7 +311,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 		localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, proxyPod.Name, "8444")
 		address := fmt.Sprintf("https://localhost:%d", localPort)
 
-		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+		kongClient, err := adminapi.NewKongAPIClient(address, client)
 		require.NoError(t, err)
 
 		nodeID, err := adminapi.NewClient(kongClient).NodeID(ctx)

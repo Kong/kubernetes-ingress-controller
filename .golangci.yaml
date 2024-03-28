@@ -96,6 +96,8 @@ linters-settings:
       - 'gatewayv1alpha2|gatewayv1beta1|gatewayv1(# use internal/gatewayapi aliases instead)?'
       - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
       - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
+      - '(gokong|kong)\.NewClient(# use adminapi.NewKongAPIClient instead )?'
+        
   gomodguard:
     blocked:
       modules:

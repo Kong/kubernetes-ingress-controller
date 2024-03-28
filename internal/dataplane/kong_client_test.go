@@ -716,7 +716,7 @@ func mustSampleGatewayClient(t *testing.T) *adminapi.Client {
 func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
 	t.Helper()
 
-	c, err := kong.NewClient(lo.ToPtr(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString())), &http.Client{})
+	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), &http.Client{})
 	require.NoError(t, err)
 
 	rgID := uuid.NewString()

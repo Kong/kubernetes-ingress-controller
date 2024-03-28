@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/oapi-codegen/runtime"
 )
 
@@ -195,6 +196,10 @@ func NewClient(server string, opts ...ClientOption) (*Client, error) {
 	if client.Client == nil {
 		client.Client = &http.Client{}
 	}
+	client.RequestEditors = append([]RequestEditorFn{func(ctx context.Context, req *http.Request) error {
+		req.Header.Set("User-Agent", metadata.UserAgent())
+		return nil
+	}}, client.RequestEditors...)
 	return &client, nil
 }
 

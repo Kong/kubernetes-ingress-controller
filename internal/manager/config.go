@@ -343,7 +343,7 @@ func (c *Config) GetKubeconfig() (*rest.Config, error) {
 		config.Impersonate.UserName = c.Impersonate
 	}
 
-	config.UserAgent = "kong-ingress-controller/" + metadata.Release
+	config.UserAgent = metadata.UserAgent()
 
 	return config, err
 }

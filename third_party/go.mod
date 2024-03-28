@@ -7,12 +7,10 @@ toolchain go1.21.0
 require (
 	github.com/go-delve/delve v1.22.1
 	github.com/kyoh86/looppointer v0.2.1
-	honnef.co/go/tools v0.4.7
 
 )
 
 require (
-	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/cilium/ebpf v0.11.0 // indirect
 	github.com/cosiner/argv v0.1.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
@@ -37,7 +35,6 @@ require (
 	go.starlark.net v0.0.0-20231101134539-556fd59b42f6 // indirect
 	golang.org/x/arch v0.6.0 // indirect
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
-	golang.org/x/exp/typeparams v0.0.0-20240314144324-c7f7c6466f7f // indirect
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect

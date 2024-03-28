@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored
@@ -158,11 +159,12 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 			re.UID = strings.TrimPrefix(tag, util.K8sUIDTagPrefix)
 		}
 	}
+
 	re.APIVersion, re.Kind = gvk.ToAPIVersionAndKind()
 	if re.Name == "" {
 		return re, fmt.Errorf("no name")
 	}
-	if re.Namespace == "" {
+	if re.Namespace == "" && !gvkIsClusterScoped(gvk) {
 		return re, fmt.Errorf("no namespace")
 	}
 	if re.Kind == "" {
@@ -172,4 +174,11 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 		return re, fmt.Errorf("no uid")
 	}
 	return re, nil
+}
+
+func gvkIsClusterScoped(gvk schema.GroupVersionKind) bool {
+	if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version {
+		return gvk.Kind == "KongClusterPlugin" || gvk.Kind == "KongLicense" || gvk.Kind == "KongVault"
+	}
+	return false
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
@@ -50,6 +51,7 @@ type Synchronizer struct {
 	configApplied   bool
 	isServerRunning bool
 	initWaitPeriod  time.Duration
+	cache           cache.Cache
 
 	lock sync.RWMutex
 }
@@ -67,6 +69,13 @@ func WithStagger(period time.Duration) SynchronizerOption {
 func WithInitCacheSyncDuration(period time.Duration) SynchronizerOption {
 	return func(s *Synchronizer) {
 		s.initWaitPeriod = period
+	}
+}
+
+// WithCache returns a SynchronizerOption that sets the cache.
+func WithCache(c cache.Cache) SynchronizerOption {
+	return func(s *Synchronizer) {
+		s.cache = c
 	}
 }
 
@@ -101,13 +110,9 @@ func NewSynchronizer(logger logr.Logger, client Client, opts ...SynchronizerOpti
 //
 // To stop the server, the provided context must be Done().
 func (p *Synchronizer) Start(ctx context.Context) error {
-	select {
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2315
-	// This is a temporary mitigation to allow some time for controllers to
-	// populate their dataplaneClient cache.
-	case <-time.After(p.initWaitPeriod):
-	case <-ctx.Done():
-		return fmt.Errorf("Synchronizer Start() interrupted: %w", ctx.Err())
+	// unsure if it makes sense to do this _after_ the lock for any particular reason
+	if sync := p.cache.WaitForCacheSync(ctx); sync == false {
+		return fmt.Errorf("cache did not sync, aborting")
 	}
 
 	p.lock.Lock()

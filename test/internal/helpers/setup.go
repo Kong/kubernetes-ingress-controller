@@ -25,7 +25,7 @@ func Setup(ctx context.Context, t *testing.T, env environments.Environment) (*co
 	t.Log("performing test setup")
 	cluster := env.Cluster()
 	cleaner := clusters.NewCleaner(cluster)
-	t.Cleanup(func() {
+	t.Cleanup(func() { //nolint:contextcheck
 		// We still want to dump the diagnostics and perform the cleanup so use
 		// a separate context.
 		ctx := context.Background()

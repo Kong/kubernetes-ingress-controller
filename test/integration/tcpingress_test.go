@@ -36,7 +36,7 @@ var (
 )
 
 func TestTCPIngressEssentials(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
+	RunWhenKongExpressionRouter(context.Background(), t)
 	ctx := context.Background()
 
 	t.Parallel()
@@ -142,7 +142,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 }
 
 func TestTCPIngressTLS(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
+	RunWhenKongExpressionRouter(context.Background(), t)
 	t.Parallel()
 
 	t.Log("locking Gateway TLS ports")

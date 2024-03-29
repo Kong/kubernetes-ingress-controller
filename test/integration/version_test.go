@@ -67,8 +67,8 @@ func RunWhenKongEnterprise(t *testing.T) {
 	}
 }
 
-func RunWhenKongExpressionRouter(t *testing.T) {
-	if routerFlavor := eventuallyGetKongRouterFlavor(t, proxyAdminURL); routerFlavor != kongRouterFlavorExpressions {
+func RunWhenKongExpressionRouter(ctx context.Context, t *testing.T) {
+	if routerFlavor := eventuallyGetKongRouterFlavor(ctx, t, proxyAdminURL); routerFlavor != kongRouterFlavorExpressions {
 		t.Skipf("skip test because expression router is disabled (current router flavor is: %q)", routerFlavor)
 	}
 }
@@ -107,7 +107,7 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) dpconf.DBMode {
 	return dbmode
 }
 
-func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) dpconf.RouterFlavor {
+func eventuallyGetKongRouterFlavor(ctx context.Context, t *testing.T, adminURL *url.URL) dpconf.RouterFlavor {
 	t.Helper()
 
 	var (
@@ -116,7 +116,7 @@ func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) dpconf.Route
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ctx, cancel := context.WithTimeout(context.Background(), test.RequestTimeout)
+		ctx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
 		defer cancel()
 		routerFlavor, err = helpers.GetKongRouterFlavor(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)

@@ -71,7 +71,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	kong := Kong{
 		container: kongC,
 	}
-	t.Cleanup(func() {
+	t.Cleanup(func() { //nolint:contextcheck
 		// If the container is already terminated, we don't need to terminate it again.
 		if kongC.IsRunning() {
 			assert.NoError(t, kongC.Terminate(context.Background()))

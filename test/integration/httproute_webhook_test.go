@@ -149,7 +149,7 @@ func invalidRegexInPathTestCase(
 
 func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, expressions)
+	skipTestForRouterFlavors(context.Background(), t, expressions)
 
 	ctx := context.Background()
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
@@ -163,7 +163,7 @@ func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 
 func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
+	skipTestForRouterFlavors(context.Background(), t, traditional, traditionalCompatible)
 
 	ctx := context.Background()
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)

@@ -26,7 +26,7 @@ import (
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
 	ctx := context.Background()
-	RunWhenKongExpressionRouter(t)
+	RunWhenKongExpressionRouter(context.Background(), t)
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {

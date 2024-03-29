@@ -67,6 +67,16 @@ func setupControllers(
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
+	kongUpstreamPolicyReconciler := &configuration.KongUpstreamPolicyReconciler{
+		Client:                   mgr.GetClient(),
+		Log:                      ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
+		Scheme:                   mgr.GetScheme(),
+		DataplaneClient:          dataplaneClient,
+		CacheSyncTimeout:         c.CacheSyncTimeout,
+		KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+		StatusQueue:              kubernetesStatusQueue,
+	}
+
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Kong Gateway Admin API Service discovery
@@ -250,11 +260,17 @@ func setupControllers(
 				// StatusQueue:       kubernetesStatusQueue,
 			},
 		},
+		// KongUpstreamPolicy controller without HTTPRoute.
 		{
-			Enabled: c.KongUpstreamPolicyEnabled,
+			Enabled:    c.KongUpstreamPolicyEnabled,
+			Controller: kongUpstreamPolicyReconciler,
+		},
+		// HTTPRoute controller for updating KongUpstreamPolicy's ancestor status with services used as backends of HTTPRoutes.
+		{
+			Enabled: c.KongUpstreamPolicyEnabled && c.GatewayAPIHTTPRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KongUpstreamPolicy"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/Gateway"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: []schema.GroupVersionResource{
 					{
@@ -263,14 +279,8 @@ func setupControllers(
 						Resource: "httproutes",
 					},
 				},
-				Controller: &configuration.KongUpstreamPolicyReconciler{
-					Client:                   mgr.GetClient(),
-					Log:                      ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
-					Scheme:                   mgr.GetScheme(),
-					DataplaneClient:          dataplaneClient,
-					CacheSyncTimeout:         c.CacheSyncTimeout,
-					KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
-					StatusQueue:              kubernetesStatusQueue,
+				Controller: &configuration.HTTPRouteReconcilerForKongUpstreamPolicy{
+					Reconciler: kongUpstreamPolicyReconciler,
 				},
 			},
 		},

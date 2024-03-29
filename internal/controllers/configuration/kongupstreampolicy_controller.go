@@ -71,15 +71,6 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		return err
 	}
 
-	// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
-	// of the HTTPRoute.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-		handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
-	); err != nil {
-		return err
-	}
-
 	if r.KongServiceFacadeEnabled {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &incubatorv1alpha1.KongServiceFacade{}),
@@ -134,15 +125,6 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		indexServicesOnUpstreamPolicyAnnotation,
 	); err != nil {
 		return fmt.Errorf("failed to index services on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
-	}
-
-	if err := mgr.GetCache().IndexField(
-		context.Background(),
-		&gatewayapi.HTTPRoute{},
-		routeBackendRefServiceNameIndexKey,
-		indexRoutesOnBackendRefServiceName,
-	); err != nil {
-		return fmt.Errorf("failed to index HTTPRoutes on backendReferences: %w", err)
 	}
 
 	if r.KongServiceFacadeEnabled {
@@ -380,4 +362,45 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 // SetLogger sets the logger.
 func (r *KongUpstreamPolicyReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
+}
+
+type HTTPRouteReconcilerForKongUpstreamPolicy struct {
+	Reconciler *KongUpstreamPolicyReconciler
+}
+
+func (r *HTTPRouteReconcilerForKongUpstreamPolicy) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("HTTPRouteForKongUpstreamPolicy", mgr, controller.Options{
+		Reconciler: r.Reconciler,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Reconciler.Log
+		},
+		CacheSyncTimeout: r.Reconciler.CacheSyncTimeout,
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := mgr.GetCache().IndexField(
+		context.Background(),
+		&gatewayapi.HTTPRoute{},
+		routeBackendRefServiceNameIndexKey,
+		indexRoutesOnBackendRefServiceName,
+	); err != nil {
+		return fmt.Errorf("failed to index HTTPRoutes on backendReferences: %w", err)
+	}
+
+	// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
+	// of the HTTPRoute.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
+		handler.EnqueueRequestsFromMapFunc(r.Reconciler.getUpstreamPoliciesForHTTPRouteServices),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *HTTPRouteReconcilerForKongUpstreamPolicy) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	return r.Reconciler.Reconcile(ctx, req)
 }

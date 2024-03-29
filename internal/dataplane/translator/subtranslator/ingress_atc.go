@@ -158,44 +158,12 @@ func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPath
 		// segment match path.
 		if segmentPathPrefix != "" && strings.HasPrefix(httpIngressPath.Path, segmentPathPrefix) {
 			segmentMatchingPath := strings.TrimPrefix(httpIngressPath.Path, segmentPathPrefix)
-			return pathSegmentMatcherFromIngressMatch(segmentMatchingPath)
+			return pathSegmentMatcherFromPath(segmentMatchingPath)
 		}
 		return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, httpIngressPath.Path), nil
 	}
 	// Should not reach here.
 	return nil, nil
-}
-
-func pathSegmentMatcherFromIngressMatch(path string) (atc.Matcher, error) {
-	path = strings.Trim(path, "/")
-	segments := strings.Split(path, "/")
-	predicates := make([]atc.Matcher, 0)
-
-	numSegments := len(segments)
-	var segmentLenPredicate atc.Predicate
-	if segments[numSegments-1] == "**" {
-		segmentLenPredicate = atc.NewPredicateHTTPPathSegmentLength(atc.OpGreaterEqual, numSegments-1)
-	} else {
-		segmentLenPredicate = atc.NewPredicateHTTPPathSegmentLength(atc.OpEqual, numSegments)
-	}
-	predicates = append(predicates, segmentLenPredicate)
-
-	for index, segment := range segments {
-		if segment == "**" {
-			if index != numSegments-1 {
-				return nil, fmt.Errorf("'**' can only appear on the last segment")
-			}
-			continue
-		}
-		if segment == "*" {
-			continue
-		}
-
-		segment = strings.ReplaceAll(segment, "\\*", "*")
-		predicates = append(predicates, atc.NewPredicateHTTPPathSingleSegment(index, atc.OpEqual, segment))
-	}
-
-	return atc.And(predicates...), nil
 }
 
 // headerMatcherFromHeaders generates matcher to match headers in HTTP requests.

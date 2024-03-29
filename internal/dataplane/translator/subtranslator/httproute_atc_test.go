@@ -328,7 +328,9 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.expression, generateMatcherFromHTTPRouteMatch(tc.match).Expression())
+			matcher, err := generateMatcherFromHTTPRouteMatch(tc.match, map[string]string{})
+			require.NoError(t, err)
+			require.Equal(t, tc.expression, matcher.Expression())
 		})
 	}
 }

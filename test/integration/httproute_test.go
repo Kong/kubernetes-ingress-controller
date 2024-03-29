@@ -675,3 +675,87 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	t.Logf("test host matched in httproute, but not in listeners")
 	require.False(t, testGetByHost(t, "another.specific.io"))
 }
+
+func TestHTTPRoutePathSegmentMatch(t *testing.T) {
+	ctx := context.Background()
+	RunWhenKongVersion(t, ">=3.6.0", "Path segment match is only supported in Kong 3.6.0+ with expression router")
+	RunWhenKongExpressionRouter(ctx, t)
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Log("getting a gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a new gatewayClass")
+	gatewayClassName := uuid.NewString()
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	t.Log("deploying a new gateway")
+	gatewayName := uuid.NewString()
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
+	httpPort := gatewayapi.PortNumber(80)
+	httpRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.SegmentPrefixKey: "/#",
+			},
+		},
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gateway.Name),
+				}},
+			},
+			Rules: []gatewayapi.HTTPRouteRule{{
+				Matches: []gatewayapi.HTTPRouteMatch{
+					{
+						Path: &gatewayapi.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayapi.PathMatchRegularExpression),
+							Value: lo.ToPtr("/#/status/*"),
+						},
+					},
+				},
+				BackendRefs: []gatewayapi.HTTPBackendRef{{
+					BackendRef: gatewayapi.BackendRef{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Name: gatewayapi.ObjectName(service.Name),
+							Port: &httpPort,
+							Kind: util.StringToGatewayAPIKindPtr("Service"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+	_, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRoute)
+
+	// paths that should match /status/*
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/200", http.StatusOK, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/204", http.StatusNoContent, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/404", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	// paths that should not match
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/200/aaa", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+}

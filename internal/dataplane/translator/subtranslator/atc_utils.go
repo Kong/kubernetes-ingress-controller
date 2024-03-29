@@ -1,6 +1,7 @@
 package subtranslator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
@@ -61,4 +62,39 @@ func hostMatcherFromHosts(hosts []string) atc.Matcher {
 		}
 	}
 	return atc.Or(matchers...)
+}
+
+// pathSegmentMatcher returns matcher to match path segment rules.
+// a '*' represents any non-empty string in the segment.
+// a '**' which can only appear in the last segment represents any path, including empty.
+func pathSegmentMatcherFromPath(path string) (atc.Matcher, error) {
+	path = strings.Trim(path, "/")
+	segments := strings.Split(path, "/")
+	predicates := make([]atc.Matcher, 0)
+
+	numSegments := len(segments)
+	var segmentLenPredicate atc.Predicate
+	if segments[numSegments-1] == "**" {
+		segmentLenPredicate = atc.NewPredicateHTTPPathSegmentLength(atc.OpGreaterEqual, numSegments-1)
+	} else {
+		segmentLenPredicate = atc.NewPredicateHTTPPathSegmentLength(atc.OpEqual, numSegments)
+	}
+	predicates = append(predicates, segmentLenPredicate)
+
+	for index, segment := range segments {
+		if segment == "**" {
+			if index != numSegments-1 {
+				return nil, fmt.Errorf("'**' can only appear on the last segment")
+			}
+			continue
+		}
+		if segment == "*" {
+			continue
+		}
+
+		segment = strings.ReplaceAll(segment, "\\*", "*")
+		predicates = append(predicates, atc.NewPredicateHTTPPathSingleSegment(index, atc.OpEqual, segment))
+	}
+
+	return atc.And(predicates...), nil
 }

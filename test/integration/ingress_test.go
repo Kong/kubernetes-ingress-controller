@@ -1204,6 +1204,56 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")
 }
 
+func TestIngressPathSegmentMatch(t *testing.T) {
+	ctx := context.Background()
+	RunWhenKongVersion(t, ">=3.6.0", "Path segment match is only supported in Kong 3.6.0+ with expression router")
+	RunWhenKongExpressionRouter(ctx, t)
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with fixed host", service.Name)
+	ingress := generators.NewIngressForService("/#/status/*", map[string]string{
+		annotations.AnnotationPrefix + annotations.SegmentPrefixKey: "/#",
+	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
+	// Change pathTypes of paths to `ImplementationSpecific` to specify the paths to segment matches.
+	for i, rule := range ingress.Spec.Rules {
+		for j := range rule.HTTP.Paths {
+			ingress.Spec.Rules[i].HTTP.Paths[j].PathType = lo.ToPtr(netv1.PathTypeImplementationSpecific)
+		}
+	}
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	cleaner.Add(ingress)
+
+	require.Eventually(t, func() bool {
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
+		if err != nil {
+			return false
+		}
+		return len(lbstatus.Ingress) > 0
+	}, statusWait, waitTick)
+
+	// paths that should match /status/*
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/200", http.StatusOK, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/204", http.StatusNoContent, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/404", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	// paths that should not match
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/status/200/aaa", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+}
+
 // setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value
 // and retries if update conflict happens.
 func setIngressClassNameWithRetry(ctx context.Context, namespace string, ingress *netv1.Ingress, ingressClassName *string) error {

@@ -95,9 +95,9 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 	}
 	if len(configError.Flattened) == 0 {
 		if len(configError.Message) > 0 {
-			logger.Error(nil, "config error missing per-resource errors", "message", configError.Message)
+			logger.Error(nil, "Config error missing per-resource errors", "message", configError.Message)
 		} else {
-			logger.Error(nil, "config error missing per-resource and message", "message", configError.Message)
+			logger.Error(nil, "Config error missing per-resource and message", "message", configError.Message)
 		}
 	}
 	for _, ee := range configError.Flattened {

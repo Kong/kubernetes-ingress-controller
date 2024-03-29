@@ -80,7 +80,7 @@ func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIn
 
 func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, expressions)
+	skipTestForRouterFlavors(context.Background(), t, expressions)
 
 	ctx := context.Background()
 	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)
@@ -100,7 +100,7 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 
 func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
+	skipTestForRouterFlavors(context.Background(), t, traditional, traditionalCompatible)
 
 	ctx := context.Background()
 	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)

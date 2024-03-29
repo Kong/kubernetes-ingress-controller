@@ -15,7 +15,7 @@ import (
 func Namespace(ctx context.Context, t *testing.T, env environments.Environment) *corev1.Namespace {
 	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
-	t.Cleanup(func() {
+	t.Cleanup(func() { //nolint:contextcheck
 		// Use context.Background() to ensure the namespace got removed when ctx
 		// gets cancelled.
 		assert.NoError(t, clusters.CleanupGeneratedResources(context.Background(), env.Cluster(), t.Name()))

@@ -21,7 +21,7 @@ import (
 
 func TestKongIngressValidationWebhook(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, expressions)
+	skipTestForRouterFlavors(context.Background(), t, expressions)
 	ctx := context.Background()
 
 	ns, _ := helpers.Setup(ctx, t, env)

@@ -30,7 +30,7 @@ import (
 )
 
 func TestHTTPSRedirect(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
+	RunWhenKongExpressionRouter(context.Background(), t)
 	ctx := context.Background()
 
 	t.Parallel()

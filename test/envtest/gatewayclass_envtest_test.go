@@ -91,7 +91,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			) {
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) })
+				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) }) //nolint:contextcheck
 
 				t.Logf("verifying that the unsupported Gateway %s does not get Accepted or Programmed by the controller", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -180,7 +180,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) })
+				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) }) //nolint:contextcheck
 
 				// Let's wait and check that the Gateway hasn't been reconciled by the operator.
 				t.Log("verifying the Gateway is not reconciled as it is using a managed GatewayClass")
@@ -278,7 +278,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) })
+				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) }) //nolint:contextcheck
 
 				t.Logf("now that the GatewayClass exists, verifying that the Gateway %s gets Accepted and Programmed", gw.Name)
 

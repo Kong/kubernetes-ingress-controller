@@ -75,7 +75,7 @@ func TestHTTPRouteExample(t *testing.T) {
 }
 
 func TestTCPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
+	RunWhenKongExpressionRouter(context.Background(), t)
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {

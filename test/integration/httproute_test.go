@@ -198,7 +198,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	})
 
 	t.Run("HTTPRoute query param match", func(t *testing.T) {
-		RunWhenKongExpressionRouter(t) //nolint:contextcheck
+		RunWhenKongExpressionRouter(ctx, t)
 
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)

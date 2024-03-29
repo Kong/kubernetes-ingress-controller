@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
@@ -16,9 +17,9 @@ const (
 	expressions           routerFlavor = "expressions"
 )
 
-func skipTestForRouterFlavors(t *testing.T, flavor ...routerFlavor) {
+func skipTestForRouterFlavors(ctx context.Context, t *testing.T, flavor ...routerFlavor) {
 	t.Helper()
-	routerFlavor := routerFlavor(eventuallyGetKongRouterFlavor(t, proxyAdminURL))
+	routerFlavor := routerFlavor(eventuallyGetKongRouterFlavor(ctx, t, proxyAdminURL))
 	for _, f := range flavor {
 		if routerFlavor == f {
 			t.Skipf("router flavor: %q for ingress: %q skipping", f, proxyAdminURL)

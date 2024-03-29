@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,18 +84,19 @@ func MustParseURL(t *testing.T, urlStr string) *url.URL {
 // doesn't eventually succeed the calling test will fail and stop.
 // Parameter proxyURL is the URL of Kong Gateway proxy (set nil when it's not different
 // from parameter host). Parameter host, path and headers are used to make the GET request.
-// Response is expected to have the given statusCode and contain the passed bodyContents.
+// Response is expected to have the given statusCode and contain the passed bodyContent.
 func EventuallyGETPath(
 	t *testing.T,
 	proxyURL *url.URL,
 	host string,
 	path string,
 	statusCode int,
-	bodyContents string,
+	bodyContent string,
 	headers map[string]string,
 	waitDuration time.Duration,
 	waitTick time.Duration,
 ) {
+	t.Helper()
 	var client *http.Client
 	if proxyURL != nil {
 		client = DefaultHTTPClientWithProxy(proxyURL)
@@ -102,29 +104,29 @@ func EventuallyGETPath(
 		client = DefaultHTTPClient()
 	}
 
-	require.Eventually(t, func() bool {
-		req := MustHTTPRequest(t, http.MethodGet, host, path, headers)
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Logf("WARNING: http request failed for GET %s/%s to %s: %v", host, path, proxyURL, err)
-			return false
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		resp, err := client.Do(MustHTTPRequest(t, http.MethodGet, host, path, headers))
+		if !assert.NoError(c, err) {
+			return
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == statusCode {
-			if bodyContents == "" {
-				return true
-			}
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			if !strings.Contains(b.String(), bodyContents) {
-				t.Logf("WARNING: http response body does not contain expected contents: %s, actual: \n%s", bodyContents, b.String())
-				return false
-			}
-			return true
+
+		if !assert.Equal(c, statusCode, resp.StatusCode) {
+			return
 		}
-		return false
+		if bodyContent == "" {
+			return
+		}
+
+		b := new(bytes.Buffer)
+		n, err := b.ReadFrom(resp.Body)
+		if !assert.NoError(c, err) {
+			return
+		}
+		if !assert.Greater(c, n, int64(0)) {
+			return
+		}
+		assert.Contains(c, b.String(), bodyContent)
 	}, waitDuration, waitTick)
 }
 

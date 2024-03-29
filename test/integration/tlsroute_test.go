@@ -18,6 +18,7 @@ import (
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -586,9 +587,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("adding an additional backendRef to the TLSRoute")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
+		if !assert.NoError(c, err) {
+			return
+		}
 
 		tlsRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 			{
@@ -606,7 +609,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		}
 
 		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
-		return err == nil
+		assert.NoError(c, err)
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that the TLSRoute is now load-balanced between two services")

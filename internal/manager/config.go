@@ -83,6 +83,7 @@ type Config struct {
 	IngressClassName         string
 	LeaderElectionNamespace  string
 	LeaderElectionID         string
+	LeaderElectionForce      string
 	Concurrency              int
 	FilterTags               []string
 	WatchNamespaces          []string
@@ -216,6 +217,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster.`)
+	flagSet.StringVar(&c.LeaderElectionForce, "force-leader-election", "", `Set to "enabled" or "disabled" to force a leader election behavior. Behavior is normally determined automatically from other settings.`)
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"},
 		"Tag(s) in comma-separated format (or specify this flag multiple times). They are used to manage and filter entities in Kong. "+
 			"This setting will be silently ignored if the Kong instance has no tags support.")

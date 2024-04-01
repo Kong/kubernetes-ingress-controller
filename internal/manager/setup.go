@@ -120,7 +120,20 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 	return managerOpts, nil
 }
 
+const (
+	LeaderElectionEnabled  = "enabled"
+	LeaderElectionDisabled = "disabled"
+)
+
 func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode dpconf.DBMode) bool {
+	if c.LeaderElectionForce == LeaderElectionEnabled {
+		logger.Info("leader election forcibly enabled")
+		return true
+	}
+	if c.LeaderElectionForce == LeaderElectionDisabled {
+		logger.Info("leader election forcibly disabled")
+		return false
+	}
 	if c.Konnect.ConfigSynchronizationEnabled {
 		logger.Info("Konnect config synchronisation enabled, enabling leader election")
 		return true

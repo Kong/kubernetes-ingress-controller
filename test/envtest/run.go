@@ -78,6 +78,9 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.GatewayAPIHTTPRouteController = false
 	cfg.GatewayAPIReferenceGrantController = false
 
+	// Disable leader election, which doesn't work outside the cluster and is irrelevant for single-instance tests.
+	cfg.LeaderElectionForce = manager.LeaderElectionDisabled
+
 	return cfg
 }
 

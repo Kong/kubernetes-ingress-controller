@@ -105,8 +105,9 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 		return NewUpdateStrategyDBMode(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:  r.config.SkipCACertificates,
-				SelectorTags: r.config.FilterTags,
+				SkipCACerts:     r.config.SkipCACertificates,
+				SelectorTags:    r.config.FilterTags,
+				IncludeLicenses: true,
 			},
 			r.config.Version,
 			r.config.Concurrency,

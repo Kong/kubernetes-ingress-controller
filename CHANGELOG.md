@@ -108,6 +108,8 @@ Adding a new version? You'll need three changes:
 - Reconcile Secrets with `konghq.com/credential` label instead of waiting for other
   object to contain a reference to that Secrets
   [#5816](https://github.com/Kong/kubernetes-ingress-controller/pull/5816)
+- Support to apply licenses to DB backed Kong gateway from `KongLicense`.
+  [#5648](https://github.com/Kong/kubernetes-ingress-controller/pull/5648)
 
 ## [3.1.2]
 

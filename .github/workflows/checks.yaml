@@ -127,6 +127,8 @@ jobs:
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit
+    with:
+      platforms: linux/amd64, linux/arm64
 
   # We need this step to fail the workflow if any of the previous steps failed or were cancelled.
   # It allows to use this particular job as a required check for PRs.

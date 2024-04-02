@@ -5,3 +5,14 @@
 !**/*.sum
 .git
 kong-ingress-controller
+bin/
+config/
+docs/
+examples/
+scripts/
+generators/
+Dockerfile*
+test/
+keps/
+third_party/
+*.md

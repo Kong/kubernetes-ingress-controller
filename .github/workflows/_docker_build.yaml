@@ -88,9 +88,6 @@ jobs:
       - run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
       - run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

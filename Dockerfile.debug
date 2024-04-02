@@ -1,5 +1,5 @@
 # Build a manager binary with debug symbols and download Delve
-FROM golang:1.22.1 as builder
+FROM --platform=$BUILDPLATFORM golang:1.22.1 as builder
 
 ARG GOPATH
 ARG GOCACHE

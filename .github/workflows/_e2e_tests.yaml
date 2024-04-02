@@ -193,7 +193,7 @@ jobs:
           path: "*-tests.xml"
 
   gke:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
     if: ${{ inputs.run-gke }}
     environment: "gcloud"
     runs-on: ubuntu-latest

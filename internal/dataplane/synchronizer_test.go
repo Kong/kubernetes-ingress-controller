@@ -99,8 +99,10 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 		dbMode := dbMode
 		t.Run(fmt.Sprintf("dbmode=%s", dbMode), func(t *testing.T) {
 			c := &fakeDataplaneClient{dbmode: dbMode, t: t}
+			l, err := zap.NewDevelopment()
+			require.NoError(t, err)
 			s, err := NewSynchronizer(
-				zapr.NewLogger(zap.NewNop()),
+				zapr.NewLogger(l),
 				c,
 				WithStagger(testSynchronizerTick),
 				WithInitCacheSyncDuration(testSynchronizerTick),
@@ -115,15 +117,20 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 			t.Log("verifying the first update happened and the synchronizer is ready")
 			require.Eventually(t, func() bool { return s.IsReady() }, testSynchronizerTick*10, testSynchronizerTick)
 
+			const clientBlockTime = time.Second * 10
+
 			t.Log("making the data plane calls block for significantly longer than the synchronizer tick")
-			c.clientShouldBlockFor(time.Second * 10)
+			c.clientShouldBlockFor(clientBlockTime)
 			updateCount := c.totalUpdates()
 
 			t.Log("waiting for a blocking update to happen")
 			require.Eventually(t, func() bool { return c.totalUpdates() > updateCount }, testSynchronizerTick*10, testSynchronizerTick)
 
 			t.Log("verifying that IsReady is not blocking even though the client is blocked")
-			require.Eventually(t, func() bool { return s.IsReady() }, testSynchronizerTick*2, testSynchronizerTick)
+			// NOTE: Allow a little extra time for the synchronizer to return from IsReady() as
+			// time duration on the magnitude of milliseconds can be flaky.
+			// As long as it responds in a reasonable amount of time ( less than half the blocking time), we're good.
+			require.Eventually(t, func() bool { return s.IsReady() }, clientBlockTime/2, testSynchronizerTick)
 		})
 	}
 }
@@ -148,13 +155,25 @@ func (c *fakeDataplaneClient) DBMode() dpconf.DBMode {
 	return c.dbmode
 }
 
-func (c *fakeDataplaneClient) Update(_ context.Context) error {
+func (c *fakeDataplaneClient) Update(ctx context.Context) error {
 	c.updateCount.Add(1)
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	if c.clientCallBlockDuration > 0 {
-		c.t.Logf("Update() blocking for %s", c.clientCallBlockDuration)
-		time.Sleep(c.clientCallBlockDuration)
+		ch := time.After(c.clientCallBlockDuration)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			c.t.Logf("Update() blocking for %s", c.clientCallBlockDuration)
+		}
+
+		select {
+
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ch:
+		}
 	}
 	return nil
 }

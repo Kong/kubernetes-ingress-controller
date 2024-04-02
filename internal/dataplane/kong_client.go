@@ -712,6 +712,17 @@ func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Configuration
 func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.ResourceFailure, reason string) {
 	for _, failure := range resourceFailures {
 		for _, obj := range failure.CausingObjects() {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			c.logger.Error(
+				errors.New("object failed to apply"),
+				"recording a Warning event for object",
+				"name", obj.GetName(),
+				"namespace", obj.GetNamespace(),
+				"kind", gvk.Kind,
+				"apiVersion", gvk.Group+"/"+gvk.Version,
+				"reason", reason,
+				"message", failure.Message(),
+			)
 			c.eventRecorder.Event(obj, corev1.EventTypeWarning, reason, failure.Message())
 		}
 	}

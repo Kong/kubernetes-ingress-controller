@@ -84,10 +84,12 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [3.1.3]
+## Unreleased
 
 ### Fixed
 
+- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly.
+  [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658) 
 - Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
   [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
 

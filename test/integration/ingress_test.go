@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -1020,15 +1021,21 @@ func TestIngressMatchByHost(t *testing.T) {
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
 
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
-	require.NoError(t, err)
 	t.Log("change the ingress to wildcard host")
-	for i := range ingress.Spec.Rules {
-		ingress.Spec.Rules[i].Host = "*.example"
-	}
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ingClient := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name)
+		ingress, err := ingClient.Get(ctx, ingress.Name, metav1.GetOptions{})
+		if !assert.NoError(c, err) {
+			return
+		}
+		t.Log("change the ingress to wildcard host")
+		for i := range ingress.Spec.Rules {
+			ingress.Spec.Rules[i].Host = "*.example"
+		}
 
-	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-	require.NoError(t, err)
+		_, err = ingClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		assert.NoError(c, err)
+	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by matching host")
 

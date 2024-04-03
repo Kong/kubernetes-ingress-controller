@@ -123,7 +123,7 @@ func (s *Server) receiveConfig(ctx context.Context) {
 			s.configLock.Lock()
 			if dump.Failed {
 				s.failedConfigDump = dump.Config
-				s.rawErrBody = dump.Raw
+				s.rawErrBody = dump.RawResponseBody
 			} else {
 				s.successfulConfigDump = dump.Config
 			}

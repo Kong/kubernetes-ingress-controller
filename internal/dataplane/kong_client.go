@@ -648,7 +648,7 @@ func prepareSendDiagnosticFn(
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
 		select {
-		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, Raw: raw}:
+		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, RawResponseBody: raw}:
 			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")

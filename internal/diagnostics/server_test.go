@@ -48,9 +48,9 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 		for i := 0; i < configDumpsToWrite; i++ {
 			failed = !failed // Toggle failed flag.
 			configsCh <- util.ConfigDump{
-				Config: file.Content{},
-				Failed: failed,
-				Raw:    []byte("fake error body"),
+				Config:          file.Content{},
+				Failed:          failed,
+				RawResponseBody: []byte("fake error body"),
 			}
 		}
 	}()

@@ -92,6 +92,11 @@ Adding a new version? You'll need three changes:
   [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658) 
 - Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
   [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
+- Set proper User-Agent for request made to Kong and Konnect.
+  [#5753](https://github.com/Kong/kubernetes-ingress-controller/pull/5753)
+- `KongUpstreamPolicy` controller no longer requires existence of `HTTPRoute` CRD
+  to start.
+  [#5780](https://github.com/Kong/kubernetes-ingress-controller/pull/5780)
 
 ## [3.1.2]
 
@@ -126,13 +131,20 @@ Adding a new version? You'll need three changes:
 
 ### Highlights
 
-- 🔒 Kong Gateway's [secret vaults](kong-vault) now become a first-class citizen for Kubernetes users
-  thanks to the new `KongVault` CRD.
-- 🔒 Providing an Enterprise license to KIC-managed Kong Gateways becomes much easier thanks to the new `KongLicense` CRD
-  which is used to dynamically provision all the replicas with the latest license found in the cluster.
-- ✨ Populating a single field of `KongPlugin`'s configuration with use of a Kubernetes Secret becomes possible thanks 
-  to the new `KongPlugin`'s `configPatches` field.
+- 🔒 Kong Gateway's [secret vaults][kong-vault] now become a first-class citizen for Kubernetes users thanks to the new
+  `KongVault` CRD. _See [Kong Vault guide][vault-guide] and [CRDs reference][crds-ref] for more details._
+- 🔒 Providing an Enterprise license to KIC-managed Kong Gateways becomes much easier thanks to the new `KongLicense`
+  CRD which is used to dynamically provision all the replicas with the latest license found in the cluster. _See
+  [Enterprise License][license-guide] and [CRDs reference][crds-ref] for more details._
+- ✨ Populating a single field of `KongPlugin`'s configuration with use of a Kubernetes Secret becomes possible thanks
+  to the new `KongPlugin`'s `configPatches` field. _See [Using Kubernetes Secrets in Plugins][secrets-in-plugins-guide]
+  and [CRDs reference][crds-ref] for more details._
 - 🔒 All sensitive information stored in the cluster is now sanitized while sending configuration to Konnect.
+
+[crds-ref]: https://docs.konghq.com/kubernetes-ingress-controller/latest/reference/custom-resources/
+[vault-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/security/kong-vault/
+[license-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/license/
+[secrets-in-plugins-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/security/plugin-secrets/
 
 ### Added
 

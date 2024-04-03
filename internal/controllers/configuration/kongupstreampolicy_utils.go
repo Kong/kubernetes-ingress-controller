@@ -212,6 +212,10 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 
 // getConflictedServices returns a set of services that have conflicts.
 func (r *KongUpstreamPolicyReconciler) getConflictedServices(ctx context.Context, services []corev1.Service) (servicesSet, error) {
+	// return directly when HTTPRoute is not enabled, as it only check conflicted services in HTTPRoute backends only.
+	if !r.HTTPRouteEnabled {
+		return make(servicesSet), nil
+	}
 	// Prepare a mapping for efficient lookups if a Service uses this KongUpstreamPolicy.
 	upstreamPolicyServices := make(servicesSet)
 	for _, service := range services {

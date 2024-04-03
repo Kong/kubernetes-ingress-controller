@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
@@ -67,16 +68,6 @@ func setupControllers(
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
-	kongUpstreamPolicyReconciler := &configuration.KongUpstreamPolicyReconciler{
-		Client:                   mgr.GetClient(),
-		Log:                      ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
-		Scheme:                   mgr.GetScheme(),
-		DataplaneClient:          dataplaneClient,
-		CacheSyncTimeout:         c.CacheSyncTimeout,
-		KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
-		StatusQueue:              kubernetesStatusQueue,
-	}
-
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Kong Gateway Admin API Service discovery
@@ -260,28 +251,23 @@ func setupControllers(
 				// StatusQueue:       kubernetesStatusQueue,
 			},
 		},
-		// KongUpstreamPolicy controller without HTTPRoute.
+		// KongUpstreamPolicy controller.
+		// When HTTPRoute exists, the controller is enabled to watch HTTPRoutes to set ancestor status of KongUpstreamPolicies.
 		{
-			Enabled:    c.KongUpstreamPolicyEnabled,
-			Controller: kongUpstreamPolicyReconciler,
-		},
-		// HTTPRoute controller for updating KongUpstreamPolicy's ancestor status with services used as backends of HTTPRoutes.
-		{
-			Enabled: c.KongUpstreamPolicyEnabled && c.GatewayAPIHTTPRouteController,
-			Controller: &crds.DynamicCRDController{
-				Manager:          mgr,
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/Gateway"),
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: []schema.GroupVersionResource{
-					{
-						Group:    gatewayv1.GroupVersion.Group,
-						Version:  gatewayv1.GroupVersion.Version,
-						Resource: "httproutes",
-					},
-				},
-				Controller: &configuration.HTTPRouteReconcilerForKongUpstreamPolicy{
-					Reconciler: kongUpstreamPolicyReconciler,
-				},
+			Enabled: c.KongUpstreamPolicyEnabled,
+			Controller: &configuration.KongUpstreamPolicyReconciler{
+				Client:                   mgr.GetClient(),
+				Log:                      ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
+				Scheme:                   mgr.GetScheme(),
+				DataplaneClient:          dataplaneClient,
+				CacheSyncTimeout:         c.CacheSyncTimeout,
+				KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+				StatusQueue:              kubernetesStatusQueue,
+				HTTPRouteEnabled: utils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
+					Resource: "httproutes",
+				}),
 			},
 		},
 		{

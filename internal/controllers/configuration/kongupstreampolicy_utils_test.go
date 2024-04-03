@@ -698,6 +698,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Client:                   fakeClient,
 				DataplaneClient:          DataPlaneStatusClientMock{ObjectsConfigured: tc.objectsConfiguredInDataPlane},
 				KongServiceFacadeEnabled: true,
+				HTTPRouteEnabled:         true,
 			}
 
 			updated, err := reconciler.enforceKongUpstreamPolicyStatus(context.TODO(), &tc.kongUpstreamPolicy)

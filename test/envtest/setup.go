@@ -154,7 +154,7 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 	require.NoError(t, err)
 }
 
-func deployIngressClass(ctx context.Context, t *testing.T, name string, client ctrlclient.Client) {
+func deployIngressClass(ctx context.Context, t *testing.T, name string, client ctrlclient.Client) { //nolint:unparam
 	t.Helper()
 
 	ingress := &netv1.IngressClass{

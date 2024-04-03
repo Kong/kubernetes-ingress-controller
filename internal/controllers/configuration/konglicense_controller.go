@@ -366,7 +366,7 @@ func WrapKongLicenseReconcilerToDynamicCRDController(
 ) *crds.DynamicCRDController {
 	return &crds.DynamicCRDController{
 		Manager:          mgr,
-		Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KongUpstreamPolicy"),
+		Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KongLicense"),
 		CacheSyncTimeout: r.CacheSyncTimeout,
 		RequiredCRDs: []schema.GroupVersionResource{
 			{

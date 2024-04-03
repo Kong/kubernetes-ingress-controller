@@ -44,6 +44,9 @@ type KongUpstreamPolicyReconciler struct {
 	// KongServiceFacadeEnabled determines whether the controller should populate the KongUpstreamPolicy's ancestor
 	// status for KongServiceFacades.
 	KongServiceFacadeEnabled bool
+	// HTTPRouteEnabled determines whether the controller should populate the KongUpstreamPolicy's
+	// ancestor status for Services used in HTTPRoutes.
+	HTTPRouteEnabled bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -71,13 +74,15 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		return err
 	}
 
-	// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
-	// of the HTTPRoute.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-		handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
-	); err != nil {
-		return err
+	if r.HTTPRouteEnabled {
+		// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
+		// of the HTTPRoute.
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
+			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
+		); err != nil {
+			return err
+		}
 	}
 
 	if r.KongServiceFacadeEnabled {
@@ -136,13 +141,15 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to index services on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
 	}
 
-	if err := mgr.GetCache().IndexField(
-		context.Background(),
-		&gatewayapi.HTTPRoute{},
-		routeBackendRefServiceNameIndexKey,
-		indexRoutesOnBackendRefServiceName,
-	); err != nil {
-		return fmt.Errorf("failed to index HTTPRoutes on backendReferences: %w", err)
+	if r.HTTPRouteEnabled {
+		if err := mgr.GetCache().IndexField(
+			context.Background(),
+			&gatewayapi.HTTPRoute{},
+			routeBackendRefServiceNameIndexKey,
+			indexRoutesOnBackendRefServiceName,
+		); err != nil {
+			return fmt.Errorf("failed to index HTTPRoutes on backendReferences: %w", err)
+		}
 	}
 
 	if r.KongServiceFacadeEnabled {
@@ -261,7 +268,6 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(c
 	if !ok {
 		return nil
 	}
-
 	var requests []reconcile.Request
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, br := range rule.BackendRefs {

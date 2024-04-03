@@ -88,6 +88,60 @@ func TestValidateCredentials(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid jwt credential with HS512",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.LabelPrefix + labels.CredentialKey: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS512"),
+					"key":       []byte("key-name"),
+					"secret":    []byte("secret-name"),
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid jwt credential with HS384",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.LabelPrefix + labels.CredentialKey: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS384"),
+					"key":       []byte("key-name"),
+					"secret":    []byte("secret-name"),
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid jwt credential with HS256",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.LabelPrefix + labels.CredentialKey: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS256"),
+					"key":       []byte("key-name"),
+					"secret":    []byte("secret-name"),
+				},
+			},
+			wantErr: nil,
+		},
+		{
 			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 to be removed after deprecation window
 			name: "valid credential with deprectated field",
 			secret: &corev1.Secret{
@@ -167,7 +221,12 @@ func TestValidateCredentials(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateCredentials(tt.secret)
-			require.Equal(t, tt.wantErr, err)
+			if tt.wantErr != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.wantErr, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

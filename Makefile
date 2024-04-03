@@ -725,10 +725,15 @@ _run:
 # unsupported ref and downloads the manifests from the main branch.
 #
 # [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
+#
+# If you want to install from a specific commit,
+# you can set GATEWAY_API_VERSION to the full commit hash
+# and GATEWAY_API_PACKAGE_VERSION will be automatically obtained through go mod.
 GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
 GATEWAY_API_RELEASE_CHANNEL ?= experimental
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
-GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
+GATEWAY_API_PACKAGE_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
+GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_PACKAGE_VERSION)/config/crd
 GATEWAY_API_REPO ?= github.com/kubernetes-sigs/gateway-api
 GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/kubernetes-sigs/gateway-api
 GATEWAY_API_CRDS_URL = $(GATEWAY_API_REPO)/config/crd/$(GATEWAY_API_RELEASE_CHANNEL)?ref=$(GATEWAY_API_VERSION)
@@ -745,6 +750,7 @@ print-gateway-api-raw-repo-url:
 .PHONY: generate.gateway-api-consts
 generate.gateway-api-consts:
 	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+		GATEWAY_API_PACKAGE_VERSION=$(GATEWAY_API_PACKAGE_VERSION) \
 		CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url) \
 		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \

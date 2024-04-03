@@ -14,19 +14,21 @@ import (
 	"text/template"
 )
 
-//go:generate go run --tags generate_gateway_api_consts . -gateway-api-version $GATEWAY_API_VERSION -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
+//go:generate go run --tags generate_gateway_api_consts . -gateway-api-version $GATEWAY_API_VERSION -gateway-api-package-version $GATEWAY_API_PACKAGE_VERSION -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
 
 var (
-	gatewayAPIVersionFlag   = flag.String("gateway-api-version", "", "The semver version of Gateway API that should be used")
-	crdsStandardURLFlag     = flag.String("crds-standard-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")
-	crdsExperimentalURLFlag = flag.String("crds-experimental-url", "", "The URL of experimental Gateway API CRDs to be consumed by kustomize")
-	rawRepoURLFlag          = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
-	inFlag                  = flag.String("in", "", "Template file path")
-	outFlag                 = flag.String("out", "", "Output file path where the generated file will be placed")
+	gatewayAPIVersionFlag        = flag.String("gateway-api-version", "", "The semver version of Gateway API that should be used")
+	gatewayAPIPackageVersionFlag = flag.String("gateway-api-package-version", "", "The version of Gateway API package that should be used")
+	crdsStandardURLFlag          = flag.String("crds-standard-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")
+	crdsExperimentalURLFlag      = flag.String("crds-experimental-url", "", "The URL of experimental Gateway API CRDs to be consumed by kustomize")
+	rawRepoURLFlag               = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
+	inFlag                       = flag.String("in", "", "Template file path")
+	outFlag                      = flag.String("out", "", "Output file path where the generated file will be placed")
 )
 
 type Data struct {
 	GatewayAPIVersion            string
+	GatewayAPIPackageVersion     string
 	CRDsStandardKustomizeURL     string
 	CRDsExperimentalKustomizeURL string
 	RawRepoURL                   string
@@ -37,6 +39,7 @@ func main() {
 
 	data := Data{
 		GatewayAPIVersion:            *gatewayAPIVersionFlag,
+		GatewayAPIPackageVersion:     *gatewayAPIPackageVersionFlag,
 		CRDsStandardKustomizeURL:     *crdsStandardURLFlag,
 		CRDsExperimentalKustomizeURL: *crdsExperimentalURLFlag,
 		RawRepoURL:                   *rawRepoURLFlag,
@@ -55,6 +58,9 @@ func flagParse() {
 	if *gatewayAPIVersionFlag == "" {
 		log.Print("Please provide the 'gateway-api-version' flag")
 		os.Exit(0)
+	}
+	if *gatewayAPIPackageVersionFlag == "" {
+		*gatewayAPIPackageVersionFlag = *gatewayAPIVersionFlag
 	}
 	if *crdsStandardURLFlag == "" {
 		log.Print("Please provide the 'crds-standard-url' flag")

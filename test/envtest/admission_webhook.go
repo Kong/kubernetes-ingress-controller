@@ -26,7 +26,6 @@ func setupValidatingWebhookConfiguration(
 		CABundle: cert,
 	})
 	require.NoError(t, ctrlClient.Create(ctx, webhookConfig))
-	_ = webhookConfig
 }
 
 func validatingWebhookConfigWithClientConfig(t *testing.T, clientConfig admregv1.WebhookClientConfig) *admregv1.ValidatingWebhookConfiguration {

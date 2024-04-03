@@ -45,7 +45,7 @@ type KongUpstreamPolicyReconciler struct {
 	// status for KongServiceFacades.
 	KongServiceFacadeEnabled bool
 	// HTTPRouteEnabled determines whether the controller should populate the KongUpstreamPolicy's
-	// ancestor status for HTTPRoutes.
+	// ancestor status for Services used in HTTPRoutes.
 	HTTPRouteEnabled bool
 }
 
@@ -268,7 +268,6 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(c
 	if !ok {
 		return nil
 	}
-	r.Log.Info("Found HTTPRoute", "name", httpRoute.Name, "namespace", httpRoute.Namespace)
 	var requests []reconcile.Request
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, br := range rule.BackendRefs {

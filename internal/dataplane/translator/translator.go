@@ -12,6 +12,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -340,8 +341,8 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 		name := *service.Host
 
 		if _, exists := upstreamDedup[name]; !exists {
+			targetMap := map[string]kongstate.Target{}
 			// populate all the kong targets for the upstream given all the backends
-			var targets []kongstate.Target
 			for _, backend := range service.Backends {
 				// gather the Kubernetes service for the backend
 				backendNamespace := backend.Namespace()
@@ -414,10 +415,24 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					}
 				}
 
-				// add the new targets to the existing pool of targets for the Upstream.
-				targets = append(targets, newTargets...)
+				for _, t := range newTargets {
+					// See https://github.com/Kong/kubernetes-ingress-controller/issues/5761:
+					// Duplicate targets will appear in configurations that use Services with the same selector, which are used
+					// by some rollout systems. We need to deduplicate them while honoring the total weight.
+					//
+					// Because kongstate.Target is a nested kong.Target and the target IP is also a field named Target, the
+					// key names are a bit silly.
+					if existing, ok := targetMap[*t.Target.Target]; ok {
+						sum := *existing.Weight + *t.Weight
+						existing.Target.Weight = &sum
+						targetMap[*t.Target.Target] = existing
+					} else {
+						targetMap[*t.Target.Target] = t
+					}
+				}
 			}
 
+			targets := maps.Values(targetMap)
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
 				t.logger.V(util.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)

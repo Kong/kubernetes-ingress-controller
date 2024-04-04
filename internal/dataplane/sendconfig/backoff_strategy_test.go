@@ -27,15 +27,16 @@ func newMockUpdateStrategy(shouldSucceed bool) *mockUpdateStrategy {
 func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (
 	err error,
 	resourceErrors []sendconfig.ResourceError,
+	rawErrBody []byte,
 	resourceErrorsParseErr error,
 ) {
 	m.wasUpdateCalled = true
 
 	if !m.shouldSucceed {
-		return errors.New("update failure occurred"), nil, nil
+		return errors.New("update failure occurred"), nil, nil, nil
 	}
 
-	return nil, nil, nil
+	return nil, nil, nil, nil
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
@@ -119,7 +120,7 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			backoffStrategy := newMockBackoffStrategy(tc.updateShouldBeAllowed)
 
 			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, logger)
-			err, _, _ := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
+			err, _, _, _ := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
 			if tc.expectError != nil {
 				require.Equal(t, tc.expectError, err)
 			} else {

@@ -37,6 +37,26 @@ type AdminAPIClient interface {
 	KonnectControlPlane() string
 }
 
+// Note that UpdateError is used for both DB-less and DB-backed update strategies, but does not have parity between the
+// two. Pending a refactor of database reconciler (https://github.com/Kong/go-database-reconciler/issues/22), KIC does
+// not have access to per-resource errors or any original response bodies in database mode. Future DB mode work would
+// need to find some way to reconcile the single /config raw body and many per-resource responses from DB endpoints.
+
+// UpdateError wraps several pieces of error information relevant to a failed Kong update attempt.
+type UpdateError struct {
+	// RawBody is the original Kong HTTP error response body from a failed update.
+	RawBody []byte
+	// ResourceFailures are per-resource failures from a Kong configuration update attempt.
+	ResourceFailures []failures.ResourceFailure
+	// Err is an overall description of the update failure.
+	Err error
+}
+
+// Error implements the Error interface. It returns the string value of the Err field.
+func (e UpdateError) Error() string {
+	return fmt.Sprintf("%s", e.Err)
+}
+
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(
 	ctx context.Context,
@@ -47,18 +67,18 @@ func PerformUpdate(
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
-) ([]byte, []failures.ResourceFailure, error) {
+) ([]byte, UpdateError) {
 	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
-		return oldSHA, []failures.ResourceFailure{}, err
+		return oldSHA, UpdateError{ResourceFailures: []failures.ResourceFailure{}, Err: err}
 	}
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
 		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
 		if err != nil {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, UpdateError{Err: err}
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
@@ -66,14 +86,14 @@ func PerformUpdate(
 			} else {
 				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
-			return oldSHA, []failures.ResourceFailure{}, nil
+			return oldSHA, UpdateError{}
 		}
 	}
 
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
-	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
+	err, resourceErrors, rawErrBody, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
 		Content: targetContent,
 		Hash:    newSHA,
 	})
@@ -83,12 +103,12 @@ func PerformUpdate(
 	if err != nil {
 		// Not pushing metrics in case it's an update skip due to a backoff.
 		if errors.As(err, &UpdateSkippedDueToBackoffStrategyError{}) {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, UpdateError{RawBody: rawErrBody, Err: err}
 		}
 
 		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, logger)
 		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(resourceFailures), err)
-		return nil, resourceFailures, err
+		return nil, UpdateError{ResourceFailures: resourceFailures, RawBody: rawErrBody, Err: err}
 	}
 
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
@@ -99,7 +119,7 @@ func PerformUpdate(
 		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
 	}
 
-	return newSHA, nil, nil
+	return newSHA, UpdateError{}
 }
 
 // -----------------------------------------------------------------------------

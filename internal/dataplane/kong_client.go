@@ -567,7 +567,7 @@ func (c *KongClient) sendToClient(
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
-	newConfigSHA, entityErrors, err := sendconfig.PerformUpdate(
+	newConfigSHA, err := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,
 		client,
@@ -578,14 +578,14 @@ func (c *KongClient) sendToClient(
 		c.configChangeDetector,
 	)
 
-	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
+	c.recordResourceFailureEvents(err.ResourceFailures, KongConfigurationApplyFailedEventReason)
 	// Only record events on applying configuration to Kong gateway here.
 	if !client.IsKonnect() {
 		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
 	}
-	sendDiagnostic(err != nil)
+	sendDiagnostic(err.Err != nil, err.RawBody)
 
-	if err != nil {
+	if err.Err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			logger.Error(nil, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
@@ -611,7 +611,7 @@ func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
 
-type sendDiagnosticFn func(failed bool)
+type sendDiagnosticFn func(failed bool, raw []byte)
 
 // prepareSendDiagnosticFn generates sendDiagnosticFn.
 // Diagnostics are sent only when provided diagnostic config (--dump-config) is set.
@@ -625,7 +625,7 @@ func prepareSendDiagnosticFn(
 ) sendDiagnosticFn {
 	if diagnosticConfig == (util.ConfigDumpDiagnostic{}) {
 		// noop, diagnostics won't be sent
-		return func(bool) {}
+		return func(bool, []byte) {}
 	}
 
 	var config *file.Content
@@ -640,7 +640,7 @@ func prepareSendDiagnosticFn(
 		config = targetContent
 	}
 
-	return func(failed bool) {
+	return func(failed bool, raw []byte) {
 		// Given that we can send multiple configs to this channel and
 		// the fact that the API that exposes that can only expose 1 config
 		// at a time it means that users utilizing the diagnostics API
@@ -648,7 +648,7 @@ func prepareSendDiagnosticFn(
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
 		select {
-		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
+		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, RawResponseBody: raw}:
 			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")

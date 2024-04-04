@@ -86,6 +86,14 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Add a `/debug/config/raw-error` endpoint to the config dump diagnostic
+  server. This endpoint outputs the original Kong `/config` endpoint error for
+  failed configuration pushes in case error parsing fails. Attempt to log the
+  `message` field of errors that KIC cannot fully parse.
+  [#5773](https://github.com/Kong/kubernetes-ingress-controller/issues/5773)
+
 ### Fixed
 
 - Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly.

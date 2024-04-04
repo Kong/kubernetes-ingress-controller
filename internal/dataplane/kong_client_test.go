@@ -253,10 +253,11 @@ type mockUpdateStrategy struct {
 func (m *mockUpdateStrategy) Update(_ context.Context, content sendconfig.ContentWithHash) (
 	err error,
 	resourceErrors []sendconfig.ResourceError,
+	rawErrBody []byte,
 	resourceErrorsParseErr error,
 ) {
 	err = m.onUpdate(content)
-	return err, nil, nil
+	return err, nil, nil, nil
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {

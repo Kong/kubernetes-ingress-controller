@@ -91,7 +91,23 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 
 	err := json.Unmarshal(body, &configError)
 	if err != nil {
+		// we _should_ arguably be able to parse the "message" field into a ConfigError even if we can't parse a full set
+		// of flattened errors, but for some reason those incomplete errors still don't unmarshal. as a fallback, try and
+		// yank the field out via a more basic unmarshal target
+		fallback := map[string]interface{}{}
+		if fallbackErr := json.Unmarshal(body, &fallback); fallbackErr == nil {
+			if message, ok := fallback["message"]; ok {
+				logger.Error(nil, "Could not fully parse config error", "message", message)
+			}
+		}
 		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)
+	}
+	if len(configError.Flattened) == 0 {
+		if len(configError.Message) > 0 {
+			logger.Error(nil, "Config error missing per-resource errors", "message", configError.Message)
+		} else {
+			logger.Error(nil, "Config error missing per-resource and message", "message", configError.Message)
+		}
 	}
 	for _, ee := range configError.Flattened {
 		raw := rawResourceError{

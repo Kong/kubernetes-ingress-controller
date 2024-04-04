@@ -56,10 +56,12 @@ require (
 	k8s.io/component-base v0.29.3
 	sigs.k8s.io/controller-runtime v0.17.2
 	sigs.k8s.io/gateway-api v1.0.0
-	sigs.k8s.io/kustomize/api v0.16.0
-	sigs.k8s.io/kustomize/kyaml v0.16.0
+	sigs.k8s.io/kustomize/api v0.17.0
+	sigs.k8s.io/kustomize/kyaml v0.17.0
 	sigs.k8s.io/yaml v1.4.0
 )
+
+require gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 
 require (
 	cloud.google.com/go/compute v1.24.0 // indirect
@@ -211,7 +213,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0 // indirect
-	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

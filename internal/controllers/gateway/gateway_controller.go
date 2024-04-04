@@ -368,7 +368,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "Reconciliation triggered but gateway does not exist, deleting it in dataplane")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 		}
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{}, err
 	}
 
 	debug(log, gateway, "Processing gateway")
@@ -495,7 +495,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 				"name", gateway.Name,
 				"service", ref,
 			)
-			return ctrl.Result{Requeue: true}, err
+			return ctrl.Result{}, err
 		}
 		if svc != nil {
 			gatewayServices = append(gatewayServices, svc)

@@ -30,7 +30,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.8.0
-	github.com/kong/go-kong v0.52.0
+	github.com/kong/go-kong v0.54.0
 	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.46.0
 	github.com/lithammer/dedent v1.1.0

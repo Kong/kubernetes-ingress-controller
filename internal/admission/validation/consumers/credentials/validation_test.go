@@ -78,7 +78,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "key-auth",
+						labels.CredentialTypeLabel: "key-auth",
 					},
 				},
 				Data: map[string][]byte{
@@ -94,7 +94,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "jwt",
+						labels.CredentialTypeLabel: "jwt",
 					},
 				},
 				Data: map[string][]byte{
@@ -112,7 +112,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "jwt",
+						labels.CredentialTypeLabel: "jwt",
 					},
 				},
 				Data: map[string][]byte{
@@ -130,7 +130,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "jwt",
+						labels.CredentialTypeLabel: "jwt",
 					},
 				},
 				Data: map[string][]byte{
@@ -163,7 +163,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "bee-auth",
+						labels.CredentialTypeLabel: "bee-auth",
 					},
 				},
 				Data: map[string][]byte{
@@ -183,7 +183,7 @@ func TestValidateCredentials(t *testing.T) {
 					"key": []byte("little-rabbits-be-good"),
 				},
 			},
-			wantErr: fmt.Errorf("secret has no credential type, add a %s label", labels.LabelPrefix+labels.CredentialKey),
+			wantErr: fmt.Errorf("secret has no credential type, add a %s label", labels.CredentialTypeLabel),
 		},
 		{
 			name: "missing required field",
@@ -192,7 +192,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "key-auth",
+						labels.CredentialTypeLabel: "key-auth",
 					},
 				},
 				Data: map[string][]byte{
@@ -208,7 +208,7 @@ func TestValidateCredentials(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "key-auth",
+						labels.CredentialTypeLabel: "key-auth",
 					},
 				},
 				Data: map[string][]byte{

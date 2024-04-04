@@ -23,7 +23,7 @@ const (
 // ExtractKongCredentialType returns the credential type of a Secret and a code indicating whether the credential type
 // was obtained from a label, field, or not at all. Labels take precedence over fields if both are present.
 func ExtractKongCredentialType(secret *corev1.Secret) (string, CredentialTypeSource) {
-	credType, labelOk := secret.Labels[labels.LabelPrefix+labels.CredentialKey]
+	credType, labelOk := secret.Labels[labels.CredentialTypeLabel]
 	if !labelOk {
 		// if no label, fall back to the deprecated field
 		credBytes, fieldOk := secret.Data["kongCredType"]

@@ -105,6 +105,9 @@ Adding a new version? You'll need three changes:
 - `KongUpstreamPolicy` controller no longer requires existence of `HTTPRoute` CRD
   to start.
   [#5780](https://github.com/Kong/kubernetes-ingress-controller/pull/5780)
+- Reconcile Secrets with `konghq.com/credential` label instead of waiting for other
+  object to contain a reference to that Secrets
+  [#5816](https://github.com/Kong/kubernetes-ingress-controller/pull/5816)
 
 ## [3.1.2]
 

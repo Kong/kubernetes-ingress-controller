@@ -515,7 +515,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				Name:      "labeledSecret",
 				Namespace: "default",
 				Labels: map[string]string{
-					labels.LabelPrefix + labels.CredentialKey: "key-auth",
+					labels.CredentialTypeLabel: "key-auth",
 				},
 			},
 			Data: map[string][]byte{
@@ -527,7 +527,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				Name:      "labeledSecretWithCredField",
 				Namespace: "default",
 				Labels: map[string]string{
-					labels.LabelPrefix + labels.CredentialKey: "key-auth",
+					labels.CredentialTypeLabel: "key-auth",
 				},
 			},
 			Data: map[string][]byte{
@@ -540,7 +540,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				Name:      "badTypeLabeledSecret",
 				Namespace: "default",
 				Labels: map[string]string{
-					labels.LabelPrefix + labels.CredentialKey: "bee-auth",
+					labels.CredentialTypeLabel: "bee-auth",
 				},
 			},
 			Data: map[string][]byte{

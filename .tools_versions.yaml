@@ -7,7 +7,7 @@ kustomize: "5.3.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "1.57.2"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.10.1"
+skaffold: "2.11.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.17.2"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs

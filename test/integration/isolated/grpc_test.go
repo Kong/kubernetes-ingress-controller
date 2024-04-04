@@ -191,7 +191,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 				return err == nil
 			}, consts.IngressWait, consts.WaitTick)
 
-			client, closeGrpcConn, err := grpcBinClient(ctx, grpcAddr, testHostname, true)
+			client, closeGrpcConn, err := grpcBinClient(grpcAddr, testHostname, true)
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				err := closeGrpcConn()
@@ -232,7 +232,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 }
 
 func grpcEchoResponds(ctx context.Context, url, hostname, input string, enableTLS bool) error {
-	client, closeConn, err := grpcBinClient(ctx, url, hostname, enableTLS)
+	client, closeConn, err := grpcBinClient(url, hostname, enableTLS)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func grpcEchoResponds(ctx context.Context, url, hostname, input string, enableTL
 	return nil
 }
 
-func grpcBinClient(ctx context.Context, url, hostname string, enableTLS bool) (pb.GRPCBinClient, func() error, error) {
+func grpcBinClient(url, hostname string, enableTLS bool) (pb.GRPCBinClient, func() error, error) {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithAuthority(hostname)}
 	if enableTLS {
 		opts = []grpc.DialOption{grpc.WithTransportCredentials(credentials.NewTLS(
@@ -261,7 +261,7 @@ func grpcBinClient(ctx context.Context, url, hostname string, enableTLS bool) (p
 			},
 		))}
 	}
-	conn, err := grpc.DialContext(ctx, url, opts...)
+	conn, err := grpc.NewClient(url, opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to dial GRPC server: %w", err)
 	}

@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -82,9 +83,15 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 		return false
 	}
 
-	labels := secret.Labels
-	if labels != nil && labels[CACertLabelKey] == "true" {
-		return true
+	l := secret.Labels
+	if l != nil {
+		if l[CACertLabelKey] == "true" {
+			return true
+		}
+
+		if _, ok := l[labels.CredentialTypeLabel]; ok {
+			return true
+		}
 	}
 
 	referred, err := r.ReferenceIndexers.ObjectReferred(secret)

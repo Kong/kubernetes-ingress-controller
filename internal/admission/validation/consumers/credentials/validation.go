@@ -24,7 +24,7 @@ func ValidateCredentials(secret *corev1.Secret) error {
 	if credentialSource == util.CredentialTypeAbsent {
 		// this shouldn't occur, since we check this earlier in the admission controller's handleSecret function, but
 		// checking here also in case a refactor removes that
-		return fmt.Errorf("secret has no credential type, add a %s label", labels.LabelPrefix+labels.CredentialKey)
+		return fmt.Errorf("secret has no credential type, add a %s label", labels.CredentialTypeLabel)
 	}
 
 	// verify that the credential type provided is valid
@@ -127,7 +127,7 @@ func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret
 	if credentialSource == util.CredentialTypeAbsent {
 		return fmt.Errorf(
 			"secret has no credential type, add a %s label",
-			labels.LabelPrefix+labels.CredentialKey,
+			labels.CredentialTypeLabel,
 		)
 	}
 

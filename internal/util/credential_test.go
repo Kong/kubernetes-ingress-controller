@@ -24,7 +24,7 @@ func TestExtractKongCredentialType(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "key-auth",
+						labels.CredentialTypeLabel: "key-auth",
 					},
 				},
 				Data: map[string][]byte{
@@ -58,7 +58,7 @@ func TestExtractKongCredentialType(t *testing.T) {
 					Name:      "secret",
 					Namespace: "default",
 					Labels: map[string]string{
-						labels.LabelPrefix + labels.CredentialKey: "key-auth",
+						labels.CredentialTypeLabel: "key-auth",
 					},
 				},
 				Data: map[string][]byte{

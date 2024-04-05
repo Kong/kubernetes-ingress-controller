@@ -341,6 +341,12 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 		name := *service.Host
 
 		if _, exists := upstreamDedup[name]; !exists {
+			// targetMap maps the target's Target field to the Target object. The field represents the string "target" field
+			// of a Kong target entity. This field is either an IP address or hostname and a port separated by a colon. For
+			// example: "10.0.0.1:80", "example.com:9000". We use a map because this field must be unique within an upstream,
+			// and we may need to combine multiple Kubernetes backends into a single target for some configurations--some
+			// routes may, for example, use the same Service twice or may use two Services with the same selector and same
+			// endpoints.
 			targetMap := map[string]kongstate.Target{}
 			// populate all the kong targets for the upstream given all the backends
 			for _, backend := range service.Backends {
@@ -421,9 +427,11 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					// by some rollout systems. We need to deduplicate them while honoring the total weight.
 					//
 					// Because kongstate.Target is a nested kong.Target and the target IP is also a field named Target, the
-					// key names are a bit silly.
+					// key names are a bit silly: while fields like t.Weight and t.Upstream resolve fine, t.Target does not, and
+					// instead requires t.Target.Target. For consistency, everything below explicitly includes the nested object
+					// name, so t.Target.Weight instead of t.Weight.
 					if existing, ok := targetMap[*t.Target.Target]; ok {
-						sum := *existing.Weight + *t.Weight
+						sum := *existing.Target.Weight + *t.Target.Weight
 						existing.Target.Weight = &sum
 						targetMap[*t.Target.Target] = existing
 					} else {

@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -232,116 +233,84 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 	return classParams
 }
 
-// ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
-func (s Store) ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error) {
-	var httproutes []*gatewayapi.HTTPRoute
-	if err := cache.ListAll(s.stores.HTTPRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			httproute, ok := ob.(*gatewayapi.HTTPRoute)
-			if ok {
-				httproutes = append(httproutes, httproute)
-			}
-		},
-	); err != nil {
+// List lists all objects of given type from the provided cache stores.
+func List[T client.Object](cs CacheStores) ([]T, error) {
+	s, err := GetTypedStore[T](cs)
+	if err != nil {
 		return nil, err
 	}
-	return httproutes, nil
+
+	objs := s.List()
+	ret := make([]T, 0, len(objs))
+	for _, obj := range objs {
+		httproute, ok := obj.(T)
+		if !ok {
+			return nil, fmt.Errorf("%T is not a supported cache object type", obj)
+		}
+		ret = append(ret, httproute)
+	}
+
+	return ret, nil
+}
+
+// GetTypedStore returns a cache.Store for the given type.
+func GetTypedStore[T client.Object](cs CacheStores) (cache.Store, error) {
+	var obj T
+	switch any(obj).(type) {
+	case *gatewayapi.HTTPRoute:
+		return cs.HTTPRoute, nil
+	case *gatewayapi.TCPRoute:
+		return cs.TCPRoute, nil
+	case *gatewayapi.UDPRoute:
+		return cs.UDPRoute, nil
+	case *gatewayapi.TLSRoute:
+		return cs.TLSRoute, nil
+	case *gatewayapi.GRPCRoute:
+		return cs.GRPCRoute, nil
+	case *gatewayapi.ReferenceGrant:
+		return cs.ReferenceGrant, nil
+	case *gatewayapi.Gateway:
+		return cs.Gateway, nil
+	case *kongv1.KongPlugin:
+		return cs.Plugin, nil
+	default:
+	}
+	return nil, fmt.Errorf("unsupported type %T", obj)
+}
+
+// ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
+func (s Store) ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error) {
+	return List[*gatewayapi.HTTPRoute](s.stores)
 }
 
 // ListUDPRoutes returns the list of UDPRoutes in the UDPRoute cache store.
 func (s Store) ListUDPRoutes() ([]*gatewayapi.UDPRoute, error) {
-	var udproutes []*gatewayapi.UDPRoute
-	if err := cache.ListAll(s.stores.UDPRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			udproute, ok := ob.(*gatewayapi.UDPRoute)
-			if ok {
-				udproutes = append(udproutes, udproute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return udproutes, nil
+	return List[*gatewayapi.UDPRoute](s.stores)
 }
 
 // ListTCPRoutes returns the list of TCPRoutes in the TCPRoute cache store.
 func (s Store) ListTCPRoutes() ([]*gatewayapi.TCPRoute, error) {
-	var tcproutes []*gatewayapi.TCPRoute
-	if err := cache.ListAll(s.stores.TCPRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			tcproute, ok := ob.(*gatewayapi.TCPRoute)
-			if ok {
-				tcproutes = append(tcproutes, tcproute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return tcproutes, nil
+	return List[*gatewayapi.TCPRoute](s.stores)
 }
 
 // ListTLSRoutes returns the list of TLSRoutes in the TLSRoute cache store.
 func (s Store) ListTLSRoutes() ([]*gatewayapi.TLSRoute, error) {
-	var tlsroutes []*gatewayapi.TLSRoute
-	if err := cache.ListAll(s.stores.TLSRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			tlsroute, ok := ob.(*gatewayapi.TLSRoute)
-			if ok {
-				tlsroutes = append(tlsroutes, tlsroute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return tlsroutes, nil
+	return List[*gatewayapi.TLSRoute](s.stores)
 }
 
 // ListGRPCRoutes returns the list of GRPCRoutes in the GRPCRoute cache store.
 func (s Store) ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error) {
-	var grpcroutes []*gatewayapi.GRPCRoute
-	if err := cache.ListAll(s.stores.GRPCRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			tlsroute, ok := ob.(*gatewayapi.GRPCRoute)
-			if ok {
-				grpcroutes = append(grpcroutes, tlsroute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return grpcroutes, nil
+	return List[*gatewayapi.GRPCRoute](s.stores)
 }
 
 // ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.
 func (s Store) ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error) {
-	var grants []*gatewayapi.ReferenceGrant
-	if err := cache.ListAll(s.stores.ReferenceGrant, labels.NewSelector(),
-		func(ob interface{}) {
-			grant, ok := ob.(*gatewayapi.ReferenceGrant)
-			if ok {
-				grants = append(grants, grant)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return grants, nil
+	return List[*gatewayapi.ReferenceGrant](s.stores)
 }
 
 // ListGateways returns the list of Gateways in the Gateway cache store.
 func (s Store) ListGateways() ([]*gatewayapi.Gateway, error) {
-	var gateways []*gatewayapi.Gateway
-	if err := cache.ListAll(s.stores.Gateway, labels.NewSelector(),
-		func(ob interface{}) {
-			gw, ok := ob.(*gatewayapi.Gateway)
-			if ok {
-				gateways = append(gateways, gw)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return gateways, nil
+	return List[*gatewayapi.Gateway](s.stores)
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from
@@ -651,12 +620,10 @@ func (s Store) ListKongClusterPlugins() []*kongv1.KongClusterPlugin {
 
 // ListKongPlugins lists all KongPlugins.
 func (s Store) ListKongPlugins() []*kongv1.KongPlugin {
-	var plugins []*kongv1.KongPlugin
-	for _, item := range s.stores.Plugin.List() {
-		p, ok := item.(*kongv1.KongPlugin)
-		if ok {
-			plugins = append(plugins, p)
-		}
+	plugins, err := List[*kongv1.KongPlugin](s.stores)
+	if err != nil {
+		s.logger.Error(err, "failed to list KongPlugins")
+		return nil
 	}
 	return plugins
 }

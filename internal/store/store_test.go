@@ -1,6 +1,8 @@
 package store
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -14,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
@@ -175,4 +178,62 @@ func TestStore_Getters(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, upstreamPolicy, storedObj)
 	})
+}
+
+func benchmarkListHTTPRoutes(b *testing.B, count int) {
+	// Create a new cache store
+	cs := NewCacheStores()
+	c := New(cs, "kong", logr.Discard())
+
+	// Add some HTTPRoutes to the cache store
+	for i := 0; i < count; i++ {
+		route := &gatewayapi.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("route-%d", i),
+				Namespace: "default",
+			},
+			Spec: gatewayapi.HTTPRouteSpec{
+				Rules: []gatewayapi.HTTPRouteRule{
+					{
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/test1"),
+								},
+								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+							},
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/test2"),
+								},
+								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+							},
+						},
+					},
+				},
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{},
+			},
+		}
+
+		require.NoError(b, cs.HTTPRoute.Add(route))
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := c.ListHTTPRoutes()
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkListHTTPRoutes(b *testing.B) {
+	counts := []int{1, 10, 100, 1000, 10000, 100000, 1000000}
+	for _, count := range counts {
+		b.Run(strconv.Itoa(count), func(b *testing.B) {
+			b.ResetTimer()
+			benchmarkListHTTPRoutes(b, count)
+			b.ReportAllocs()
+		})
+	}
 }

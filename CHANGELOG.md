@@ -114,6 +114,13 @@ Adding a new version? You'll need three changes:
 - Support to apply licenses to DB backed Kong gateway from `KongLicense`.
   [#5648](https://github.com/Kong/kubernetes-ingress-controller/pull/5648)
 
+### Changed
+
+- Preallocate slices for Gateway API objects when listing in store.
+  This yields a significant performance improvements in time spent, bytes allocated
+  and allocations per list operation.
+  [#5824](https://github.com/Kong/kubernetes-ingress-controller/pull/5824)
+
 ## [3.1.2]
 
 > Release date: 2024-03-08

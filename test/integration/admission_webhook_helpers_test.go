@@ -24,6 +24,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
+// NOTE: Functions in this file use a shared environment.
+// This can be refactored so that the client is provided as an argument to the functions.
+
 func ensureWebhookService(ctx context.Context, t *testing.T, name string) {
 	t.Logf("creating webhook service: %q in namespace: %q", name, consts.ControllerNamespace)
 	validationsService, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Create(ctx, &corev1.Service{

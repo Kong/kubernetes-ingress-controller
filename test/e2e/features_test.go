@@ -28,6 +28,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
@@ -249,8 +250,13 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	controllerDeployment := deployments.GetController(ctx, t, env)
 	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
 		if container.Name == controllerContainerName {
-			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(controllerDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: testenv.GetFeatureGates()})
+			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(
+				controllerDeployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{
+					Name:  "CONTROLLER_FEATURE_GATES",
+					Value: fmt.Sprintf("%s=true", featuregates.GatewayAlphaFeature),
+				},
+			)
 		}
 	}
 
@@ -263,6 +269,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedMsg := "Required CustomResourceDefinitions are not installed, setting up a watch for them in case they are installed afterward"
+		t.Logf("checking logs of #%d pods", len(pods.Items))
 		for _, pod := range pods.Items {
 			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
 			if err != nil {
@@ -274,7 +281,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			}
 		}
 		return true
-	}, time.Minute, 5*time.Second)
+	}, time.Minute, 3*time.Second)
 
 	t.Logf("deploying Gateway APIs CRDs in standard channel from %s", consts.GatewayStandardCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayStandardCRDsKustomizeURL))

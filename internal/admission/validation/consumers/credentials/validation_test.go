@@ -142,6 +142,41 @@ func TestValidateCredentials(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid jwt credential with RS256",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("RS256"),
+				},
+			},
+			wantErr: fmt.Errorf("missing required field(s): rsa_public_key, key, secret"),
+		},
+		{
+			name: "valid jwt credential with RS256",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm":      []byte("RS256"),
+					"key":            []byte(""),
+					"secret":         []byte(""),
+					"rsa_public_key": []byte(""),
+				},
+			},
+			wantErr: fmt.Errorf("some fields were invalid due to missing data: rsa_public_key, key, secret"),
+		},
+		{
 			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 to be removed after deprecation window
 			name: "valid credential with deprectated field",
 			secret: &corev1.Secret{

@@ -2,7 +2,9 @@ package envtest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,8 +12,10 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -576,6 +580,554 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			}, 30*time.Second, 100*time.Millisecond)
 		})
 	}
+}
+
+func TestAdmissionWebhook_KongConsumers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var (
+		scheme           = Scheme(t, WithKong)
+		envcfg           = Setup(t, scheme)
+		ctrlClientGlobal = NewControllerClient(t, scheme, envcfg)
+		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
+		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+			certificate.WithDNSNames("localhost"),
+		)
+		admissionWebhookPort = helpers.GetFreePort(t)
+
+		kongContainer = runKongEnterprise(ctx, t)
+	)
+
+	_, logs := RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
+	)
+	WaitForManagerStart(t, logs)
+	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+
+	t.Logf("creating some static credentials in %s namespace which will be used to test global validation", ns.Name)
+	for _, secret := range []*corev1.Secret{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "tuxcreds1",
+			},
+			StringData: map[string]string{
+				"kongCredType": "basic-auth",
+				"username":     "tux1",
+				"password":     "testpass",
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "tuxcreds2",
+			},
+			StringData: map[string]string{
+				"kongCredType": "basic-auth",
+				"username":     "tux2",
+				"password":     "testpass",
+			},
+		},
+	} {
+		secret := secret.DeepCopy()
+		require.NoError(t, ctrlClient.Create(ctx, secret))
+		t.Cleanup(func() {
+			if err := ctrlClient.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
+	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
+	consumer := &kongv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "statis-consumer-",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
+			},
+		},
+		Username: "tux",
+		CustomID: uuid.NewString(),
+		Credentials: []string{
+			"tuxcreds1",
+			"tuxcreds2",
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, consumer))
+	t.Cleanup(func() {
+		if err := ctrlClient.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+			assert.NoError(t, err)
+		}
+	})
+
+	testCases := []struct {
+		name           string
+		consumer       *kongv1.KongConsumer
+		credentials    []*corev1.Secret
+		wantErr        bool
+		wantPartialErr string
+	}{
+		{
+			name: "a consumer with no credentials should pass validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testconsumer",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: uuid.NewString(),
+				CustomID: uuid.NewString(),
+			},
+			credentials: nil,
+			wantErr:     false,
+		},
+		{
+			name: "a consumer with valid credentials should pass validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username:    "electron",
+				CustomID:    uuid.NewString(),
+				Credentials: []string{"electronscreds"},
+			},
+			credentials: []*corev1.Secret{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "electronscreds",
+				},
+				StringData: map[string]string{
+					"kongCredType": "basic-auth",
+					"username":     "electron",
+					"password":     "testpass",
+				},
+			}},
+			wantErr: false,
+		},
+		{
+			name: "a consumer with duplicate credentials which are NOT constrained should pass validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: "proton",
+				CustomID: uuid.NewString(),
+				Credentials: []string{
+					"protonscreds1",
+					"protonscreds2",
+				},
+			},
+			credentials: []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "protonscreds1",
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     "proton",
+						"password":     "testpass",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "protonscreds2",
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     "electron", // username is unique constrained
+						"password":     "testpass", // password is not unique constrained
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "a consumer referencing credentials secrets which do not yet exist should fail validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: "repairedlawnmower",
+				CustomID: uuid.NewString(),
+				Credentials: []string{
+					"nonexistentcreds",
+				},
+			},
+			wantErr:        true,
+			wantPartialErr: "not found",
+		},
+		{
+			name: "a consumer with duplicate credentials which ARE constrained should fail validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "brokenshovel",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: "neutron",
+				CustomID: uuid.NewString(),
+				Credentials: []string{
+					"neutronscreds1",
+					"neutronscreds2",
+				},
+			},
+			credentials: []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "neutronscreds1",
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     "neutron",
+						"password":     "testpass",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "neutronscreds2",
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     "neutron", // username is unique constrained
+						"password":     "testpass",
+					},
+				},
+			},
+			wantErr:        true,
+			wantPartialErr: "unique key constraint violated for username",
+		},
+		{
+			name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: "reasonablehammer",
+				CustomID: uuid.NewString(),
+				Credentials: []string{
+					"reasonablehammer",
+				},
+			},
+			credentials: []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "reasonablehammer",
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     "reasonablehammer",
+						"password":     "testpass", // not unique constrained, so even though someone else is using this password this should pass
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "a consumer that provides credentials that are in violation of unique constraints globally against other existing consumers should fail validation",
+			consumer: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "violating-uniqueness-",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: "unreasonablehammer",
+				CustomID: uuid.NewString(),
+				Credentials: []string{
+					"unreasonablehammer",
+				},
+			},
+			credentials: []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "unreasonablehammer",
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     "tux1", // unique constrained with previous created static consumer credentials
+						"password":     "testpass",
+					},
+				},
+			},
+			wantErr:        true,
+			wantPartialErr: "unique key constraint violated for username",
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			for _, credential := range tc.credentials {
+				require.NoError(t, ctrlClient.Create(ctx, credential))
+				t.Cleanup(func() {
+					if err := ctrlClient.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) {
+						assert.NoError(t, err)
+					}
+				})
+			}
+
+			err := ctrlClient.Create(ctx, tc.consumer)
+			if tc.wantErr {
+				require.Error(t, err, fmt.Sprintf("consumer %s should fail to create", tc.consumer.Name))
+				assert.Contains(t, err.Error(), tc.wantPartialErr,
+					"got error string %q, want a superstring of %q", err.Error(), tc.wantPartialErr,
+				)
+			} else {
+				t.Cleanup(func() {
+					if err := ctrlClient.Delete(ctx, tc.consumer); err != nil && !apierrors.IsNotFound(err) {
+						assert.NoError(t, err)
+					}
+				})
+				require.NoError(t, err, fmt.Sprintf("consumer %s should create successfully", tc.consumer.Name))
+			}
+		})
+	}
+}
+
+func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// highEndConsumerUsageCount indicates a number of consumers with credentials
+	// that we consider a large number and is used to generate background
+	// consumers for testing validation (since validation relies on listing all
+	// consumers from the controller runtime cached client).
+	const highEndConsumerUsageCount = 50
+
+	var (
+		scheme           = Scheme(t, WithKong)
+		envcfg           = Setup(t, scheme)
+		ctrlClientGlobal = NewControllerClient(t, scheme, envcfg)
+		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
+		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+			certificate.WithDNSNames("localhost"),
+		)
+		admissionWebhookPort = helpers.GetFreePort(t)
+
+		kongContainer = runKongEnterprise(ctx, t)
+	)
+
+	_, logs := RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
+	)
+	WaitForManagerStart(t, logs)
+	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+
+	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount)
+
+	t.Run("attaching secret to consumer", func(t *testing.T) {
+		t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer fails validation")
+		require.Error(t,
+			ctrlClient.Create(ctx,
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "brokenfence",
+					},
+					StringData: map[string]string{
+						"kongCredType": "invalid-auth", // not a valid credential type
+						"username":     "brokenfence",
+						"password":     "testpass",
+					},
+				},
+			),
+			"invalid credential type",
+		)
+
+		t.Log("creating a valid credential secret to be referenced by a KongConsumer")
+		validCredential := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "brokenfence",
+			},
+			StringData: map[string]string{
+				"kongCredType": "basic-auth",
+				"username":     "brokenfence",
+				"password":     "testpass",
+			},
+		}
+		require.NoError(t, ctrlClient.Create(ctx, validCredential))
+		t.Cleanup(func() {
+			err := ctrlClient.Delete(ctx, validCredential)
+			if err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+				assert.NoError(t, err)
+			}
+		})
+
+		t.Log("verifying that valid credentials assigned to a consumer pass validation")
+		validConsumerLinkedToValidCredentials := &kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "valid-consumer-",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: "brokenfence",
+			CustomID: uuid.NewString(),
+			Credentials: []string{
+				"brokenfence",
+			},
+		}
+		require.NoError(t, ctrlClient.Create(ctx, validConsumerLinkedToValidCredentials))
+		t.Cleanup(func() {
+			err := ctrlClient.Delete(ctx, validConsumerLinkedToValidCredentials)
+			if err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+				assert.NoError(t, err)
+			}
+		})
+
+		t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
+		validCredential.Data["value"] = []byte("newpassword")
+		require.NoError(t, ctrlClient.Update(ctx, validCredential))
+
+		t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
+		validCredential.Data["kongCredType"] = []byte("invalid-auth")
+		err := ctrlClient.Update(ctx, validCredential)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "invalid credential type")
+
+		t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
+		require.NoError(t, ctrlClient.Delete(ctx, validConsumerLinkedToValidCredentials))
+		require.ErrorContains(t, ctrlClient.Update(ctx, validCredential), "invalid credential type")
+	})
+
+	t.Run("JWT", func(t *testing.T) {
+		t.Log("verifying that a JWT credential which has keys with missing values fails validation")
+		require.ErrorContains(t,
+			ctrlClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "invalid-jwt-",
+				},
+				StringData: map[string]string{
+					"kongCredType": "jwt",
+					"algorithm":    "RS256",
+				},
+			}),
+			"missing required field(s): rsa_public_key, key, secret",
+		)
+
+		hmacAlgos := []string{"HS256", "HS384", "HS512"}
+
+		t.Log("verifying that a JWT credentials with hmac algorithms do not require rsa_public_key field")
+		for _, algo := range hmacAlgos {
+			t.Run(algo, func(t *testing.T) {
+				require.NoError(t, ctrlClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "valid-jwt-" + strings.ToLower(algo) + "-",
+					},
+					StringData: map[string]string{
+						"kongCredType": "jwt",
+						"algorithm":    algo,
+						"key":          "key-name",
+						"secret":       "secret-name",
+					},
+				}), "failed to create JWT credential with algorithm %s", algo)
+			})
+		}
+
+		nonHmacAlgos := []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}
+		t.Log("verifying that a JWT credentials with non hmac algorithms do require rsa_public_key field")
+		for _, algo := range nonHmacAlgos {
+			t.Run(algo, func(t *testing.T) {
+				require.Error(t, ctrlClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "invalid-jwt-" + strings.ToLower(algo) + "-",
+					},
+					StringData: map[string]string{
+						"kongCredType": "jwt",
+						"algorithm":    algo,
+						"key":          "key-name",
+						"secret":       "secret-name",
+					},
+				}), "expected failure when creating JWT %s", algo)
+			})
+		}
+	})
+}
+
+// createKongConsumers creates a provider number of consumers on the cluster.
+// Resources will be created in client's default namespace. When using controller-runtime's
+// client you can specify that by calling client.NewNamespacedClient(client, namespace).
+func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, count int) {
+	t.Helper()
+
+	t.Logf("creating #%d of consumers on the cluster to verify the performance of the cached client during validation", count)
+
+	errg := errgroup.Group{}
+	for i := 0; i < count; i++ {
+		i := i
+		errg.Go(func() error {
+			consumerName := fmt.Sprintf("background-noise-consumer-%d", i)
+
+			// create 5 credentials for each consumer
+			for j := 0; j < 5; j++ {
+				credentialName := fmt.Sprintf("%s-credential-%d", consumerName, j)
+				credential := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: credentialName,
+					},
+					StringData: map[string]string{
+						"kongCredType": "basic-auth",
+						"username":     credentialName,
+						"password":     "testpass",
+					},
+				}
+				t.Logf("creating %s Secret that contains credentials", credentialName)
+				require.NoError(t, cl.Create(ctx, credential))
+				t.Cleanup(func() {
+					if err := cl.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+						assert.NoError(t, err)
+					}
+				})
+			}
+
+			// create the consumer referencing its credentials
+			consumer := &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: consumerName,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: consumerName,
+				CustomID: uuid.NewString(),
+			}
+			for j := 0; j < 5; j++ {
+				credentialName := fmt.Sprintf("%s-credential-%d", consumerName, j)
+				consumer.Credentials = append(consumer.Credentials, credentialName)
+			}
+			t.Logf("creating %s KongConsumer", consumerName)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				assert.NoError(c, cl.Create(ctx, consumer))
+			}, 10*time.Second, 100*time.Millisecond)
+			t.Cleanup(func() {
+				if err := cl.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+					assert.NoError(t, err)
+				}
+			})
+			return nil
+		})
+	}
+	require.NoError(t, errg.Wait())
 }
 
 // prepareKongVaultAlreadyProgrammedInGateway creates a KongVault and waits until it gets programmed in Gateway.

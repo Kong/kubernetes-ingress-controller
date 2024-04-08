@@ -33,6 +33,16 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+ifeq (Darwin,$(shell uname -s))
+LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
+endif
+
+LDFLAGS_METADATA ?= \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Commit=$(COMMIT) \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO) \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.ProjectURL=$(REPO_URL)
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -174,10 +184,9 @@ _build.fips:
 
 .PHONY: _build.template
 _build.template:
-	go build -o bin/manager -ldflags "-s -w \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+	go build -o bin/manager \
+		-ldflags "-s -w $(LDFLAGS_METADATA)" \
+		${MAIN}
 
 .PHONY: _build.debug
 _build.debug:
@@ -185,10 +194,11 @@ _build.debug:
 
 .PHONY: _build.template.debug
 _build.template.debug:
-	go build -o bin/manager-debug -trimpath -gcflags=all="-N -l" -ldflags " \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+	go build -o bin/manager-debug \
+		-trimpath \
+		-gcflags=all="-N -l" \
+		-ldflags "-s -w $(LDFLAGS_METADATA)" \
+		${MAIN}
 
 .PHONY: fmt
 fmt:
@@ -366,10 +376,7 @@ test.conformance: _check.container.environment go-junit-report
 		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		GOFLAGS="-tags=conformance_tests" \
 		go test \
-		-ldflags " \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.ProjectURL=$(REPO_URL) \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO)" \
+		-ldflags "$(LDFLAGS_METADATA)" \
 		-v \
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
@@ -388,7 +395,9 @@ test.integration.enterprise: test.integration.enterprise.postgres test.integrati
 _test.unit: gotestsum
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \
-		-race $(GOTESTFLAGS) \
+		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
+		$(GOTESTFLAGS) \
 		-tags envtest \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -423,7 +432,9 @@ _test.envtest: gotestsum setup-envtest use-setup-envtest
 		$(GOTESTSUM) \
 		--hide-summary output \
 		-- \
-		-race $(GOTESTFLAGS) \
+		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
+		$(GOTESTFLAGS) \
 		-tags envtest \
 		-covermode=atomic \
 		-timeout $(ENVTEST_TIMEOUT) \

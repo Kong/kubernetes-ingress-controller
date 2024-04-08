@@ -422,21 +422,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				}
 
 				for _, t := range newTargets {
-					// See https://github.com/Kong/kubernetes-ingress-controller/issues/5761:
-					// Duplicate targets will appear in configurations that use Services with the same selector, which are used
-					// by some rollout systems. We need to deduplicate them while honoring the total weight.
-					//
-					// Because kongstate.Target is a nested kong.Target and the target IP is also a field named Target, the
-					// key names are a bit silly: while fields like t.Weight and t.Upstream resolve fine, t.Target does not, and
-					// instead requires t.Target.Target. For consistency, everything below explicitly includes the nested object
-					// name, so t.Target.Weight instead of t.Weight.
-					if existing, ok := targetMap[*t.Target.Target]; ok {
-						sum := *existing.Target.Weight + *t.Target.Weight
-						existing.Target.Weight = &sum
-						targetMap[*t.Target.Target] = existing
-					} else {
-						targetMap[*t.Target.Target] = t
-					}
+					targetMap = updateTargetMap(targetMap, t)
 				}
 			}
 
@@ -461,6 +447,25 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 		}
 	}
 	return upstreams, serviceMap
+}
+
+func updateTargetMap(targetMap map[string]kongstate.Target, t kongstate.Target) map[string]kongstate.Target {
+	// See https://github.com/Kong/kubernetes-ingress-controller/issues/5761:
+	// Duplicate targets will appear in configurations that use Services with the same selector, which are used
+	// by some rollout systems. We need to deduplicate them while honoring the total weight.
+	//
+	// Because kongstate.Target is a nested kong.Target and the target IP is also a field named Target, the
+	// key names are a bit silly: while fields like t.Weight and t.Upstream resolve fine, t.Target does not, and
+	// instead requires t.Target.Target. For consistency, everything below explicitly includes the nested object
+	// name, so t.Target.Weight instead of t.Weight.
+	if existing, ok := targetMap[*t.Target.Target]; ok {
+		sum := *existing.Target.Weight + *t.Target.Weight
+		existing.Target.Weight = &sum
+		targetMap[*t.Target.Target] = existing
+	} else {
+		targetMap[*t.Target.Target] = t
+	}
+	return targetMap
 }
 
 func getCertFromSecret(secret *corev1.Secret) (string, string, error) {

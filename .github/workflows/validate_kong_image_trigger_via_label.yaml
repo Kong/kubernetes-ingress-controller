@@ -1,0 +1,110 @@
+name: Trigger validate Kong image test (targeted) via issue label
+on:
+  issues:
+    types:
+    - labeled
+
+jobs:
+  # Firstly remove the issue label to avoid duplicate triggers.
+  check-and-remove-issue-label:
+    name: Check label "ci/run-validate-kong-image" and remove the label
+    if: contains(github.event.*.labels.*.name, 'ci/run-validate-kong-image')
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: "Remove the label ci/run-validate-kong-image if exist"
+        run: gh issue edit ${ISSUE_NUMBER} --remove-label ci/run-validate-kong-image
+
+  extract-and-parse-container-image:
+    name: Extract container image repo and tag from issue body
+    needs:
+    - check-and-remove-issue-label
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    steps:
+      # The body of testing request issue created from the template has the following format:
+
+      # ### What component needs testing with KIC?
+      # (empty line)
+      #  Kong Gateway EE
+      # (empty line)
+      # ### Container image
+      # (empty line)
+      # kong/kong-gateway-dev:2.8.4.8-rc2
+
+      # So we need to extract the line on the position 2 lines after the heading "### Container image".
+      
+      - name: Extract container image from issue body
+        id: extract_image
+        run: echo "TEST_KONG_CONTAINER_IMAGE=$(echo ${{ github.event.issue.body }} | grep -A 2 '### Container image' | tail -n 1)" >> $GITHUB_ENV
+      
+      # Split the container into repo and tag by ":" and then extract the first 3 segments of tags as its version.
+      # For example, version extracted from tag "3.6.1.2-rc1" is "3.6.1".
+      - name: Extract image repo and tag
+        id: extract_repo_tag
+        run: |
+          echo "TEST_KONG_IMAGE_REPO=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $1}')" >> $GITHUB_ENV
+          kong_image_tag=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $2}')
+          echo "TEST_KONG_IMAGE_TAG=${kong_image_tag}" >> $GITHUB_ENV
+          kong_image_version=$(echo ${kong_image_tag} | awk -F'.' '{printf("%s.%s.%s",$1,$2,$3)}')
+          echo "TEST_KONG_IMAGE_VERSION=${kong_image_version}" >> $GITHUB_ENV 
+      
+      # We parse the semver from Kong image tag because we need to run with different KIC images with Kong 2.8.x and Kong 3.x.
+      - name: Parse Semver of Kong from image tag
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        with:
+          input_string: ${{ env.TEST_KONG_IMAGE_VERSION }}
+      
+      - name: Extract major version of Kong image
+        id: extract_major_version
+        run: echo "TEST_KONG_IMAGE_MAJOR_VERSION=${{ steps.semver_parser.outputs.major }}" >> $GITHUB_ENV
+  
+  # Choose KIC image and branch to run tests with Kong image by the major version of Kong image.
+  decide-kic-branch-and-image:
+    name: Decide KIC branch and version to run against the tested Kong image
+    needs:
+    - extract-and-parse-container-image
+    runs-on: ubuntu-latest
+    env:
+      KONG_MAJOR_VERSION: ${{ env.TEST_KONG_IMAGE_MAJOR_VERSION }}
+    steps:
+     - name: Choose KIC image and branch
+       id: choose_kic_branch
+       run: |
+          if [ "$KONG_MAJOR_VERSION" == "2" ]; then
+            echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
+            echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV
+          else
+            echo "KIC_BRANCH=main" >> $GITHUB_ENV
+            echo "KIC_IMAGE_TAG=latest" >> $GITHUB_ENV
+          fi
+
+  run-validate-kong-image:
+    name: Run tests to validate Kong image
+    needs:
+    - decide-kic-branch-and-image
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      WORKFLOW: .github/workflows/validate_kong_image.yaml
+      TEST_KONG_IMAGE_REPO: ${{ env.TEST_KONG_IMAGE_REPO }}
+      TEST_KONG_IMAGE_TAG: ${{ env.TEST_KONG_IMAGE_TAG }}
+      TEST_KONG_IMAGE_VERSION: ${{ env.TEST_KONG_IMAGE_VERSION }}
+      KIC_IMAGE_TAG: ${{ env.KIC_IMAGE_TAG }}
+      KIC_BRANCH: ${{ env.KIC_BRANCH }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: checkout to repo
+        id: checkout_kic_repo
+        uses: actions/checkout@v4
+
+      - name: Run validate Kong image tests
+        id: run_validate_kong_image
+        run: |
+          gh workflow run ${WORKFLOW} --ref ${KIC_BRANCH} \
+            -f issue_number=${ISSUE_NUMBER} \
+            -f kong_image_repo=${TEST_KONG_IMAGE_REPO} \
+            -f kong_image_tag=${TEST_KONG_IMAGE_TAG} \
+            -f kong_effective_version=${TEST_KONG_IMAGE_VERSION} \
+            -f e2e_controller_image_tag=${KIC_IMAGE_TAG}

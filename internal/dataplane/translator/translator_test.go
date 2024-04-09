@@ -5073,3 +5073,94 @@ func TestTargetsForEndpoints(t *testing.T) {
 
 	require.Equal(t, wantTargets, targets)
 }
+
+func TestUpdateTargetMap(t *testing.T) {
+	testCases := []struct {
+		name        string
+		newTarget   kongstate.Target
+		currentMap  map[string]kongstate.Target
+		expectedMap map[string]kongstate.Target
+	}{
+		{
+			name: "empty map",
+			newTarget: kongstate.Target{
+				Target: kong.Target{
+					Target: lo.ToPtr("1.1.1.1"),
+					Weight: lo.ToPtr(10),
+				},
+			},
+			currentMap: map[string]kongstate.Target{},
+			expectedMap: map[string]kongstate.Target{
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+		},
+		{
+			name: "other target in map",
+			newTarget: kongstate.Target{
+				Target: kong.Target{
+					Target: lo.ToPtr("1.1.1.1"),
+					Weight: lo.ToPtr(10),
+				},
+			},
+			currentMap: map[string]kongstate.Target{
+				"2.2.2.2": {
+					Target: kong.Target{
+						Target: lo.ToPtr("2.2.2.2"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+			expectedMap: map[string]kongstate.Target{
+				"2.2.2.2": {
+					Target: kong.Target{
+						Target: lo.ToPtr("2.2.2.2"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+		},
+		{
+			name: "like target in map",
+			newTarget: kongstate.Target{
+				Target: kong.Target{
+					Target: lo.ToPtr("1.1.1.1"),
+					Weight: lo.ToPtr(10),
+				},
+			},
+			currentMap: map[string]kongstate.Target{
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+			expectedMap: map[string]kongstate.Target{
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(20),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := updateTargetMap(tc.currentMap, tc.newTarget)
+			require.Equal(t, tc.expectedMap, result)
+		})
+	}
+}

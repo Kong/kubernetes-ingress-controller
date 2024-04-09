@@ -12,6 +12,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -340,8 +341,14 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 		name := *service.Host
 
 		if _, exists := upstreamDedup[name]; !exists {
+			// targetMap maps the target's Target field to the Target object. The field represents the string "target" field
+			// of a Kong target entity. This field is either an IP address or hostname and a port separated by a colon. For
+			// example: "10.0.0.1:80", "example.com:9000". We use a map because this field must be unique within an upstream,
+			// and we may need to combine multiple Kubernetes backends into a single target for some configurations--some
+			// routes may, for example, use the same Service twice or may use two Services with the same selector and same
+			// endpoints.
+			targetMap := map[string]kongstate.Target{}
 			// populate all the kong targets for the upstream given all the backends
-			var targets []kongstate.Target
 			for _, backend := range service.Backends {
 				// gather the Kubernetes service for the backend
 				backendNamespace := backend.Namespace()
@@ -414,10 +421,12 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					}
 				}
 
-				// add the new targets to the existing pool of targets for the Upstream.
-				targets = append(targets, newTargets...)
+				for _, t := range newTargets {
+					targetMap = updateTargetMap(targetMap, t)
+				}
 			}
 
+			targets := maps.Values(targetMap)
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
 				t.logger.V(util.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
@@ -438,6 +447,25 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 		}
 	}
 	return upstreams, serviceMap
+}
+
+func updateTargetMap(targetMap map[string]kongstate.Target, t kongstate.Target) map[string]kongstate.Target {
+	// See https://github.com/Kong/kubernetes-ingress-controller/issues/5761:
+	// Duplicate targets will appear in configurations that use Services with the same selector, which are used
+	// by some rollout systems. We need to deduplicate them while honoring the total weight.
+	//
+	// Because kongstate.Target is a nested kong.Target and the target IP is also a field named Target, the
+	// key names are a bit silly: while fields like t.Weight and t.Upstream resolve fine, t.Target does not, and
+	// instead requires t.Target.Target. For consistency, everything below explicitly includes the nested object
+	// name, so t.Target.Weight instead of t.Weight.
+	if existing, ok := targetMap[*t.Target.Target]; ok {
+		sum := *existing.Target.Weight + *t.Target.Weight
+		existing.Target.Weight = &sum
+		targetMap[*t.Target.Target] = existing
+	} else {
+		targetMap[*t.Target.Target] = t
+	}
+	return targetMap
 }
 
 func getCertFromSecret(secret *corev1.Secret) (string, string, error) {

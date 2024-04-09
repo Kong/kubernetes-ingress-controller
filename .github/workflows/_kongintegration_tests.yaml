@@ -32,14 +32,14 @@ jobs:
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
 
       - name: collect test coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-kongintegration
           path: "coverage.*.out"
 
       - name: collect test report
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: tests-report
-          path: "*-tests.xml"
+          name: tests-report-kongintegration
+          path: kongintegration-tests.xml

@@ -27,10 +27,11 @@ jobs:
 
       - name: collect test coverage artifacts
         id: download-coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: coverage
+          pattern: coverage-*
           path: coverage
+          merge-multiple: true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -51,10 +52,11 @@ jobs:
 
       - name: download tests report
         id: download-coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: tests-report
+          pattern: tests-report-*
           path: report
+          merge-multiple: true
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}

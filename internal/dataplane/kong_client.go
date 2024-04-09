@@ -593,11 +593,11 @@ func (c *KongClient) sendToClient(
 				if err := ctx.Err(); err != nil {
 					logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 				}
-				return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), updateErr)
+				return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), updateErr)
 			}
 		} else {
 			// It should never happen.
-			return "", fmt.Errorf("performing update for %s failed with unexpected type of error: %w", client.AdminAPIClient().BaseRootURL(), err)
+			return "", fmt.Errorf("performing update for %s failed with unexpected type of error: %w", client.BaseRootURL(), err)
 		}
 	}
 	sendDiagnostic(false, nil) // No error occurred.

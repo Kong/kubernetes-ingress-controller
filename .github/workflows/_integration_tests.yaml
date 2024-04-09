@@ -209,7 +209,7 @@ jobs:
       - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
         uses: actions/upload-artifact@v4
-        with: 
+        with:
           name: integration-tests-kic-logs-${{ matrix.name }}
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore

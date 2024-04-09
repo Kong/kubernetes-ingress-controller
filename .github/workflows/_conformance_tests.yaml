@@ -35,9 +35,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - name: conformance-tests-traditional-compatible-router
+        - name: traditional-compatible-router
           expression_routes: "false"
-        - name: "conformance-tests-expressions-router"
+        - name: expressions-router
           expression_routes: "true"
     steps:
       - name: checkout repository
@@ -55,22 +55,22 @@ jobs:
       - name: run conformance tests
         run: make test.conformance
         env:
-          JUNIT_REPORT: "conformance-tests.xml"
+          JUNIT_REPORT: conformance-tests.xml
           KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
 
       # upload logs when test failed
       - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
-        with:
+        uses: actions/upload-artifact@v4
+        with: 
           name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-conformance-${{ matrix.name }}
           path: conformance-tests.xml

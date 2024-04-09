@@ -26,14 +26,14 @@ jobs:
           GOTESTSUM_JUNITFILE: unit-tests.xml
 
       - name: collect test coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-unit
           path: coverage.unit.out
 
       - name: collect test report
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: tests-report
+          name: tests-report-unit
           path: unit-tests.xml

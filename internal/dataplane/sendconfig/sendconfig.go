@@ -67,7 +67,7 @@ func PerformUpdate(
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
-) ([]byte, UpdateError) {
+) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
@@ -86,7 +86,7 @@ func PerformUpdate(
 			} else {
 				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
-			return oldSHA, UpdateError{}
+			return oldSHA, nil
 		}
 	}
 
@@ -119,7 +119,7 @@ func PerformUpdate(
 		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
 	}
 
-	return newSHA, UpdateError{}
+	return newSHA, nil
 }
 
 // -----------------------------------------------------------------------------

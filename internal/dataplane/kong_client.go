@@ -577,21 +577,30 @@ func (c *KongClient) sendToClient(
 		c.updateStrategyResolver,
 		c.configChangeDetector,
 	)
-
-	c.recordResourceFailureEvents(err.ResourceFailures, KongConfigurationApplyFailedEventReason)
 	// Only record events on applying configuration to Kong gateway here.
+	// Nil error is expected to be passed to indicate success.
 	if !client.IsKonnect() {
 		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
 	}
-	sendDiagnostic(err.Err != nil, err.RawBody)
+	if err != nil {
+		var updateErr sendconfig.UpdateError
+		if errors.As(err, &updateErr) {
+			c.recordResourceFailureEvents(updateErr.ResourceFailures, KongConfigurationApplyFailedEventReason)
 
-	if err.Err != nil {
-		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
-			logger.Error(nil, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+			sendDiagnostic(updateErr.Err != nil, updateErr.RawBody)
+
+			if updateErr.Err != nil {
+				if err := ctx.Err(); err != nil {
+					logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+				}
+				return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), updateErr)
+			}
+		} else {
+			// It should never happen.
+			return "", fmt.Errorf("performing update for %s failed with unexpected type of error: %w", client.AdminAPIClient().BaseRootURL(), err)
 		}
-		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
 	}
-
+	sendDiagnostic(false, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
 

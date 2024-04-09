@@ -93,7 +93,7 @@ Adding a new version? You'll need three changes:
   server. This endpoint outputs the original Kong `/config` endpoint error for
   failed configuration pushes in case error parsing fails. Attempt to log the
   `message` field of errors that KIC cannot fully parse.
-  [#5773](https://github.com/Kong/kubernetes-ingress-controller/issues/5773)
+  [#5773](https://github.com/Kong/kubernetes-ingress-controller/issues/5773), [#5846](https://github.com/Kong/kubernetes-ingress-controller/pull/5846)
 - Add constraint to limit items in `Credentials` and `ConsumerGroups` in
   `KongConsumer`s to be unique in validating admission webhooks.
   [#5787](https://github.com/Kong/kubernetes-ingress-controller/pull/5787)

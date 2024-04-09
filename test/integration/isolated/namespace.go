@@ -27,7 +27,7 @@ func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, run
 		return ctx, err
 	}
 
-	t.Logf("Creating namespace for test %v", t.Name())
+	t.Logf("Creating dedicated namespace for test %s", t.Name())
 	nsObj := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "ns-" + runID + "-",
@@ -43,7 +43,7 @@ func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, run
 		return ctx, err
 	}
 
-	t.Logf("Created namespace %s for test %v", nsObj.Name, t.Name())
+	t.Logf("Created namespace %s for test %s", nsObj.Name, t.Name())
 	ctx = context.WithValue(ctx, getNamespaceKey(t), nsObj.Name)
 
 	return ctx, nil

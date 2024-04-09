@@ -19,13 +19,18 @@ import (
 func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, runID string) (context.Context, error) {
 	t.Helper()
 
-	ns := envconf.RandomName("ns-"+runID, 10)
-	ctx = context.WithValue(ctx, getNamespaceKey(t), ns)
+	// TODO: We could be tempted to use cfg.Client().Resources() here but when
+	// running tests in parallel this causes a data race.
+	// Related upstream issue: https://github.com/kubernetes-sigs/e2e-framework/issues/352
+	c, err := client.New(cfg.Client().RESTConfig(), client.Options{})
+	if err != nil {
+		return ctx, err
+	}
 
-	t.Logf("Creating NS %v for test %v", ns, t.Name())
+	t.Logf("Creating namespace for test %v", t.Name())
 	nsObj := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ns,
+			GenerateName: "ns-" + runID + "-",
 			Labels: map[string]string{
 				"kubernetes-ingress-controller.konghq.com/test-name": NameFromT(t),
 				"kubernetes-ingress-controller.konghq.com/run-id":    runID,
@@ -34,16 +39,14 @@ func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, run
 		},
 	}
 
-	// TODO: We could be tempted to use cfg.Client().Resources() here but when
-	// running tests in parallel this causes a data race.
-	// Related upstream issue: https://github.com/kubernetes-sigs/e2e-framework/issues/352
-
-	c, err := client.New(cfg.Client().RESTConfig(), client.Options{})
-	if err != nil {
+	if err := c.Create(ctx, &nsObj); err != nil {
 		return ctx, err
 	}
 
-	return ctx, c.Create(ctx, &nsObj)
+	t.Logf("Created namespace %s for test %v", nsObj.Name, t.Name())
+	ctx = context.WithValue(ctx, getNamespaceKey(t), nsObj.Name)
+
+	return ctx, nil
 }
 
 // deleteNSForTest looks up the namespace corresponding to the given test and deletes it.

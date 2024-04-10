@@ -36,7 +36,10 @@ jobs:
       
       - name: Extract container image from issue body
         id: extract_image
-        run: echo "TEST_KONG_CONTAINER_IMAGE=$(echo ${{ github.event.issue.body }} | grep -A 2 '### Container image' | tail -n 1)" >> $GITHUB_ENV
+        # Fail the job if we cannot get "### Container image" keyword from issue body.
+        run: |
+          kong_container_image=$(echo ${{ github.event.issue.body }} | grep -A 2 '### Container image' | tail -n 1) && \
+          echo "TEST_KONG_CONTAINER_IMAGE=${kong_container_image}" >> $GITHUB_ENV
       
       # Split the container into repo and tag by ":" and then extract the first 3 segments of tags as its version.
       # For example, version extracted from tag "3.6.1.2-rc1" is "3.6.1".
@@ -58,9 +61,12 @@ jobs:
       
       - name: Extract major version of Kong image
         id: extract_major_version
-        run: echo "TEST_KONG_IMAGE_MAJOR_VERSION=${{ steps.semver_parser.outputs.major }}" >> $GITHUB_ENV
+        run: |
+          echo "TEST_KONG_IMAGE_MAJOR_VERSION=${{ steps.semver_parser.outputs.major }}" >> $GITHUB_ENV
+          echo "TEST_KONG_IMAGE_MINOR_VERSION=${{ steps.semver_parser.outputs.major }}" >> $GITHUB_ENV
   
-  # Choose KIC image and branch to run tests with Kong image by the major version of Kong image.
+  # Choose KIC image and branch to run tests with Kong image by the major and minor version of Kong image.
+  # For Kong 2.x (2.8 LTS only) and 3.0-3.3, we use KIC 2.12; otherwise use latest version of KIC.
   decide-kic-branch-and-image:
     name: Decide KIC branch and version to run against the tested Kong image
     needs:
@@ -68,13 +74,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KONG_MAJOR_VERSION: ${{ env.TEST_KONG_IMAGE_MAJOR_VERSION }}
+      KONG_MINOR_VERSION: ${{ env.TEST_KONG_IMAGE_MINOR_VERSION }}
     steps:
      - name: Choose KIC image and branch
        id: choose_kic_branch
        run: |
-          if [ "$KONG_MAJOR_VERSION" == "2" ]; then
+          if [[ $KONG_MAJOR_VERSION -lt 2 ]]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV
+          elif [ "$KONG_MAJOR_VERSION" == "3" ] and [[ $KONG_MINOR_VERSION -lt 3 ]]; then
+            echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
+            echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV          
           else
             echo "KIC_BRANCH=main" >> $GITHUB_ENV
             echo "KIC_IMAGE_TAG=latest" >> $GITHUB_ENV

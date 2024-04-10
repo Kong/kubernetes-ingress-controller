@@ -107,6 +107,9 @@ Adding a new version? You'll need three changes:
   [#5816](https://github.com/Kong/kubernetes-ingress-controller/pull/5816)
 - Support to apply licenses to DB backed Kong gateway from `KongLicense`.
   [#5648](https://github.com/Kong/kubernetes-ingress-controller/pull/5648)
+- Do not generate invalid duplicate upstream targets when routes use multiple
+  Services with the same endpoints.
+  [#5817](https://github.com/Kong/kubernetes-ingress-controller/pull/5817)
 
 ### Changed
 

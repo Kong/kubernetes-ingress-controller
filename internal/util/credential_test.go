@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,10 +13,10 @@ import (
 
 func TestExtractKongCredentialType(t *testing.T) {
 	tests := []struct {
-		name           string
-		secret         *corev1.Secret
-		credType       string
-		credTypeSource CredentialTypeSource
+		name     string
+		secret   *corev1.Secret
+		credType string
+		wantErr  error
 	}{
 		{
 			name: "labeled credential",
@@ -31,43 +32,7 @@ func TestExtractKongCredentialType(t *testing.T) {
 					"key": []byte("little-rabbits-be-good"),
 				},
 			},
-			credType:       "key-auth",
-			credTypeSource: CredentialTypeFromLabel,
-		},
-		{
-			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 to be removed after deprecation window
-			name: "kongCredType field credential",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-				},
-				Data: map[string][]byte{
-					"key":          []byte("little-rabbits-be-good"),
-					"kongCredType": []byte("key-auth"),
-				},
-			},
-			credType:       "key-auth",
-			credTypeSource: CredentialTypeFromField,
-		},
-		{
-			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 to be removed after deprecation window
-			name: "kongCredType field and labeled credential, label takes precedence",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "key-auth",
-					},
-				},
-				Data: map[string][]byte{
-					"key":          []byte("little-rabbits-be-good"),
-					"kongCredType": []byte("bee-auth"),
-				},
-			},
-			credType:       "key-auth",
-			credTypeSource: CredentialTypeFromLabel,
+			credType: "key-auth",
 		},
 		{
 			name: "no credential type",
@@ -80,15 +45,16 @@ func TestExtractKongCredentialType(t *testing.T) {
 					"key": []byte("little-rabbits-be-good"),
 				},
 			},
-			credType:       "",
-			credTypeSource: CredentialTypeAbsent,
+			credType: "",
+			wantErr: fmt.Errorf("Secret %s/%s used as credential, but lacks %s label",
+				"default", "secret", labels.CredentialTypeLabel),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			credType, credTypeSource := ExtractKongCredentialType(tt.secret)
+			credType, err := ExtractKongCredentialType(tt.secret)
 			require.Equal(t, tt.credType, credType)
-			require.Equal(t, tt.credTypeSource, credTypeSource)
+			require.Equal(t, tt.wantErr, err)
 		})
 	}
 }

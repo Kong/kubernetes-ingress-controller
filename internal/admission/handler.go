@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -271,24 +272,33 @@ func (h RequestHandler) handleSecret(
 
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
-		// TODO so long as we still handle the deprecated field, this has to remain
-		// once the deprecated field is removed, we must replace this with a label filter in the webhook itself
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/4853
-		if _, credentialTypeSource := util.ExtractKongCredentialType(&secret); credentialTypeSource != util.CredentialTypeAbsent {
+		// credential secrets
+		if credType, err := util.ExtractKongCredentialType(&secret); err == nil && credType != "" {
 			ok, message := h.Validator.ValidateCredential(ctx, secret)
 			if !ok {
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 			}
 		}
 
-		ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
-		if err != nil {
-			return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
-		}
-		if !ok {
-			return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
+		// TODO this check duplicates the objectSelector filter in the webhook definition, and will only check updates to
+		// plugin configuration secrets if they have the new 3.2+ plugin configuration label. we could optionally remove
+		// this check to allow users to remove the secret filter configuration from the webhook definition and check any
+		// referenced secret, labeled or not.
+
+		// plugin configuration secrets
+		if _, hasPluginLabel := secret.Labels[labels.PluginConfigLabel]; hasPluginLabel {
+			ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
+			if err != nil {
+				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
+			}
+			if !ok {
+				return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
+			}
 		}
 
+		// fallback allow
+		// No Secret should hit this, as filters should only check those that match one of the above cases, but if we
+		// somehow (presumably via outdated webhook config) get a Secret that lacks the labels we check, allow it.
 		return responseBuilder.Allowed(true).Build(), nil
 
 	default:

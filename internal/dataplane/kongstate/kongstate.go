@@ -115,11 +115,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 			}
 			credConfig := map[string]interface{}{}
 			// try the label first. if it's present, no need to check the field
-			credType, credTypeSource := util.ExtractKongCredentialType(secret)
-			if credTypeSource == util.CredentialTypeFromField {
-				logger.Error(nil,
-					fmt.Sprintf("Secret uses deprecated kongCredType field, needs konghq.com/credential=%s label", credType),
-					"namesapce", secret.Namespace, "name", secret.Name)
+			credType, err := util.ExtractKongCredentialType(secret)
+			if err != nil {
+				pushCredentialResourceFailures(fmt.Sprintf("could not load credential from Secret: %s", err))
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(

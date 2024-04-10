@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -220,6 +221,9 @@ func TestHandleSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "plugin-conf",
+					Labels: map[string]string{
+						labels.PluginConfigLabel: "true",
+					},
 				},
 			},
 			referrers: []client.Object{
@@ -235,6 +239,9 @@ func TestHandleSecret(t *testing.T) {
 					TypeMeta: kongClusterPluginTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-plugin-0",
+						Labels: map[string]string{
+							labels.PluginConfigLabel: "true",
+						},
 					},
 					PluginName: "test-plugin",
 				},
@@ -249,6 +256,9 @@ func TestHandleSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "plugin-conf",
+					Labels: map[string]string{
+						labels.PluginConfigLabel: "true",
+					},
 				},
 			},
 			referrers: []client.Object{
@@ -274,6 +284,9 @@ func TestHandleSecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "plugin-conf",
+					Labels: map[string]string{
+						labels.PluginConfigLabel: "true",
+					},
 				},
 			},
 			referrers: []client.Object{

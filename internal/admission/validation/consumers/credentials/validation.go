@@ -19,9 +19,8 @@ import (
 // ValidateCredentials performs basic validation on a credential secret given
 // the Kubernetes secret which contains credentials data.
 func ValidateCredentials(secret *corev1.Secret) error {
-	credentialType, credentialSource := util.ExtractKongCredentialType(secret)
-
-	if credentialSource == util.CredentialTypeAbsent {
+	credentialType, err := util.ExtractKongCredentialType(secret)
+	if err != nil {
 		// this shouldn't occur, since we check this earlier in the admission controller's handleSecret function, but
 		// checking here also in case a refactor removes that
 		return fmt.Errorf("secret has no credential type, add a %s label", labels.CredentialTypeLabel)
@@ -123,12 +122,9 @@ type Index map[string]map[string]map[string]struct{}
 // and will validate it for both normal structure validation and for
 // unique key constraint violations.
 func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret) error {
-	credentialType, credentialSource := util.ExtractKongCredentialType(secret)
-	if credentialSource == util.CredentialTypeAbsent {
-		return fmt.Errorf(
-			"secret has no credential type, add a %s label",
-			labels.CredentialTypeLabel,
-		)
+	credentialType, err := util.ExtractKongCredentialType(secret)
+	if err != nil {
+		return fmt.Errorf("secret has no credential type, add a %s label", labels.CredentialTypeLabel)
 	}
 
 	// the additional key/values are optional, but must be validated

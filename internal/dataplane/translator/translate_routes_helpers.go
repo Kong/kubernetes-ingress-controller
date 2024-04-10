@@ -163,3 +163,35 @@ func generateRouteName(typ routeType, namespace, name string, ruleNumber int) st
 		0,
 	)
 }
+
+func (t *Translator) getGatewayListeningPorts(
+	routeNamespace string,
+	protocol gatewayapi.ProtocolType,
+	prs []gatewayapi.ParentReference,
+) []gatewayapi.PortNumber {
+	var gwPorts []gatewayapi.PortNumber
+	for _, pr := range prs {
+		// When namespace is explicitly specified in the parentRef,
+		// it should be used instead of namespace of the whole Route.
+		ns := string(lo.FromPtr(pr.Namespace))
+		if ns == "" {
+			ns = routeNamespace
+		}
+		gw, err := t.storer.GetGateway(ns, string(pr.Name))
+		if err != nil {
+			continue // Skip when attached Gateway is not found.
+		}
+
+		// Get explicitly referenced Gateway listening ports by ParentReference configuration.
+		// If no sectionName is specified, all ports are used (according to the specification
+		// "When unspecified (empty string), this will reference the entire resource." - see
+		// https://github.com/kubernetes-sigs/gateway-api/blob/ebe9f31ef27819c3b29f698a3e9b91d279453c59/apis/v1/shared_types.go#L107).
+		gwPorts = append(gwPorts, lo.FilterMap(gw.Spec.Listeners, func(l gatewayapi.Listener, _ int) (gatewayapi.PortNumber, bool) {
+			if (pr.SectionName == nil || *pr.SectionName == l.Name) && protocol == l.Protocol {
+				return l.Port, true
+			}
+			return 0, false
+		})...)
+	}
+	return gwPorts
+}

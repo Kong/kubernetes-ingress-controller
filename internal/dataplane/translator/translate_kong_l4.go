@@ -6,10 +6,12 @@ import (
 	"strconv"
 
 	"github.com/kong/go-kong/kong"
+	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 func (t *Translator) ingressRulesFromTCPIngressV1beta1() ingressRules {
@@ -177,5 +179,17 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 		applyExpressionToIngressRules(&result)
 	}
 
+	return result
+}
+
+func tcpIngressToNetworkingTLS(tls []kongv1beta1.IngressTLS) []netv1.IngressTLS {
+	var result []netv1.IngressTLS
+
+	for _, t := range tls {
+		result = append(result, netv1.IngressTLS{
+			Hosts:      t.Hosts,
+			SecretName: t.SecretName,
+		})
+	}
 	return result
 }

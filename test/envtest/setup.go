@@ -127,7 +127,7 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
 
-	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
+	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIPackageVersion, "config", "crd", "experimental")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
 		Paths:              []string{gatewayCRDPath},

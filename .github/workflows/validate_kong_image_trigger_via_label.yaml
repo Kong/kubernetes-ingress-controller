@@ -46,7 +46,13 @@ jobs:
       - name: Extract image repo and tag
         id: extract_repo_tag
         run: |
-          echo "TEST_KONG_IMAGE_REPO=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $1}')" >> $GITHUB_ENV
+          kong_image_repo=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $1}')
+          # Limit kong image repo in [kong,kong/kong-gateway,kong/kong-gateway-dev] to prevent from attack of running unknown images
+          if [ "$kong_image_repo" != "kong" ] && [  "$kong_image_repo" != "kong/kong-gateway" ] && [ "$kong_image_repo" != "kong/kong-gateway-dev" ]; then
+            echo "invalid image repo: $kong_image_repo"
+            exit 1
+          fi
+          echo "TEST_KONG_IMAGE_REPO=$kong_image_repo" >> $GITHUB_ENV
           kong_image_tag=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $2}')
           echo "TEST_KONG_IMAGE_TAG=${kong_image_tag}" >> $GITHUB_ENV
           kong_image_version=$(echo ${kong_image_tag} | awk -F'.' '{printf("%s.%s.%s",$1,$2,$3)}')
@@ -79,10 +85,10 @@ jobs:
      - name: Choose KIC image and branch
        id: choose_kic_branch
        run: |
-          if [[ $KONG_MAJOR_VERSION -lt 2 ]]; then
+          if [[ $KONG_MAJOR_VERSION -le 2 ]]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV
-          elif [ "$KONG_MAJOR_VERSION" == "3" ] and [[ $KONG_MINOR_VERSION -lt 3 ]]; then
+          elif [ $KONG_MAJOR_VERSION -eq 3 ] and [ $KONG_MINOR_VERSION -le 3 ]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV          
           else

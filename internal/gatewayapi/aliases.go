@@ -41,6 +41,8 @@ type (
 	HTTPRoute                 = gatewayv1.HTTPRoute
 	HTTPRouteFilter           = gatewayv1.HTTPRouteFilter
 	HTTPRouteFilterType       = gatewayv1.HTTPRouteFilterType
+	HTTPURLRewriteFilter      = gatewayv1.HTTPURLRewriteFilter
+	HTTPPathModifier          = gatewayv1.HTTPPathModifier
 	HTTPRouteList             = gatewayv1.HTTPRouteList
 	HTTPRouteMatch            = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule             = gatewayv1.HTTPRouteRule
@@ -106,6 +108,7 @@ type (
 
 const (
 	FullPathHTTPPathModifier              = gatewayv1.FullPathHTTPPathModifier
+	PrefixMatchHTTPPathModifier           = gatewayv1.PrefixMatchHTTPPathModifier
 	GatewayClassConditionStatusAccepted   = gatewayv1.GatewayClassConditionStatusAccepted
 	GatewayClassReasonAccepted            = gatewayv1.GatewayClassReasonAccepted
 	GatewayConditionAccepted              = gatewayv1.GatewayConditionAccepted

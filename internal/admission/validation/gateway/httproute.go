@@ -142,7 +142,6 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 // any of those unsupported features.
 func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
 	unsupportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
-		gatewayapi.HTTPRouteFilterURLRewrite:    {},
 		gatewayapi.HTTPRouteFilterRequestMirror: {},
 	}
 	const (
@@ -150,11 +149,32 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 	)
 
 	for ruleIndex, rule := range httproute.Spec.Rules {
-		// Filters URLRewrite, RequestMirror are not supported.
+		// Filter RequestMirror is not supported.
+
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+		// For URLRewrite, only FullPathHTTPPathModifier is supported.
 		for filterIndex, filter := range rule.Filters {
 			if _, unsupported := unsupportedFilterMap[filter.Type]; unsupported {
 				return fmt.Errorf("rules[%d].filters[%d]: filter type %s is unsupported",
 					ruleIndex, filterIndex, filter.Type)
+			}
+
+			if filter.Type == gatewayapi.HTTPRouteFilterURLRewrite && filter.URLRewrite != nil {
+				urlrewrite := filter.URLRewrite
+
+				// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+				if filter.URLRewrite.Path != nil {
+					if urlrewrite.Path.Type != gatewayapi.FullPathHTTPPathModifier {
+						return fmt.Errorf("rules[%d].filters[%d]: filter type %s (with path replace type %s) is unsupported",
+							ruleIndex, filterIndex, filter.Type, urlrewrite.Path.Type)
+					}
+				}
+
+				// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+				if filter.URLRewrite.Hostname != nil {
+					return fmt.Errorf("rules[%d].filters[%d]: filter type %s (with hostname replace) is unsupported",
+						ruleIndex, filterIndex, filter.Type)
+				}
 			}
 		}
 

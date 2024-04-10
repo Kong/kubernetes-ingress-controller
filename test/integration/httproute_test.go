@@ -163,18 +163,15 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/3/exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/3/exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, "/test-http-route-essentials", nil)
 		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
-		if err != nil {
-			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyHTTPURL, "test-http-route-essentials", err)
-			return false
+		if !assert.NoError(c, err) {
+			return
 		}
 		defer resp.Body.Close()
-		if _, ok := resp.Header["Reqid"]; ok {
-			return true
-		}
-		return false
+		_, ok := resp.Header["Reqid"]
+		assert.True(c, ok, "expected header Reqid to be present in response")
 	}, ingressWait, waitTick)
 
 	t.Run("header regex match", func(t *testing.T) {
@@ -231,12 +228,14 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
+		if !assert.NoError(c, err) {
+			return
+		}
 		httpRoute.Spec.ParentRefs = nil
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
-		return err == nil
+		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
@@ -247,12 +246,14 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
+		if !assert.NoError(c, err) {
+			return
+		}
 		httpRoute.Spec.ParentRefs = oldParentRefs
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
-		return err == nil
+		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
@@ -328,13 +329,15 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set the Port in ParentRef which does not have a matching listener in Gateway.
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
+		if !assert.NoError(c, err) {
+			return
+		}
 		port81 := gatewayapi.PortNumber(81)
 		httpRoute.Spec.ParentRefs[0].Port = &port81
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
-		return err == nil
+		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'False' when it specified a port not existent in Gateway")
@@ -603,46 +606,45 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	// testGetByHost tries to get the test path with specified host in request,
 	// and returns true if 200 returned.
-	testGetByHost := func(t *testing.T, host string) bool {
+	testGetByHost := func(t *testing.T, host string) error {
+		t.Helper()
 		req := helpers.MustHTTPRequest(t, http.MethodGet, host, "/test-http-route-filter-hosts", nil)
 		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
 		if err != nil {
-			return false
+			return err
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusOK
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("expected status code 200, got %d", resp.StatusCode)
+		}
+		return nil
 	}
 
 	t.Logf("test host matched hostname in listeners")
-	require.Eventually(t, func() bool {
-		return testGetByHost(t, "test.specific.io")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.NoError(c, testGetByHost(t, "test.specific.io"))
 	}, ingressWait, waitTick)
 	t.Logf("test host matched in httproute, but not in listeners")
-	require.False(t, testGetByHost(t, "another.specific.io"))
+	require.Error(t, testGetByHost(t, "another.specific.io"))
 
 	t.Logf("update hostnames in httproute to wildcard")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("failed getting the HTTPRoute %s: %v", httpRoute.Name, err)
-			return false
+		if !assert.NoErrorf(c, err, "failed getting the HTTPRoute %s", httpRoute.Name) {
+			return
 		}
 		httpRoute.Spec.Hostnames = []gatewayapi.Hostname{
 			gatewayapi.Hostname("*.specific.io"),
 		}
 		httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
-		if err != nil {
-			t.Logf("failed updating the HTTPRoute %s: %v", httpRoute.Name, err)
-			return false
-		}
-		return true
+		assert.NoErrorf(c, err, "failed updating the HTTPRoute %s", httpRoute.Name)
 	}, test.RequestTimeout, 100*time.Millisecond)
 	t.Logf("test host matched hostname in listeners")
-	require.Eventually(t, func() bool {
-		return testGetByHost(t, "test.specific.io")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.NoError(c, testGetByHost(t, "test.specific.io"))
 	}, ingressWait, waitTick)
 	t.Logf("test host matched in httproute, but not in listeners")
-	require.False(t, testGetByHost(t, "another2.specific.io"))
+	require.Error(t, testGetByHost(t, "another2.specific.io"))
 
 	t.Logf("update hostname in httproute to an unmatched host")
 	httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
@@ -653,17 +655,21 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	t.Logf("status of httproute should contain an 'Accepted' condition with 'False' status")
-	require.Eventuallyf(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		currentHTTPRoute, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
+		if !assert.NoError(c, err) {
+			return
+		}
 		for _, parent := range currentHTTPRoute.Status.Parents {
 			for _, condition := range parent.Conditions {
-				if condition.Type == string(gatewayapi.RouteReasonAccepted) && condition.Status == metav1.ConditionFalse {
-					return true
+				if assert.True(
+					c,
+					condition.Type == string(gatewayapi.RouteReasonAccepted) && condition.Status == metav1.ConditionFalse,
+				) {
+					return
 				}
 			}
 		}
-		return false
 	}, ingressWait, waitTick,
 		func() string {
 			currentHTTPRoute, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
@@ -673,5 +679,5 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			return fmt.Sprintf("current status of HTTPRoute %s/%s:%v", httpRoute.Namespace, httpRoute.Name, currentHTTPRoute.Status)
 		}())
 	t.Logf("test host matched in httproute, but not in listeners")
-	require.False(t, testGetByHost(t, "another.specific.io"))
+	require.Error(t, testGetByHost(t, "another.specific.io"))
 }

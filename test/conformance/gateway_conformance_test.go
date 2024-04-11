@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -45,15 +46,21 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 
 func TestGatewayConformance(t *testing.T) {
 	k8sClient, gatewayClassName := prepareEnvForGatewayConformanceTests(t)
-	// Conformance tests are run for both configs with and without
-	// KONG_TEST_EXPRESSION_ROUTES='true'.
-	var skippedTests []string
-	var supportedFeatures []suite.SupportedFeature
-	if testenv.ExpressionRoutesEnabled() {
-		supportedFeatures = expressionRoutesSupportedFeatures
-	} else {
+
+	// Conformance tests are run for both available router flavours:
+	// traditional_compatible and expressions.
+	var (
+		skippedTests      []string
+		supportedFeatures []suite.SupportedFeature
+	)
+	switch rf := testenv.KongRouterFlavor(); rf {
+	case dpconf.RouterFlavorTraditionalCompatible:
 		skippedTests = skippedTestsForTraditionalRoutes
 		supportedFeatures = traditionalRoutesSupportedFeatures
+	case dpconf.RouterFlavorExpressions:
+		supportedFeatures = expressionRoutesSupportedFeatures
+	default:
+		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
 	cSuite, err := suite.NewExperimentalConformanceTestSuite(

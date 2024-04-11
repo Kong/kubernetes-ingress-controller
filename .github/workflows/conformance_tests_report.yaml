@@ -48,7 +48,7 @@ jobs:
       - name: Run conformance tests
         env:
           TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
-          KONG_TEST_EXPRESSION_ROUTES: "true"
+          TEST_KONG_ROUTER_FLAVOR: expressions
         run: make test.conformance
 
       # Generated report should be submitted to

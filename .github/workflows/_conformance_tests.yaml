@@ -36,9 +36,9 @@ jobs:
       matrix:
         include:
         - name: traditional-compatible-router
-          expression_routes: "false"
+          router-flavor: traditional_compatible
         - name: expressions-router
-          expression_routes: "true"
+          router-flavor: expressions
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
         run: make test.conformance
         env:
           JUNIT_REPORT: conformance-tests.xml
-          KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
+          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
 
       # upload logs when test failed

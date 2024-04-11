@@ -376,7 +376,7 @@ test.conformance: _check.container.environment go-junit-report
 		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		GOFLAGS="-tags=conformance_tests" \
 		go test \
-		-ldflags "$(LDFLAGS_METADATA)" \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_METADATA)" \
 		-v \
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \

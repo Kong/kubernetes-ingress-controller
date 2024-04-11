@@ -7,6 +7,8 @@ import (
 
 	"github.com/tidwall/gjson"
 	"sigs.k8s.io/yaml"
+
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -130,14 +132,14 @@ func KongHelmChartVersion() string {
 // - `traditional`
 // - `traditional_compatible`.
 // - `expressions` (experimental, only for testing expression route related tests).
-func KongRouterFlavor() string {
+func KongRouterFlavor() dpconf.RouterFlavor {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 	if rf != "" && rf != "traditional" && rf != "traditional_compatible" && rf != "expressions" {
 		// TODO
 		os.Exit(1)
 	}
 
-	return rf
+	return dpconf.RouterFlavor(rf)
 }
 
 // KongPullUsername is the Docker username to use for the Kong image pull secret.
@@ -207,13 +209,6 @@ func ControllerFeatureGates() string {
 		featureGates = GetFeatureGates()
 	}
 	return featureGates
-}
-
-// ExpressionRoutesEnabled indicates whether or not to enable expression routes
-// for the Kong Gateway and the controller.
-// If none specified, we fall back to default value - traditional_compatible.
-func ExpressionRoutesEnabled() bool {
-	return os.Getenv("KONG_TEST_EXPRESSION_ROUTES") == "true"
 }
 
 // -----------------------------------------------------------------------------

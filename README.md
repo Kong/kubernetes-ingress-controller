@@ -69,11 +69,9 @@ to start using Kong in your Kubernetes cluster.
 > Note: Kong Enterprise users, please follow along with our
 [enterprise guide][docs-konghq-k4k8s-enterprise-setup] to setup the enterprise version.
 
-## Get started (using Operator _tech preview_) 
+## Get started (using Operator) 
 
 As an alternative to Helm, you can also install Kong Ingress Controller using the **Kong Gateway Operator** by following this [quick start guide][kgo-guide].
-
-**Tech Preview warning**: Please note that this capability is a Tech Preview (alpha-quality) and should not be depended upon in a production environment.
 
 ## Container images
 
@@ -169,4 +167,4 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [docs-konghq-k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/
 [docs-konghq-kic-guides]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/
 
-[kgo-guide]: https://docs.konghq.com/gateway-operator/1.0.x/get-started/kic/install/
+[kgo-guide]: https://docs.konghq.com/gateway-operator/latest/get-started/kic/install/

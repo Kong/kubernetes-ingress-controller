@@ -75,7 +75,7 @@ func TestMain(m *testing.M) {
 	// In order to pass conformance tests, the expression router is required.
 	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
-	if testenv.ExpressionRoutesEnabled() {
+	if testenv.KongRouterFlavor() == "expressions" {
 		fmt.Println("INFO: expression routes enabled")
 		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
 	}

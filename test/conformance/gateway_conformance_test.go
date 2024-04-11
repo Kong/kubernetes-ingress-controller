@@ -45,15 +45,21 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 
 func TestGatewayConformance(t *testing.T) {
 	k8sClient, gatewayClassName := prepareEnvForGatewayConformanceTests(t)
-	// Conformance tests are run for both configs with and without
-	// KONG_TEST_EXPRESSION_ROUTES='true'.
-	var skippedTests []string
-	var supportedFeatures []suite.SupportedFeature
-	if testenv.ExpressionRoutesEnabled() {
-		supportedFeatures = expressionRoutesSupportedFeatures
-	} else {
+
+	// Conformance tests are run for both available router flavours:
+	// traditional_compatible and expressions.
+	var (
+		skippedTests      []string
+		supportedFeatures []suite.SupportedFeature
+	)
+	switch rf := testenv.KongRouterFlavor(); rf {
+	case "traditional_compatible":
 		skippedTests = skippedTestsForTraditionalRoutes
 		supportedFeatures = traditionalRoutesSupportedFeatures
+	case "expressions":
+		supportedFeatures = expressionRoutesSupportedFeatures
+	default:
+		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
 	cSuite, err := suite.NewExperimentalConformanceTestSuite(

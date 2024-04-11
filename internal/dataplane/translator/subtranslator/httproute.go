@@ -415,8 +415,14 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 				pluginsAnnotation.WriteString(plugin)
 			}
 
-		case gatewayapi.HTTPRouteFilterRequestMirror,
-			gatewayapi.HTTPRouteFilterURLRewrite:
+		case gatewayapi.HTTPRouteFilterURLRewrite:
+			plugin, err := generateRequestTransformerForURLRewrite(filter.URLRewrite)
+			if err != nil {
+				return nil, "", err
+			}
+			kongPlugins = append(kongPlugins, plugin)
+
+		case gatewayapi.HTTPRouteFilterRequestMirror:
 			// not supported
 			return nil, "", fmt.Errorf("httpFilter %s unsupported", filter.Type)
 		}
@@ -536,4 +542,45 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 func kongHeaderFormatter(header gatewayapi.HTTPHeader) string {
 	return fmt.Sprintf("%s:%s", header.Name, header.Value)
+}
+
+func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFilter) (kong.Plugin, error) {
+	if filter == nil {
+		return kong.Plugin{}, fmt.Errorf("%s is not provided", gatewayapi.HTTPRouteFilterURLRewrite)
+	}
+
+	if filter.Path == nil && filter.Hostname == nil {
+		return kong.Plugin{}, fmt.Errorf("%s missing Path and Hostname", gatewayapi.HTTPRouteFilterURLRewrite)
+	}
+
+	if filter.Path != nil {
+		switch filter.Path.Type {
+		case gatewayapi.FullPathHTTPPathModifier:
+			if filter.Path.ReplaceFullPath == nil {
+				return kong.Plugin{}, fmt.Errorf("%s missing ReplaceFullPath", gatewayapi.HTTPRouteFilterURLRewrite)
+			}
+
+			plugin := kong.Plugin{
+				Name: kong.String("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": *filter.Path.ReplaceFullPath,
+					},
+				},
+			}
+
+			return plugin, nil
+
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+		case gatewayapi.PrefixMatchHTTPPathModifier:
+			return kong.Plugin{}, fmt.Errorf("%s unsupported for %s", gatewayapi.PrefixMatchHTTPPathModifier, gatewayapi.HTTPRouteFilterURLRewrite)
+		}
+	}
+
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+	if filter.Hostname != nil {
+		return kong.Plugin{}, fmt.Errorf("unsupported hostname replace for %s", gatewayapi.HTTPRouteFilterURLRewrite)
+	}
+
+	return kong.Plugin{}, fmt.Errorf("invalid %s config", gatewayapi.HTTPRouteFilterURLRewrite)
 }

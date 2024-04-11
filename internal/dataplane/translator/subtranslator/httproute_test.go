@@ -2,6 +2,7 @@ package subtranslator
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -218,6 +219,69 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, plugins)
 			require.Equal(t, tc.expectedPluginsAnnotation, pluginsAnnotation)
+		})
+	}
+}
+
+func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
+	testCases := []struct {
+		name        string
+		modifier    *gatewayapi.HTTPURLRewriteFilter
+		expected    kong.Plugin
+		expectedErr error
+	}{
+		{
+			name: "valid URLRewriteFilter with ReplaceFullPath",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:            gatewayapi.FullPathHTTPPathModifier,
+					ReplaceFullPath: lo.ToPtr("/new-path"),
+				},
+			},
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": "/new-path",
+					},
+				},
+			},
+			expectedErr: nil,
+		},
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+		{
+			name: "valid URLRewriteFilter with unsupported",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/new"),
+				},
+			},
+			expected:    kong.Plugin{},
+			expectedErr: fmt.Errorf("%s unsupported for %s", gatewayapi.PrefixMatchHTTPPathModifier, gatewayapi.HTTPRouteFilterURLRewrite),
+		},
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+		{
+			name: "valid URLRewriteFilter with unsupported",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("hostname")),
+			},
+			expected:    kong.Plugin{},
+			expectedErr: fmt.Errorf("unsupported hostname replace for %s", gatewayapi.HTTPRouteFilterURLRewrite),
+		},
+		{
+			name:        "nil URLRewriteFilter",
+			modifier:    nil,
+			expected:    kong.Plugin{},
+			expectedErr: errors.New("URLRewrite is not provided"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			plugin, err := generateRequestTransformerForURLRewrite(tc.modifier)
+			require.Equal(t, tc.expectedErr, err)
+			require.Equal(t, tc.expected, plugin)
 		})
 	}
 }

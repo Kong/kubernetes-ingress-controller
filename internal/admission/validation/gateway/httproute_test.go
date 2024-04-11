@@ -623,6 +623,170 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid:         false,
 			validationMsg: "HTTPRoute has invalid Kong annotations: invalid konghq.com/protocols value: ohno",
 		},
+		{
+			msg: "HTTPRoute URLRewrite ReplaceFullPath",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Filters: []gatewayapi.HTTPRouteFilter{
+								{
+									Type: gatewayapi.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+										Path: &gatewayapi.HTTPPathModifier{
+											Type:            gatewayapi.FullPathHTTPPathModifier,
+											ReplaceFullPath: lo.ToPtr("/new-path"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			msg: "HTTPRoute URLRewrite Hostname",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Filters: []gatewayapi.HTTPRouteFilter{
+								{
+									Type: gatewayapi.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+										Hostname: lo.ToPtr(gatewayapi.PreciseHostname("example.com")),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+			},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type URLRewrite (with hostname replace) is unsupported",
+		},
+		{
+			msg: "HTTPRoute URLRewrite ReplacePrefixMatch",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Filters: []gatewayapi.HTTPRouteFilter{
+								{
+									Type: gatewayapi.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+										Path: &gatewayapi.HTTPPathModifier{
+											Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+											ReplacePrefixMatch: lo.ToPtr("/new"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+			},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type URLRewrite (with path replace type ReplacePrefixMatch) is unsupported",
+		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
 			fakeClient := fakeclient.

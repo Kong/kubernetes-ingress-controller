@@ -5,6 +5,7 @@ const (
 	Kind                   = "kind"
 	KindUDPRoute           = "UDPRoute"
 	KindTCPRoute           = "TCPRoute"
+	KindHTTPRoute          = "HTTPRoute"
 	KindGRPCRoute          = "GRPCRoute"
 	KindIngress            = "Ingress"
 	KindKongServiceFacade  = "KongServiceFacade"

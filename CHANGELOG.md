@@ -97,6 +97,8 @@ Adding a new version? You'll need three changes:
 - Add constraint to limit items in `Credentials` and `ConsumerGroups` in
   `KongConsumer`s to be unique in validating admission webhooks.
   [#5787](https://github.com/Kong/kubernetes-ingress-controller/pull/5787)
+- Add support in `HTTPRoute`s for `URLRewrite`:
+  - `FullPathRewrite` [#5855](https://github.com/Kong/kubernetes-ingress-controller/pull/5855)
 
 ### Fixed
 

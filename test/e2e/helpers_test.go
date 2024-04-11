@@ -681,13 +681,15 @@ func getLicenseFromAdminAPI(ctx context.Context, env environments.Environment, a
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return license, err
+		return license, fmt.Errorf("failed to read response body: %w; body: %s", err, body)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return license, nil
+		return license, fmt.Errorf("unexpected status code: %d; body: %s", resp.StatusCode, body)
 	}
-	err = json.Unmarshal(body, &license)
-	return license, err
+	if err = json.Unmarshal(body, &license); err != nil {
+		return licenseOutput{}, fmt.Errorf("could not unmarshal license response: %w; body: %s", err, body)
+	}
+	return license, nil
 }
 
 func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environment) {

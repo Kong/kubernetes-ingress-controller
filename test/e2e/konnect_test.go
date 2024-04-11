@@ -98,6 +98,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	require.Eventually(t, func() bool {
 		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
+			t.Logf("failed to get license: %v", err)
 			return false
 		}
 		return license.License.Expiration == ""
@@ -117,6 +118,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
+			t.Logf("failed to get license: %v", err)
 			return false
 		}
 		return license.License.Expiration != ""

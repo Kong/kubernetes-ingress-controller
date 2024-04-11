@@ -31,6 +31,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -75,9 +76,9 @@ func TestMain(m *testing.M) {
 	// In order to pass conformance tests, the expression router is required.
 	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
-	if testenv.KongRouterFlavor() == "expressions" {
+	if testenv.KongRouterFlavor() == dpconf.RouterFlavorExpressions {
 		fmt.Println("INFO: expression routes enabled")
-		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
+		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", string(dpconf.RouterFlavorExpressions))
 	}
 
 	// Pin the Helm chart version.

@@ -197,7 +197,7 @@ _build.template.debug:
 	go build -o bin/manager-debug \
 		-trimpath \
 		-gcflags=all="-N -l" \
-		-ldflags "-s -w $(LDFLAGS_METADATA)" \
+		-ldflags "$(LDFLAGS_METADATA)" \
 		${MAIN}
 
 .PHONY: fmt

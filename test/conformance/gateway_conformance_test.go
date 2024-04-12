@@ -3,12 +3,14 @@
 package conformance
 
 import (
+	"io/fs"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -70,6 +72,7 @@ func TestGatewayConformance(t *testing.T) {
 			Debug:                true,
 			CleanupBaseResources: !testenv.IsCI(),
 			BaseManifests:        conformanceTestsBaseManifests,
+			ManifestFS:           []fs.FS{&conformance.Manifests},
 			SupportedFeatures:    sets.New(supportedFeatures...),
 			SkipTests:            skippedTests,
 			ConformanceProfiles: sets.New(

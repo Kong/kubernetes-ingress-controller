@@ -742,40 +742,6 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "KongConsumer with key-auth from label secret with the old cred field",
-			k8sConsumers: []*kongv1.KongConsumer{
-				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
-					},
-					Username: "foo",
-					CustomID: "foo",
-					Credentials: []string{
-						"labeledSecretWithCredField",
-					},
-				},
-			},
-			expectedKongStateConsumers: []Consumer{
-				{
-					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
-						CustomID: kong.String("foo"),
-					},
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{
-						Key: kong.String("little-rabbits-be-good"),
-						Tags: util.GenerateTagsForObject(&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "labeledSecretWithCredField"},
-						}),
-					}}},
-				},
-			},
-		},
 	}
 
 	for i, tc := range testCases {

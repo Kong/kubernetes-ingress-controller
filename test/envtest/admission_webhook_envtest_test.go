@@ -214,6 +214,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			kongPlugin: &kongv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-invalid-config-from",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				PluginName: "rate-limiting",
 				ConfigFrom: &kongv1.ConfigSource{
@@ -226,6 +229,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-config",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
@@ -234,6 +240,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-config",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
@@ -267,6 +276,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte("10"),
@@ -275,6 +287,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`"10"`),
@@ -288,6 +303,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			kongPlugin: &kongv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-valid-config",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				PluginName: "rate-limiting",
 				Config: apiextensionsv1.JSON{
@@ -308,6 +326,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-valid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`10`),
@@ -316,6 +337,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-valid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`15`),
@@ -409,6 +433,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
@@ -417,6 +444,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":10}`),
@@ -445,6 +475,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
@@ -453,6 +486,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
@@ -490,6 +526,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`5`),
@@ -498,6 +537,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`10`),
@@ -534,6 +576,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`5`),
@@ -542,6 +587,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`"10"`),

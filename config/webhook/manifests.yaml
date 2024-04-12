@@ -232,7 +232,7 @@ webhooks:
   name: secrets.plugins.validation.ingress-controller.konghq.com
   objectSelector:
     matchExpressions:
-    - key: "konghq.com/plugin-config"
+    - key: "konghq.com/validate"
       operator: "Exists"
   rules:
   - apiGroups:

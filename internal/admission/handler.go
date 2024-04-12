@@ -286,7 +286,8 @@ func (h RequestHandler) handleSecret(
 		// referenced secret, labeled or not.
 
 		// plugin configuration secrets
-		if _, hasPluginLabel := secret.Labels[labels.ValidateLabel]; hasPluginLabel {
+		switch validate := secret.Labels[labels.ValidateLabel]; labels.ValidateType(validate) {
+		case labels.PluginValidate:
 			ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
 			if err != nil {
 				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
@@ -294,16 +295,28 @@ func (h RequestHandler) handleSecret(
 			if !ok {
 				return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
 			}
-		}
+		default:
+			// TODO this duplicates the above plugin handling block. prior to 3.2, the admission webhook ingested all
+			// Secrets and used this to validate updates to plugin configuration. this non-labeled case is retained
+			// for environments that still use ingest all configuration.
+			ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
+			if err != nil {
+				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
+			}
+			if !ok {
+				return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
+			}
 
-		// fallback allow
-		// No Secret should hit this, as filters should only check those that match one of the above cases, but if we
-		// somehow (presumably via outdated webhook config) get a Secret that lacks the labels we check, allow it.
-		return responseBuilder.Allowed(true).Build(), nil
+			// no reference found in the blanket block, this is some random unrelated Secret and KIC should ignore it.
+			return responseBuilder.Allowed(true).Build(), nil
+		}
 
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
+	// fallback allow. it should not be possible to hit this because of the defaults above, but the compiler wants it.
+	// if a request somehow has reached this, we shouldn't touch it.
+	return responseBuilder.Allowed(true).Build(), nil
 }
 
 // checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret

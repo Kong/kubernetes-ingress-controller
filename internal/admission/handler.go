@@ -286,7 +286,7 @@ func (h RequestHandler) handleSecret(
 		// referenced secret, labeled or not.
 
 		// plugin configuration secrets
-		if _, hasPluginLabel := secret.Labels[labels.PluginConfigLabel]; hasPluginLabel {
+		if _, hasPluginLabel := secret.Labels[labels.ValidateLabel]; hasPluginLabel {
 			ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
 			if err != nil {
 				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err

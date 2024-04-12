@@ -222,7 +222,7 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "plugin-conf",
 					Labels: map[string]string{
-						labels.PluginConfigLabel: "true",
+						labels.ValidateLabel: "plugin",
 					},
 				},
 			},
@@ -240,7 +240,7 @@ func TestHandleSecret(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-plugin-0",
 						Labels: map[string]string{
-							labels.PluginConfigLabel: "true",
+							labels.ValidateLabel: "plugin",
 						},
 					},
 					PluginName: "test-plugin",
@@ -257,7 +257,7 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "plugin-conf",
 					Labels: map[string]string{
-						labels.PluginConfigLabel: "true",
+						labels.ValidateLabel: "plugin",
 					},
 				},
 			},
@@ -285,7 +285,7 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "plugin-conf",
 					Labels: map[string]string{
-						labels.PluginConfigLabel: "true",
+						labels.ValidateLabel: "plugin",
 					},
 				},
 			},

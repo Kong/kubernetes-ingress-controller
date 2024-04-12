@@ -30,4 +30,7 @@ jobs:
         run: make verify.manifests
 
       - name: Verify generators consistency
+        env:
+          # The new version of GWAPI has not been released yet, and we have used a specific commit.
+          GATEWAY_API_VERSION: c57c131b49f8aec9eb7033f05c48654c57c9cc99
         run: make verify.generators

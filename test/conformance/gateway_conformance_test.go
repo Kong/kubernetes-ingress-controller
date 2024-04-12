@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
-	conformancev1alpha1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
+	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
@@ -63,21 +63,19 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
-	cSuite, err := suite.NewExperimentalConformanceTestSuite(
-		suite.ExperimentalConformanceOptions{
-			Options: suite.Options{
-				Client:               k8sClient,
-				GatewayClassName:     gatewayClassName,
-				Debug:                true,
-				CleanupBaseResources: !testenv.IsCI(),
-				BaseManifests:        conformanceTestsBaseManifests,
-				SupportedFeatures:    sets.New(supportedFeatures...),
-				SkipTests:            skippedTests,
-			},
+	cSuite, err := suite.NewConformanceTestSuite(
+		suite.ConformanceOptions{
+			Client:               k8sClient,
+			GatewayClassName:     gatewayClassName,
+			Debug:                true,
+			CleanupBaseResources: !testenv.IsCI(),
+			BaseManifests:        conformanceTestsBaseManifests,
+			SupportedFeatures:    sets.New(supportedFeatures...),
+			SkipTests:            skippedTests,
 			ConformanceProfiles: sets.New(
 				suite.HTTPConformanceProfileName,
 			),
-			Implementation: conformancev1alpha1.Implementation{
+			Implementation: conformancev1.Implementation{
 				Organization: metadata.Organization,
 				Project:      metadata.ProjectName,
 				URL:          metadata.ProjectURL,
@@ -91,7 +89,7 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("starting the gateway conformance test suite")
-	cSuite.Setup(t)
+	cSuite.Setup(t, tests.ConformanceTests)
 
 	go patchGatewayClassToPassTestGatewayClassObservedGenerationBump(ctx, t, k8sClient)
 

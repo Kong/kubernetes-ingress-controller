@@ -132,7 +132,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 					credConfig[k] = strings.Split(string(v), ",")
 					continue
 				}
-				// TODO this is a kongCredType-agnostic mutation that should only apply to Oauth2 credentials.
+				// TODO this is a credential type-agnostic mutation that should only apply to Oauth2 credentials.
 				// However, the credential-specific code after deals only in interface{}s, and we can't fix individual
 				// keys. To handle this properly we'd need to refactor the types used in all following code.
 				if k == "hash_secret" {

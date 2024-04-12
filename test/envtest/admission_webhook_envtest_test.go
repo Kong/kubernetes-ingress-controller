@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
@@ -611,21 +612,25 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "tuxcreds1",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "basic-auth",
+				},
 			},
 			StringData: map[string]string{
-				"kongCredType": "basic-auth",
-				"username":     "tux1",
-				"password":     "testpass",
+				"username": "tux1",
+				"password": "testpass",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "tuxcreds2",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "basic-auth",
+				},
 			},
 			StringData: map[string]string{
-				"kongCredType": "basic-auth",
-				"username":     "tux2",
-				"password":     "testpass",
+				"username": "tux2",
+				"password": "testpass",
 			},
 		},
 	} {
@@ -698,11 +703,14 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			credentials: []*corev1.Secret{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "electronscreds",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "basic-auth",
+					},
 				},
 				StringData: map[string]string{
-					"kongCredType": "basic-auth",
-					"username":     "electron",
-					"password":     "testpass",
+
+					"username": "electron",
+					"password": "testpass",
 				},
 			}},
 			wantErr: false,
@@ -727,21 +735,25 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "protonscreds1",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "proton",
-						"password":     "testpass",
+						"username": "proton",
+						"password": "testpass",
 					},
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "protonscreds2",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "electron", // username is unique constrained
-						"password":     "testpass", // password is not unique constrained
+						"username": "electron", // username is unique constrained
+						"password": "testpass", // password is not unique constrained
 					},
 				},
 			},
@@ -785,21 +797,25 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "neutronscreds1",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "neutron",
-						"password":     "testpass",
+						"username": "neutron",
+						"password": "testpass",
 					},
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "neutronscreds2",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "neutron", // username is unique constrained
-						"password":     "testpass",
+						"username": "neutron", // username is unique constrained
+						"password": "testpass",
 					},
 				},
 			},
@@ -825,11 +841,13 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "reasonablehammer",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "reasonablehammer",
-						"password":     "testpass", // not unique constrained, so even though someone else is using this password this should pass
+						"username": "reasonablehammer",
+						"password": "testpass", // not unique constrained, so even though someone else is using this password this should pass
 					},
 				},
 			},
@@ -854,11 +872,13 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "unreasonablehammer",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "tux1", // unique constrained with previous created static consumer credentials
-						"password":     "testpass",
+						"username": "tux1", // unique constrained with previous created static consumer credentials
+						"password": "testpass",
 					},
 				},
 			},
@@ -939,11 +959,13 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "brokenfence",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "invalid-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "invalid-auth", // not a valid credential type
-						"username":     "brokenfence",
-						"password":     "testpass",
+						"username": "brokenfence",
+						"password": "testpass",
 					},
 				},
 			),
@@ -954,11 +976,13 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		validCredential := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "brokenfence",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "basic-auth",
+				},
 			},
 			StringData: map[string]string{
-				"kongCredType": "basic-auth",
-				"username":     "brokenfence",
-				"password":     "testpass",
+				"username": "brokenfence",
+				"password": "testpass",
 			},
 		}
 		require.NoError(t, ctrlClient.Create(ctx, validCredential))
@@ -996,7 +1020,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		require.NoError(t, ctrlClient.Update(ctx, validCredential))
 
 		t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
-		validCredential.Data["kongCredType"] = []byte("invalid-auth")
+		validCredential.ObjectMeta.Labels[labels.CredentialTypeLabel] = "invalid-auth"
 		err := ctrlClient.Update(ctx, validCredential)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "invalid credential type")
@@ -1012,10 +1036,12 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 			ctrlClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "invalid-jwt-",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
 				},
 				StringData: map[string]string{
-					"kongCredType": "jwt",
-					"algorithm":    "RS256",
+					"algorithm": "RS256",
 				},
 			}),
 			"missing required field(s): rsa_public_key, key, secret",
@@ -1029,12 +1055,14 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 				require.NoError(t, ctrlClient.Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "valid-jwt-" + strings.ToLower(algo) + "-",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "jwt",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "jwt",
-						"algorithm":    algo,
-						"key":          "key-name",
-						"secret":       "secret-name",
+						"algorithm": algo,
+						"key":       "key-name",
+						"secret":    "secret-name",
 					},
 				}), "failed to create JWT credential with algorithm %s", algo)
 			})
@@ -1047,12 +1075,14 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 				require.Error(t, ctrlClient.Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "invalid-jwt-" + strings.ToLower(algo) + "-",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "jwt",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "jwt",
-						"algorithm":    algo,
-						"key":          "key-name",
-						"secret":       "secret-name",
+						"algorithm": algo,
+						"key":       "key-name",
+						"secret":    "secret-name",
 					},
 				}), "expected failure when creating JWT %s", algo)
 			})
@@ -1080,11 +1110,13 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 				credential := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: credentialName,
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     credentialName,
-						"password":     "testpass",
+						"username": credentialName,
+						"password": "testpass",
 					},
 				}
 				t.Logf("creating %s Secret that contains credentials", credentialName)

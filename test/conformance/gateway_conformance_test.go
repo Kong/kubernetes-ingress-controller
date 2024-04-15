@@ -31,7 +31,9 @@ var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRoute,
 	// extended features
 	suite.SupportHTTPRouteResponseHeaderModification,
-	suite.SupportHTTPRouteBackendTimeout,
+	// Temporarily disabled and tracking through the following issue.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// suite.SupportHTTPRouteBackendTimeout,
 }
 
 var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
@@ -42,7 +44,9 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRouteQueryParamMatching,
 	suite.SupportHTTPRouteMethodMatching,
 	suite.SupportHTTPRouteResponseHeaderModification,
-	suite.SupportHTTPRouteBackendTimeout,
+	// Temporarily disabled and tracking through the following issue.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// suite.SupportHTTPRouteBackendTimeout,
 }
 
 func TestGatewayConformance(t *testing.T) {

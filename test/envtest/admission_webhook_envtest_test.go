@@ -756,7 +756,6 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 					},
 				},
 				StringData: map[string]string{
-
 					"username": "electron",
 					"password": "testpass",
 				},

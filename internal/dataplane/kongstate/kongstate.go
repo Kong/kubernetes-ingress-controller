@@ -68,7 +68,7 @@ func (ks *KongState) SanitizedCopy() *KongState {
 }
 
 func (ks *KongState) FillConsumersAndCredentials(
-	logger logr.Logger,
+	_ logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {

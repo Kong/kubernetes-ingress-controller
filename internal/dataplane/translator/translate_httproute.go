@@ -45,15 +45,29 @@ func (t *Translator) ingressRulesFromHTTPRoutes() ingressRules {
 		t.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutesToTranslate, &result)
 		return result
 	}
-
+	kongstateServices, routeTranslationFailures := subtranslator.TranslateHTTPRoutesToKongstateServices(
+		t.logger,
+		t.storer,
+		httpRoutesToTranslate,
+	)
+	for serviceName, service := range kongstateServices {
+		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = service.Parent
+	}
 	for _, httproute := range httpRoutesToTranslate {
-		if err := t.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
-			t.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
-		} else {
-			// at this point the object has been configured and can be
-			// reported as successfully translated.
-			t.registerSuccessfullyTranslatedObject(httproute)
+		namespacedName := k8stypes.NamespacedName{
+			Namespace: httproute.Namespace,
+			Name:      httproute.Name,
 		}
+		translationFailures, hasError := routeTranslationFailures[namespacedName]
+		if hasError && len(translationFailures) > 0 {
+			t.failuresCollector.PushResourceFailure(
+				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
+				httproute,
+			)
+			continue
+		}
+		t.registerSuccessfullyTranslatedObject(httproute)
 	}
 
 	return result

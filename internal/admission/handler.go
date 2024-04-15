@@ -257,7 +257,10 @@ func (h RequestHandler) handleKongClusterPlugin(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=core,resources=secrets,versions=v1,name=secrets.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// NOTE this handler _does not_ use a kubebuilder directive, as our Secret handling requires webhook features
+// kubebuilder does not support (objectSelector). Instead, config/webhook/additional_secret_hooks.yaml includes
+// handwritten webhook rules that we patch into the webhook manifest.
+// See https://github.com/kubernetes-sigs/controller-tools/issues/553 for further info.
 
 func (h RequestHandler) handleSecret(
 	ctx context.Context,

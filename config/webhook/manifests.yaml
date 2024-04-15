@@ -204,56 +204,6 @@ webhooks:
       path: /
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: secrets.credentials.validation.ingress-controller.konghq.com
-  objectSelector:
-    matchExpressions:
-    - key: "konghq.com/credential"
-      operator: "Exists"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: secrets.plugins.validation.ingress-controller.konghq.com
-  objectSelector:
-    matchExpressions:
-    - key: "konghq.com/validate"
-      operator: "Exists"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /
-  failurePolicy: Fail
-  matchPolicy: Equivalent
   name: services.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:

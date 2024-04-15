@@ -3,7 +3,6 @@
 package conformance
 
 import (
-	"io/fs"
 	"os"
 	"path"
 	"testing"
@@ -65,30 +64,26 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
-	cSuite, err := suite.NewConformanceTestSuite(
-		suite.ConformanceOptions{
-			Client:               k8sClient,
-			GatewayClassName:     gatewayClassName,
-			Debug:                true,
-			CleanupBaseResources: !testenv.IsCI(),
-			BaseManifests:        conformanceTestsBaseManifests,
-			ManifestFS:           []fs.FS{&conformance.Manifests},
-			SupportedFeatures:    sets.New(supportedFeatures...),
-			SkipTests:            skippedTests,
-			ConformanceProfiles: sets.New(
-				suite.HTTPConformanceProfileName,
-			),
-			Implementation: conformancev1.Implementation{
-				Organization: metadata.Organization,
-				Project:      metadata.ProjectName,
-				URL:          metadata.ProjectURL,
-				Version:      metadata.Release,
-				Contact: []string{
-					path.Join(metadata.ProjectURL, "/issues/new/choose"),
-				},
-			},
-		},
+	opts := conformance.DefaultOptions(t)
+	opts.GatewayClassName = gatewayClassName
+	opts.Debug = true
+	opts.CleanupBaseResources = !testenv.IsCI()
+	opts.BaseManifests = conformanceTestsBaseManifests
+	opts.SupportedFeatures = sets.New(supportedFeatures...)
+	opts.SkipTests = skippedTests
+	opts.ConformanceProfiles = sets.New(
+		suite.HTTPConformanceProfileName,
 	)
+	opts.Implementation = conformancev1.Implementation{
+		Organization: metadata.Organization,
+		Project:      metadata.ProjectName,
+		URL:          metadata.ProjectURL,
+		Version:      metadata.Release,
+		Contact: []string{
+			path.Join(metadata.ProjectURL, "/issues/new/choose"),
+		},
+	}
+	cSuite, err := suite.NewConformanceTestSuite(opts)
 	require.NoError(t, err)
 
 	t.Log("starting the gateway conformance test suite")

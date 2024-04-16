@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/klient/conf"
@@ -25,6 +26,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -337,7 +339,14 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			allControllerArgs = opt(allControllerArgs)
 		}
 
-		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, allControllerArgs...)
+		gracefulShutdownWithoutTimeoutOpt := func(c *manager.Config) {
+			// Set the GracefulShutdownTimeout to -1 to keep graceful shutdown enabled but disable the timeout.
+			// This prevents the errors:
+			// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
+			c.GracefulShutdownTimeout = lo.ToPtr(time.Duration(-1))
+		}
+
+		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, allControllerArgs, gracefulShutdownWithoutTimeoutOpt)
 		t.Cleanup(func() { cancel() })
 		if !assert.NoError(t, err, "failed deploying controller manager") {
 			return ctx

@@ -114,7 +114,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("Preparing the environment to run the controller manager")
 	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 	t.Log("starting the controller manager")
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, "--log-level=debug")
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, []string{"--log-level=debug"})
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 

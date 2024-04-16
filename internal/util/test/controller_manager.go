@@ -65,13 +65,18 @@ func PrepareClusterForRunningControllerManager(
 // The caller must use the provided context.Context to stop the controller manager
 // from running when they're done with it.
 //
+// This accepts both a list of command line flags with arguments as well as config options
+// for the manager. The reason for this is that there exist some flags that are
+// not exposed via the CLI interface yet like e.g. GracefulShutdownTimeout.
+//
 // It returns a context cancellation func which will stop the manager and an error.
 func DeployControllerManagerForCluster(
 	ctx context.Context,
 	logger logr.Logger,
 	cluster clusters.Cluster,
 	kongAddon *ktfkong.Addon,
-	additionalFlags ...string,
+	additionalFlags []string,
+	opts ...manager.ConfigOpt,
 ) (func(), error) {
 	if kongAddon == nil {
 		// Ensure that the provided test cluster has a kongAddon deployed to it.
@@ -118,6 +123,10 @@ func DeployControllerManagerForCluster(
 	if err := flags.Parse(controllerManagerFlags); err != nil {
 		os.Remove(kubeconfig.Name())
 		return nil, fmt.Errorf("failed to parse manager flags: %w", err)
+	}
+
+	for _, opt := range opts {
+		opt(&config)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

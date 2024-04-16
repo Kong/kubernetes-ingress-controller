@@ -186,7 +186,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs...)
+		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs)
 		defer cancel()
 		helpers.ExitOnErr(ctx, err)
 	}

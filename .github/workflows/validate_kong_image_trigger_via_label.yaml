@@ -9,6 +9,7 @@ jobs:
   check-and-remove-issue-label:
     name: Check label "ci/run-validate-kong-image" and remove the label
     if: contains(github.event.*.labels.*.name, 'ci/run-validate-kong-image')
+    runs-on: ubuntu-latest
     env:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:

@@ -5,6 +5,8 @@ package envtest
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"regexp"
 	"testing"
 	"text/template"
@@ -12,18 +14,23 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
-func TestConfigErrorEventGeneration(t *testing.T) {
+func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
 
 	const (
@@ -241,4 +248,110 @@ func formatErrBody(t *testing.T, namespace string, ingress *netv1.Ingress, servi
 	}))
 
 	return b.Bytes()
+}
+
+func TestConfigErrorEventGenerationDBMode(t *testing.T) {
+	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
+
+	const (
+		waitTime = time.Minute
+		tickTime = 100 * time.Millisecond
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	scheme := Scheme(t, WithKong)
+	restConfig := Setup(t, scheme)
+	ctrlClientGlobal := NewControllerClient(t, scheme, restConfig)
+	ns := CreateNamespace(ctx, t, ctrlClientGlobal)
+	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+	ingressClassName := "kongenvtest"
+	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+
+	const podName = "kong-ingress-controller-tyjh1"
+	t.Setenv("POD_NAMESPACE", ns.Name)
+	t.Setenv("POD_NAME", podName)
+
+	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
+	consumer := &kongv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "donenbai",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClassName,
+			},
+		},
+		Username: "donenbai",
+	}
+	require.NoError(t, ctrlClient.Create(ctx, consumer))
+	t.Cleanup(func() {
+		if err := ctrlClient.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+			assert.NoError(t, err)
+		}
+	})
+
+	RunManager(ctx, t, restConfig,
+		AdminAPIOptFns(
+			// TODO IDK where we're getting the version from normally but it shouldn't really matter for this.
+			mocks.WithRoot(formatDBRootResponse("999.999.999")),
+		),
+		WithPublishService(ns.Name),
+		WithIngressClass(ingressClassName),
+		WithProxySyncSeconds(0.1),
+	)
+
+	t.Log("checking kongconsumer event creation")
+	require.Eventually(t, func() bool {
+		var events corev1.EventList
+		if err := ctrlClient.List(ctx, &events, &client.ListOptions{Namespace: ns.Name}); err != nil {
+			t.Logf("error listing events: %v", err)
+			return false
+		}
+		t.Logf("got %d events", len(events.Items))
+
+		matches := make([]bool, 1)
+		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "KongConsumer" &&
+				e.InvolvedObject.Name == consumer.Name &&
+				e.Message == "invalid : HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")"
+		})
+		if lo.Count(matches, true) != 1 {
+			t.Logf("not all events matched: %+v", matches)
+			return false
+		}
+		return true
+	}, waitTime, tickTime)
+
+	t.Log("push failure events recorded successfully")
+}
+
+func formatDBRootResponse(version string) []byte {
+	const defaultDBLessRootResponse = `{
+		"version": "%s",
+		"configuration": {
+			"database": "postgres",
+			"router_flavor": "traditional",
+			"role": "traditional",
+			"proxy_listeners": [
+				{
+					"ipv6only=on": false,
+					"ipv6only=off": false,
+					"ssl": false,
+					"so_keepalive=off": false,
+					"listener": "0.0.0.0:8000",
+					"bind": false,
+					"port": 8000,
+					"deferred": false,
+					"so_keepalive=on": false,
+					"http2": false,
+					"proxy_protocol": false,
+					"ip": "0.0.0.0",
+					"reuseport": false
+				}
+			]
+		}
+	}`
+	return []byte(fmt.Sprintf(defaultDBLessRootResponse, version))
 }

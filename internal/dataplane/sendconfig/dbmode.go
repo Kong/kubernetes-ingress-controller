@@ -99,6 +99,8 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
+	s.resourceErrorLock.Lock()
+	defer s.resourceErrorLock.Unlock()
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}, s.resourceErrors, nil, nil
 	}
@@ -110,9 +112,8 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 
 // HandleEvents handles logging and error reporting for individual entity change events generated during a sync by
 // looping over an event channel. It terminates when its context dies.
-func (s UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan diff.EntityAction) {
+func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan diff.EntityAction) {
 	s.resourceErrorLock.Lock()
-	count := 0
 	for {
 		select {
 		case event := <-events:
@@ -129,7 +130,6 @@ func (s UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan diff
 						s.logger.Error(err, "could not parse entity update error")
 					} else {
 						s.resourceErrors = append(s.resourceErrors, rerror)
-						count++
 					}
 				}
 			}

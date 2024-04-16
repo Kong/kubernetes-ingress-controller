@@ -138,7 +138,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		featureGateFlag,
 		"--anonymous-reports=false",
 	}
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args...)
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args)
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 

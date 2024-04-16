@@ -32,6 +32,9 @@ type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
 // Type override to be used with OptionalNamespacedName variables to override their type name printed in the help text.
 var nnTypeNameOverride = flags.WithTypeNameOverride[OptionalNamespacedName]("namespaced-name")
 
+// ConfigOpt is a function that modifies a Config.
+type ConfigOpt func(*Config)
+
 // -----------------------------------------------------------------------------
 // Controller Manager - Config
 // -----------------------------------------------------------------------------

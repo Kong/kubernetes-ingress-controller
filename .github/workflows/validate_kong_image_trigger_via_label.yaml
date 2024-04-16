@@ -47,14 +47,14 @@ jobs:
       - name: Extract image repo and tag
         id: extract_repo_tag
         run: |
-          kong_image_repo=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $1}')
+          kong_image_repo=$(echo ${TEST_KONG_CONTAINER_IMAGE} | awk -F':' '{print $1}')
           # Limit kong image repo in [kong,kong/kong-gateway,kong/kong-gateway-dev] to prevent from attack of running unknown images
           if [ "$kong_image_repo" != "kong" ] && [  "$kong_image_repo" != "kong/kong-gateway" ] && [ "$kong_image_repo" != "kong/kong-gateway-dev" ]; then
             echo "invalid image repo: $kong_image_repo"
             exit 1
           fi
           echo "TEST_KONG_IMAGE_REPO=$kong_image_repo" >> $GITHUB_ENV
-          kong_image_tag=$(echo ${{ env.TEST_KONG_CONTAINER_IMAGE }} | awk -F':' '{print $2}')
+          kong_image_tag=$(echo ${TEST_KONG_CONTAINER_IMAGE} | awk -F':' '{print $2}')
           echo "TEST_KONG_IMAGE_TAG=${kong_image_tag}" >> $GITHUB_ENV
           kong_image_version=$(echo ${kong_image_tag} | awk -F'.' '{printf("%s.%s.%s",$1,$2,$3)}')
           echo "TEST_KONG_IMAGE_VERSION=${kong_image_version}" >> $GITHUB_ENV 
@@ -79,17 +79,14 @@ jobs:
     needs:
     - extract-and-parse-container-image
     runs-on: ubuntu-latest
-    env:
-      KONG_MAJOR_VERSION: ${{ env.TEST_KONG_IMAGE_MAJOR_VERSION }}
-      KONG_MINOR_VERSION: ${{ env.TEST_KONG_IMAGE_MINOR_VERSION }}
     steps:
      - name: Choose KIC image and branch
        id: choose_kic_branch
        run: |
-          if [[ $KONG_MAJOR_VERSION -le 2 ]]; then
+          if [[ $TEST_KONG_IMAGE_MAJOR_VERSION -le 2 ]]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV
-          elif [ $KONG_MAJOR_VERSION -eq 3 ] and [ $KONG_MINOR_VERSION -le 3 ]; then
+          elif [ $TEST_KONG_IMAGE_MAJOR_VERSION -eq 3 ] && [ $TEST_KONG_IMAGE_MINOR_VERSION -le 3 ]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_ENV
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_ENV          
           else
@@ -105,11 +102,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       WORKFLOW: .github/workflows/validate_kong_image.yaml
-      TEST_KONG_IMAGE_REPO: ${{ env.TEST_KONG_IMAGE_REPO }}
-      TEST_KONG_IMAGE_TAG: ${{ env.TEST_KONG_IMAGE_TAG }}
-      TEST_KONG_IMAGE_VERSION: ${{ env.TEST_KONG_IMAGE_VERSION }}
-      KIC_IMAGE_TAG: ${{ env.KIC_IMAGE_TAG }}
-      KIC_BRANCH: ${{ env.KIC_BRANCH }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
       - name: checkout to repo

@@ -57,13 +57,16 @@ func TestGatewayConformance(t *testing.T) {
 	var (
 		skippedTests      []string
 		supportedFeatures []suite.SupportedFeature
+		mode              string
 	)
 	switch rf := testenv.KongRouterFlavor(); rf {
 	case dpconf.RouterFlavorTraditionalCompatible:
 		skippedTests = skippedTestsForTraditionalRoutes
 		supportedFeatures = traditionalRoutesSupportedFeatures
+		mode = "traditional-compatible"
 	case dpconf.RouterFlavorExpressions:
 		supportedFeatures = expressionRoutesSupportedFeatures
+		mode = "expressions"
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
@@ -71,6 +74,7 @@ func TestGatewayConformance(t *testing.T) {
 	opts := conformance.DefaultOptions(t)
 	opts.GatewayClassName = gatewayClassName
 	opts.Debug = true
+	opts.Mode = mode
 	opts.CleanupBaseResources = !testenv.IsCI()
 	opts.BaseManifests = conformanceTestsBaseManifests
 	opts.SupportedFeatures = sets.New(supportedFeatures...)

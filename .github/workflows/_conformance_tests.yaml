@@ -55,6 +55,8 @@ jobs:
       - name: run conformance tests
         run: make test.conformance
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           JUNIT_REPORT: conformance-tests.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}

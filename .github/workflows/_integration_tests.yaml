@@ -178,6 +178,8 @@ jobs:
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"

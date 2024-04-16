@@ -66,40 +66,51 @@ tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-
 
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
+# NOTE: mise targets use -q to silence the output.
+# Users can use MISE_VERBOSE=1 MISE_DEBUG=1 to get more verbose output.
+
+.PHONY: mise-plugin-install
+mise-plugin-install: mise
+	$(MISE) plugin install --yes -q $(DEP) $(URL)
+
+.PHONY: mise-install
+mise-install: mise
+	$(MISE) install -q $(DEP_VER)
+
 CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
 controller-gen: mise ## Download controller-gen locally if necessary.
-	@$(MISE) plugin install --yes -q kube-controller-tools
-	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
+	@$(MAKE) mise-plugin-install DEP=kube-controller-tools
+	$(MAKE) mise-install DEP_VER=kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
 KUSTOMIZE_VERSION = $(shell yq -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
 .PHONY: kustomize
 kustomize: mise ## Download kustomize locally if necessary.
-	@$(MISE) plugin install --yes -q kustomize
-	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
+	@$(MAKE) mise-plugin-install DEP=kustomize
+	@$(MAKE) mise-install DEP_VER=kustomize@$(KUSTOMIZE_VERSION)
 
 CLIENT_GEN_VERSION = $(shell yq -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
 client-gen: mise ## Download client-gen locally if necessary.
-	@$(MISE) plugin install --yes -q kube-code-generator
-	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
+	@$(MAKE) mise-plugin-install DEP=kube-code-generator
+	@$(MAKE) mise-install DEP_VER=kube-code-generator@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell yq -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
 .PHONY: golangci-lint.download
 golangci-lint.download: mise ## Download golangci-lint locally if necessary.
-	@$(MISE) plugin install --yes -q golangci-lint
-	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@$(MAKE) mise-plugin-install DEP=golangci-lint
+	@$(MAKE) mise-install DEP_VER=golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
-	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
-	@$(MISE) install -q gotestsum
+	@$(MAKE) mise-plugin-install DEP=gotestsum URL=https://github.com/pmalek/mise-gotestsum.git
+	@$(MAKE) mise-install DEP_VER=gotestsum
 
 CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
@@ -112,15 +123,15 @@ SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
 .PHONY: skaffold
 skaffold: mise ## Download skaffold locally if necessary.
-	@$(MISE) plugin install --yes -q skaffold
-	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
+	@$(MAKE) mise-plugin-install DEP=skaffold
+	@$(MAKE) mise-install DEP_VER=skaffold@$(SKAFFOLD_VERSION)
 
 YQ_VERSION = $(shell yq -ojson -r '.yq' < $(TOOLS_VERSIONS_FILE))
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
-	@$(MISE) plugin install --yes -q yq
-	@$(MISE) install -q yq@$(YQ_VERSION)
+	@$(MAKE) mise-plugin-install DEP=yq
+	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
 
 DLV = $(PROJECT_DIR)/bin/dlv
 .PHONY: dlv
@@ -131,7 +142,7 @@ SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
 setup-envtest: mise ## Download setup-envtest locally if necessary.
-	@$(MISE) plugin install --yes -q setup-envtest https://github.com/pmalek/mise-setup-envtest.git
+	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
 	@$(MISE) install setup-envtest@v$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
@@ -139,7 +150,7 @@ STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
 # TODO: Use staticcheck plugin without alias aftrer https://github.com/pbr0ck3r/asdf-staticcheck/pull/6 is merged.
-	@$(MISE) plugin install --yes -q staticcheck https://github.com/pmalek/asdf-staticcheck.git
+	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pmalek/asdf-staticcheck.git
 	@$(MISE) install staticcheck@v$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
@@ -147,7 +158,7 @@ GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VE
 .PHONY: go-junit-report
 go-junit-report: ## Download go-junit-report locally if necessary.
 # TODO: Go back to using https://github.com/jwillker/asdf-go-junit-report when https://github.com/jwillker/asdf-go-junit-report/pull/4 merges.
-	@$(MISE) plugin install --yes -q go-junit-report https://github.com/pmalek/asdf-go-junit-report.git
+	@$(MAKE) mise-plugin-install DEP=go-junit-report URL=https://github.com/pmalek/asdf-go-junit-report.git
 	@$(MISE) install go-junit-report@v$(GOJUNIT_REPORT_VERSION)
 
 LOOPPOINTER= $(PROJECT_DIR)/bin/looppointer

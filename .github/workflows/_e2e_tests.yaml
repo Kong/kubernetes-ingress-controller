@@ -166,6 +166,8 @@ jobs:
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           E2E_TEST_RUN: ${{ matrix.test }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
@@ -258,6 +260,8 @@ jobs:
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           # NOTE: The limitation of the GKE setup is that we cannot run tests against a local image,
           # therefore we need to use the nightly one.
           # TODO: Once we have a way to load images into GKE, we can use the local image.
@@ -354,6 +358,8 @@ jobs:
       - name: run Istio tests
         run: make test.istio
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
           TEST_CONTROLLER_TAG: ${{ steps.split.outputs.kic-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}

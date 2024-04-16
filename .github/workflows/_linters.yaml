@@ -22,6 +22,8 @@ jobs:
 
       - name: Run lint
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
           GOLANGCI_LINT_FLAGS: "--fix=false"
         run: make lint

@@ -85,6 +85,8 @@ jobs:
       - name: run performance tests
         run: make test.performance
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
           TEST_CONTROLLER_TAG: ${{ steps.split.outputs.kic-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}

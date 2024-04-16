@@ -23,6 +23,8 @@ jobs:
       - name: run unit tests
         run: make test.unit
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           GOTESTSUM_JUNITFILE: unit-tests.xml
 
       - name: collect test coverage

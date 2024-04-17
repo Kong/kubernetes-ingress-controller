@@ -121,16 +121,11 @@ func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan dif
 				s.logger.V(util.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 			} else {
 				s.logger.Error(event.Error, "failed updating gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
-				raw, err := resourceErrorFromEntityAction(event)
+				parsed, err := resourceErrorFromEntityAction(event)
 				if err != nil {
 					s.logger.Error(err, "could not parse entity update error")
 				} else {
-					rerror, err := parseRawResourceError(raw)
-					if err != nil {
-						s.logger.Error(err, "could not parse entity update error")
-					} else {
-						s.resourceErrors = append(s.resourceErrors, rerror)
-					}
+					s.resourceErrors = append(s.resourceErrors, parsed)
 				}
 			}
 		case <-ctx.Done():
@@ -140,7 +135,7 @@ func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan dif
 	}
 }
 
-func resourceErrorFromEntityAction(event diff.EntityAction) (rawResourceError, error) {
+func resourceErrorFromEntityAction(event diff.EntityAction) (ResourceError, error) {
 	var subj any
 	// GDR may produce an old only (delete), new only (create), or both (update) in an event. tags should be identical
 	// but we arbitrarily pull from new.
@@ -157,17 +152,17 @@ func resourceErrorFromEntityAction(event diff.EntityAction) (rawResourceError, e
 	reflected := reflect.Indirect(reflect.ValueOf(subj))
 	if reflected.Kind() != reflect.Struct {
 		// We need to fail fast here because FieldByName() will panic on non-Struct Kinds.
-		return rawResourceError{}, fmt.Errorf("entity %s/%s is %s, not Struct",
+		return ResourceError{}, fmt.Errorf("entity %s/%s is %s, not Struct",
 			event.Entity.Kind, event.Entity.Name, reflected.Kind())
 	}
 	tagsValue := reflected.FieldByName("Tags")
 	if tagsValue.IsZero() {
-		return rawResourceError{}, fmt.Errorf("entity %s/%s of type %s lacks 'Tags' field",
+		return ResourceError{}, fmt.Errorf("entity %s/%s of type %s lacks 'Tags' field",
 			event.Entity.Kind, event.Entity.Name, reflect.TypeOf(subj))
 	}
 	tags, ok := tagsValue.Interface().([]*string)
 	if !ok {
-		return rawResourceError{}, fmt.Errorf("entity %s/%s Tags field is not []*string",
+		return ResourceError{}, fmt.Errorf("entity %s/%s Tags field is not []*string",
 			event.Entity.Kind, event.Entity.Name)
 	}
 
@@ -178,7 +173,7 @@ func resourceErrorFromEntityAction(event diff.EntityAction) (rawResourceError, e
 
 	// This omits ID, which should be available but requires similar reflect gymnastics as Tags, and probably isn't worth
 	// it.
-	return rawResourceError{
+	raw := rawResourceError{
 		Name: event.Entity.Name,
 		Tags: actualTags,
 		// /config flattened errors have a structured set of field to error reasons, whereas GDR errors are just plain
@@ -189,7 +184,9 @@ func resourceErrorFromEntityAction(event diff.EntityAction) (rawResourceError, e
 		Problems: map[string]string{
 			"": fmt.Sprintf("%s", event.Error),
 		},
-	}, nil
+	}
+
+	return parseRawResourceError(raw)
 }
 
 func (s UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {

@@ -31,8 +31,8 @@ var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRoute,
 	// extended features
 	suite.SupportHTTPRouteResponseHeaderModification,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// suite.SupportHTTPRouteBackendTimeout,
 }
 
@@ -44,8 +44,8 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRouteQueryParamMatching,
 	suite.SupportHTTPRouteMethodMatching,
 	suite.SupportHTTPRouteResponseHeaderModification,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// suite.SupportHTTPRouteBackendTimeout,
 }
 
@@ -63,10 +63,10 @@ func TestGatewayConformance(t *testing.T) {
 	case dpconf.RouterFlavorTraditionalCompatible:
 		skippedTests = skippedTestsForTraditionalRoutes
 		supportedFeatures = traditionalRoutesSupportedFeatures
-		mode = "traditional-compatible"
+		mode = string(dpconf.RouterFlavorTraditionalCompatible)
 	case dpconf.RouterFlavorExpressions:
 		supportedFeatures = expressionRoutesSupportedFeatures
-		mode = "expressions"
+		mode = string(dpconf.RouterFlavorExpressions)
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}

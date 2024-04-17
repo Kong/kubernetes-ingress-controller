@@ -228,7 +228,7 @@ func benchmarkListHTTPRoutes(b *testing.B, count int) {
 }
 
 func BenchmarkListHTTPRoutes(b *testing.B) {
-	counts := []int{100, 1000, 10000, 100000, 1000000}
+	counts := []int{1000, 10000, 100000, 1000000}
 	for _, count := range counts {
 		b.Run(strconv.Itoa(count), func(b *testing.B) {
 			b.ResetTimer()

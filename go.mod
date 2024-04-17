@@ -53,7 +53,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery v0.29.4
 	k8s.io/client-go v0.29.4
-	k8s.io/component-base v0.29.3
+	k8s.io/component-base v0.29.4
 	sigs.k8s.io/controller-runtime v0.17.3
 	sigs.k8s.io/gateway-api v1.0.1-0.20240409212030-c57c131b49f8
 	sigs.k8s.io/kustomize/api v0.17.1

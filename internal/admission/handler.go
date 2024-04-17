@@ -291,7 +291,7 @@ func (h RequestHandler) handleSecret(
 		// plugin configuration secrets
 		switch validate := secret.Labels[labels.ValidateLabel]; labels.ValidateType(validate) {
 		case labels.PluginValidate:
-			ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
+			ok, _, message, err := h.checkReferrersOfSecret(ctx, &secret)
 			if err != nil {
 				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
 			}
@@ -302,7 +302,11 @@ func (h RequestHandler) handleSecret(
 			// TODO this duplicates the above plugin handling block. prior to 3.2, the admission webhook ingested all
 			// Secrets and used this to validate updates to plugin configuration. this non-labeled case is retained
 			// for environments that still use ingest all configuration.
-			ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
+			ok, count, message, err := h.checkReferrersOfSecret(ctx, &secret)
+			if count > 0 {
+				h.Logger.Info("Warning: Secret used in Kong(Cluster)Plugin, but missing 'konghq.com/validate: plugin' label."+
+					"This label will be required in a future release", "namespace", secret.Namespace, "name", secret.Name)
+			}
 			if err != nil {
 				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
 			}
@@ -324,45 +328,49 @@ func (h RequestHandler) handleSecret(
 
 // checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret
 // and rejects the secret if it generates invalid configurations for any of the referrers.
-func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, string, error) {
+func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, int, string, error) {
 	referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(secret)
 	if err != nil {
-		return false, "", fmt.Errorf("failed to list referrers of secret: %w", err)
+		return false, 0, "", fmt.Errorf("failed to list referrers of secret: %w", err)
 	}
 
+	count := 0
 	for _, obj := range referrers {
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
+			count++
 			plugin := obj.(*kongv1.KongPlugin)
 			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
-				return false, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
+				return false, count, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
 					plugin.Namespace, plugin.Name, err,
 				)
 			}
 			if !ok {
-				return false,
+				return false, count,
 					fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
 						plugin.Namespace, plugin.Name, message,
 					), nil
 			}
 		}
 		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
+			count++
 			plugin := obj.(*kongv1.KongClusterPlugin)
 			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
-				return false, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
+				return false, count, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
 					plugin.Name, err,
 				)
 			}
 			if !ok {
-				return false, fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
-					plugin.Name, message,
-				), nil
+				return false, count,
+					fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
+						plugin.Name, message,
+					), nil
 			}
 		}
 	}
-	return true, "", nil
+	return true, count, "", nil
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=gateways,versions=v1;v1beta1,name=gateways.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1

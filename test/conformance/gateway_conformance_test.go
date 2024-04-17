@@ -9,7 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
-	conformancev1alpha1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
+	"sigs.k8s.io/gateway-api/conformance"
+	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
@@ -30,7 +31,9 @@ var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRoute,
 	// extended features
 	suite.SupportHTTPRouteResponseHeaderModification,
-	suite.SupportHTTPRouteBackendTimeout,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// Temporarily disabled and tracking through the following issue.
+	// suite.SupportHTTPRouteBackendTimeout,
 }
 
 var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
@@ -41,7 +44,9 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRouteQueryParamMatching,
 	suite.SupportHTTPRouteMethodMatching,
 	suite.SupportHTTPRouteResponseHeaderModification,
-	suite.SupportHTTPRouteBackendTimeout,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// Temporarily disabled and tracking through the following issue.
+	// suite.SupportHTTPRouteBackendTimeout,
 }
 
 func TestGatewayConformance(t *testing.T) {
@@ -52,46 +57,45 @@ func TestGatewayConformance(t *testing.T) {
 	var (
 		skippedTests      []string
 		supportedFeatures []suite.SupportedFeature
+		mode              string
 	)
 	switch rf := testenv.KongRouterFlavor(); rf {
 	case dpconf.RouterFlavorTraditionalCompatible:
 		skippedTests = skippedTestsForTraditionalRoutes
 		supportedFeatures = traditionalRoutesSupportedFeatures
+		mode = string(dpconf.RouterFlavorTraditionalCompatible)
 	case dpconf.RouterFlavorExpressions:
 		supportedFeatures = expressionRoutesSupportedFeatures
+		mode = string(dpconf.RouterFlavorExpressions)
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
-	cSuite, err := suite.NewExperimentalConformanceTestSuite(
-		suite.ExperimentalConformanceOptions{
-			Options: suite.Options{
-				Client:               k8sClient,
-				GatewayClassName:     gatewayClassName,
-				Debug:                true,
-				CleanupBaseResources: !testenv.IsCI(),
-				BaseManifests:        conformanceTestsBaseManifests,
-				SupportedFeatures:    sets.New(supportedFeatures...),
-				SkipTests:            skippedTests,
-			},
-			ConformanceProfiles: sets.New(
-				suite.HTTPConformanceProfileName,
-			),
-			Implementation: conformancev1alpha1.Implementation{
-				Organization: metadata.Organization,
-				Project:      metadata.ProjectName,
-				URL:          metadata.ProjectURL,
-				Version:      metadata.Release,
-				Contact: []string{
-					path.Join(metadata.ProjectURL, "/issues/new/choose"),
-				},
-			},
-		},
+	opts := conformance.DefaultOptions(t)
+	opts.GatewayClassName = gatewayClassName
+	opts.Debug = true
+	opts.Mode = mode
+	opts.CleanupBaseResources = !testenv.IsCI()
+	opts.BaseManifests = conformanceTestsBaseManifests
+	opts.SupportedFeatures = sets.New(supportedFeatures...)
+	opts.SkipTests = skippedTests
+	opts.ConformanceProfiles = sets.New(
+		suite.HTTPConformanceProfileName,
 	)
+	opts.Implementation = conformancev1.Implementation{
+		Organization: metadata.Organization,
+		Project:      metadata.ProjectName,
+		URL:          metadata.ProjectURL,
+		Version:      metadata.Release,
+		Contact: []string{
+			path.Join(metadata.ProjectURL, "/issues/new/choose"),
+		},
+	}
+	cSuite, err := suite.NewConformanceTestSuite(opts)
 	require.NoError(t, err)
 
 	t.Log("starting the gateway conformance test suite")
-	cSuite.Setup(t)
+	cSuite.Setup(t, tests.ConformanceTests)
 
 	go patchGatewayClassToPassTestGatewayClassObservedGenerationBump(ctx, t, k8sClient)
 

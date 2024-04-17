@@ -7,6 +7,8 @@ import (
 	"github.com/phayes/freeport"
 )
 
+var freePortLock = sync.Mutex{}
+
 // GetFreePort asks the kernel for a free open port that is ready to use.
 // On top of that, it also makes sure that the port hasn't been used in the current test run yet to reduce
 // chances of a race condition in parallel tests.
@@ -18,13 +20,16 @@ func GetFreePort(t *testing.T) int {
 	for {
 		// Get a random free port, but do not use it yet...
 		var err error
+		freePortLock.Lock()
 		freePort, err = freeport.GetFreePort()
 		if err != nil {
+			freePortLock.Unlock()
 			continue
 		}
 
 		// ... First, check if the port has been used in this test run already to reduce chances of a race condition.
 		_, wasUsed := usedPorts.LoadOrStore(freePort, true)
+		freePortLock.Unlock()
 
 		// The port hasn't been used in this test run - we can use it. It was stored in usedPorts, so it will not be
 		// used again during this test run.

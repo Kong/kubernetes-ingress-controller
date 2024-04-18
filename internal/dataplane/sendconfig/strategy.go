@@ -98,6 +98,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			},
 			r.config.Version,
 			r.config.Concurrency,
+			r.logger,
 		)
 	}
 
@@ -111,6 +112,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			},
 			r.config.Version,
 			r.config.Concurrency,
+			r.logger,
 		)
 	}
 

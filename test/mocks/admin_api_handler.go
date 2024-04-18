@@ -10,6 +10,18 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
+const mockConsumerError = `{
+    "code": 2,
+    "fields": {
+        "@entity": [
+            "at least one of these fields must be non-empty: 'custom_id', 'username'"
+        ],
+        "fake": "unknown field"
+    },
+    "message": "2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)",
+    "name": "schema violation"
+}`
+
 // AdminAPIHandler is a mock implementation of the Admin API. It only implements the endpoints that are
 // required for the tests.
 type AdminAPIHandler struct {
@@ -40,6 +52,9 @@ type AdminAPIHandler struct {
 	// configPostErrorBody contains the error body which will be returned when
 	// responding to a `POST /config` request.
 	configPostErrorBody []byte
+
+	// rootResponse is the response body served by the admin API root "GET /" endpoint.
+	rootResponse []byte
 }
 
 type AdminAPIHandlerOpt func(h *AdminAPIHandler)
@@ -79,6 +94,12 @@ func WithConfigPostError(errorbody []byte) AdminAPIHandlerOpt {
 	}
 }
 
+func WithRoot(response []byte) AdminAPIHandlerOpt {
+	return func(h *AdminAPIHandler) {
+		h.rootResponse = response
+	}
+}
+
 func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandler {
 	h := &AdminAPIHandler{
 		version: versions.KICv3VersionCutoff.String(),
@@ -94,7 +115,11 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			_, _ = w.Write(formatDefaultDBLessRootResponse(h.version))
+			if h.rootResponse != nil {
+				_, _ = w.Write(h.rootResponse)
+			} else {
+				_, _ = w.Write(formatDefaultDBLessRootResponse(h.version))
+			}
 			return
 		}
 
@@ -161,6 +186,53 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 				h.t.Logf("got config: %v", string(b))
 				h.config = b
 			}
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+		}
+	})
+	// These endpoints are only used for the DB mode test. They always return empty responses for GETs and a fake error
+	// for POSTs and PUTs, to test error handling.
+	mux.HandleFunc("/consumers/{$}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{ "data": [], "next": null }`))
+
+		case http.MethodPost:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(mockConsumerError))
+
+		case http.MethodPut:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(mockConsumerError))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+		}
+	})
+	mux.HandleFunc("/consumers/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// This should technically be the below 404. The mux termination for handling "/consumers/" and
+			// "/consumers/<something>" isn't behaving as expected and always returns this less specific endpoint.
+			// Returning the expected 404 here breaks GDR because it can't find the list of existing consumers.
+			// Returning the 200 list response even for more specific queries is apparently fine for the purposes of the
+			// test, so we do so as a hack to get to the endpoint we care about, "POST/PUT /consumers/<maybe something>".
+			//
+			//w.WriteHeader(http.StatusNotFound)
+			//_, _ = w.Write([]byte(`{ "message": "Not found" }`))
+			//
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{ "data": [], "next": null }`))
+
+		case http.MethodPost:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(mockConsumerError))
+
+		case http.MethodPut:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(mockConsumerError))
+
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 		}

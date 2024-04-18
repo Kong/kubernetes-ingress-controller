@@ -279,7 +279,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			plugin, err := generateRequestTransformerForURLRewrite(tc.modifier)
+			plugin, err := generateRequestTransformerForURLRewrite(tc.modifier, "")
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expected, plugin)
 		})

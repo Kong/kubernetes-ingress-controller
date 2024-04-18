@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -650,12 +651,7 @@ func generateRequestTransformerForURLRewrite(
 			return plugin, nil, nil
 
 		case gatewayapi.PrefixMatchHTTPPathModifier:
-			if expressionsRouterEnabled {
-				// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
-				return kong.Plugin{}, nil, fmt.Errorf("%s unsupported with expressions router", gatewayapi.PrefixMatchHTTPPathModifier)
-			}
-
-			plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path)
+			plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path, expressionsRouterEnabled)
 			return plugin, routeModifier, nil
 		}
 	}
@@ -687,7 +683,14 @@ func generateRequestTransformerForURLRewriteFullPath(filter *gatewayapi.HTTPURLR
 
 // generateRequestTransformerForURLRewritePrefixMatch generates a request-transformer plugin and a route modifier
 // for the URLRewrite filter with a PrefixMatchHTTPPathModifier.
-func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPURLRewriteFilter, path string) (kong.Plugin, kongRouteModifier) {
+func generateRequestTransformerForURLRewritePrefixMatch(
+	filter *gatewayapi.HTTPURLRewriteFilter,
+	path string,
+	expressionsRouterEnabled bool,
+) (kong.Plugin, kongRouteModifier) {
+	// Normalize the path before passing it down.
+	path = normalizePath(path)
+
 	return kong.Plugin{
 		Name: kong.String("request-transformer"),
 		Config: kong.Configuration{
@@ -698,7 +701,7 @@ func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPU
 				),
 			},
 		},
-	}, generateKongRouteModifierForURLRewritePrefixMatch(path)
+	}, generateKongRouteModifierForURLRewritePrefixMatch(path, expressionsRouterEnabled)
 }
 
 // generateRequestTransformerReplaceURIForURLRewritePrefixMatch generates the replacement URI for the request-transformer
@@ -757,10 +760,28 @@ func generateRequestTransformerReplaceURIForURLRewritePrefixMatch(
 // Please note that depending on the path, the capture group will:
 // - Exclude the leading slash if the path is root.
 // - Include the leading slash otherwise.
-func generateKongRouteModifierForURLRewritePrefixMatch(path string) func(route *kongstate.Route) {
+func generateKongRouteModifierForURLRewritePrefixMatch(path string, expressionsRouterEnabled bool) func(route *kongstate.Route) {
 	pathIsRoot := isPathRoot(path)
-	// We need to change the paths in the Kong route to a regex with a capture group that can be used
-	// in the request-transformer plugin.
+
+	// If expressions router is enabled, we need to set the expression on the Kong Route.
+	if expressionsRouterEnabled {
+		return func(route *kongstate.Route) {
+			exactPrefixPredicate := atc.NewPredicateHTTPPath(atc.OpEqual, path)
+			subpathsPredicate := func() atc.Predicate {
+				if pathIsRoot {
+					// If the path is "/", we don't capture the slash as Kong Route's path has to begin with a slash.
+					// If we captured the slash, we'd generate "(/.*)", and it'd be rejected by Kong.
+					return atc.NewPredicateHTTPPath(atc.OpRegexMatch, "^/(.*)")
+				}
+				// If the path is not "/", i.e. it has a prefix, we capture the slash to make it possible to
+				// route "/prefix" to "/replacement" and "/prefix/" to "/replacement/" correctly.
+				return atc.NewPredicateHTTPPath(atc.OpRegexMatch, fmt.Sprintf("^%s(/.*)", path))
+			}()
+			route.Route.Expression = lo.ToPtr(atc.Or(exactPrefixPredicate, subpathsPredicate).Expression())
+		}
+	}
+
+	// Otherwise, we set the Kong Route's paths.
 	return func(route *kongstate.Route) {
 		paths := make([]*string, 0, 2)
 		// The first path matches the exact path.
@@ -774,14 +795,23 @@ func generateKongRouteModifierForURLRewritePrefixMatch(path string) func(route *
 			// If the path is not "/", i.e. it has a prefix, we capture the slash to make it possible to
 			// route "/prefix" to "/replacement" and "/prefix/" to "/replacement/" correctly.
 			paths = append(paths, lo.ToPtr(
-				fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
+				fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, path)),
 			)
 		}
 		route.Paths = paths
 	}
 }
 
+// normalizePath normalizes the path by making it:
+// - a slash if it's empty or "/",
+// - a path without trailing slash otherwise.
+func normalizePath(path string) string {
+	if path == "/" || path == "" {
+		return "/"
+	}
+	return strings.TrimSuffix(path, "/")
+}
+
 func isPathRoot(path string) bool {
-	// Path is considered root if it's "/" or empty.
-	return path == "/" || path == ""
+	return path == "/"
 }

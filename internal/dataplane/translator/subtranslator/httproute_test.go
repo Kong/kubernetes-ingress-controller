@@ -366,6 +366,32 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			},
 		},
 		{
+			name: "URLRewriteFilter with empty firstMatchPath",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/prefix"),
+				},
+			},
+			firstMatchPath: "",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `/prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/$"),
+						lo.ToPtr("~/(.*)"),
+					},
+				},
+			},
+		},
+		{
 			name: "URLRewriteFilter with '/' ReplacePrefixPatch",
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
@@ -443,6 +469,32 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "URLRewriteFilter with firstMatchPath with a trailing slash",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+				},
+			},
+			firstMatchPath: "/prefix/",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `/new-prefix$(uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
 		{
 			name: "valid URLRewriteFilter with unsupported",
@@ -471,6 +523,42 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				routeModifier(&route)
 			}
 			require.Equal(t, tc.expectedKongRouteModification, route)
+		})
+	}
+}
+
+func TestGenerateKongRouteModifierForURLRewritePrefixMatch_ExpressionsRouter(t *testing.T) {
+	testCases := []struct {
+		name                      string
+		path                      string
+		expectedRouteModification kongstate.Route
+	}{
+		{
+			name: "root path",
+			path: "/",
+			expectedRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Expression: lo.ToPtr(`(http.path == "/") || (http.path ~ "^/(.*)")`),
+				},
+			},
+		},
+		{
+			name: "prefix path",
+			path: "/prefix",
+			expectedRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Expression: lo.ToPtr(`(http.path == "/prefix") || (http.path ~ "^/prefix(/.*)")`),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			modifier := generateKongRouteModifierForURLRewritePrefixMatch(tc.path, true)
+			route := kongstate.Route{}
+			modifier(&route)
+			require.Equal(t, tc.expectedRouteModification, route)
 		})
 	}
 }

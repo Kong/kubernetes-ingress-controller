@@ -1,0 +1,45 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: httproute.default.httproute-testing._.0
+  id: 2fad71d1-7599-5c6e-9d4f-4afd44f99587
+  name: httproute.default.httproute-testing._.0
+  port: 8080
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/prefix") || (http.path ~ "^/prefix(/.*)")
+    https_redirect_status_code: 426
+    id: 91833860-2041-5eea-abf8-a1e85b7c64cf
+    name: httproute.default.httproute-testing._.0.0
+    plugins:
+    - config:
+        replace:
+          uri: /new-prefix$(uri_captures[1])
+      name: request-transformer
+    preserve_host: true
+    priority: 35184422424575
+    strip_path: false
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httproute-testing
+  - k8s-namespace:default
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: httproute.default.httproute-testing._.0
+  tags:
+  - k8s-name:httproute-testing
+  - k8s-namespace:default
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1

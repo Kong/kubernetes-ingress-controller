@@ -607,14 +607,16 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 				replacePrefixMatch := *filter.Path.ReplacePrefixMatch
 				replaceWith = strings.TrimSuffix(replacePrefixMatch, "/")
 				if len(replaceWith) == 0 {
-					replaceWith = "/"
+					replaceWith = "/$(uri_captures[1])"
+				} else {
+					replaceWith = fmt.Sprintf("%s/$(uri_captures[1])", replaceWith)
 				}
 			}
 			plugin := kong.Plugin{
 				Name: kong.String("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
-						"uri": fmt.Sprintf(*filter.Path.ReplacePrefixMatch),
+						"uri": replaceWith,
 					},
 				},
 			}

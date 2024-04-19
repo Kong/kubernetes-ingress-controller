@@ -95,8 +95,8 @@ Adding a new version? You'll need three changes:
   `message` field of errors that KIC cannot fully parse.
   [#5773](https://github.com/Kong/kubernetes-ingress-controller/issues/5773), [#5846](https://github.com/Kong/kubernetes-ingress-controller/pull/5846)
 - Add constraint to limit items in `Credentials` and `ConsumerGroups` in
-  `KongConsumer`s to be unique in validating admission webhooks.
-  [#5787](https://github.com/Kong/kubernetes-ingress-controller/pull/5787)
+  `KongConsumer`s to be unique by defining their `x-kubernetes-list-type` as `set`.
+  [#5894](https://github.com/Kong/kubernetes-ingress-controller/pull/5894)
 - Add support in `HTTPRoute`s for `URLRewrite`:
   - `FullPathRewrite` [#5855](https://github.com/Kong/kubernetes-ingress-controller/pull/5855)
 - DB mode now supports Event reporting for resources that failed to apply.

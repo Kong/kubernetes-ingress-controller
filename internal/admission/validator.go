@@ -169,16 +169,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		return false, fmt.Sprintf("failed to fetch managed KongConsumers from cache: %s", err), nil
 	}
 
-	// validate that no duplicate credentials and consumer groups are in the consumer.
-	dupeCredentials := lo.FindDuplicates(consumer.Credentials)
-	if len(dupeCredentials) > 0 {
-		return false, fmt.Sprintf("Credentials %s duplicated in KongConsumer", strings.Join(dupeCredentials, ",")), nil
-	}
-	dupeConsumerGroups := lo.FindDuplicates(consumer.ConsumerGroups)
-	if len(dupeConsumerGroups) > 0 {
-		return false, fmt.Sprintf("ConsumerGroups %s duplicated in KongConsumer", strings.Join(dupeConsumerGroups, ",")), nil
-	}
-
 	// retrieve the consumer's credentials secrets to validate them with the index
 	credentials := make([]*corev1.Secret, 0, len(consumer.Credentials))
 	ignoredSecrets := make(map[string]map[string]struct{})

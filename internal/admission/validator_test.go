@@ -2,7 +2,6 @@ package admission
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"testing"
@@ -24,7 +23,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	managerscheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
@@ -568,82 +566,6 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.False(t, valid)
 		require.Equal(t, ErrTextConsumerExists, errText)
 	})
-
-	// validation for credential related parts
-	t.Run("passes when secrets available", func(t *testing.T) {
-		s, _ := store.NewFakeStore(store.FakeObjects{
-			Secrets: []*corev1.Secret{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-credential-acl",
-						Labels: map[string]string{
-							labels.LabelPrefix + labels.CredentialKey: "acl",
-						},
-					},
-					Data: map[string][]byte{
-						"group": encodeBase64FromString("group1"),
-					},
-				},
-			},
-		})
-		validator := KongHTTPValidator{
-			SecretGetter:   s,
-			ConsumerGetter: fakeConsumerGetter{},
-			AdminAPIServicesProvider: fakeServicesProvider{
-				consumerSvc: fakeConsumersSvc{consumer: nil},
-			},
-			ingressClassMatcher: fakeClassMatcher,
-		}
-
-		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
-			Username:    "username",
-			Credentials: []string{"test-credential-acl"},
-		})
-		require.NoError(t, err)
-		require.True(t, valid)
-		require.Empty(t, errText)
-	})
-
-	t.Run("fails when consumer has duplicate credentials", func(t *testing.T) {
-		s, _ := store.NewFakeStore(store.FakeObjects{
-			Secrets: []*corev1.Secret{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-credential-acl",
-						Labels: map[string]string{
-							labels.LabelPrefix + labels.CredentialKey: "acl",
-						},
-					},
-					Data: map[string][]byte{
-						"group": encodeBase64FromString("group1"),
-					},
-				},
-			},
-		})
-		validator := KongHTTPValidator{
-			SecretGetter:   s,
-			ConsumerGetter: fakeConsumerGetter{},
-			AdminAPIServicesProvider: fakeServicesProvider{
-				consumerSvc: fakeConsumersSvc{consumer: nil},
-			},
-			ingressClassMatcher: fakeClassMatcher,
-		}
-
-		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
-			Username:    "username",
-			Credentials: []string{"test-credential-acl", "test-credential-acl"},
-		})
-		require.NoError(t, err)
-		require.False(t, valid)
-		require.Equal(t, "Credentials test-credential-acl duplicated in KongConsumer", errText)
-	})
-}
-
-func encodeBase64FromString(s string) []byte {
-	src := []byte(s)
-	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
-	base64.StdEncoding.Encode(dst, src)
-	return dst
 }
 
 type fakeConsumerGroupSvc struct {

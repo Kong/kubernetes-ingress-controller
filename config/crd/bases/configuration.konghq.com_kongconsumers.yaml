@@ -49,6 +49,7 @@ spec:
             items:
               type: string
             type: array
+            x-kubernetes-list-type: set
           credentials:
             description: |-
               Credentials are references to secrets containing a credential to be
@@ -56,6 +57,7 @@ spec:
             items:
               type: string
             type: array
+            x-kubernetes-list-type: set
           custom_id:
             description: |-
               CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping

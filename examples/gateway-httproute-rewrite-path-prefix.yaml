@@ -92,20 +92,32 @@ spec:
             path:
               type: ReplacePrefixMatch
               replacePrefixMatch: "/"
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - name: X-Header-Set
+                value: set-overwrites-values
+            add:
+              - name: X-Header-Add
+                value: header-val-1
+              - name: X-Header-Add-Append
+                value: header-val-2
+            remove:
+              - X-Header-Remove
       backendRefs:
         - name: echo
           port: 80
 
 # Request Path | Prefix Match | Replace Prefix | Modified Path
 # -------------|--------------|----------------|----------
-# /foo/bar     | /foo         | /xyz           | /xyz/bar          PASS
-# /foo/bar     | /foo         | /xyz/          | /xyz/bar          PASS
-# /foo/bar     | /foo/        | /xyz           | /xyz/bar          PASS
-# /foo/bar     | /foo/        | /xyz/          | /xyz/bar          PASS
-# /foo         | /foo         | /xyz           | /xyz              FAIL (modified to /xyz/)
-# /foo/        | /foo         | /xyz           | /xyz/             PASS
-# /foo/bar     | /foo         | <empty string> | /bar              PASS
-# /foo/        | /foo         | <empty string> | /                 PASS
-# /foo         | /foo         | <empty string> | /                 PASS
-# /foo/        | /foo         | /              | /                 PASS
-# /foo         | /foo         | /              | /                 PASS
+#P /foo         | /foo         | /xyz           | /xyz
+#P /foo/        | /foo         | /xyz           | /xyz/
+#P /foo/bar     | /foo         | /xyz           | /xyz/bar
+#P /foo/bar     | /foo         | /xyz/          | /xyz/bar
+#P /foo/bar     | /foo/        | /xyz           | /xyz/bar
+#P /foo/bar     | /foo/        | /xyz/          | /xyz/bar
+#P /foo/bar     | /foo         | <empty string> | /bar
+#P /foo/        | /foo         | <empty string> | /
+#P /foo         | /foo         | <empty string> | /
+# /foo/        | /foo         | /              | /
+# /foo         | /foo         | /              | /

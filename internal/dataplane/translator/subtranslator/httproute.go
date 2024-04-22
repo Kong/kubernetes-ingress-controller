@@ -606,10 +606,11 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 			if filter.Path.ReplacePrefixMatch != nil {
 				replacePrefixMatch := *filter.Path.ReplacePrefixMatch
 				replaceWith = strings.TrimSuffix(replacePrefixMatch, "/")
-				if len(replaceWith) == 0 {
-					replaceWith = "/$(uri_captures[1])"
+				if replaceWith == "" {
+					// In case of an empty replacePrefixMatch, we need to make sure that the path will always start with a slash.
+					replaceWith = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
 				} else {
-					replaceWith = fmt.Sprintf("%s/$(uri_captures[1])", replaceWith)
+					replaceWith = fmt.Sprintf(`%s$(uri_captures[1])`, replaceWith)
 				}
 			}
 			plugin := kong.Plugin{
@@ -625,7 +626,7 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 				paths := make([]*string, 0, 2)
 				paths = append(paths, lo.ToPtr(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
 				paths = append(paths, lo.ToPtr(
-					fmt.Sprintf("%s%s/(.+)?", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
+					fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
 				)
 				route.Paths = paths
 			}

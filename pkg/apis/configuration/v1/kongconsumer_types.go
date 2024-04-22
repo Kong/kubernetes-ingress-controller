@@ -45,10 +45,12 @@ type KongConsumer struct {
 
 	// Credentials are references to secrets containing a credential to be
 	// provisioned in Kong.
+	// +listType=set
 	Credentials []string `json:"credentials,omitempty"`
 
 	// ConsumerGroups are references to consumer groups (that consumer wants to be part of)
 	// provisioned in Kong.
+	// +listType=set
 	ConsumerGroups []string `json:"consumerGroups,omitempty"`
 
 	// Status represents the current status of the KongConsumer resource.

@@ -780,6 +780,46 @@ func TestCRDValidations(t *testing.T) {
 					"The spec.prefix field is immutable")
 			},
 		},
+		{
+			name: "KongConsumer - duplicate credentials are not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:    "u1",
+					Credentials: []string{"c1", "c1", "c2"},
+				}
+				assert.ErrorContains(t, createKongConsumer(ctx, ctrlClient, ns, consumer), `Duplicate value: "c1"`)
+			},
+		},
+		{
+			name: "KongConsumer - unique credentials are allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:    "u1",
+					Credentials: []string{"c1", "c2"},
+				}
+				assert.NoError(t, createKongConsumer(ctx, ctrlClient, ns, consumer))
+			},
+		},
+		{
+			name: "KongConsumer - duplicate consumer groups are not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:       "u1",
+					ConsumerGroups: []string{"cg1", "cg1", "cg2"},
+				}
+				assert.ErrorContains(t, createKongConsumer(ctx, ctrlClient, ns, consumer), `Duplicate value: "cg1"`)
+			},
+		},
+		{
+			name: "KongConsumer - unique consumer groups are allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:       "u1",
+					ConsumerGroups: []string{"cg1", "cg2"},
+				}
+				assert.NoError(t, createKongConsumer(ctx, ctrlClient, ns, consumer))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -960,4 +1000,10 @@ func createKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.K
 func updateKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
 	vault.GenerateName = "test-"
 	return c.Update(ctx, vault)
+}
+
+func createKongConsumer(ctx context.Context, c client.Client, ns string, consumer *kongv1.KongConsumer) error {
+	consumer.GenerateName = "test-"
+	consumer.Namespace = ns
+	return c.Create(ctx, consumer)
 }

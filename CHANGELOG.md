@@ -95,8 +95,11 @@ Adding a new version? You'll need three changes:
   `message` field of errors that KIC cannot fully parse.
   [#5773](https://github.com/Kong/kubernetes-ingress-controller/issues/5773), [#5846](https://github.com/Kong/kubernetes-ingress-controller/pull/5846)
 - Add constraint to limit items in `Credentials` and `ConsumerGroups` in
-  `KongConsumer`s to be unique in validating admission webhooks.
-  [#5787](https://github.com/Kong/kubernetes-ingress-controller/pull/5787)
+  `KongConsumer`s to be unique by defining their `x-kubernetes-list-type` as `set`.
+  Please note that if you're using `helm` as the installation method, upgrading alone
+  won't make this change take effect until you manually update the CRD manifests in your
+  cluster to the current version. See [Updates to CRDs] for more details.
+  [#5894](https://github.com/Kong/kubernetes-ingress-controller/pull/5894)
 - Add support in `HTTPRoute`s for `URLRewrite`:
   - `FullPathRewrite` [#5855](https://github.com/Kong/kubernetes-ingress-controller/pull/5855)
 - DB mode now supports Event reporting for resources that failed to apply.
@@ -121,6 +124,8 @@ Adding a new version? You'll need three changes:
   This yields a significant performance improvements in time spent, bytes allocated
   and allocations per list operation.
   [#5824](https://github.com/Kong/kubernetes-ingress-controller/pull/5824)
+
+[Updates to CRDs]: https://github.com/Kong/charts/blob/main/charts/kong/UPGRADE.md#updates-to-crds
 
 ## [3.1.3]
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/sourcegraph/conc/iter"
-	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -701,7 +701,7 @@ func UniqueObjects(reportedObjects []client.Object, resourceFailures []failures.
 	allCausingObjects := lo.FlatMap(resourceFailures, func(f failures.ResourceFailure, _ int) []client.Object {
 		return f.CausingObjects()
 	})
-	allObjects := append(reportedObjects, allCausingObjects...)
+	allObjects := slices.Concat(reportedObjects, allCausingObjects)
 	return lo.UniqBy(allObjects, func(obj client.Object) string {
 		return obj.GetObjectKind().GroupVersionKind().String() + "/" +
 			obj.GetNamespace() + "/" + obj.GetName()

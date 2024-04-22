@@ -159,15 +159,16 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 			s.logger.Error(nil, "ListIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
 			continue
 		}
-		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
+		switch {
+		case ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "":
 			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 				continue
 			}
-		} else if ing.Spec.IngressClassName != nil {
+		case ing.Spec.IngressClassName != nil:
 			if !s.isValidIngressV1Class(ing, s.ingressClassMatching) {
 				continue
 			}
-		} else {
+		default:
 			class, err := s.GetIngressClassV1(s.ingressClass)
 			if err != nil {
 				s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)

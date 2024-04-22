@@ -683,12 +683,12 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			objectsToAdd := append(tc.inputObjects, &tc.kongUpstreamPolicy)
+			tc.inputObjects = append(tc.inputObjects, &tc.kongUpstreamPolicy)
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
 				WithScheme(lo.Must(scheme.Get())).
-				WithObjects(objectsToAdd...).
-				WithStatusSubresource(objectsToAdd...).
+				WithObjects(tc.inputObjects...).
+				WithStatusSubresource(tc.inputObjects...).
 				WithIndex(&corev1.Service{}, upstreamPolicyIndexKey, indexServicesOnUpstreamPolicyAnnotation).
 				WithIndex(&gatewayapi.HTTPRoute{}, routeBackendRefServiceNameIndexKey, indexRoutesOnBackendRefServiceName).
 				WithIndex(&incubatorv1alpha1.KongServiceFacade{}, upstreamPolicyIndexKey, indexServiceFacadesOnUpstreamPolicyAnnotation).

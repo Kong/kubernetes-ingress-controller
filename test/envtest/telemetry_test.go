@@ -400,7 +400,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 // Pass e.g. "uptime" to remove the whole uptime=9; from the report.
 func removeStanzaFromReport(report string, stanza string) (string, error) {
 	const idStanzaEnd = ";"
-	stanza = stanza + "="
+	stanza += "="
 	start := strings.Index(report, stanza)
 	if start == -1 {
 		return "", fmt.Errorf("stanza %q not found in report: %s", stanza, report)

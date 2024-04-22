@@ -92,7 +92,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 	// This is the default behavior of the controller-runtime manager.
 	// If there are configured watch namespaces, then we're watching only those namespaces.
 	if len(c.WatchNamespaces) > 0 {
-		watchNamespaces := c.WatchNamespaces
+		watchNamespaces := sets.NewString(c.WatchNamespaces...)
 
 		// In all other cases we are a multi-namespace setup and must watch all the
 		// c.WatchNamespaces.
@@ -104,10 +104,11 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 		// If ingress service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
 		if s, ok := c.PublishService.Get(); ok {
-			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
+			watchNamespaces.Insert(s.Namespace)
 		}
+
 		watched := make(map[string]cache.Config)
-		for _, n := range sets.NewString(watchNamespaces...).List() {
+		for _, n := range watchNamespaces.List() {
 			watched[n] = cache.Config{}
 		}
 		managerOpts.Cache.DefaultNamespaces = watched

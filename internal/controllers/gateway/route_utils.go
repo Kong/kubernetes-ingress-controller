@@ -313,22 +313,22 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 
 			// This will also catch a case of not matching listener/section name.
 			reason := gatewayapi.RouteReasonNoMatchingParent
-
-			if matchingHostname != nil && *matchingHostname == metav1.ConditionFalse {
+			switch {
+			case matchingHostname != nil && *matchingHostname == metav1.ConditionFalse:
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
-			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
+			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			} else if !listenerReady {
+			case !listenerReady:
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
-			} else if (parentRef.Port != nil) && !portMatched {
+			case parentRef.Port != nil && !portMatched:
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			} else if !allowedByAllowedRoutes || !allowedBySupportedKinds {
+			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 

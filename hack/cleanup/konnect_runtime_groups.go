@@ -87,7 +87,7 @@ func findOrphanedControlPlanes(ctx context.Context, log logr.Logger, c *cp.Clien
 			log.Info("Control plane has no creation timestamp, skipping", "name", *ControlPlane.Name)
 			continue
 		}
-		orphanedAfter := (*ControlPlane.CreatedAt).Add(timeUntilControlPlaneOrphaned)
+		orphanedAfter := ControlPlane.CreatedAt.Add(timeUntilControlPlaneOrphaned)
 		if !time.Now().After(orphanedAfter) {
 			log.Info("Control plane is not old enough to be considered orphaned, skipping", "name", *ControlPlane.Name, "created_at", *ControlPlane.CreatedAt)
 			continue

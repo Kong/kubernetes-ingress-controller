@@ -219,8 +219,8 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 			// Returning the 200 list response even for more specific queries is apparently fine for the purposes of the
 			// test, so we do so as a hack to get to the endpoint we care about, "POST/PUT /consumers/<maybe something>".
 			//
-			//w.WriteHeader(http.StatusNotFound)
-			//_, _ = w.Write([]byte(`{ "message": "Not found" }`))
+			// w.WriteHeader(http.StatusNotFound)
+			// _, _ = w.Write([]byte(`{ "message": "Not found" }`))
 			//
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{ "data": [], "next": null }`))

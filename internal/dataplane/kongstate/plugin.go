@@ -173,7 +173,7 @@ func kongPluginFromK8SClusterPlugin(
 		var err error
 		config, err = NamespacedSecretToConfiguration(
 			s,
-			(*k8sPlugin.ConfigFrom).SecretValue)
+			k8sPlugin.ConfigFrom.SecretValue)
 		if err != nil {
 			return Plugin{},
 				fmt.Errorf("error parsing config for KongClusterPlugin %s: %w",
@@ -236,7 +236,7 @@ func kongPluginFromK8SPlugin(
 	if k8sPlugin.ConfigFrom != nil {
 		var err error
 		config, err = SecretToConfiguration(s,
-			(*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return Plugin{},
 				fmt.Errorf("error parsing config for KongPlugin '%s/%s': %w",

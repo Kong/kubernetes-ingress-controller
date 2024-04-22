@@ -342,10 +342,8 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 						return
 					}
 					assert.Contains(c, err.Error(), tc.expectErrorContains)
-				} else {
-					if !assert.NoError(c, err) {
-						t.Logf("Error: %v", err)
-					}
+				} else if !assert.NoError(c, err) {
+					t.Logf("Error: %v", err)
 				}
 			}, 10*time.Second, 100*time.Millisecond)
 		})
@@ -572,10 +570,8 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 						return
 					}
 					assert.Contains(c, err.Error(), tc.expectErrorContains)
-				} else {
-					if !assert.NoError(c, err) {
-						t.Logf("Error: %v", err)
-					}
+				} else if !assert.NoError(c, err) {
+					t.Logf("Error: %v", err)
 				}
 			}, 30*time.Second, 100*time.Millisecond)
 		})

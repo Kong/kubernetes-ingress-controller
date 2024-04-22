@@ -275,10 +275,8 @@ func validateHTTPRouteTimeoutBackendRequest(httproute *gatewayapi.HTTPRoute) err
 			if rule.Timeouts != nil && *rule.Timeouts.BackendRequest != *firstTimeoutFound {
 				return fmt.Errorf("timeout is set for one of the rules, but a different value is set in another rule")
 			}
-		} else {
-			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-				firstTimeoutFound = rule.Timeouts.BackendRequest
-			}
+		} else if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+			firstTimeoutFound = rule.Timeouts.BackendRequest
 		}
 	}
 

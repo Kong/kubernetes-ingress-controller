@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -115,7 +114,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				}
 			}
 
-			targets := maps.Values(targetMap)
+			targets := lo.Values(targetMap)
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
 				t.logger.V(util.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)

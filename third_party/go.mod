@@ -2,8 +2,6 @@ module github.com/kong/kubernetes-ingress-controller/tools
 
 go 1.21
 
-toolchain go1.21.0
-
 require (
 	github.com/elastic/crd-ref-docs v0.0.10
 	github.com/go-delve/delve v1.22.0

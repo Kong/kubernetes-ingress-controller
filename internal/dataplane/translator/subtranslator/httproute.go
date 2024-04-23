@@ -393,7 +393,7 @@ type kongRouteModifier func(*kongstate.Route)
 // It returns httpRouteFiltersOriginatedPlugins which contains:
 // - generated plugins
 // - Kong Route modifiers that need to be applied to the Kong Route
-// - PluginsAnnotation that is generated from the ExtensionRef filter
+// - PluginsAnnotation that is generated from the ExtensionRef filter.
 func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, path string, tags []*string) (httpRouteFiltersOriginatedPlugins, error) {
 	if len(filters) == 0 {
 		return httpRouteFiltersOriginatedPlugins{}, nil

@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
@@ -416,12 +416,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			require.Equal(t, tc.expected, plugin)
 
 			route := kongstate.Route{}
-			routeModifier(&route)
+			if routeModifier != nil {
+				routeModifier(&route)
+			}
 			require.Equal(t, tc.expectedKongRouteModification, route)
 		})
 	}
 }
 
 func TestMergePluginsOfTheSameType(t *testing.T) {
-	// TODO
+	t.Skip("TODO: implement this test")
 }

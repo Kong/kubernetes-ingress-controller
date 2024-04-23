@@ -29,11 +29,7 @@ spec:
     spec:
       containers:
         - name: echo
-          image: registry.k8s.io/e2e-test-images/agnhost:2.40
-          command:
-            - /agnhost
-            - netexec
-            - --http-port=8080
+          image: mendhak/http-https-echo:31
           ports:
             - containerPort: 8080
               name: http
@@ -89,7 +85,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /
+        value: /full-path-prefix
     filters:
     - type: URLRewrite
       urlRewrite:
@@ -106,8 +102,6 @@ spec:
             value: header-val-1
           - name: X-Header-Add-Append
             value: header-val-2
-        remove:
-          - X-Header-Remove
     backendRefs:
     - name: echo
       kind: Service
@@ -124,7 +118,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /prefix
+            value: /old-prefix
       filters:
         - type: URLRewrite
           urlRewrite:
@@ -141,8 +135,6 @@ spec:
                 value: header-val-1
               - name: X-Header-Add-Append
                 value: header-val-2
-            remove:
-              - X-Header-Remove
       backendRefs:
         - name: echo
           port: 80

@@ -661,6 +661,11 @@ func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPU
 	// By default, we replace the URI with a slash.
 	replaceURI := "/"
 
+	// If an empty path is provided, we need to make sure that the path will always start with a slash.
+	if path == "" {
+		path = "/"
+	}
+
 	// If the ReplacePrefixMatch is provided, we need to use it as the replacement URI.
 	if replacePrefixMatch := filter.Path.ReplacePrefixMatch; replacePrefixMatch != nil {
 		// Trim the trailing slash from the ReplacePrefixMatch to avoid double slashes in the final URI.
@@ -669,10 +674,22 @@ func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPU
 			// In the case of an empty ReplacePrefixMatch, we need to make sure that the path will always start with a slash,
 			// even if we have no capture group captured from the incoming request's URI.
 			// The below is a Lua ternary operator that checks if the captured group is nil, and if so, replaces it with a slash.
-			replaceURI = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
+			if path == "/" {
+				// If path is "/", we need to add a slash before URI captures because the capture group won't include
+				// the leading slash.
+				replaceURI = `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`
+			} else {
+				replaceURI = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
+			}
 		} else {
 			// Otherwise, we concatenate the replacement URI with the captured group.
-			replaceURI = fmt.Sprintf(`%s$(uri_captures[1])`, replaceURI)
+			if path == "/" {
+				// If path is "/", we need to add a slash before URI captures because the capture group won't include
+				// the leading slash.
+				replaceURI = fmt.Sprintf(`%s$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`, replaceURI)
+			} else {
+				replaceURI = fmt.Sprintf(`%s$(uri_captures[1])`, replaceURI)
+			}
 		}
 	}
 	plugin := kong.Plugin{
@@ -691,9 +708,17 @@ func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPU
 		// The first path matches the exact path.
 		paths = append(paths, lo.ToPtr(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
 		// The second path matches subpaths, including a single slash.
-		paths = append(paths, lo.ToPtr(
-			fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
-		)
+		if path == "/" {
+			// If the path is "/", we don't capture the slash as Kong Route's path has to begin with a slash.
+			// If we captured the slash, we'd generate "(/.*)", and it'd be rejected by Kong.
+			paths = append(paths, lo.ToPtr(fmt.Sprintf("%s/(.*)", KongPathRegexPrefix)))
+		} else {
+			// If the path is not "/", i.e. it has a prefix, we capture the slash to make it possible to
+			// route "/prefix" to "/replacement" and "/prefix/" to "/replacement/" correctly.
+			paths = append(paths, lo.ToPtr(
+				fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
+			)
+		}
 		route.Paths = paths
 	}
 

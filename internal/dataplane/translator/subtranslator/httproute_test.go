@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
@@ -15,17 +16,17 @@ import (
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	testCases := []struct {
-		name                      string
-		filters                   []gatewayapi.HTTPRouteFilter
-		path                      string
-		expectedPlugins           []kong.Plugin
-		expectedPluginsAnnotation string
-		expectedErr               error
+		name                       string
+		filters                    []gatewayapi.HTTPRouteFilter
+		path                       string
+		expectedPlugins            []kong.Plugin
+		expectedRouteModifications kongstate.Route
+		expectedErr                error
 	}{
 		{
 			name:            "no filters",
 			filters:         []gatewayapi.HTTPRouteFilter{},
-			expectedPlugins: []kong.Plugin{},
+			expectedPlugins: nil,
 		},
 		{
 			name: "request header modifier filter",
@@ -178,8 +179,14 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPluginsAnnotation: "plugin1,plugin2",
-			expectedPlugins:           []kong.Plugin{},
+			expectedRouteModifications: kongstate.Route{
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/plugins": "plugin1,plugin2",
+					},
+				},
+			},
+			expectedPlugins: []kong.Plugin{},
 		},
 		{
 			name: "invalid extensionrefs filter group",
@@ -193,8 +200,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPluginsAnnotation: "",
-			expectedErr:               errors.New("plugin wrong.group/KongPlugin unsupported"),
+			expectedErr: errors.New("plugin wrong.group/KongPlugin unsupported"),
 		},
 		{
 			name: "invalid extensionrefs filter kind",
@@ -208,9 +214,9 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPluginsAnnotation: "",
-			expectedErr:               errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
+			expectedErr: errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
 		},
+		// TODO: add a testcase for RequestHeaderModifier and PrefixMatchHTTPPathModifier
 	}
 
 	for _, tc := range testCases {
@@ -219,8 +225,12 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, result.Plugins)
-			// TODO: verify expected route modifier is returned for plugin annotations
-			// require.Equal(t, tc.expectedPluginsAnnotation, pluginsAnnotation)
+
+			route := kongstate.Route{}
+			for _, modifier := range result.KongRouteModifiers {
+				modifier(&route)
+			}
+			require.Equal(t, tc.expectedRouteModifications, route)
 		})
 	}
 }
@@ -253,7 +263,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name: "URLRewriteFilter with non-empty ReplacePrefixPatch",
+			name: "URLRewriteFilter with non-empty ReplacePrefixMatch",
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
@@ -279,7 +289,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			},
 		},
 		{
-			name: "URLRewriteFilter with empty ReplacePrefixPatch",
+			name: "URLRewriteFilter with empty ReplacePrefixMatch",
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
@@ -326,6 +336,58 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 					Paths: []*string{
 						lo.ToPtr("~/prefix$"),
 						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with '/' firstMatchPath and '/' ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/"),
+				},
+			},
+			firstMatchPath: "/",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/$"),
+						lo.ToPtr("~/(.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with '/' firstMatchPath and non-empty ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+				},
+			},
+			firstMatchPath: "/",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `/new-prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/$"),
+						lo.ToPtr("~/(.*)"),
 					},
 				},
 			},

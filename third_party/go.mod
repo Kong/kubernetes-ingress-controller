@@ -1,8 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/tools
 
-go 1.21
-
-toolchain go1.21.0
+go 1.21.9
 
 require (
 	github.com/elastic/crd-ref-docs v0.0.10

@@ -1,6 +1,6 @@
 module github.com/kubernetes-ingress-controller/third_party/skaffold
 
-go 1.21
+go 1.21.9
 
 require github.com/GoogleContainerTools/skaffold/v2 v2.10.0
 

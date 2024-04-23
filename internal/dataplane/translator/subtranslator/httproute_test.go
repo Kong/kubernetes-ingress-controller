@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
@@ -226,10 +227,12 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 
 func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 	testCases := []struct {
-		name        string
-		modifier    *gatewayapi.HTTPURLRewriteFilter
-		expected    kong.Plugin
-		expectedErr error
+		name                          string
+		modifier                      *gatewayapi.HTTPURLRewriteFilter
+		firstMatchPath                string
+		expectedKongRouteModification kongstate.Route
+		expected                      kong.Plugin
+		expectedErr                   error
 	}{
 		{
 			name: "valid URLRewriteFilter with ReplaceFullPath",
@@ -249,17 +252,83 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
-		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
 		{
-			name: "valid URLRewriteFilter with unsupported",
+			name: "URLRewriteFilter with non-empty ReplacePrefixPatch",
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: lo.ToPtr("/new"),
 				},
 			},
-			expected:    kong.Plugin{},
-			expectedErr: fmt.Errorf("%s unsupported for %s", gatewayapi.PrefixMatchHTTPPathModifier, gatewayapi.HTTPRouteFilterURLRewrite),
+			firstMatchPath: "/prefix",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": "/new$(uri_captures[1])",
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with empty ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr(""),
+				},
+			},
+			firstMatchPath: "/prefix",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with '/' ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/"),
+				},
+			},
+			firstMatchPath: "/prefix",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
 		},
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
 		{
@@ -280,9 +349,13 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			plugin, _, err := generateRequestTransformerForURLRewrite(tc.modifier, "")
+			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expected, plugin)
+
+			route := kongstate.Route{}
+			routeModifier(&route)
+			require.Equal(t, tc.expectedKongRouteModification, route)
 		})
 	}
 }

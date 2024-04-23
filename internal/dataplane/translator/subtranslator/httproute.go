@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"dario.cat/mergo"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -443,27 +444,58 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 		p.Tags = tags
 	}
 
+	// It's possible the above loop generates multiple plugins of the same type, so we need to merge them.
+	// It can happen for example when both RequestHeaderModifier and HTTPRouteFilterURLRewrite are present.
+	kongPlugins, err := mergePluginsOfTheSameType(kongPlugins)
+	if err != nil {
+		return httpRouteFiltersOriginatedPlugins{}, fmt.Errorf("failed to merge plugins of the same type: %w", err)
+	}
+
 	if len(pluginNamesFromExtensionRef) > 0 {
-		kongRouteModifiers = append(kongRouteModifiers, func(route *kongstate.Route) {
-			if route.Ingress.Annotations == nil {
-				route.Ingress.Annotations = make(map[string]string)
-			}
-			annotationValue := strings.Join(pluginNamesFromExtensionRef, ",")
-			const pluginAnnotationKey = annotations.AnnotationPrefix + annotations.PluginsKey
-			if _, ok := route.Ingress.Annotations[pluginAnnotationKey]; !ok {
-				route.Ingress.Annotations[pluginAnnotationKey] = annotationValue
-			} else {
-				route.Ingress.Annotations[pluginAnnotationKey] = fmt.Sprintf("%s,%s",
-					route.Ingress.Annotations[pluginAnnotationKey],
-					annotationValue)
-			}
-		})
+		kongRouteModifiers = append(kongRouteModifiers, generateKongRouteModifierFromExtensionRef(pluginNamesFromExtensionRef))
 	}
 
 	return httpRouteFiltersOriginatedPlugins{
 		Plugins:            kongPlugins,
 		KongRouteModifiers: kongRouteModifiers,
 	}, nil
+}
+
+func mergePluginsOfTheSameType(plugins []kong.Plugin) ([]kong.Plugin, error) {
+	pluginsByName := lo.GroupBy(plugins, func(p kong.Plugin) string {
+		return *p.Name // Name is effectively a plugin type.
+	})
+	for pluginName, plugins := range pluginsByName {
+		// If we produced multiple plugins of the same type, we need to merge their configurations now.
+		if len(plugins) > 1 {
+			mergedPlugin := *plugins[0].DeepCopy()
+			for _, plugin := range plugins {
+				if err := mergo.Merge(&mergedPlugin.Config, plugin.Config); err != nil {
+					// Should never happen as we're passing the same type of objects.
+					return nil, fmt.Errorf("failed to merge %q plugin configurations: %w", pluginName, err)
+				}
+			}
+			pluginsByName[pluginName] = []kong.Plugin{mergedPlugin}
+		}
+	}
+	return lo.Flatten(lo.Values(pluginsByName)), nil
+}
+
+func generateKongRouteModifierFromExtensionRef(pluginNamesFromExtensionRef []string) kongRouteModifier {
+	return func(route *kongstate.Route) {
+		if route.Ingress.Annotations == nil {
+			route.Ingress.Annotations = make(map[string]string)
+		}
+		annotationValue := strings.Join(pluginNamesFromExtensionRef, ",")
+		const pluginAnnotationKey = annotations.AnnotationPrefix + annotations.PluginsKey
+		if _, ok := route.Ingress.Annotations[pluginAnnotationKey]; !ok {
+			route.Ingress.Annotations[pluginAnnotationKey] = annotationValue
+		} else {
+			route.Ingress.Annotations[pluginAnnotationKey] = fmt.Sprintf("%s,%s",
+				route.Ingress.Annotations[pluginAnnotationKey],
+				annotationValue)
+		}
+	}
 }
 
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
@@ -586,51 +618,14 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 	if filter.Path != nil {
 		switch filter.Path.Type {
 		case gatewayapi.FullPathHTTPPathModifier:
-			if filter.Path.ReplaceFullPath == nil {
-				return kong.Plugin{}, nil, fmt.Errorf("%s missing ReplaceFullPath", gatewayapi.HTTPRouteFilterURLRewrite)
+			plugin, err := generateRequestTransformerForURLRewriteFullPath(filter)
+			if err != nil {
+				return kong.Plugin{}, nil, fmt.Errorf("failed to generate request-transformer plugin for %s: %w", gatewayapi.HTTPRouteFilterURLRewrite, err)
 			}
-
-			plugin := kong.Plugin{
-				Name: kong.String("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": *filter.Path.ReplaceFullPath,
-					},
-				},
-			}
-
 			return plugin, nil, nil
 
 		case gatewayapi.PrefixMatchHTTPPathModifier:
-			replaceWith := "/"
-			if filter.Path.ReplacePrefixMatch != nil {
-				replacePrefixMatch := *filter.Path.ReplacePrefixMatch
-				replaceWith = strings.TrimSuffix(replacePrefixMatch, "/")
-				if replaceWith == "" {
-					// In case of an empty replacePrefixMatch, we need to make sure that the path will always start with a slash.
-					replaceWith = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
-				} else {
-					replaceWith = fmt.Sprintf(`%s$(uri_captures[1])`, replaceWith)
-				}
-			}
-			plugin := kong.Plugin{
-				Name: kong.String("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": replaceWith,
-					},
-				},
-			}
-			routeModifier := func(route *kongstate.Route) {
-				// TODO: extract this to a common function
-				paths := make([]*string, 0, 2)
-				paths = append(paths, lo.ToPtr(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
-				paths = append(paths, lo.ToPtr(
-					fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
-				)
-				route.Paths = paths
-			}
-
+			plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path)
 			return plugin, routeModifier, nil
 		}
 	}
@@ -641,4 +636,54 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 	}
 
 	return kong.Plugin{}, nil, fmt.Errorf("invalid %s config", gatewayapi.HTTPRouteFilterURLRewrite)
+}
+
+func generateRequestTransformerForURLRewriteFullPath(filter *gatewayapi.HTTPURLRewriteFilter) (kong.Plugin, error) {
+	if filter.Path.ReplaceFullPath == nil {
+		return kong.Plugin{}, fmt.Errorf("%s missing ReplaceFullPath", gatewayapi.HTTPRouteFilterURLRewrite)
+	}
+
+	return kong.Plugin{
+		Name: kong.String("request-transformer"),
+		Config: kong.Configuration{
+			"replace": map[string]string{
+				"uri": *filter.Path.ReplaceFullPath,
+			},
+		},
+	}, nil
+}
+
+func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPURLRewriteFilter, path string) (kong.Plugin, kongRouteModifier) {
+	replaceWith := "/"
+	if filter.Path.ReplacePrefixMatch != nil {
+		replacePrefixMatch := *filter.Path.ReplacePrefixMatch
+		replaceWith = strings.TrimSuffix(replacePrefixMatch, "/")
+		if replaceWith == "" {
+			// In the case of an empty replacePrefixMatch, we need to make sure that the path will always start with a slash,
+			// even if we have no capture group captured from the incoming request's URL.
+			// The below is a Lua ternary operator that checks if the captured group is nil, and if so, replaces it with a slash.
+			replaceWith = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
+		} else {
+			replaceWith = fmt.Sprintf(`%s$(uri_captures[1])`, replaceWith)
+		}
+	}
+	plugin := kong.Plugin{
+		Name: kong.String("request-transformer"),
+		Config: kong.Configuration{
+			"replace": map[string]string{
+				"uri": replaceWith,
+			},
+		},
+	}
+
+	routeModifier := func(route *kongstate.Route) {
+		paths := make([]*string, 0, 2)
+		paths = append(paths, lo.ToPtr(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
+		paths = append(paths, lo.ToPtr(
+			fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
+		)
+		route.Paths = paths
+	}
+
+	return plugin, routeModifier
 }

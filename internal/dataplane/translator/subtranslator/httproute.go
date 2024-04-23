@@ -638,6 +638,8 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 	return kong.Plugin{}, nil, fmt.Errorf("invalid %s config", gatewayapi.HTTPRouteFilterURLRewrite)
 }
 
+// generateRequestTransformerForURLRewriteFullPath generates a request-transformer plugin for the URLRewrite filter
+// with a FullPathHTTPPathModifier.
 func generateRequestTransformerForURLRewriteFullPath(filter *gatewayapi.HTTPURLRewriteFilter) (kong.Plugin, error) {
 	if filter.Path.ReplaceFullPath == nil {
 		return kong.Plugin{}, fmt.Errorf("%s missing ReplaceFullPath", gatewayapi.HTTPRouteFilterURLRewrite)
@@ -653,32 +655,42 @@ func generateRequestTransformerForURLRewriteFullPath(filter *gatewayapi.HTTPURLR
 	}, nil
 }
 
+// generateRequestTransformerForURLRewritePrefixMatch generates a request-transformer plugin and a route modifier
+// for the URLRewrite filter with a PrefixMatchHTTPPathModifier.
 func generateRequestTransformerForURLRewritePrefixMatch(filter *gatewayapi.HTTPURLRewriteFilter, path string) (kong.Plugin, kongRouteModifier) {
-	replaceWith := "/"
-	if filter.Path.ReplacePrefixMatch != nil {
-		replacePrefixMatch := *filter.Path.ReplacePrefixMatch
-		replaceWith = strings.TrimSuffix(replacePrefixMatch, "/")
-		if replaceWith == "" {
-			// In the case of an empty replacePrefixMatch, we need to make sure that the path will always start with a slash,
-			// even if we have no capture group captured from the incoming request's URL.
+	// By default, we replace the URI with a slash.
+	replaceURI := "/"
+
+	// If the ReplacePrefixMatch is provided, we need to use it as the replacement URI.
+	if replacePrefixMatch := filter.Path.ReplacePrefixMatch; replacePrefixMatch != nil {
+		// Trim the trailing slash from the ReplacePrefixMatch to avoid double slashes in the final URI.
+		replaceURI = strings.TrimSuffix(*replacePrefixMatch, "/")
+		if replaceURI == "" {
+			// In the case of an empty ReplacePrefixMatch, we need to make sure that the path will always start with a slash,
+			// even if we have no capture group captured from the incoming request's URI.
 			// The below is a Lua ternary operator that checks if the captured group is nil, and if so, replaces it with a slash.
-			replaceWith = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
+			replaceURI = `$(uri_captures[1] == nil and "/" or uri_captures[1])`
 		} else {
-			replaceWith = fmt.Sprintf(`%s$(uri_captures[1])`, replaceWith)
+			// Otherwise, we concatenate the replacement URI with the captured group.
+			replaceURI = fmt.Sprintf(`%s$(uri_captures[1])`, replaceURI)
 		}
 	}
 	plugin := kong.Plugin{
 		Name: kong.String("request-transformer"),
 		Config: kong.Configuration{
 			"replace": map[string]string{
-				"uri": replaceWith,
+				"uri": replaceURI,
 			},
 		},
 	}
 
+	// We need to change the paths in the Kong route to a regex with a capture group that can be used
+	// in the request-transformer plugin.
 	routeModifier := func(route *kongstate.Route) {
 		paths := make([]*string, 0, 2)
+		// The first path matches the exact path.
 		paths = append(paths, lo.ToPtr(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
+		// The second path matches subpaths, including a single slash.
 		paths = append(paths, lo.ToPtr(
 			fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, strings.TrimSuffix(path, "/"))),
 		)

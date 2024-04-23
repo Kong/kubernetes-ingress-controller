@@ -591,22 +591,24 @@ func generateRewriteURIConfig(uri string) (string, error) {
 				out.WriteRune(char)
 			} else {
 				out.WriteString("])")
-				if char == '$' {
+				switch char {
+				case '$':
 					lastRuneType = runeTypeMark
-				} else if char == '\\' {
+				case '\\':
 					lastRuneType = runeTypeEscape
-				} else {
+				default:
 					out.WriteRune(char)
 					lastRuneType = runeTypePlain
 				}
 			}
 
 		case runeTypePlain:
-			if char == '$' {
+			switch char {
+			case '$':
 				lastRuneType = runeTypeMark
-			} else if char == '\\' {
+			case '\\':
 				lastRuneType = runeTypeEscape
-			} else {
+			default:
 				out.WriteRune(char)
 			}
 		}

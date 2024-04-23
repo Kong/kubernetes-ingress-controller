@@ -4,6 +4,7 @@ package envtest
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestGatewayAddressOverride(t *testing.T) {
 		WithGatewayAPIControllers(),
 	)
 
-	allExpected := append(expected, udp...)
+	allExpected := slices.Concat(expected, udp)
 	require.Eventually(t, func() bool {
 		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, &gw)
 		if err != nil {

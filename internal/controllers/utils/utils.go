@@ -32,13 +32,7 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 			return true
 		}
 	}
-
-	switch controllerIngressClass {
-	case objectIngressClass:
-		return true
-	}
-
-	return false
+	return objectIngressClass == controllerIngressClass
 }
 
 // GeneratePredicateFuncsForIngressClassFilter builds a controller-runtime reconciliation predicate function which filters out objects

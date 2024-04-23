@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -334,7 +335,7 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
 			fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 		}
-		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
+		allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
 		for _, opt := range setupCfg.controllerManagerOpts {
 			allControllerArgs = opt(allControllerArgs)
 		}

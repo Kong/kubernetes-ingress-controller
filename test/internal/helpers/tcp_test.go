@@ -51,7 +51,7 @@ func TestTCPProxy(t *testing.T) {
 	t.Log("Ensuring proxy is accepting connections by default")
 	conn, err := net.Dial("tcp", proxy.Address())
 	require.NoError(t, err)
-	require.Eventually(t, func() bool { return destAcceptedConn.Load() }, time.Second, time.Millisecond, "destination didn't accept connection")
+	require.Eventually(t, destAcceptedConn.Load, time.Second, time.Millisecond, "destination didn't accept connection")
 
 	t.Log("Ensuring proxy forwards data from the source to the destination")
 	_, err = conn.Write([]byte("hello"))
@@ -60,7 +60,7 @@ func TestTCPProxy(t *testing.T) {
 
 	t.Log("Ensuring proxy dropped connection after StopHandlingConnections")
 	proxy.StopHandlingConnections()
-	require.Eventually(t, func() bool { return destDroppedConn.Load() }, time.Second, time.Millisecond)
+	require.Eventually(t, destDroppedConn.Load, time.Second, time.Millisecond)
 
 	t.Log("Ensuring proxy dropped existing connection after StopHandlingConnections")
 	require.Eventually(t, func() bool {

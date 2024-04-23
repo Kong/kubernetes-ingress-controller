@@ -21,6 +21,7 @@ linters:
   - exportloopref
   - forbidigo
   - gci
+  - gocritic
   - godot
   - gofmt
   - gofumpt
@@ -101,6 +102,11 @@ linters-settings:
   gomodguard:
     blocked:
       modules:
+      - golang.org/x/exp:
+         recommendations:
+          - maps
+          - slices
+          - github.com/samber/lo
       - github.com/ghodss/yaml:
           recommendations:
           - sigs.k8s.io/yaml

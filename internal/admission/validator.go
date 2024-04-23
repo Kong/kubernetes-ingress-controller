@@ -241,10 +241,8 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
 		validator.Logger.V(util.DebugLevel).Info("Failed to parse Kong version", "error", err)
-	} else {
-		if !version.IsKongGatewayEnterprise() {
-			return false, ErrTextConsumerGroupUnsupported, nil
-		}
+	} else if !version.IsKongGatewayEnterprise() {
+		return false, ErrTextConsumerGroupUnsupported, nil
 	}
 
 	cgs, ok := validator.AdminAPIServicesProvider.GetConsumerGroupsService()
@@ -344,7 +342,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		return false, fmt.Sprintf("%s: %s", ErrTextPluginConfigInvalid, err), nil
 	}
 	if k8sPlugin.ConfigFrom != nil {
-		config, err := kongstate.SecretToConfiguration(secretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(secretGetter, k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	"golang.org/x/exp/maps"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -296,8 +295,8 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 			return false
 		}
 		// Otherwise, we have to clear the clients and return true to indicate that the change was made.
-		maps.Clear(c.readyGatewayClients)
-		maps.Clear(c.pendingGatewayClients)
+		clear(c.readyGatewayClients)
+		clear(c.pendingGatewayClients)
 		return true
 	}
 

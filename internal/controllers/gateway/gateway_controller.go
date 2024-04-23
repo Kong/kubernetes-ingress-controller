@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -553,7 +554,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// use in place of the proxy Service addresses, usually because there's another proxy in front of Kong and the
 	// addresses associated with the proxy Service aren't actually where you want to direct external clients.
 	if len(r.AddressOverrides)+len(r.AddressOverridesUDP) > 0 {
-		combinedOverrideAddresses := append(r.AddressOverrides, r.AddressOverridesUDP...)
+		combinedOverrideAddresses := slices.Concat(r.AddressOverrides, r.AddressOverridesUDP)
 		overrides := make([]gatewayapi.GatewayStatusAddress, len(combinedOverrideAddresses))
 		for i, stringAddr := range combinedOverrideAddresses {
 			addr := gatewayapi.GatewayStatusAddress{

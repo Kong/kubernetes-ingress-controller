@@ -29,11 +29,12 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTP
 			return nil, fmt.Errorf("multiple header matches for the same header are not allowed: %s",
 				string(header.Name))
 		}
-		if header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression {
+		switch {
+		case header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression:
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
-		} else if header.Type == nil || *header.Type == gatewayapi.HeaderMatchExact {
+		case header.Type == nil || *header.Type == gatewayapi.HeaderMatchExact:
 			convertedHeaders[string(header.Name)] = []string{header.Value}
-		} else {
+		default:
 			return nil, fmt.Errorf("unknown/unsupported header match type: %s", string(*header.Type))
 		}
 	}

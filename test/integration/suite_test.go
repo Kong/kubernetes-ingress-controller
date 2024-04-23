@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -191,7 +192,7 @@ func TestMain(m *testing.M) {
 			// so elections are disabled in integration tests for convenience.
 			fmt.Sprintf("force-leader-election=%s", manager.LeaderElectionDisabled),
 		}
-		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
+		allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
 		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs)
 		defer cancel()
 		helpers.ExitOnErr(ctx, err)

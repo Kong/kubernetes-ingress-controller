@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -350,15 +351,69 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
 			t.Cleanup(func() {
-				require.NoError(t, ctrlClient.Delete(ctx, tc.secretBefore))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretBefore)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretAfter)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.kongPlugin)))
 			})
+			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
 
 			require.NoError(t, ctrlClient.Create(ctx, tc.kongPlugin))
+
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				err := ctrlClient.Update(ctx, tc.secretAfter)
+				if tc.errorOnUpdate {
+					if !assert.Error(c, err) {
+						return
+					}
+					assert.Contains(c, err.Error(), tc.expectErrorContains)
+				} else if !assert.NoError(c, err) {
+					t.Logf("Error: %v", err)
+				}
+			}, 10*time.Second, 100*time.Millisecond)
+		})
+	}
+
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/5876
+	// This repeats all test cases without filtering Secrets in the webhook configuration. This behavior is slated
+	// for removal in 4.0, and the following block should be removed along with the behavior.
+	webhookConfig := validatingWebhookConfigWithClientConfig(t, admregv1.WebhookClientConfig{
+		URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", admissionWebhookPort)),
+		CABundle: webhookCert,
+	})
+	// Update requires an object with generated fields populated, so we Get() after using the builder. The builder just
+	// ensures the name and namespace match the original.
+	require.NoError(t, ctrlClient.Get(
+		ctx,
+		k8stypes.NamespacedName{Name: webhookConfig.Name, Namespace: webhookConfig.Namespace},
+		webhookConfig,
+		&client.GetOptions{},
+	))
+	for i, hook := range webhookConfig.Webhooks {
+		if hook.Name == "secrets.plugins.validation.ingress-controller.konghq.com" {
+			webhookConfig.Webhooks[i].ObjectSelector = nil
+		}
+	}
+	require.NoError(t, ctrlClient.Update(ctx, webhookConfig))
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Annoyingly, Create forcibly stores the resulting object in the tc field object we want to reuse.
+			// Clearing it manually is a bit silly, but works to let us reuse them.
+			tc.secretBefore.ResourceVersion = ""
+			tc.secretBefore.UID = ""
+			tc.secretAfter.ResourceVersion = ""
+			tc.secretAfter.UID = ""
+			tc.kongPlugin.ResourceVersion = ""
+			tc.kongPlugin.UID = ""
 			t.Cleanup(func() {
-				require.NoError(t, ctrlClient.Delete(ctx, tc.kongPlugin))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretBefore)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretAfter)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.kongPlugin)))
 			})
+			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
+
+			require.NoError(t, ctrlClient.Create(ctx, tc.kongPlugin))
 
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
 				err := ctrlClient.Update(ctx, tc.secretAfter)

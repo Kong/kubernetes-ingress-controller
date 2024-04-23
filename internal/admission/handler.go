@@ -283,47 +283,33 @@ func (h RequestHandler) handleSecret(
 			}
 		}
 
-		// TODO this check duplicates the objectSelector filter in the webhook definition, and will only check updates to
-		// plugin configuration secrets if they have the new 3.2+ plugin configuration label. we could optionally remove
-		// this check to allow users to remove the secret filter configuration from the webhook definition and check any
-		// referenced secret, labeled or not.
-
-		// plugin configuration secrets
-		switch validate := secret.Labels[labels.ValidateLabel]; labels.ValidateType(validate) {
-		case labels.PluginValidate:
-			ok, _, message, err := h.checkReferrersOfSecret(ctx, &secret)
-			if err != nil {
-				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
-			}
-			if !ok {
-				return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
-			}
-		default:
-			// TODO this duplicates the above plugin handling block. prior to 3.2, the admission webhook ingested all
-			// Secrets and used this to validate updates to plugin configuration. this non-labeled case is retained
-			// for environments that still use ingest all configuration.
-			ok, count, message, err := h.checkReferrersOfSecret(ctx, &secret)
-			if count > 0 {
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/5876
+		// This catch-all block handles Secrets referenced by KongPlugin and KongClusterPlugin configuration. As of 3.2,
+		// these Secrets should use a "konghq.com/validate: plugin" label, but the original unfiltered behavior is still
+		// supported. It is slated for removal in 4.0. Once it is removed (or if we add additional Secret validation cases
+		// other than "plugin") this needs to change to a case that only applies if the valdiate label is present with the
+		// "plugin" value, probably using a 'switch validate := secret.Labels[labels.ValidateLabel]; labels.ValidateType(validate)'
+		// statement.
+		ok, count, message, err := h.checkReferrersOfSecret(ctx, &secret)
+		if count > 0 {
+			if secret.Labels[labels.ValidateLabel] != string(labels.PluginValidate) {
 				h.Logger.Info("Warning: Secret used in Kong(Cluster)Plugin, but missing 'konghq.com/validate: plugin' label."+
 					"This label will be required in a future release", "namespace", secret.Namespace, "name", secret.Name)
 			}
-			if err != nil {
-				return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
-			}
-			if !ok {
-				return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
-			}
-
-			// no reference found in the blanket block, this is some random unrelated Secret and KIC should ignore it.
-			return responseBuilder.Allowed(true).Build(), nil
 		}
+		if err != nil {
+			return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
+		}
+		if !ok {
+			return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
+		}
+
+		// no reference found in the blanket block, this is some random unrelated Secret and KIC should ignore it.
+		return responseBuilder.Allowed(true).Build(), nil
 
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
-	// fallback allow. it should not be possible to hit this because of the defaults above, but the compiler wants it.
-	// if a request somehow has reached this, we shouldn't touch it.
-	return responseBuilder.Allowed(true).Build(), nil
 }
 
 // checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret

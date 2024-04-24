@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/tools
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/go-delve/delve v1.22.1

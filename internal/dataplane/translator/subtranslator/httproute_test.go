@@ -216,13 +216,64 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 			expectedErr: errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
 		},
-		// TODO: add a testcase for RequestHeaderModifier and PrefixMatchHTTPPathModifier
+		{
+			name: "RequestHeaderModifier and PrefixMatchHTTPPathModifier",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
+					RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{
+						Set: []gatewayapi.HTTPHeader{
+							{
+								Name:  "header-to-set",
+								Value: "bar",
+							},
+						},
+					},
+				},
+				{
+					Type: gatewayapi.HTTPRouteFilterURLRewrite,
+					URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+						Path: &gatewayapi.HTTPPathModifier{
+							Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+							ReplacePrefixMatch: lo.ToPtr("/new"),
+						},
+					},
+				},
+			},
+			path: "/prefix",
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"add": map[string]interface{}{
+							"headers": []interface{}{
+								"header-to-set:bar",
+							},
+						},
+						"replace": map[string]interface{}{
+							"uri": "/new$(uri_captures[1])",
+							"headers": []interface{}{
+								"header-to-set:bar",
+							},
+						},
+					},
+				},
+			},
+			expectedRouteModifications: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
+			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, result.Plugins)
 

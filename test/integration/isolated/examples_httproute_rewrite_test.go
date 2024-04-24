@@ -8,15 +8,15 @@ import (
 	"os"
 	"testing"
 
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
 )
 
@@ -64,12 +64,12 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 					return ctx
 				}
 
-				t.Logf("asserting /olx-prefix?msg=hello path is redirected to /echo?msg=hello replacing the prefix")
+				t.Logf("asserting /old-prefix?msg=hello path is redirected to /echo?msg=hello replacing the prefix")
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,
-					"/olx-prefix?msg=hello",
+					"/old-prefix?msg=hello",
 					http.StatusOK,
 					"hello",
 					nil,

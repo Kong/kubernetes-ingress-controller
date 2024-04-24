@@ -19,7 +19,7 @@ import (
 )
 
 func TestHTTPRouteRewriteExample(t *testing.T) {
-	httprouteURLRewritePathFullExampleManifests := examplesManifestPath("gateway-httproute-rewrite-path.yaml")
+	httprouteURLRewriteExampleManifests := examplesManifestPath("gateway-httproute-rewrite-path.yaml")
 
 	f := features.
 		New("example").
@@ -35,20 +35,33 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 				cluster := GetClusterFromCtx(ctx)
 				proxyURL := GetHTTPURLFromCtx(ctx)
 
-				t.Logf("applying yaml manifest %s", httprouteURLRewritePathFullExampleManifests)
-				manifest, err := os.ReadFile(httprouteURLRewritePathFullExampleManifests)
+				t.Logf("applying yaml manifest %s", httprouteURLRewriteExampleManifests)
+				manifest, err := os.ReadFile(httprouteURLRewriteExampleManifests)
 				assert.NoError(t, err)
 				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, string(manifest)))
 				cleaner.AddManifest(string(manifest))
 
 				t.Logf("verifying that the UDPIngress routes traffic properly")
 
-				t.Logf("asserting /dummy-random-string path is redirected (as any other path for this HTTPRoute) to /echo?msg=hello from the manifest")
+				t.Logf("asserting /full-path-prefix path is redirected to /echo?msg=hello from the manifest")
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,
-					"/dummy-random-string",
+					"/full-path-prefix",
+					http.StatusOK,
+					"hello",
+					nil,
+					consts.IngressWait,
+					consts.WaitTick,
+				)
+
+				t.Logf("asserting /olx-prefix?msg=hello path is redirected to /echo?msg=hello replacing the prefix")
+				helpers.EventuallyGETPath(
+					t,
+					proxyURL,
+					proxyURL.Host,
+					"/olx-prefix?msg=hello",
 					http.StatusOK,
 					"hello",
 					nil,

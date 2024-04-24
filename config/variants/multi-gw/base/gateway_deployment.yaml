@@ -72,7 +72,7 @@ spec:
           value: /dev/stderr
         # router mode in 3.0.0. use `traditional` here for full compatibility.
         - name: KONG_ROUTER_FLAVOR
-          value: traditional_compatible
+          value: expressions
         lifecycle:
           preStop:
             exec:

@@ -29,7 +29,11 @@ spec:
     spec:
       containers:
         - name: echo
-          image: mendhak/http-https-echo:31
+          image: registry.k8s.io/e2e-test-images/agnhost:2.40
+          command:
+            - /agnhost
+            - netexec
+            - --http-port=8080
           ports:
             - containerPort: 8080
               name: http
@@ -92,16 +96,6 @@ spec:
         path:
           type: ReplaceFullPath
           replaceFullPath: /echo?msg=hello
-    - type: RequestHeaderModifier
-      requestHeaderModifier:
-        set:
-          - name: X-Header-Set
-            value: set-overwrites-values
-        add:
-          - name: X-Header-Add
-            value: header-val-1
-          - name: X-Header-Add-Append
-            value: header-val-2
     backendRefs:
     - name: echo
       kind: Service
@@ -124,17 +118,7 @@ spec:
           urlRewrite:
             path:
               type: ReplacePrefixMatch
-              replacePrefixMatch: "/new-prefix"
-        - type: RequestHeaderModifier
-          requestHeaderModifier:
-            set:
-              - name: X-Header-Set
-                value: set-overwrites-values
-            add:
-              - name: X-Header-Add
-                value: header-val-1
-              - name: X-Header-Add-Append
-                value: header-val-2
+              replacePrefixMatch: "/echo"
       backendRefs:
         - name: echo
           port: 80

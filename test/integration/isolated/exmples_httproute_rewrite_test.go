@@ -19,7 +19,7 @@ import (
 )
 
 func TestHTTPRouteRewriteExample(t *testing.T) {
-	httprouteURLRewritePathFullExampleManifests := examplesManifestPath("gateway-httproute-rewrite-path-full.yaml")
+	httprouteURLRewritePathFullExampleManifests := examplesManifestPath("gateway-httproute-rewrite-path.yaml")
 
 	f := features.
 		New("example").

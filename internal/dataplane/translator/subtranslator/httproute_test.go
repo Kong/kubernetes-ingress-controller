@@ -425,5 +425,136 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 }
 
 func TestMergePluginsOfTheSameType(t *testing.T) {
-	t.Skip("TODO: implement this test")
+	testCases := []struct {
+		name     string
+		plugins  []kong.Plugin
+		expected []kong.Plugin
+	}{
+		{
+			name:     "no plugins",
+			plugins:  []kong.Plugin{},
+			expected: []kong.Plugin{},
+		},
+		{
+			name: "single plugin",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+			},
+		},
+		{
+			name: "multiple plugins of different types",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+				{
+					Name: lo.ToPtr("plugin3"),
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+				{
+					Name: lo.ToPtr("plugin3"),
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types with different configurations - configuration is merged",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+					},
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key2": "value2",
+					},
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types with same configuration keys - configuration is merged and the first wins",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+					},
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value2",
+					},
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			plugins, err := mergePluginsOfTheSameType(tc.plugins)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, plugins)
+		})
+	}
 }

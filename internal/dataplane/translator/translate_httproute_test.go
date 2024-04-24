@@ -2130,68 +2130,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "url path rewrite",
-			httpRoutes: []*gatewayapi.HTTPRoute{
-				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
-							{
-								Matches: []gatewayapi.HTTPRouteMatch{
-									builder.NewHTTPRouteMatch().WithPathPrefix("/v1/").Build(),
-								},
-								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-								},
-							},
-						},
-					},
-				},
-			},
-			fakeObjects: store.FakeObjects{
-				Services: []*corev1.Service{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service1",
-						},
-					},
-				},
-			},
-			expectedKongServices: []kongstate.Service{
-				{
-					Service: kong.Service{
-						Name:           kong.String("httproute.default.httproute-1._.0"),
-						ConnectTimeout: kong.Int(500),
-						ReadTimeout:    kong.Int(500),
-						WriteTimeout:   kong.Int(500),
-					},
-					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").
-							WithNamespace("default").
-							WithPortNumber(80).
-							MustBuild(),
-					},
-				},
-			},
-			expectedKongRoutes: map[string][]kongstate.Route{
-				"httproute.default.httproute-1._.0": {
-					{
-						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`(http.path == "/v1/") || (http.path ^= "/v1/")`),
-							PreserveHost: kong.Bool(true),
-						},
-						ExpressionRoutes: true,
-					},
-				},
-			},
-		},
 	}
 
 	for _, tc := range testCases {

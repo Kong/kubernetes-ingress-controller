@@ -327,16 +327,16 @@ func generateKongRoutesFromHTTPRouteMatches(
 			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
 			filter.URLRewrite.Path.ReplacePrefixMatch != nil
 	}); hasURLRewriteWithReplacePrefixMatchFilter {
-		// In the case of a URLRewrite with non-nil ReplacePrefixMatch, we rely on a CEL validation rule that disallows
-		// rules with multiple matches if the URLRewrite filter is present therefore we can be sure that if the filter is
-		// present, there is at most only one match. Based on that, we can determine the path from the match.
+		// In the case of URLRewrite with non-nil ReplacePrefixMatch, we rely on a CEL validation rule that disallows
+		// rules with multiple matches if the URLRewrite filter is present. We can be certain that if the filter is
+		// present, there is at most only one match. Based on that, we can determine the path from the first match.
 		// See: https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131
 		if len(matches) > 0 && matches[0].Path != nil && matches[0].Path.Value != nil {
 			path = *matches[0].Path.Value
 		}
 	}
 
-	// if the redirect filter has not been set, we still need to set the route plugins
+	// If the redirect filter has not been set, we still need to set the route plugins.
 	if !hasRedirectFilter {
 		if err := subtranslator.SetRoutePlugins(&r, filters, path, tags); err != nil {
 			return nil, err

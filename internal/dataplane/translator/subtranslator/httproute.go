@@ -478,7 +478,13 @@ func mergePluginsOfTheSameType(plugins []kong.Plugin) ([]kong.Plugin, error) {
 			pluginsByName[pluginName] = []kong.Plugin{mergedPlugin}
 		}
 	}
-	return lo.Flatten(lo.Values(pluginsByName)), nil
+
+	// Sort the plugins by name to ensure that the order is deterministic.
+	mergedPlugins := lo.Flatten(lo.Values(pluginsByName))
+	sort.Slice(mergedPlugins, func(i, j int) bool {
+		return *mergedPlugins[i].Name < *mergedPlugins[j].Name
+	})
+	return mergedPlugins, nil
 }
 
 func generateKongRouteModifierFromExtensionRef(pluginNamesFromExtensionRef []string) kongRouteModifier {

@@ -47,7 +47,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	_, hasRedirectFilter := lo.Find(translation.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+	hasRedirectFilter := lo.ContainsBy(translation.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
 		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
 	})
 	// if the rule has request redirect filter(s), we need to generate a route for each match to

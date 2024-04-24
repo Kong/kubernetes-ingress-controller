@@ -8,6 +8,8 @@ import (
 	"os"
 	"testing"
 
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -55,6 +57,12 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 					consts.IngressWait,
 					consts.WaitTick,
 				)
+
+				if testenv.KongRouterFlavor() != dpconf.RouterFlavorTraditional {
+					// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+					t.Log("skipping prefix rewrite test for expressions router - to be implemented")
+					return ctx
+				}
 
 				t.Logf("asserting /olx-prefix?msg=hello path is redirected to /echo?msg=hello replacing the prefix")
 				helpers.EventuallyGETPath(

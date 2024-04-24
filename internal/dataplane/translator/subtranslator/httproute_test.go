@@ -411,7 +411,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath)
+			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath, false)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expected, plugin)
 

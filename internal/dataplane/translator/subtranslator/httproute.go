@@ -358,8 +358,8 @@ func mustMarshalJSON[T any](val T) string {
 // The plugins can be set in two different ways:
 // - Direct conversion from the respective HTTPRouteFilter.
 // - ExtensionRef to plugins annotation from the ExtensionRef filter.
-func SetRoutePlugins(route *kongstate.Route, filters []gatewayapi.HTTPRouteFilter, path string, tags []*string) error {
-	generatedPlugins, err := generatePluginsFromHTTPRouteFilters(filters, path, tags)
+func SetRoutePlugins(route *kongstate.Route, filters []gatewayapi.HTTPRouteFilter, path string, tags []*string, expressionsRouterEnabled bool) error {
+	generatedPlugins, err := generatePluginsFromHTTPRouteFilters(filters, path, tags, expressionsRouterEnabled)
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,12 @@ type kongRouteModifier func(*kongstate.Route)
 // - generated plugins
 // - Kong Route modifiers that need to be applied to the Kong Route
 // - PluginsAnnotation that is generated from the ExtensionRef filter.
-func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, path string, tags []*string) (httpRouteFiltersOriginatedPlugins, error) {
+func generatePluginsFromHTTPRouteFilters(
+	filters []gatewayapi.HTTPRouteFilter,
+	path string,
+	tags []*string,
+	expressionsRouterEnabled bool,
+) (httpRouteFiltersOriginatedPlugins, error) {
 	if len(filters) == 0 {
 		return httpRouteFiltersOriginatedPlugins{}, nil
 	}
@@ -423,7 +428,7 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 			pluginNamesFromExtensionRef = append(pluginNamesFromExtensionRef, plugin)
 
 		case gatewayapi.HTTPRouteFilterURLRewrite:
-			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path)
+			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path, expressionsRouterEnabled)
 			if err != nil {
 				return httpRouteFiltersOriginatedPlugins{}, err
 			}
@@ -612,7 +617,11 @@ func kongHeaderFormatter(header gatewayapi.HTTPHeader) string {
 	return fmt.Sprintf("%s:%s", header.Name, header.Value)
 }
 
-func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFilter, path string) (kong.Plugin, kongRouteModifier, error) {
+func generateRequestTransformerForURLRewrite(
+	filter *gatewayapi.HTTPURLRewriteFilter,
+	path string,
+	expressionsRouterEnabled bool,
+) (kong.Plugin, kongRouteModifier, error) {
 	if filter == nil {
 		return kong.Plugin{}, nil, fmt.Errorf("%s is not provided", gatewayapi.HTTPRouteFilterURLRewrite)
 	}
@@ -631,6 +640,11 @@ func generateRequestTransformerForURLRewrite(filter *gatewayapi.HTTPURLRewriteFi
 			return plugin, nil, nil
 
 		case gatewayapi.PrefixMatchHTTPPathModifier:
+			if expressionsRouterEnabled {
+				// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+				return kong.Plugin{}, nil, fmt.Errorf("%s unsupported with expressions router", gatewayapi.PrefixMatchHTTPPathModifier)
+			}
+
 			plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path)
 			return plugin, routeModifier, nil
 		}

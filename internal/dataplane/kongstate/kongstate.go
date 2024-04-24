@@ -332,7 +332,7 @@ func (ks *KongState) FillVaults(
 	}
 }
 
-func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
+func (ks *KongState) getPluginRelations(cacheStore store.Storer) map[string]util.ForeignRelations {
 	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
 	pluginRels := map[string]util.ForeignRelations{}
 	addConsumerRelation := func(namespace, pluginName, identifier string) {
@@ -377,7 +377,20 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 		for _, svc := range ks.Services[i].K8sServices {
 			pluginList := annotations.ExtractKongPluginsFromAnnotations(svc.GetAnnotations())
 			for _, pluginName := range pluginList {
-				addServiceRelation(svc.Namespace, pluginName, *ks.Services[i].Name)
+				// If we found a KongClusterPlugin, that implies that a KCP with this name exists and there's no superseding
+				// KongPlugin in the local namespace. We therefore stick the _relation_ in the empty namespace so that plugins
+				// generated from KongClusterPlugins can attach to Kong entities derived from resources across namespaces.
+				// See https://github.com/Kong/kubernetes-ingress-controller/issues/5355 for history.
+				//
+				// We ignore errors here because we treat errors as a de facto indicator that no such KongClusterPlugin exists,
+				// although it _could_ imply a problem with the store. We'll handle these errors later in
+				// kongstate.buildPlugins() if present.
+				namespace := svc.Namespace
+				_, k8sClusterPlugin, _ := getKongPluginOrKongClusterPlugin(cacheStore, namespace, pluginName)
+				if k8sClusterPlugin != nil {
+					namespace = ""
+				}
+				addServiceRelation(namespace, pluginName, *ks.Services[i].Name)
 			}
 		}
 		// route
@@ -385,7 +398,12 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractKongPluginsFromAnnotations(ingress.Annotations)
 			for _, pluginName := range pluginList {
-				addRouteRelation(ingress.Namespace, pluginName, *ks.Services[i].Routes[j].Name)
+				namespace := ingress.Namespace
+				_, k8sClusterPlugin, _ := getKongPluginOrKongClusterPlugin(cacheStore, namespace, pluginName)
+				if k8sClusterPlugin != nil {
+					namespace = ""
+				}
+				addRouteRelation(namespace, pluginName, *ks.Services[i].Routes[j].Name)
 			}
 		}
 	}
@@ -393,14 +411,24 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 	for _, c := range ks.Consumers {
 		pluginList := annotations.ExtractKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
 		for _, pluginName := range pluginList {
-			addConsumerRelation(c.K8sKongConsumer.Namespace, pluginName, *c.Username)
+			namespace := c.K8sKongConsumer.Namespace
+			_, k8sClusterPlugin, _ := getKongPluginOrKongClusterPlugin(cacheStore, namespace, pluginName)
+			if k8sClusterPlugin != nil {
+				namespace = ""
+			}
+			addConsumerRelation(namespace, pluginName, *c.Username)
 		}
 	}
 	// consumer group
 	for _, cg := range ks.ConsumerGroups {
 		pluginList := annotations.ExtractKongPluginsFromAnnotations(cg.K8sKongConsumerGroup.GetAnnotations())
 		for _, pluginName := range pluginList {
-			addConsumerGroupRelation(cg.K8sKongConsumerGroup.Namespace, pluginName, *cg.Name)
+			namespace := cg.K8sKongConsumerGroup.Namespace
+			_, k8sClusterPlugin, _ := getKongPluginOrKongClusterPlugin(cacheStore, namespace, pluginName)
+			if k8sClusterPlugin != nil {
+				namespace = ""
+			}
+			addConsumerGroupRelation(namespace, pluginName, *cg.Name)
 		}
 	}
 
@@ -541,7 +569,7 @@ func (ks *KongState) FillPlugins(
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
-	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations())
+	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations(s))
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity

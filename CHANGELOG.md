@@ -142,7 +142,16 @@ Adding a new version? You'll need three changes:
   - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
   - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.
   [#5918](https://github.com/Kong/kubernetes-ingress-controller/pull/5918)
-
+- The `konghq.com/plugins` annotation supports a new `<namespace>:<name>`
+  format. This format requests a KongPlugin from a remote namespace. Binding
+  plugins across namespaces requires a ReferenceGrant from the requesting
+  resource to KongPlugins in the target namespace. This approach is useful for
+  some plugins bound to different types of entities, such as a set of
+  rate-limiting plugins applied to a service and various consumers. The
+  cross-namespace grant allows the service manager to define different limits
+  for consumers managed by other users without requiring those users to create
+  consumers in the Service's namespace.
+  [#5965](https://github.com/Kong/kubernetes-ingress-controller/pull/5965)
 
 ### Fixed
 

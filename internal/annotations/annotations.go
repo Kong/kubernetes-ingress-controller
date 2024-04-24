@@ -155,6 +155,36 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 	return kongPluginCRs
 }
 
+type NamespacedKongPlugin struct {
+	Namespace string
+	Name      string
+}
+
+// ExtractNamespacedKongPluginsFromAnnotations extracts a KongPlugin name and optional namespace from an annotation
+// value. Plugins are delimited by ",". Values are either colon-delimited "namespace:name" strings or name-only
+// strings.
+func ExtractNamespacedKongPluginsFromAnnotations(anns map[string]string) []NamespacedKongPlugin {
+	var plugins []NamespacedKongPlugin
+	v := pluginsFromAnnotations(anns)
+	if v == "" {
+		return plugins
+	}
+	for _, s := range strings.Split(v, ",") {
+		if s != "" {
+			plugin := NamespacedKongPlugin{}
+			if strings.Contains(s, ":") {
+				split := strings.Split(s, ":")
+				plugin.Namespace = strings.TrimSpace(split[0])
+				plugin.Name = strings.TrimSpace(split[1])
+			} else {
+				plugin.Name = strings.TrimSpace(s)
+			}
+			plugins = append(plugins, plugin)
+		}
+	}
+	return plugins
+}
+
 // ExtractConfigurationName extracts the name of the KongIngress object that holds
 // information about the configuration to use in Routes, Services and Upstreams.
 func ExtractConfigurationName(anns map[string]string) string {

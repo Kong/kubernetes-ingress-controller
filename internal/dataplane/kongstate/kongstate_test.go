@@ -457,7 +457,8 @@ func TestGetPluginRelations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.args.state.getPluginRelations(); !reflect.DeepEqual(got, tt.want) {
+			store, _ := store.NewFakeStore(store.FakeObjects{})
+			if got := tt.args.state.getPluginRelations(store, logr.Discard()); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getPluginRelations() = %v, want %v", got, tt.want)
 			}
 		})

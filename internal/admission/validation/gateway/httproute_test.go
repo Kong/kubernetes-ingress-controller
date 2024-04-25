@@ -78,6 +78,50 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid: true,
 		},
 		{
+			msg: "route with parentRef to non-gateway object is accepted with no vlaidation",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+								Namespace: lo.ToPtr(gatewayapi.Namespace(corev1.NamespaceDefault)),
+								Name:      gatewayapi.ObjectName("kuma-cp"),
+							},
+						},
+					},
+				},
+			}, // parentRef to a Service
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+			},
+			valid: true,
+		},
+		{
 			msg: "parentRefs which omit the namespace pass validation in the same namespace",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{

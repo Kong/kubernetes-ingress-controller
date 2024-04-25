@@ -7,6 +7,8 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+
+ - [3.1.4](#314)
  - [3.1.3](#313)
  - [3.1.2](#312)
  - [3.1.1](#311)
@@ -85,8 +87,6 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
-
 ### Breaking changes
 
 - Removed support for the deprecated `kongCredType` Secret field. If you have
@@ -147,6 +147,18 @@ Adding a new version? You'll need three changes:
   [#5824](https://github.com/Kong/kubernetes-ingress-controller/pull/5824)
 
 [Updates to CRDs]: https://github.com/Kong/charts/blob/main/charts/kong/UPGRADE.md#updates-to-crds
+
+## [3.1.4]
+
+> Release date: 2024-04-26
+
+### Fixed
+
+- Do not generate invalid duplicate upstream targets when routes use multiple
+  Services with the same endpoints.
+  [#5817](https://github.com/Kong/kubernetes-ingress-controller/pull/5817)
+- Bump golang version to 1.21.9 to fix CVE [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687).
+  [#5905](https://github.com/Kong/kubernetes-ingress-controller/pull/5905)
 
 ## [3.1.3]
 
@@ -3387,6 +3399,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.1.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.3...v3.1.4
 [3.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.2...v3.1.3
 [3.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.1...v3.1.2
 [3.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.0...v3.1.1

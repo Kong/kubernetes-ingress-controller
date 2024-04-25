@@ -36,11 +36,6 @@ func ValidateHTTPRoute(
 	httproute *gatewayapi.HTTPRoute,
 	managerClient client.Client,
 ) (bool, string, error) {
-	// Validate that the route has valid parentRefs.
-	if err := ValidateHTTPRouteParentRefs(httproute); err != nil {
-		return false, fmt.Sprintf("HTTPRoute has invalid parentRefs: %s", err), nil
-	}
-
 	// Check if route is managed by this controller. If not, we don't need to validate it.
 	routeIsManaged, err := ensureHTTPRouteIsManagedByController(ctx, httproute, managerClient)
 	if err != nil {
@@ -74,23 +69,12 @@ func ValidateHTTPRoute(
 // Validation - HTTPRoute - Private Functions
 // -----------------------------------------------------------------------------
 
-// ValidateHTTPRouteParentRefs checks the group/kind of each parentRef in spec and allows only
-// empty or `gateway.networking.k8s.io.Gateway`.
-func ValidateHTTPRouteParentRefs(httproute *gatewayapi.HTTPRoute) error {
+// parentRefIsGateway returns true if the group/kind of ParentReference is empty or gateway.networking.k8s.io/Gateway.
+func parentRefIsGateway(parentRef gatewayapi.ParentReference) bool {
 	const KindGateway = gatewayapi.Kind("Gateway")
 
-	for parentRefIndex, parentRef := range httproute.Spec.ParentRefs {
-		if parentRef.Group != nil && *parentRef.Group != "" && *parentRef.Group != gatewayapi.V1Group {
-			return fmt.Errorf("parentRefs[%d]: %s is not a supported group for httproute parentRefs, only %s is supported",
-				parentRefIndex, *parentRef.Group, gatewayapi.V1Group)
-		}
-		if parentRef.Kind != nil && *parentRef.Kind != "" && *parentRef.Kind != KindGateway {
-			return fmt.Errorf("parentRefs[%d]: %s is not a supported kind for httproute parentRefs, only kind %s is supported",
-				parentRefIndex, *parentRef.Kind, KindGateway)
-		}
-	}
-
-	return nil
+	return (parentRef.Group == nil || (*parentRef.Group == "" || *parentRef.Group == gatewayapi.V1Group)) &&
+		(parentRef.Kind == nil || (*parentRef.Kind == "" || *parentRef.Kind == KindGateway))
 }
 
 // ensureHTTPRouteIsManagedByController checks whether the provided HTTPRoute is managed by this controller implementation.
@@ -98,6 +82,12 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 	// In order to be sure whether an HTTPRoute resource is managed by this
 	// controller we ignore references to Gateway resources that do not exist.
 	for _, parentRef := range httproute.Spec.ParentRefs {
+		// Skip the parentRefs that are not Gateways because they cannot refer to the controller.
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/5912
+		if !parentRefIsGateway(parentRef) {
+			continue
+		}
+
 		// Determine the namespace of the gateway referenced via parentRef. If no
 		// explicit namespace is provided, assume the namespace of the route.
 		namespace := httproute.Namespace

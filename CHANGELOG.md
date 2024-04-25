@@ -117,6 +117,11 @@ Adding a new version? You'll need three changes:
 - Do not generate invalid duplicate upstream targets when routes use multiple
   Services with the same endpoints.
   [#5817](https://github.com/Kong/kubernetes-ingress-controller/pull/5817)
+- Remove the constraint of items of `parentRefs` can only be empty or 
+  `gateway.network.k8s.io/Gateway` in validating `HTTPRoute`s. If an item in
+  `parentRefs`'s group/kind is not `gateway.network.k8s.io/Gateway`, the item
+  is seen as a parent other than the controller and ignored in parentRef check.
+  [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
 
 ### Changed
 

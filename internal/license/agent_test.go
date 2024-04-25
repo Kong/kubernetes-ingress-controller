@@ -3,6 +3,7 @@ package license_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -233,4 +234,105 @@ func TestAgent(t *testing.T) {
 			expectLicenseToMatchEventually(t, a, "new-license")
 		})
 	})
+
+	t.Run("initial license retrieval fails and recovers", func(t *testing.T) {
+		ticker := mocks.NewTicker()
+
+		upstreamClient := newMockKonnectLicenseClient(mo.None[license.KonnectLicense](), ticker)
+
+		upstreamClient.ReturnSuccess(mo.Some(license.KonnectLicense{
+			Payload:   fmt.Sprintf(testLicense, time.Now().AddDate(0, 0, -10).Format(time.DateOnly)),
+			UpdatedAt: expectedLicense.UpdatedAt.Add(-50 * time.Second),
+		}))
+
+		const (
+			initialPollingPeriod = time.Minute * 3
+			regularPollingPeriod = time.Minute * 20
+			allowedDelta         = time.Second
+		)
+
+		a := license.NewAgent(
+			upstreamClient,
+			logr.Discard(),
+			license.WithInitialPollingPeriod(initialPollingPeriod),
+			license.WithPollingPeriod(regularPollingPeriod),
+			license.WithTicker(ticker),
+		)
+
+		startTime := time.Now()
+		go a.Start(ctx) //nolint:errcheck
+
+		select {
+		case <-a.Started():
+		case <-time.After(time.Second):
+			require.FailNow(t, "timed out waiting for agent to start")
+		}
+
+		t.Run("initial polling period is used when license is expired", func(t *testing.T) {
+			require.Eventually(t, func() bool {
+				return len(upstreamClient.GetCalls()) >= 1
+			}, time.Second, time.Nanosecond, "expected upstream client to be called at least once")
+
+			firstListCallTime := upstreamClient.GetCalls()[0]
+
+			require.WithinDuration(t, startTime, firstListCallTime, allowedDelta,
+				"expected first call to List() to happen immediately after starting the agent")
+
+			ticker.Add(initialPollingPeriod)
+
+			require.Eventually(t, func() bool {
+				return len(upstreamClient.GetCalls()) >= 2
+			}, time.Second, time.Nanosecond, "expected upstream client to be called at least twice")
+
+			secondListCallTime := upstreamClient.GetCalls()[1]
+			require.WithinDuration(t, firstListCallTime.Add(initialPollingPeriod), secondListCallTime, allowedDelta,
+				"expected second call to List() to happen after the initial polling period as current license is expired")
+
+			require.True(t, a.GetLicense().IsPresent(), "license should be present")
+		})
+
+		t.Run("license is always updated when cached is expired", func(t *testing.T) {
+			upstreamClient.ReturnSuccess(mo.Some(license.KonnectLicense{
+				Payload: "new-license",
+				// This is intentionally _older_ than the initial seed license. We want to disregard the normal updated_at
+				// rules when our current license is expired.
+				UpdatedAt: expectedLicense.UpdatedAt.Add(-100 * time.Second),
+			}))
+
+			ticker.Add(regularPollingPeriod)
+
+			expectLicenseToMatchEventually(t, a, "new-license")
+		})
+	})
+}
+
+const testLicense = `{
+    "license":{
+      "payload":{
+        "admin_seats":"1",
+        "customer":"TESTTESTTEST",
+        "dataplanes":"1",
+        "license_creation_date":"2014-11-14",
+        "license_expiration_date":"%s",
+        "license_key":"TESTTESTTEST",
+        "product_subscription":"Test",
+        "support_plan":"None"
+     },
+     "signature":"fake",
+     "version":"1"
+    }
+}`
+
+func TestIsExpiredLicense(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, license.IsExpiredLicense(fmt.Sprintf(testLicense, time.Now().AddDate(0, 0, -1).Format(time.DateOnly))))
+
+	require.False(t, license.IsExpiredLicense(fmt.Sprintf(testLicense, time.Now().AddDate(0, 0, 1).Format(time.DateOnly))))
+
+	require.False(t, license.IsExpiredLicense(fmt.Sprintf(testLicense, "not a valid date")))
+
+	require.False(t, license.IsExpiredLicense("this is not valid json"))
+
+	require.False(t, license.IsExpiredLicense(`{"missing_expiration": 0}`))
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"github.com/tidwall/gjson"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
@@ -172,13 +173,18 @@ func (a *Agent) runPollingLoop(ctx context.Context) error {
 }
 
 func (a *Agent) resolvePollingPeriod() time.Duration {
-	// If we already have a license, start with the regular polling period (happy path) ...
-	if a.cachedLicense.IsPresent() {
-		return a.regularPollingPeriod
+	cached, ok := a.cachedLicense.Get()
+	// With no license available, update frequently to retrieve it when it appears, e.g. when a user upgrades from Free
+	// to Enterprise tier).
+	if !ok {
+		return a.initialPollingPeriod
 	}
-	// ... otherwise, start with the initial polling period which is shorter by default (to get a license faster
-	// when it appears, e.g. when a user upgrades from Free to Enterprise tier).
-	return a.initialPollingPeriod
+	// The current license is expired, update more often to try and fix it.
+	if IsExpiredLicense(cached.Payload) {
+		return a.initialPollingPeriod
+	}
+	// We already have a license, update at the slower interval.
+	return a.regularPollingPeriod
 }
 
 // reconcileLicenseWithKonnect retrieves a license from upstream and caches it if it is newer than the cached license or there is no cached license.
@@ -200,12 +206,20 @@ func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 			"updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
-	} else if cachedLicense, ok := a.cachedLicense.Get(); ok && retrievedLicense.UpdatedAt.After(cachedLicense.UpdatedAt) {
-		a.logger.V(util.InfoLevel).Info("Caching license retrieved from the upstream as it is newer than the cached one",
-			"cached_updated_at", cachedLicense.UpdatedAt.String(),
-			"retrieved_updated_at", retrievedLicense.UpdatedAt.String(),
-		)
-		a.updateCache(retrievedLicense)
+	} else if cachedLicense, ok := a.cachedLicense.Get(); ok {
+		if IsExpiredLicense(cachedLicense.Payload) {
+			a.logger.V(util.InfoLevel).Info("Caching license retrieved from the upstream as current license is expired",
+				"cached_updated_at", cachedLicense.UpdatedAt.String(),
+				"retrieved_updated_at", retrievedLicense.UpdatedAt.String(),
+			)
+			a.updateCache(retrievedLicense)
+		} else if retrievedLicense.UpdatedAt.After(cachedLicense.UpdatedAt) {
+			a.logger.V(util.InfoLevel).Info("Caching license retrieved from the upstream as it is newer than the cached one",
+				"cached_updated_at", cachedLicense.UpdatedAt.String(),
+				"retrieved_updated_at", retrievedLicense.UpdatedAt.String(),
+			)
+			a.updateCache(retrievedLicense)
+		}
 	} else {
 		a.logger.V(util.DebugLevel).Info("License cache is up to date")
 	}
@@ -223,4 +237,28 @@ func (a *Agent) updateCache(license KonnectLicense) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	a.cachedLicense = mo.Some(license)
+}
+
+// IsExpiredLicense returns true if given a well-formatted license string with an expiration date before now. It
+// returns false if the license expiration is after now, or if the license status is unknown due to a parse error.
+func IsExpiredLicense(license string) bool {
+	// Licenses from Kong APIs do not have formally-defined schemas in those APIs. License objects consist only of an ID,
+	// created/updated times, and an opaque payload string that we expect to be valid JSON with an expiration field.
+	// As we don't care about the rest of the license contents, this performs a basic path extraction and tries to parse
+	// a date out of it.
+	if !gjson.Valid(license) {
+		return false
+	}
+	expiry := gjson.Get(license, "license.payload.license_expiration_date")
+	if !expiry.Exists() {
+		return false
+	}
+	date, err := time.Parse(time.DateOnly, expiry.String())
+	if err != nil {
+		return false
+	}
+	if date.Before(time.Now()) {
+		return true
+	}
+	return false
 }

@@ -100,6 +100,12 @@ Adding a new version? You'll need three changes:
 - Bump `golang.org/x/net` to `0.23.0` and `google.golang.org/protobuf` to `1.33.0`
   To fix [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687) and [GO-2024-2611](https://pkg.go.dev/vuln/GO-2024-2611).
   [#5938](https://github.com/Kong/kubernetes-ingress-controller/pull/5938)
+- Remove the constraint of items of `parentRefs` can only be empty or
+  `gateway.network.k8s.io/Gateway` in validating `HTTPRoute`s. If an item in
+  `parentRefs`'s group/kind is not `gateway.network.k8s.io/Gateway`, the item
+  is seen as a parent other than the controller and ignored in parentRef check.
+  [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
+
 
 ## [3.1.3]
 
@@ -3340,7 +3346,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[3.1.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.4...v3.1.3
+[3.1.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.3...v3.1.4
 [3.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.2...v3.1.3
 [3.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.1...v3.1.2
 [3.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.0...v3.1.1

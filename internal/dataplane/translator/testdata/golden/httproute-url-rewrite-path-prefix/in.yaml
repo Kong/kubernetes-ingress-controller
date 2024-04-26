@@ -49,7 +49,7 @@ spec:
           urlRewrite:
             path:
               type: ReplacePrefixMatch
-              replacePrefixMatch: "/new-prefix"
+              replacePrefixMatch: /new-prefix
       backendRefs:
         - name: httpbin
           kind: Service

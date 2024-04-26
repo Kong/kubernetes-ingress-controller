@@ -95,6 +95,9 @@ Adding a new version? You'll need three changes:
 - `KongUpstreamPolicy` controller no longer requires existence of `HTTPRoute` CRD
   to start.
   [#5780](https://github.com/Kong/kubernetes-ingress-controller/pull/5780)
+- Bump `golang.org/x/net` to `0.23.0` and `google.golang.org/protobuf` to `1.33.0`
+  To fix [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687) and [GO-2024-2611](https://pkg.go.dev/vuln/GO-2024-2611).
+  [#5921](https://github.com/Kong/kubernetes-ingress-controller/pull/5921)
 
 ## [3.1.2]
 

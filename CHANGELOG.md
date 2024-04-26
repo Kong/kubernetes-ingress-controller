@@ -87,6 +87,22 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Breaking changes
+
+- Removed support for the deprecated `kongCredType` Secret field. If you have
+  not previously [updated to the credential label](https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/)
+  you must do so before upgrading to this version. This removal includes an
+  update to the webhook configuration that checks only Secrets with
+  `konghq.com/credential` or `konghq.com/validate` labels (for Secrets that
+  contain plugin configuration). This filter improves performance and
+  reliability by not checking Secrets the controller will never use. Users that
+  wish to defer adding `konghq.com/validate` to Secrets with plugin
+  configuration can set the `ingressController.admissionWebhook.filterSecrets`
+  chart values.yaml key to `false`. Doing so does not benefit from the
+  performance benefits, however, so labeling plugin configuration Secrets and
+  enabling the filter is recommended as soon as is convenient.
+  [#5856](https://github.com/Kong/kubernetes-ingress-controller/pull/5856)
+
 ### Added
 
 - Add a `/debug/config/raw-error` endpoint to the config dump diagnostic

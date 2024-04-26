@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -113,11 +114,13 @@ func TestConsumerCredential(t *testing.T) {
 	credential := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "basic-auth",
+			},
 		},
 		StringData: map[string]string{
-			"kongCredType": "basic-auth",
-			"username":     "test_consumer_credential",
-			"password":     "test_consumer_credential",
+			"username": "test_consumer_credential",
+			"password": "test_consumer_credential",
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})

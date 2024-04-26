@@ -68,7 +68,7 @@ func (ks *KongState) SanitizedCopy() *KongState {
 }
 
 func (ks *KongState) FillConsumersAndCredentials(
-	logger logr.Logger,
+	_ logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
@@ -115,11 +115,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 			}
 			credConfig := map[string]interface{}{}
 			// try the label first. if it's present, no need to check the field
-			credType, credTypeSource := util.ExtractKongCredentialType(secret)
-			if credTypeSource == util.CredentialTypeFromField {
-				logger.Error(nil,
-					fmt.Sprintf("Secret uses deprecated kongCredType field, needs konghq.com/credential=%s label", credType),
-					"namesapce", secret.Namespace, "name", secret.Name)
+			credType, err := util.ExtractKongCredentialType(secret)
+			if err != nil {
+				pushCredentialResourceFailures(fmt.Sprintf("could not load credential from Secret: %s", err))
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(
@@ -134,7 +132,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 					credConfig[k] = strings.Split(string(v), ",")
 					continue
 				}
-				// TODO this is a kongCredType-agnostic mutation that should only apply to Oauth2 credentials.
+				// TODO this is a credential type-agnostic mutation that should only apply to Oauth2 credentials.
 				// However, the credential-specific code after deals only in interface{}s, and we can't fix individual
 				// keys. To handle this properly we'd need to refactor the types used in all following code.
 				if k == "hash_secret" {

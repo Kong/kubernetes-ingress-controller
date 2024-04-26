@@ -272,8 +272,11 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 // else it returns false with the error message. If an error happens during
 // validation, error is returned.
 func (validator KongHTTPValidator) ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string) {
-	// If the secret doesn't specify a credential type (either by label or the secret's key) it's not a credentials secret.
-	if _, s := util.ExtractKongCredentialType(&secret); s == util.CredentialTypeAbsent {
+	// If the secret doesn't specify a credential type it's not a credentials secret. We shouldn't actually reach this
+	// codepath in practice because such secrets will be filtered out by the webhook secrets objectSelector and ignored.
+	// However, installs could potentially use an outdated webhook definition. Prior to 3.2 we only filtered in code and
+	// used a blanket selector.
+	if _, err := util.ExtractKongCredentialType(&secret); err != nil {
 		return true, ""
 	}
 

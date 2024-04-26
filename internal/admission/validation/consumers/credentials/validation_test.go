@@ -177,21 +177,6 @@ func TestValidateCredentials(t *testing.T) {
 			wantErr: fmt.Errorf("some fields were invalid due to missing data: rsa_public_key, key, secret"),
 		},
 		{
-			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 to be removed after deprecation window
-			name: "valid credential with deprectated field",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-				},
-				Data: map[string][]byte{
-					"key":          []byte("little-rabbits-be-good"),
-					"kongCredType": []byte("key-auth"),
-				},
-			},
-			wantErr: nil,
-		},
-		{
 			name: "invalid credential type",
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{

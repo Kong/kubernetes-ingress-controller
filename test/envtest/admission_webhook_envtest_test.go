@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
@@ -213,6 +215,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			kongPlugin: &kongv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-invalid-config-from",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				PluginName: "rate-limiting",
 				ConfigFrom: &kongv1.ConfigSource{
@@ -225,6 +230,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-config",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
@@ -233,6 +241,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-config",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
@@ -266,6 +277,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte("10"),
@@ -274,6 +288,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-invalid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`"10"`),
@@ -287,6 +304,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			kongPlugin: &kongv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-valid-config",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				PluginName: "rate-limiting",
 				Config: apiextensionsv1.JSON{
@@ -307,6 +327,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-valid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`10`),
@@ -315,6 +338,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "conf-secret-valid-field",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`15`),
@@ -325,15 +351,69 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
 			t.Cleanup(func() {
-				require.NoError(t, ctrlClient.Delete(ctx, tc.secretBefore))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretBefore)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretAfter)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.kongPlugin)))
 			})
+			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
 
 			require.NoError(t, ctrlClient.Create(ctx, tc.kongPlugin))
+
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				err := ctrlClient.Update(ctx, tc.secretAfter)
+				if tc.errorOnUpdate {
+					if !assert.Error(c, err) {
+						return
+					}
+					assert.Contains(c, err.Error(), tc.expectErrorContains)
+				} else if !assert.NoError(c, err) {
+					t.Logf("Error: %v", err)
+				}
+			}, 10*time.Second, 100*time.Millisecond)
+		})
+	}
+
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/5876
+	// This repeats all test cases without filtering Secrets in the webhook configuration. This behavior is slated
+	// for removal in 4.0, and the following block should be removed along with the behavior.
+	webhookConfig := validatingWebhookConfigWithClientConfig(t, admregv1.WebhookClientConfig{
+		URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", admissionWebhookPort)),
+		CABundle: webhookCert,
+	})
+	// Update requires an object with generated fields populated, so we Get() after using the builder. The builder just
+	// ensures the name and namespace match the original.
+	require.NoError(t, ctrlClient.Get(
+		ctx,
+		k8stypes.NamespacedName{Name: webhookConfig.Name, Namespace: webhookConfig.Namespace},
+		webhookConfig,
+		&client.GetOptions{},
+	))
+	for i, hook := range webhookConfig.Webhooks {
+		if hook.Name == "secrets.plugins.validation.ingress-controller.konghq.com" {
+			webhookConfig.Webhooks[i].ObjectSelector = nil
+		}
+	}
+	require.NoError(t, ctrlClient.Update(ctx, webhookConfig))
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Annoyingly, Create forcibly stores the resulting object in the tc field object we want to reuse.
+			// Clearing it manually is a bit silly, but works to let us reuse them.
+			tc.secretBefore.ResourceVersion = ""
+			tc.secretBefore.UID = ""
+			tc.secretAfter.ResourceVersion = ""
+			tc.secretAfter.UID = ""
+			tc.kongPlugin.ResourceVersion = ""
+			tc.kongPlugin.UID = ""
 			t.Cleanup(func() {
-				require.NoError(t, ctrlClient.Delete(ctx, tc.kongPlugin))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretBefore)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretAfter)))
+				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.kongPlugin)))
 			})
+			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
+
+			require.NoError(t, ctrlClient.Create(ctx, tc.kongPlugin))
 
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
 				err := ctrlClient.Update(ctx, tc.secretAfter)
@@ -408,6 +488,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
@@ -416,6 +499,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":10}`),
@@ -444,6 +530,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
@@ -452,6 +541,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
@@ -489,6 +581,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`5`),
@@ -497,6 +592,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-valid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`10`),
@@ -533,6 +631,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretBefore: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`5`),
@@ -541,6 +642,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			secretAfter: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-conf-secret-invalid-patch",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
+					},
 				},
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`"10"`),
@@ -611,21 +715,25 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "tuxcreds1",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "basic-auth",
+				},
 			},
 			StringData: map[string]string{
-				"kongCredType": "basic-auth",
-				"username":     "tux1",
-				"password":     "testpass",
+				"username": "tux1",
+				"password": "testpass",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "tuxcreds2",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "basic-auth",
+				},
 			},
 			StringData: map[string]string{
-				"kongCredType": "basic-auth",
-				"username":     "tux2",
-				"password":     "testpass",
+				"username": "tux2",
+				"password": "testpass",
 			},
 		},
 	} {
@@ -698,11 +806,13 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			credentials: []*corev1.Secret{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "electronscreds",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "basic-auth",
+					},
 				},
 				StringData: map[string]string{
-					"kongCredType": "basic-auth",
-					"username":     "electron",
-					"password":     "testpass",
+					"username": "electron",
+					"password": "testpass",
 				},
 			}},
 			wantErr: false,
@@ -727,21 +837,25 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "protonscreds1",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "proton",
-						"password":     "testpass",
+						"username": "proton",
+						"password": "testpass",
 					},
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "protonscreds2",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "electron", // username is unique constrained
-						"password":     "testpass", // password is not unique constrained
+						"username": "electron", // username is unique constrained
+						"password": "testpass", // password is not unique constrained
 					},
 				},
 			},
@@ -785,21 +899,25 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "neutronscreds1",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "neutron",
-						"password":     "testpass",
+						"username": "neutron",
+						"password": "testpass",
 					},
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "neutronscreds2",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "neutron", // username is unique constrained
-						"password":     "testpass",
+						"username": "neutron", // username is unique constrained
+						"password": "testpass",
 					},
 				},
 			},
@@ -825,11 +943,13 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "reasonablehammer",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "reasonablehammer",
-						"password":     "testpass", // not unique constrained, so even though someone else is using this password this should pass
+						"username": "reasonablehammer",
+						"password": "testpass", // not unique constrained, so even though someone else is using this password this should pass
 					},
 				},
 			},
@@ -854,11 +974,13 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "unreasonablehammer",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     "tux1", // unique constrained with previous created static consumer credentials
-						"password":     "testpass",
+						"username": "tux1", // unique constrained with previous created static consumer credentials
+						"password": "testpass",
 					},
 				},
 			},
@@ -939,11 +1061,13 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "brokenfence",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "invalid-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "invalid-auth", // not a valid credential type
-						"username":     "brokenfence",
-						"password":     "testpass",
+						"username": "brokenfence",
+						"password": "testpass",
 					},
 				},
 			),
@@ -954,11 +1078,13 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		validCredential := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "brokenfence",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "basic-auth",
+				},
 			},
 			StringData: map[string]string{
-				"kongCredType": "basic-auth",
-				"username":     "brokenfence",
-				"password":     "testpass",
+				"username": "brokenfence",
+				"password": "testpass",
 			},
 		}
 		require.NoError(t, ctrlClient.Create(ctx, validCredential))
@@ -996,7 +1122,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		require.NoError(t, ctrlClient.Update(ctx, validCredential))
 
 		t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
-		validCredential.Data["kongCredType"] = []byte("invalid-auth")
+		validCredential.ObjectMeta.Labels[labels.CredentialTypeLabel] = "invalid-auth"
 		err := ctrlClient.Update(ctx, validCredential)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "invalid credential type")
@@ -1012,10 +1138,12 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 			ctrlClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "invalid-jwt-",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
 				},
 				StringData: map[string]string{
-					"kongCredType": "jwt",
-					"algorithm":    "RS256",
+					"algorithm": "RS256",
 				},
 			}),
 			"missing required field(s): rsa_public_key, key, secret",
@@ -1029,12 +1157,14 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 				require.NoError(t, ctrlClient.Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "valid-jwt-" + strings.ToLower(algo) + "-",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "jwt",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "jwt",
-						"algorithm":    algo,
-						"key":          "key-name",
-						"secret":       "secret-name",
+						"algorithm": algo,
+						"key":       "key-name",
+						"secret":    "secret-name",
 					},
 				}), "failed to create JWT credential with algorithm %s", algo)
 			})
@@ -1047,12 +1177,14 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 				require.Error(t, ctrlClient.Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "invalid-jwt-" + strings.ToLower(algo) + "-",
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "jwt",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "jwt",
-						"algorithm":    algo,
-						"key":          "key-name",
-						"secret":       "secret-name",
+						"algorithm": algo,
+						"key":       "key-name",
+						"secret":    "secret-name",
 					},
 				}), "expected failure when creating JWT %s", algo)
 			})
@@ -1080,11 +1212,13 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 				credential := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: credentialName,
+						Labels: map[string]string{
+							labels.CredentialTypeLabel: "basic-auth",
+						},
 					},
 					StringData: map[string]string{
-						"kongCredType": "basic-auth",
-						"username":     credentialName,
-						"password":     "testpass",
+						"username": credentialName,
+						"password": "testpass",
 					},
 				}
 				t.Logf("creating %s Secret that contains credentials", credentialName)

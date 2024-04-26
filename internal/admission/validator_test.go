@@ -754,9 +754,15 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 		{
 			name: "valid key-auth credential with no consumers gets accepted",
 			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
 				Data: map[string][]byte{
-					"kongCredType": []byte("key-auth"),
-					"key":          []byte("my-key"),
+					"key": []byte("my-key"),
 				},
 			},
 			wantOK: true,
@@ -787,8 +793,14 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 		{
 			name: "invalid key-auth credential with no consumers gets rejected",
 			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
 				Data: map[string][]byte{
-					"kongCredType": []byte("key-auth"),
 					// missing key
 				},
 			},

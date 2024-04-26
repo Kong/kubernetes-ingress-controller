@@ -470,20 +470,24 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fooCredSecret",
 				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
 			},
 			Data: map[string][]byte{
-				"kongCredType": []byte("key-auth"),
-				"key":          []byte("whatever"),
-				"ttl":          []byte("1024"),
+				"key": []byte("whatever"),
+				"ttl": []byte("1024"),
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "barCredSecret",
 				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "oauth2",
+				},
 			},
 			Data: map[string][]byte{
-				"kongCredType":  []byte("oauth2"),
 				"name":          []byte("whatever"),
 				"client_id":     []byte("whatever"),
 				"client_secret": []byte("whatever"),
@@ -495,19 +499,22 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "emptyCredSecret",
 				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
 			},
-			Data: map[string][]byte{
-				"kongCredType": []byte("key-auth"),
-			},
+			Data: map[string][]byte{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "unsupportedCredSecret",
 				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "unsupported",
+				},
 			},
 			Data: map[string][]byte{
-				"kongCredType": []byte("unsupported"),
-				"foo":          []byte("bar"),
+				"foo": []byte("bar"),
 			},
 		},
 		{
@@ -520,19 +527,6 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			Data: map[string][]byte{
 				"key": []byte("little-rabbits-be-good"),
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "labeledSecretWithCredField",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
-			},
-			Data: map[string][]byte{
-				"kongCredType": []byte("key-auth"),
-				"key":          []byte("little-rabbits-be-good"),
 			},
 		},
 		{
@@ -743,40 +737,6 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 						Key: kong.String("little-rabbits-be-good"),
 						Tags: util.GenerateTagsForObject(&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "labeledSecret"},
-						}),
-					}}},
-				},
-			},
-		},
-		{
-			name: "KongConsumer with key-auth from label secret with the old cred field",
-			k8sConsumers: []*kongv1.KongConsumer{
-				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
-					},
-					Username: "foo",
-					CustomID: "foo",
-					Credentials: []string{
-						"labeledSecretWithCredField",
-					},
-				},
-			},
-			expectedKongStateConsumers: []Consumer{
-				{
-					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
-						CustomID: kong.String("foo"),
-					},
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{
-						Key: kong.String("little-rabbits-be-good"),
-						Tags: util.GenerateTagsForObject(&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "labeledSecretWithCredField"},
 						}),
 					}}},
 				},

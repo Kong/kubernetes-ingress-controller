@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
@@ -271,10 +272,12 @@ func configureConsumerWithAPIKey(
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
 			},
 			StringData: map[string]string{
-				"key":          name,
-				"kongCredType": "key-auth",
+				"key": name,
 			},
 		},
 		metav1.CreateOptions{},

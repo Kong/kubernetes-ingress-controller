@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -256,7 +257,10 @@ func (h RequestHandler) handleKongClusterPlugin(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=core,resources=secrets,versions=v1,name=secrets.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// NOTE this handler _does not_ use a kubebuilder directive, as our Secret handling requires webhook features
+// kubebuilder does not support (objectSelector). Instead, config/webhook/additional_secret_hooks.yaml includes
+// handwritten webhook rules that we patch into the webhook manifest.
+// See https://github.com/kubernetes-sigs/controller-tools/issues/553 for further info.
 
 func (h RequestHandler) handleSecret(
 	ctx context.Context,
@@ -271,17 +275,28 @@ func (h RequestHandler) handleSecret(
 
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
-		// TODO so long as we still handle the deprecated field, this has to remain
-		// once the deprecated field is removed, we must replace this with a label filter in the webhook itself
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/4853
-		if _, credentialTypeSource := util.ExtractKongCredentialType(&secret); credentialTypeSource != util.CredentialTypeAbsent {
+		// credential secrets
+		if credType, err := util.ExtractKongCredentialType(&secret); err == nil && credType != "" {
 			ok, message := h.Validator.ValidateCredential(ctx, secret)
 			if !ok {
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 			}
 		}
 
-		ok, message, err := h.checkReferrersOfSecret(ctx, &secret)
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/5876
+		// This catch-all block handles Secrets referenced by KongPlugin and KongClusterPlugin configuration. As of 3.2,
+		// these Secrets should use a "konghq.com/validate: plugin" label, but the original unfiltered behavior is still
+		// supported. It is slated for removal in 4.0. Once it is removed (or if we add additional Secret validation cases
+		// other than "plugin") this needs to change to a case that only applies if the valdiate label is present with the
+		// "plugin" value, probably using a 'switch validate := secret.Labels[labels.ValidateLabel]; labels.ValidateType(validate)'
+		// statement.
+		ok, count, message, err := h.checkReferrersOfSecret(ctx, &secret)
+		if count > 0 {
+			if secret.Labels[labels.ValidateLabel] != string(labels.PluginValidate) {
+				h.Logger.Info("Warning: Secret used in Kong(Cluster)Plugin, but missing 'konghq.com/validate: plugin' label."+
+					"This label will be required in a future release", "namespace", secret.Namespace, "name", secret.Name)
+			}
+		}
 		if err != nil {
 			return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
 		}
@@ -289,6 +304,7 @@ func (h RequestHandler) handleSecret(
 			return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
 		}
 
+		// no reference found in the blanket block, this is some random unrelated Secret and KIC should ignore it.
 		return responseBuilder.Allowed(true).Build(), nil
 
 	default:
@@ -298,45 +314,49 @@ func (h RequestHandler) handleSecret(
 
 // checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret
 // and rejects the secret if it generates invalid configurations for any of the referrers.
-func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, string, error) {
+func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, int, string, error) {
 	referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(secret)
 	if err != nil {
-		return false, "", fmt.Errorf("failed to list referrers of secret: %w", err)
+		return false, 0, "", fmt.Errorf("failed to list referrers of secret: %w", err)
 	}
 
+	count := 0
 	for _, obj := range referrers {
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
+			count++
 			plugin := obj.(*kongv1.KongPlugin)
 			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
-				return false, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
+				return false, count, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
 					plugin.Namespace, plugin.Name, err,
 				)
 			}
 			if !ok {
-				return false,
+				return false, count,
 					fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
 						plugin.Namespace, plugin.Name, message,
 					), nil
 			}
 		}
 		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
+			count++
 			plugin := obj.(*kongv1.KongClusterPlugin)
 			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
-				return false, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
+				return false, count, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
 					plugin.Name, err,
 				)
 			}
 			if !ok {
-				return false, fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
-					plugin.Name, message,
-				), nil
+				return false, count,
+					fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
+						plugin.Name, message,
+					), nil
 			}
 		}
 	}
-	return true, "", nil
+	return true, count, "", nil
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=gateways,versions=v1;v1beta1,name=gateways.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1

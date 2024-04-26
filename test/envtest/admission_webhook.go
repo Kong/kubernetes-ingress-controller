@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -29,13 +29,13 @@ func setupValidatingWebhookConfiguration(
 }
 
 func validatingWebhookConfigWithClientConfig(t *testing.T, clientConfig admregv1.WebhookClientConfig) *admregv1.ValidatingWebhookConfiguration {
-	file, err := os.ReadFile("../../config/webhook/manifests.yaml")
+	manifest, err := kubectl.RunKustomize("../../config/webhook/")
 	require.NoError(t, err)
-	file = bytes.ReplaceAll(file, []byte("---"), []byte("")) // We're only expecting one document in the file.
+	manifest = bytes.ReplaceAll(manifest, []byte("---"), []byte("")) // We're only expecting one document in the file.
 
 	// Load the webhook configuration from the generated manifest.
 	webhookConfig := &admregv1.ValidatingWebhookConfiguration{}
-	require.NoError(t, yaml.Unmarshal(file, webhookConfig))
+	require.NoError(t, yaml.Unmarshal(manifest, webhookConfig))
 
 	// Set the client config.
 	for i := range webhookConfig.Webhooks {

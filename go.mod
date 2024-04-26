@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v2
 
-go 1.21
+go 1.21.9
 
 // TODO: this is disabled by FOSSA action doesn't support go 1.21's toolchain clause:
 //

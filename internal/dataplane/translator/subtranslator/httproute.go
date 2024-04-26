@@ -358,7 +358,15 @@ func mustMarshalJSON[T any](val T) string {
 // The plugins can be set in two different ways:
 // - Direct conversion from the respective HTTPRouteFilter.
 // - ExtensionRef to plugins annotation from the ExtensionRef filter.
-func SetRoutePlugins(route *kongstate.Route, filters []gatewayapi.HTTPRouteFilter, path string, tags []*string, expressionsRouterEnabled bool) error {
+func SetRoutePlugins(
+	route *kongstate.Route,
+	filters []gatewayapi.HTTPRouteFilter,
+	path string,
+	tags []*string,
+	// As of now, expressions router is not supported for URLRewrite with PrefixMatchHTTPPathModifier.
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+	expressionsRouterEnabled bool,
+) error {
 	generatedPlugins, err := generatePluginsFromHTTPRouteFilters(filters, path, tags, expressionsRouterEnabled)
 	if err != nil {
 		return err
@@ -398,6 +406,8 @@ func generatePluginsFromHTTPRouteFilters(
 	filters []gatewayapi.HTTPRouteFilter,
 	path string,
 	tags []*string,
+	// As of now, expressions router is not supported for URLRewrite with PrefixMatchHTTPPathModifier.
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
 	expressionsRouterEnabled bool,
 ) (httpRouteFiltersOriginatedPlugins, error) {
 	if len(filters) == 0 {

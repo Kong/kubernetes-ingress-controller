@@ -7,6 +7,8 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.1.4](#314)
+ - [3.1.3](#313)
  - [3.1.2](#312)
  - [3.1.1](#311)
  - [3.1.0](#310)
@@ -84,17 +86,17 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.1.4]
+
+ Release date: 2024-04-26
 
 ### Fixed
 
-- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly.
-  [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658) 
-- Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
-  [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
-- `KongUpstreamPolicy` controller no longer requires existence of `HTTPRoute` CRD
-  to start.
-  [#5780](https://github.com/Kong/kubernetes-ingress-controller/pull/5780)
+- Do not generate invalid duplicate upstream targets when routes use multiple
+  Services with the same endpoints.
+  [#5817](https://github.com/Kong/kubernetes-ingress-controller/pull/5817)
+- Bump golang version to 1.21.9 to fix CVE [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687).
+  [#5905](https://github.com/Kong/kubernetes-ingress-controller/pull/5905)
 - Bump `golang.org/x/net` to `0.23.0` and `google.golang.org/protobuf` to `1.33.0`
   To fix [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687) and [GO-2024-2611](https://pkg.go.dev/vuln/GO-2024-2611).
   [#5938](https://github.com/Kong/kubernetes-ingress-controller/pull/5938)
@@ -104,6 +106,22 @@ Adding a new version? You'll need three changes:
   is seen as a parent other than the controller and ignored in parentRef check.
   [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
 
+
+## [3.1.3]
+
+> Release date: 2024-04-08
+
+### Fixed
+
+- Remove unnecessary tag support check that could incorrectly delete configuration if the check did not execute properly.
+  [#5658](https://github.com/Kong/kubernetes-ingress-controller/issues/5658)
+- Do not require `rsa_public_key` field in credential `Secret`s when working with jwt HMAC credentials.
+  [#5737](https://github.com/Kong/kubernetes-ingress-controller/issues/5737)
+- `KongUpstreamPolicy` controller no longer requires existence of `HTTPRoute` CRD
+  to start.
+  [#5780](https://github.com/Kong/kubernetes-ingress-controller/pull/5780)
+- Do not require namespaces when parsing errors about cluster scoped resources
+  [#5764](https://github.com/Kong/kubernetes-ingress-controller/issues/5764)
 
 ## [3.1.2]
 
@@ -3328,6 +3346,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.1.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.3...v3.1.4
+[3.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.2...v3.1.3
 [3.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.1...v3.1.2
 [3.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.2...v3.1.0

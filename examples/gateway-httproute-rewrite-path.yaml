@@ -118,7 +118,7 @@ spec:
           urlRewrite:
             path:
               type: ReplacePrefixMatch
-              replacePrefixMatch: "/echo"
+              replacePrefixMatch: /echo
       backendRefs:
         - name: echo
           port: 80

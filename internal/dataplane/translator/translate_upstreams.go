@@ -331,6 +331,16 @@ func getEndpoints(
 	return upstreamServers
 }
 
+// targetWeightOrDefault returns the effective value of a target weight pointer. If the pointer is non-nil, it returns
+// the pointee. If the pointer is nil, it returns 100, the default Kong target weight. This allows us to sum
+// deduplicated targets' weights if one happens to be unset in the controller.
+func targetWeightOrDefault(in *int) int {
+	if in != nil {
+		return *in
+	}
+	return 100
+}
+
 func updateTargetMap(targetMap map[string]kongstate.Target, t kongstate.Target) map[string]kongstate.Target {
 	// See https://github.com/Kong/kubernetes-ingress-controller/issues/5761:
 	// Duplicate targets will appear in configurations that use Services with the same selector, which are used
@@ -341,7 +351,7 @@ func updateTargetMap(targetMap map[string]kongstate.Target, t kongstate.Target) 
 	// instead requires t.Target.Target. For consistency, everything below explicitly includes the nested object
 	// name, so t.Target.Weight instead of t.Weight.
 	if existing, ok := targetMap[*t.Target.Target]; ok {
-		sum := *existing.Target.Weight + *t.Target.Weight
+		sum := targetWeightOrDefault(existing.Target.Weight) + targetWeightOrDefault(t.Target.Weight)
 		existing.Target.Weight = &sum
 		targetMap[*t.Target.Target] = existing
 	} else {

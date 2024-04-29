@@ -296,7 +296,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, proxyURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 }
 
-func TestIngressNamespaces(t *testing.T) {
+func TestIngressServiceUpstream(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -307,12 +307,15 @@ func TestIngressNamespaces(t *testing.T) {
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Replicas = lo.ToPtr(int32(3))
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.ObjectMeta.Annotations = map[string]string{}
+	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)

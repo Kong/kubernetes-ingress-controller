@@ -32,6 +32,7 @@ var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
 	// extended features
 	suite.SupportHTTPRouteResponseHeaderModification,
 	suite.SupportHTTPRoutePathRewrite,
+	suite.SupportHTTPRouteHostRewrite,
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
 	// suite.SupportHTTPRouteBackendTimeout,
@@ -46,6 +47,7 @@ var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRouteMethodMatching,
 	suite.SupportHTTPRouteResponseHeaderModification,
 	suite.SupportHTTPRoutePathRewrite,
+	suite.SupportHTTPRouteHostRewrite,
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
 	// suite.SupportHTTPRouteBackendTimeout,

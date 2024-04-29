@@ -1055,8 +1055,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										{
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
-												"append": map[string][]string{
-													"headers": {"X-Test-Header-1:test-value-1"},
+												"append": map[string]interface{}{
+													"headers": []interface{}{"X-Test-Header-1:test-value-1"},
 												},
 											},
 										},
@@ -1088,8 +1088,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										{
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
-												"append": map[string][]string{
-													"headers": {"X-Test-Header-2:test-value-2"},
+												"append": map[string]interface{}{
+													"headers": []interface{}{"X-Test-Header-2:test-value-2"},
 												},
 											},
 										},
@@ -1465,8 +1465,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										{
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
-												"append": map[string][]string{
-													"headers": {"X-Test-Header-1:test-value-1"},
+												"append": map[string]interface{}{
+													"headers": []interface{}{"X-Test-Header-1:test-value-1"},
 												},
 											},
 										},

@@ -2,7 +2,6 @@ package subtranslator
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -54,23 +53,23 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("request-transformer"),
 					Config: kong.Configuration{
-						"add": map[string][]string{
-							"headers": {
+						"add": map[string]interface{}{
+							"headers": []interface{}{
 								"header-to-set:bar",
 							},
 						},
-						"append": map[string][]string{
-							"headers": {
+						"append": map[string]interface{}{
+							"headers": []interface{}{
 								"header-to-add:foo",
 							},
 						},
-						"remove": map[string][]string{
-							"headers": {
+						"remove": map[string]interface{}{
+							"headers": []string{
 								"header-to-remove",
 							},
 						},
-						"replace": map[string][]string{
-							"headers": {
+						"replace": map[string]interface{}{
+							"headers": []interface{}{
 								"header-to-set:bar",
 							},
 						},
@@ -135,23 +134,23 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("response-transformer"),
 					Config: kong.Configuration{
-						"add": map[string][]string{
-							"headers": {
+						"add": map[string]interface{}{
+							"headers": []interface{}{
 								"header-to-set:bar",
 							},
 						},
-						"append": map[string][]string{
-							"headers": {
+						"append": map[string]interface{}{
+							"headers": []interface{}{
 								"header-to-add:foo",
 							},
 						},
-						"remove": map[string][]string{
-							"headers": {
+						"remove": map[string]interface{}{
+							"headers": []string{
 								"header-to-remove",
 							},
 						},
-						"replace": map[string][]string{
-							"headers": {
+						"replace": map[string]interface{}{
+							"headers": []interface{}{
 								"header-to-set:bar",
 							},
 						},
@@ -292,7 +291,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		modifier                      *gatewayapi.HTTPURLRewriteFilter
 		firstMatchPath                string
 		expectedKongRouteModification kongstate.Route
-		expected                      kong.Plugin
+		expected                      []kong.Plugin
 		expectedErr                   error
 	}{
 		{
@@ -303,14 +302,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 					ReplaceFullPath: lo.ToPtr("/new-path"),
 				},
 			},
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": "/new-path",
 					},
 				},
-			},
+			}},
 			expectedErr: nil,
 		},
 		{
@@ -322,14 +321,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": "/new$(uri_captures[1])",
 					},
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -348,14 +347,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
 					},
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -374,14 +373,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": `/prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
 					},
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -400,14 +399,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
 					},
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -426,14 +425,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
 					},
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -452,14 +451,14 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": `/new-prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
 					},
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -478,11 +477,76 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix/",
-			expected: kong.Plugin{
+			expected: []kong.Plugin{{
 				Name: lo.ToPtr("request-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]string{
 						"uri": `/new-prefix$(uri_captures[1])`,
+					},
+				},
+			}},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with hostname",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("replaced.host")),
+			},
+			expected: []kong.Plugin{{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string][]string{
+						"headers": {
+							"host:replaced.host",
+						},
+					},
+					"add": map[string][]string{
+						"headers": {
+							"host:replaced.host",
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "URLRewriteFilter with hostname and path",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+				},
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("replaced.host")),
+			},
+			firstMatchPath: "/prefix",
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": `/new-prefix$(uri_captures[1])`,
+						},
+					},
+				},
+				{
+					Name: lo.ToPtr("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string][]string{
+							"headers": {
+								"host:replaced.host",
+							},
+						},
+						"add": map[string][]string{
+							"headers": {
+								"host:replaced.host",
+							},
+						},
 					},
 				},
 			},
@@ -495,31 +559,22 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 		},
-		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
-		{
-			name: "valid URLRewriteFilter with unsupported",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("hostname")),
-			},
-			expected:    kong.Plugin{},
-			expectedErr: fmt.Errorf("unsupported hostname replace for %s", gatewayapi.HTTPRouteFilterURLRewrite),
-		},
 		{
 			name:        "nil URLRewriteFilter",
 			modifier:    nil,
-			expected:    kong.Plugin{},
+			expected:    nil,
 			expectedErr: errors.New("URLRewrite is not provided"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath, false)
+			plugins, routeModifiers, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath, false)
 			require.Equal(t, tc.expectedErr, err)
-			require.Equal(t, tc.expected, plugin)
+			require.Equal(t, tc.expected, plugins)
 
 			route := kongstate.Route{}
-			if routeModifier != nil {
+			for _, routeModifier := range routeModifiers {
 				routeModifier(&route)
 			}
 			require.Equal(t, tc.expectedKongRouteModification, route)
@@ -684,6 +739,31 @@ func TestMergePluginsOfTheSameType(t *testing.T) {
 					Name: lo.ToPtr("plugin1"),
 					Config: kong.Configuration{
 						"key1": "value1",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types with same configuration keys - slices are appended",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": []interface{}{"value1"},
+					},
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": []interface{}{"value2"},
+					},
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": []interface{}{"value1", "value2"},
 					},
 				},
 			},

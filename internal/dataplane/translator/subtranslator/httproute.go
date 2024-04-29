@@ -439,14 +439,12 @@ func generatePluginsFromHTTPRouteFilters(
 			pluginNamesFromExtensionRef = append(pluginNamesFromExtensionRef, plugin)
 
 		case gatewayapi.HTTPRouteFilterURLRewrite:
-			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path, expressionsRouterEnabled)
+			plugins, routeModifiers, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path, expressionsRouterEnabled)
 			if err != nil {
 				return httpRouteFiltersOriginatedPlugins{}, err
 			}
-			kongPlugins = append(kongPlugins, plugin)
-			if routeModifier != nil {
-				kongRouteModifiers = append(kongRouteModifiers, routeModifier)
-			}
+			kongPlugins = append(kongPlugins, plugins...)
+			kongRouteModifiers = append(kongRouteModifiers, routeModifiers...)
 
 		case gatewayapi.HTTPRouteFilterRequestMirror:
 			// not supported
@@ -482,11 +480,12 @@ func mergePluginsOfTheSameType(plugins []kong.Plugin) ([]kong.Plugin, error) {
 		return *p.Name // Name is effectively a plugin type.
 	})
 	for pluginName, plugins := range pluginsByName {
+		plugins := plugins
 		// If we produced multiple plugins of the same type, we need to merge their configurations now.
 		if len(plugins) > 1 {
 			mergedPlugin := *plugins[0].DeepCopy()
-			for _, plugin := range plugins {
-				if err := mergo.Merge(&mergedPlugin.Config, plugin.Config); err != nil {
+			for _, plugin := range plugins[1:] {
+				if err := mergo.Merge(&mergedPlugin.Config, plugin.Config, mergo.WithAppendSlice); err != nil {
 					// Should never happen as we're passing the same type of objects.
 					return nil, fmt.Errorf("failed to merge %q plugin configurations: %w", pluginName, err)
 				}
@@ -592,31 +591,31 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	// modifier.Set is converted to a pair composed of "replace" and "add"
 	if modifier.Set != nil {
-		setModifiers := make([]string, 0, len(modifier.Set))
+		setModifiers := make([]interface{}, 0, len(modifier.Set))
 		for _, s := range modifier.Set {
 			setModifiers = append(setModifiers, kongHeaderFormatter(s))
 		}
-		plugin.Config["replace"] = map[string][]string{
+		plugin.Config["replace"] = map[string]interface{}{
 			"headers": setModifiers,
 		}
-		plugin.Config["add"] = map[string][]string{
+		plugin.Config["add"] = map[string]interface{}{
 			"headers": setModifiers,
 		}
 	}
 
 	// modifier.Add is converted to "append"
 	if modifier.Add != nil {
-		appendModifiers := make([]string, 0, len(modifier.Add))
+		appendModifiers := make([]interface{}, 0, len(modifier.Add))
 		for _, a := range modifier.Add {
 			appendModifiers = append(appendModifiers, kongHeaderFormatter(a))
 		}
-		plugin.Config["append"] = map[string][]string{
+		plugin.Config["append"] = map[string]interface{}{
 			"headers": appendModifiers,
 		}
 	}
 
 	if modifier.Remove != nil {
-		plugin.Config["remove"] = map[string][]string{
+		plugin.Config["remove"] = map[string]interface{}{
 			"headers": modifier.Remove,
 		}
 	}
@@ -632,36 +631,74 @@ func generateRequestTransformerForURLRewrite(
 	filter *gatewayapi.HTTPURLRewriteFilter,
 	path string,
 	expressionsRouterEnabled bool,
-) (kong.Plugin, kongRouteModifier, error) {
+) ([]kong.Plugin, []kongRouteModifier, error) {
 	if filter == nil {
-		return kong.Plugin{}, nil, fmt.Errorf("%s is not provided", gatewayapi.HTTPRouteFilterURLRewrite)
+		return nil, nil, fmt.Errorf("%s is not provided", gatewayapi.HTTPRouteFilterURLRewrite)
 	}
-
 	if filter.Path == nil && filter.Hostname == nil {
-		return kong.Plugin{}, nil, fmt.Errorf("%s missing Path and Hostname", gatewayapi.HTTPRouteFilterURLRewrite)
+		return nil, nil, fmt.Errorf("%s missing Path and Hostname", gatewayapi.HTTPRouteFilterURLRewrite)
 	}
 
+	var (
+		plugins        []kong.Plugin
+		routeModifiers []kongRouteModifier
+	)
 	if filter.Path != nil {
-		switch filter.Path.Type {
-		case gatewayapi.FullPathHTTPPathModifier:
-			plugin, err := generateRequestTransformerForURLRewriteFullPath(filter)
-			if err != nil {
-				return kong.Plugin{}, nil, fmt.Errorf("failed to generate request-transformer plugin for %s: %w", gatewayapi.HTTPRouteFilterURLRewrite, err)
-			}
-			return plugin, nil, nil
-
-		case gatewayapi.PrefixMatchHTTPPathModifier:
-			plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path, expressionsRouterEnabled)
-			return plugin, routeModifier, nil
+		plugin, modifier, err := generateRequestTransformerForURLRewritePath(filter, path, expressionsRouterEnabled)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to generate request-transformer plugin for Path: %w", err)
+		}
+		plugins = append(plugins, plugin)
+		if modifier != nil {
+			routeModifiers = append(routeModifiers, modifier)
 		}
 	}
-
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
 	if filter.Hostname != nil {
-		return kong.Plugin{}, nil, fmt.Errorf("unsupported hostname replace for %s", gatewayapi.HTTPRouteFilterURLRewrite)
+		plugins = append(plugins, generateRequestTransformerForURLRewriteHostname(filter))
 	}
 
-	return kong.Plugin{}, nil, fmt.Errorf("invalid %s config", gatewayapi.HTTPRouteFilterURLRewrite)
+	return plugins, routeModifiers, nil
+}
+
+func generateRequestTransformerForURLRewritePath(
+	filter *gatewayapi.HTTPURLRewriteFilter,
+	path string,
+	expressionsRouterEnabled bool,
+) (kong.Plugin, kongRouteModifier, error) {
+	switch filter.Path.Type {
+	case gatewayapi.FullPathHTTPPathModifier:
+		plugin, err := generateRequestTransformerForURLRewriteFullPath(filter)
+		if err != nil {
+			return kong.Plugin{}, nil, fmt.Errorf("failed to generate request-transformer plugin for %s: %w", gatewayapi.HTTPRouteFilterURLRewrite, err)
+		}
+		return plugin, nil, nil
+
+	case gatewayapi.PrefixMatchHTTPPathModifier:
+		plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path, expressionsRouterEnabled)
+		return plugin, routeModifier, nil
+	default:
+		return kong.Plugin{}, nil, fmt.Errorf("unsupported path type %s for %s", filter.Path.Type, gatewayapi.HTTPRouteFilterURLRewrite)
+	}
+}
+
+func generateRequestTransformerForURLRewriteHostname(
+	filter *gatewayapi.HTTPURLRewriteFilter,
+) kong.Plugin {
+	return kong.Plugin{
+		Name: kong.String("request-transformer"),
+		Config: kong.Configuration{
+			"replace": map[string][]string{
+				"headers": {
+					fmt.Sprintf("host:%s", string(*filter.Hostname)),
+				},
+			},
+			"add": map[string][]string{
+				"headers": {
+					fmt.Sprintf("host:%s", string(*filter.Hostname)),
+				},
+			},
+		},
+	}
 }
 
 // generateRequestTransformerForURLRewriteFullPath generates a request-transformer plugin for the URLRewrite filter

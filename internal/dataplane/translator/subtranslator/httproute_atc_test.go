@@ -200,8 +200,8 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 						{
 							Name: kong.String("request-transformer"),
 							Config: kong.Configuration{
-								"append": map[string][]string{
-									"headers": {"foo:bar"},
+								"append": map[string]interface{}{
+									"headers": []interface{}{"foo:bar"},
 								},
 							},
 						},

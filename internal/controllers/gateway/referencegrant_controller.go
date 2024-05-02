@@ -58,8 +58,9 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
-		&handler.EnqueueRequestForObject{},
+		source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{},
+			&handler.TypedEnqueueRequestForObject[*gatewayapi.ReferenceGrant]{},
+		),
 	)
 }
 

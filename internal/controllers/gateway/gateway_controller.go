@@ -104,9 +104,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch Gateway objects, filtering out any Gateways which are not configured with
 	// a supported GatewayClass controller name.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass),
+		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{},
+			&handler.TypedEnqueueRequestForObject[*gatewayapi.Gateway]{},
+			predicate.NewTypedPredicateFuncs(r.gatewayHasMatchingGatewayClass),
+		),
 	); err != nil {
 		return err
 	}
@@ -114,9 +115,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch for updates to gatewayclasses, if any gateway classes change, enqueue
 	// reconciliation for all supported gateway objects which reference it.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
-		predicate.NewPredicateFuncs(r.gatewayClassMatchesController),
+		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
+			predicate.NewTypedPredicateFuncs(r.gatewayClassMatchesController),
+		),
 	); err != nil {
 		return err
 	}
@@ -125,9 +127,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// reconciliation on all Gateway objects referenced by it (in the most common
 	// deployments this will be a single Gateway).
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
-		predicate.NewPredicateFuncs(r.isGatewayService),
+		source.Kind(mgr.GetCache(), &corev1.Service{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForService),
+			predicate.NewTypedPredicateFuncs(r.isGatewayService),
+		),
 	); err != nil {
 		return err
 	}
@@ -135,8 +138,9 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
 	// reconciliation on the gateway, as we need to update the number of attachedRoutes.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
+		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
+		),
 	); err != nil {
 		return err
 	}
@@ -144,9 +148,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.enableReferenceGrant {
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
-			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
+			source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{},
+				handler.TypedEnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+				predicate.NewTypedPredicateFuncs(referenceGrantHasGatewayFrom),
+			),
 		); err != nil {
 			return err
 		}
@@ -174,17 +179,7 @@ func (r *GatewayReconciler) SetLogger(l logr.Logger) {
 
 // gatewayHasMatchingGatewayClass is a watch predicate which filters out reconciliation events for
 // gateway objects which aren't supported by this controller or not using an unmanaged GatewayClass.
-func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
-	gateway, ok := obj.(*gatewayapi.Gateway)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"Gateway watch predicate received unexpected object type",
-			"expected", "*gatewayapi.Gateway", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
+func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(gateway *gatewayapi.Gateway) bool {
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
@@ -203,23 +198,14 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
 // aren't configured with the required ControllerName or not annotated as unmanaged.
-func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayapi.GatewayClass)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"Gatewayclass watch predicate received unexpected object type",
-			"expected", "*gatewayapi.GatewayClass", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
+func (r *GatewayReconciler) gatewayClassMatchesController(gatewayClass *gatewayapi.GatewayClass) bool {
 	return isGatewayClassControlled(gatewayClass)
 }
 
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
 // by a gatewayclass to enqueue them for reconciliation. This is generally used when a GatewayClass
 // is updated to ensure that idle gateways are initialized when their gatewayclass becomes available.
-func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gatewayClass client.Object) []reconcile.Request {
+func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gatewayClass *gatewayapi.GatewayClass) []reconcile.Request {
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
@@ -230,16 +216,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
-func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"Referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
-		)
-		return nil
-	}
+func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, grant *gatewayapi.ReferenceGrant) []reconcile.Request {
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
@@ -267,7 +244,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 // GatewayClasses supported by this controller and are configured for the same service via
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
-func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc client.Object) (recs []reconcile.Request) {
+func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc *corev1.Service) (recs []reconcile.Request) {
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways for service in watch predicates", "service", svc)
@@ -292,16 +269,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
-func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj client.Object) []reconcile.Request {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"HTTPRoute watch predicate received unexpected object type",
-			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
-		)
-		return nil
-	}
+func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, httpRoute *gatewayapi.HTTPRoute) []reconcile.Request {
 	recs := []reconcile.Request{}
 	for _, gateway := range routeAcceptedByGateways(httpRoute.Namespace, httpRoute.Status.Parents) {
 		recs = append(recs, reconcile.Request{
@@ -314,7 +282,7 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj clie
 
 // isGatewayService is a watch predicate that filters out events for objects that aren't
 // the gateway service referenced by --publish-service or --publish-service-udp.
-func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
+func (r *GatewayReconciler) isGatewayService(obj *corev1.Service) bool {
 	isPublishService := fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceRef.String()
 	isUDPPublishService := r.PublishServiceUDPRef.IsPresent() &&
 		fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceUDPRef.MustGet().String()
@@ -322,11 +290,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 	return isPublishService || isUDPPublishService
 }
 
-func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
-	if !ok {
-		return false
-	}
+func referenceGrantHasGatewayFrom(grant *gatewayapi.ReferenceGrant) bool {
 	for _, from := range grant.Spec.From {
 		if from.Kind == "Gateway" && from.Group == "gateway.networking.k8s.io" {
 			return true

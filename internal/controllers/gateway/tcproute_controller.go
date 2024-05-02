@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -68,14 +67,21 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGatewayClass),
-		predicate.Funcs{
-			GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
-			CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-		},
+		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.listTCPRoutesForGatewayClass),
+			predicate.TypedFuncs[*gatewayapi.GatewayClass]{
+				GenericFunc: func(_ event.TypedGenericEvent[*gatewayapi.GatewayClass]) bool { return false }, // we don't need to enqueue from generic
+				CreateFunc: func(e event.TypedCreateEvent[*gatewayapi.GatewayClass]) bool {
+					return isGatewayClassEventInClass(r.Log, e)
+				},
+				UpdateFunc: func(e event.TypedUpdateEvent[*gatewayapi.GatewayClass]) bool {
+					return isGatewayClassEventInClass(r.Log, e)
+				},
+				DeleteFunc: func(e event.TypedDeleteEvent[*gatewayapi.GatewayClass]) bool {
+					return isGatewayClassEventInClass(r.Log, e)
+				},
+			},
+		),
 	); err != nil {
 		return err
 	}
@@ -85,20 +91,22 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
+		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
+		),
 	); err != nil {
 		return err
 	}
 
 	if r.StatusQueue != nil {
 		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+			source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
 				Group:   gatewayv1alpha2.GroupVersion.Group,
 				Version: gatewayv1alpha2.GroupVersion.Version,
 				Kind:    "TCPRoute",
-			})},
-			&handler.EnqueueRequestForObject{},
+			}),
+				&handler.EnqueueRequestForObject{},
+			),
 		); err != nil {
 			return err
 		}
@@ -110,8 +118,9 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an TCPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.TCPRoute{}),
-		&handler.EnqueueRequestForObject{},
+		source.Kind(mgr.GetCache(), &gatewayapi.TCPRoute{},
+			&handler.TypedEnqueueRequestForObject[*gatewayapi.TCPRoute]{},
+		),
 	)
 }
 
@@ -125,14 +134,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // to determine the TCPRoutes as the relationship has to be discovered entirely
 // by object reference. This relies heavily on the inherent performance benefits of
 // the cached manager client to avoid API overhead.
-func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
-	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayapi.GatewayClass)
-	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
-		return nil
-	}
-
+func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, gwc *gatewayapi.GatewayClass) []reconcile.Request {
 	// map all Gateway objects
 	gatewayList := gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
@@ -218,14 +220,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 // the moment for v1alpha2. As future releases of Gateway come out we'll need to
 // continue iterating on this and perhaps advocating for upstream changes to help avoid
 // this kind of problem without having to enqueue extra objects.
-func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayapi.Gateway)
-	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
-		return nil
-	}
-
+func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, gw *gatewayapi.Gateway) []reconcile.Request {
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {

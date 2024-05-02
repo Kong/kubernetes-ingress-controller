@@ -142,20 +142,22 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) e
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
 		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+			source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
 				Group:   "configuration.konghq.com",
 				Version: "v1alpha1",
 				Kind:    "KongLicense",
-			})},
-			&handler.EnqueueRequestForObject{},
+			}),
+				&handler.TypedEnqueueRequestForObject[client.Object]{},
+			),
 		); err != nil {
 			return err
 		}
 	}
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1alpha1.KongLicense{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(isKongLicenseEnabled),
+		source.Kind(mgr.GetCache(), &kongv1alpha1.KongLicense{},
+			&handler.TypedEnqueueRequestForObject[*kongv1alpha1.KongLicense]{},
+			predicate.NewTypedPredicateFuncs(isKongLicenseEnabled),
+		),
 	)
 }
 
@@ -164,8 +166,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=konglicenses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=konglicenses/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=konglicenses,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=konglicenses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects.
 func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -297,11 +299,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License]
 // KongV1Alpha1 KongLicense - Private Methods of Reconciler
 // -----------------------------------------------------------------------------
 
-func isKongLicenseEnabled(obj client.Object) bool {
-	kongLicense, ok := obj.(*kongv1alpha1.KongLicense)
-	if !ok {
-		return false
-	}
+func isKongLicenseEnabled(kongLicense *kongv1alpha1.KongLicense) bool {
 	return kongLicense.Enabled
 }
 

@@ -1,11 +1,10 @@
 module github.com/kong/kubernetes-ingress-controller/tools
 
-go 1.22
+go 1.22.2
 
 require (
 	github.com/go-delve/delve v1.22.1
 	github.com/kyoh86/looppointer v0.2.1
-
 )
 
 require (

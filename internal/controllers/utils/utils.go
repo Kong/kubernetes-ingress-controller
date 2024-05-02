@@ -14,11 +14,8 @@ import (
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
 
 // IsDefaultIngressClass returns whether an IngressClass is the default IngressClass.
-func IsDefaultIngressClass(obj client.Object) bool {
-	if ingressClass, ok := obj.(*netv1.IngressClass); ok {
-		return ingressClass.ObjectMeta.Annotations[defaultIngressClassAnnotation] == "true"
-	}
-	return false
+func IsDefaultIngressClass(ingressClass *netv1.IngressClass) bool {
+	return ingressClass.ObjectMeta.Annotations[defaultIngressClassAnnotation] == "true"
 }
 
 // MatchesIngressClass indicates whether or not an object belongs to a given ingress class.
@@ -37,13 +34,13 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 
 // GeneratePredicateFuncsForIngressClassFilter builds a controller-runtime reconciliation predicate function which filters out objects
 // which have their ingress class set to the a value other than the controller class.
-func GeneratePredicateFuncsForIngressClassFilter(name string) predicate.Funcs {
-	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+func GeneratePredicateFuncsForIngressClassFilter[T client.Object](name string) predicate.TypedFuncs[T] {
+	preds := predicate.NewTypedPredicateFuncs(func(obj T) bool {
 		// we assume true for isDefault here because the predicates have no client and cannot check if the class is
 		// default. classless and are filtered out by Reconcile() if the configured class is not the default class
 		return MatchesIngressClass(obj, name, true)
 	})
-	preds.UpdateFunc = func(e event.UpdateEvent) bool {
+	preds.UpdateFunc = func(e event.TypedUpdateEvent[T]) bool {
 		return MatchesIngressClass(e.ObjectOld, name, true) || MatchesIngressClass(e.ObjectNew, name, true)
 	}
 	return preds

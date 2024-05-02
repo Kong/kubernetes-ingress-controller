@@ -531,12 +531,13 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
 		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "{{.Group}}",
-				Version: "{{.Version}}",
-				Kind:    "{{.Kind}}",
-			})},
-			&handler.EnqueueRequestForObject{},
+				source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "{{.Group}}",
+					Version: "{{.Version}}",
+					Kind:    "{{.Kind}}",
+				}),
+				&handler.TypedEnqueueRequestForObject[client.Object]{},
+			),
 		); err != nil {
 			return err
 		}
@@ -545,28 +546,30 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 {{- if .AcceptsIngressClassNameAnnotation}}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
-			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+				source.Kind(mgr.GetCache(), &netv1.IngressClass{},
+				handler.TypedEnqueueRequestsFromMapFunc(r.listClassless),
+				predicate.NewTypedPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 		if err != nil {
 			return err
 		}
 	}
-	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter[*{{.PackageImportAlias}}.{{.Kind}}](r.IngressClassName)
 {{- end}}
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &{{.PackageImportAlias}}.{{.Kind}}{}),
-		&handler.EnqueueRequestForObject{},
+			source.Kind(mgr.GetCache(), &{{.PackageImportAlias}}.{{.Kind}}{},
+			&handler.TypedEnqueueRequestForObject[*{{.PackageImportAlias}}.{{.Kind}}]{},
 {{- if .AcceptsIngressClassNameAnnotation}}
-		preds,
+			preds,
 {{- end}}
+		),
 	)
 }
 
 {{- if .AcceptsIngressClassNameAnnotation}}
 // listClassless finds and reconciles all objects without ingress class information
-func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(ctx context.Context, _ *netv1.IngressClass) []reconcile.Request {
 	resourceList := &{{.PackageImportAlias}}.{{.Kind}}List{}
 	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless {{.Plural}}")

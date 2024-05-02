@@ -58,13 +58,14 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	predicateFuncs := predicate.NewPredicateFuncs(r.shouldReconcileSecret)
+	predicateFuncs := predicate.NewTypedPredicateFuncs(r.shouldReconcileSecret)
 	// we should always try to delete secrets in caches when they are deleted in cluster.
-	predicateFuncs.DeleteFunc = func(_ event.DeleteEvent) bool { return true }
+	predicateFuncs.DeleteFunc = func(_ event.TypedDeleteEvent[*corev1.Secret]) bool { return true }
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Secret{}),
-		&handler.EnqueueRequestForObject{},
-		predicateFuncs,
+		source.Kind(mgr.GetCache(), &corev1.Secret{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
+			predicateFuncs,
+		),
 	)
 }
 
@@ -77,12 +78,7 @@ func (r *CoreV1SecretReconciler) SetLogger(l logr.Logger) {
 // and stored in cache of the controller. It returns true for the secret should be reconciled when:
 // - the secret has label: konghq.com/ca-cert:true
 // - or the secret is referred by objects we care (service, ingress, gateway, ...)
-func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return false
-	}
-
+func (r *CoreV1SecretReconciler) shouldReconcileSecret(secret *corev1.Secret) bool {
 	l := secret.Labels
 	if l != nil {
 		if l[CACertLabelKey] == "true" {

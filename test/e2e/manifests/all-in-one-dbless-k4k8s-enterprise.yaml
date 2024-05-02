@@ -2762,6 +2762,7 @@ spec:
                           x-kubernetes-list-type: atomic
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                 type: object
             type: object
         type: object
@@ -2934,6 +2935,7 @@ spec:
                           x-kubernetes-list-type: atomic
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                 type: object
             type: object
         type: object

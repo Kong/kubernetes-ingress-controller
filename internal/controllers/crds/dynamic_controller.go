@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -63,9 +62,10 @@ func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &apiextensionsv1.CustomResourceDefinition{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.isOneOfRequiredCRDs),
+		source.Kind(mgr.GetCache(), &apiextensionsv1.CustomResourceDefinition{},
+			&handler.TypedEnqueueRequestForObject[*apiextensionsv1.CustomResourceDefinition]{},
+			predicate.NewTypedPredicateFuncs(r.isOneOfRequiredCRDs),
+		),
 	)
 }
 
@@ -109,12 +109,7 @@ func (r *DynamicCRDController) allRequiredCRDsInstalled() bool {
 	})
 }
 
-func (r *DynamicCRDController) isOneOfRequiredCRDs(obj client.Object) bool {
-	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
-	if !ok {
-		return false
-	}
-
+func (r *DynamicCRDController) isOneOfRequiredCRDs(crd *apiextensionsv1.CustomResourceDefinition) bool {
 	return lo.ContainsBy(r.RequiredCRDs, func(gvr schema.GroupVersionResource) bool {
 		versionMatches := lo.ContainsBy(crd.Spec.Versions, func(crdv apiextensionsv1.CustomResourceDefinitionVersion) bool {
 			return crdv.Name == gvr.Version

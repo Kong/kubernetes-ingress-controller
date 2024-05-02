@@ -67,9 +67,10 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-		predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
+		source.Kind(mgr.GetCache(), &corev1.Service{},
+			handler.TypedEnqueueRequestsFromMapFunc(getUpstreamPolicyForObject[*corev1.Service](r.Client, r.Log)),
+			predicate.NewTypedPredicateFuncs(doesObjectReferUpstreamPolicy[*corev1.Service]),
+		),
 	); err != nil {
 		return err
 	}
@@ -78,8 +79,9 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
 		// of the HTTPRoute.
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
+			source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
+			),
 		); err != nil {
 			return err
 		}
@@ -87,17 +89,19 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 
 	if r.KongServiceFacadeEnabled {
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &incubatorv1alpha1.KongServiceFacade{}),
-			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
+			source.Kind(mgr.GetCache(), &incubatorv1alpha1.KongServiceFacade{},
+				handler.TypedEnqueueRequestsFromMapFunc(getUpstreamPolicyForObject[*incubatorv1alpha1.KongServiceFacade](r.Client, r.Log)),
+				predicate.NewTypedPredicateFuncs(doesObjectReferUpstreamPolicy[*incubatorv1alpha1.KongServiceFacade]),
+			),
 		); err != nil {
 			return err
 		}
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1beta1.KongUpstreamPolicy{}),
-		&handler.EnqueueRequestForObject{},
+		source.Kind(mgr.GetCache(), &kongv1beta1.KongUpstreamPolicy{},
+			&handler.TypedEnqueueRequestForObject[*kongv1beta1.KongUpstreamPolicy]{},
+		),
 	); err != nil {
 		return err
 	}
@@ -106,23 +110,25 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		// Watch for notifications on the status queue from Services and KongServiceFacades as their status change
 		// needs to be propagated to the KongUpstreamPolicy's ancestor Programmed status.
 		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+			source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
 				Version: "v1",
 				Kind:    "Service",
-			})},
-			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
+			}),
+				handler.TypedEnqueueRequestsFromMapFunc[client.Object](getUpstreamPolicyForObject[client.Object](r.Client, r.Log)),
+				source.WithPredicates[client.Object](predicate.NewTypedPredicateFuncs(doesObjectReferUpstreamPolicy[client.Object])),
+			),
 		); err != nil {
 			return err
 		}
 		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+			source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
 				Version: incubatorv1alpha1.SchemeGroupVersion.Version,
 				Group:   incubatorv1alpha1.SchemeGroupVersion.Group,
 				Kind:    incubatorv1alpha1.KongServiceFacadeKind,
-			})},
-			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
+			}),
+				handler.TypedEnqueueRequestsFromMapFunc[client.Object](getUpstreamPolicyForObject[client.Object](r.Client, r.Log)),
+				source.WithPredicates[client.Object](predicate.NewTypedPredicateFuncs(doesObjectReferUpstreamPolicy[client.Object])),
+			),
 		); err != nil {
 			return err
 		}
@@ -228,46 +234,44 @@ func indexServiceFacadesOnUpstreamPolicyAnnotation(o client.Object) []string {
 // -----------------------------------------------------------------------------
 
 // getUpstreamPolicyForObject enqueues a new reconcile request for the KongUpstreamPolicy referenced by an object.
-func (r *KongUpstreamPolicyReconciler) getUpstreamPolicyForObject(ctx context.Context, obj client.Object) []reconcile.Request {
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		return nil
-	}
-	policyName, ok := annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
-	if !ok {
-		return nil
-	}
-
-	kongUpstreamPolicy := &kongv1beta1.KongUpstreamPolicy{}
-	if err := r.Get(ctx, k8stypes.NamespacedName{
-		Namespace: obj.GetNamespace(),
-		Name:      policyName,
-	}, kongUpstreamPolicy); err != nil {
-		if !apierrors.IsNotFound(err) {
-			r.Log.Error(err, "Failed to retrieve KongUpstreamPolicy in watch predicates",
-				"KongUpstreamPolicy", fmt.Sprintf("%s/%s", obj.GetNamespace(), policyName),
-			)
+func getUpstreamPolicyForObject[T client.Object](client client.Client, logger logr.Logger) handler.TypedMapFunc[T] {
+	return func(ctx context.Context, obj T) []reconcile.Request {
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			return nil
 		}
-		return []reconcile.Request{}
-	}
+		policyName, ok := annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+		if !ok {
+			return nil
+		}
 
-	return []reconcile.Request{
-		{
-			NamespacedName: k8stypes.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      policyName,
+		kongUpstreamPolicy := &kongv1beta1.KongUpstreamPolicy{}
+		if err := client.Get(ctx, k8stypes.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      policyName,
+		}, kongUpstreamPolicy); err != nil {
+			if !apierrors.IsNotFound(err) {
+				logger.Error(err, "Failed to retrieve KongUpstreamPolicy in watch predicates",
+					"KongUpstreamPolicy", fmt.Sprintf("%s/%s", obj.GetNamespace(), policyName),
+				)
+			}
+			return []reconcile.Request{}
+		}
+
+		return []reconcile.Request{
+			{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: obj.GetNamespace(),
+					Name:      policyName,
+				},
 			},
-		},
+		}
 	}
 }
 
 // getUpstreamPoliciesForHTTPRouteServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
 // the Services of an HTTPRoute.
-func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(ctx context.Context, obj client.Object) []reconcile.Request {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
-	if !ok {
-		return nil
-	}
+func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(ctx context.Context, httpRoute *gatewayapi.HTTPRoute) []reconcile.Request {
 	var requests []reconcile.Request
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, br := range rule.BackendRefs {
@@ -311,7 +315,7 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(c
 }
 
 // doesObjectReferUpstreamPolicy filters out all the objects not referencing KongUpstreamPolicies.
-func doesObjectReferUpstreamPolicy(obj client.Object) bool {
+func doesObjectReferUpstreamPolicy[T client.Object](obj T) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return false

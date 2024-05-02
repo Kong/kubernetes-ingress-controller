@@ -2,8 +2,6 @@ package gateway
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -76,9 +74,10 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.GatewayClassIsUnmanaged),
+		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{},
+			&handler.TypedEnqueueRequestForObject[*gatewayapi.GatewayClass]{},
+			predicate.NewTypedPredicateFuncs(r.GatewayClassIsUnmanaged),
+		),
 	)
 }
 
@@ -88,17 +87,7 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // GatewayClassIsUnmanaged is a watch predicate which filters out reconciliation events for
 // gateway objects which aren't annotated as unmanaged.
-func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayapi.GatewayClass)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"Gatewayclass watch predicate received unexpected object type",
-			"expected", "*gatewayapi.GatewayClass", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
+func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(gatewayClass *gatewayapi.GatewayClass) bool {
 	return isGatewayClassControlled(gatewayClass)
 }
 

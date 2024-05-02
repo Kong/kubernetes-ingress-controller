@@ -75,9 +75,10 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice),
+		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{},
+			&handler.TypedEnqueueRequestForObject[*discoveryv1.EndpointSlice]{},
+			predicate.NewTypedPredicateFuncs(r.shouldReconcileEndpointSlice),
+		),
 	)
 }
 
@@ -86,12 +87,7 @@ func (r *KongAdminAPIServiceReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-func (r *KongAdminAPIServiceReconciler) shouldReconcileEndpointSlice(obj client.Object) bool {
-	endpoints, ok := obj.(*discoveryv1.EndpointSlice)
-	if !ok {
-		return false
-	}
-
+func (r *KongAdminAPIServiceReconciler) shouldReconcileEndpointSlice(endpoints *discoveryv1.EndpointSlice) bool {
 	if endpoints.Namespace != r.ServiceNN.Namespace {
 		return false
 	}

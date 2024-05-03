@@ -11,7 +11,7 @@ import (
 
 func TestKeyAuth_SanitizedCopy(t *testing.T) {
 	// this needs a static random seed because some auths generate random values
-	uuid.SetRand(rand.New(rand.NewSource(1)))
+	uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 	for _, tt := range []struct {
 		name string
 		in   KeyAuth
@@ -35,7 +35,7 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		// this needs a static random seed because some auths generate random values
-		uuid.SetRand(rand.New(rand.NewSource(1)))
+		uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 		t.Run(tt.name, func(t *testing.T) {
 			got := *tt.in.SanitizedCopy()
 			assert.Equal(t, tt.want, got)

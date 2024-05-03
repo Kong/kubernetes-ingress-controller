@@ -770,7 +770,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 
 func TestPlugin_SanitizedCopy(t *testing.T) {
 	// this needs a static random seed because some auths generate random values
-	uuid.SetRand(rand.New(rand.NewSource(1)))
+	uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 	testCases := []struct {
 		name                    string
 		config                  kong.Configuration

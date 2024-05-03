@@ -48,7 +48,7 @@ var serviceTypeMeta = metav1.TypeMeta{
 func TestKongState_SanitizedCopy(t *testing.T) {
 	testedFields := sets.New[string]()
 	// this needs a static random seed because some auths generate random values
-	uuid.SetRand(rand.New(rand.NewSource(1)))
+	uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 	for _, tt := range []struct {
 		name string
 		in   KongState
@@ -107,7 +107,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		// this needs a static random seed because some auths generate random values
-		uuid.SetRand(rand.New(rand.NewSource(1)))
+		uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 		t.Run(tt.name, func(t *testing.T) {
 			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
 			got := *tt.in.SanitizedCopy()

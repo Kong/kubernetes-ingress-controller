@@ -3,6 +3,7 @@ package kongstate
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/mitchellh/mapstructure"
 )
@@ -11,6 +12,13 @@ import (
 // It uses a vault URI to pass Konnect Admin API validations (e.g. when a TLS key is expected, it's only possible
 // to pass a valid key or a vault URI).
 var redactedString = kong.String("{vault://redacted-value}")
+
+// randRedactedString is used to redact sensitive values in the KongState when the value must be random to avoid
+// collisions.
+func randRedactedString() *string {
+	s := fmt.Sprintf("{vault://%s}", uuid.NewString())
+	return &s
+}
 
 // KeyAuth represents a key-auth credential.
 type KeyAuth struct {
@@ -158,7 +166,7 @@ func (c *KeyAuth) SanitizedCopy() *KeyAuth {
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
-			Key:       redactedString,
+			Key:       randRedactedString(),
 			Tags:      c.Tags,
 		},
 	}

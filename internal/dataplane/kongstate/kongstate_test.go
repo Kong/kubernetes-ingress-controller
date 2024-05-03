@@ -2,6 +2,7 @@ package kongstate
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/zapr"
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -45,6 +47,8 @@ var serviceTypeMeta = metav1.TypeMeta{
 
 func TestKongState_SanitizedCopy(t *testing.T) {
 	testedFields := sets.New[string]()
+	// this needs a static random seed because some auths generate random values
+	uuid.SetRand(rand.New(rand.NewSource(1)))
 	for _, tt := range []struct {
 		name string
 		in   KongState
@@ -86,7 +90,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 					Plugin:              kong.Plugin{ID: kong.String("1"), Config: kong.Configuration{"secret": *redactedString}},
 				}},
 				Consumers: []Consumer{{
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: randRedactedString()}}},
 				}},
 				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: redactedString}}},
 				ConsumerGroups: []ConsumerGroup{{
@@ -102,6 +106,8 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 			},
 		},
 	} {
+		// this needs a static random seed because some auths generate random values
+		uuid.SetRand(rand.New(rand.NewSource(1)))
 		t.Run(tt.name, func(t *testing.T) {
 			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
 			got := *tt.in.SanitizedCopy()

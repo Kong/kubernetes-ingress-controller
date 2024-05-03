@@ -1,8 +1,10 @@
 package kongstate
 
 import (
+	"math/rand"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -767,6 +769,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 }
 
 func TestPlugin_SanitizedCopy(t *testing.T) {
+	// this needs a static random seed because some auths generate random values
+	uuid.SetRand(rand.New(rand.NewSource(1)))
 	testCases := []struct {
 		name                    string
 		config                  kong.Configuration

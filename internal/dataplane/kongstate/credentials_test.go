@@ -1,13 +1,17 @@
 package kongstate
 
 import (
+	"math/rand"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestKeyAuth_SanitizedCopy(t *testing.T) {
+	// this needs a static random seed because some auths generate random values
+	uuid.SetRand(rand.New(rand.NewSource(1)))
 	for _, tt := range []struct {
 		name string
 		in   KeyAuth
@@ -25,11 +29,13 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 			want: KeyAuth{kong.KeyAuth{
 				CreatedAt: kong.Int(1),
 				ID:        kong.String("2"),
-				Key:       redactedString,
+				Key:       randRedactedString(),
 				Tags:      []*string{kong.String("4.1"), kong.String("4.2")},
 			}},
 		},
 	} {
+		// this needs a static random seed because some auths generate random values
+		uuid.SetRand(rand.New(rand.NewSource(1)))
 		t.Run(tt.name, func(t *testing.T) {
 			got := *tt.in.SanitizedCopy()
 			assert.Equal(t, tt.want, got)

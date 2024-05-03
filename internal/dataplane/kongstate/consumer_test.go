@@ -1,8 +1,10 @@
 package kongstate
 
 import (
+	"math/rand"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
@@ -14,6 +16,8 @@ func int64Ptr(i int64) *int64 {
 }
 
 func TestConsumer_SanitizedCopy(t *testing.T) {
+	// this needs a static random seed because some auths generate random values
+	uuid.SetRand(rand.New(rand.NewSource(1)))
 	for _, tt := range []struct {
 		name string
 		in   Consumer
@@ -50,7 +54,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 				Plugins:    []kong.Plugin{{ID: kong.String("1")}},
-				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: randRedactedString()}}},
 				HMACAuths:  []*HMACAuth{{kong.HMACAuth{ID: kong.String("1"), Secret: redactedString}}},
 				JWTAuths:   []*JWTAuth{{kong.JWTAuth{ID: kong.String("1"), Secret: redactedString}}},
 				BasicAuths: []*BasicAuth{{kong.BasicAuth{ID: kong.String("1"), Password: redactedString}}},
@@ -63,6 +67,8 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 			},
 		},
 	} {
+		// this needs a static random seed because some auths generate random values
+		uuid.SetRand(rand.New(rand.NewSource(1)))
 		t.Run(tt.name, func(t *testing.T) {
 			got := *tt.in.SanitizedCopy()
 			assert.Equal(t, tt.want, got)

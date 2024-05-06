@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
@@ -56,6 +57,7 @@ func TestValidateIngress(t *testing.T) {
 				tt.ingress,
 				logger,
 				fakestore,
+				fake.NewClientBuilder().Build(),
 			)
 			assert.Equal(t, tt.valid, valid, tt.msg)
 			assert.Equal(t, tt.validationMsg, validMsg, tt.msg)

@@ -18,6 +18,7 @@ import (
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/gateway"
 	ingressvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/ingress"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/kongplugin"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -41,6 +42,7 @@ type KongValidator interface {
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
+	ValidateService(ctx context.Context, ingress corev1.Service) (bool, string, error)
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -149,6 +151,9 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// ignore consumers that are being managed by another controller
 	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil
+	}
+	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, validator.ManagerClient, &consumer); err != nil {
+		return false, fmt.Sprintf("KongConsumer has invalid KongPlugin annotation: %s", err), nil
 	}
 
 	errText, err := validator.ensureConsumerDoesNotExistInGateway(ctx, consumer.Username)
@@ -462,7 +467,16 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer, validator.ManagerClient)
+}
+
+func (validator KongHTTPValidator) ValidateService(
+	ctx context.Context, service corev1.Service,
+) (bool, string, error) {
+	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, validator.ManagerClient, &service); err != nil {
+		return false, fmt.Sprintf("Service has invalid KongPlugin annotation: %s", err), nil
+	}
+	return true, "", nil
 }
 
 type routeValidator interface {

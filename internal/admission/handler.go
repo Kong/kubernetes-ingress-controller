@@ -439,15 +439,12 @@ const (
 
 // +kubebuilder:webhook:verbs=create;update,groups=core,resources=services,versions=v1,name=services.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleService(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+func (h RequestHandler) handleService(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	service := corev1.Service{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &service)
 	if err != nil {
 		return nil, err
 	}
-
-	// Service is always allowed.
-	responseBuilder = responseBuilder.Allowed(true)
 
 	if annotations.ExtractConfigurationName(service.Annotations) != "" {
 		warning := fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
@@ -456,7 +453,12 @@ func (h RequestHandler) handleService(_ context.Context, request admissionv1.Adm
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 
-	return responseBuilder.Build(), nil
+	ok, message, err := h.Validator.ValidateService(ctx, service)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=networking.k8s.io,resources=ingresses,versions=v1,name=ingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1

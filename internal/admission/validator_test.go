@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -566,6 +567,107 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.False(t, valid)
 		require.Equal(t, ErrTextConsumerExists, errText)
 	})
+
+	t.Run("fails when many plugins of the same type are attached", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{})
+		require.NoError(t, err)
+		const cfgNamespace = "default"
+		scheme := runtime.NewScheme()
+		require.NoError(t, kongv1.AddToScheme(scheme))
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin1",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "foo",
+			},
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin2",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "bar",
+			},
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin3",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "foo",
+			},
+		).Build()
+		validator := KongHTTPValidator{
+			SecretGetter:  s,
+			ManagerClient: fakeClient,
+			AdminAPIServicesProvider: fakeServicesProvider{
+				consumerSvc: fakeConsumersSvc{},
+			},
+			ingressClassMatcher: fakeClassMatcher,
+		}
+
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+				},
+				Namespace: cfgNamespace,
+			},
+			Username: "username",
+		})
+		require.NoError(t, err)
+		require.False(t, valid)
+		require.Equal(
+			t,
+			"KongConsumer has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+			errText,
+		)
+	})
+
+	t.Run("pass when different valid plugins and one no existing are attached", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{})
+		require.NoError(t, err)
+		const cfgNamespace = "default"
+		scheme := runtime.NewScheme()
+		require.NoError(t, kongv1.AddToScheme(scheme))
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin1",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "foo",
+			},
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin2",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "bar",
+			},
+		).Build()
+		validator := KongHTTPValidator{
+			SecretGetter:  s,
+			ManagerClient: fakeClient,
+			AdminAPIServicesProvider: fakeServicesProvider{
+				consumerSvc: fakeConsumersSvc{},
+			},
+			ingressClassMatcher: fakeClassMatcher,
+		}
+
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+				},
+				Namespace: cfgNamespace,
+			},
+			Username: "username",
+		})
+		require.NoError(t, err)
+		require.True(t, valid)
+		require.Empty(t, errText)
+	})
 }
 
 type fakeConsumerGroupSvc struct {
@@ -844,12 +946,11 @@ func (f fakeConsumerGetter) ListAllConsumers(context.Context) ([]kongv1.KongCons
 
 func TestValidator_ValidateIngress(t *testing.T) {
 	const testSvcFacadeName = "svc-facade"
-	s := lo.Must(managerscheme.Get())
-	b := fake.NewClientBuilder().WithScheme(s)
 
 	testCases := []struct {
 		name                          string
 		storerObjects                 store.FakeObjects
+		clientObjects                 []client.Object
 		kongRouteValidationShouldFail bool
 		translatorFeatures            translator.FeatureFlags
 		ingress                       *netv1.Ingress
@@ -872,7 +973,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				).
 				Build(),
 			kongRouteValidationShouldFail: true, // Despite the route validation failing, the ingress class is not kong, so it's ok.
-			storerObjects:                 store.FakeObjects{},
 			wantOK:                        true,
 		},
 		{
@@ -890,8 +990,83 @@ func TestValidator_ValidateIngress(t *testing.T) {
 					}),
 				).
 				Build(),
-			storerObjects: store.FakeObjects{},
-			wantOK:        true,
+			wantOK: true,
+		},
+		{
+			name: "valid Ingress fails when many plugins of the same type are attached",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithKongPlugins("plugin1", "plugin2", "plugin3").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			clientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "default",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin3",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+			},
+			wantOK:      false,
+			wantMessage: "Ingress has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+		},
+		{
+			name: "valid Ingress with different valid plugins and one no existing are attached passes",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithKongPlugins("plugin1", "plugin2", "plugin3").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			clientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+			},
+			wantOK: true,
 		},
 		{
 			name: "invalid with Service backend",
@@ -909,7 +1084,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				).
 				Build(),
 			kongRouteValidationShouldFail: true,
-			storerObjects:                 store.FakeObjects{},
 			wantOK:                        false,
 			wantMessage:                   "Ingress failed schema validation: something is wrong with the route",
 		},
@@ -995,7 +1169,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{
-				ManagerClient: b.Build(),
+				ManagerClient: fake.NewClientBuilder().WithScheme(lo.Must(managerscheme.Get())).WithObjects(tc.clientObjects...).Build(),
 				Storer:        storer,
 				AdminAPIServicesProvider: fakeServicesProvider{
 					routeSvc: &fakeRouteSvc{

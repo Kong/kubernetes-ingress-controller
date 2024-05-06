@@ -309,7 +309,9 @@ func generateKongRoutesFromHTTPRouteMatches(
 	// stripPath needs to be disabled by default to be conformant with the Gateway API
 	r.StripPath = kong.Bool(false)
 
-	_, hasRedirectFilter := lo.Find(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+	// Check if the route has a RequestRedirect or URLRewrite with non-nil ReplacePrefixMatch - if it does, we need to
+	// generate a route for each match as the path is used to modify routes and generate plugins.
+	hasRedirectFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
 		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
 	})
 
@@ -318,9 +320,25 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return nil, err
 	}
 
-	// if the redirect filter has not been set, we still need to set the route plugins
+	var path string
+	if hasURLRewriteWithReplacePrefixMatchFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
+			filter.URLRewrite.Path != nil &&
+			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
+			filter.URLRewrite.Path.ReplacePrefixMatch != nil
+	}); hasURLRewriteWithReplacePrefixMatchFilter {
+		// In the case of URLRewrite with non-nil ReplacePrefixMatch, we rely on a CEL validation rule that disallows
+		// rules with multiple matches if the URLRewrite filter is present. We can be certain that if the filter is
+		// present, there is at most only one match. Based on that, we can determine the path from the first match.
+		// See: https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131
+		if len(matches) > 0 && matches[0].Path != nil && matches[0].Path.Value != nil {
+			path = *matches[0].Path.Value
+		}
+	}
+
+	// If the redirect filter has not been set, we still need to set the route plugins.
 	if !hasRedirectFilter {
-		if err := subtranslator.SetRoutePlugins(&r, filters, "", tags); err != nil {
+		if err := subtranslator.SetRoutePlugins(&r, filters, path, tags, false); err != nil {
 			return nil, err
 		}
 		routes = []kongstate.Route{r}
@@ -371,7 +389,7 @@ func getRoutesFromMatches(
 			}
 
 			// generate kong plugins from rule.filters
-			if err := subtranslator.SetRoutePlugins(matchRoute, filters, path, tags); err != nil {
+			if err := subtranslator.SetRoutePlugins(matchRoute, filters, path, tags, false); err != nil {
 				return nil, err
 			}
 

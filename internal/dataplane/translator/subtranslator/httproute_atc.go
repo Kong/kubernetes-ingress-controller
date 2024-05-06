@@ -47,7 +47,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	_, hasRedirectFilter := lo.Find(translation.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+	hasRedirectFilter := lo.ContainsBy(translation.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
 		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
 	})
 	// if the rule has request redirect filter(s), we need to generate a route for each match to
@@ -66,7 +66,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	if err := SetRoutePlugins(&r, translation.Filters, "", tags); err != nil {
+	if err := SetRoutePlugins(&r, translation.Filters, "", tags, true); err != nil {
 		return nil, err
 	}
 	return []kongstate.Route{r}, nil
@@ -105,7 +105,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 		if match.Path != nil && match.Path.Value != nil {
 			path = *match.Path.Value
 		}
-		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags); err != nil {
+		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags, true); err != nil {
 			return nil, err
 		}
 		routes = append(routes, matchRoute)
@@ -594,7 +594,7 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 			path = *match.Match.Path.Value
 		}
 
-		if err := SetRoutePlugins(r, rule.Filters, path, tags); err != nil {
+		if err := SetRoutePlugins(r, rule.Filters, path, tags, true); err != nil {
 			return nil, err
 		}
 	}

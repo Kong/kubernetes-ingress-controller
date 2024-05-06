@@ -9,22 +9,24 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	testCases := []struct {
-		name                      string
-		filters                   []gatewayapi.HTTPRouteFilter
-		path                      string
-		expectedPlugins           []kong.Plugin
-		expectedPluginsAnnotation string
-		expectedErr               error
+		name                       string
+		filters                    []gatewayapi.HTTPRouteFilter
+		path                       string
+		expectedPlugins            []kong.Plugin
+		expectedRouteModifications kongstate.Route
+		expectedErr                error
 	}{
 		{
 			name:            "no filters",
 			filters:         []gatewayapi.HTTPRouteFilter{},
-			expectedPlugins: []kong.Plugin{},
+			expectedPlugins: nil,
 		},
 		{
 			name: "request header modifier filter",
@@ -177,8 +179,14 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPluginsAnnotation: "plugin1,plugin2",
-			expectedPlugins:           []kong.Plugin{},
+			expectedRouteModifications: kongstate.Route{
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/plugins": "plugin1,plugin2",
+					},
+				},
+			},
+			expectedPlugins: []kong.Plugin{},
 		},
 		{
 			name: "invalid extensionrefs filter group",
@@ -192,8 +200,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPluginsAnnotation: "",
-			expectedErr:               errors.New("plugin wrong.group/KongPlugin unsupported"),
+			expectedErr: errors.New("plugin wrong.group/KongPlugin unsupported"),
 		},
 		{
 			name: "invalid extensionrefs filter kind",
@@ -207,28 +214,86 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPluginsAnnotation: "",
-			expectedErr:               errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
+			expectedErr: errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
+		},
+		{
+			name: "RequestHeaderModifier and PrefixMatchHTTPPathModifier",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
+					RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{
+						Set: []gatewayapi.HTTPHeader{
+							{
+								Name:  "header-to-set",
+								Value: "bar",
+							},
+						},
+					},
+				},
+				{
+					Type: gatewayapi.HTTPRouteFilterURLRewrite,
+					URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+						Path: &gatewayapi.HTTPPathModifier{
+							Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+							ReplacePrefixMatch: lo.ToPtr("/new"),
+						},
+					},
+				},
+			},
+			path: "/prefix",
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"add": map[string]interface{}{
+							"headers": []interface{}{
+								"header-to-set:bar",
+							},
+						},
+						"replace": map[string]interface{}{
+							"uri": "/new$(uri_captures[1])",
+							"headers": []interface{}{
+								"header-to-set:bar",
+							},
+						},
+					},
+				},
+			},
+			expectedRouteModifications: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			plugins, pluginsAnnotation, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
+			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false)
 			require.Equal(t, tc.expectedErr, err)
-			require.Equal(t, tc.expectedPlugins, plugins)
-			require.Equal(t, tc.expectedPluginsAnnotation, pluginsAnnotation)
+			require.Equal(t, tc.expectedPlugins, result.Plugins)
+
+			route := kongstate.Route{}
+			for _, modifier := range result.KongRouteModifiers {
+				modifier(&route)
+			}
+			require.Equal(t, tc.expectedRouteModifications, route)
 		})
 	}
 }
 
 func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 	testCases := []struct {
-		name        string
-		modifier    *gatewayapi.HTTPURLRewriteFilter
-		expected    kong.Plugin
-		expectedErr error
+		name                          string
+		modifier                      *gatewayapi.HTTPURLRewriteFilter
+		firstMatchPath                string
+		expectedKongRouteModification kongstate.Route
+		expected                      kong.Plugin
+		expectedErr                   error
 	}{
 		{
 			name: "valid URLRewriteFilter with ReplaceFullPath",
@@ -248,17 +313,135 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
-		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
 		{
-			name: "valid URLRewriteFilter with unsupported",
+			name: "URLRewriteFilter with non-empty ReplacePrefixMatch",
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: lo.ToPtr("/new"),
 				},
 			},
-			expected:    kong.Plugin{},
-			expectedErr: fmt.Errorf("%s unsupported for %s", gatewayapi.PrefixMatchHTTPPathModifier, gatewayapi.HTTPRouteFilterURLRewrite),
+			firstMatchPath: "/prefix",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": "/new$(uri_captures[1])",
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with empty ReplacePrefixMatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr(""),
+				},
+			},
+			firstMatchPath: "/prefix",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with '/' ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/"),
+				},
+			},
+			firstMatchPath: "/prefix",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with '/' firstMatchPath and '/' ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/"),
+				},
+			},
+			firstMatchPath: "/",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/$"),
+						lo.ToPtr("~/(.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with '/' firstMatchPath and non-empty ReplacePrefixPatch",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+				},
+			},
+			firstMatchPath: "/",
+			expected: kong.Plugin{
+				Name: lo.ToPtr("request-transformer"),
+				Config: kong.Configuration{
+					"replace": map[string]string{
+						"uri": `/new-prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
+					},
+				},
+			},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/$"),
+						lo.ToPtr("~/(.*)"),
+					},
+				},
+			},
 		},
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
 		{
@@ -279,9 +462,150 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			plugin, err := generateRequestTransformerForURLRewrite(tc.modifier)
+			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath, false)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expected, plugin)
+
+			route := kongstate.Route{}
+			if routeModifier != nil {
+				routeModifier(&route)
+			}
+			require.Equal(t, tc.expectedKongRouteModification, route)
+		})
+	}
+}
+
+func TestMergePluginsOfTheSameType(t *testing.T) {
+	testCases := []struct {
+		name     string
+		plugins  []kong.Plugin
+		expected []kong.Plugin
+	}{
+		{
+			name:     "no plugins",
+			plugins:  []kong.Plugin{},
+			expected: []kong.Plugin{},
+		},
+		{
+			name: "single plugin",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+			},
+		},
+		{
+			name: "multiple plugins of different types",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+				{
+					Name: lo.ToPtr("plugin3"),
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+				{
+					Name: lo.ToPtr("plugin3"),
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+				},
+				{
+					Name: lo.ToPtr("plugin2"),
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types with different configurations - configuration is merged",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+					},
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key2": "value2",
+					},
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types with same configuration keys - configuration is merged and the first wins",
+			plugins: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+					},
+				},
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value2",
+					},
+				},
+			},
+			expected: []kong.Plugin{
+				{
+					Name: lo.ToPtr("plugin1"),
+					Config: kong.Configuration{
+						"key1": "value1",
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			plugins, err := mergePluginsOfTheSameType(tc.plugins)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, plugins)
 		})
 	}
 }

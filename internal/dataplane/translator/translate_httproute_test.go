@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -944,7 +945,6 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs and different filters results in a single service",
 			routes: []*gatewayapi.HTTPRoute{
@@ -1102,7 +1102,6 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			msg: "a single HTTPRoute with single rule and multiple matches generates consolidated kong route paths",
 			routes: []*gatewayapi.HTTPRoute{{
@@ -1272,7 +1271,6 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			msg: "a single HTTPRoute with multiple rules and matches generates consolidated kong route paths",
 			routes: []*gatewayapi.HTTPRoute{{
@@ -1481,7 +1479,6 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			msg: "a single HTTPRoute with timeouts will set the timeout in the service",
 			routes: []*gatewayapi.HTTPRoute{{
@@ -1592,7 +1589,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 			// verify that we receive the expected values
 			expectedIngressRules := tt.expected(tt.routes)
-			assert.Equal(t, expectedIngressRules, ingressRules)
+			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{})))
 
 			// verify that we receive any and all expected errors
 			for i := range tt.errs {

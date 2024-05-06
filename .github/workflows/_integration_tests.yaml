@@ -122,10 +122,12 @@ jobs:
           # Set enterprise to 'true' to enable isolated integration test cases requiring enterprise features.
           - name: isolated-dbless
             test: isolated.dbless
+            router-flavor: traditional
             feature_gates: "GatewayAlpha=true"
             enterprise: true
           - name: isolated-postgres
             test: isolated.postgres
+            router-flavor: traditional
             feature_gates: "GatewayAlpha=true"
             enterprise: true
           - name: isolated-dbless-expression-router

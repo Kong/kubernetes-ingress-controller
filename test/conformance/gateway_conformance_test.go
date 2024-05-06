@@ -31,6 +31,7 @@ var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
 	suite.SupportHTTPRoute,
 	// extended features
 	suite.SupportHTTPRouteResponseHeaderModification,
+	suite.SupportHTTPRoutePathRewrite,
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
 	// suite.SupportHTTPRouteBackendTimeout,
@@ -106,7 +107,7 @@ func TestGatewayConformance(t *testing.T) {
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//
-	// cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRedirectPortAndScheme})
+	// require.NoError(t, cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRewritePath}))
 	require.NoError(t, cSuite.Run(t, tests.ConformanceTests))
 
 	const reportFileName = "kong-kubernetes-ingress-controller.yaml"

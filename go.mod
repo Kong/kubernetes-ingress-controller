@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.22.2
+go 1.22
 
 // TODO: this is disabled by FOSSA action doesn't support go 1.21's toolchain clause:
 //
@@ -68,7 +68,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
-	dario.cat/mergo v1.0.0 // indirect
+	dario.cat/mergo v1.0.0
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect

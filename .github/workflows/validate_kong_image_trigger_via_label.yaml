@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
     steps:
       - name: "Remove the label ci/run-validate-kong-image if exist"
         run: gh issue edit ${ISSUE_NUMBER} --remove-label ci/run-validate-kong-image

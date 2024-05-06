@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -109,7 +110,11 @@ func TestHandleService(t *testing.T) {
 	tests := []struct {
 		name         string
 		resource     corev1.Service
+		validator    KongHTTPValidator
 		wantWarnings []string
+		wantErrors   []string
+		wantMessage  string
+		isAllowed    bool
 	}{
 		{
 			name: "has kongingress annotation",
@@ -121,10 +126,12 @@ func TestHandleService(t *testing.T) {
 					},
 				},
 			},
+
 			wantWarnings: []string{
 				fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
 					kongv1beta1.KongUpstreamPolicyAnnotationKey),
 			},
+			isAllowed: true,
 		},
 		{
 			name: "has upstream policy annotation",
@@ -136,13 +143,68 @@ func TestHandleService(t *testing.T) {
 					},
 				},
 			},
-			wantWarnings: nil,
+			isAllowed: true,
+		},
+		{
+			name: "has upstream policy annotation",
+			resource: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + kongv1beta1.KongUpstreamPolicyAnnotationKey: "test",
+					},
+				},
+			},
+			isAllowed: true,
+		},
+		{
+			name: "fails when many plugins of the same type are attached",
+			resource: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1, plugin2, plugin3",
+					},
+				},
+			},
+			validator: KongHTTPValidator{
+				Storer: func() store.Storer {
+					s, _ := store.NewFakeStore(store.FakeObjects{
+						KongPlugins: []*kongv1.KongPlugin{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "plugin1",
+									Namespace: "default",
+								},
+								PluginName: "foo",
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "plugin2",
+									Namespace: "default",
+								},
+								PluginName: "bar",
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "plugin3",
+									Namespace: "default",
+								},
+								PluginName: "foo",
+							},
+						},
+					})
+					return s
+				}(),
+			},
+			isAllowed:   false,
+			wantMessage: "Service has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
 		},
 	}
 	for _, tt := range tests {
 		resource := tt.resource
 		t.Run(tt.name, func(t *testing.T) {
-			validator := KongHTTPValidator{}
 			raw, err := json.Marshal(tt.resource)
 			require.NoError(t, err)
 			request := admissionv1.AdmissionRequest{
@@ -152,7 +214,7 @@ func TestHandleService(t *testing.T) {
 				},
 			}
 			handler := RequestHandler{
-				Validator: validator,
+				Validator: tt.validator,
 				Logger:    logr.Discard(),
 			}
 
@@ -160,8 +222,9 @@ func TestHandleService(t *testing.T) {
 
 			got, err := handler.handleService(context.Background(), request, responseBuilder)
 			require.NoError(t, err)
-			require.True(t, got.Allowed)
+			require.Equal(t, tt.isAllowed, got.Allowed)
 			require.Equal(t, tt.wantWarnings, got.Warnings)
+			require.Equal(t, tt.wantMessage, got.Result.Message)
 		})
 	}
 }

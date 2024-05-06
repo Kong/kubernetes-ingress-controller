@@ -566,6 +566,103 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.False(t, valid)
 		require.Equal(t, ErrTextConsumerExists, errText)
 	})
+
+	t.Run("fails when many plugins of the same type are attached", func(t *testing.T) {
+		const cfgNamespace = "default"
+		s, _ := store.NewFakeStore(store.FakeObjects{
+			KongPlugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: cfgNamespace,
+					},
+					PluginName: "foo",
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: cfgNamespace,
+					},
+					PluginName: "bar",
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin3",
+						Namespace: cfgNamespace,
+					},
+					PluginName: "foo",
+				},
+			},
+		})
+		validator := KongHTTPValidator{
+			Storer:       s,
+			SecretGetter: s,
+			AdminAPIServicesProvider: fakeServicesProvider{
+				consumerSvc: fakeConsumersSvc{},
+			},
+			ingressClassMatcher: fakeClassMatcher,
+		}
+
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+				},
+				Namespace: cfgNamespace,
+			},
+			Username: "username",
+		})
+		require.NoError(t, err)
+		require.False(t, valid)
+		require.Equal(
+			t,
+			"KongConsumer has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+			errText,
+		)
+	})
+
+	t.Run("pass when different plugins and one no existing are configured", func(t *testing.T) {
+		const cfgNamespace = "default"
+		s, _ := store.NewFakeStore(store.FakeObjects{
+			KongPlugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: cfgNamespace,
+					},
+					PluginName: "foo",
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: cfgNamespace,
+					},
+					PluginName: "bar",
+				},
+			},
+		})
+		validator := KongHTTPValidator{
+			Storer:       s,
+			SecretGetter: s,
+			AdminAPIServicesProvider: fakeServicesProvider{
+				consumerSvc: fakeConsumersSvc{},
+			},
+			ingressClassMatcher: fakeClassMatcher,
+		}
+
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+				},
+				Namespace: cfgNamespace,
+			},
+			Username: "username",
+		})
+		require.NoError(t, err)
+		require.True(t, valid)
+		require.Empty(t, errText)
+	})
 }
 
 type fakeConsumerGroupSvc struct {
@@ -892,6 +989,86 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				Build(),
 			storerObjects: store.FakeObjects{},
 			wantOK:        true,
+		},
+		{
+			name: "valid Ingress with duplicated plugins",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithKongPlugins("plugin1", "plugin2", "plugin3").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			storerObjects: store.FakeObjects{
+				KongPlugins: []*kongv1.KongPlugin{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "plugin1",
+							Namespace: "default",
+						},
+						PluginName: "foo",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "plugin2",
+							Namespace: "default",
+						},
+						PluginName: "default",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "plugin3",
+							Namespace: "default",
+						},
+						PluginName: "foo",
+					},
+				},
+			},
+			wantOK:      false,
+			wantMessage: "Ingress has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+		},
+		{
+			name: "valid Ingress with duplicated plugins aa",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithKongPlugins("plugin1", "plugin2", "plugin3").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			storerObjects: store.FakeObjects{
+				KongPlugins: []*kongv1.KongPlugin{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "plugin1",
+							Namespace: "default",
+						},
+						PluginName: "foo",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "plugin2",
+							Namespace: "default",
+						},
+						PluginName: "default",
+					},
+				},
+			},
+			wantOK: true,
 		},
 		{
 			name: "invalid with Service backend",

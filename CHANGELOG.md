@@ -121,6 +121,9 @@ Adding a new version? You'll need three changes:
   - `ReplacePrefixMatch` [#5895](https://github.com/Kong/kubernetes-ingress-controller/pull/5895)
 - DB mode now supports Event reporting for resources that failed to apply.
   [#5785](https://github.com/Kong/kubernetes-ingress-controller/pull/5785)
+- The Konnect license agent now attempts to update more frequently if its
+  license is expired.
+  [#5936](https://github.com/Kong/kubernetes-ingress-controller/pull/5936)
 
 ### Fixed
 

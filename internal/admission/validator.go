@@ -152,7 +152,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil
 	}
-	if err := kongplugin.ValidatePluginUniquenessPerObject(validator.Storer, &consumer); err != nil {
+	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, validator.ManagerClient, &consumer); err != nil {
 		return false, fmt.Sprintf("KongConsumer has invalid KongPlugin annotation: %s", err), nil
 	}
 
@@ -467,13 +467,13 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer, validator.ManagerClient)
 }
 
 func (validator KongHTTPValidator) ValidateService(
-	_ context.Context, service corev1.Service,
+	ctx context.Context, service corev1.Service,
 ) (bool, string, error) {
-	if err := kongplugin.ValidatePluginUniquenessPerObject(validator.Storer, &service); err != nil {
+	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, validator.ManagerClient, &service); err != nil {
 		return false, fmt.Sprintf("Service has invalid KongPlugin annotation: %s", err), nil
 	}
 	return true, "", nil

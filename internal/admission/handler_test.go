@@ -16,11 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -112,7 +112,6 @@ func TestHandleService(t *testing.T) {
 		resource     corev1.Service
 		validator    KongHTTPValidator
 		wantWarnings []string
-		wantErrors   []string
 		wantMessage  string
 		isAllowed    bool
 	}{
@@ -146,18 +145,6 @@ func TestHandleService(t *testing.T) {
 			isAllowed: true,
 		},
 		{
-			name: "has upstream policy annotation",
-			resource: corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + kongv1beta1.KongUpstreamPolicyAnnotationKey: "test",
-					},
-				},
-			},
-			isAllowed: true,
-		},
-		{
 			name: "fails when many plugins of the same type are attached",
 			resource: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -169,37 +156,78 @@ func TestHandleService(t *testing.T) {
 				},
 			},
 			validator: KongHTTPValidator{
-				Storer: func() store.Storer {
-					s, _ := store.NewFakeStore(store.FakeObjects{
-						KongPlugins: []*kongv1.KongPlugin{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "plugin1",
-									Namespace: "default",
-								},
-								PluginName: "foo",
+				ManagerClient: func() client.Client {
+					scheme := runtime.NewScheme()
+					require.NoError(t, kongv1.AddToScheme(scheme))
+					fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+						&kongv1.KongPlugin{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "plugin1",
+								Namespace: "default",
 							},
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "plugin2",
-									Namespace: "default",
-								},
-								PluginName: "bar",
-							},
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "plugin3",
-									Namespace: "default",
-								},
-								PluginName: "foo",
-							},
+							PluginName: "foo",
 						},
-					})
-					return s
+						&kongv1.KongPlugin{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "plugin2",
+								Namespace: "default",
+							},
+							PluginName: "bar",
+						},
+						&kongv1.KongPlugin{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "plugin3",
+								Namespace: "default",
+							},
+							PluginName: "foo",
+						},
+					).Build()
+					return fakeClient
 				}(),
 			},
 			isAllowed:   false,
 			wantMessage: "Service has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+		},
+		{
+			name: "pass when many valid plugins are attached",
+			resource: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey:       "plugin1, plugin2, plugin3",
+						annotations.AnnotationPrefix + annotations.ConfigurationKey: "test",
+					},
+				},
+			},
+			validator: KongHTTPValidator{
+				ManagerClient: func() client.Client {
+					scheme := runtime.NewScheme()
+					require.NoError(t, kongv1.AddToScheme(scheme))
+					fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+						&kongv1.KongPlugin{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "plugin1",
+								Namespace: "default",
+							},
+							PluginName: "foo",
+						},
+						&kongv1.KongPlugin{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "plugin2",
+								Namespace: "default",
+							},
+							PluginName: "bar",
+						},
+					).Build()
+					return fakeClient
+				}(),
+			},
+			isAllowed: true,
+			wantWarnings: []string{
+				fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
+					kongv1beta1.KongUpstreamPolicyAnnotationKey),
+			},
 		},
 	}
 	for _, tt := range tests {

@@ -846,6 +846,15 @@ func TestExtractHeaders(t *testing.T) {
 			want: map[string][]string{},
 		},
 		{
+			name: "empty with custom separator",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers-separator": ";",
+				},
+			},
+			want: map[string][]string{},
+		},
+		{
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
@@ -864,6 +873,15 @@ func TestExtractHeaders(t *testing.T) {
 			want: map[string][]string{},
 		},
 		{
+			name: "separator with no header results in empty header value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers.foo": "foo,",
+				},
+			},
+			want: map[string][]string{"foo": {"foo", ""}},
+		},
+		{
 			name: "no header name",
 			args: args{
 				anns: map[string]string{
@@ -871,6 +889,47 @@ func TestExtractHeaders(t *testing.T) {
 				},
 			},
 			want: map[string][]string{},
+		},
+		{
+			name: "multiple header, multiple values, trailing spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers.x-example":    "foo, bar, baz  ",
+					"konghq.com/headers.x-additional": "foo",
+				},
+			},
+			want: map[string][]string{
+				"x-example":    {"foo", "bar", "baz"},
+				"x-additional": {"foo"},
+			},
+		},
+		{
+			name: "multiple header, multiple values, custom separator",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers-separator":    ";",
+					"konghq.com/headers.x-example":    "foo, bar;baz",
+					"konghq.com/headers.x-additional": "foo",
+				},
+			},
+			want: map[string][]string{
+				"x-example":    {"foo, bar", "baz"},
+				"x-additional": {"foo"},
+			},
+		},
+		{
+			name: "multiple header, multiple values, custom separator, leading & trailing spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers-separator":    ";",
+					"konghq.com/headers.x-example":    " foo, bar;cat,dog ;   baz ",
+					"konghq.com/headers.x-additional": "foo;",
+				},
+			},
+			want: map[string][]string{
+				"x-example":    {"foo, bar", "cat,dog", "baz"},
+				"x-additional": {"foo", ""},
+			},
 		},
 	}
 	for _, tt := range tests {

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -61,6 +62,7 @@ const (
 	ReadTimeoutKey       = "/read-timeout"
 	RetriesKey           = "/retries"
 	HeadersKey           = "/headers"
+	HeadersSeparatorKey  = "/headers-separator"
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
 	RewriteURIKey        = "/rewrite"
@@ -311,14 +313,20 @@ func ExtractRetries(anns map[string]string) (string, bool) {
 // ExtractHeaders extracts the parsed headers annotations values. It returns a map of header names to slices of values.
 func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
 	headers := make(map[string][]string)
-	prefix := AnnotationPrefix + HeadersKey + "."
+	const prefix = AnnotationPrefix + HeadersKey + "."
+	separator, ok := anns[AnnotationPrefix+HeadersSeparatorKey]
+	if !ok {
+		separator = ","
+	}
 	for key, val := range anns {
 		if strings.HasPrefix(key, prefix) {
 			header := strings.TrimPrefix(key, prefix)
 			if len(header) == 0 || len(val) == 0 {
 				continue
 			}
-			headers[header] = strings.Split(val, ",")
+			headers[header] = lo.Map(strings.Split(val, separator), func(hv string, _ int) string {
+				return strings.TrimSpace(hv)
+			})
 		}
 	}
 	if len(headers) == 0 {

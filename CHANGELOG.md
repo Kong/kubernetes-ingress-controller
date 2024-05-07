@@ -126,6 +126,10 @@ Adding a new version? You'll need three changes:
 - Improve validation - reject `Ingresses`, `Services` or `KongConsumers` that have multiple instances
   of the same type plugin attached.
   [#5972](https://github.com/Kong/kubernetes-ingress-controller/pull/5972)
+- Added support for `konghq.com/headers-separator` that allows to set custom separator (instead of default `,`)
+  for headers specified with `konghq.com/headers.*` annotations. Moreover parsing a content of `konghq.com/headers.*`
+  is more robust - leading and trailing whitespace characters are discarded.
+  [#5977](https://github.com/Kong/kubernetes-ingress-controller/pull/5977)
 
 ### Fixed
 

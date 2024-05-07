@@ -32,8 +32,6 @@ jobs:
       kong_image_major_version: ${{ steps.semver_parser.outputs.major }}
       kong_image_minor_version: ${{ steps.semver_parser.outputs.minor }}
     steps:
-     - name: checkout repository
-       uses: actions/checkout@v4
       # The body of testing request issue created from the template has the following format:
 
       # ### What component needs testing with KIC?
@@ -92,11 +90,11 @@ jobs:
       kic_branch: ${{ steps.choose_kic_branch.outputs.KIC_BRANCH }}
       kic_image_tag: ${{ steps.choose_kic_branch.outputs.KIC_IMAGE_TAG }}
     steps:
-     - name: checkout repository
-       uses: actions/checkout@v4
-     - name: Choose KIC image and branch
-       id: choose_kic_branch
-       run: |
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: Choose KIC image and branch
+        id: choose_kic_branch
+        run: |
           if [[ $TEST_KONG_IMAGE_MAJOR_VERSION -le 2 ]]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_OUTPUT
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_OUTPUT

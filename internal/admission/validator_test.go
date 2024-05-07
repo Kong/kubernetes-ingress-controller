@@ -701,13 +701,14 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 		cg kongv1beta1.KongConsumerGroup
 	}
 	tests := []struct {
-		name             string
-		ConsumerGroupSvc kong.AbstractConsumerGroupService
-		InfoSvc          kong.AbstractInfoService
-		args             args
-		wantOK           bool
-		wantMessage      string
-		wantErr          bool
+		name                 string
+		ConsumerGroupSvc     kong.AbstractConsumerGroupService
+		InfoSvc              kong.AbstractInfoService
+		ManagerClientObjects []client.Object
+		args                 args
+		wantOK               bool
+		wantMessage          string
+		wantErr              bool
 	}{
 		{
 			name:             "Enterprise version",
@@ -715,6 +716,79 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise Kong Gateway and KongConsumerGroup with multiple plugins of the same type attached",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
+			ManagerClientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin3",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+			},
+			args: args{
+				cg: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+						},
+					},
+				},
+			},
+			wantOK:      false,
+			wantMessage: "KongConsumerGroup has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise Kong Gateway and KongConsumerGroup with plugins of the different types and non-existing one attached",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
+			ManagerClientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+			},
+			args: args{
+				cg: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+						},
+					},
+				},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -787,10 +861,14 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kongv1.AddToScheme(scheme))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				SecretGetter: store,
+				ManagerClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.ManagerClientObjects...).Build(),
+				SecretGetter:  store,
 				AdminAPIServicesProvider: fakeServicesProvider{
 					infoSvc:          tt.InfoSvc,
 					consumerGroupSvc: tt.ConsumerGroupSvc,

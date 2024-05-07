@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/kongplugin"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
@@ -44,6 +45,10 @@ func ValidateHTTPRoute(
 	}
 	if !routeIsManaged {
 		return true, "", nil
+	}
+
+	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, managerClient, httproute); err != nil {
+		return false, fmt.Sprintf("HTTPRoute has invalid KongPlugin annotation: %s", err), nil
 	}
 
 	if err := validateHTTPRouteTimeoutBackendRequest(httproute); err != nil {

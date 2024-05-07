@@ -123,9 +123,10 @@ Adding a new version? You'll need three changes:
     - `expressions`: [#5940](https://github.com/Kong/kubernetes-ingress-controller/pull/5940)
 - DB mode now supports Event reporting for resources that failed to apply.
   [#5785](https://github.com/Kong/kubernetes-ingress-controller/pull/5785)
-- Improve validation - reject `Ingresses`, `Services` or `KongConsumers` that have multiple instances
-  of the same type plugin attached.
+- Improve validation - reject `Ingresses`, `Services`, `HTTPRoutes`, `KongConsumers` or `KongConsumerGroups`
+  that have multiple instances of the same type plugin attached.
   [#5972](https://github.com/Kong/kubernetes-ingress-controller/pull/5972)
+  [#5979](https://github.com/Kong/kubernetes-ingress-controller/pull/5979)
 - Added support for `konghq.com/headers-separator` that allows to set custom separator (instead of default `,`)
   for headers specified with `konghq.com/headers.*` annotations. Moreover parsing a content of `konghq.com/headers.*`
   is more robust - leading and trailing whitespace characters are discarded.

@@ -3,7 +3,7 @@ name: 'FOSSA'
 on:
   schedule:
     - cron: '30 2 * * *'
-
+  workflow_dispatch: {}
 jobs:
   fossa-scan:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}

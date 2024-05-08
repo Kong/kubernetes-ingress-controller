@@ -14,6 +14,8 @@ jobs:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
       - name: "Remove the label ci/run-validate-kong-image if exist"
         run: gh issue edit ${ISSUE_NUMBER} --remove-label ci/run-validate-kong-image
 
@@ -88,9 +90,11 @@ jobs:
       kic_branch: ${{ steps.choose_kic_branch.outputs.KIC_BRANCH }}
       kic_image_tag: ${{ steps.choose_kic_branch.outputs.KIC_IMAGE_TAG }}
     steps:
-     - name: Choose KIC image and branch
-       id: choose_kic_branch
-       run: |
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: Choose KIC image and branch
+        id: choose_kic_branch
+        run: |
           if [[ $TEST_KONG_IMAGE_MAJOR_VERSION -le 2 ]]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_OUTPUT
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_OUTPUT
@@ -119,8 +123,7 @@ jobs:
       KIC_BRANCH: ${{ needs.decide-kic-branch-and-image.outputs.kic_branch }}
       KIC_IMAGE_TAG: ${{ needs.decide-kic-branch-and-image.outputs.kic_image_tag }} 
     steps:
-      - name: checkout to KIC repo
-        id: checkout_kic_repo
+      - name: checkout repository
         uses: actions/checkout@v4
 
       - name: Run validate Kong image tests

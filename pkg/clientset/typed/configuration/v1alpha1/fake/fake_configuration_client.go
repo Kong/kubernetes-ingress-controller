@@ -32,6 +32,10 @@ func (c *FakeConfigurationV1alpha1) IngressClassParameterses(namespace string) v
 	return &FakeIngressClassParameterses{c, namespace}
 }
 
+func (c *FakeConfigurationV1alpha1) KongCustomEntities(namespace string) v1alpha1.KongCustomEntityInterface {
+	return &FakeKongCustomEntities{c, namespace}
+}
+
 func (c *FakeConfigurationV1alpha1) KongLicenses() v1alpha1.KongLicenseInterface {
 	return &FakeKongLicenses{c}
 }

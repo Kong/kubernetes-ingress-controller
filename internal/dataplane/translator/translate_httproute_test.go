@@ -1055,8 +1055,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										{
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
-												"append": map[string]interface{}{
-													"headers": []interface{}{"X-Test-Header-1:test-value-1"},
+												"append": subtranslator.TransformerPluginConfig{
+													Headers: []string{"X-Test-Header-1:test-value-1"},
 												},
 											},
 										},
@@ -1088,8 +1088,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										{
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
-												"append": map[string]interface{}{
-													"headers": []interface{}{"X-Test-Header-2:test-value-2"},
+												"append": subtranslator.TransformerPluginConfig{
+													Headers: []string{"X-Test-Header-2:test-value-2"},
 												},
 											},
 										},
@@ -1465,8 +1465,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										{
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
-												"append": map[string]interface{}{
-													"headers": []interface{}{"X-Test-Header-1:test-value-1"},
+												"append": subtranslator.TransformerPluginConfig{
+													Headers: []string{"X-Test-Header-1:test-value-1"},
 												},
 											},
 										},
@@ -2313,8 +2313,8 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					{
 						Name: kong.String("response-transformer"),
 						Config: kong.Configuration{
-							"add": map[string][]string{
-								"headers": {"Location: http://bar.com:80/v1/foo"},
+							"add": subtranslator.TransformerPluginConfig{
+								Headers: []string{"Location: http://bar.com:80/v1/foo"},
 							},
 						},
 					},

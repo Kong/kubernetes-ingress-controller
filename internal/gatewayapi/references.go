@@ -78,8 +78,8 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		}
 
 		return isRefAllowedByGrant(
-			(*string)(br.Namespace),
-			(string)(br.Name),
+			(br.Namespace),
+			(br.Name),
 			"configuration.konghq.com", // TODO TRR we have some const for this somewhere? alternately maybe it's fed in like the rest
 			"KongPlugin",               // TODO TRR ditto
 			allowedRefs,

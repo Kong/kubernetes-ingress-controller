@@ -652,7 +652,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 			},
 		},
 	}
-	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(ns.Name).Create(ctx, grant, metav1.CreateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(ns.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)

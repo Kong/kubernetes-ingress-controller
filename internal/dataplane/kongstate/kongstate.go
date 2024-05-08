@@ -475,6 +475,11 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 				if err := isRemotePluginReferenceAllowed(
 					cacheStore,
 					pluginReference{
+						// TODO gosec complains about "Implicit memory aliasing in for loop" here but apparently this
+						// shouldn't be relevant in modern Go? Is our version outdated?
+						// https://stackoverflow.com/a/68247837
+						// I don't think reinstantiating the loop var causes issues for this, but if we don't need the
+						// extra code...
 						Referer:   &c.K8sKongConsumer,
 						Namespace: plugin.Namespace,
 						Name:      plugin.Name,

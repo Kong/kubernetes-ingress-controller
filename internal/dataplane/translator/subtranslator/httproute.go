@@ -483,7 +483,11 @@ func mergePluginsOfTheSameType(plugins []kong.Plugin) ([]kong.Plugin, error) {
 		plugins := plugins
 		// If we produced multiple plugins of the same type, we need to merge their configurations now.
 		if len(plugins) > 1 {
+			// Use the first plugin as the base for the merged plugin.
 			mergedPlugin := *plugins[0].DeepCopy()
+			// Merge the configurations of the other plugins into the base plugin (thus skipping the first one).
+			// If we merged the first one into itself, it could result in duplicate entries in slices because of
+			// the `mergo.WithAppendSlice` option.
 			for _, plugin := range plugins[1:] {
 				if err := mergo.Merge(&mergedPlugin.Config, plugin.Config, mergo.WithAppendSlice); err != nil {
 					// Should never happen as we're passing the same type of objects.

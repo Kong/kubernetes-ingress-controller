@@ -157,6 +157,52 @@ func TestExtractKongPluginsFromAnnotations(t *testing.T) {
 	}
 }
 
+func TestExtractNamespacedKongPluginsFromAnnotations(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []NamespacedKongPlugin
+	}{
+		{
+			name: "empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/nothing": "whatever",
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "basic",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/plugins": "kp-rl, kp-cors",
+				},
+			},
+			want: []NamespacedKongPlugin{{Name: "kp-rl"}, {Name: "kp-cors"}},
+		},
+		{
+			name: "mixed",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/plugins": "default:kp-rl, kp-cors",
+				},
+			},
+			want: []NamespacedKongPlugin{{Name: "kp-rl", Namespace: "default"}, {Name: "kp-cors"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExtractNamespacedKongPluginsFromAnnotations(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExtractNamespacedKongPluginsFromAnnotations() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestExtractConfigurationName(t *testing.T) {
 	type args struct {
 		anns map[string]string

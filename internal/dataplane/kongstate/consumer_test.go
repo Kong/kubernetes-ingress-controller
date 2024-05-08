@@ -1,14 +1,13 @@
 package kongstate
 
 import (
-	"math/rand"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func int64Ptr(i int64) *int64 {
@@ -16,8 +15,6 @@ func int64Ptr(i int64) *int64 {
 }
 
 func TestConsumer_SanitizedCopy(t *testing.T) {
-	// this needs a static random seed because some auths generate random values
-	uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 	for _, tt := range []struct {
 		name string
 		in   Consumer
@@ -54,7 +51,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 				Plugins:    []kong.Plugin{{ID: kong.String("1")}},
-				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: randRedactedString()}}},
+				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")}}},
 				HMACAuths:  []*HMACAuth{{kong.HMACAuth{ID: kong.String("1"), Secret: redactedString}}},
 				JWTAuths:   []*JWTAuth{{kong.JWTAuth{ID: kong.String("1"), Secret: redactedString}}},
 				BasicAuths: []*BasicAuth{{kong.BasicAuth{ID: kong.String("1"), Password: redactedString}}},
@@ -67,10 +64,8 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 			},
 		},
 	} {
-		// this needs a static random seed because some auths generate random values
-		uuid.SetRand(rand.New(rand.NewSource(1))) //nolint:gosec
 		t.Run(tt.name, func(t *testing.T) {
-			got := *tt.in.SanitizedCopy()
+			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}

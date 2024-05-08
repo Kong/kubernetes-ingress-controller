@@ -1,10 +1,8 @@
 package kongstate
 
 import (
-	"math/rand"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

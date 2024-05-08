@@ -122,6 +122,7 @@ func Run(
 		EnableReverseSync:          c.EnableReverseSync,
 		ExpressionRoutes:           dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		SanitizeKonnectConfigDumps: featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
+		FallbackConfiguration:      featureGates.Enabled(featuregates.FallbackConfiguration),
 	}
 
 	setupLog.Info("Configuring and building the controller manager")
@@ -182,6 +183,7 @@ func Run(
 		storer,
 		c.KongWorkspace,
 		translatorFeatureFlags,
+		c.IngressClassName,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)

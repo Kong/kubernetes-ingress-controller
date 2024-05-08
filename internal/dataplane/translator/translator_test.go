@@ -5020,14 +5020,12 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 }
 
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
-	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer, "",
-		FeatureFlags{
-			// We'll assume these are true for all tests.
-			FillIDs:                           true,
-			ReportConfiguredKubernetesObjects: true,
-			KongServiceFacade:                 true,
-		},
-	)
+	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer, "", FeatureFlags{
+		// We'll assume these are true for all tests.
+		FillIDs:                           true,
+		ReportConfiguredKubernetesObjects: true,
+		KongServiceFacade:                 true,
+	}, "kong")
 	require.NoError(t, err)
 	return p
 }
@@ -5163,4 +5161,33 @@ func TestUpdateTargetMap(t *testing.T) {
 			require.Equal(t, tc.expectedMap, result)
 		})
 	}
+}
+
+func TestTranslator_UpdateStore(t *testing.T) {
+	originalStore, err := store.NewFakeStore(store.FakeObjects{})
+	require.NoError(t, err)
+	translator := mustNewTranslator(t, originalStore)
+
+	originalBuildConfigResult := translator.BuildKongConfig()
+
+	newStore, err := store.NewFakeStore(store.FakeObjects{
+		KongConsumers: []*kongv1.KongConsumer{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "consumer1",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Username: "consumer1",
+			},
+		},
+	})
+	require.NoError(t, err)
+	translator.UpdateStore(newStore)
+
+	newBuildConfigResult := translator.BuildKongConfig()
+	require.NotEqual(t, originalBuildConfigResult.KongState, newBuildConfigResult.KongState, "KongState should be different after updating the store")
+	require.Len(t, newBuildConfigResult.KongState.Consumers, 1, "expected 1 consumer in the KongState")
 }

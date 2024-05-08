@@ -223,7 +223,7 @@ func runTranslatorGoldenTest(t *testing.T, tc translatorGoldenTestCase) {
 
 	// Create the translator.
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags)
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, "")
 	require.NoError(t, err, "failed creating translator")
 
 	// MustBuild the Kong configuration.

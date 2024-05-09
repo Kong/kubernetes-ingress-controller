@@ -1,6 +1,7 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
 go 1.22
+toolchain go1.22.2
 
 // TODO: this is disabled by FOSSA action doesn't support go 1.21's toolchain clause:
 //
@@ -49,12 +50,12 @@ require (
 	github.com/testcontainers/testcontainers-go v0.30.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/api v0.178.0
-	k8s.io/api v0.29.4
-	k8s.io/apiextensions-apiserver v0.29.3
-	k8s.io/apimachinery v0.29.4
-	k8s.io/client-go v0.29.4
-	k8s.io/component-base v0.29.4
-	sigs.k8s.io/controller-runtime v0.17.3
+	k8s.io/api v0.30.0
+	k8s.io/apiextensions-apiserver v0.30.0
+	k8s.io/apimachinery v0.30.0
+	k8s.io/client-go v0.30.0
+	k8s.io/component-base v0.30.0
+	sigs.k8s.io/controller-runtime v0.18.2
 	sigs.k8s.io/gateway-api v1.0.1-0.20240409212030-c57c131b49f8
 	sigs.k8s.io/kustomize/api v0.17.1
 	sigs.k8s.io/kustomize/kyaml v0.17.0
@@ -160,8 +161,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/onsi/ginkgo v1.16.4 // indirect
-	github.com/onsi/ginkgo/v2 v2.15.0 // indirect
-	github.com/onsi/gomega v1.31.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -209,7 +208,7 @@ require (
 	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.17.0 // indirect
+	golang.org/x/tools v0.18.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240429193739-8cf5692501f6 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240429193739-8cf5692501f6 // indirect
@@ -220,8 +219,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/cli-runtime v0.29.4
-	k8s.io/klog/v2 v2.120.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20240105020646-a37d4de58910 // indirect
+	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/kubectl v0.29.4
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 	sigs.k8s.io/e2e-framework v0.3.1-0.20231113122213-262cac32d35e

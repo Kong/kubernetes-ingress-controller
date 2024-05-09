@@ -289,7 +289,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-consts generate.docs generate.store fmt
+generate: generate.controllers generate.clientsets generate.gateway-api-consts generate.docs generate.go fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -328,9 +328,10 @@ generate.apidocs: crd-ref-docs
 generate.cli-arguments-docs:
 	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
-.PHONY: generate.store
-generate.store:
-	go generate ./internal/store
+.PHONY: generate.go
+generate.go:
+	go generate ./...
+
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

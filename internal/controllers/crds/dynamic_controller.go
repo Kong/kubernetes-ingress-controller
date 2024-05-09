@@ -11,12 +11,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -51,22 +51,20 @@ func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
 
 	r.Log.Info("Required CustomResourceDefinitions are not installed, setting up a watch for them in case they are installed afterward")
 
-	c, err := controller.New("DynamicCRDController", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &apiextensionsv1.CustomResourceDefinition{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.isOneOfRequiredCRDs),
-	)
+	return ctrl.NewControllerManagedBy(mgr).
+		Named("DynamicCRDController").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		Watches(&apiextensionsv1.CustomResourceDefinition{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.isOneOfRequiredCRDs)),
+		).
+		Complete(r)
 }
 
 func (r *DynamicCRDController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -51,56 +52,43 @@ type TLSRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("tlsroute-controller", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
-	// if a GatewayClass updates then we need to enqueue the linked TLSRoutes to
-	// ensure that any route objects that may have been orphaned by that change get
-	// removed from data-plane configurations, and any routes that are now supported
-	// due to that change get added to data-plane configurations.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForGatewayClass),
-		predicate.Funcs{
-			GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
-			CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-		},
-	); err != nil {
-		return err
-	}
-
-	// if a Gateway updates then we need to enqueue the linked TLSRoutes to
-	// ensure that any route objects that may have been orphaned by that change get
-	// removed from data-plane configurations, and any routes that are now supported
-	// due to that change get added to data-plane configurations.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForGateway),
-	); err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		Named("tlsroute-controller").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		Watches(&gatewayapi.GatewayClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForGatewayClass),
+			builder.WithPredicates(predicate.Funcs{
+				GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
+				CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+				UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+				DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+			}),
+		).
+		// if a Gateway updates then we need to enqueue the linked TLSRoutes to
+		// ensure that any route objects that may have been orphaned by that change get
+		// removed from data-plane configurations, and any routes that are now supported
+		// due to that change get added to data-plane configurations.
+		Watches(&gatewayapi.Gateway{},
+			handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForGateway),
+		)
 
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   gatewayv1alpha2.GroupVersion.Group,
-				Version: gatewayv1alpha2.GroupVersion.Version,
-				Kind:    "TLSRoute",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   gatewayv1alpha2.GroupVersion.Group,
+					Version: gatewayv1alpha2.GroupVersion.Version,
+					Kind:    "TLSRoute",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 
 	// because of the additional burden of having to manage reference data-plane
@@ -108,10 +96,8 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// simply reconcile ALL TLSRoute objects. This allows us to drop the backend
 	// data-plane config for an TLSRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.TLSRoute{}),
-		&handler.EnqueueRequestForObject{},
-	)
+	return blder.For(&gatewayapi.TLSRoute{}).
+		Complete(r)
 }
 
 // -----------------------------------------------------------------------------

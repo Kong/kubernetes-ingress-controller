@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -70,20 +71,20 @@ var _ controllers.Reconciler = &CoreV1ServiceReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("CoreV1Service", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("CoreV1Service").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	return blder.Watches(&corev1.Service{},
 		&handler.EnqueueRequestForObject{},
-	)
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -175,20 +176,20 @@ var _ controllers.Reconciler = &DiscoveryV1EndpointSliceReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("DiscoveryV1EndpointSlice", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("DiscoveryV1EndpointSlice").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	return blder.Watches(&discoveryv1.EndpointSlice{},
 		&handler.EnqueueRequestForObject{},
-	)
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -266,45 +267,41 @@ var _ controllers.Reconciler = &NetV1IngressReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("NetV1Ingress", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("NetV1Ingress").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "networking.k8s.io",
-				Version: "v1",
-				Kind:    "Ingress",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "networking.k8s.io",
+					Version: "v1",
+					Kind:    "Ingress",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &netv1.Ingress{}),
+	return blder.Watches(&netv1.Ingress{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -462,20 +459,20 @@ var _ controllers.Reconciler = &NetV1IngressClassReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("NetV1IngressClass", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("NetV1IngressClass").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	return blder.Watches(&netv1.IngressClass{},
 		&handler.EnqueueRequestForObject{},
-	)
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -546,20 +543,20 @@ var _ controllers.Reconciler = &KongV1KongIngressReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1KongIngress", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1.KongIngress{}),
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1KongIngress").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	return blder.Watches(&kongv1.KongIngress{},
 		&handler.EnqueueRequestForObject{},
-	)
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -632,20 +629,20 @@ var _ controllers.Reconciler = &KongV1KongPluginReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1KongPlugin", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1.KongPlugin{}),
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1KongPlugin").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	return blder.Watches(&kongv1.KongPlugin{},
 		&handler.EnqueueRequestForObject{},
-	)
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -741,32 +738,28 @@ var _ controllers.Reconciler = &KongV1KongClusterPluginReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1KongClusterPlugin", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1KongClusterPlugin").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1.KongClusterPlugin{}),
+	return blder.Watches(&kongv1.KongClusterPlugin{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -904,45 +897,41 @@ var _ controllers.Reconciler = &KongV1KongConsumerReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1KongConsumer", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1KongConsumer").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1",
-				Kind:    "KongConsumer",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1",
+					Kind:    "KongConsumer",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1.KongConsumer{}),
+	return blder.Watches(&kongv1.KongConsumer{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -1095,45 +1084,41 @@ var _ controllers.Reconciler = &KongV1Beta1KongConsumerGroupReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Beta1KongConsumerGroup", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Beta1KongConsumerGroup").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1beta1",
-				Kind:    "KongConsumerGroup",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1beta1",
+					Kind:    "KongConsumerGroup",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1beta1.KongConsumerGroup{}),
+	return blder.Watches(&kongv1beta1.KongConsumerGroup{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -1288,45 +1273,41 @@ var _ controllers.Reconciler = &KongV1Beta1TCPIngressReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Beta1TCPIngress", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Beta1TCPIngress").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1beta1",
-				Kind:    "TCPIngress",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1beta1",
+					Kind:    "TCPIngress",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1beta1.TCPIngress{}),
+	return blder.Watches(&kongv1beta1.TCPIngress{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -1490,45 +1471,41 @@ var _ controllers.Reconciler = &KongV1Beta1UDPIngressReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Beta1UDPIngress", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Beta1UDPIngress").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1beta1",
-				Kind:    "UDPIngress",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1beta1",
+					Kind:    "UDPIngress",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1beta1.UDPIngress{}),
+	return blder.Watches(&kongv1beta1.UDPIngress{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -1666,20 +1643,20 @@ var _ controllers.Reconciler = &KongV1Alpha1IngressClassParametersReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Alpha1IngressClassParameters", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1alpha1.IngressClassParameters{}),
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Alpha1IngressClassParameters").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	return blder.Watches(&kongv1alpha1.IngressClassParameters{},
 		&handler.EnqueueRequestForObject{},
-	)
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -1754,45 +1731,41 @@ var _ controllers.Reconciler = &IncubatorV1Alpha1KongServiceFacadeReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("IncubatorV1Alpha1KongServiceFacade", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("IncubatorV1Alpha1KongServiceFacade").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "incubator.ingress-controller.konghq.com",
-				Version: "v1alpha1",
-				Kind:    "KongServiceFacade",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "incubator.ingress-controller.konghq.com",
+					Version: "v1alpha1",
+					Kind:    "KongServiceFacade",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &incubatorv1alpha1.KongServiceFacade{}),
+	return blder.Watches(&incubatorv1alpha1.KongServiceFacade{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
@@ -1925,45 +1898,41 @@ var _ controllers.Reconciler = &KongV1Alpha1KongVaultReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1KongVaultReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Alpha1KongVault", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Alpha1KongVault").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1alpha1",
-				Kind:    "KongVault",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1alpha1",
+					Kind:    "KongVault",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1alpha1.KongVault{}),
+	return blder.Watches(&kongv1alpha1.KongVault{},
 		&handler.EnqueueRequestForObject{},
-		preds,
-	)
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
 }
 
 // listClassless finds and reconciles all objects without ingress class information

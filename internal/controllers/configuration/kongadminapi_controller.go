@@ -13,12 +13,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
@@ -59,26 +59,26 @@ var _ controllers.Reconciler = &KongAdminAPIServiceReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongAdminAPIEndpoints", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
 
 	if r.Cache == nil {
 		r.Cache = make(DiscoveredAdminAPIsCache)
 	}
 
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice),
-	)
+	return ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongAdminAPIEndpoints").
+		WithOptions(controller.Options{
+			Reconciler: r,
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		Watches(&discoveryv1.EndpointSlice{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice)),
+		).
+		Complete(r)
 }
 
 // SetLogger sets the logger.

@@ -9,9 +9,6 @@ import (
 )
 
 func (c CacheStores) TakeSnapshot() (CacheStores, error) {
-	c.l.RLock()
-	defer c.l.RUnlock()
-
 	// Create a fresh CacheStores instance to store the snapshot.
 	snapshot := NewCacheStores()
 
@@ -41,6 +38,9 @@ func (c CacheStores) TakeSnapshot() (CacheStores, error) {
 		c.KongServiceFacade,
 		c.KongVault,
 	}
+
+	c.l.RLock()
+	defer c.l.RUnlock()
 
 	// Iterate over all stores and add a deep copy of each object to the snapshot.
 	for _, store := range allStores {

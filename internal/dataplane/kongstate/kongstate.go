@@ -360,159 +360,104 @@ func getPermittedForReferenceGrantFrom(
 	return allowed
 }
 
+type NamespacedKongPlugin struct {
+	Namespace string
+	Name      string
+}
+
 func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger) map[string]util.ForeignRelations {
 	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
 	pluginRels := map[string]util.ForeignRelations{}
-	addConsumerRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
+
+	type entityRelationType int
+	const (
+		ConsumerRelation      entityRelationType = iota
+		ConsumerGroupRelation entityRelationType = iota
+		RouteRelation         entityRelationType = iota
+		ServiceRelation       entityRelationType = iota
+	)
+	addRelation := func(referer client.Object, plugin annotations.NamespacedKongPlugin, identifier string, t entityRelationType) {
+		// There are 2 types of KongPlugin references: local and remote.
+		// A local reference is one where the KongPlugin is in the same namespace as the referer.
+		// A remote reference is one where the KongPlugin is in a different namespace.
+		// By default a KongPlugin is considered local.
+		// If the plugin has a namespace specified, it is considered remote.
+		//
+		// The referer is the entity that the KongPlugin is associated with.
+		//
+		// Code in buildPlugins() will combine plugin associations into
+		// multi-entity plugins within the local namespace
+		namespace := referer.GetNamespace()
+		if plugin.Namespace != "" {
+			// remote KongPlugin, permitted if ReferenceGrant allows
+			if err := isRemotePluginReferenceAllowed(
+				cacheStore,
+				pluginReference{
+					Referer:   referer,
+					Namespace: plugin.Namespace,
+					Name:      plugin.Name,
+				},
+			); err != nil {
+				log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+				return
+			}
+
+			namespace = plugin.Namespace
+		}
+
+		pluginKey := namespace + ":" + plugin.Name
 		relations, ok := pluginRels[pluginKey]
 		if !ok {
 			relations = util.ForeignRelations{}
 		}
-		relations.Consumer = append(relations.Consumer, identifier)
-		pluginRels[pluginKey] = relations
-	}
-	addConsumerGroupRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
-		relations, ok := pluginRels[pluginKey]
-		if !ok {
-			relations = util.ForeignRelations{}
+		switch t {
+		case ConsumerRelation:
+			relations.Consumer = append(relations.Consumer, identifier)
+		case ConsumerGroupRelation:
+			relations.ConsumerGroup = append(relations.ConsumerGroup, identifier)
+		case RouteRelation:
+			relations.Route = append(relations.Route, identifier)
+		case ServiceRelation:
+			relations.Service = append(relations.Service, identifier)
 		}
-		relations.ConsumerGroup = append(relations.ConsumerGroup, identifier)
-		pluginRels[pluginKey] = relations
-	}
-	addRouteRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
-		relations, ok := pluginRels[pluginKey]
-		if !ok {
-			relations = util.ForeignRelations{}
-		}
-		relations.Route = append(relations.Route, identifier)
-		pluginRels[pluginKey] = relations
-	}
-	addServiceRelation := func(namespace, pluginName, identifier string) {
-		pluginKey := namespace + ":" + pluginName
-		relations, ok := pluginRels[pluginKey]
-		if !ok {
-			relations = util.ForeignRelations{}
-		}
-		relations.Service = append(relations.Service, identifier)
 		pluginRels[pluginKey] = relations
 	}
 
 	for i := range ks.Services {
-		// service
 		for _, svc := range ks.Services[i].K8sServices {
 			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(svc.GetAnnotations())
 			for _, plugin := range pluginList {
-				if plugin.Namespace == "" {
-					// either a local KongPlugin or a KongClusterPlugin. Code in buildPlugins() will combine plugin associations
-					// into multi-entity plugins within the local namespace
-					addServiceRelation(svc.Namespace, plugin.Name, *ks.Services[i].Name)
-
-				} else {
-					// remote KongPlugin, permitted if ReferenceGrant allows
-					if err := isRemotePluginReferenceAllowed(
-						cacheStore,
-						pluginReference{
-							Referer:   svc,
-							Namespace: plugin.Namespace,
-							Name:      plugin.Name,
-						},
-					); err == nil {
-						addServiceRelation(plugin.Namespace, plugin.Name, *ks.Services[i].Name)
-					} else {
-						log.Error(err, "could not bind requested plugin")
-					}
-				}
+				addRelation(svc, plugin, *ks.Services[i].Name, ServiceRelation)
 			}
 		}
 
-		// route
 		for j := range ks.Services[i].Routes {
 			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
 			for _, plugin := range pluginList {
-				if plugin.Namespace == "" {
-					// either a local KongPlugin or a KongClusterPlugin. Code in buildPlugins() will combine plugin associations
-					// into multi-entity plugins within the local namespace
-					addRouteRelation(ingress.Namespace, plugin.Name, *ks.Services[i].Routes[j].Name)
-				} else {
-					// remote KongPlugin, permitted if ReferenceGrant allows
-					// pretend we have a full Ingress struct for reference checks
-					virtualIngress := netv1.Ingress{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: ingress.Namespace,
-							Name:      ingress.Name,
-						},
-					}
-					if err := isRemotePluginReferenceAllowed(
-						cacheStore,
-						pluginReference{
-							Referer:   &virtualIngress,
-							Namespace: plugin.Namespace,
-							Name:      plugin.Name,
-						},
-					); err == nil {
-						addRouteRelation(plugin.Namespace, plugin.Name, *ks.Services[i].Routes[j].Name)
-					} else {
-						log.Error(err, "could not bind requested plugin")
-					}
+				// pretend we have a full Ingress struct for reference checks
+				virtualIngress := netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ingress.Namespace,
+						Name:      ingress.Name,
+					},
 				}
+				addRelation(&virtualIngress, plugin, *ks.Services[i].Routes[j].Name, RouteRelation)
 			}
 		}
 	}
-	// consumer
+
 	for _, c := range ks.Consumers {
 		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
 		for _, plugin := range pluginList {
-			if plugin.Namespace == "" {
-				// either a local KongPlugin or a KongClusterPlugin. Code in buildPlugins() will combine plugin associations
-				// into multi-entity plugins within the local namespace
-				addConsumerRelation(c.K8sKongConsumer.Namespace, plugin.Name, *c.Username)
-			} else {
-				// remote KongPlugin, permitted if ReferenceGrant allows
-				if err := isRemotePluginReferenceAllowed(
-					cacheStore,
-					pluginReference{
-						// TODO gosec complains about "Implicit memory aliasing in for loop" here but apparently this
-						// shouldn't be relevant in modern Go? Is our version outdated?
-						// https://stackoverflow.com/a/68247837
-						// I don't think reinstantiating the loop var causes issues for this, but if we don't need the
-						// extra code...
-						Referer:   &c.K8sKongConsumer,
-						Namespace: plugin.Namespace,
-						Name:      plugin.Name,
-					},
-				); err == nil {
-					addConsumerRelation(plugin.Namespace, plugin.Name, *c.Username)
-				} else {
-					log.Error(err, "could not bind requested plugin")
-				}
-			}
+			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation)
 		}
 	}
-	// consumer group
+
 	for _, cg := range ks.ConsumerGroups {
 		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(cg.K8sKongConsumerGroup.GetAnnotations())
 		for _, plugin := range pluginList {
-			if plugin.Namespace == "" {
-				addConsumerGroupRelation(cg.K8sKongConsumerGroup.Namespace, plugin.Name, *cg.Name)
-			} else {
-				// remote KongPlugin, permitted if ReferenceGrant allows
-				if err := isRemotePluginReferenceAllowed(
-					cacheStore,
-					pluginReference{
-						Referer:   &cg.K8sKongConsumerGroup,
-						Namespace: plugin.Namespace,
-						Name:      plugin.Name,
-					},
-				); err == nil {
-					addConsumerGroupRelation(plugin.Namespace, plugin.Name, *cg.Name)
-				} else {
-					log.Error(err, "could not bind requested plugin")
-				}
-			}
+			addRelation(&cg.K8sKongConsumerGroup, plugin, *cg.Name, ConsumerGroupRelation)
 		}
 	}
 

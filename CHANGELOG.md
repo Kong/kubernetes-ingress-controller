@@ -86,6 +86,13 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Support to apply licenses to DB backed Kong gateway from `KongLicense`.
+  [#5648](https://github.com/Kong/kubernetes-ingress-controller/pull/5648)
+
 ## [3.1.4]
 
  Release date: 2024-04-26

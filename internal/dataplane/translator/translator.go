@@ -127,6 +127,12 @@ type KongConfigBuildingResult struct {
 	ConfiguredKubernetesObjects []client.Object
 }
 
+// UpdateCache updates the store cache used by the translator.
+// This method can be used to swap the cache with another one (e.g. the last valid snapshot).
+func (t *Translator) UpdateCache(c store.CacheStores) {
+	t.storer.UpdateCache(c)
+}
+
 // BuildKongConfig creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes.
 func (t *Translator) BuildKongConfig() KongConfigBuildingResult {

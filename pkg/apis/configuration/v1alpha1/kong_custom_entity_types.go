@@ -17,26 +17,24 @@ type KongEntityScope string
 // +kubebuilder:resource:scope=Namespaced,shortName=kce,categories=kong-ingress-controller,path=kongcustomentities,singular=kongcustomentity
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Entity Type",type=string,JSONPath=`.type`,description="type of the Kong entity"
-// +kubebuilder:validation:XValidation:rule="self.scope == oldSelf.scope",message="The scope field is immutable"
-// +kubebuilder:validation:XValidation:rule="self.type == oldSelf.type",message="The type field is immutable"
-// +kubebuilder:validation:XValidation:rule="!(self.type in ['services','routes','upstreams','targets','plugins','consumers','consumer_groups'])",message="The type field cannot be known Kong entity types"
-// +kubebuilder:validation:XValidation:rule="!(self.scope == 'independent' && has(self.parentRef)) && !(self.scope == 'attached' && !has(self.parentRef))",message="attached KongCustomEntity must have parentRef; independent KongCustomEntity must not have parentRef"
-// REVIEW: put all fields other than "status" under the "spec"?
+// +kubebuilder:printcolumn:name="Entity Type",type=string,JSONPath=`.spec.type`,description="type of the Kong entity"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="self.spec.type == oldSelf.spec.type",message="The spec.type field is immutable"
+// +kubebuilder:validation:XValidation:rule="!(self.spec.type in ['services','routes','upstreams','targets','plugins','consumers','consumer_groups'])",message="The spec.type field cannot be known Kong entity types"
 
 // KongCustomEntity defines a "custom" Kong entity that KIC cannot support the entity type directly.
 type KongCustomEntity struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// +kubebuilder:validation:Enum=independent;attached
-	// REVIEW: We can get the schema of entities from Kong gateway admin APIs including fields requiring foreign reference.
-	// Is the "Scope" field really required?
 
-	// Scope means whether the entity can be specified independently.
-	// "independent" means that the entity does not depend on other entities;
-	// "attached" means that the entity has "foreign" fields referring to other entities.
-	Scope KongEntityScope `json:"scope"`
+	Spec KongCustomEntitySpec `json:"spec"`
 
+	// Status stores the reconciling status of the resource.
+	Status KongCustomEntityStatus `json:"status,omitempty"`
+}
+
+type KongCustomEntitySpec struct {
 	// EntityType is the type of the Kong entity. The type is used in generating declarative configuration.
 	EntityType string `json:"type"`
 	// Fields defines the fields of the Kong entity itself.
@@ -48,14 +46,7 @@ type KongCustomEntity struct {
 	// Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached
 	// to the entity(service/route/consumer) where the plugin is attached.
 	ParentRef *ObjectReference `json:"parentRef,omitempty"`
-	// Status stores the reconciling status of the resource.
-	Status KongCustomEntityStatus `json:"status,omitempty"`
 }
-
-// REVIEW:
-// - Should we define dedicated type aliases for each field (like gateway API does, define types "Group","Kind","Namespace","ObjectName")?
-// - Should we define the optional fields to pointer type?
-// - Should we preset a "default" value of Group/Kind when they are not present like KongPlugin?
 
 // ObjectReference defines reference of a kubernetes object.
 type ObjectReference struct {

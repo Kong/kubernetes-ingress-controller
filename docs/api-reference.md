@@ -344,11 +344,7 @@ KongCustomEntity defines a "custom" Kong entity that KIC cannot support the enti
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCustomEntity`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `scope` _[KongEntityScope](#kongentityscope)_ | Scope means whether the entity can be specified independently. "independent" means that the entity does not depend on other entities; "attached" means that the entity has "foreign" fields referring to other entities. |
-| `type` _string_ | EntityType is the type of the Kong entity. The type is used in generating declarative configuration. |
-| `fields` _[JSON](#json)_ | Fields defines the fields of the Kong entity itself. |
-| `controllerName` _string_ | ControllerName specifies the controller that should reconcile it, like ingress class. |
-| `parentRef` _[ObjectReference](#objectreference)_ | ParentRef references the kubernetes resource it attached to when its scope is "attached". Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached to the entity(service/route/consumer) where the plugin is attached. |
+| `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ |  |
 
 
 
@@ -449,19 +445,27 @@ Kind refers to a Kubernetes kind.
 _Appears in:_
 - [ControllerReference](#controllerreference)
 
-
-
-#### KongEntityScope
-_Underlying type:_ `string`
+#### KongCustomEntitySpec
 
 
 
 
 
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | EntityType is the type of the Kong entity. The type is used in generating declarative configuration. |
+| `fields` _[JSON](#json)_ | Fields defines the fields of the Kong entity itself. |
+| `controllerName` _string_ | ControllerName specifies the controller that should reconcile it, like ingress class. |
+| `parentRef` _[ObjectReference](#objectreference)_ | ParentRef references the kubernetes resource it attached to when its scope is "attached". Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached to the entity(service/route/consumer) where the plugin is attached. |
 
 
 _Appears in:_
 - [KongCustomEntity](#kongcustomentity)
+
+
+
+
 
 #### KongLicenseControllerStatus
 
@@ -547,7 +551,7 @@ ObjectReference defines reference of a kubernetes object.
 
 
 _Appears in:_
-- [KongCustomEntity](#kongcustomentity)
+- [KongCustomEntitySpec](#kongcustomentityspec)
 
 
 ## configuration.konghq.com/v1beta1

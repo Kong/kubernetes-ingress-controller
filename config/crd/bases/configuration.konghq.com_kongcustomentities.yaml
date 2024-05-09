@@ -20,8 +20,15 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: type of the Kong entity
-      jsonPath: .type
+      jsonPath: .spec.type
       name: Entity Type
+      type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.conditions[?(@.type=="Programmed")].status
+      name: Programmed
       type: string
     name: v1alpha1
     schema:
@@ -36,13 +43,6 @@ spec:
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
-          controllerName:
-            description: ControllerName specifies the controller that should reconcile
-              it, like ingress class.
-            type: string
-          fields:
-            description: Fields defines the fields of the Kong entity itself.
-            x-kubernetes-preserve-unknown-fields: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -53,34 +53,43 @@ spec:
             type: string
           metadata:
             type: object
-          parentRef:
-            description: |-
-              ParentRef references the kubernetes resource it attached to when its scope is "attached".
-              Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached
-              to the entity(service/route/consumer) where the plugin is attached.
+          spec:
             properties:
-              group:
+              controllerName:
+                description: ControllerName specifies the controller that should reconcile
+                  it, like ingress class.
                 type: string
-              kind:
-                type: string
-              name:
-                type: string
-              namespace:
-                description: Empty namespace means the same namespace of the owning
-                  object.
+              fields:
+                description: Fields defines the fields of the Kong entity itself.
+                x-kubernetes-preserve-unknown-fields: true
+              parentRef:
+                description: |-
+                  ParentRef references the kubernetes resource it attached to when its scope is "attached".
+                  Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached
+                  to the entity(service/route/consumer) where the plugin is attached.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                  namespace:
+                    description: Empty namespace means the same namespace of the owning
+                      object.
+                    type: string
+                required:
+                - name
+                type: object
+              type:
+                description: EntityType is the type of the Kong entity. The type is
+                  used in generating declarative configuration.
                 type: string
             required:
-            - name
+            - controllerName
+            - fields
+            - type
             type: object
-          scope:
-            description: |-
-              Scope means whether the entity can be specified independently.
-              "independent" means that the entity does not depend on other entities;
-              "attached" means that the entity has "foreign" fields referring to other entities.
-            enum:
-            - independent
-            - attached
-            type: string
           status:
             description: Status stores the reconciling status of the resource.
             properties:
@@ -174,27 +183,14 @@ spec:
             required:
             - conditions
             type: object
-          type:
-            description: EntityType is the type of the Kong entity. The type is used
-              in generating declarative configuration.
-            type: string
         required:
-        - controllerName
-        - fields
-        - scope
-        - type
+        - spec
         type: object
         x-kubernetes-validations:
-        - message: The scope field is immutable
-          rule: self.scope == oldSelf.scope
-        - message: The type field is immutable
-          rule: self.type == oldSelf.type
-        - message: The type field cannot be known Kong entity types
-          rule: '!(self.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
-        - message: attached KongCustomEntity must have parentRef; independent KongCustomEntity
-            must not have parentRef
-          rule: '!(self.scope == ''independent'' && has(self.parentRef)) && !(self.scope
-            == ''attached'' && !has(self.parentRef))'
+        - message: The spec.type field is immutable
+          rule: self.spec.type == oldSelf.spec.type
+        - message: The spec.type field cannot be known Kong entity types
+          rule: '!(self.spec.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
     served: true
     storage: true
     subresources:

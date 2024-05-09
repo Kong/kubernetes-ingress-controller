@@ -74,12 +74,11 @@ type LicenseGetter interface {
 // equivalent Kong objects and configurations, producing a complete
 // state configuration for the Kong Admin API.
 type Translator struct {
-	logger           logr.Logger
-	storer           store.Storer
-	workspace        string
-	licenseGetter    LicenseGetter
-	featureFlags     FeatureFlags
-	ingressClassName string
+	logger        logr.Logger
+	storer        store.Storer
+	workspace     string
+	licenseGetter LicenseGetter
+	featureFlags  FeatureFlags
 
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
@@ -92,7 +91,6 @@ func NewTranslator(
 	storer store.Storer,
 	workspace string,
 	featureFlags FeatureFlags,
-	ingressClassName string,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -109,7 +107,6 @@ func NewTranslator(
 		featureFlags:               featureFlags,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
-		ingressClassName:           ingressClassName,
 	}, nil
 }
 
@@ -130,8 +127,10 @@ type KongConfigBuildingResult struct {
 	ConfiguredKubernetesObjects []client.Object
 }
 
-func (t *Translator) UpdateStore(s store.Storer) {
-	t.storer = s
+// UpdateCache updates the store cache used by the translator.
+// This method can be used to swap the cache with another one (e.g. the last valid snapshot).
+func (t *Translator) UpdateCache(c store.CacheStores) {
+	t.storer.UpdateCache(c)
 }
 
 // BuildKongConfig creates a Kong configuration from Ingress and Custom resources
@@ -222,10 +221,6 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 		TranslationFailures:         t.popTranslationFailures(),
 		ConfiguredKubernetesObjects: t.popConfiguredKubernetesObjects(),
 	}
-}
-
-func (t *Translator) IngressClassName() string {
-	return t.ingressClassName
 }
 
 // -----------------------------------------------------------------------------

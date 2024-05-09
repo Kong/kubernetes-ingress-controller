@@ -147,7 +147,7 @@ func TestGetIngressClassHandling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := NewFakeStore(tt.objs)
 			require.NoError(t, err)
-			if got := s.(Store).getIngressClassHandling(); got != tt.want {
+			if got := s.(*Store).getIngressClassHandling(); got != tt.want {
 				t.Errorf("s.getIngressClassHandling() = %v, want %v", got, tt.want)
 			}
 		})

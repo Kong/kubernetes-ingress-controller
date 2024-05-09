@@ -5025,7 +5025,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 		FillIDs:                           true,
 		ReportConfiguredKubernetesObjects: true,
 		KongServiceFacade:                 true,
-	}, "kong")
+	})
 	require.NoError(t, err)
 	return p
 }
@@ -5170,22 +5170,24 @@ func TestTranslator_UpdateStore(t *testing.T) {
 
 	originalBuildConfigResult := translator.BuildKongConfig()
 
-	newStore, err := store.NewFakeStore(store.FakeObjects{
-		KongConsumers: []*kongv1.KongConsumer{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "consumer1",
-					Namespace: "bar",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
-				},
-				Username: "consumer1",
+	newStore, err := store.NewCacheStoresFromObjs(
+		&kongv1.KongConsumer{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongConsumer",
+				APIVersion: kongv1.GroupVersion.String(),
 			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "consumer1",
+				Namespace: "bar",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: "consumer1",
 		},
-	})
+	)
 	require.NoError(t, err)
-	translator.UpdateStore(newStore)
+	translator.UpdateCache(newStore)
 
 	newBuildConfigResult := translator.BuildKongConfig()
 	require.NotEqual(t, originalBuildConfigResult.KongState, newBuildConfigResult.KongState, "KongState should be different after updating the store")

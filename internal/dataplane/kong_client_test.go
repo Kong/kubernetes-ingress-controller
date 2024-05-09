@@ -427,7 +427,7 @@ func (m *mockConfigStatusQueue) Notifications() []clients.ConfigStatus {
 type mockKongConfigBuilder struct {
 	translationFailuresToReturn []failures.ResourceFailure
 	kongState                   *kongstate.KongState
-	updateStoreCalled           bool
+	updateCacheCalled           bool
 }
 
 func newMockKongConfigBuilder() *mockKongConfigBuilder {
@@ -443,8 +443,8 @@ func (p *mockKongConfigBuilder) BuildKongConfig() translator.KongConfigBuildingR
 	}
 }
 
-func (p *mockKongConfigBuilder) UpdateStore(store.Storer) {
-	p.updateStoreCalled = true
+func (p *mockKongConfigBuilder) UpdateCache(store.CacheStores) {
+	p.updateCacheCalled = true
 }
 
 func (p *mockKongConfigBuilder) IngressClassName() string {
@@ -966,5 +966,5 @@ func TestKongClient_FallbackConfiguration(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, kongClient.Update(ctx))
-	require.True(t, configBuilder.updateStoreCalled, "expected store to be updated with a snapshot")
+	require.True(t, configBuilder.updateCacheCalled, "expected store to be updated with a snapshot")
 }

@@ -56,8 +56,7 @@ const (
 // KongConfigBuilder builds a Kong configuration from a Kubernetes object cache.
 type KongConfigBuilder interface {
 	BuildKongConfig() translator.KongConfigBuildingResult
-	UpdateStore(store.Storer)
-	IngressClassName() string
+	UpdateCache(store.CacheStores)
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
@@ -406,8 +405,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to take snapshot of cache: %w", err)
 		}
-		storeUsingCacheSnapshot := store.New(cacheSnapshot, c.kongConfigBuilder.IngressClassName(), c.logger)
-		c.kongConfigBuilder.UpdateStore(storeUsingCacheSnapshot)
+		c.kongConfigBuilder.UpdateCache(cacheSnapshot)
 	}
 
 	c.logger.V(util.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")

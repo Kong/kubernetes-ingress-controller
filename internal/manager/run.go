@@ -178,13 +178,7 @@ func Run(
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
-	configTranslator, err := translator.NewTranslator(
-		logger,
-		storer,
-		c.KongWorkspace,
-		translatorFeatureFlags,
-		c.IngressClassName,
-	)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags)
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
 	}

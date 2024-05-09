@@ -551,14 +551,15 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-{{- end}}
     return blder.Watches(&{{.PackageImportAlias}}.{{.Kind}}{},
 		&handler.EnqueueRequestForObject{},
-{{- if .AcceptsIngressClassNameAnnotation}}
 		builder.WithPredicates(preds),
-{{- end}}
 	).
 		Complete(r)
+{{- else}}
+    return blder.For(&{{.PackageImportAlias}}.{{.Kind}}{}).
+		Complete(r)
+{{- end}}
 }
 
 {{- if .AcceptsIngressClassNameAnnotation}}

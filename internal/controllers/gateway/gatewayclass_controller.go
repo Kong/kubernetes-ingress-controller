@@ -62,7 +62,6 @@ type GatewayClassReconciler struct { //nolint:revive
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	return ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
 		Named(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass").

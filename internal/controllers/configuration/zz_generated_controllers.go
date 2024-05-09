@@ -81,9 +81,7 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
-	return blder.Watches(&corev1.Service{},
-		&handler.EnqueueRequestForObject{},
-	).
+	return blder.For(&corev1.Service{}).
 		Complete(r)
 }
 
@@ -186,9 +184,7 @@ func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) 
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
-	return blder.Watches(&discoveryv1.EndpointSlice{},
-		&handler.EnqueueRequestForObject{},
-	).
+	return blder.For(&discoveryv1.EndpointSlice{}).
 		Complete(r)
 }
 
@@ -469,9 +465,7 @@ func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
-	return blder.Watches(&netv1.IngressClass{},
-		&handler.EnqueueRequestForObject{},
-	).
+	return blder.For(&netv1.IngressClass{}).
 		Complete(r)
 }
 
@@ -553,9 +547,7 @@ func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
-	return blder.Watches(&kongv1.KongIngress{},
-		&handler.EnqueueRequestForObject{},
-	).
+	return blder.For(&kongv1.KongIngress{}).
 		Complete(r)
 }
 
@@ -639,9 +631,7 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
-	return blder.Watches(&kongv1.KongPlugin{},
-		&handler.EnqueueRequestForObject{},
-	).
+	return blder.For(&kongv1.KongPlugin{}).
 		Complete(r)
 }
 
@@ -1653,9 +1643,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
-	return blder.Watches(&kongv1alpha1.IngressClassParameters{},
-		&handler.EnqueueRequestForObject{},
-	).
+	return blder.For(&kongv1alpha1.IngressClassParameters{}).
 		Complete(r)
 }
 

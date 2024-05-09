@@ -47,7 +47,6 @@ var _ controllers.Reconciler = &CoreV1SecretReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	predicateFuncs := predicate.NewPredicateFuncs(r.shouldReconcileSecret)
 	// we should always try to delete secrets in caches when they are deleted in cluster.
 	predicateFuncs.DeleteFunc = func(_ event.DeleteEvent) bool { return true }
@@ -66,7 +65,6 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicateFuncs),
 		).
 		Complete(r)
-
 }
 
 // SetLogger sets the logger.

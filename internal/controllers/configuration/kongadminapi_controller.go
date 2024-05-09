@@ -59,7 +59,6 @@ var _ controllers.Reconciler = &KongAdminAPIServiceReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	if r.Cache == nil {
 		r.Cache = make(DiscoveredAdminAPIsCache)
 	}

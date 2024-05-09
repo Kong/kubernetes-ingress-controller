@@ -56,6 +56,7 @@ const (
 // KongConfigBuilder builds a Kong configuration from a Kubernetes object cache.
 type KongConfigBuilder interface {
 	BuildKongConfig() translator.KongConfigBuildingResult
+	UpdateCache(store.CacheStores)
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
@@ -156,7 +157,7 @@ func NewKongClient(
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	kongConfigFetcher configfetcher.LastValidConfigFetcher,
-	parser KongConfigBuilder,
+	kongConfigBuilder KongConfigBuilder,
 	cacheStores store.CacheStores,
 ) (*KongClient, error) {
 	c := &KongClient{
@@ -172,7 +173,7 @@ func NewKongClient(
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
-		kongConfigBuilder:      parser,
+		kongConfigBuilder:      kongConfigBuilder,
 		kongConfigFetcher:      kongConfigFetcher,
 	}
 	c.initializeControllerPodReference()
@@ -396,6 +397,17 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 
+	// If FallbackConfiguration is enabled, we take a snapshot of the cache so that we operate on a consistent
+	// set of resources in case of failures being returned from Kong. As we're going to generate a fallback config
+	// based on the cache contents, we need to ensure it is not modified during the process.
+	if c.kongConfig.FallbackConfiguration {
+		cacheSnapshot, err := c.cache.TakeSnapshot()
+		if err != nil {
+			return fmt.Errorf("failed to take snapshot of cache: %w", err)
+		}
+		c.kongConfigBuilder.UpdateCache(cacheSnapshot)
+	}
+
 	c.logger.V(util.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
@@ -424,6 +436,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// In case of a failure in syncing configuration with Gateways, propagate the error.
 	if gatewaysSyncErr != nil {
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5931
+		// In case of a failure in syncing configuration with Gateways, if FallbackConfiguration is enabled,
+		// we should generate a fallback configuration and push it to the gateways first.
 		if state, found := c.kongConfigFetcher.LastValidConfig(); found {
 			_, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig)
 			if fallbackSyncErr != nil {

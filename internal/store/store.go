@@ -56,6 +56,8 @@ const (
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
+	UpdateCache(cs CacheStores)
+
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
@@ -109,11 +111,11 @@ type Store struct {
 	logger logr.Logger
 }
 
-var _ Storer = Store{}
+var _ Storer = &Store{}
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, logger logr.Logger) Storer {
-	return Store{
+func New(cs CacheStores, ingressClass string, logger logr.Logger) *Store {
+	return &Store{
 		stores:                cs,
 		ingressClass:          ingressClass,
 		ingressClassMatching:  annotations.ExactClassMatch,
@@ -121,6 +123,11 @@ func New(cs CacheStores, ingressClass string, logger logr.Logger) Storer {
 		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 		logger:                logger,
 	}
+}
+
+// UpdateCache updates the cache stores in the Store.
+func (s *Store) UpdateCache(cs CacheStores) {
+	s.stores = cs
 }
 
 // GetSecret returns a Secret using the namespace and name as key.

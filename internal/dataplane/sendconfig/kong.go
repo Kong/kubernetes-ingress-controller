@@ -33,4 +33,8 @@ type Config struct {
 
 	// SanitizeKonnectConfigDumps indicates whether to sanitize Konnect config dumps.
 	SanitizeKonnectConfigDumps bool
+
+	// FallbackConfiguration indicates whether to generate fallback configuration in the case of entity
+	// errors returned by the Kong Admin API.
+	FallbackConfiguration bool
 }

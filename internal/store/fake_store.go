@@ -227,7 +227,7 @@ func NewFakeStore(
 		}
 	}
 
-	s = Store{
+	s = &Store{
 		stores: CacheStores{
 			IngressV1:                      ingressV1Store,
 			IngressClassV1:                 ingressClassV1Store,

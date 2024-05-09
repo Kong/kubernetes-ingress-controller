@@ -427,6 +427,7 @@ func (m *mockConfigStatusQueue) Notifications() []clients.ConfigStatus {
 type mockKongConfigBuilder struct {
 	translationFailuresToReturn []failures.ResourceFailure
 	kongState                   *kongstate.KongState
+	updateCacheCalled           bool
 }
 
 func newMockKongConfigBuilder() *mockKongConfigBuilder {
@@ -440,6 +441,14 @@ func (p *mockKongConfigBuilder) BuildKongConfig() translator.KongConfigBuildingR
 		KongState:           p.kongState,
 		TranslationFailures: p.translationFailuresToReturn,
 	}
+}
+
+func (p *mockKongConfigBuilder) UpdateCache(store.CacheStores) {
+	p.updateCacheCalled = true
+}
+
+func (p *mockKongConfigBuilder) IngressClassName() string {
+	return "kong"
 }
 
 func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
@@ -927,4 +936,35 @@ func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
 	cert := konnectContent.Content.Certificates[0]
 	require.NotNil(t, cert.Key, "expected Konnect to have certificate key")
 	require.Equal(t, "{vault://redacted-value}", *cert.Key, "expected Konnect to have redacted certificate key")
+}
+
+func TestKongClient_FallbackConfiguration(t *testing.T) {
+	ctx := context.Background()
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{mustSampleGatewayClient(t)},
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
+	kongClient, err := NewKongClient(
+		zapr.NewLogger(zap.NewNop()),
+		time.Second,
+		util.ConfigDumpDiagnostic{},
+		sendconfig.Config{
+			FallbackConfiguration: true,
+		},
+		mocks.NewEventRecorder(),
+		dpconf.DBModeOff,
+		clientsProvider,
+		updateStrategyResolver,
+		configChangeDetector,
+		kongRawStateGetter,
+		configBuilder,
+		store.NewCacheStores(),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, kongClient.Update(ctx))
+	require.True(t, configBuilder.updateCacheCalled, "expected store to be updated with a snapshot")
 }

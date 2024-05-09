@@ -28,6 +28,10 @@ const (
 	// SanitizeKonnectConfigDumps is the name of the feature-gate that enables sanitization of Konnect config dumps.
 	SanitizeKonnectConfigDumps = "SanitizeKonnectConfigDumps"
 
+	// FallbackConfiguration is the name of the featuer-gate that enables generating fallback configuration in the case
+	// of entity errors returned by the Kong Admin API.
+	FallbackConfiguration = "FallbackConfiguration"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -68,5 +72,6 @@ func GetFeatureGatesDefaults() FeatureGates {
 		RewriteURIsFeature:         false,
 		KongServiceFacade:          false,
 		SanitizeKonnectConfigDumps: true,
+		FallbackConfiguration:      false,
 	}
 }

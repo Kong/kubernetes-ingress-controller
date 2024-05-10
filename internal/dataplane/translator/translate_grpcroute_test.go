@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -22,7 +21,7 @@ import (
 )
 
 func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
-	grpcRouteTypeMeta := metav1.TypeMeta{Kind: "GRPCRoute", APIVersion: gatewayv1.SchemeGroupVersion.String()}
+	grpcRouteTypeMeta := gatewayapi.GRPCRouteTypeMeta
 
 	testCases := []struct {
 		name                 string

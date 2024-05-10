@@ -448,18 +448,17 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 	}
 
 	for _, c := range ks.Consumers {
-		c := c
 		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
 		for _, plugin := range pluginList {
-			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation)
+			// gosec linter is mad about this; it's irrelevant as of Go 1.22
+			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation) // #nosec G601
 		}
 	}
 
 	for _, cg := range ks.ConsumerGroups {
-		cg := cg
 		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(cg.K8sKongConsumerGroup.GetAnnotations())
 		for _, plugin := range pluginList {
-			addRelation(&cg.K8sKongConsumerGroup, plugin, *cg.Name, ConsumerGroupRelation)
+			addRelation(&cg.K8sKongConsumerGroup, plugin, *cg.Name, ConsumerGroupRelation) // #nosec G601
 		}
 	}
 

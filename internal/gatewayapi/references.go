@@ -37,7 +37,7 @@ func NewRefCheckerForKongPlugin[T BackendRefT](target client.Object, requester T
 // IsRefAllowedByGrant is a wrapper on top of isRefAllowedByGrant checks if backendRef (that RefChecker
 // holds) is permitted by the provided namespace-indexed ReferenceGrantTo set: allowedRefs.
 // allowedRefs is assumed to contain Tos that only match the backendRef's parent's From, as returned by
-// getPermittedForReferenceGrantFrom.
+// GetPermittedForReferenceGrantFrom.
 func (rc RefChecker[T]) IsRefAllowedByGrant(
 	allowedRefs map[Namespace][]ReferenceGrantTo,
 ) bool {
@@ -95,7 +95,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 
 // isRefAllowedByGrant checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set: allowed.
 // allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
-// getPermittedForReferenceGrantFrom.
+// GetPermittedForReferenceGrantFrom.
 func isRefAllowedByGrant(
 	namespace *string,
 	name string,
@@ -123,10 +123,10 @@ func isRefAllowedByGrant(
 	return false
 }
 
-// getPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
+// GetPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferenceGrant with those Tos and the input From.
-func getPermittedForReferenceGrantFrom(
+func GetPermittedForReferenceGrantFrom(
 	from ReferenceGrantFrom,
 	grants []*ReferenceGrant,
 ) map[Namespace][]ReferenceGrantTo {

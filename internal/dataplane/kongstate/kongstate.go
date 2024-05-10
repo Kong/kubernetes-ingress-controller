@@ -450,7 +450,7 @@ func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
 	if err != nil {
 		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
 	}
-	allowed := gatewayapi.getPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
+	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
 		Group:     gatewayapi.Group(r.Referer.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayapi.Kind(r.Referer.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayapi.Namespace(r.Referer.GetNamespace()),

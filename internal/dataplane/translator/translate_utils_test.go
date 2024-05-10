@@ -250,7 +250,7 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := getPermittedForReferenceGrantFrom(tt.from, grants)
+			result := GetPermittedForReferenceGrantFrom(tt.from, grants)
 			assert.Equal(t, tt.result, result)
 		})
 	}

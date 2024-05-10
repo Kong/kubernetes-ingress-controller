@@ -454,6 +454,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -516,52 +517,48 @@ var _ controllers.Reconciler = &{{.PackageAlias}}{{.Kind}}Reconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("{{.PackageAlias}}{{.Kind}}", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+    blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("{{.PackageAlias}}{{.Kind}}").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+	    })
 
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "{{.Group}}",
-				Version: "{{.Version}}",
-				Kind:    "{{.Kind}}",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "{{.Group}}",
+					Version: "{{.Version}}",
+					Kind:    "{{.Kind}}",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 {{- end}}
 {{- if .AcceptsIngressClassNameAnnotation}}
 	if !r.DisableIngressClassLookups {
-		err = c.Watch(
-			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
 		)
-		if err != nil {
-			return err
-		}
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
-{{- end}}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &{{.PackageImportAlias}}.{{.Kind}}{}),
+    return blder.Watches(&{{.PackageImportAlias}}.{{.Kind}}{},
 		&handler.EnqueueRequestForObject{},
-{{- if .AcceptsIngressClassNameAnnotation}}
-		preds,
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
+{{- else}}
+    return blder.For(&{{.PackageImportAlias}}.{{.Kind}}{}).
+		Complete(r)
 {{- end}}
-	)
 }
 
 {{- if .AcceptsIngressClassNameAnnotation}}

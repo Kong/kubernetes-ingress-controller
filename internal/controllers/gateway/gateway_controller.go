@@ -20,12 +20,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -89,67 +89,50 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Resource: "referencegrants",
 	})
 
-	// generate the controller object and attach it to the manager and link the reconciler object
-	c, err := controller.New("gateway-controller", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
-	// watch Gateway objects, filtering out any Gateways which are not configured with
-	// a supported GatewayClass controller name.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass),
-	); err != nil {
-		return err
-	}
-
-	// watch for updates to gatewayclasses, if any gateway classes change, enqueue
-	// reconciliation for all supported gateway objects which reference it.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
-		predicate.NewPredicateFuncs(r.gatewayClassMatchesController),
-	); err != nil {
-		return err
-	}
-
-	// if an update to the gateway service occurs, we need to make sure to trigger
-	// reconciliation on all Gateway objects referenced by it (in the most common
-	// deployments this will be a single Gateway).
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
-		predicate.NewPredicateFuncs(r.isGatewayService),
-	); err != nil {
-		return err
-	}
-
-	// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
-	// reconciliation on the gateway, as we need to update the number of attachedRoutes.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
-	); err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("gateway-controller").
+		// set the controller options
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		// watch Gateway objects, filtering out any Gateways which are not configured with
+		// a supported GatewayClass controller name.
+		For(&gatewayapi.Gateway{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass)),
+		).
+		// watch for updates to gatewayclasses, if any gateway classes change, enqueue
+		// reconciliation for all supported gateway objects which reference it.
+		Watches(&gatewayapi.GatewayClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController)),
+		).
+		// if an update to the gateway service occurs, we need to make sure to trigger
+		// reconciliation on all Gateway objects referenced by it (in the most common
+		// deployments this will be a single Gateway).
+		Watches(&corev1.Service{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.isGatewayService)),
+		).
+		// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
+		// reconciliation on the gateway, as we need to update the number of attachedRoutes.
+		Watches(&gatewayapi.HTTPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
+		)
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.enableReferenceGrant {
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
+		blder.Watches(&gatewayapi.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
-		); err != nil {
-			return err
-		}
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
+		)
+	}
+
+	if err := blder.Complete(r); err != nil {
+		return err
 	}
 
 	// start the required gatewayclass controller as well

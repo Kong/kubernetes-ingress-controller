@@ -18,6 +18,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -129,34 +130,32 @@ func kongLicenseKeyFunc(obj interface{}) (string, error) {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongV1Alpha1KongLicense", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		Named("KongV1Alpha1KongLicense").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+		blder.WatchesRawSource(
+			source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
 				Group:   "configuration.konghq.com",
 				Version: "v1alpha1",
 				Kind:    "KongLicense",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+			}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1alpha1.KongLicense{}),
+	return blder.Watches(&kongv1alpha1.KongLicense{},
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(isKongLicenseEnabled),
-	)
+		builder.WithPredicates(predicate.NewPredicateFuncs(isKongLicenseEnabled)),
+	).
+		Complete(r)
 }
 
 // SetLogger sets the logger.

@@ -26,9 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -46,21 +44,18 @@ type ReferenceGrantReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("referencegrant-controller", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
-		&handler.EnqueueRequestForObject{},
-	)
+	return ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("referencegrant-controller").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		// watch Referencegrant objects
+		For(&gatewayapi.ReferenceGrant{}).
+		Complete(r)
 }
 
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch

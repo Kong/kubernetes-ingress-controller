@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -62,17 +63,6 @@ type HTTPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("httproute-controller", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
 	// We're verifying whether ReferenceGrant CRD is installed at setup of the HTTPRouteReconciler
 	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
 	// when reconciling HTTPRoutes.
@@ -84,55 +74,54 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Resource: "referencegrants",
 	})
 
-	// if a GatewayClass updates then we need to enqueue the linked HTTPRoutes to
-	// ensure that any route objects that may have been orphaned by that change get
-	// removed from data-plane configurations, and any routes that are now supported
-	// due to that change get added to data-plane configurations.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGatewayClass),
-		predicate.Funcs{
-			GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
-			CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-		},
-	); err != nil {
-		return err
-	}
-
-	// if a Gateway updates then we need to enqueue the linked HTTPRoutes to
-	// ensure that any route objects that may have been orphaned by that change get
-	// removed from data-plane configurations, and any routes that are now supported
-	// due to that change get added to data-plane configurations.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
-	); err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("httproute-controller").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		// if a GatewayClass updates then we need to enqueue the linked HTTPRoutes to
+		// ensure that any route objects that may have been orphaned by that change get
+		// removed from data-plane configurations, and any routes that are now supported
+		// due to that change get added to data-plane configurations.
+		Watches(&gatewayapi.GatewayClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGatewayClass),
+			builder.WithPredicates(predicate.Funcs{
+				GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
+				CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+				UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+				DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+			}),
+		).
+		// if a Gateway updates then we need to enqueue the linked HTTPRoutes to
+		// ensure that any route objects that may have been orphaned by that change get
+		// removed from data-plane configurations, and any routes that are now supported
+		// due to that change get added to data-plane configurations.
+		Watches(&gatewayapi.Gateway{},
+			handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
+		)
 
 	if r.enableReferenceGrant {
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
+		blder.Watches(&gatewayapi.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
-			predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom),
-		); err != nil {
-			return err
-		}
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom)),
+		)
 	}
 
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   gatewayv1.GroupVersion.Group,
-				Version: gatewayv1.GroupVersion.Version,
-				Kind:    "HTTPRoute",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
+					Kind:    "HTTPRoute",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 
 	// because of the additional burden of having to manage reference data-plane
@@ -140,10 +129,8 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// simply reconcile ALL HTTPRoute objects. This allows us to drop the backend
 	// data-plane config for an HTTPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-		&handler.EnqueueRequestForObject{},
-	)
+	return blder.For(&gatewayapi.HTTPRoute{}).
+		Complete(r)
 }
 
 // -----------------------------------------------------------------------------

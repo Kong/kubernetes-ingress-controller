@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -51,84 +52,65 @@ type KongUpstreamPolicyReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongUpstreamPolicy", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
 	if err := r.setupIndices(mgr); err != nil {
 		return err
 	}
 
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-		predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
-	); err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		Named("KongUpstreamPolicy").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		Watches(&corev1.Service{},
+			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
+			builder.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+		)
 
 	if r.HTTPRouteEnabled {
 		// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
 		// of the HTTPRoute.
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
+		blder.Watches(&gatewayapi.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
-		); err != nil {
-			return err
-		}
+		)
 	}
 
 	if r.KongServiceFacadeEnabled {
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &incubatorv1alpha1.KongServiceFacade{}),
+		blder.Watches(&incubatorv1alpha1.KongServiceFacade{},
 			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
-		); err != nil {
-			return err
-		}
-	}
-
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &kongv1beta1.KongUpstreamPolicy{}),
-		&handler.EnqueueRequestForObject{},
-	); err != nil {
-		return err
+			builder.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+		)
 	}
 
 	if r.StatusQueue != nil {
 		// Watch for notifications on the status queue from Services and KongServiceFacades as their status change
 		// needs to be propagated to the KongUpstreamPolicy's ancestor Programmed status.
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Version: "v1",
-				Kind:    "Service",
-			})},
-			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
-		); err != nil {
-			return err
-		}
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Version: incubatorv1alpha1.SchemeGroupVersion.Version,
-				Group:   incubatorv1alpha1.SchemeGroupVersion.Group,
-				Kind:    incubatorv1alpha1.KongServiceFacadeKind,
-			})},
-			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-			predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy),
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Version: "v1",
+					Kind:    "Service",
+				}),
+				handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
+				source.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+			),
+		).
+			WatchesRawSource(
+				source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Version: incubatorv1alpha1.SchemeGroupVersion.Version,
+					Group:   incubatorv1alpha1.SchemeGroupVersion.Group,
+					Kind:    incubatorv1alpha1.KongServiceFacadeKind,
+				}),
+					handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
+					source.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+				),
+			)
 	}
 
-	return nil
+	return blder.For(&kongv1beta1.KongUpstreamPolicy{}).
+		Complete(r)
 }
 
 func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {

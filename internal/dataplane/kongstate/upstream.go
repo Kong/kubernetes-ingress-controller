@@ -3,7 +3,7 @@ package kongstate
 import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -155,7 +155,7 @@ func (u *Upstream) override(
 		// configuration with a KongIngress object and if that's the case then
 		// skip it since those should not be affected.
 		gvk := u.Service.Parent.GetObjectKind().GroupVersionKind()
-		if gvk.Group == gatewayv1alpha2.GroupName {
+		if gvk.Group == gatewayv1.GroupName {
 			// No log needed here as there will be one issued already from Kong's
 			// Service override. The reason for this is that there is no other
 			// object in Kubernetes that creates a Kong's Upstream and Kubernetes

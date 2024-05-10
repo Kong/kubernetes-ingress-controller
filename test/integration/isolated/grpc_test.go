@@ -160,7 +160,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 				},
 			}
 
-			grpcRoute, err = gatewayClient.GatewayV1alpha2().GRPCRoutes(namespace).Create(ctx, grpcRoute, metav1.CreateOptions{})
+			grpcRoute, err = gatewayClient.GatewayV1().GRPCRoutes(namespace).Create(ctx, grpcRoute, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(grpcRoute)
 			ctx = SetInCtxForT(ctx, t, grpcRoute)

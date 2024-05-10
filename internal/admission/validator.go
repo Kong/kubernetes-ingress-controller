@@ -234,6 +234,10 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return true, "", nil
 	}
 
+	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, validator.ManagerClient, &consumerGroup); err != nil {
+		return false, fmt.Sprintf("KongConsumerGroup has invalid KongPlugin annotation: %s", err), nil
+	}
+
 	infoSvc, ok := validator.AdminAPIServicesProvider.GetInfoService()
 	if !ok {
 		return true, "", nil

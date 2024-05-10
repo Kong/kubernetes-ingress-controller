@@ -57,7 +57,7 @@ func TestValidateIngress(t *testing.T) {
 				tt.ingress,
 				logger,
 				fakestore,
-				fake.NewClientBuilder().Build(),
+				fake.NewFakeClient(),
 			)
 			assert.Equal(t, tt.valid, valid, tt.msg)
 			assert.Equal(t, tt.validationMsg, validMsg, tt.msg)

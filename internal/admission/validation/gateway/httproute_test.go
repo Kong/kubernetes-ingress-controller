@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -78,7 +79,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid: true,
 		},
 		{
-			msg: "route with parentRef to non-gateway object is accepted with no vlaidation",
+			msg: "route with parentRef to non-gateway object is accepted with no validation",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
@@ -157,6 +158,128 @@ func TestValidateHTTPRoute(t *testing.T) {
 							},
 						}},
 					},
+				},
+			},
+			valid: true,
+		},
+		{
+			msg: "valid HTTPRoute with multiple plugins of the same type attached - does not pass validation",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+					Annotations: map[string]string{
+						"konghq.com/plugins": "plugin1,plugin2,plugin3",
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin3",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+			},
+			valid:         false,
+			validationMsg: "HTTPRoute has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+		},
+		{
+			msg: "valid HTTPRoute with multiple plugins of different types and one no-existing attached - passes validation",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+					Annotations: map[string]string{
+						"konghq.com/plugins": "plugin1,plugin2,plugin3",
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
 				},
 			},
 			valid: true,

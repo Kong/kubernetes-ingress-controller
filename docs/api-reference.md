@@ -313,6 +313,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [IngressClassParameters](#ingressclassparameters)
+- [KongCustomEntity](#kongcustomentity)
 - [KongLicense](#konglicense)
 - [KongVault](#kongvault)
 ### IngressClassParameters
@@ -328,6 +329,22 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
+
+
+
+### KongCustomEntity
+
+
+KongCustomEntity defines a "custom" Kong entity that KIC cannot support the entity type directly.
+
+<!-- kong_custom_entity description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongCustomEntity`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ |  |
 
 
 
@@ -428,6 +445,28 @@ Kind refers to a Kubernetes kind.
 _Appears in:_
 - [ControllerReference](#controllerreference)
 
+#### KongCustomEntitySpec
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | EntityType is the type of the Kong entity. The type is used in generating declarative configuration. |
+| `fields` _[JSON](#json)_ | Fields defines the fields of the Kong entity itself. |
+| `controllerName` _string_ | ControllerName specifies the controller that should reconcile it, like ingress class. |
+| `parentRef` _[ObjectReference](#objectreference)_ | ParentRef references the kubernetes resource it attached to when its scope is "attached". Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached to the entity(service/route/consumer) where the plugin is attached. |
+
+
+_Appears in:_
+- [KongCustomEntity](#kongcustomentity)
+
+
+
+
+
 #### KongLicenseControllerStatus
 
 
@@ -495,6 +534,24 @@ RFC 1123 labels, or RFC 1035 labels.
 
 _Appears in:_
 - [ControllerReference](#controllerreference)
+
+#### ObjectReference
+
+
+ObjectReference defines reference of a kubernetes object.
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _string_ |  |
+| `kind` _string_ |  |
+| `namespace` _string_ | Empty namespace means the same namespace of the owning object. |
+| `name` _string_ |  |
+
+
+_Appears in:_
+- [KongCustomEntitySpec](#kongcustomentityspec)
 
 
 ## configuration.konghq.com/v1beta1

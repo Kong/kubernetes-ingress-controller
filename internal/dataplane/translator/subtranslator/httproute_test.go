@@ -2,7 +2,6 @@ package subtranslator
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -54,23 +53,23 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("request-transformer"),
 					Config: kong.Configuration{
-						"add": map[string][]string{
-							"headers": {
+						"add": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-set:bar",
 							},
 						},
-						"append": map[string][]string{
-							"headers": {
+						"append": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-add:foo",
 							},
 						},
-						"remove": map[string][]string{
-							"headers": {
+						"remove": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-remove",
 							},
 						},
-						"replace": map[string][]string{
-							"headers": {
+						"replace": TransformerPluginReplaceConfig{
+							Headers: []string{
 								"header-to-set:bar",
 							},
 						},
@@ -100,8 +99,8 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("response-transformer"),
 					Config: kong.Configuration{
-						"add": map[string][]string{
-							"headers": {
+						"add": TransformerPluginConfig{
+							Headers: []string{
 								"Location: http://example.org:80/test",
 							},
 						},
@@ -135,23 +134,23 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("response-transformer"),
 					Config: kong.Configuration{
-						"add": map[string][]string{
-							"headers": {
+						"add": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-set:bar",
 							},
 						},
-						"append": map[string][]string{
-							"headers": {
+						"append": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-add:foo",
 							},
 						},
-						"remove": map[string][]string{
-							"headers": {
+						"remove": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-remove",
 							},
 						},
-						"replace": map[string][]string{
-							"headers": {
+						"replace": TransformerPluginReplaceConfig{
+							Headers: []string{
 								"header-to-set:bar",
 							},
 						},
@@ -186,7 +185,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 			},
-			expectedPlugins: []kong.Plugin{},
+			expectedPlugins: nil,
 		},
 		{
 			name: "invalid extensionrefs filter group",
@@ -245,14 +244,14 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Name: kong.String("request-transformer"),
 					Config: kong.Configuration{
-						"add": map[string]interface{}{
-							"headers": []interface{}{
+						"add": TransformerPluginConfig{
+							Headers: []string{
 								"header-to-set:bar",
 							},
 						},
-						"replace": map[string]interface{}{
-							"uri": "/new$(uri_captures[1])",
-							"headers": []interface{}{
+						"replace": TransformerPluginReplaceConfig{
+							URI: "/new$(uri_captures[1])",
+							Headers: []string{
 								"header-to-set:bar",
 							},
 						},
@@ -292,7 +291,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		modifier                      *gatewayapi.HTTPURLRewriteFilter
 		firstMatchPath                string
 		expectedKongRouteModification kongstate.Route
-		expected                      kong.Plugin
+		expected                      []transformerPlugin
 		expectedErr                   error
 	}{
 		{
@@ -303,14 +302,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 					ReplaceFullPath: lo.ToPtr("/new-path"),
 				},
 			},
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": "/new-path",
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: "/new-path",
 				},
-			},
+			}},
 			expectedErr: nil,
 		},
 		{
@@ -322,14 +319,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": "/new$(uri_captures[1])",
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: "/new$(uri_captures[1])",
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -348,14 +343,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -374,14 +367,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": `/prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: `/prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -400,14 +391,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -426,14 +415,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -452,14 +439,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": `/new-prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
-					},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: `/new-prefix$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
 				},
-			},
+			}},
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
@@ -478,11 +463,69 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 			firstMatchPath: "/prefix/",
-			expected: kong.Plugin{
-				Name: lo.ToPtr("request-transformer"),
-				Config: kong.Configuration{
-					"replace": map[string]string{
-						"uri": `/new-prefix$(uri_captures[1])`,
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					URI: `/new-prefix$(uri_captures[1])`,
+				},
+			}},
+			expectedKongRouteModification: kongstate.Route{
+				Route: kong.Route{
+					Paths: []*string{
+						lo.ToPtr("~/prefix$"),
+						lo.ToPtr("~/prefix(/.*)"),
+					},
+				},
+			},
+		},
+		{
+			name: "URLRewriteFilter with hostname",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("replaced.host")),
+			},
+			expected: []transformerPlugin{{
+				Type: transformerPluginTypeRequest,
+				Replace: TransformerPluginReplaceConfig{
+					Headers: []string{
+						"host:replaced.host",
+					},
+				},
+				Add: TransformerPluginConfig{
+					Headers: []string{
+						"host:replaced.host",
+					},
+				},
+			}},
+		},
+		{
+			name: "URLRewriteFilter with hostname and path",
+			modifier: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+				},
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("replaced.host")),
+			},
+			firstMatchPath: "/prefix",
+			expected: []transformerPlugin{
+				{
+					Type: transformerPluginTypeRequest,
+
+					Replace: TransformerPluginReplaceConfig{
+						URI: `/new-prefix$(uri_captures[1])`,
+					},
+				},
+				{
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						Headers: []string{
+							"host:replaced.host",
+						},
+					},
+					Add: TransformerPluginConfig{
+						Headers: []string{
+							"host:replaced.host",
+						},
 					},
 				},
 			},
@@ -495,31 +538,22 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				},
 			},
 		},
-		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
-		{
-			name: "valid URLRewriteFilter with unsupported",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("hostname")),
-			},
-			expected:    kong.Plugin{},
-			expectedErr: fmt.Errorf("unsupported hostname replace for %s", gatewayapi.HTTPRouteFilterURLRewrite),
-		},
 		{
 			name:        "nil URLRewriteFilter",
 			modifier:    nil,
-			expected:    kong.Plugin{},
+			expected:    nil,
 			expectedErr: errors.New("URLRewrite is not provided"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			plugin, routeModifier, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath, false)
+			plugins, routeModifiers, err := generateRequestTransformerForURLRewrite(tc.modifier, tc.firstMatchPath, false)
 			require.Equal(t, tc.expectedErr, err)
-			require.Equal(t, tc.expected, plugin)
+			require.Equal(t, tc.expected, plugins)
 
 			route := kongstate.Route{}
-			if routeModifier != nil {
+			for _, routeModifier := range routeModifiers {
 				routeModifier(&route)
 			}
 			require.Equal(t, tc.expectedKongRouteModification, route)
@@ -566,124 +600,151 @@ func TestGenerateKongRouteModifierForURLRewritePrefixMatch_ExpressionsRouter(t *
 func TestMergePluginsOfTheSameType(t *testing.T) {
 	testCases := []struct {
 		name     string
-		plugins  []kong.Plugin
-		expected []kong.Plugin
+		plugins  []transformerPlugin
+		expected []transformerPlugin
 	}{
 		{
 			name:     "no plugins",
-			plugins:  []kong.Plugin{},
-			expected: []kong.Plugin{},
+			plugins:  []transformerPlugin{},
+			expected: []transformerPlugin{},
 		},
 		{
 			name: "single plugin",
-			plugins: []kong.Plugin{
+			plugins: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeRequest,
 				},
 			},
-			expected: []kong.Plugin{
+			expected: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeRequest,
 				},
 			},
 		},
 		{
 			name: "multiple plugins of different types",
-			plugins: []kong.Plugin{
+			plugins: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeRequest,
 				},
 				{
-					Name: lo.ToPtr("plugin2"),
-				},
-				{
-					Name: lo.ToPtr("plugin3"),
+					Type: transformerPluginTypeResponse,
 				},
 			},
-			expected: []kong.Plugin{
+			expected: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeRequest,
 				},
 				{
-					Name: lo.ToPtr("plugin2"),
-				},
-				{
-					Name: lo.ToPtr("plugin3"),
+					Type: transformerPluginTypeResponse,
 				},
 			},
 		},
 		{
 			name: "multiple plugins of the same types",
-			plugins: []kong.Plugin{
+			plugins: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeRequest,
 				},
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeResponse,
 				},
 				{
-					Name: lo.ToPtr("plugin2"),
+					Type: transformerPluginTypeRequest,
 				},
 				{
-					Name: lo.ToPtr("plugin2"),
+					Type: transformerPluginTypeResponse,
 				},
 			},
-			expected: []kong.Plugin{
+			expected: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
+					Type: transformerPluginTypeRequest,
 				},
 				{
-					Name: lo.ToPtr("plugin2"),
+					Type: transformerPluginTypeResponse,
 				},
 			},
 		},
 		{
 			name: "multiple plugins of the same types with different configurations - configuration is merged",
-			plugins: []kong.Plugin{
+			plugins: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
-					Config: kong.Configuration{
-						"key1": "value1",
+					Type: transformerPluginTypeRequest,
+					Add: TransformerPluginConfig{
+						Headers: []string{"header1:value1"},
+					},
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path1",
 					},
 				},
 				{
-					Name: lo.ToPtr("plugin1"),
-					Config: kong.Configuration{
-						"key2": "value2",
+					Type: transformerPluginTypeRequest,
+					Add: TransformerPluginConfig{
+						Headers: []string{"header2:value2"},
+					},
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path2",
 					},
 				},
 			},
-			expected: []kong.Plugin{
+			expected: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
-					Config: kong.Configuration{
-						"key1": "value1",
-						"key2": "value2",
+					Type: transformerPluginTypeRequest,
+					Add: TransformerPluginConfig{
+						Headers: []string{"header1:value1", "header2:value2"},
+					},
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path1",
 					},
 				},
 			},
 		},
 		{
 			name: "multiple plugins of the same types with same configuration keys - configuration is merged and the first wins",
-			plugins: []kong.Plugin{
+			plugins: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
-					Config: kong.Configuration{
-						"key1": "value1",
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path1",
 					},
 				},
 				{
-					Name: lo.ToPtr("plugin1"),
-					Config: kong.Configuration{
-						"key1": "value2",
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path2",
 					},
 				},
 			},
-			expected: []kong.Plugin{
+			expected: []transformerPlugin{
 				{
-					Name: lo.ToPtr("plugin1"),
-					Config: kong.Configuration{
-						"key1": "value1",
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path1",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple plugins of the same types with same configuration keys, first URI empty",
+			plugins: []transformerPlugin{
+				{
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						URI: "",
+					},
+				},
+				{
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path2",
+					},
+				},
+			},
+			expected: []transformerPlugin{
+				{
+					Type: transformerPluginTypeRequest,
+					Replace: TransformerPluginReplaceConfig{
+						URI: "path2",
 					},
 				},
 			},

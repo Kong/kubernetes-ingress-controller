@@ -119,8 +119,9 @@ Adding a new version? You'll need three changes:
 - Add support in `HTTPRoute`s for `URLRewrite`:
   - `FullPathRewrite` [#5855](https://github.com/Kong/kubernetes-ingress-controller/pull/5855)
   - `ReplacePrefixMatch` for both router modes:
-    - `traditional_compatible`: [#5895](https://github.com/Kong/kubernetes-ingress-controller/pull/5895)
-    - `expressions`: [#5940](https://github.com/Kong/kubernetes-ingress-controller/pull/5940)
+    - `traditional_compatible` [#5895](https://github.com/Kong/kubernetes-ingress-controller/pull/5895)
+    - `expressions` [#5940](https://github.com/Kong/kubernetes-ingress-controller/pull/5940)
+  - `Hostname` [#5952](https://github.com/Kong/kubernetes-ingress-controller/pull/5952)
 - DB mode now supports Event reporting for resources that failed to apply.
   [#5785](https://github.com/Kong/kubernetes-ingress-controller/pull/5785)
 - Improve validation - reject `Ingresses`, `Services`, `HTTPRoutes`, `KongConsumers` or `KongConsumerGroups`

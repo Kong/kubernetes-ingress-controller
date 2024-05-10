@@ -101,8 +101,9 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
-		For(&gatewayapi.Gateway{}).
-		WithEventFilter(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass)).
+		For(&gatewayapi.Gateway{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass)),
+		).
 		// watch for updates to gatewayclasses, if any gateway classes change, enqueue
 		// reconciliation for all supported gateway objects which reference it.
 		Watches(&gatewayapi.GatewayClass{},

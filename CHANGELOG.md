@@ -156,6 +156,8 @@ Adding a new version? You'll need three changes:
   `parentRefs`'s group/kind is not `gateway.network.k8s.io/Gateway`, the item
   is seen as a parent other than the controller and ignored in parentRef check.
   [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
+- Redacted values no longer cause collisions in configuration reported to Konnect.
+  [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
 
 ### Changed
 

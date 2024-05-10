@@ -568,7 +568,7 @@ func (c *KongClient) sendToClient(
 	// If the client is Konnect and the feature flag is turned on,
 	// we should sanitize the configuration before sending it out.
 	if client.IsKonnect() && config.SanitizeKonnectConfigDumps {
-		s = s.SanitizedCopy()
+		s = s.SanitizedCopy(util.DefaultUUIDGenerator{})
 	}
 	deckGenParams := deckgen.GenerateDeckContentParams{
 		SelectorTags:                    config.FilterTags,
@@ -656,7 +656,7 @@ func prepareSendDiagnosticFn(
 	if diagnosticConfig.DumpsIncludeSensitive {
 		redactedConfig := deckgen.ToDeckContent(ctx,
 			logger,
-			targetState.SanitizedCopy(),
+			targetState.SanitizedCopy(util.DefaultUUIDGenerator{}),
 			deckGenParams,
 		)
 		config = redactedConfig

@@ -31,6 +31,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -86,7 +87,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 					Plugin:              kong.Plugin{ID: kong.String("1"), Config: kong.Configuration{"secret": *redactedString}},
 				}},
 				Consumers: []Consumer{{
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")}}},
 				}},
 				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: redactedString}}},
 				ConsumerGroups: []ConsumerGroup{{
@@ -104,7 +105,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
-			got := *tt.in.SanitizedCopy()
+			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}

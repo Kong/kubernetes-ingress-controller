@@ -23,7 +23,7 @@ import (
 	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -156,7 +156,7 @@ func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
 	return kongPluginCRs
 }
 
-type NamespacedKongPlugin types.NamespacedName
+type NamespacedKongPlugin k8stypes.NamespacedName
 
 // ExtractNamespacedKongPluginsFromAnnotations extracts a KongPlugin name and optional namespace from an annotation
 // value. Plugins are delimited by ",". Values are either colon-delimited "namespace:name" strings or name-only

@@ -3,7 +3,6 @@ package kongstate
 import (
 	"crypto/sha256"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -335,31 +334,6 @@ func (ks *KongState) FillVaults(
 	}
 }
 
-// TODO TRR copypastaed this out of internal/dataplane/translator/translate_utils.go, it needs to live in some package
-
-// getPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
-// from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
-// ReferenceGrant with those Tos and the input From.
-func getPermittedForReferenceGrantFrom(
-	from gatewayapi.ReferenceGrantFrom,
-	grants []*gatewayapi.ReferenceGrant,
-) map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo {
-	allowed := make(map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo)
-	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
-	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
-	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
-	// matching To when checking if a ReferenceGrant allows a reference)
-	for _, grant := range grants {
-		for _, otherFrom := range grant.Spec.From {
-			if reflect.DeepEqual(from, otherFrom) {
-				allowed[gatewayapi.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayapi.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
-			}
-		}
-	}
-
-	return allowed
-}
-
 type NamespacedKongPlugin struct {
 	Namespace string
 	Name      string
@@ -476,7 +450,7 @@ func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
 	if err != nil {
 		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
 	}
-	allowed := getPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
+	allowed := gatewayapi.getPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
 		Group:     gatewayapi.Group(r.Referer.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayapi.Kind(r.Referer.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayapi.Namespace(r.Referer.GetNamespace()),

@@ -133,7 +133,6 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) e
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("KongV1Alpha1KongLicense").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

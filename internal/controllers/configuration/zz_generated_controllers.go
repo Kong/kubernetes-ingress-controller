@@ -75,7 +75,6 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// set the controller name
 		Named("CoreV1Service").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -178,7 +177,6 @@ func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) 
 		// set the controller name
 		Named("DiscoveryV1EndpointSlice").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -267,7 +265,6 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// set the controller name
 		Named("NetV1Ingress").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -459,7 +456,6 @@ func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// set the controller name
 		Named("NetV1IngressClass").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -541,7 +537,6 @@ func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// set the controller name
 		Named("KongV1KongIngress").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -625,7 +620,6 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// set the controller name
 		Named("KongV1KongPlugin").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -732,7 +726,6 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 		// set the controller name
 		Named("KongV1KongClusterPlugin").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -891,7 +884,6 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		// set the controller name
 		Named("KongV1KongConsumer").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -1078,7 +1070,6 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manag
 		// set the controller name
 		Named("KongV1Beta1KongConsumerGroup").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -1267,7 +1258,6 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		// set the controller name
 		Named("KongV1Beta1TCPIngress").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -1465,7 +1455,6 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		// set the controller name
 		Named("KongV1Beta1UDPIngress").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -1637,7 +1626,6 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 		// set the controller name
 		Named("KongV1Alpha1IngressClassParameters").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -1723,7 +1711,6 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetupWithManager(mgr ctrl
 		// set the controller name
 		Named("IncubatorV1Alpha1KongServiceFacade").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},
@@ -1890,7 +1877,6 @@ func (r *KongV1Alpha1KongVaultReconciler) SetupWithManager(mgr ctrl.Manager) err
 		// set the controller name
 		Named("KongV1Alpha1KongVault").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

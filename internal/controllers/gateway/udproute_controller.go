@@ -55,7 +55,6 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("udproute-controller").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

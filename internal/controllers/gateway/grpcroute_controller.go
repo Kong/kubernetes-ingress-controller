@@ -60,7 +60,6 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// set the controller name
 		Named("grpcroute-controller").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

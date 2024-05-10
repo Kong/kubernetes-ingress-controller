@@ -59,7 +59,6 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("KongUpstreamPolicy").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

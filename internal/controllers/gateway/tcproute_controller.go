@@ -56,7 +56,6 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tcproute-controller").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

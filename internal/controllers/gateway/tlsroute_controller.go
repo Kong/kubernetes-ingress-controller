@@ -55,7 +55,6 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tlsroute-controller").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

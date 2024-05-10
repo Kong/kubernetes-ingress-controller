@@ -521,7 +521,6 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 		// set the controller name
 		Named("{{.PackageAlias}}{{.Kind}}").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

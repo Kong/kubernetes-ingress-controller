@@ -67,7 +67,6 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass").
 		// set the controller options
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

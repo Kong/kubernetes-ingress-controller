@@ -94,7 +94,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("gateway-controller").
 		// set the controller options
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

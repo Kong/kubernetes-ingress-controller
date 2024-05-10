@@ -67,7 +67,6 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 		// set the controller name
 		Named("KongAdminAPIEndpoints").
 		WithOptions(controller.Options{
-			Reconciler: r,
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
 			},

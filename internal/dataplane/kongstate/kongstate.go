@@ -448,6 +448,7 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 	}
 
 	for _, c := range ks.Consumers {
+		c := c
 		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
 		for _, plugin := range pluginList {
 			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation)
@@ -455,6 +456,7 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 	}
 
 	for _, cg := range ks.ConsumerGroups {
+		cg := cg
 		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(cg.K8sKongConsumerGroup.GetAnnotations())
 		for _, plugin := range pluginList {
 			addRelation(&cg.K8sKongConsumerGroup, plugin, *cg.Name, ConsumerGroupRelation)

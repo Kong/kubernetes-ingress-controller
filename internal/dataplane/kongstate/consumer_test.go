@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func int64Ptr(i int64) *int64 {
@@ -50,7 +51,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 				Plugins:    []kong.Plugin{{ID: kong.String("1")}},
-				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
+				KeyAuths:   []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")}}},
 				HMACAuths:  []*HMACAuth{{kong.HMACAuth{ID: kong.String("1"), Secret: redactedString}}},
 				JWTAuths:   []*JWTAuth{{kong.JWTAuth{ID: kong.String("1"), Secret: redactedString}}},
 				BasicAuths: []*BasicAuth{{kong.BasicAuth{ID: kong.String("1"), Password: redactedString}}},
@@ -64,7 +65,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := *tt.in.SanitizedCopy()
+			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}

@@ -5,12 +5,21 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // redactedString is used to redact sensitive values in the KongState.
 // It uses a vault URI to pass Konnect Admin API validations (e.g. when a TLS key is expected, it's only possible
 // to pass a valid key or a vault URI).
 var redactedString = kong.String("{vault://redacted-value}")
+
+// randRedactedString is used to redact sensitive values in the KongState when the value must be random to avoid
+// collisions.
+func randRedactedString(uuidGenerator util.UUIDGenerator) *string {
+	s := fmt.Sprintf("{vault://%s}", uuidGenerator.NewString())
+	return &s
+}
 
 // KeyAuth represents a key-auth credential.
 type KeyAuth struct {
@@ -152,13 +161,13 @@ func NewMTLSAuth(config interface{}) (*MTLSAuth, error) {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
-func (c *KeyAuth) SanitizedCopy() *KeyAuth {
+func (c *KeyAuth) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KeyAuth {
 	return &KeyAuth{
 		kong.KeyAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
-			Key:       redactedString,
+			Key:       randRedactedString(uuidGenerator),
 			Tags:      c.Tags,
 		},
 	}

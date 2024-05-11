@@ -69,6 +69,14 @@ func (p DefaultAdminAPIServicesProvider) GetVaultsService() (kong.AbstractVaultS
 	return c.Vaults, true
 }
 
+func (p DefaultAdminAPIServicesProvider) GetSchemasService() (kong.AbstractSchemaService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Schemas, true
+}
+
 func (p DefaultAdminAPIServicesProvider) designatedAdminAPIClient() (*kong.Client, bool) {
 	gwClients := p.gatewayClientsProvider.GatewayClients()
 	if len(gwClients) == 0 {

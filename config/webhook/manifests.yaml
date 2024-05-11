@@ -141,6 +141,27 @@ webhooks:
       path: /
   failurePolicy: Fail
   matchPolicy: Equivalent
+  name: kongcustomentities.validation.ingress-controller.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongcustomentities
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /
+  failurePolicy: Fail
+  matchPolicy: Equivalent
   name: kongingresses.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:

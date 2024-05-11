@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -23,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	managerscheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -64,6 +66,7 @@ type fakeServicesProvider struct {
 	infoSvc          kong.AbstractInfoService
 	routeSvc         kong.AbstractRouteService
 	vaultSvc         kong.AbstractVaultService
+	schemaSvc        kong.AbstractSchemaService
 }
 
 func (f fakeServicesProvider) GetConsumersService() (kong.AbstractConsumerService, bool) {
@@ -104,6 +107,13 @@ func (f fakeServicesProvider) GetRoutesService() (kong.AbstractRouteService, boo
 func (f fakeServicesProvider) GetVaultsService() (kong.AbstractVaultService, bool) {
 	if f.vaultSvc != nil {
 		return f.vaultSvc, true
+	}
+	return nil, false
+}
+
+func (f fakeServicesProvider) GetSchemasService() (kong.AbstractSchemaService, bool) {
+	if f.schemaSvc != nil {
+		return f.schemaSvc, true
 	}
 	return nil, false
 }
@@ -1413,9 +1423,159 @@ type fakeVaultSvc struct {
 	shouldFail bool
 }
 
-func (s fakeVaultSvc) Validate(context.Context, *kong.Vault) (bool, string, error) {
+func (s fakeVaultSvc) Validate(_ context.Context, _ *kong.Vault) (bool, string, error) {
 	if s.shouldFail {
 		return false, "something is wrong with the vault", nil
+	}
+	return true, "", nil
+}
+
+func TestValidator_ValidateCustomEntity(t *testing.T) {
+	testCases := []struct {
+		name            string
+		entity          kongv1alpha1.KongCustomEntity
+		fields          map[string]kongstate.EntityField
+		entityTypeExist bool
+		validateSvcFail bool
+		expectedOK      bool
+		expectedMessage string
+	}{
+		{
+			name: "entity with non-exist type should fail the validation",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "entity_non_exist",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "non_exist",
+					Fields:     apiextensionsv1.JSON{Raw: []byte("{}")},
+				},
+			},
+			entityTypeExist: false,
+			expectedOK:      false,
+			expectedMessage: "entity type does not exist",
+		},
+		{
+			name: "valid entity",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "valid_entity",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "entity_type_ok",
+					Fields:     apiextensionsv1.JSON{Raw: []byte(`{"foo":"bar"}`)},
+				},
+			},
+			fields: map[string]kongstate.EntityField{
+				"foo": {
+					Name: "foo",
+					Type: kongstate.EntityFieldTypeString,
+				},
+			},
+			entityTypeExist: true,
+			expectedOK:      true,
+		},
+		{
+			name: "valid entity with foreign key",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "entity_with_foreign",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "entity_type_with_foreign",
+					Fields:     apiextensionsv1.JSON{Raw: []byte(`{"foo":"bar"}`)},
+				},
+			},
+			fields: map[string]kongstate.EntityField{
+				"foo": {
+					Name: "foo",
+					Type: kongstate.EntityFieldTypeString,
+				},
+				"baz": {
+					Name:      "baz",
+					Type:      kongstate.EntityFieldTypeForeign,
+					Required:  true,
+					Reference: "service",
+				},
+			},
+			entityTypeExist: true,
+			expectedOK:      true,
+		},
+		{
+			name: "validate service fail",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "validate_service_fail",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "entity_type_ok",
+					Fields:     apiextensionsv1.JSON{Raw: []byte(`{"foo":"bar"}`)},
+				},
+			},
+			fields: map[string]kongstate.EntityField{
+				"foo": {
+					Name: "foo",
+					Type: kongstate.EntityFieldTypeString,
+				},
+			},
+			entityTypeExist: true,
+			validateSvcFail: true,
+			expectedOK:      false,
+			expectedMessage: "something is wrong in the entity",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fieldList := make([]interface{}, 0, len(tc.fields))
+			for _, field := range tc.fields {
+				fieldList = append(fieldList, map[string]interface{}{
+					field.Name: map[string]interface{}{
+						"type":      string(field.Type),
+						"required":  field.Required,
+						"reference": field.Reference,
+					},
+				})
+			}
+
+			validator := KongHTTPValidator{
+				AdminAPIServicesProvider: fakeServicesProvider{
+					schemaSvc: fakeSchemaSvc{
+						entityTypeExist: tc.entityTypeExist,
+						schema: map[string]interface{}{
+							"fields": fieldList,
+						},
+						shouldFail: tc.validateSvcFail,
+					},
+				},
+				ingressClassMatcher: fakeClassMatcher,
+			}
+			ok, msg, err := validator.ValidateCustomEntity(context.Background(), tc.entity)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedOK, ok)
+			assert.Contains(t, msg, tc.expectedMessage)
+		})
+	}
+}
+
+type fakeSchemaSvc struct {
+	schema          map[string]interface{}
+	entityTypeExist bool
+	shouldFail      bool
+}
+
+var _ kong.AbstractSchemaService = fakeSchemaSvc{}
+
+func (s fakeSchemaSvc) Get(_ context.Context, _ string) (kong.Schema, error) {
+	if !s.entityTypeExist {
+		return nil, errors.New("entity type does not exist")
+	}
+	return s.schema, nil
+}
+
+func (s fakeSchemaSvc) Validate(_ context.Context, _ kong.EntityType, _ interface{}) (bool, string, error) {
+	if s.shouldFail {
+		return false, "something is wrong in the entity", nil
 	}
 	return true, "", nil
 }

@@ -20,6 +20,7 @@
 | `--election-namespace` | `string` | Leader election namespace to use when running outside a cluster. |  |
 | `--emit-kubernetes-events` | `bool` | Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects. | `true` |
 | `--enable-controller-gwapi-gateway` | `bool` | Enable the Gateway API Gateway controller. | `true` |
+| `--enable-controller-gwapi-grpcroute` | `bool` | Enable the Gateway API GRPCRoute controller. | `true` |
 | `--enable-controller-gwapi-httproute` | `bool` | Enable the Gateway API HTTPRoute controller. | `true` |
 | `--enable-controller-gwapi-reference-grant` | `bool` | Enable the Gateway API ReferenceGrant controller. | `true` |
 | `--enable-controller-ingress-class-networkingv1` | `bool` | Enable the networking.k8s.io/v1 IngressClass controller. | `true` |

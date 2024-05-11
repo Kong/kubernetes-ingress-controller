@@ -364,6 +364,28 @@ func setupControllers(
 				},
 			},
 		},
+		{
+			Enabled: c.GatewayAPIGRPCRouteController,
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/GRPCRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
+					Resource: "grpcroutes",
+				}),
+				Controller: &gateway.GRPCRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("GRPCRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        c.GatewayToReconcile,
+				},
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Gateway API Controllers - Alpha APIs
 		// ---------------------------------------------------------------------------
@@ -425,28 +447,6 @@ func setupControllers(
 				Controller: &gateway.TLSRouteReconciler{
 					Client:           mgr.GetClient(),
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
-					GatewayNN:        c.GatewayToReconcile,
-				},
-			},
-		},
-		{
-			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
-			Controller: &crds.DynamicCRDController{
-				Manager:          mgr,
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/GRPCRoute"),
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.GroupVersion.Group,
-					Version:  gatewayv1alpha2.GroupVersion.Version,
-					Resource: "grpcroutes",
-				}),
-				Controller: &gateway.GRPCRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("GRPCRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,

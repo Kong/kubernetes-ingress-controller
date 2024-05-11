@@ -43,7 +43,7 @@ var ReferenceGrantTypeMeta = metav1.TypeMeta{
 }
 
 var GRPCRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
+	APIVersion: gatewayv1.GroupVersion.String(),
 	Kind:       "GRPCRoute",
 }
 

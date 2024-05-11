@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -90,8 +90,8 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   gatewayv1alpha2.GroupVersion.Group,
-					Version: gatewayv1alpha2.GroupVersion.Version,
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
 					Kind:    "GRPCRoute",
 				}),
 				&handler.EnqueueRequestForObject{},
@@ -266,7 +266,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1Alpha2GRPCRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1GRPCRoute", req.NamespacedName)
 
 	grpcroute := new(gatewayapi.GRPCRoute)
 	if err := r.Get(ctx, req.NamespacedName, grpcroute); err != nil {
@@ -448,7 +448,7 @@ func (r *GRPCRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayapi.RouteParentStatus{
 			ParentRef: gatewayapi.ParentReference{
-				Group:     (*gatewayapi.Group)(&gatewayv1alpha2.GroupVersion.Group),
+				Group:     (*gatewayapi.Group)(&gatewayv1.GroupVersion.Group),
 				Kind:      util.StringToGatewayAPIKindPtr(grpcrouteParentKind),
 				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayapi.ObjectName(gateway.gateway.Name),

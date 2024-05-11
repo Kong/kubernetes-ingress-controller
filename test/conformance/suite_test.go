@@ -117,9 +117,9 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	t.Log("configuring environment for gateway conformance tests")
 	client, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
-	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
-	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
-	require.NoError(t, gatewayv1.AddToScheme(client.Scheme()))
+	require.NoError(t, gatewayv1alpha2.Install(client.Scheme()))
+	require.NoError(t, gatewayv1beta1.Install(client.Scheme()))
+	require.NoError(t, gatewayv1.Install(client.Scheme()))
 	require.NoError(t, apiextensionsv1.AddToScheme(client.Scheme()))
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)

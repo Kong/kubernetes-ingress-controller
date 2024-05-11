@@ -138,6 +138,10 @@ Adding a new version? You'll need three changes:
 - Added `FallbackConfiguration` feature gate to enable the controller to generate a fallback configuration
   for Kong when it fails to apply the configuration. The feature gate is disabled by default.
   [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)
+- Add support for Kubernetes Gateway API v1.1:
+  - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
+  - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.
+  [#5918](https://github.com/Kong/kubernetes-ingress-controller/pull/5918)
 
 
 ### Fixed

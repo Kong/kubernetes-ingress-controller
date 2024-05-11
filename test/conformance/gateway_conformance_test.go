@@ -13,6 +13,7 @@ import (
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
 	"sigs.k8s.io/yaml"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -25,32 +26,32 @@ var skippedTestsForTraditionalRoutes = []string{
 	tests.HTTPRouteHeaderMatching.ShortName,
 }
 
-var traditionalRoutesSupportedFeatures = []suite.SupportedFeature{
+var traditionalRoutesSupportedFeatures = []features.SupportedFeature{
 	// core features
-	suite.SupportGateway,
-	suite.SupportHTTPRoute,
+	features.SupportGateway,
+	features.SupportHTTPRoute,
 	// extended features
-	suite.SupportHTTPRouteResponseHeaderModification,
-	suite.SupportHTTPRoutePathRewrite,
-	suite.SupportHTTPRouteHostRewrite,
+	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
 	// suite.SupportHTTPRouteBackendTimeout,
 }
 
-var expressionRoutesSupportedFeatures = []suite.SupportedFeature{
+var expressionRoutesSupportedFeatures = []features.SupportedFeature{
 	// core features
-	suite.SupportGateway,
-	suite.SupportHTTPRoute,
+	features.SupportGateway,
+	features.SupportHTTPRoute,
 	// extended features
-	suite.SupportHTTPRouteQueryParamMatching,
-	suite.SupportHTTPRouteMethodMatching,
-	suite.SupportHTTPRouteResponseHeaderModification,
-	suite.SupportHTTPRoutePathRewrite,
-	suite.SupportHTTPRouteHostRewrite,
+	features.SupportHTTPRouteQueryParamMatching,
+	features.SupportHTTPRouteMethodMatching,
+	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
-	// suite.SupportHTTPRouteBackendTimeout,
+	// features.SupportHTTPRouteBackendTimeout,
 }
 
 func TestGatewayConformance(t *testing.T) {
@@ -60,7 +61,7 @@ func TestGatewayConformance(t *testing.T) {
 	// traditional_compatible and expressions.
 	var (
 		skippedTests      []string
-		supportedFeatures []suite.SupportedFeature
+		supportedFeatures []features.SupportedFeature
 		mode              string
 	)
 	switch rf := testenv.KongRouterFlavor(); rf {
@@ -84,7 +85,7 @@ func TestGatewayConformance(t *testing.T) {
 	opts.SupportedFeatures = sets.New(supportedFeatures...)
 	opts.SkipTests = skippedTests
 	opts.ConformanceProfiles = sets.New(
-		suite.HTTPConformanceProfileName,
+		suite.GatewayHTTPConformanceProfileName,
 	)
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,

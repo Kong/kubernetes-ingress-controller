@@ -75,18 +75,18 @@ type (
 	RouteStatus               = gatewayv1.RouteStatus
 	SecretObjectReference     = gatewayv1.SecretObjectReference
 	SectionName               = gatewayv1.SectionName
+	GRPCBackendRef            = gatewayv1.GRPCBackendRef
+	GRPCHeaderMatch           = gatewayv1.GRPCHeaderMatch
+	GRPCHeaderName            = gatewayv1.GRPCHeaderName
+	GRPCMethodMatch           = gatewayv1.GRPCMethodMatch
+	GRPCMethodMatchType       = gatewayv1.GRPCMethodMatchType
+	GRPCRoute                 = gatewayv1.GRPCRoute
+	GRPCRouteList             = gatewayv1.GRPCRouteList
+	GRPCRouteMatch            = gatewayv1.GRPCRouteMatch
+	GRPCRouteRule             = gatewayv1.GRPCRouteRule
+	GRPCRouteSpec             = gatewayv1.GRPCRouteSpec
+	GRPCRouteStatus           = gatewayv1.GRPCRouteStatus
 
-	GRPCBackendRef       = gatewayv1alpha2.GRPCBackendRef
-	GRPCHeaderMatch      = gatewayv1alpha2.GRPCHeaderMatch
-	GRPCHeaderName       = gatewayv1alpha2.GRPCHeaderName
-	GRPCMethodMatch      = gatewayv1alpha2.GRPCMethodMatch
-	GRPCMethodMatchType  = gatewayv1alpha2.GRPCMethodMatchType
-	GRPCRoute            = gatewayv1alpha2.GRPCRoute
-	GRPCRouteList        = gatewayv1alpha2.GRPCRouteList
-	GRPCRouteMatch       = gatewayv1alpha2.GRPCRouteMatch
-	GRPCRouteRule        = gatewayv1alpha2.GRPCRouteRule
-	GRPCRouteSpec        = gatewayv1alpha2.GRPCRouteSpec
-	GRPCRouteStatus      = gatewayv1alpha2.GRPCRouteStatus
 	PolicyAncestorStatus = gatewayv1alpha2.PolicyAncestorStatus
 	PolicyStatus         = gatewayv1alpha2.PolicyStatus
 	TCPRoute             = gatewayv1alpha2.TCPRoute
@@ -170,9 +170,10 @@ const (
 	TLSProtocolType                       = gatewayv1.TLSProtocolType
 	UDPProtocolType                       = gatewayv1.UDPProtocolType
 
-	GRPCMethodMatchExact             = gatewayv1alpha2.GRPCMethodMatchExact
-	GRPCMethodMatchRegularExpression = gatewayv1alpha2.GRPCMethodMatchRegularExpression
-	PolicyConditionAccepted          = gatewayv1alpha2.PolicyConditionAccepted
-	PolicyReasonAccepted             = gatewayv1alpha2.PolicyReasonAccepted
-	PolicyReasonConflicted           = gatewayv1alpha2.PolicyReasonConflicted
+	GRPCMethodMatchExact             = gatewayv1.GRPCMethodMatchExact
+	GRPCMethodMatchRegularExpression = gatewayv1.GRPCMethodMatchRegularExpression
+
+	PolicyConditionAccepted = gatewayv1alpha2.PolicyConditionAccepted
+	PolicyReasonAccepted    = gatewayv1alpha2.PolicyReasonAccepted
+	PolicyReasonConflicted  = gatewayv1alpha2.PolicyReasonConflicted
 )

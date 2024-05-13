@@ -488,7 +488,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	cluster := env.Cluster()
 	remote, err := clusters.GenerateNamespace(ctx, cluster, helpers.LabelValueForTest(t))
 	require.NoError(t, err)
-	cleaner.Add(remote)
+	cleaner.AddNamespace(remote)
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

@@ -636,6 +636,7 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]k
 func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error) {
 	// If the spec.contollerName does not match the ingress class name,
 	// ignore it as it is not controlled by the controller.
+	// REVIEW: should we also match the "ingress class" annotation here?
 	if !validator.ingressClassMatcher(&metav1.ObjectMeta{
 		Annotations: map[string]string{
 			annotations.IngressClassKey: entity.Spec.ControllerName,
@@ -644,6 +645,8 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 		validator.Logger.V(util.DebugLevel).Info("Skipped validation because the controller name does not match", "controller_name", entity.Spec.ControllerName)
 		return true, "", nil
 	}
+
+	// REVIEW: should we validate group/kind of `spec.parentRef` here because we only want it to be attached to plugins?
 
 	fields, err := kongstate.RawConfigToConfiguration(entity.Spec.Fields.Raw)
 	if err != nil {

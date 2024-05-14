@@ -143,7 +143,7 @@ SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSIO
 .PHONY: setup-envtest
 setup-envtest: mise ## Download setup-envtest locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
-	@$(MISE) install setup-envtest@v$(SETUP_ENVTEST_VERSION)
+	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
 STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
@@ -151,7 +151,7 @@ STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin
 staticcheck.download: ## Download staticcheck locally if necessary.
 # TODO: Use staticcheck plugin without alias aftrer https://github.com/pbr0ck3r/asdf-staticcheck/pull/6 is merged.
 	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pmalek/asdf-staticcheck.git
-	@$(MISE) install staticcheck@v$(STATICCHECK_VERSION)
+	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
 GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report
@@ -159,7 +159,7 @@ GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VE
 go-junit-report: ## Download go-junit-report locally if necessary.
 # TODO: Go back to using https://github.com/jwillker/asdf-go-junit-report when https://github.com/jwillker/asdf-go-junit-report/pull/4 merges.
 	@$(MAKE) mise-plugin-install DEP=go-junit-report URL=https://github.com/pmalek/asdf-go-junit-report.git
-	@$(MISE) install go-junit-report@v$(GOJUNIT_REPORT_VERSION)
+	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
 LOOPPOINTER= $(PROJECT_DIR)/bin/looppointer
 .PHONY: looppointer.download

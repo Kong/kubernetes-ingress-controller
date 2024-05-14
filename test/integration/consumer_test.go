@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
@@ -34,7 +33,6 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
-	time.Sleep(time.Minute * 90)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)

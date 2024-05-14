@@ -1,6 +1,15 @@
 package kongstate
 
-import "github.com/kong/go-kong/kong"
+import (
+	"context"
+	"sort"
+
+	"github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong/custom"
+	"github.com/samber/lo"
+
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
+)
 
 // EntityFieldType represents type of a Kong entity field.
 // possible field types include boolean, integer, number, string, array, set, map, record, json, foreign.
@@ -88,4 +97,54 @@ func ExtractEntityFieldDefinitions(schema kong.Schema) EntitySchema {
 		}
 	}
 	return retSchema
+}
+
+// KnownEntityTypeList includes the types of standard Kong entities that is processed elsewhere in KIC.
+// So the entities cannot be specified via KongCustomEntity types.
+var KnownEntityTypeList = []string{
+	"services",
+	"routes",
+	"upstreams",
+	"targets",
+	"consumers",
+	"consumer_groups",
+	"plugins",
+}
+
+// KnownEntityTypeMap is the map including standard entities used for checking whether a custom entity has one of the types.
+var KnownEntityTypeMap = lo.SliceToMap(KnownEntityTypeList, func(s string) (string, struct{}) { return s, struct{}{} })
+
+// KongCustomEntityCollection is a collection of custom Kong entities with the same type.
+type KongCustomEntityCollection struct {
+	// Schema is the Schema of the entity.
+	Schema EntitySchema `json:"-"`
+	// Entities is the list of entities in the collection.
+	Entities []CustomEntity
+}
+
+// CustomEntity saves content of a Kong custom entity with the pointer to the k8s resource translating to it.
+type CustomEntity struct {
+	custom.Object
+
+	k8sKongCustomEntity *kongv1alpha1.KongCustomEntity
+}
+
+// SchemaGetter is the interface to fetch the schema of a Kong entity by its type.
+// Used for fetching schema of custom entity for filling "foreign" field referring to other entities.
+type SchemaGetter interface {
+	Get(ctx context.Context, entityType string) (kong.Schema, error)
+}
+
+// sortCustomEntities sorts the custom entities of each type.
+// Since there may not be a consistent field to identify an entity, here we sort them by the k8s namespace/name.
+func (ks *KongState) sortCustomEntities() {
+	for _, collection := range ks.CustomEntities {
+		sort.Slice(collection.Entities, func(i, j int) bool {
+			e1 := collection.Entities[i]
+			e2 := collection.Entities[j]
+			key1 := e1.k8sKongCustomEntity.Namespace + ":" + e1.k8sKongCustomEntity.Name
+			key2 := e2.k8sKongCustomEntity.Namespace + ":" + e2.k8sKongCustomEntity.Name
+			return key1 < key2
+		})
+	}
 }

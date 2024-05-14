@@ -108,4 +108,8 @@ var supportedTypes = []cacheStoreSupportedType{
 		Package: "kongv1alpha1",
 		KeyFunc: clusterWideKeyFunc,
 	},
+	{
+		Type:    "KongCustomEntity",
+		Package: "kongv1alpha1",
+	},
 }

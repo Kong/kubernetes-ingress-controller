@@ -2,6 +2,7 @@ package translator
 
 import (
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -73,6 +74,11 @@ type Translator struct {
 	licenseGetter license.Getter
 	featureFlags  FeatureFlags
 
+	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
+	// Actually we only need the `Get()` method to fetch the schema of a certain entity type,
+	// So maybe we should define another interface inside `kongstate` package to omit methods we do not require here?
+	schemaServiceProvider func() kong.AbstractSchemaService
+
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
 }
@@ -84,6 +90,7 @@ func NewTranslator(
 	storer store.Storer,
 	workspace string,
 	featureFlags FeatureFlags,
+	schemaServiceProvider func() kong.AbstractSchemaService,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -98,6 +105,7 @@ func NewTranslator(
 		storer:                     storer,
 		workspace:                  workspace,
 		featureFlags:               featureFlags,
+		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
 	}, nil
@@ -187,6 +195,9 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	for i := range result.Plugins {
 		t.registerSuccessfullyTranslatedObject(result.Plugins[i].K8sParent)
 	}
+
+	// process custom entities
+	result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider(), t.workspace)
 
 	// generate Certificates and SNIs
 	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)

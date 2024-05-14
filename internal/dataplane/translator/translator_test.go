@@ -5025,7 +5025,8 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 		FillIDs:                           true,
 		ReportConfiguredKubernetesObjects: true,
 		KongServiceFacade:                 true,
-	})
+	}, func() kong.AbstractSchemaService { return nil }, // TODO: return a fake schema service
+	)
 	require.NoError(t, err)
 	return p
 }

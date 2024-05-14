@@ -788,6 +788,7 @@ func (c *KongClient) sendToClient(
 		client,
 		config,
 		targetContent,
+		customEntities,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,

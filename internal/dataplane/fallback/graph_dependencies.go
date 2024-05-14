@@ -63,6 +63,8 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		*kongv1alpha1.IngressClassParameters,
 		*kongv1alpha1.KongVault:
 		return nil, nil
+	case *kongv1alpha1.KongCustomEntity: // KongCustomEnity is not supported in failure domain yet.
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type: %T", obj)
 	}

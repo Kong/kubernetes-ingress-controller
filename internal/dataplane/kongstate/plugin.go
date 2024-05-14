@@ -463,3 +463,14 @@ func (p plugin) toKongPlugin() kong.Plugin {
 	}
 	return result
 }
+
+type RelatedEntitiesRef struct {
+	Services  []*Service
+	Routes    []*Route
+	Consumers []*Consumer
+}
+
+type PluginRelatedEntitiesRefs struct {
+	RelatedEntities      map[string]RelatedEntitiesRef
+	RouteAttachedService map[string]*Service
+}

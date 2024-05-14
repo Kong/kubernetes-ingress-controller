@@ -13,6 +13,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -180,7 +181,9 @@ func Run(
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, func() kong.AbstractSchemaService {
+		return clientsManager.GatewayClients()[0].AdminAPIClient().Schemas
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
 	}

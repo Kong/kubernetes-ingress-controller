@@ -12,10 +12,28 @@ import (
 
 // GenerateSHA generates a SHA256 checksum of targetContent, with the purpose
 // of change detection.
-func GenerateSHA(targetContent *file.Content) ([]byte, error) {
+func GenerateSHA(targetContent *file.Content, customEntities map[string][]map[string]interface{}) ([]byte, error) {
 	jsonConfig, err := gojson.Marshal(targetContent)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
+	}
+	// Calculate SHA including the custom entities.
+	if len(customEntities) > 0 {
+		jsonCustomEntities, err := gojson.Marshal(customEntities)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling Kong custom entities to JSON: %w", err)
+		}
+		jsonConfig = append(jsonConfig, jsonCustomEntities...)
+	}
+
+	shaSum := sha256.Sum256(jsonConfig)
+	return shaSum[:], nil
+}
+
+func GenerateSHAForCustomEntities(entities map[string][]map[string]interface{}) ([]byte, error) {
+	jsonConfig, err := gojson.Marshal(entities)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling Kong custom entities to JSON: %w", err)
 	}
 
 	shaSum := sha256.Sum256(jsonConfig)

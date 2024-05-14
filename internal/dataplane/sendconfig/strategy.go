@@ -14,8 +14,9 @@ import (
 
 // ContentWithHash encapsulates file.Content along with its precalculated hash.
 type ContentWithHash struct {
-	Content *file.Content
-	Hash    []byte
+	Content        *file.Content
+	CustomEntities map[string][]map[string]interface{}
+	Hash           []byte
 }
 
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.

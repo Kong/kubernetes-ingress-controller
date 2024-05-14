@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type ConfigService interface {
@@ -54,6 +55,23 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
+
+	if len(targetState.CustomEntities) > 0 {
+		unmarhsaledConfig := map[string]interface{}{}
+		err := json.Unmarshal(config, &unmarhsaledConfig)
+		if err != nil {
+			return fmt.Errorf("unmarshaling config for adding custom entities: %w", err)
+		}
+		for entityType, entities := range targetState.CustomEntities {
+			unmarhsaledConfig[entityType] = entities
+			s.logger.V(util.DebugLevel).Info("Filled custom entities", "entity_type", entityType)
+		}
+		config, err = json.Marshal(unmarhsaledConfig)
+		if err != nil {
+			return fmt.Errorf("constructing kong configuration again with custom entities: %w", err)
+		}
+	}
+
 	if errBody, reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); reloadConfigErr != nil {
 		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.logger)
 		if parseErr != nil {

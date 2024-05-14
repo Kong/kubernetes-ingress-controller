@@ -53,6 +53,7 @@ type FakeObjects struct {
 	KongUpstreamPolicies           []*kongv1beta1.KongUpstreamPolicy
 	KongServiceFacades             []*incubatorv1alpha1.KongServiceFacade
 	KongVaults                     []*kongv1alpha1.KongVault
+	KongCustomEntities             []*kongv1alpha1.KongCustomEntity
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -214,6 +215,13 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	kongCustomEntityStore := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongCustomEntities {
+		err := kongCustomEntityStore.Add(e)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	s = &Store{
 		stores: CacheStores{
@@ -240,6 +248,7 @@ func NewFakeStore(
 			KongUpstreamPolicy:             kongUpstreamPolicyStore,
 			KongServiceFacade:              kongServiceFacade,
 			KongVault:                      kongVaultStore,
+			KongCustomEntity:               kongCustomEntityStore,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
@@ -277,6 +286,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&kongv1.KongConsumer{}):                 kongv1.SchemeGroupVersion.WithKind("KongConsumer"),
 		reflect.TypeOf(&kongv1beta1.KongConsumerGroup{}):       kongv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
 		reflect.TypeOf(&kongv1alpha1.KongVault{}):              kongv1alpha1.SchemeGroupVersion.WithKind(kongv1alpha1.KongVaultKind),
+		reflect.TypeOf(&kongv1alpha1.KongCustomEntity{}):       kongv1alpha1.SchemeGroupVersion.WithKind(kongv1alpha1.KongCustomEntityKind),
 	}
 
 	out := &bytes.Buffer{}
@@ -320,6 +330,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumerGroups)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongVaults)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongCustomEntities)...)
 
 	for _, obj := range allObjects {
 		if err := fillGVKAndAppendToBuffer(obj.(runtime.Object)); err != nil {

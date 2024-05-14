@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
+	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -223,7 +224,7 @@ func runTranslatorGoldenTest(t *testing.T, tc translatorGoldenTestCase) {
 
 	// Create the translator.
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags)
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, func() kong.AbstractSchemaService { return nil })
 	require.NoError(t, err, "failed creating translator")
 
 	// MustBuild the Kong configuration.

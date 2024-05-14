@@ -24,7 +24,7 @@ services:
     - k8s-namespace:default
     - k8s-kind:GRPCRoute
     - k8s-group:gateway.networking.k8s.io
-    - k8s-version:v1alpha2
+    - k8s-version:v1
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

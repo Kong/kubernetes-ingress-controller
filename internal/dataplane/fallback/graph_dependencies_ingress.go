@@ -24,7 +24,7 @@ func resolveIngressDependencies(cache store.CacheStores, ingress *netv1.Ingress)
 		resolveIngressDependenciesIngressClass(cache, ingress),
 		resolveIngressDependenciesService(cache, ingress),
 		resolveIngressDependenciesKongUpstreamPolicy(cache, ingress),
-		resolveIngressDependenciesPlugin(cache, ingress),
+		resolveObjectDependenciesPlugin(cache, ingress),
 	)
 }
 
@@ -89,21 +89,4 @@ func resolveIngressDependenciesKongUpstreamPolicy(cache store.CacheStores, ingre
 		}
 	}
 	return nil
-}
-
-// resolveIngressDependenciesPlugin resolves KongPlugin and KongClusterPlugin dependencies for an Ingress object.
-func resolveIngressDependenciesPlugin(cache store.CacheStores, ingress *netv1.Ingress) []client.Object {
-	var dependencies []client.Object
-	for _, pluginName := range annotations.ExtractKongPluginsFromAnnotations(ingress.Annotations) {
-		if plugin, exists, err := cache.Plugin.GetByKey(
-			fmt.Sprintf("%s/%s", ingress.GetNamespace(), pluginName),
-		); err == nil && exists {
-			dependencies = append(dependencies, plugin.(client.Object))
-		}
-
-		if plugin, exists, err := cache.ClusterPlugin.GetByKey(pluginName); err == nil && exists {
-			dependencies = append(dependencies, plugin.(client.Object))
-		}
-	}
-	return dependencies
 }

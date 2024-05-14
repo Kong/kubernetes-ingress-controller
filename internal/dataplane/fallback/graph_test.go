@@ -10,7 +10,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -108,6 +110,225 @@ func TestNewConfigGraphFromCacheStores(t *testing.T) {
 				},
 				"KongServiceFacade:test-namespace/test-kong-service-facade": {
 					"Ingress:test-namespace/test-ingress",
+				},
+			},
+		},
+		{
+			name: "cache with HTTPRoute and its dependencies",
+			cache: cacheStoresFromObjs(t,
+				&gatewayapi.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
+						},
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									{
+										BackendRef: gatewayapi.BackendRef{
+											BackendObjectReference: gatewayapi.BackendObjectReference{
+												Name: "1",
+												Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				testService(t, "1"),
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+			),
+			expectedAdjacencyMap: map[string][]string{
+				"HTTPRoute:test-namespace/test-route": {},
+				"Service:test-namespace/1": {
+					"HTTPRoute:test-namespace/test-route",
+				},
+				"KongPlugin:test-namespace/1": {
+					"HTTPRoute:test-namespace/test-route",
+				},
+				"KongClusterPlugin:test-namespace/cluster-1": {
+					"HTTPRoute:test-namespace/test-route",
+				},
+			},
+		},
+		{
+			name: "cache with TLSRoute and its dependencies",
+			cache: cacheStoresFromObjs(t,
+				&gatewayapi.TLSRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
+						},
+					},
+					Spec: gatewayapi.TLSRouteSpec{
+						Rules: []gatewayapi.TLSRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Name: "1",
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				testService(t, "1"),
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+			),
+			expectedAdjacencyMap: map[string][]string{
+				"TLSRoute:test-namespace/test-route": {},
+				"Service:test-namespace/1": {
+					"TLSRoute:test-namespace/test-route",
+				},
+				"KongPlugin:test-namespace/1": {
+					"TLSRoute:test-namespace/test-route",
+				},
+				"KongClusterPlugin:test-namespace/cluster-1": {
+					"TLSRoute:test-namespace/test-route",
+				},
+			},
+		},
+		{
+			name: "cache with TCPRoute and its dependencies",
+			cache: cacheStoresFromObjs(t,
+				&gatewayapi.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
+						},
+					},
+					Spec: gatewayapi.TCPRouteSpec{
+						Rules: []gatewayapi.TCPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Name: "1",
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				testService(t, "1"),
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+			),
+			expectedAdjacencyMap: map[string][]string{
+				"TCPRoute:test-namespace/test-route": {},
+				"Service:test-namespace/1": {
+					"TCPRoute:test-namespace/test-route",
+				},
+				"KongPlugin:test-namespace/1": {
+					"TCPRoute:test-namespace/test-route",
+				},
+				"KongClusterPlugin:test-namespace/cluster-1": {
+					"TCPRoute:test-namespace/test-route",
+				},
+			},
+		},
+		{
+			name: "cache with UDPRoute and its dependencies",
+			cache: cacheStoresFromObjs(t,
+				&gatewayapi.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
+						},
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Name: "1",
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				testService(t, "1"),
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+			),
+			expectedAdjacencyMap: map[string][]string{
+				"UDPRoute:test-namespace/test-route": {},
+				"Service:test-namespace/1": {
+					"UDPRoute:test-namespace/test-route",
+				},
+				"KongPlugin:test-namespace/1": {
+					"UDPRoute:test-namespace/test-route",
+				},
+				"KongClusterPlugin:test-namespace/cluster-1": {
+					"UDPRoute:test-namespace/test-route",
+				},
+			},
+		},
+		{
+			name: "cache with GRPCRoute and its dependencies",
+			cache: cacheStoresFromObjs(t,
+				&gatewayapi.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
+						},
+					},
+					Spec: gatewayapi.GRPCRouteSpec{
+						Rules: []gatewayapi.GRPCRouteRule{
+							{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
+									{
+										BackendRef: gatewayapi.BackendRef{
+											BackendObjectReference: gatewayapi.BackendObjectReference{
+												Name: "1",
+												Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				testService(t, "1"),
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+			),
+			expectedAdjacencyMap: map[string][]string{
+				"GRPCRoute:test-namespace/test-route": {},
+				"Service:test-namespace/1": {
+					"GRPCRoute:test-namespace/test-route",
+				},
+				"KongPlugin:test-namespace/1": {
+					"GRPCRoute:test-namespace/test-route",
+				},
+				"KongClusterPlugin:test-namespace/cluster-1": {
+					"GRPCRoute:test-namespace/test-route",
 				},
 			},
 		},

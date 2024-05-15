@@ -93,7 +93,9 @@ Adding a new version? You'll need three changes:
 - Support to apply licenses to DB backed Kong gateway from `KongLicense`.
   [#5648](https://github.com/Kong/kubernetes-ingress-controller/pull/5648)
 - Redacted values no longer cause collisions in configuration reported to Konnect.
-  [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+  [#5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+- Assign a default value for `weight` in Kong target if the `weight` is nil.
+  [#5946](https://github.com/Kong/kubernetes-ingress-controller/pull/5946)
 
 ## [3.1.4]
 

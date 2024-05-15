@@ -27,6 +27,7 @@ import (
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
@@ -1190,6 +1191,160 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var (
+		scheme           = Scheme(t, WithKong)
+		envcfg           = Setup(t, scheme)
+		ctrlClientGlobal = NewControllerClient(t, scheme, envcfg)
+		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
+		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+			certificate.WithDNSNames("localhost"),
+		)
+		admissionWebhookPort = helpers.GetFreePort(t)
+
+		kongContainer = runKongEnterprise(ctx, t)
+	)
+
+	_, logs := RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
+	)
+	WaitForManagerStart(t, logs)
+	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+
+	testCases := []struct {
+		name                     string
+		requireEnterpriseLicense bool
+		entity                   *kongv1alpha1.KongCustomEntity
+		valid                    bool
+
+		errContains string
+	}{
+		{
+			name: "entity not supported in Kong",
+			entity: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "not-supported-entity",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "invalid_entity",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"key":"value"}`),
+					},
+				},
+			},
+			valid:       false,
+			errContains: "failed to get schema of Kong entity type 'invalid_entity'",
+		},
+		{
+			name: "valid session entity",
+			entity: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "session-1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "sessions",
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"session_id":"session1"}`),
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			name: "invalid session entity",
+			entity: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "session-1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "sessions",
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"session_id":"session2","foo":"bar"}`),
+					},
+				},
+			},
+			valid: false,
+		},
+		{
+			name: "valid degraphql_route entity",
+			entity: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "degraphql-route-1",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "degraphql_routes",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"uri":"/me","query":"query{ viewer { login}}"}`),
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			name: "invalid degraphql_route entity",
+			entity: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "degraphql-route-1",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "degraphql_routes",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"uri":"/me","query":"query{ viewer { login}}","foo":"bar"}`),
+					},
+				},
+			},
+			valid: false,
+		},
+		{
+			name: "KongCustomEntity not controlled by the current controller",
+			entity: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unrelated-entity",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "unrelated_entity",
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte("{}"),
+					},
+				},
+			},
+			valid: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.requireEnterpriseLicense && !testenv.KongEnterpriseEnabled() {
+				t.Skip("Skipped because Kong enterprise is not enabled")
+			}
+			err := ctrlClient.Create(ctx, tc.entity)
+			if tc.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errContains)
+			}
+		})
+	}
 }
 
 // createKongConsumers creates a provider number of consumers on the cluster.

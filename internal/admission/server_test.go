@@ -82,6 +82,10 @@ func (v KongFakeValidator) ValidateVault(_ context.Context, _ kongv1alpha1.KongV
 	return v.Result, v.Message, v.Error
 }
 
+func (v KongFakeValidator) ValidateCustomEntity(_ context.Context, _ kongv1alpha1.KongCustomEntity) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
 func (v KongFakeValidator) ValidateService(_ context.Context, _ corev1.Service) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }

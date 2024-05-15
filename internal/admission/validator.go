@@ -38,6 +38,7 @@ type KongValidator interface {
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
 	ValidateVault(ctx context.Context, vault kongv1alpha1.KongVault) (bool, string, error)
+	ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string)
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
@@ -54,6 +55,7 @@ type AdminAPIServicesProvider interface {
 	GetInfoService() (kong.AbstractInfoService, bool)
 	GetRoutesService() (kong.AbstractRouteService, bool)
 	GetVaultsService() (kong.AbstractVaultService, bool)
+	GetSchemasService() (kong.AbstractSchemaService, bool)
 }
 
 // ConsumerGetter is an interface for retrieving KongConsumers.
@@ -629,4 +631,56 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]k
 		return nil, err
 	}
 	return consumers.Items, nil
+}
+
+func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error) {
+	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", kongv1alpha1.KongCustomEntityKind)
+	// If the spec.contollerName does not match the ingress class name,
+	// and the ingress class annotation does not match the ingress class name either,
+	// ignore it as it is not controlled by the controller.
+	if (!validator.ingressClassMatcher(&entity.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch)) &&
+		(!validator.ingressClassMatcher(&metav1.ObjectMeta{
+			Annotations: map[string]string{
+				annotations.IngressClassKey: entity.Spec.ControllerName,
+			},
+		}, annotations.IngressClassKey, annotations.ExactClassMatch)) {
+		return true, "", nil
+	}
+
+	fields, err := kongstate.RawConfigToConfiguration(entity.Spec.Fields.Raw)
+	if err != nil {
+		return false, fmt.Sprintf(ErrTextCustomEntityFieldsUnmarshalFailed, err), nil
+	}
+
+	schemaService, hasClient := validator.AdminAPIServicesProvider.GetSchemasService()
+	// Skip validation on Kong gateway if we do not have available client.
+	if !hasClient {
+		logger.V(util.DebugLevel).Info("Skipped because no schema service available")
+		return true, "", nil
+	}
+
+	// Retrieve the schema of the entity from Kong gateway.
+	entityType := entity.Spec.EntityType
+	schema, err := schemaService.Get(ctx, entityType)
+	if err != nil {
+		logger.V(util.DebugLevel).Info("Failed to get schema of entity", "entity_type", entityType, "error", err)
+		return false, fmt.Sprintf(ErrTextCustomEntityGetSchemaFailed, entityType, err), nil
+	}
+
+	// Extract field definitions from the response of getting the schema of the entity.
+	s := kongstate.ExtractEntityFieldDefinitions(schema)
+	// Fill in fields that are "foreign" and required if there are such fields.
+	for fieldName, field := range s.Fields {
+		// Fill in an arbitrary UUID if the entity requires a reference to a foreign key.
+		// This format of foreign reference in entities should satisfy most of foreign fields in entities(services/routes/consumers/...).
+		// The admission webhook needs a placeholder value because the actual value isn't present in the KongCustomEntity spec.
+		// It will be derived from the resource(s) used by the parent KongPlugin during translation.
+		if field.Required && field.Type == kongstate.EntityFieldTypeForeign {
+			fields[fieldName] = map[string]interface{}{
+				"id": util.DefaultUUIDGenerator{}.NewString(),
+			}
+		}
+	}
+	// validate the custom entity against Kong gateway.
+	return schemaService.Validate(ctx, kong.EntityType(entity.Spec.EntityType), fields)
 }

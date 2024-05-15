@@ -103,6 +103,11 @@ var (
 		Version:  kongv1alpha1.SchemeGroupVersion.Version,
 		Resource: "kongvaults",
 	}
+	kongCustomEntityGVResource = metav1.GroupVersionResource{
+		Group:    kongv1alpha1.SchemeGroupVersion.Group,
+		Version:  kongv1alpha1.SchemeGroupVersion.Version,
+		Resource: "kongcustomentities",
+	}
 	secretGVResource = metav1.GroupVersionResource{
 		Group:    corev1.SchemeGroupVersion.Group,
 		Version:  corev1.SchemeGroupVersion.Version,
@@ -144,6 +149,8 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleKongIngress(ctx, request, responseBuilder)
 	case kongVaultGVResource:
 		return h.handleKongVault(ctx, request, responseBuilder)
+	case kongCustomEntityGVResource:
+		return h.handleKongCustomEntity(ctx, request, responseBuilder)
 	case serviceGVResource:
 		return h.handleService(ctx, request, responseBuilder)
 	case ingressGVResource:
@@ -486,6 +493,24 @@ func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1
 		return nil, err
 	}
 	ok, message, err := h.Validator.ValidateVault(ctx, kongVault)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+}
+
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	kongCustomEntity := kongv1alpha1.KongCustomEntity{}
+
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongCustomEntity)
+	if err != nil {
+		return nil, err
+	}
+
+	ok, message, err := h.Validator.ValidateCustomEntity(ctx, kongCustomEntity)
 	if err != nil {
 		return nil, err
 	}

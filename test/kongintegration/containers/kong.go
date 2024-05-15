@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -53,6 +54,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
 			"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongProxyPort),
 			"KONG_ROUTER_FLAVOR": defaultRouterFlavor,
+			"KONG_LICENSE_DATA":  os.Getenv("KONG_LICENSE_DATA"),
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(kongAdminPort),

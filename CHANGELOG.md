@@ -135,6 +135,7 @@ Adding a new version? You'll need three changes:
 - Added the CRD `KongCustomEntity` to support custom Kong entities that are not
   defined in KIC yet.
   [#5982](https://github.com/Kong/kubernetes-ingress-controller/pull/5982)
+  [#6006](https://github.com/Kong/kubernetes-ingress-controller/pull/6006)
 - Added `FallbackConfiguration` feature gate to enable the controller to generate a fallback configuration
   for Kong when it fails to apply the configuration. The feature gate is disabled by default.
   [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)

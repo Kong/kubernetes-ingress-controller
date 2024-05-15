@@ -9,6 +9,8 @@ const (
 	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise"
 	ErrTextConsumerGroupUnlicensed            = "consumer group support requires a valid Kong Enterprise license"
 	ErrTextConsumerGroupUnexpected            = "unexpected error during checking support for consumer group"
+	ErrTextCustomEntityFieldsUnmarshalFailed  = "failed to unmarshal fields of custom entity: %v"
+	ErrTextCustomEntityGetSchemaFailed        = "failed to get schema of Kong entity type '%s': %v"
 	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API" //nolint:revive,gosec
 	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
 	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"

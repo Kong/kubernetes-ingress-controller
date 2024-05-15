@@ -33,7 +33,6 @@ linters:
   - importas
   - ineffassign
   - loggercheck
-  - megacheck
   - misspell
   - nakedret
   - nilerr

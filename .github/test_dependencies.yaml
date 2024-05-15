@@ -7,7 +7,7 @@ e2e:
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.27.11'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.26.14'
+    - 'v1.26.15'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.25.16'
   gke:
@@ -30,7 +30,7 @@ e2e:
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.18.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.26.14'
+      kind: 'v1.26.15'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.17.8'
 

@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.0.3](#303)
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
@@ -77,6 +78,16 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [3.0.3]
+
+> Release date: 2024-05-15
+
+### Changed
+
+- Bumped `golang.org/x/net` and `google.golang.org/protobuf` to fix CVEs
+  [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687) and [GO-2024-2611](https://pkg.go.dev/vuln/GO-2024-2611).
+  [#5948](https://github.com/Kong/kubernetes-ingress-controller/pull/5948)
 
 ## [3.0.2]
 
@@ -3028,6 +3039,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.0.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.2...v3.0.3
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1

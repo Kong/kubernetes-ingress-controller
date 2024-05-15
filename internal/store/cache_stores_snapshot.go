@@ -93,11 +93,6 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash string) (
 		return CacheStores{}, "", fmt.Errorf("failed to take snapshot: %w", err)
 	}
 	return snapshot, newHash, nil
-		err := takeSnapshot(&snapshot, listOfStores)
-		return snapshot, newHash, err
-	}
-
-	return CacheStores{}, "", nil
 }
 
 // takeSnapshot iterates over all stores and add a deep copy of each object to the snapshot.

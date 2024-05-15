@@ -10,42 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
 func TestResolveDependencies_Ingress(t *testing.T) {
-	testIngressClass := helpers.WithTypeMeta(t, &netv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-ingress-class",
-		},
-	})
-	testService := helpers.WithTypeMeta(t, &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-service",
-			Namespace: "test-namespace",
-		},
-	})
-	testKongServiceFacade := helpers.WithTypeMeta(t, &incubatorv1alpha1.KongServiceFacade{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-kong-service-facade",
-			Namespace: "test-namespace",
-		},
-	})
-	testKongPlugin := helpers.WithTypeMeta(t, &kongv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-plugin",
-			Namespace: "test-namespace",
-		},
-	})
-	testKongClusterPlugin := helpers.WithTypeMeta(t, &kongv1.KongClusterPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cluster-plugin",
-			Namespace: "test-namespace",
-		},
-	})
-
 	testCases := []resolveDependenciesTestCase{
 		{
 			name: "no dependencies",
@@ -55,7 +23,13 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			cache:    cacheStoresFromObjs(t, testIngressClass),
+			cache: cacheStoresFromObjs(t,
+				testIngressClass(t, "1"),
+				testService(t, "1"),
+				testKongServiceFacade(t, "1"),
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
 			expected: []client.Object{},
 		},
 		{
@@ -65,12 +39,15 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					Name:      "test-ingress",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						annotations.IngressClassKey: "test-ingress-class",
+						annotations.IngressClassKey: "1",
 					},
 				},
 			},
-			cache:    cacheStoresFromObjs(t, testIngressClass),
-			expected: []client.Object{testIngressClass},
+			cache: cacheStoresFromObjs(t,
+				testIngressClass(t, "1"),
+				testIngressClass(t, "2"),
+			),
+			expected: []client.Object{testIngressClass(t, "1")},
 		},
 		{
 			name: "Ingress -> IngressClass - field",
@@ -80,13 +57,14 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr("test-ingress-class"),
+					IngressClassName: lo.ToPtr("1"),
 				},
 			},
-			cache: cacheStoresFromObjs(t, testIngressClass),
-			expected: []client.Object{
-				testIngressClass,
-			},
+			cache: cacheStoresFromObjs(t,
+				testIngressClass(t, "1"),
+				testIngressClass(t, "2"),
+			),
+			expected: []client.Object{testIngressClass(t, "1")},
 		},
 		{
 			name: "Ingress -> Service",
@@ -104,7 +82,14 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 										{
 											Backend: netv1.IngressBackend{
 												Service: &netv1.IngressServiceBackend{
-													Name: "test-service",
+													Name: "1",
+												},
+											},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "2",
 												},
 											},
 										},
@@ -115,8 +100,15 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					},
 				},
 			},
-			cache:    cacheStoresFromObjs(t, testService),
-			expected: []client.Object{testService},
+			cache: cacheStoresFromObjs(t,
+				testService(t, "1"),
+				testService(t, "2"),
+				testService(t, "3"),
+			),
+			expected: []client.Object{
+				testService(t, "1"),
+				testService(t, "2"),
+			},
 		},
 		{
 			name: "Ingress -> KongServiceFacade",
@@ -134,7 +126,16 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 										{
 											Backend: netv1.IngressBackend{
 												Resource: &corev1.TypedLocalObjectReference{
-													Name:     "test-kong-service-facade",
+													Name:     "1",
+													Kind:     "KongServiceFacade",
+													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												},
+											},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Resource: &corev1.TypedLocalObjectReference{
+													Name:     "2",
 													Kind:     "KongServiceFacade",
 													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
 												},
@@ -147,8 +148,15 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					},
 				},
 			},
-			cache:    cacheStoresFromObjs(t, testKongServiceFacade),
-			expected: []client.Object{testKongServiceFacade},
+			cache: cacheStoresFromObjs(t,
+				testKongServiceFacade(t, "1"),
+				testKongServiceFacade(t, "2"),
+				testKongServiceFacade(t, "3"),
+			),
+			expected: []client.Object{
+				testKongServiceFacade(t, "1"),
+				testKongServiceFacade(t, "2"),
+			},
 		},
 		{
 			name: "Ingress -> KongPlugin, KongClusterPlugin",
@@ -157,12 +165,76 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					Name:      "test-ingress",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "test-plugin,test-cluster-plugin",
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 					},
 				},
 			},
-			cache:    cacheStoresFromObjs(t, testKongPlugin, testKongClusterPlugin),
-			expected: []client.Object{testKongPlugin, testKongClusterPlugin},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongPlugin(t, "3"),
+				testKongClusterPlugin(t, "cluster-1"),
+				testKongClusterPlugin(t, "cluster-2"),
+				testKongClusterPlugin(t, "cluster-3"),
+			),
+			expected: []client.Object{
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "cluster-1"),
+				testKongClusterPlugin(t, "cluster-2"),
+			},
+		},
+		{
+			name: "Ingress -> all dependencies at once",
+			object: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Backend: netv1.IngressBackend{
+												Resource: &corev1.TypedLocalObjectReference{
+													Name:     "1",
+													Kind:     "KongServiceFacade",
+													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												},
+											},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "1",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+				testService(t, "1"),
+				testKongServiceFacade(t, "1"),
+			),
+			expected: []client.Object{
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "cluster-1"),
+				testService(t, "1"),
+				testKongServiceFacade(t, "1"),
+			},
 		},
 	}
 

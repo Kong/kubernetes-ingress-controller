@@ -12,7 +12,7 @@ func (c CacheStores) TakeSnapshot() (CacheStores, error) {
 	// in the c.takeSnapshot method. It happens here because it's
 	// not required to be guarded by a lock.
 	snapshot := NewCacheStores()
-	listOfStores := c.listAllStores()
+	listOfStores := c.ListAllStores()
 
 	c.l.RLock()
 	defer c.l.RUnlock()

@@ -64,8 +64,8 @@ func NewConfigGraphFromCacheStores(c store.CacheStores) (*ConfigGraph, error) {
 
 	for _, s := range c.ListAllStores() {
 		for _, o := range s.List() {
-			obj, err := o.(client.Object)
-			if !err {
+			obj, ok := o.(client.Object)
+			if !ok {
 				// Should not happen since all objects in the cache are client.Objects, but better safe than sorry.
 				return nil, fmt.Errorf("expected client.Object, got %T", o)
 			}
@@ -75,8 +75,12 @@ func NewConfigGraphFromCacheStores(c store.CacheStores) (*ConfigGraph, error) {
 				return nil, fmt.Errorf("failed to add %s to the graph: %w", GetObjectHash(obj), err)
 			}
 
+			deps, err := ResolveDependencies(c, obj)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve dependencies for %s: %w", GetObjectHash(obj), err)
+			}
 			// Add the object's dependencies to the graph.
-			for _, dep := range ResolveDependencies(c, obj) {
+			for _, dep := range deps {
 				// Add the dependency to the graph in case it wasn't added before. If it was added before, we ignore the
 				// error.
 				if err := g.AddVertex(dep); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {

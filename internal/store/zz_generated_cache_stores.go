@@ -11,6 +11,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -280,8 +281,8 @@ func (c CacheStores) ListAllStores() []cache.Store {
 }
 
 // SupportedTypes returns a list of supported types for the cache.
-func (c CacheStores) SupportedTypes() []runtime.Object {
-	return []runtime.Object{
+func (c CacheStores) SupportedTypes() []client.Object {
+	return []client.Object{
 		&netv1.Ingress{},
 		&netv1.IngressClass{},
 		&corev1.Service{},

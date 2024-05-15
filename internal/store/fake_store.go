@@ -28,18 +28,6 @@ import (
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
-func keyFunc(obj interface{}) (string, error) {
-	v := reflect.Indirect(reflect.ValueOf(obj))
-	name := v.FieldByName("Name")
-	namespace := v.FieldByName("Namespace")
-	return namespace.String() + "/" + name.String(), nil
-}
-
-func clusterResourceKeyFunc(obj interface{}) (string, error) {
-	v := reflect.Indirect(reflect.ValueOf(obj))
-	return v.FieldByName("Name").String(), nil
-}
-
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
 	IngressesV1                    []*netv1.Ingress
@@ -73,153 +61,153 @@ func NewFakeStore(
 ) (Storer, error) {
 	var s Storer
 
-	ingressV1Store := cache.NewStore(keyFunc)
+	ingressV1Store := cache.NewStore(namespacedKeyFunc)
 	for _, ingress := range objects.IngressesV1 {
 		err := ingressV1Store.Add(ingress)
 		if err != nil {
 			return nil, err
 		}
 	}
-	ingressClassV1Store := cache.NewStore(clusterResourceKeyFunc)
+	ingressClassV1Store := cache.NewStore(clusterWideKeyFunc)
 	for _, ingress := range objects.IngressClassesV1 {
 		err := ingressClassV1Store.Add(ingress)
 		if err != nil {
 			return nil, err
 		}
 	}
-	IngressClassParametersV1alpha1Store := cache.NewStore(clusterResourceKeyFunc)
+	IngressClassParametersV1alpha1Store := cache.NewStore(clusterWideKeyFunc)
 	for _, IngressClassParametersV1alpha1 := range objects.IngressClassParametersV1alpha1 {
 		err := IngressClassParametersV1alpha1Store.Add(IngressClassParametersV1alpha1)
 		if err != nil {
 			return nil, err
 		}
 	}
-	httprouteStore := cache.NewStore(keyFunc)
+	httprouteStore := cache.NewStore(namespacedKeyFunc)
 	for _, httproute := range objects.HTTPRoutes {
 		if err := httprouteStore.Add(httproute); err != nil {
 			return nil, err
 		}
 	}
-	udprouteStore := cache.NewStore(keyFunc)
+	udprouteStore := cache.NewStore(namespacedKeyFunc)
 	for _, udproute := range objects.UDPRoutes {
 		if err := udprouteStore.Add(udproute); err != nil {
 			return nil, err
 		}
 	}
-	tcprouteStore := cache.NewStore(keyFunc)
+	tcprouteStore := cache.NewStore(namespacedKeyFunc)
 	for _, tcproute := range objects.TCPRoutes {
 		if err := tcprouteStore.Add(tcproute); err != nil {
 			return nil, err
 		}
 	}
-	tlsrouteStore := cache.NewStore(keyFunc)
+	tlsrouteStore := cache.NewStore(namespacedKeyFunc)
 	for _, tlsroute := range objects.TLSRoutes {
 		if err := tlsrouteStore.Add(tlsroute); err != nil {
 			return nil, err
 		}
 	}
-	grpcrouteStore := cache.NewStore(keyFunc)
+	grpcrouteStore := cache.NewStore(namespacedKeyFunc)
 	for _, grpcroute := range objects.GRPCRoutes {
 		if err := grpcrouteStore.Add(grpcroute); err != nil {
 			return nil, err
 		}
 	}
-	referencegrantStore := cache.NewStore(keyFunc)
+	referencegrantStore := cache.NewStore(namespacedKeyFunc)
 	for _, referencegrant := range objects.ReferenceGrants {
 		if err := referencegrantStore.Add(referencegrant); err != nil {
 			return nil, err
 		}
 	}
-	gatewayStore := cache.NewStore(keyFunc)
+	gatewayStore := cache.NewStore(namespacedKeyFunc)
 	for _, gw := range objects.Gateways {
 		if err := gatewayStore.Add(gw); err != nil {
 			return nil, err
 		}
 	}
-	tcpIngressStore := cache.NewStore(keyFunc)
+	tcpIngressStore := cache.NewStore(namespacedKeyFunc)
 	for _, ingress := range objects.TCPIngresses {
 		err := tcpIngressStore.Add(ingress)
 		if err != nil {
 			return nil, err
 		}
 	}
-	udpIngressStore := cache.NewStore(keyFunc)
+	udpIngressStore := cache.NewStore(namespacedKeyFunc)
 	for _, ingress := range objects.UDPIngresses {
 		if err := udpIngressStore.Add(ingress); err != nil {
 			return nil, err
 		}
 	}
-	serviceStore := cache.NewStore(keyFunc)
+	serviceStore := cache.NewStore(namespacedKeyFunc)
 	for _, s := range objects.Services {
 		err := serviceStore.Add(s)
 		if err != nil {
 			return nil, err
 		}
 	}
-	secretsStore := cache.NewStore(keyFunc)
+	secretsStore := cache.NewStore(namespacedKeyFunc)
 	for _, s := range objects.Secrets {
 		err := secretsStore.Add(s)
 		if err != nil {
 			return nil, err
 		}
 	}
-	endpointSliceStore := cache.NewStore(keyFunc)
+	endpointSliceStore := cache.NewStore(namespacedKeyFunc)
 	for _, e := range objects.EndpointSlices {
 		err := endpointSliceStore.Add(e)
 		if err != nil {
 			return nil, err
 		}
 	}
-	kongIngressStore := cache.NewStore(keyFunc)
+	kongIngressStore := cache.NewStore(namespacedKeyFunc)
 	for _, k := range objects.KongIngresses {
 		err := kongIngressStore.Add(k)
 		if err != nil {
 			return nil, err
 		}
 	}
-	consumerStore := cache.NewStore(keyFunc)
+	consumerStore := cache.NewStore(namespacedKeyFunc)
 	for _, c := range objects.KongConsumers {
 		err := consumerStore.Add(c)
 		if err != nil {
 			return nil, err
 		}
 	}
-	consumerGroupStore := cache.NewStore(keyFunc)
+	consumerGroupStore := cache.NewStore(namespacedKeyFunc)
 	for _, c := range objects.KongConsumerGroups {
 		err := consumerGroupStore.Add(c)
 		if err != nil {
 			return nil, err
 		}
 	}
-	kongPluginsStore := cache.NewStore(keyFunc)
+	kongPluginsStore := cache.NewStore(namespacedKeyFunc)
 	for _, p := range objects.KongPlugins {
 		err := kongPluginsStore.Add(p)
 		if err != nil {
 			return nil, err
 		}
 	}
-	kongClusterPluginsStore := cache.NewStore(clusterResourceKeyFunc)
+	kongClusterPluginsStore := cache.NewStore(clusterWideKeyFunc)
 	for _, p := range objects.KongClusterPlugins {
 		err := kongClusterPluginsStore.Add(p)
 		if err != nil {
 			return nil, err
 		}
 	}
-	kongUpstreamPolicyStore := cache.NewStore(keyFunc)
+	kongUpstreamPolicyStore := cache.NewStore(namespacedKeyFunc)
 	for _, p := range objects.KongUpstreamPolicies {
 		err := kongUpstreamPolicyStore.Add(p)
 		if err != nil {
 			return nil, err
 		}
 	}
-	kongServiceFacade := cache.NewStore(keyFunc)
+	kongServiceFacade := cache.NewStore(namespacedKeyFunc)
 	for _, s := range objects.KongServiceFacades {
 		err := kongServiceFacade.Add(s)
 		if err != nil {
 			return nil, err
 		}
 	}
-	kongVaultStore := cache.NewStore(clusterResourceKeyFunc)
+	kongVaultStore := cache.NewStore(clusterWideKeyFunc)
 	for _, v := range objects.KongVaults {
 		err := kongVaultStore.Add(v)
 		if err != nil {

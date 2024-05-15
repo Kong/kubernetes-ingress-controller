@@ -43,7 +43,6 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash string) (
 	listOfStores := c.listAllStores()
 	accessor := meta.NewAccessor()
 	hashCalculator := sha256.New()
-	var capturedErr error
 
 	c.l.RLock()
 	defer c.l.RUnlock()
@@ -52,6 +51,7 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash string) (
 	for _, store := range listOfStores {
 		// Underlying store is implemented a thread-safe map so for method List() it doesn't maintain order of items.
 		// To successfully calculate hash we need to sort the items.
+		var capturedErr error
 		valuesForHashComputation := lo.Map(store.List(), func(item interface{}, _ int) string {
 			obj, ok := item.(runtime.Object)
 			if !ok {
@@ -81,7 +81,18 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash string) (
 		}
 	}
 	// Encode the hash to base32 string to make it human-readable.
-	if newHash = base32.StdEncoding.EncodeToString(hashCalculator.Sum(nil)); newHash != previousSnapshotHash {
+	newHash = base32.StdEncoding.EncodeToString(hashCalculator.Sum(nil))
+
+	// If the hash of the current state is the same as the hash of the previous snapshot, return an empty snapshot.
+	if newHash == previousSnapshotHash {
+		return CacheStores{}, "", nil
+	}
+
+	// Take a snapshot of the current state as the hash of the current state differs from the previous one.
+	if err := takeSnapshot(&snapshot, listOfStores); err != nil {
+		return CacheStores{}, "", fmt.Errorf("failed to take snapshot: %w", err)
+	}
+	return snapshot, newHash, nil
 		err := takeSnapshot(&snapshot, listOfStores)
 		return snapshot, newHash, err
 	}

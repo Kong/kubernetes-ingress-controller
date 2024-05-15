@@ -65,7 +65,7 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash SnapshotHash) (
 ) {
 	// Initialize all variables that don't need to be guarded by a lock.
 	snapshot = NewCacheStores()
-	listOfStores := c.listAllStores()
+	listOfStores := c.ListAllStores()
 	accessor := meta.NewAccessor()
 	hashCalculator := newHashCalculator()
 

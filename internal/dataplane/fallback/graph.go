@@ -1,15 +1,16 @@
 package fallback
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dominikbraun/graph"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
 
-//go:generate go run ../../../hack/generators/config-graph
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+)
 
 // ConfigGraph is a graph representation of the Kubernetes resources kept in the cache.
 // Vertices are objects, edges are dependencies between objects (dependency -> dependant).
@@ -53,6 +54,44 @@ func GetObjectHash(obj client.Object) ObjectHash {
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}
+}
+
+// NewConfigGraphFromCacheStores creates a new ConfigGraph from the given cache stores. It adds all objects
+// from the cache stores to the graph as vertices as well as edges between objects and their dependencies
+// resolved by the ResolveDependencies function.
+func NewConfigGraphFromCacheStores(c store.CacheStores) (*ConfigGraph, error) {
+	g := graph.New[ObjectHash, client.Object](GetObjectHash, graph.Directed())
+
+	for _, s := range c.ListAllStores() {
+		for _, o := range s.List() {
+			obj, err := o.(client.Object)
+			if !err {
+				// Should not happen since all objects in the cache are client.Objects, but better safe than sorry.
+				return nil, fmt.Errorf("expected client.Object, got %T", o)
+			}
+			// Add the object to the graph. It can happen that the object is already in the graph (i.e. was already added
+			// as a dependency of another object), in which case we ignore the error.
+			if err := g.AddVertex(obj); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+				return nil, fmt.Errorf("failed to add %s to the graph: %w", GetObjectHash(obj), err)
+			}
+
+			// Add the object's dependencies to the graph.
+			for _, dep := range ResolveDependencies(c, obj) {
+				// Add the dependency to the graph in case it wasn't added before. If it was added before, we ignore the
+				// error.
+				if err := g.AddVertex(dep); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+					return nil, fmt.Errorf("failed to add %s to the graph: %w", GetObjectHash(obj), err)
+				}
+
+				// Add an edge from a dependency to the object. If the edge was already added before, we ignore the error.
+				if err := g.AddEdge(GetObjectHash(dep), GetObjectHash(obj)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
+					return nil, fmt.Errorf("failed to add edge from %s to %s: %w", GetObjectHash(obj), GetObjectHash(dep), err)
+				}
+			}
+		}
+	}
+
+	return &ConfigGraph{graph: g}, nil
 }
 
 // AdjacencyMap is a map of object hashes to their neighbours' hashes.

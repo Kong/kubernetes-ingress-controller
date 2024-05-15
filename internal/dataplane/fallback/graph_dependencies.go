@@ -13,6 +13,9 @@ import (
 
 // ResolveDependencies resolves dependencies for a given object. Dependencies are all objects referenced by the
 // given object. For example, an Ingress object might refer to an IngressClass, Services, Plugins, etc.
+// Every supported object type should explicitly have a case in this function.
+// TODO: Automated test ensuring `ResolveDependencies` is implemented for all supported object types.
+// https://github.com/Kong/kubernetes-ingress-controller/issues/6026
 func ResolveDependencies(cache store.CacheStores, obj client.Object) []client.Object {
 	// TODO: Implement dependency resolution for all types below.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5929

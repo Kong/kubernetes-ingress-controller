@@ -30,9 +30,9 @@ func TestCacheStores_TakeSnapshot(t *testing.T) {
 func TestCacheStores_TakeSnapshotIfChanged(t *testing.T) {
 	originalStores := getStoresForTests(t)
 	t.Log("Taking a snapshot of the originalStores")
-	originalStoresSnapshot, originalStoresHash, err := originalStores.TakeSnapshotIfChanged("")
+	originalStoresSnapshot, originalStoresHash, err := originalStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
 	require.NoError(t, err)
-	require.Equal(t, "4FU3CVGPMPGXTSC2I3L4UCKE6M46LWOJBSQMJ2N7HAYR46IVHNGQ====", originalStoresHash)
+	require.Equal(t, store.SnapshotHash("4FU3CVGPMPGXTSC2I3L4UCKE6M46LWOJBSQMJ2N7HAYR46IVHNGQ===="), originalStoresHash)
 	require.NotEqual(t, store.CacheStores{}, originalStoresSnapshot)
 
 	t.Log("Taking again a snapshot of the originalStores")
@@ -281,26 +281,26 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 		}
 	})
 	b.Run("Small_With_Cache", func(b *testing.B) {
-		s, hash, err := smallStores.TakeSnapshotIfChanged("")
+		s, hash, err := smallStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
 		require.NoError(b, err)
 		require.NotEmpty(b, hash)
 		require.NotEqual(b, store.CacheStores{}, s)
 		for i := 0; i < b.N; i++ {
 			s, hashNew, err := smallStores.TakeSnapshotIfChanged(hash)
-			if err != nil || hashNew != "" || s != (store.CacheStores{}) {
+			if err != nil || hashNew != store.SnapshotHashEmpty || s != (store.CacheStores{}) {
 				b.Fatalf("unexpected error or non-empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
 			}
 		}
 	})
 
 	b.Run("Big_With_Cache", func(b *testing.B) {
-		s, hash, err := bigStores.TakeSnapshotIfChanged("")
+		s, hash, err := bigStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
 		require.NoError(b, err)
 		require.NotEmpty(b, hash)
 		require.NotEqual(b, store.CacheStores{}, s)
 		for i := 0; i < b.N; i++ {
 			s, hashNew, err := bigStores.TakeSnapshotIfChanged(hash)
-			if err != nil || hashNew != "" || s != (store.CacheStores{}) {
+			if err != nil || hashNew != store.SnapshotHashEmpty || s != (store.CacheStores{}) {
 				b.Fatalf("unexpected error or non-empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
 			}
 		}
@@ -308,8 +308,8 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 
 	b.Run("Small_With_Missed_Cache", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			s, hashNew, err := smallStores.TakeSnapshotIfChanged("")
-			if err != nil || hashNew == "" || s == (store.CacheStores{}) {
+			s, hashNew, err := smallStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
+			if err != nil || hashNew == store.SnapshotHashEmpty || s == (store.CacheStores{}) {
 				b.Fatalf("unexpected error or empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
 			}
 		}
@@ -317,8 +317,8 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 
 	b.Run("Big_With_Missed_Cache", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			s, hashNew, err := bigStores.TakeSnapshotIfChanged("")
-			if err != nil || hashNew == "" || s == (store.CacheStores{}) {
+			s, hashNew, err := bigStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
+			if err != nil || hashNew == store.SnapshotHashEmpty || s == (store.CacheStores{}) {
 				b.Fatalf("unexpected error or empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
 			}
 		}

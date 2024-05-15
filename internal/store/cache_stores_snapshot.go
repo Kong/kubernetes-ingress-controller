@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base32"
 	"fmt"
+	"hash"
 	"slices"
 
 	"github.com/samber/lo"
@@ -27,22 +28,46 @@ func (c CacheStores) TakeSnapshot() (CacheStores, error) {
 	return snapshot, err
 }
 
+// SnapshotHash is type that represents a hash of the snapshot.
+// It's a base32 encoded string of the sha256 hash of the snapshot.
+// It's printable and human-readable.
+type SnapshotHash string
+
+// SnapshotHashEmpty is a constant that represents an empty snapshot hash.
+const SnapshotHashEmpty SnapshotHash = ""
+
+func newHashCalculator() hashCalculator {
+	return hashCalculator{calc: sha256.New()}
+}
+
+type hashCalculator struct {
+	calc hash.Hash
+}
+
+func (hc hashCalculator) Write(s string) {
+	hc.calc.Write([]byte(s))
+}
+
+func (hc hashCalculator) Get() SnapshotHash {
+	return SnapshotHash(base32.StdEncoding.EncodeToString(hc.calc.Sum(nil)))
+}
+
 // TakeSnapshotIfChanged takes a snapshot of the CacheStores if the hash of the current state
 // differs from the hash of the previous snapshot supplied as an argument (to make and initial
 // just pass empty string). When error is not nil discard all other return values.
 // When newHash is empty it means that the snapshot hasn't been taken - returned snapshot is
 // meaningless. This is a situation when hash of the current state is the same as the hash of
 // the previous snapshot supplied as an argument.
-func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash string) (
+func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash SnapshotHash) (
 	snapshot CacheStores,
-	newHash string,
+	newHash SnapshotHash,
 	err error,
 ) {
 	// Initialize all variables that don't need to be guarded by a lock.
 	snapshot = NewCacheStores()
 	listOfStores := c.listAllStores()
 	accessor := meta.NewAccessor()
-	hashCalculator := sha256.New()
+	hashCalculator := newHashCalculator()
 
 	c.l.RLock()
 	defer c.l.RUnlock()
@@ -77,11 +102,11 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash string) (
 		// Strings have to be used instead of byte slices, because Cmp.Ordered has to be satisfied.
 		slices.Sort(valuesForHashComputation)
 		for _, v := range valuesForHashComputation {
-			hashCalculator.Write([]byte(v))
+			hashCalculator.Write(v)
 		}
 	}
 	// Encode the hash to base32 string to make it human-readable.
-	newHash = base32.StdEncoding.EncodeToString(hashCalculator.Sum(nil))
+	newHash = hashCalculator.Get()
 
 	// If the hash of the current state is the same as the hash of the previous snapshot, return an empty snapshot.
 	if newHash == previousSnapshotHash {

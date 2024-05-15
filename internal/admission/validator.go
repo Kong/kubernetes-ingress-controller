@@ -634,19 +634,18 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]k
 }
 
 func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error) {
+	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", kongv1alpha1.KongCustomEntityKind)
 	// If the spec.contollerName does not match the ingress class name,
+	// and the ingress class annotation does not match the ingress class name either,
 	// ignore it as it is not controlled by the controller.
-	// REVIEW: should we also match the "ingress class" annotation here?
-	if !validator.ingressClassMatcher(&metav1.ObjectMeta{
-		Annotations: map[string]string{
-			annotations.IngressClassKey: entity.Spec.ControllerName,
-		},
-	}, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		validator.Logger.V(util.DebugLevel).Info("Skipped validation because the controller name does not match", "controller_name", entity.Spec.ControllerName)
+	if (!validator.ingressClassMatcher(&entity.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch)) &&
+		(!validator.ingressClassMatcher(&metav1.ObjectMeta{
+			Annotations: map[string]string{
+				annotations.IngressClassKey: entity.Spec.ControllerName,
+			},
+		}, annotations.IngressClassKey, annotations.ExactClassMatch)) {
 		return true, "", nil
 	}
-
-	// REVIEW: should we validate group/kind of `spec.parentRef` here because we only want it to be attached to plugins?
 
 	fields, err := kongstate.RawConfigToConfiguration(entity.Spec.Fields.Raw)
 	if err != nil {
@@ -656,7 +655,7 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 	schemaService, hasClient := validator.AdminAPIServicesProvider.GetSchemasService()
 	// Skip validation on Kong gateway if we do not have available client.
 	if !hasClient {
-		validator.Logger.V(util.DebugLevel).Info("Skipped because no schema service available")
+		logger.V(util.DebugLevel).Info("Skipped because no schema service available")
 		return true, "", nil
 	}
 
@@ -664,7 +663,7 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 	entityType := entity.Spec.EntityType
 	schema, err := schemaService.Get(ctx, entityType)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("Failed to get schema of entity", "entity_type", entityType, "error", err)
+		logger.V(util.DebugLevel).Info("Failed to get schema of entity", "entity_type", entityType, "error", err)
 		return false, fmt.Sprintf(ErrTextCustomEntityGetSchemaFailed, entityType, err), nil
 	}
 
@@ -674,8 +673,9 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 	for fieldName, field := range s.Fields {
 		// Fill in an arbitrary UUID if the entity requires a reference to a foreign key.
 		// This format of foreign reference in entities should satisfy most of foreign fields in entities(services/routes/consumers/...).
+		// The admission webhook needs a placeholder value because the actual value isn't present in the KongCustomEntity spec.
+		// It will be derived from the resource(s) used by the parent KongPlugin during translation.
 		if field.Required && field.Type == kongstate.EntityFieldTypeForeign {
-			validator.Logger.V(util.DebugLevel).Info("fill in foreign field", "field_name", fieldName)
 			fields[fieldName] = map[string]interface{}{
 				"id": util.DefaultUUIDGenerator{}.NewString(),
 			}

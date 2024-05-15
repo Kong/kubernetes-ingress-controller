@@ -6,6 +6,10 @@ import "github.com/kong/go-kong/kong"
 // possible field types include boolean, integer, number, string, array, set, map, record, json, foreign.
 type EntityFieldType string
 
+// These types and field properties are defined upstream in the Kong DAO:
+// https://github.com/Kong/kong/blob/3.6.1/kong/db/schema/init.lua#L131-L143
+// https://docs.konghq.com/gateway/latest/plugin-development/custom-entities/#define-a-schema
+
 const (
 	EntityFieldTypeBoolean EntityFieldType = "boolean"
 	EntityFieldTypeInteger EntityFieldType = "integer"

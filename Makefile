@@ -62,7 +62,7 @@ mise:
 	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-ref-docs skaffold looppointer.download staticcheck.download
+tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-ref-docs skaffold staticcheck.download
 
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
@@ -161,11 +161,6 @@ go-junit-report: ## Download go-junit-report locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=go-junit-report URL=https://github.com/pmalek/asdf-go-junit-report.git
 	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
-LOOPPOINTER= $(PROJECT_DIR)/bin/looppointer
-.PHONY: looppointer.download
-looppointer.download: ## Download looppointer locally if necessary.
-	@$(MAKE) _download_tool TOOL=looppointer
-
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -216,7 +211,7 @@ fmt:
 	go fmt ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck looppointer
+lint: verify.tidy golangci-lint staticcheck 
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download
@@ -228,9 +223,6 @@ staticcheck: staticcheck.download
 	go list ./... | \
 		grep -F -e internal/konnect/controlplanes -v | \
 		xargs $(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests -f stylish
-
-looppointer: looppointer.download
-	$(LOOPPOINTER) -v ./internal/... ./test/...
 
 .PHONY: verify.tidy
 verify.tidy:

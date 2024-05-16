@@ -111,7 +111,7 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			rc := newRefCheckerForRoute(tc.route, tc.backendRef)
+			rc := gatewayapi.NewRefCheckerForRoute(tc.route, tc.backendRef)
 			result := rc.IsRefAllowedByGrant(tc.allowedRefs)
 			require.Equal(t, tc.expected, result)
 		})

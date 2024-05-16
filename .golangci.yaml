@@ -159,6 +159,9 @@ issues:
    - (Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)
    # EXC0010 gosec: False positive is triggered by 'src, err := ioutil.ReadFile(filename)'
    - Potential file inclusion via variable
+   # G601 Implicit memory aliasing in for loop
+   # Irrelevant as of Go 1.22
+   - (G601)
 
   exclude-rules:
   # Ignore insecure TLS in tests and hardcoded credentials

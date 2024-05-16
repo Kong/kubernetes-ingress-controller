@@ -42,10 +42,10 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTP
 	return convertedHeaders, nil
 }
 
-// getPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
+// GetPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferenceGrant with those Tos and the input From.
-func getPermittedForReferenceGrantFrom(
+func GetPermittedForReferenceGrantFrom(
 	from gatewayapi.ReferenceGrantFrom,
 	grants []*gatewayapi.ReferenceGrant,
 ) map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo {
@@ -82,7 +82,7 @@ func generateKongServiceFromBackendRefWithName(
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
-	allowed := getPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
+	allowed := GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
 		Group:     gatewayapi.Group(route.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayapi.Kind(route.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayapi.Namespace(route.GetNamespace()),

@@ -711,6 +711,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	case netv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &netv1.Ingress{}, nil
+	case netv1.SchemeGroupVersion.WithKind("IngressClass"):
+		return &netv1.IngressClass{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):

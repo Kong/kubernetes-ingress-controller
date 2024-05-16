@@ -153,6 +153,8 @@ Adding a new version? You'll need three changes:
   for consumers managed by other users without requiring those users to create
   consumers in the Service's namespace.
   [#5965](https://github.com/Kong/kubernetes-ingress-controller/pull/5965)
+- Fallback configuration no longer omits licenses and vaults.
+  [#6048](https://github.com/Kong/kubernetes-ingress-controller/pull/6048)
 
 ### Fixed
 

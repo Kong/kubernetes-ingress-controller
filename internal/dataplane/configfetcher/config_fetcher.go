@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -36,6 +37,8 @@ type DefaultKongLastGoodConfigFetcher struct {
 	fillIDs bool
 	// workspace is the workspace name used in generating deterministic IDs. Only used when fillIDs = true.
 	workspace string
+	// licenseGetter is an optional license provider.
+	licenseGetter license.Getter
 }
 
 func NewDefaultKongLastGoodConfigFetcher(fillIDs bool, workspace string) *DefaultKongLastGoodConfigFetcher {
@@ -46,8 +49,52 @@ func NewDefaultKongLastGoodConfigFetcher(fillIDs bool, workspace string) *Defaul
 	}
 }
 
+// InjectLicenseGetter adds a license getter to the config fetcher.
+func (cf *DefaultKongLastGoodConfigFetcher) InjectLicenseGetter(licenseGetter license.Getter) {
+	cf.licenseGetter = licenseGetter
+}
+
 func (cf *DefaultKongLastGoodConfigFetcher) LastValidConfig() (*kongstate.KongState, bool) {
 	if cf.lastValidState != nil {
+		// TODO the translator version of this also has a condition on
+		// `t.featureFlags.EnterpriseEdition == true`. This isn't a typical feature
+		// flag, and is instead set based on whether we see we're talking to a
+		// kong-gateway image. It's not used for anything other than the license.
+		// Do we actually need this? While the OSS image does not recognize license
+		// entities, you'll only have license entities if you created a KongLicense
+		// or set up Konnect credentials that can pull one. In either of those
+		// cases you arguably _should_ be using the kong-gateway image, so we
+		// shouldn't really exclude it if you're not :thinking:
+		if cf.licenseGetter != nil {
+			optionalLicense := cf.licenseGetter.GetLicense()
+			if l, ok := optionalLicense.Get(); ok {
+				// TODO cf.lastValidState is a pointer, and a pointer to a rather large
+				// struct we probably don't want to copy. this assignment without
+				// copying it does actually _modify_ the last good config, and could
+				// technically transform it from valid to invalid in a contrived
+				// scenario where the config had a valid license and the environment
+				// provided an invalid one.
+				//
+				// The environment arguably shouldn't provide an invalid one, but we
+				// have seen Konnect provide invalid licenses (though we think this was
+				// a fluke due to a change in their license management code), and you
+				// could potentially overwrite your previously valid KongLicense with
+				// garbage.
+				//
+				// On the other hand, any license in the last valid config would simply
+				// be whatever license you had when the config was last valid. That
+				// license could have since expired, and attempting to use it would
+				// fail. Using the latest available license is the better option in
+				// that case.
+				//
+				// We can reasonably expect Konnect to provide valid licenses (Konnect
+				// needs to fix something if they aren't) and a broken KongLicense is
+				// something you should be able to fix easily: you should only have one
+				// of them managed by the superuser, so there shouldn't be any
+				// confusion around where it's coming from.
+				cf.lastValidState.Licenses = []kongstate.License{{License: l}}
+			}
+		}
 		return cf.lastValidState, true
 	}
 	return nil, false

@@ -75,6 +75,8 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		kongState.Upstreams = append(kongState.Upstreams, sanitizeUpstream(newUpstream))
 	}
 
+	kongState.Vaults = rawVaultsToVaults(rawstate.Vaults)
+
 	kongState.CACertificates = rawCACertificatesToCACertificates(rawstate.CACertificates)
 	kongState.Certificates = rawCertificatesToCertificates(rawstate.Certificates)
 
@@ -221,6 +223,20 @@ func rawCACertificatesToCACertificates(caCertificates []*kong.CACertificate) []k
 	return certs
 }
 
+func rawVaultsToVaults(rawVaults []*kong.Vault) []kongstate.Vault {
+	if len(rawVaults) == 0 {
+		return nil
+	}
+	vaults := []kongstate.Vault{}
+
+	for _, v := range rawVaults {
+		vaults = append(vaults, kongstate.Vault{
+			Vault: sanitizeVault(*v),
+		})
+	}
+	return vaults
+}
+
 // -----------------------------------------------------------------------------
 // Sanitization functions
 // -----------------------------------------------------------------------------
@@ -269,6 +285,12 @@ func sanitizeCACertificate(caCertificate kong.CACertificate) kong.CACertificate 
 	caCertificate.ID = nil
 	caCertificate.CreatedAt = nil
 	return caCertificate
+}
+
+func sanitizeVault(v kong.Vault) kong.Vault {
+	v.ID = nil
+	v.CreatedAt = nil
+	return v
 }
 
 func sanitizeConsumer(consumer kong.Consumer) kong.Consumer {

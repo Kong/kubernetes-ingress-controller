@@ -1,15 +1,12 @@
 package fallback
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/dominikbraun/graph"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
 
 // ConfigGraph is a graph representation of the Kubernetes resources kept in the cache.
@@ -21,6 +18,12 @@ import (
 // function is implemented for that object type. If your object type has no dependencies, you can ignore it.
 type ConfigGraph struct {
 	graph graph.Graph[ObjectHash, client.Object]
+}
+
+func NewConfigGraph() *ConfigGraph {
+	return &ConfigGraph{
+		graph: graph.New[ObjectHash, client.Object](GetObjectHash, graph.Directed()),
+	}
 }
 
 // ObjectHash is a unique identifier for a given object that is used as a vertex key in the graph.
@@ -56,46 +59,14 @@ func GetObjectHash(obj client.Object) ObjectHash {
 	}
 }
 
-// NewConfigGraphFromCacheStores creates a new ConfigGraph from the given cache stores. It adds all objects
-// from the cache stores to the graph as vertices as well as edges between objects and their dependencies
-// resolved by the ResolveDependencies function.
-func NewConfigGraphFromCacheStores(c store.CacheStores) (*ConfigGraph, error) {
-	g := graph.New[ObjectHash, client.Object](GetObjectHash, graph.Directed())
+// AddVertex adds a vertex to the graph.
+func (g *ConfigGraph) AddVertex(obj client.Object) error {
+	return g.graph.AddVertex(obj)
+}
 
-	for _, s := range c.ListAllStores() {
-		for _, o := range s.List() {
-			obj, ok := o.(client.Object)
-			if !ok {
-				// Should not happen since all objects in the cache are client.Objects, but better safe than sorry.
-				return nil, fmt.Errorf("expected client.Object, got %T", o)
-			}
-			// Add the object to the graph. It can happen that the object is already in the graph (i.e. was already added
-			// as a dependency of another object), in which case we ignore the error.
-			if err := g.AddVertex(obj); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
-				return nil, fmt.Errorf("failed to add %s to the graph: %w", GetObjectHash(obj), err)
-			}
-
-			deps, err := ResolveDependencies(c, obj)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve dependencies for %s: %w", GetObjectHash(obj), err)
-			}
-			// Add the object's dependencies to the graph.
-			for _, dep := range deps {
-				// Add the dependency to the graph in case it wasn't added before. If it was added before, we ignore the
-				// error.
-				if err := g.AddVertex(dep); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
-					return nil, fmt.Errorf("failed to add %s to the graph: %w", GetObjectHash(obj), err)
-				}
-
-				// Add an edge from a dependency to the object. If the edge was already added before, we ignore the error.
-				if err := g.AddEdge(GetObjectHash(dep), GetObjectHash(obj)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
-					return nil, fmt.Errorf("failed to add edge from %s to %s: %w", GetObjectHash(obj), GetObjectHash(dep), err)
-				}
-			}
-		}
-	}
-
-	return &ConfigGraph{graph: g}, nil
+// AddEdge adds an edge between two vertices in the graph.
+func (g *ConfigGraph) AddEdge(from, to ObjectHash) error {
+	return g.graph.AddEdge(from, to)
 }
 
 // AdjacencyMap is a map of object hashes to their neighbours' hashes.
@@ -113,4 +84,21 @@ func (g *ConfigGraph) AdjacencyMap() (AdjacencyMap, error) {
 		m[v] = lo.Keys(neighbours)
 	}
 	return m, nil
+}
+
+// SubgraphObjects returns all objects in the graph reachable from the source object, including the source object.
+// It uses a depth-first search to traverse the graph.
+func (g *ConfigGraph) SubgraphObjects(sourceHash ObjectHash) ([]client.Object, error) {
+	var objects []client.Object
+	if err := graph.DFS(g.graph, sourceHash, func(hash ObjectHash) bool {
+		obj, err := g.graph.Vertex(hash)
+		if err != nil {
+			return false
+		}
+		objects = append(objects, obj)
+		return false
+	}); err != nil {
+		return nil, fmt.Errorf("failed to traverse the graph: %w", err)
+	}
+	return objects, nil
 }

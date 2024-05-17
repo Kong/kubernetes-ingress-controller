@@ -895,8 +895,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type URLRewrite (with hostname replace) is unsupported",
+			valid: true,
 		},
 		{
 			msg: "HTTPRoute URLRewrite ReplacePrefixMatch",

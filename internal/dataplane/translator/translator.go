@@ -2,14 +2,13 @@ package translator
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
-	"github.com/samber/mo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
@@ -64,12 +63,6 @@ func NewFeatureFlags(
 	}
 }
 
-// LicenseGetter is an interface for getting the Kong Enterprise license.
-type LicenseGetter interface {
-	// GetLicense returns an optional license.
-	GetLicense() mo.Option[kong.License]
-}
-
 // Translator translates Kubernetes objects and configurations into their
 // equivalent Kong objects and configurations, producing a complete
 // state configuration for the Kong Admin API.
@@ -77,7 +70,7 @@ type Translator struct {
 	logger        logr.Logger
 	storer        store.Storer
 	workspace     string
-	licenseGetter LicenseGetter
+	licenseGetter license.Getter
 	featureFlags  FeatureFlags
 
 	failuresCollector          *failures.ResourceFailuresCollector
@@ -228,7 +221,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 // -----------------------------------------------------------------------------
 
 // InjectLicenseGetter sets a license getter to be used by the translator.
-func (t *Translator) InjectLicenseGetter(licenseGetter LicenseGetter) {
+func (t *Translator) InjectLicenseGetter(licenseGetter license.Getter) {
 	t.licenseGetter = licenseGetter
 }
 

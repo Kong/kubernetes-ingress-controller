@@ -300,6 +300,7 @@ func Run(
 		setupLog.Info("Inject license getter to config translator",
 			"license_getter_type", fmt.Sprintf("%T", licenseGetter))
 		configTranslator.InjectLicenseGetter(licenseGetter)
+		kongConfigFetcher.InjectLicenseGetter(licenseGetter)
 	}
 
 	if c.AnonymousReports {

@@ -60,6 +60,11 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 					},
 				},
+				Vaults: []*kong.Vault{
+					{
+						Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+					},
+				},
 				Plugins: []*kong.Plugin{
 					{
 						Name: kong.String("plugin1"),
@@ -205,6 +210,13 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 					},
 				},
+				Vaults: []kongstate.Vault{
+					{
+						Vault: kong.Vault{
+							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						},
+					},
+				},
 				Certificates: []kongstate.Certificate{
 					{
 						Certificate: kong.Certificate{
@@ -292,7 +304,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 
 			// Collect all fields that are tested in this test case.
 			if tt.kongRawState != nil {
-				testedKongRawStateFields.Insert(extractNotEmptyFieldNames(*tt.kongRawState)...)
+				testedKongRawStateFields.Insert(extractNotEmptyFieldNames(*tt.expectedKongState)...)
 			}
 
 			var state *kongstate.KongState
@@ -305,12 +317,12 @@ func TestKongRawStateToKongState(t *testing.T) {
 		})
 	}
 
-	ensureAllKongRawStateFieldsAreTested(t, testedKongRawStateFields.UnsortedList())
+	ensureAllKongStateFieldsAreTested(t, testedKongRawStateFields.UnsortedList())
 }
 
-// extractNotEmptyFieldNames returns the names of all non-empty fields in the given KongRawState.
+// extractNotEmptyFieldNames returns the names of all non-empty fields in the given KongState.
 // This is to programmatically find out what fields are used in a test case.
-func extractNotEmptyFieldNames(s utils.KongRawState) []string {
+func extractNotEmptyFieldNames(s kongstate.KongState) []string {
 	var fields []string
 	typ := reflect.ValueOf(s).Type()
 	for i := 0; i < typ.NumField(); i++ {
@@ -323,34 +335,30 @@ func extractNotEmptyFieldNames(s utils.KongRawState) []string {
 	return fields
 }
 
-// ensureAllKongRawStateFieldsAreTested verifies that all fields in KongRawState are tested.
+// ensureAllKongStateFieldsAreTested verifies that all fields in KongState are tested.
 // It uses the testedFields slice to determine what fields were actually tested and compares
-// it to the list of all fields in KongRawState, excluding fields that KIC doesn't support.
-func ensureAllKongRawStateFieldsAreTested(t *testing.T, testedFields []string) {
-	kongRawStateFieldsKICDoesntSupport := []string{
-		// These are fields that KIC explicitly doesn't support.
-		"SNIs",
-		"CustomEntities",
-		"Vaults",
-		"RBACRoles",
-		"RBACEndpointPermissions",
+// it to the list of all fields in KongState, excluding fields that KIC doesn't support.
+func ensureAllKongStateFieldsAreTested(t *testing.T, testedFields []string) {
+	exempt := []string{
+		// Plugins live under their attached objects and are not populated independently at the top level.
+		"Plugins",
+		// Licenses are injected from the license getter rather than extracted from the last state.
 		"Licenses",
 	}
-	allKongRawStateFields := func() []string {
+	allKongStateFields := func() []string {
 		var fields []string
-		typ := reflect.ValueOf(utils.KongRawState{}).Type()
+		typ := reflect.ValueOf(kongstate.KongState{}).Type()
 		for i := 0; i < typ.NumField(); i++ {
-			fields = append(fields, typ.Field(i).Name)
+			name := typ.Field(i).Name
+			if !lo.Contains(exempt, name) {
+				fields = append(fields, name)
+			}
 		}
 		return fields
 	}()
 
 	// Meta test - ensure we have testcases covering all fields in KongRawState.
-	for _, field := range allKongRawStateFields {
-		if lo.Contains(kongRawStateFieldsKICDoesntSupport, field) {
-			t.Logf("skipping field %s - explicitly unsupported", field)
-			continue
-		}
+	for _, field := range allKongStateFields {
 		assert.True(t, lo.Contains(testedFields, field), "field %s not tested", field)
 	}
 }

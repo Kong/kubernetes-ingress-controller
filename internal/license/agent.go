@@ -26,6 +26,12 @@ const (
 	PollingTimeout = time.Minute * 5
 )
 
+// Getter is an interface for getting a Kong Enterprise license.
+type Getter interface {
+	// GetLicense returns an optional license.
+	GetLicense() mo.Option[kong.License]
+}
+
 // KonnectLicense is a license retrieved from Konnect.
 type KonnectLicense struct {
 	ID        string

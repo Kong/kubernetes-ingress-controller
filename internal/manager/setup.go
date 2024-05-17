@@ -424,7 +424,7 @@ func setupLicenseGetter(
 	setupLog logr.Logger,
 	mgr manager.Manager,
 	statusQueue *status.Queue,
-) (translator.LicenseGetter, error) {
+) (license.Getter, error) {
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
 	// This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
 	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but

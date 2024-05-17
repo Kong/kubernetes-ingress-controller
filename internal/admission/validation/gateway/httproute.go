@@ -146,20 +146,10 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 	for ruleIndex, rule := range httproute.Spec.Rules {
 		// Filter RequestMirror is not supported.
 
-		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
-		// For URLRewrite, only FullPathHTTPPathModifier is supported.
 		for filterIndex, filter := range rule.Filters {
 			if _, unsupported := unsupportedFilterMap[filter.Type]; unsupported {
 				return fmt.Errorf("rules[%d].filters[%d]: filter type %s is unsupported",
 					ruleIndex, filterIndex, filter.Type)
-			}
-
-			if filter.Type == gatewayapi.HTTPRouteFilterURLRewrite && filter.URLRewrite != nil {
-				// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3685
-				if filter.URLRewrite.Hostname != nil {
-					return fmt.Errorf("rules[%d].filters[%d]: filter type %s (with hostname replace) is unsupported",
-						ruleIndex, filterIndex, filter.Type)
-				}
 			}
 		}
 

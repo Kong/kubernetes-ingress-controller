@@ -141,6 +141,7 @@ Adding a new version? You'll need three changes:
   [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)
   [#6010](https://github.com/Kong/kubernetes-ingress-controller/pull/6010)
   [#6047](https://github.com/Kong/kubernetes-ingress-controller/pull/6047)
+  [#6071](https://github.com/Kong/kubernetes-ingress-controller/pull/6071)
   
 - Add support for Kubernetes Gateway API v1.1:
   - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.

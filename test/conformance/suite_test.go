@@ -82,6 +82,10 @@ func TestMain(m *testing.M) {
 		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", string(dpconf.RouterFlavorExpressions))
 	}
 
+	// The test cases for GRPCRoute in the current GatewayAPI all use the h2c protocol.
+	// In order to pass conformance tests, the proxy must listen http2 and http on the same port.
+	kongBuilder.WithProxyEnvVar("PROXY_LISTEN", `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`)
+
 	// Pin the Helm chart version.
 	kongBuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
 

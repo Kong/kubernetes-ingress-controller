@@ -470,7 +470,7 @@ func (r *GRPCRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
-		parentRefKey := gateway.gateway.Namespace + "/" + gateway.gateway.Name
+		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)
 		if existingGatewayParentStatus, exists := parentStatuses[parentRefKey]; exists {
 			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
 			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&

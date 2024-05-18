@@ -24,12 +24,22 @@ import (
 var skippedTestsForTraditionalRoutes = []string{
 	// core conformance
 	tests.HTTPRouteHeaderMatching.ShortName,
+	// Kong gateway does not support this feature
+	tests.GRPCRouteListenerHostnameMatching.ShortName,
+}
+
+var skippedTestsForExpressionRoutes = []string{
+	// core conformance
+	tests.HTTPRouteHeaderMatching.ShortName,
+	// Kong gateway does not support this feature
+	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
 var traditionalRoutesSupportedFeatures = []features.SupportedFeature{
 	// core features
 	features.SupportGateway,
 	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
 	// extended features
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRoutePathRewrite,
@@ -71,6 +81,7 @@ func TestGatewayConformance(t *testing.T) {
 		supportedFeatures = traditionalRoutesSupportedFeatures
 		mode = string(dpconf.RouterFlavorTraditionalCompatible)
 	case dpconf.RouterFlavorExpressions:
+		skippedTests = skippedTestsForExpressionRoutes
 		supportedFeatures = expressionRoutesSupportedFeatures
 		mode = string(dpconf.RouterFlavorExpressions)
 	default:

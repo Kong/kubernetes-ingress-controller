@@ -46,6 +46,11 @@ func routeParentStatusKey[routeT gatewayapi.RouteT](
 			namespace,
 			parentRef.GetName(),
 			parentRef.GetSectionName().OrEmpty())
+	case *gatewayapi.GRPCRoute:
+		return fmt.Sprintf("%s/%s/%s",
+			namespace,
+			parentRef.GetName(),
+			parentRef.GetSectionName().OrEmpty())
 	default:
 		return fmt.Sprintf("%s/%s", namespace, parentRef.GetName())
 	}

@@ -143,7 +143,7 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []
 	return backendRefs
 }
 
-// getProtocolForKongService returns the protocol for the Kong service based on the Gateway listening ports
+// getProtocolForKongService returns the protocol for the Kong service based on the Gateway listening ports.
 func (t *Translator) getProtocolForKongService(grpcRoute *gatewayapi.GRPCRoute) string {
 	// When Gateway listens on HTTP use "grpc" protocol for the service. Otherwise for HTTPS use "grpcs".
 	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {

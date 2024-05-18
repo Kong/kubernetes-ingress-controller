@@ -53,10 +53,9 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
-		// Create a service and attach the routes to it. Protocol for Service can be set via K8s object annotation
-		// "konghq.com/protocol", by default use "grpcs" to not break existing behavior when annotation is not specified.
+		// Create a service and attach the routes to it.
 		service, err := generateKongServiceFromBackendRefWithRuleNumber(
-			t.logger, t.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...,
+			t.logger, t.storer, result, grpcroute, ruleNumber, t.getProtocolForKongService(grpcroute), grpcBackendRefsToBackendRefs(rule.BackendRefs)...,
 		)
 		if err != nil {
 			return err
@@ -116,15 +115,14 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 
 	serviceName := subtranslator.KongServiceNameFromSplitGRPCRouteMatch(match)
 
-	// Create a service and attach the routes to it. Protocol for Service can be set via K8s object annotation
-	// "konghq.com/protocol", by default use "grpcs" to not break existing behavior when annotation is not specified.
+	// Create a service and attach the routes to it.
 	kongService, _ := generateKongServiceFromBackendRefWithName(
 		t.logger,
 		t.storer,
 		rules,
 		serviceName,
 		grpcRoute,
-		"grpcs",
+		t.getProtocolForKongService(grpcRoute),
 		grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)...,
 	)
 	kongService.Routes = append(
@@ -143,4 +141,13 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
+}
+
+// getProtocolForKongService returns the protocol for the Kong service based on the Gateway listening ports
+func (t *Translator) getProtocolForKongService(grpcRoute *gatewayapi.GRPCRoute) string {
+	// When Gateway listens on HTTP use "grpc" protocol for the service. Otherwise for HTTPS use "grpcs".
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+		return "grpc"
+	}
+	return "grpcs"
 }

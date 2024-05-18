@@ -43,6 +43,7 @@ var expressionRoutesSupportedFeatures = []features.SupportedFeature{
 	// core features
 	features.SupportGateway,
 	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
 	// extended features
 	features.SupportHTTPRouteQueryParamMatching,
 	features.SupportHTTPRouteMethodMatching,

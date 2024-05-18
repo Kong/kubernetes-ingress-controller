@@ -26,6 +26,7 @@ var skippedTestsForTraditionalRoutes = []string{
 	tests.HTTPRouteHeaderMatching.ShortName,
 	// Kong gateway does not support this feature
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
+	tests.GRPCRouteHeaderMatching.ShortName,
 }
 
 var skippedTestsForExpressionRoutes = []string{

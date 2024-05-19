@@ -99,6 +99,7 @@ func TestGatewayConformance(t *testing.T) {
 	opts.SkipTests = skippedTests
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
 	)
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,

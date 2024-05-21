@@ -3,6 +3,7 @@ package kongintegration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -14,8 +15,11 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
@@ -73,53 +77,62 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			},
 		},
 	}
-	expectedResourceError := sendconfig.ResourceError{
-		Name:       "test-service",
-		Namespace:  "default",
-		Kind:       "Service",
-		UID:        "a3b8afcc-9f19-42e4-aa8f-5866168c2ad3",
-		APIVersion: "v1",
-		Problems: map[string]string{
-			"service:test-service": "failed conditional validation given value of field 'protocol'",
-			"path":                 "value must be null",
+	expectedCausingObjects := []client.Object{
+		&metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Service",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "test-service",
+				UID:       "a3b8afcc-9f19-42e4-aa8f-5866168c2ad3",
+			},
 		},
 	}
+	expectedMessage := "invalid service:test-service: failed conditional validation given value of field 'protocol'"
 	expectedRawErrBody := []byte(`{"code":14,"name":"invalid declarative configuration","fields":{},"message":"declarative config is invalid: {}","flattened_errors":[{"entity_type":"service","entity_name":"test-service","entity_tags":["k8s-name:test-service","k8s-namespace:default","k8s-kind:Service","k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3","k8s-group:","k8s-version:v1"],"errors":[{"type":"field","message":"value must be null","field":"path"},{"type":"entity","message":"failed conditional validation given value of field 'protocol'"}],"entity":{"path":"/test","name":"test-service","protocol":"grpc","tags":["k8s-name:test-service","k8s-namespace:default","k8s-kind:Service","k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3","k8s-group:","k8s-version:v1"],"host":"konghq.com","port":80}}]}`)
 	expectedBody := map[string]interface{}{}
 	require.NoError(t, json.Unmarshal(expectedRawErrBody, &expectedBody))
 
 	require.Eventually(t, func() bool {
-		err, resourceErrors, rawErrBody, parseErr := sut.Update(ctx, faultyConfig)
+		err := sut.Update(ctx, faultyConfig)
 		if err == nil {
 			t.Logf("expected error: %v", err)
 			return false
 		}
-		if len(resourceErrors) == 0 {
+		var updateError sendconfig.UpdateError
+		if !errors.As(err, &updateError) {
+			t.Logf("expected UpdateError, got: %T", err)
+			return false
+		}
+		if len(updateError.ResourceFailures()) == 0 {
 			t.Log("expected resource errors")
 			return false
 		}
-		if len(rawErrBody) == 0 {
+		if len(updateError.RawResponseBody()) == 0 {
 			t.Log("expected error response body")
 			return false
 		}
-		if parseErr != nil {
-			t.Logf("expected no parse error: %v", parseErr)
-			return false
-		}
-
-		resourceErr, found := lo.Find(resourceErrors, func(r sendconfig.ResourceError) bool {
-			return r.Name == "test-service"
+		resourceErr, found := lo.Find(updateError.ResourceFailures(), func(r failures.ResourceFailure) bool {
+			return lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
+				return obj.GetName() == "test-service"
+			})
 		})
 		if !found {
-			t.Logf("expected resource error for test-service, got: %+v", resourceErrors)
+			t.Logf("expected resource error for test-service, got: %+v", updateError.ResourceFailures())
 			return false
 		}
-		if diff := cmp.Diff(expectedResourceError, resourceErr); diff != "" {
+		if resourceErr.Message() != expectedMessage {
+			t.Logf("expected resource error message to be %q, got %q", expectedMessage, resourceErr.Message())
+			return false
+		}
+		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); diff != "" {
 			t.Logf("expected resource error to match, got diff: %s", diff)
 			return false
 		}
 		actualBody := map[string]interface{}{}
-		if err := json.Unmarshal(rawErrBody, &actualBody); err != nil {
+		if err := json.Unmarshal(updateError.RawResponseBody(), &actualBody); err != nil {
 			t.Logf("could not unmarshal error body: %s", err)
 			return false
 		}

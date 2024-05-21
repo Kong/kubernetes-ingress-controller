@@ -598,22 +598,23 @@ func (c *KongClient) sendToClient(
 		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
 	}
 	if err != nil {
-		var updateErr sendconfig.UpdateError
+		var (
+			rawResponseBody    []byte
+			updateErr          sendconfig.UpdateError
+			responseParsingErr sendconfig.ResponseParsingError
+		)
 		if errors.As(err, &updateErr) {
-			c.recordResourceFailureEvents(updateErr.ResourceFailures, KongConfigurationApplyFailedEventReason)
-
-			sendDiagnostic(updateErr.Err != nil, updateErr.RawBody)
-
-			if updateErr.Err != nil {
-				if err := ctx.Err(); err != nil {
-					logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
-				}
-				return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), updateErr)
-			}
-		} else {
-			// It should never happen.
-			return "", fmt.Errorf("performing update for %s failed with unexpected type of error: %w", client.BaseRootURL(), err)
+			c.recordResourceFailureEvents(updateErr.ResourceFailures(), KongConfigurationApplyFailedEventReason)
 		}
+		if errors.As(err, &responseParsingErr) {
+			rawResponseBody = responseParsingErr.ResponseBody()
+		}
+		sendDiagnostic(true, rawResponseBody)
+
+		if err := ctx.Err(); err != nil {
+			logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+		}
+		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), updateErr)
 	}
 	sendDiagnostic(false, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
@@ -664,7 +665,7 @@ func prepareSendDiagnosticFn(
 		config = targetContent
 	}
 
-	return func(failed bool, raw []byte) {
+	return func(failed bool, rawResponseBody []byte) {
 		// Given that we can send multiple configs to this channel and
 		// the fact that the API that exposes that can only expose 1 config
 		// at a time it means that users utilizing the diagnostics API
@@ -672,7 +673,7 @@ func prepareSendDiagnosticFn(
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
 		select {
-		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, RawResponseBody: raw}:
+		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, RawResponseBody: rawResponseBody}:
 			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")

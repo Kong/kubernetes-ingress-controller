@@ -250,14 +250,9 @@ type mockUpdateStrategy struct {
 	onUpdate func(content sendconfig.ContentWithHash) error
 }
 
-func (m *mockUpdateStrategy) Update(_ context.Context, content sendconfig.ContentWithHash) (
-	err error,
-	resourceErrors []sendconfig.ResourceError,
-	rawErrBody []byte,
-	resourceErrorsParseErr error,
-) {
-	err = m.onUpdate(content)
-	return err, nil, nil, nil
+func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (err error) {
+	err = m.onUpdate(targetContent)
+	return err
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {

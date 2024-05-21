@@ -48,24 +48,25 @@ func NewUpdateStrategyInMemory(
 	}
 }
 
-func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentWithHash) (
-	err error,
-	resourceErrors []ResourceError,
-	rawErrBody []byte,
-	resourceErrorsParseErr error,
-) {
+func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentWithHash) error {
 	dblessConfig := s.configConverter.Convert(targetState.Content)
 	config, err := json.Marshal(dblessConfig)
 	if err != nil {
-		return fmt.Errorf("constructing kong configuration: %w", err), nil, nil, nil
+		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
-
-	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); err != nil {
+	if errBody, reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); reloadConfigErr != nil {
 		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.logger)
-		return err, resourceErrors, errBody, parseErr
-	}
+		if parseErr != nil {
+			return fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
+		}
 
-	return nil, nil, nil, nil
+		return NewUpdateErrorWithResponseBody(
+			errBody,
+			resourceErrorsToResourceFailures(resourceErrors, s.logger),
+			reloadConfigErr,
+		)
+	}
+	return nil
 }
 
 func (s UpdateStrategyInMemory) MetricsProtocol() metrics.Protocol {

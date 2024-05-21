@@ -2,6 +2,7 @@ package sendconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -63,22 +64,15 @@ func NewUpdateStrategyDBModeKonnect(
 	return s
 }
 
-func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (
-	err error,
-	resourceErrors []ResourceError,
-	// this is always empty for DB mode, as it does not have a single config error, and will instead return individual
-	// errors as a deckutils.ErrArray. we need it for the interface signature, however.
-	rawErrBody []byte,
-	resourceErrorsParseErr error,
-) {
+func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) error {
 	cs, err := s.currentState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err), nil, nil, nil
+		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
 	}
 
 	ts, err := s.targetState(ctx, cs, targetContent.Content)
 	if err != nil {
-		return deckerrors.ConfigConflictError{Err: err}, nil, nil, nil
+		return deckerrors.ConfigConflictError{Err: err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -91,7 +85,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 		EnableEntityActions: true,
 	})
 	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err), nil, nil, nil
+		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -101,13 +95,24 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 	cancel()
 	s.resourceErrorLock.Lock()
 	defer s.resourceErrorLock.Unlock()
+	resourceFailures := resourceErrorsToResourceFailures(s.resourceErrors, s.logger)
 	if errs != nil {
-		return deckutils.ErrArray{Errors: errs}, s.resourceErrors, nil, nil
+		return NewUpdateError(
+			resourceFailures,
+			deckutils.ErrArray{Errors: errs},
+		)
 	}
 
 	// as of GDR 1.8 we should always get a plain error set in addition to resourceErrors, so returning resourceErrors
 	// here should not be necessary. Return it anyway as a future-proof because why not.
-	return nil, s.resourceErrors, nil, nil
+	if len(resourceFailures) > 0 {
+		return NewUpdateError(
+			resourceFailures,
+			errors.New("go-database-reconciler found resource errors"),
+		)
+	}
+
+	return nil
 }
 
 // HandleEvents handles logging and error reporting for individual entity change events generated during a sync by

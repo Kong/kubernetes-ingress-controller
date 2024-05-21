@@ -3,6 +3,7 @@ package fallback
 import (
 	"fmt"
 
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -30,4 +31,13 @@ func resolveObjectDependenciesPlugin(cache store.CacheStores, obj client.Object)
 		}
 	}
 	return dependencies
+}
+
+// fetchSecret retrieves a Secret object as client.Object from the cache.
+func fetchSecret(cache store.CacheStores, nn k8stypes.NamespacedName) (client.Object, bool) {
+	secret, exists, err := cache.Secret.GetByKey(nn.String())
+	if err != nil || !exists {
+		return nil, false
+	}
+	return secret.(client.Object), true
 }

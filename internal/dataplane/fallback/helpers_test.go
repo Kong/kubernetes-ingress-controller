@@ -37,6 +37,19 @@ func testService(t *testing.T, name string) *corev1.Service {
 	})
 }
 
+func testSecret(t *testing.T, name string, modifiers ...func(s *corev1.Secret)) *corev1.Secret {
+	s := helpers.WithTypeMeta(t, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+		},
+	})
+	for _, mod := range modifiers {
+		mod(s)
+	}
+	return s
+}
+
 func testKongServiceFacade(t *testing.T, name string) *incubatorv1alpha1.KongServiceFacade {
 	return helpers.WithTypeMeta(t, &incubatorv1alpha1.KongServiceFacade{
 		ObjectMeta: metav1.ObjectMeta{

@@ -19,6 +19,20 @@ func resolveKongClusterPluginDependencies(_ store.CacheStores, _ *kongv1.KongClu
 	return nil
 }
 
+// resolveKongConsumerDependencies resolves potential dependencies for a KongConsumer object:
+// - KongPlugin
+// - KongClusterPlugin.
+func resolveKongConsumerDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
+	return resolveObjectDependenciesPlugin(cache, kongConsumer)
+}
+
+// resolveKongConsumerGroupDependencies resolves potential dependencies for a KongConsumerGroup object:
+// - KongPlugin
+// - KongClusterPlugin.
+func resolveKongConsumerGroupDependencies(cache store.CacheStores, kongConsumerGroup *kongv1beta1.KongConsumerGroup) []client.Object {
+	return resolveObjectDependenciesPlugin(cache, kongConsumerGroup)
+}
+
 // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5929
 func resolveUDPIngressDependencies(_ store.CacheStores, _ *kongv1beta1.UDPIngress) []client.Object {
 	return nil

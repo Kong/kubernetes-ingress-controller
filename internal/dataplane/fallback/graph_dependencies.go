@@ -21,8 +21,12 @@ import (
 // Every supported object type should explicitly have a case in this function.
 func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.Object, error) {
 	switch obj := obj.(type) {
+	// Standard Kubernetes objects.
+	case *corev1.Service:
+		return resolveServiceDependencies(cache, obj), nil
 	case *netv1.Ingress:
 		return resolveIngressDependencies(cache, obj), nil
+	// Gateway API objects.
 	case *gatewayapi.HTTPRoute:
 		return resolveHTTPRouteDependencies(cache, obj), nil
 	case *gatewayapi.TLSRoute:
@@ -33,24 +37,27 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		return resolveUDPRouteDependencies(cache, obj), nil
 	case *gatewayapi.GRPCRoute:
 		return resolveGRPCRouteDependencies(cache, obj), nil
+	// Kong specific objects.
 	case *kongv1.KongPlugin:
 		return resolveKongPluginDependencies(cache, obj), nil
 	case *kongv1.KongClusterPlugin:
 		return resolveKongClusterPluginDependencies(cache, obj), nil
+	case *kongv1.KongConsumer:
+		return resolveKongConsumerDependencies(cache, obj), nil
+	case *kongv1beta1.KongConsumerGroup:
+		return resolveKongConsumerGroupDependencies(cache, obj), nil
 	case *kongv1beta1.UDPIngress:
 		return resolveUDPIngressDependencies(cache, obj), nil
 	case *kongv1beta1.TCPIngress:
 		return resolveTCPIngressDependencies(cache, obj), nil
 	case *incubatorv1alpha1.KongServiceFacade:
 		return resolveKongServiceFacadeDependencies(cache, obj), nil
-	case *netv1.IngressClass, // Object types that have no dependencies.
-		*corev1.Service,
+	// Object types that have no dependencies.
+	case *netv1.IngressClass,
 		*corev1.Secret,
 		*discoveryv1.EndpointSlice,
 		*gatewayapi.ReferenceGrant,
 		*gatewayapi.Gateway,
-		*kongv1.KongConsumer,
-		*kongv1beta1.KongConsumerGroup,
 		*kongv1.KongIngress,
 		*kongv1beta1.KongUpstreamPolicy,
 		*kongv1alpha1.IngressClassParameters,

@@ -72,23 +72,19 @@ func TestIngressGRPC(t *testing.T) {
 				gRPC  kongProtocolAnnotation = "grpc"
 				gRPCS kongProtocolAnnotation = "grpcs"
 			)
-			const (
-				gRPCBinPort  int32 = 9000
-				gRPCSBinPort int32 = 9001
-			)
 			t.Log("deploying a minimal gRPC container deployment to test Ingress routes")
 			container := generators.NewContainer("grpcbin", test.GRPCBinImage, 0)
 			// Overwrite ports to specify gRPC over HTTP (9000) and gRPC over HTTPS (9001).
-			container.Ports = []corev1.ContainerPort{{ContainerPort: gRPCBinPort, Name: string(gRPC)}, {ContainerPort: gRPCSBinPort, Name: string(gRPCS)}}
+			container.Ports = []corev1.ContainerPort{{ContainerPort: test.GRPCBinPort, Name: string(gRPC)}, {ContainerPort: test.GRPCSBinPort, Name: string(gRPCS)}}
 			deployment := generators.NewDeploymentForContainer(container)
 			deployment, err = cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(deployment)
 
 			exposeWithService := func(p kongProtocolAnnotation) *corev1.Service {
-				grpcBinPort := gRPCBinPort
+				grpcBinPort := test.GRPCBinPort
 				if p == gRPCS {
-					grpcBinPort = gRPCSBinPort
+					grpcBinPort = test.GRPCSBinPort
 				}
 				kongProtocol := string(p)
 				t.Logf("exposing deployment gRPC (%s) port %s via service", kongProtocol, deployment.Name)
@@ -122,7 +118,7 @@ func TestIngressGRPC(t *testing.T) {
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPCS.Name,
 											Port: netv1.ServiceBackendPort{
-												Number: gRPCSBinPort,
+												Number: test.GRPCSBinPort,
 											},
 										},
 									},
@@ -142,7 +138,7 @@ func TestIngressGRPC(t *testing.T) {
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPC.Name,
 											Port: netv1.ServiceBackendPort{
-												Number: gRPCBinPort,
+												Number: test.GRPCBinPort,
 											},
 										},
 									},

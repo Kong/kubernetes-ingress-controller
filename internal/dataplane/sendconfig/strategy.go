@@ -21,12 +21,7 @@ type ContentWithHash struct {
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.
 type UpdateStrategy interface {
 	// Update applies targetConfig to the data-plane.
-	Update(ctx context.Context, targetContent ContentWithHash) (
-		err error,
-		resourceErrors []ResourceError,
-		rawErrorBody []byte,
-		resourceErrorsParseErr error,
-	)
+	Update(ctx context.Context, targetContent ContentWithHash) error
 
 	// MetricsProtocol returns a string describing the update strategy type to be used in metrics.
 	MetricsProtocol() metrics.Protocol

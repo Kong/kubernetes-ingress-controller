@@ -29,13 +29,17 @@ func testIngressClass(t *testing.T, name string) *netv1.IngressClass {
 	})
 }
 
-func testService(t *testing.T, name string) *corev1.Service {
-	return helpers.WithTypeMeta(t, &corev1.Service{
+func testService(t *testing.T, name string, modifiers ...func(s *corev1.Service)) *corev1.Service {
+	svc := helpers.WithTypeMeta(t, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: testNamespace,
 		},
 	})
+	for _, mod := range modifiers {
+		mod(svc)
+	}
+	return svc
 }
 
 func testSecret(t *testing.T, name string, modifiers ...func(s *corev1.Secret)) *corev1.Secret {

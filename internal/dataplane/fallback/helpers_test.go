@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
@@ -75,6 +76,19 @@ func testKongClusterPlugin(t *testing.T, name string) *kongv1.KongClusterPlugin 
 			Namespace: testNamespace,
 		},
 	})
+}
+
+func testKongUpstreamPolicy(t *testing.T, name string, modifiers ...func(kup *kongv1beta1.KongUpstreamPolicy)) *kongv1beta1.KongUpstreamPolicy {
+	kup := helpers.WithTypeMeta(t, &kongv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+		},
+	})
+	for _, mod := range modifiers {
+		mod(kup)
+	}
+	return kup
 }
 
 // GraphBuilder is a helper to build a graph for testing.

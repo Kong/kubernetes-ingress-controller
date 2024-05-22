@@ -10,6 +10,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 func TestResolveDependencies_KongPlugin(t *testing.T) {
@@ -359,6 +360,107 @@ func TestResolveDependencies_KongConsumerGroup(t *testing.T) {
 				testKongClusterPlugin(t, "3"),
 			),
 			expected: []client.Object{testKongClusterPlugin(t, "3")},
+		},
+	}
+
+	for _, tc := range testCases {
+		runResolveDependenciesTest(t, tc)
+	}
+}
+
+func TestResolveDependencies_KongServiceFacade(t *testing.T) {
+	testCases := []resolveDependenciesTestCase{
+		{
+			name: "no dependencies",
+			object: &incubatorv1alpha1.KongServiceFacade{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-KongServiceFacade",
+					Namespace: "test-namespace",
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{},
+		},
+		{
+			name: "KongServiceFacade -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name) and KongUpstreamPolicy",
+			object: &incubatorv1alpha1.KongServiceFacade{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-KongServiceFacade",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
+						kongv1beta1.KongUpstreamPolicyAnnotationKey:           "1",
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongUpstreamPolicy(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{testKongPlugin(t, "1"), testKongPlugin(t, "2"), testKongUpstreamPolicy(t, "1")},
+		},
+		{
+			name: "KongServiceFacade -> plugins - annotation (KongPlugin and KongClusterPlugin with different names)",
+			object: &incubatorv1alpha1.KongServiceFacade{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-KongServiceFacade",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "3"),
+				testKongUpstreamPolicy(t, "1"),
+			),
+			expected: []client.Object{testKongPlugin(t, "1"), testKongClusterPlugin(t, "3")},
+		},
+		{
+			name: "KongServiceFacade -> plugins - annotation (KongClusterPlugin) and KongUpstreamPolicy",
+			object: &incubatorv1alpha1.KongServiceFacade{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-KongServiceFacade",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
+						kongv1beta1.KongUpstreamPolicyAnnotationKey:           "3",
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "3"),
+				testKongUpstreamPolicy(t, "3"),
+			),
+			expected: []client.Object{testKongClusterPlugin(t, "3"), testKongUpstreamPolicy(t, "3")},
+		},
+		{
+			name: "KongServiceFacade -> KongUpstreamPolicy - the same name in different namespaces",
+			object: &incubatorv1alpha1.KongServiceFacade{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-KongServiceFacade",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						kongv1beta1.KongUpstreamPolicyAnnotationKey: "1",
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongUpstreamPolicy(t, "1"),
+				testKongUpstreamPolicy(t, "1", func(kup *kongv1beta1.KongUpstreamPolicy) {
+					kup.Namespace = "other-namespace"
+				}),
+			),
+			expected: []client.Object{testKongUpstreamPolicy(t, "1")},
 		},
 	}
 

@@ -9,7 +9,8 @@ import (
 
 // resolveServiceDependencies resolves potential dependencies for a Service object:
 // - KongPlugin
-// - KongClusterPlugin.
+// - KongClusterPlugin
+// - KongUpstreamPolicy.
 func resolveServiceDependencies(cache store.CacheStores, service *corev1.Service) []client.Object {
-	return resolveObjectDependenciesPlugin(cache, service)
+	return resolveDependenciesForServiceLikeObj(cache, service)
 }

@@ -239,8 +239,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 
 			// Update Kong with the Upstream.
 			require.Eventually(t, func() bool {
-				err = updateStrategy.Update(ctx, content)
-				if err != nil {
+				if err := updateStrategy.Update(ctx, content); err != nil {
 					t.Logf("error updating Kong configuration: %v", err)
 					return false
 				}

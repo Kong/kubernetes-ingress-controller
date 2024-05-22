@@ -251,8 +251,7 @@ type mockUpdateStrategy struct {
 }
 
 func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (err error) {
-	err = m.onUpdate(targetContent)
-	return err
+	return m.onUpdate(targetContent)
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {

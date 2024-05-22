@@ -56,11 +56,11 @@ func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent Con
 	if err != nil {
 		s.logger.V(util.DebugLevel).Info("Update failed, registering it for backoff strategy", "reason", err.Error())
 		s.backoffStrategy.RegisterUpdateFailure(err, targetContent.Hash)
-	} else {
-		s.backoffStrategy.RegisterUpdateSuccess()
+		return err
 	}
 
-	return err
+	s.backoffStrategy.RegisterUpdateSuccess()
+	return nil
 }
 
 func (s UpdateStrategyWithBackoff) MetricsProtocol() metrics.Protocol {

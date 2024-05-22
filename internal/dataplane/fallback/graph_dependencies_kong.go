@@ -92,7 +92,10 @@ func resolveTCPIngressDependencies(_ store.CacheStores, _ *kongv1beta1.TCPIngres
 	return nil
 }
 
-// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5929
-func resolveKongServiceFacadeDependencies(_ store.CacheStores, _ *incubatorv1alpha1.KongServiceFacade) []client.Object {
-	return nil
+// resolveKongServiceFacadeDependencies resolves potential dependencies for a KongServiceFacade object:
+// - KongPlugin
+// - KongClusterPlugin
+// - KongUpstreamPolicy.
+func resolveKongServiceFacadeDependencies(cache store.CacheStores, kongServiceFacade *incubatorv1alpha1.KongServiceFacade) []client.Object {
+	return resolveDependenciesForServiceLikeObj(cache, kongServiceFacade)
 }

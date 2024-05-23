@@ -291,7 +291,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			ControllerName: gateway.GetControllerName(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			GenerateName: "kong-gwclass-",
 			Annotations: map[string]string{
 				"konghq.com/gatewayclass-unmanaged": "placeholder",
 			},
@@ -299,8 +299,22 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+	gwcNonKong := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: "acme.com/dummy-controller",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "non-kong-gwclass-",
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwcNonKong))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwcNonKong) })
 
 	gw := gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    ns.Name,
+			GenerateName: "gw-kong-",
+		},
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
@@ -316,12 +330,31 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 				},
 			},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
-		},
 	}
 	require.NoError(t, client.Create(ctx, &gw))
+
+	gwNonKong := gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "gw-nonkong-",
+			Namespace:    ns.Name,
+		},
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName(gwcNonKong.Name),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     gatewayapi.SectionName("http"),
+					Port:     gatewayapi.PortNumber(80),
+					Protocol: gatewayapi.HTTPProtocolType,
+					AllowedRoutes: &gatewayapi.AllowedRoutes{
+						Namespaces: &gatewayapi.RouteNamespaces{
+							From: lo.ToPtr(gatewayapi.NamespacesFromAll),
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwNonKong))
 
 	route := gatewayapi.HTTPRoute{
 		TypeMeta: metav1.TypeMeta{
@@ -329,8 +362,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			APIVersion: "v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nsRoute.Name,
-			Name:      uuid.NewString(),
+			Namespace:    nsRoute.Name,
+			GenerateName: "httproute-kong-",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -345,7 +378,6 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &route))
-
 	// Status has to be updated separately.
 	route.Status = gatewayapi.HTTPRouteStatus{
 		RouteStatus: gatewayapi.RouteStatus{
@@ -361,22 +393,80 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 	require.NoError(t, client.Status().Update(ctx, &route))
 
-	require.Eventually(t, func() bool {
-		err := client.Get(ctx, k8stypes.NamespacedName{Name: route.Name, Namespace: route.Namespace}, &route)
-		if err != nil {
-			t.Logf("failed to get HTTPRoute %s/%s: %v", route.Namespace, route.Name, err)
-			return false
-		}
+	routeNonKong := gatewayapi.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    nsRoute.Name,
+			GenerateName: "httproute-nonkong-",
+		},
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name:      gatewayapi.ObjectName(gwNonKong.Name),
+					Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+				}},
+			},
+			Rules: []gatewayapi.HTTPRouteRule{{
+				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
+			}},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &routeNonKong))
+	// Status has to be updated separately.
+	routeNonKong.Status = gatewayapi.HTTPRouteStatus{
+		RouteStatus: gatewayapi.RouteStatus{
+			Parents: []gatewayapi.RouteParentStatus{
+				{
+					ParentRef: gatewayapi.ParentReference{
+						Name: "other-gw-name",
+					},
+					ControllerName: gateway.GetControllerName(),
+				},
+			},
+		},
+	}
+	require.NoError(t, client.Status().Update(ctx, &routeNonKong))
 
-		if staleStatusFound := lo.ContainsBy(route.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
-			return ps.ParentRef.Name == "other-gw-name"
-		}); staleStatusFound {
-			t.Log("found stale status for parent other-gw-name")
-			return false
-		}
+	t.Run("routes attached to Gateways reconciled by KIC should have their status cleared", func(t *testing.T) {
+		require.Eventually(t, func() bool {
+			err := client.Get(ctx, k8stypes.NamespacedName{Name: route.Name, Namespace: route.Namespace}, &route)
+			if err != nil {
+				t.Logf("failed to get HTTPRoute %s/%s: %v", route.Namespace, route.Name, err)
+				return false
+			}
 
-		return true
-	}, waitDuration, tickDuration, "expected stale status to be removed from HTTPRoute")
+			if staleStatusFound := lo.ContainsBy(route.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
+				return ps.ParentRef.Name == "other-gw-name"
+			}); staleStatusFound {
+				t.Log("found stale status for parent other-gw-name")
+				return false
+			}
+
+			return true
+		}, waitDuration, tickDuration, "expected stale status to be removed from HTTPRoute")
+	})
+
+	t.Run("routes attached to Gateways not reconciled by KIC should not have their status cleared", func(t *testing.T) {
+		require.Never(t, func() bool {
+			err := client.Get(ctx, k8stypes.NamespacedName{Name: routeNonKong.Name, Namespace: routeNonKong.Namespace}, &route)
+			if err != nil {
+				t.Logf("failed to get HTTPRoute %s/%s: %v", routeNonKong.Namespace, routeNonKong.Name, err)
+				return true
+			}
+
+			if staleStatusFound := lo.ContainsBy(routeNonKong.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
+				return ps.ParentRef.Name == "other-gw-name"
+			}); !staleStatusFound {
+				t.Log("status for parent other-gw-name not found, it should not be cleared")
+				return true
+			}
+
+			return false
+		}, waitDuration, tickDuration, "expected status to not be removed from HTTPRoute")
+	})
 }
 
 func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn k8stypes.NamespacedName) string {

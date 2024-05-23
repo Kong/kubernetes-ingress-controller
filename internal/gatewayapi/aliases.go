@@ -6,7 +6,10 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-var InstallV1 = gatewayv1.Install
+var (
+	InstallV1    = gatewayv1.Install
+	GroupVersion = gatewayv1.GroupVersion
+)
 
 // This file contains aliases for types and consts from the Gateway API.  Its purpose is to allow easy migration from
 // one version of the Gateway API to another with minimal changes to the codebase.
@@ -20,6 +23,7 @@ type (
 	Gateway                   = gatewayv1.Gateway
 	GatewayAddress            = gatewayv1.GatewayAddress
 	GatewayClass              = gatewayv1.GatewayClass
+	GatewayClassList          = gatewayv1.GatewayClassList
 	GatewayClassSpec          = gatewayv1.GatewayClassSpec
 	GatewayClassStatus        = gatewayv1.GatewayClassStatus
 	GatewayController         = gatewayv1.GatewayController

@@ -3,7 +3,10 @@ package fallback
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type CacheGraphProvider interface {
@@ -14,11 +17,13 @@ type CacheGraphProvider interface {
 // Generator is responsible for generating fallback cache snapshots.
 type Generator struct {
 	cacheGraphProvider CacheGraphProvider
+	logger             logr.Logger
 }
 
-func NewGenerator(cacheGraphProvider CacheGraphProvider) *Generator {
+func NewGenerator(cacheGraphProvider CacheGraphProvider, logger logr.Logger) *Generator {
 	return &Generator{
 		cacheGraphProvider: cacheGraphProvider,
+		logger:             logger.WithName("fallback-generator"),
 	}
 }
 
@@ -46,6 +51,11 @@ func (g *Generator) GenerateExcludingAffected(
 			if err := fallbackCache.Delete(obj); err != nil {
 				return store.CacheStores{}, fmt.Errorf("failed to delete %s from the cache: %w", GetObjectHash(obj), err)
 			}
+			g.logger.V(util.DebugLevel).Info("Excluded object from fallback cache",
+				"object_kind", obj.GetObjectKind(),
+				"object_name", obj.GetName(),
+				"object_namespace", obj.GetNamespace(),
+			)
 		}
 	}
 

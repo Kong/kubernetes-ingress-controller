@@ -3,6 +3,7 @@ package fallback_test
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
@@ -53,7 +54,7 @@ func TestGenerator_GenerateExcludingAffected(t *testing.T) {
 	require.NoError(t, err)
 
 	graphProvider := &mockGraphProvider{graph: graph}
-	g := fallback.NewGenerator(graphProvider)
+	g := fallback.NewGenerator(graphProvider, logr.Discard())
 
 	t.Run("ingressClass is broken", func(t *testing.T) {
 		fallbackCache, err := g.GenerateExcludingAffected(inputCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass)})

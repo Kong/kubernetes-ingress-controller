@@ -30,7 +30,7 @@ spec:
           - /manager-debug
           - --
         args:
-          - --feature-gates=GatewayAlpha=true
+          - --feature-gates=GatewayAlpha=true,FallbackConfiguration=true
           - --anonymous-reports=false
         env:
         - name: CONTROLLER_LOG_LEVEL

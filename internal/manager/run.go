@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -191,6 +192,7 @@ func Run(
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
+	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -204,6 +206,7 @@ func Run(
 		kongConfigFetcher,
 		configTranslator,
 		cache,
+		fallbackConfigGenerator,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

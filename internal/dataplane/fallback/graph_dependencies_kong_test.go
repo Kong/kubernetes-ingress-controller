@@ -468,3 +468,241 @@ func TestResolveDependencies_KongServiceFacade(t *testing.T) {
 		runResolveDependenciesTest(t, tc)
 	}
 }
+
+func TestResolveDependencies_UDPIngress(t *testing.T) {
+	testCases := []resolveDependenciesTestCase{
+		{
+			name: "no dependencies",
+			object: &kongv1beta1.UDPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-UDPIngress",
+					Namespace: "test-namespace",
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{},
+		},
+		{
+			name: "UDPIngress -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name) and referenced Service",
+			object: &kongv1beta1.UDPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-UDPIngress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
+					},
+				},
+				Spec: kongv1beta1.UDPIngressSpec{
+					Rules: []kongv1beta1.UDPIngressRule{
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "1",
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testService(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{testKongPlugin(t, "1"), testKongPlugin(t, "2"), testService(t, "1")},
+		},
+		{
+			name: "UDPIngress -> plugins - annotation (KongPlugin and KongClusterPlugin with different names) and duplicated Service in different namespaces",
+			object: &kongv1beta1.UDPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-UDPIngress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
+					},
+				},
+				Spec: kongv1beta1.UDPIngressSpec{
+					Rules: []kongv1beta1.UDPIngressRule{
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "1",
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "3"),
+				testService(t, "1"),
+				testService(t, "1", func(s *corev1.Service) {
+					s.Namespace = "other-namespace"
+				}),
+			),
+			expected: []client.Object{testKongPlugin(t, "1"), testKongClusterPlugin(t, "3"), testService(t, "1")},
+		},
+		{
+			name: "UDPIngress -> plugins - annotation (KongClusterPlugin) and referenced Services",
+			object: &kongv1beta1.UDPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-UDPIngress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
+						kongv1beta1.KongUpstreamPolicyAnnotationKey:           "3",
+					},
+				},
+				Spec: kongv1beta1.UDPIngressSpec{
+					Rules: []kongv1beta1.UDPIngressRule{
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "1",
+							},
+						},
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "2",
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "3"),
+				testKongServiceFacade(t, "1"),
+				testKongServiceFacade(t, "2"),
+				testService(t, "1"),
+				testService(t, "2"),
+			),
+			expected: []client.Object{testKongClusterPlugin(t, "3"), testService(t, "1"), testService(t, "2")},
+		},
+	}
+
+	for _, tc := range testCases {
+		runResolveDependenciesTest(t, tc)
+	}
+}
+
+func TestResolveDependencies_TCPIngress(t *testing.T) {
+	testCases := []resolveDependenciesTestCase{
+		{
+			name: "no dependencies",
+			object: &kongv1beta1.TCPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-TCPIngress",
+					Namespace: "test-namespace",
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{},
+		},
+		{
+			name: "TCPIngress -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name) and referenced Service",
+			object: &kongv1beta1.TCPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-TCPIngress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
+					},
+				},
+				Spec: kongv1beta1.TCPIngressSpec{
+					Rules: []kongv1beta1.IngressRule{
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "1",
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testService(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{testKongPlugin(t, "1"), testKongPlugin(t, "2"), testService(t, "1")},
+		},
+		{
+			name: "TCPIngress -> plugins - annotation (KongPlugin and KongClusterPlugin with different names) and duplicated Service in different namespaces",
+			object: &kongv1beta1.TCPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-TCPIngress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
+					},
+				},
+				Spec: kongv1beta1.TCPIngressSpec{
+					Rules: []kongv1beta1.IngressRule{
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "1",
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "3"),
+				testService(t, "1"),
+				testService(t, "1", func(s *corev1.Service) {
+					s.Namespace = "other-namespace"
+				}),
+			),
+			expected: []client.Object{testKongPlugin(t, "1"), testKongClusterPlugin(t, "3"), testService(t, "1")},
+		},
+		{
+			name: "TCPIngress -> plugins - annotation (KongClusterPlugin) and referenced Services",
+			object: &kongv1beta1.TCPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-TCPIngress",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
+						kongv1beta1.KongUpstreamPolicyAnnotationKey:           "3",
+					},
+				},
+				Spec: kongv1beta1.TCPIngressSpec{
+					Rules: []kongv1beta1.IngressRule{
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "1",
+							},
+						},
+						{
+							Backend: kongv1beta1.IngressBackend{
+								ServiceName: "2",
+							},
+						},
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongPlugin(t, "2"),
+				testKongClusterPlugin(t, "3"),
+				testKongServiceFacade(t, "1"),
+				testKongServiceFacade(t, "2"),
+				testService(t, "1"),
+				testService(t, "2"),
+			),
+			expected: []client.Object{testKongClusterPlugin(t, "3"), testService(t, "1"), testService(t, "2")},
+		},
+	}
+
+	for _, tc := range testCases {
+		runResolveDependenciesTest(t, tc)
+	}
+}

@@ -413,6 +413,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// based on the cache contents, we need to ensure it is not modified during the process.
 	var cacheSnapshot store.CacheStores
 	if c.kongConfig.FallbackConfiguration {
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6080
+		// Use TakeSnapshotIfChanged to avoid taking a snapshot if the cache hasn't changed.
 		var err error
 		cacheSnapshot, err = c.cache.TakeSnapshot()
 		if err != nil {
@@ -496,8 +498,7 @@ func (c *KongClient) tryRecoveringFromGatewaysSyncError(
 	// If FallbackConfiguration is disabled, or we failed to recover using the fallback configuration, we should
 	// apply the last valid configuration to the gateways.
 	if state, found := c.kongConfigFetcher.LastValidConfig(); found {
-		_, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig)
-		if fallbackSyncErr != nil {
+		if _, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig); fallbackSyncErr != nil {
 			return errors.Join(gatewaysSyncErr, fallbackSyncErr)
 		}
 		c.logger.V(util.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
@@ -529,15 +530,15 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	c.kongConfigBuilder.UpdateCache(fallbackCache)
 	fallbackParsingResult := c.kongConfigBuilder.BuildKongConfig()
 
-	// REVIEW: what do we do with the translation failures here? Do we want to propagate them as Kubernetes events?
-	// Should they be included in regular metrics?
-	// I think we could propagate them as Kubernetes events, but with a distinct type (e.g. "FallbackTranslationFailed"),
-	// and we could include them in the dedicated metrics for fallback configuration (ingress_controller_fallback_translation_broken_resource_count)
-	// but not in the regular metrics for configuration translation.
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6081
+	// Emit Kubernetes events depending on fallback configuration parsing result.
+
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6082
+	// Expose Prometheus metrics for fallback configuration parsing result.
 
 	_, gatewaysSyncErr = c.sendOutToGatewayClients(ctx, fallbackParsingResult.KongState, c.kongConfig)
 	if gatewaysSyncErr != nil {
-		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", err)
+		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", gatewaysSyncErr)
 	}
 	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig)
 	if konnectSyncErr != nil {

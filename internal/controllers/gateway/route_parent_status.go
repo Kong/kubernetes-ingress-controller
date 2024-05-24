@@ -89,3 +89,35 @@ func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
 		SectionName: sectionName,
 	}
 }
+
+func getRouteStatusParents[T gatewayapi.RouteT](route T) []gatewayapi.RouteParentStatus {
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		return r.Status.Parents
+	case *gatewayapi.TCPRoute:
+		return r.Status.Parents
+	case *gatewayapi.UDPRoute:
+		return r.Status.Parents
+	case *gatewayapi.TLSRoute:
+		return r.Status.Parents
+	case *gatewayapi.GRPCRoute:
+		return r.Status.Parents
+	default:
+		return nil
+	}
+}
+
+func setRouteStatusParents[T gatewayapi.RouteT](route T, parents []gatewayapi.RouteParentStatus) {
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.TCPRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.UDPRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.TLSRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.GRPCRoute:
+		r.Status.Parents = parents
+	}
+}

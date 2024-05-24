@@ -319,14 +319,10 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
 				{
-					Name:     gatewayapi.SectionName("http"),
-					Port:     gatewayapi.PortNumber(80),
-					Protocol: gatewayapi.HTTPProtocolType,
-					AllowedRoutes: &gatewayapi.AllowedRoutes{
-						Namespaces: &gatewayapi.RouteNamespaces{
-							From: lo.ToPtr(gatewayapi.NamespacesFromAll),
-						},
-					},
+					Name:          gatewayapi.SectionName("http"),
+					Port:          gatewayapi.PortNumber(80),
+					Protocol:      gatewayapi.HTTPProtocolType,
+					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},
 		},
@@ -342,14 +338,10 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			GatewayClassName: gatewayapi.ObjectName(gwcNonKong.Name),
 			Listeners: []gatewayapi.Listener{
 				{
-					Name:     gatewayapi.SectionName("http"),
-					Port:     gatewayapi.PortNumber(80),
-					Protocol: gatewayapi.HTTPProtocolType,
-					AllowedRoutes: &gatewayapi.AllowedRoutes{
-						Namespaces: &gatewayapi.RouteNamespaces{
-							From: lo.ToPtr(gatewayapi.NamespacesFromAll),
-						},
-					},
+					Name:          gatewayapi.SectionName("http"),
+					Port:          gatewayapi.PortNumber(80),
+					Protocol:      gatewayapi.HTTPProtocolType,
+					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},
 		},
@@ -384,7 +376,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			Parents: []gatewayapi.RouteParentStatus{
 				{
 					ParentRef: gatewayapi.ParentReference{
-						Name: "other-gw-name",
+						Name: gatewayapi.ObjectName(gwNonKong.Name),
 					},
 					ControllerName: gateway.GetControllerName(),
 				},
@@ -421,27 +413,26 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			Parents: []gatewayapi.RouteParentStatus{
 				{
 					ParentRef: gatewayapi.ParentReference{
-						Name: "other-gw-name",
+						Name: gatewayapi.ObjectName(gwNonKong.Name),
 					},
-					ControllerName: gateway.GetControllerName(),
+					ControllerName: gwcNonKong.Spec.ControllerName,
 				},
 			},
 		},
 	}
 	require.NoError(t, client.Status().Update(ctx, &routeNonKong))
 
-	t.Run("routes attached to Gateways reconciled by KIC should have their status cleared", func(t *testing.T) {
+	t.Run("routes attached to Gateways that are reconciled by KIC should have other Gateway refs cleared from status", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			err := client.Get(ctx, k8stypes.NamespacedName{Name: route.Name, Namespace: route.Namespace}, &route)
-			if err != nil {
-				t.Logf("failed to get HTTPRoute %s/%s: %v", route.Namespace, route.Name, err)
+			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
 			}
 
 			if staleStatusFound := lo.ContainsBy(route.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
-				return ps.ParentRef.Name == "other-gw-name"
+				return string(ps.ParentRef.Name) == gwNonKong.Name
 			}); staleStatusFound {
-				t.Log("found stale status for parent other-gw-name")
+				t.Logf("found stale status for parent Gateway %s that does not belong to KIC GatewayClass", gwNonKong.Name)
 				return false
 			}
 
@@ -449,18 +440,38 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 		}, waitDuration, tickDuration, "expected stale status to be removed from HTTPRoute")
 	})
 
-	t.Run("routes attached to Gateways not reconciled by KIC should not have their status cleared", func(t *testing.T) {
+	t.Run("routes that were attached to Gateways that are reconciled by KIC and now become detached should have KIC Gateway refs cleared from status", func(t *testing.T) {
+		require.Eventually(t, func() bool {
+			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+				return false
+			}
+			route.Spec.ParentRefs = nil
+			if err := client.Status().Update(ctx, &route); err != nil {
+				t.Logf("failed to update HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+				return false
+			}
+
+			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+				return false
+			}
+
+			return len(route.Status.Parents) == 0
+		}, waitDuration, tickDuration, "expected stale KIC Gateway parentRef to be removed from HTTPRoute status")
+	})
+
+	t.Run("routes attached to Gateways that are not reconciled by KIC should not have other Gateway refs cleared from status", func(t *testing.T) {
 		require.Never(t, func() bool {
-			err := client.Get(ctx, k8stypes.NamespacedName{Name: routeNonKong.Name, Namespace: routeNonKong.Namespace}, &route)
-			if err != nil {
-				t.Logf("failed to get HTTPRoute %s/%s: %v", routeNonKong.Namespace, routeNonKong.Name, err)
+			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&routeNonKong), &routeNonKong); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&routeNonKong), err)
 				return true
 			}
 
 			if staleStatusFound := lo.ContainsBy(routeNonKong.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
-				return ps.ParentRef.Name == "other-gw-name"
+				return string(ps.ParentRef.Name) == gwNonKong.Name
 			}); !staleStatusFound {
-				t.Log("status for parent other-gw-name not found, it should not be cleared")
+				t.Logf("status for parent %s not found, it should not have been cleared", gwNonKong.Name)
 				return true
 			}
 

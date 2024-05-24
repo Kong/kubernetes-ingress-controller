@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -124,106 +125,29 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 	}
 
-	// We enqueue only HTTPRoutes that are:
+	// We enqueue only routes that are:
 	// - attached during creation or deletion
 	// - have been attached or detached to a reconciled Gateway.
-	// This allows us to drop the backend data-plane config for an HTTPRoute if
+	// This allows us to drop the backend data-plane config for a route if
 	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
 	return blder.
 		For(&gatewayapi.HTTPRoute{},
 			builder.WithPredicates(predicate.Funcs{
-				GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
-				CreateFunc:  func(e event.CreateEvent) bool { return r.isHTTPRouteAttachedToReconciledGateway(e.Object) },
-				UpdateFunc:  func(e event.UpdateEvent) bool { return r.isOrWasHTTPRouteAttachedToReconciledGateway(e) },
-				DeleteFunc:  func(e event.DeleteEvent) bool { return r.isHTTPRouteAttachedToReconciledGateway(e.Object) },
+				GenericFunc: func(_ event.GenericEvent) bool {
+					return false // we don't need to enqueue from generic
+				},
+				CreateFunc: func(e event.CreateEvent) bool {
+					return isRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+				},
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
+				},
+				DeleteFunc: func(e event.DeleteEvent) bool {
+					return isRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+				},
 			}),
 		).
 		Complete(r)
-}
-
-func (r *HTTPRouteReconciler) isOrWasHTTPRouteAttachedToReconciledGateway(e event.UpdateEvent) bool {
-	oldObj, newObj := e.ObjectOld, e.ObjectNew
-	return r.isHTTPRouteAttachedToReconciledGateway(oldObj) || r.isHTTPRouteAttachedToReconciledGateway(newObj)
-}
-
-func (r *HTTPRouteReconciler) isHTTPRouteAttachedToReconciledGateway(obj client.Object) bool {
-	httproute, ok := obj.(*gatewayapi.HTTPRoute)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"HTTPRoute watch predicate received unexpected object type",
-			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
-	// If the reconciler has a GatewayNN set, only HTTPRoutes attached to that Gateway are reconciled.
-	if gNN, ok := r.GatewayNN.Get(); ok {
-		for _, parentRef := range httproute.Spec.ParentRefs {
-			if parentRef.Namespace != nil && string(*parentRef.Namespace) != gNN.Namespace {
-				continue
-			}
-			if string(parentRef.Name) != gNN.Name {
-				continue
-			}
-			if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
-				continue
-			}
-			if parentRef.Group != nil && *parentRef.Group != gatewayapi.Group(gatewayapi.GroupVersion.Group) {
-				continue
-			}
-			return true
-		}
-		return false
-	}
-
-	// If the GatewayNN is not set, all HTTPRoutes are reconciled.
-	// Hence we need to check if the HTTPRoute is attached to a Gateway that is managed by this controller.
-	for _, parentRef := range httproute.Spec.ParentRefs {
-		namespace := httproute.Namespace
-		if parentRef.Namespace != nil {
-			namespace = string(*parentRef.Namespace)
-		}
-
-		kind := gatewayapi.Kind("Gateway")
-		if parentRef.Kind != nil {
-			kind = *parentRef.Kind
-		}
-
-		group := gatewayapi.GroupVersion.Group
-		if parentRef.Group != nil {
-			group = string(*parentRef.Group)
-		}
-
-		switch {
-		case kind == "Gateway" && group == gatewayapi.GroupVersion.Group:
-			var gateway gatewayapi.Gateway
-			err := r.Get(context.Background(), k8stypes.NamespacedName{Namespace: namespace, Name: string(parentRef.Name)}, &gateway)
-			if err != nil {
-				r.Log.Error(err, "Failed to get Gateway in HTTPRoute watch")
-				return false
-			}
-
-			var gatewayClass gatewayapi.GatewayClass
-			err = r.Get(context.Background(), k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass)
-			if err != nil {
-				r.Log.Error(err, "Failed to get GatewayClass in HTTPRoute watch")
-				return false
-			}
-
-			if isGatewayClassControlled(&gatewayClass) {
-				return true
-			}
-		default:
-			r.Log.Error(
-				fmt.Errorf("unsupported parentRef kind %s and group %s", kind, group),
-				"Got an unexpected kind and group when checking HTTPRoute parentRefs",
-			)
-			return false
-		}
-	}
-
-	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -472,21 +396,14 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	debug(log, httproute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, httproute, r.GatewayNN)
 	if err != nil {
-		if err.Error() == unsupportedGW {
-			debug(log, httproute, "Unsupported route found, processing to verify whether it was ever supported")
+		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
-			statusUpdated, err := r.ensureGatewayReferenceStatusRemoved(ctx, httproute)
+			_, err := ensureGatewayReferenceStatusRemoved(ctx, r.Client, log, httproute)
 			if err != nil {
 				// some failure happened so we need to retry to avoid orphaned statuses
 				return ctrl.Result{}, err
-			}
-			if statusUpdated {
-				// the status did in fact needed to be updated, so no need to requeue
-				// as the status update will trigger a requeue.
-				debug(log, httproute, "Unsupported route was previously supported, status was updated")
-				return ctrl.Result{}, nil
 			}
 
 			// if the route doesn't have a supported Gateway+GatewayClass associated with
@@ -706,34 +623,6 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	}
 
 	// the status needed an update and it was updated successfully
-	return true, nil
-}
-
-// ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
-// implementation to prune status references to Gateways supported by this controller
-// in the provided HTTPRoute object.
-func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, httproute *gatewayapi.HTTPRoute) (bool, error) {
-	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
-	for _, status := range httproute.Status.Parents {
-		if status.ControllerName != GetControllerName() {
-			newStatuses = append(newStatuses, status)
-		}
-	}
-
-	// if the new list of statuses is the same length as the old
-	// nothing has changed and we're all done.
-	if len(newStatuses) == len(httproute.Status.Parents) {
-		return false, nil
-	}
-
-	old := httproute.DeepCopy()
-	httproute.Status.Parents = newStatuses
-	if err := r.Status().Patch(ctx, httproute, client.MergeFrom(old)); err != nil {
-		return false, fmt.Errorf("failed to patch HTTPRoute status: %w", err)
-	}
-
-	// the status needed to be updated and it was updated successfully
 	return true, nil
 }
 

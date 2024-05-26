@@ -37,6 +37,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
@@ -185,7 +186,8 @@ func Run(
 	}
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
+	promMetrics := metrics.NewCtrlFuncMetrics()
+	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), logger, translatorFeatureFlags, storer, promMetrics); err != nil {
 		return err
 	}
 
@@ -207,6 +209,7 @@ func Run(
 		configTranslator,
 		cache,
 		fallbackConfigGenerator,
+		promMetrics,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

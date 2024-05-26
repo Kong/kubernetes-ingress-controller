@@ -16,6 +16,7 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -37,6 +38,8 @@ type RequestHandler struct {
 	// referring the validated resource (Secret) to check the changes on
 	// referred Secret will produce invalid configuration of the plugins.
 	ReferenceIndexers ctrlref.CacheIndexers
+	// PromMetrics provides the Prometheus registry to record metrics
+	PromMetrics *metrics.CtrlFuncMetrics
 
 	Logger logr.Logger
 }
@@ -63,6 +66,14 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	h.PromMetrics.RecordAdmissionCount(
+		response.Allowed,
+		fmt.Sprintf(
+			"%s.%s/%s",
+			review.Request.Resource.Resource, review.Request.Resource.Group, review.Request.Resource.Version,
+		),
+	)
 	review.Response = response
 
 	if err := json.NewEncoder(w).Encode(&review); err != nil {

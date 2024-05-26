@@ -197,12 +197,13 @@ func NewKongClient(
 	kongConfigBuilder KongConfigBuilder,
 	cacheStores store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
+	prometheusMetrics *metrics.CtrlFuncMetrics,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                  logger,
 		requestTimeout:          timeout,
 		diagnostic:              diagnostic,
-		prometheusMetrics:       metrics.NewCtrlFuncMetrics(),
+		prometheusMetrics:       prometheusMetrics,
 		cache:                   &cacheStores,
 		kongConfig:              kongConfig,
 		eventRecorder:           eventRecorder,

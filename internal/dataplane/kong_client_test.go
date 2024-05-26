@@ -939,6 +939,7 @@ func setupTestKongClient(
 		configBuilder,
 		store.NewCacheStores(),
 		newMockFallbackConfigGenerator(),
+		metrics.NewCtrlFuncMetrics(),
 	)
 	require.NoError(t, err)
 	return kongClient
@@ -1386,6 +1387,7 @@ func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing
 		configBuilder,
 		originalCache,
 		fallbackConfigGenerator,
+		metrics.NewCtrlFuncMetrics(),
 	)
 	require.NoError(t, err)
 
@@ -1451,6 +1453,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 		configBuilder,
 		originalCache,
 		fallbackConfigGenerator,
+		metrics.NewCtrlFuncMetrics(),
 	)
 	require.NoError(t, err)
 

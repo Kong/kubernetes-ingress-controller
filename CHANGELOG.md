@@ -202,6 +202,9 @@ Adding a new version? You'll need three changes:
   [#6048](https://github.com/Kong/kubernetes-ingress-controller/pull/6048)
 - Add support for Gateway API GRPCRoute and pass related Gateway API conformance test.
   [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)
+- Added new metric for Prometheus called `ingress_controller_admission_count`. It's a counter and has two labels
+  `allowed` to indicate if the resource was allowed and `resource` to indicate the resource under admission.
+  [#6084](https://github.com/Kong/kubernetes-ingress-controller/issues/6084)
 
 ### Fixed
 

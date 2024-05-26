@@ -70,6 +70,7 @@ func TestMetricsAreServed(t *testing.T) {
 				metrics.MetricNameTranslationBrokenResources,
 				metrics.MetricNameConfigPushDuration,
 				metrics.MetricNameConfigPushSuccessTime,
+				metrics.MetricNameAdmissionCount,
 			},
 		},
 	}

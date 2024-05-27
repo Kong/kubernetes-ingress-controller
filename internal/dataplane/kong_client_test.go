@@ -291,20 +291,20 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 
 // mockKongLastValidConfigFetcher is a mock implementation of FallbackConfigGenerator interface.
 type mockFallbackConfigGenerator struct {
-	generateExcludingAffectedCalledWith lo.Tuple2[store.CacheStores, []fallback.ObjectHash]
-	generateExcludingAffectedResult     store.CacheStores
+	GenerateExcludingBrokenObjectsCalledWith lo.Tuple2[store.CacheStores, []fallback.ObjectHash]
+	GenerateExcludingBrokenObjectsResult     store.CacheStores
 }
 
 func newMockFallbackConfigGenerator() *mockFallbackConfigGenerator {
 	return &mockFallbackConfigGenerator{}
 }
 
-func (m *mockFallbackConfigGenerator) GenerateExcludingAffected(
+func (m *mockFallbackConfigGenerator) GenerateExcludingBrokenObjects(
 	stores store.CacheStores,
 	hashes []fallback.ObjectHash,
 ) (store.CacheStores, error) {
-	m.generateExcludingAffectedCalledWith = lo.T2(stores, hashes)
-	return m.generateExcludingAffectedResult, nil
+	m.GenerateExcludingBrokenObjectsCalledWith = lo.T2(stores, hashes)
+	return m.GenerateExcludingBrokenObjectsResult, nil
 }
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
@@ -1026,7 +1026,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 
 	t.Log("Setting the fallback config generator to return a snapshot excluding the broken consumer")
 	fallbackCacheStoresToBeReturned := cacheStoresFromObjs(t, validConsumer)
-	fallbackConfigGenerator.generateExcludingAffectedResult = fallbackCacheStoresToBeReturned
+	fallbackConfigGenerator.GenerateExcludingBrokenObjectsResult = fallbackCacheStoresToBeReturned
 
 	t.Log("Calling KongClient.Update")
 	err = kongClient.Update(ctx)
@@ -1044,8 +1044,8 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	require.True(t, hasConsumer, "expected consumer to be in the first cache snapshot")
 
 	t.Log("Verifying that the fallback config generator was called with the first cache snapshot and the broken object hash")
-	expectedGenerateExcludingAffectedArgs := lo.T2(firstCacheUpdate, []fallback.ObjectHash{fallback.GetObjectHash(brokenConsumer)})
-	require.Equal(t, expectedGenerateExcludingAffectedArgs, fallbackConfigGenerator.generateExcludingAffectedCalledWith,
+	expectedGenerateExcludingBrokenObjectsArgs := lo.T2(firstCacheUpdate, []fallback.ObjectHash{fallback.GetObjectHash(brokenConsumer)})
+	require.Equal(t, expectedGenerateExcludingBrokenObjectsArgs, fallbackConfigGenerator.GenerateExcludingBrokenObjectsCalledWith,
 		"expected fallback config generator to be called with the first cache snapshot and the broken object hash")
 
 	t.Log("Verifying that the second config builder cache update contains the fallback snapshot")
@@ -1066,6 +1066,68 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	lastValidConfig, _ := lastValidConfigFetcher.LastValidConfig()
 	require.Len(t, lastValidConfig.Consumers, 1)
 	require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
+}
+
+func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing.T) {
+	ctx := context.Background()
+	gwClient := mustSampleGatewayClient(t)
+	konnectClient := mustSampleKonnectClient(t)
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{gwClient},
+		konnectClient:  konnectClient,
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+	fallbackConfigGenerator := newMockFallbackConfigGenerator()
+
+	// We'll use KongConsumer as an example of an object, but it could be any supported type
+	// for the purpose of this test as the fallback config generator is mocked anyway.
+	someConsumer := func(name string) *kongv1.KongConsumer {
+		return &kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: name,
+		}
+	}
+
+	originalCache := cacheStoresFromObjs(t, someConsumer("valid"))
+	kongClient, err := NewKongClient(
+		zapr.NewLogger(zap.NewNop()),
+		time.Second,
+		util.ConfigDumpDiagnostic{},
+		sendconfig.Config{
+			FallbackConfiguration: true,
+		},
+		mocks.NewEventRecorder(),
+		dpconf.DBModeOff,
+		clientsProvider,
+		updateStrategyResolver,
+		configChangeDetector,
+		lastValidConfigFetcher,
+		configBuilder,
+		originalCache,
+		fallbackConfigGenerator,
+	)
+	require.NoError(t, err)
+
+	t.Log("Calling KongClient.Update")
+	require.NoError(t, kongClient.Update(ctx))
+
+	t.Log("Verifying that the config builder cache was updated once")
+	require.Len(t, configBuilder.updateCacheCalls, 1)
+
+	t.Log("Calling KongClient.Update again")
+	require.NoError(t, kongClient.Update(ctx))
+
+	t.Log("Verifying that the config builder cache was not updated when config was not changed")
+	require.Len(t, configBuilder.updateCacheCalls, 1)
 }
 
 func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {

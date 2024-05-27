@@ -27,8 +27,8 @@ func NewGenerator(cacheGraphProvider CacheGraphProvider, logger logr.Logger) *Ge
 	}
 }
 
-// GenerateExcludingAffected generates a new cache snapshot that excludes all objects that depend on the broken objects.
-func (g *Generator) GenerateExcludingAffected(
+// GenerateExcludingBrokenObjects generates a new cache snapshot that excludes all objects that depend on the broken objects.
+func (g *Generator) GenerateExcludingBrokenObjects(
 	cache store.CacheStores,
 	brokenObjects []ObjectHash,
 ) (store.CacheStores, error) {
@@ -37,7 +37,7 @@ func (g *Generator) GenerateExcludingAffected(
 		return store.CacheStores{}, fmt.Errorf("failed to build cache graph: %w", err)
 	}
 
-	fallbackCache, err := cache.TakeSnapshot()
+	fallbackCache, _, err := cache.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
 	if err != nil {
 		return store.CacheStores{}, fmt.Errorf("failed to take cache snapshot: %w", err)
 	}

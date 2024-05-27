@@ -181,6 +181,9 @@ Adding a new version? You'll need three changes:
   [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
 - The `--dump-sensitive-config` flag is no longer backwards.
   [6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
+- Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
+  those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
+  [6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
 
 ### Changed
 

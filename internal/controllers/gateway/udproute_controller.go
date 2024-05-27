@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -94,12 +95,28 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 	}
 
-	// because of the additional burden of having to manage reference data-plane
-	// configurations for UDPRoute objects in the underlying Kong Gateway, we
-	// simply reconcile ALL UDPRoute objects. This allows us to drop the backend
-	// data-plane config for an UDPRoute if it somehow becomes disconnected from
-	// a supported Gateway and GatewayClass.
-	return blder.For(&gatewayapi.UDPRoute{}).
+	// We enqueue only routes that are:
+	// - attached during creation or deletion
+	// - have been attached or detached to a reconciled Gateway.
+	// This allows us to drop the backend data-plane config for a route if
+	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
+	return blder.
+		For(&gatewayapi.UDPRoute{},
+			builder.WithPredicates(predicate.Funcs{
+				GenericFunc: func(_ event.GenericEvent) bool {
+					return false // We don't need to enqueue from generic.
+				},
+				CreateFunc: func(e event.CreateEvent) bool {
+					return isRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+				},
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
+				},
+				DeleteFunc: func(e event.DeleteEvent) bool {
+					return isRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+				},
+			}),
+		).
 		Complete(r)
 }
 
@@ -300,21 +317,14 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	debug(log, udproute, "Retrieving GatewayClass and Gateway for route")
 	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, udproute, r.GatewayNN)
 	if err != nil {
-		if err.Error() == unsupportedGW {
-			debug(log, udproute, "Unsupported route found, processing to verify whether it was ever supported")
+		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
-			statusUpdated, err := r.ensureGatewayReferenceStatusRemoved(ctx, udproute)
+			_, err := ensureGatewayReferenceStatusRemoved(ctx, r.Client, log, udproute)
 			if err != nil {
 				// some failure happened so we need to retry to avoid orphaned statuses
 				return ctrl.Result{}, err
-			}
-			if statusUpdated {
-				// the status did in fact needed to be updated, so no need to requeue
-				// as the status update will trigger a requeue.
-				debug(log, udproute, "Unsupported route was previously supported, status was updated")
-				return ctrl.Result{}, nil
 			}
 
 			// if the route doesn't have a supported Gateway+GatewayClass associated with
@@ -510,34 +520,6 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, udproute); err != nil {
-		return false, err
-	}
-
-	// the status needed an update and it was updated successfully
-	return true, nil
-}
-
-// ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
-// implementation to prune status references to Gateways supported by this controller
-// in the provided UDPRoute object.
-func (r *UDPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, udproute *gatewayapi.UDPRoute) (bool, error) {
-	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
-	for _, status := range udproute.Status.Parents {
-		if status.ControllerName != GetControllerName() {
-			newStatuses = append(newStatuses, status)
-		}
-	}
-
-	// if the new list of statuses is the same length as the old
-	// nothing has changed and we're all done.
-	if len(newStatuses) == len(udproute.Status.Parents) {
-		return false, nil
-	}
-
-	// update the object status in the API
-	udproute.Status.Parents = newStatuses
 	if err := r.Status().Update(ctx, udproute); err != nil {
 		return false, err
 	}

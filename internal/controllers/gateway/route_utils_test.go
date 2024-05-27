@@ -1432,7 +1432,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected:    []expected{},
-				expectedErr: fmt.Errorf("no supported Gateway found for route"),
+				expectedErr: ErrNoSupportedGateway,
 			},
 		}
 

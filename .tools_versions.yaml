@@ -9,7 +9,7 @@ golangci-lint: "1.59.0"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.12.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.18.2"
+setup-envtest: "0.18.3"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.0.12"
 # renovate: datasource=github-releases depName=mikefarah/yq

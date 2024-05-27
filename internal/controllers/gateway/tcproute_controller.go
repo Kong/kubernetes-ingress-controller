@@ -322,8 +322,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
-			_, err := ensureGatewayReferenceStatusRemoved(ctx, r.Client, log, tcproute)
-			if err != nil {
+			if _, err := ensureGatewayReferenceStatusRemoved(ctx, r.Client, log, tcproute); err != nil {
 				// some failure happened so we need to retry to avoid orphaned statuses
 				return ctrl.Result{}, err
 			}

@@ -995,7 +995,7 @@ func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
 	kind := route.GetObjectKind().GroupVersionKind().Kind
 	parents := getRouteStatusParents(route)
 
-	// drop all status references to supported Gateway objects
+	// Drop all status references to supported Gateway objects.
 	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
 	for _, status := range parents {
 		if status.ControllerName != GetControllerName() {
@@ -1009,13 +1009,13 @@ func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
 		}
 	}
 
-	// if the new list of statuses is the same length as the old
+	// If the new list of statuses is the same length as the old
 	// nothing has changed and we're all done.
 	if len(newStatuses) == len(parents) {
 		return false, nil
 	}
 
-	// if the route doesn't have a supported Gateway+GatewayClass associated with
+	// If the route doesn't have a supported Gateway+GatewayClass associated with
 	// it it's possible it became orphaned after becoming queued. In either case
 	// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 	// configurations.
@@ -1026,7 +1026,7 @@ func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
 	}
 
 	debug(log, route, "Unsupported route was previously supported, status was updated")
-	// the status needed to be updated and it was updated successfully
+	// The status needed to be updated and it was updated successfully.
 	return true, nil
 }
 

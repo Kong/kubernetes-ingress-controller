@@ -17,9 +17,9 @@ import (
 func isRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,
 ) bool {
-	kind := obj.GetObjectKind().GroupVersionKind().Kind
 	route, ok := obj.(routeT)
 	if !ok {
+		kind := obj.GetObjectKind().GroupVersionKind().Kind
 		log.Error(
 			fmt.Errorf("unexpected object type"),
 			"Route watch predicate received unexpected object type",

@@ -104,7 +104,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&gatewayapi.UDPRoute{},
 			builder.WithPredicates(predicate.Funcs{
 				GenericFunc: func(_ event.GenericEvent) bool {
-					return false // we don't need to enqueue from generic
+					return false // We don't need to enqueue from generic.
 				},
 				CreateFunc: func(e event.CreateEvent) bool {
 					return isRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)

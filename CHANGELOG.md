@@ -179,6 +179,8 @@ Adding a new version? You'll need three changes:
   [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
 - Redacted values no longer cause collisions in configuration reported to Konnect.
   [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+- The `--dump-sensitive-config` flag is no longer backwards.
+  [6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
 
 ### Changed
 

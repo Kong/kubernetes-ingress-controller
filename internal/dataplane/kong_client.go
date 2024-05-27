@@ -759,14 +759,14 @@ func prepareSendDiagnosticFn(
 
 	var config *file.Content
 	if diagnosticConfig.DumpsIncludeSensitive {
+		config = targetContent
+	} else {
 		redactedConfig := deckgen.ToDeckContent(ctx,
 			logger,
 			targetState.SanitizedCopy(util.DefaultUUIDGenerator{}),
 			deckGenParams,
 		)
 		config = redactedConfig
-	} else {
-		config = targetContent
 	}
 
 	return func(failed bool, rawResponseBody []byte) {

@@ -1156,3 +1156,69 @@ func cacheStoresFromObjs(t *testing.T, objs ...runtime.Object) store.CacheStores
 	require.NoError(t, err)
 	return s
 }
+
+func TestKongClient_ConfigDumpSanitization(t *testing.T) {
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{
+			mustSampleGatewayClient(t),
+		},
+		konnectClient: mustSampleKonnectClient(t),
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
+
+	const testPrivateKey = "private-key-string"
+	configBuilder.kongState = &kongstate.KongState{
+		Certificates: []kongstate.Certificate{
+			{
+				Certificate: kong.Certificate{
+					ID:  kong.String("new_cert"),
+					Key: kong.String(testPrivateKey), // This should be redacted.
+				},
+			},
+		},
+	}
+	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+
+	testCases := []struct {
+		name                  string
+		dumpsIncludeSensitive bool
+		expectSanitizedDump   bool
+	}{
+		{
+			name:                  "when DumpsIncludeSensitive is true, expect no sanitization",
+			dumpsIncludeSensitive: true,
+			expectSanitizedDump:   false,
+		},
+		{
+			name:                  "when DumpsIncludeSensitive is false, expect sanitization",
+			dumpsIncludeSensitive: false,
+			expectSanitizedDump:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			diagnosticsCh := make(chan util.ConfigDump, 1) // make it buffered to avoid blocking
+			kongClient.diagnostic = util.ConfigDumpDiagnostic{
+				Configs:               diagnosticsCh,
+				DumpsIncludeSensitive: tc.dumpsIncludeSensitive,
+			}
+			ctx := context.Background()
+			err := kongClient.Update(ctx)
+			require.NoError(t, err)
+
+			dump := <-diagnosticsCh
+			require.NotNil(t, dump.Config)
+			require.Len(t, dump.Config.Certificates, 1)
+			dumpedCert := dump.Config.Certificates[0]
+			if tc.expectSanitizedDump {
+				require.Equal(t, "{vault://redacted-value}", *dumpedCert.Key)
+			} else {
+				require.Equal(t, testPrivateKey, *dumpedCert.Key)
+			}
+		})
+	}
+}

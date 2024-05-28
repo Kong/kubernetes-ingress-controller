@@ -1,10 +1,11 @@
-package util
+package diagnostics
 
 import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
+// DumpMeta annotates a config dump.
 type DumpMeta struct {
 	// Failed indicates the dump was not accepted by the Kong admin API.
 	Failed bool
@@ -33,6 +34,7 @@ type ConfigDumpDiagnostic struct {
 	Configs chan ConfigDump
 }
 
+// AffectedObject is a Kubernetes object associated with diagnostic information.
 type AffectedObject struct {
 	// UID is the unique identifier of the object.
 	UID k8stypes.UID

@@ -28,9 +28,9 @@ import (
 	"k8s.io/client-go/rest"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
@@ -68,7 +68,7 @@ func TestTelemetry(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
+		err = manager.Run(ctx, &cfg, diagnostics.ConfigDumpDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 

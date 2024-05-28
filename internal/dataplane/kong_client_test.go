@@ -39,9 +39,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
@@ -916,7 +916,7 @@ func setupTestKongClient(
 ) *KongClient {
 	logger := zapr.NewLogger(zap.NewNop())
 	timeout := time.Second
-	diagnostic := util.ConfigDumpDiagnostic{}
+	diagnostic := diagnostics.ConfigDumpDiagnostic{}
 	config := sendconfig.Config{
 		SanitizeKonnectConfigDumps: true,
 	}
@@ -1171,6 +1171,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	}
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
 
 	// We'll use KongConsumer as an example of a broken object, but it could be any supported type
 	// for the purpose of this test as the fallback config generator is mocked anyway.
@@ -1210,13 +1211,15 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			updateStrategyResolver := newMockUpdateStrategyResolver(t)
 			configBuilder := newMockKongConfigBuilder()
 			fallbackConfigGenerator := newMockFallbackConfigGenerator()
-			updateStrategyResolver := newMockUpdateStrategyResolver(t)
 			kongClient, err := NewKongClient(
 				zapr.NewLogger(zap.NewNop()),
 				time.Second,
-				util.ConfigDumpDiagnostic{},
+				diagnostics.ConfigDumpDiagnostic{
+					Configs: diagnosticsCh,
+				},
 				sendconfig.Config{
 					FallbackConfiguration:         true,
 					UseLastValidConfigForFallback: tc.enableLastValidConfigFallback,
@@ -1310,6 +1313,28 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
 		})
 	}
+
+	t.Log("Verifying that the last valid config is updated with the config excluding the broken consumer")
+	lastValidConfig, _ := lastValidConfigFetcher.LastValidConfig()
+	require.Len(t, lastValidConfig.Consumers, 1)
+	require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
+
+	t.Log("Verifying that the diagnostic server received a dump indicating that the broken consumer caused a problem")
+	// the test will have pushed several successful configs that we don't care about into the diag buffer. this is a
+	// silly hack to churn through those until we get to the successful fallback
+	var dump diagnostics.ConfigDump
+	require.Eventually(t, func() bool {
+		dump = <-diagnosticsCh
+		return len(dump.Meta.AffectedObjects) > 0
+	}, time.Second, time.Nanosecond)
+
+	// once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push triggered by
+	// the expected broken consumer
+	require.False(t, dump.Meta.Failed)
+	require.True(t, dump.Meta.Fallback)
+
+	require.Equal(t, dump.Meta.AffectedObjects[0].Namespace, brokenConsumer.ObjectMeta.Namespace)
+	require.Equal(t, dump.Meta.AffectedObjects[0].Name, brokenConsumer.ObjectMeta.Name)
 }
 
 func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing.T) {
@@ -1325,6 +1350,7 @@ func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing
 	configBuilder := newMockKongConfigBuilder()
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
 	fallbackConfigGenerator := newMockFallbackConfigGenerator()
+	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
 
 	// We'll use KongConsumer as an example of an object, but it could be any supported type
 	// for the purpose of this test as the fallback config generator is mocked anyway.
@@ -1345,7 +1371,9 @@ func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing
 	kongClient, err := NewKongClient(
 		zapr.NewLogger(zap.NewNop()),
 		time.Second,
-		util.ConfigDumpDiagnostic{},
+		diagnostics.ConfigDumpDiagnostic{
+			Configs: diagnosticsCh,
+		},
 		sendconfig.Config{
 			FallbackConfiguration: true,
 		},
@@ -1387,6 +1415,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	configBuilder := newMockKongConfigBuilder()
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
 	fallbackConfigGenerator := newMockFallbackConfigGenerator()
+	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
 
 	// We'll use KongConsumer as an example of a broken object, but it could be any supported type
 	// for the purpose of this test as the fallback config generator is mocked anyway.
@@ -1407,7 +1436,9 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	kongClient, err := NewKongClient(
 		zapr.NewLogger(zap.NewNop()),
 		time.Second,
-		util.ConfigDumpDiagnostic{},
+		diagnostics.ConfigDumpDiagnostic{
+			Configs: diagnosticsCh,
+		},
 		sendconfig.Config{
 			FallbackConfiguration: true,
 		},
@@ -1450,6 +1481,23 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	t.Log("Verifying that the last valid config is empty")
 	_, hasLastValidConfig := lastValidConfigFetcher.LastValidConfig()
 	require.False(t, hasLastValidConfig, "expected no last valid config to be stored as no successful recovery happened")
+
+	t.Log("Verifying that the diagnostic server received a dump indicating that the broken consumer caused a problem")
+	// the test will have pushed several successful configs that we don't care about into the diag buffer. this is a
+	// silly hack to churn through those until we get to the failed fallback
+	var dump diagnostics.ConfigDump
+	require.Eventually(t, func() bool {
+		dump = <-diagnosticsCh
+		return len(dump.Meta.AffectedObjects) > 0
+	}, time.Second, time.Nanosecond)
+
+	// once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push triggered by
+	// the expected broken consumer
+	require.True(t, dump.Meta.Failed)
+	require.True(t, dump.Meta.Fallback)
+
+	require.Equal(t, dump.Meta.AffectedObjects[0].Namespace, brokenConsumer.ObjectMeta.Namespace)
+	require.Equal(t, dump.Meta.AffectedObjects[0].Name, brokenConsumer.ObjectMeta.Name)
 }
 
 func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
@@ -1507,7 +1555,7 @@ func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
 			kongClient, err := NewKongClient(
 				zapr.NewLogger(zap.NewNop()),
 				time.Second,
-				util.ConfigDumpDiagnostic{},
+				diagnostics.ConfigDumpDiagnostic{},
 				sendconfig.Config{
 					FallbackConfiguration:         tc.fallbackConfigurationFeatureEnabled,
 					UseLastValidConfigForFallback: tc.useLastValidConfigForFallbackEnabled,
@@ -1594,8 +1642,8 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			diagnosticsCh := make(chan util.ConfigDump, 1) // make it buffered to avoid blocking
-			kongClient.diagnostic = util.ConfigDumpDiagnostic{
+			diagnosticsCh := make(chan diagnostics.ConfigDump, 1) // make it buffered to avoid blocking
+			kongClient.diagnostic = diagnostics.ConfigDumpDiagnostic{
 				Configs:               diagnosticsCh,
 				DumpsIncludeSensitive: tc.dumpsIncludeSensitive,
 			}

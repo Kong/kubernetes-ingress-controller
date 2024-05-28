@@ -31,10 +31,11 @@ const (
 type Server struct {
 	logger           logr.Logger
 	profilingEnabled bool
-	configDumps      util.ConfigDumpDiagnostic
+	configDumps      ConfigDumpDiagnostic
 
 	successfulConfigDump file.Content
 	failedConfigDump     file.Content
+	problemObjects       []AffectedObject
 	rawErrBody           []byte
 	configLock           *sync.RWMutex
 }
@@ -60,9 +61,9 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 	}
 
 	if cfg.ConfigDumpsEnabled {
-		s.configDumps = util.ConfigDumpDiagnostic{
+		s.configDumps = ConfigDumpDiagnostic{
 			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
-			Configs:               make(chan util.ConfigDump, diagnosticConfigBufferDepth),
+			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
 		}
 	}
 
@@ -71,14 +72,14 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 
 // ConfigDumps returns an object allowing dumping succeeded and failed configuration updates.
 // It will return a zero value of the type in case the config dumps are not enabled.
-func (s *Server) ConfigDumps() util.ConfigDumpDiagnostic {
+func (s *Server) ConfigDumps() ConfigDumpDiagnostic {
 	return s.configDumps
 }
 
 // Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context, port int) error {
 	mux := http.NewServeMux()
-	if s.configDumps != (util.ConfigDumpDiagnostic{}) {
+	if s.configDumps != (ConfigDumpDiagnostic{}) {
 		s.installDumpHandlers(mux)
 	}
 	if s.profilingEnabled {
@@ -121,9 +122,10 @@ func (s *Server) receiveConfig(ctx context.Context) {
 		select {
 		case dump := <-s.configDumps.Configs:
 			s.configLock.Lock()
-			if dump.Failed {
+			if dump.Meta.Failed {
 				s.failedConfigDump = dump.Config
 				s.rawErrBody = dump.RawResponseBody
+				s.problemObjects = dump.Meta.AffectedObjects
 			} else {
 				s.successfulConfigDump = dump.Config
 			}
@@ -158,6 +160,7 @@ func installProfilingHandlers(mux *http.ServeMux) {
 func (s *Server) installDumpHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/config/successful", s.handleLastValidConfig)
 	mux.HandleFunc("/debug/config/failed", s.handleLastFailedConfig)
+	mux.HandleFunc("/debug/config/problems", s.handleLastFailedProblemObjects)
 	mux.HandleFunc("/debug/config/raw-error", s.handleLastErrBody)
 }
 
@@ -183,6 +186,15 @@ func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request)
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(s.failedConfigDump); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) handleLastFailedProblemObjects(rw http.ResponseWriter, _ *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	s.configLock.RLock()
+	defer s.configLock.RUnlock()
+	if err := json.NewEncoder(rw).Encode(s.problemObjects); err != nil {
+		rw.WriteHeader(http.StatusOK)
 	}
 }
 

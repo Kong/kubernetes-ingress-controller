@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
@@ -49,7 +50,7 @@ import (
 func Run(
 	ctx context.Context,
 	c *Config,
-	diagnostic util.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ConfigDumpDiagnostic,
 	logger logr.Logger,
 ) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")

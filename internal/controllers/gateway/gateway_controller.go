@@ -292,7 +292,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
 	} else {
 		if err := r.Client.List(ctx, &gateways); err != nil {
-			r.Log.Error(err, "Failed to list gateways for service in watch", "svc", svc.GetName())
+			r.Log.Error(err, "Failed to list gateways for service in watch", "service", svc.GetName())
 			return nil
 		}
 	}

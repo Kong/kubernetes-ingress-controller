@@ -47,14 +47,13 @@ func TestSpecificGatewayNN(t *testing.T) {
 		WithGatewayToReconcile(nn.String()),
 	)
 
-	routeCount := 10
+	const routeCount = 10
 	routes := createHTTPRoutes(ctx, t, ctrlClient, gw, routeCount)
 	ignoredRoutes := createHTTPRoutes(ctx, t, ctrlClient, gwIgnored, routeCount)
 
 	t.Run("configured specific gateway gets its listener status filled", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			err := ctrlClient.Get(ctx, nn, &gw)
-			if err != nil {
+			if err := ctrlClient.Get(ctx, nn, &gw); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nn, err)
 				return false
 			}
@@ -77,8 +76,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 		require.Eventually(t, func() bool {
 			route := gatewayapi.HTTPRoute{}
 			routeNN := client.ObjectKeyFromObject(routes[0])
-			err := ctrlClient.Get(ctx, routeNN, &route)
-			if err != nil {
+			if err := ctrlClient.Get(ctx, routeNN, &route); err != nil {
 				t.Logf("Failed to get route %s: %v", routeNN, err)
 				return false
 			}
@@ -97,8 +95,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	t.Run("not configured gateway does not gets its listener status filled and HTTPRoute attached to it doesn't get its status parent filled", func(t *testing.T) {
 		require.Never(t, func() bool {
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
-			err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored)
-			if err != nil {
+			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
 				return true
 			}
@@ -120,12 +117,10 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return false
 			}
 			for _, p := range routeIgnored.Status.Parents {
-				if lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
+				return lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
 					return c.Type == string(gatewayapi.RouteConditionAccepted) &&
 						c.Status == metav1.ConditionTrue
-				}) {
-					return true
-				}
+				})
 			}
 
 			return false

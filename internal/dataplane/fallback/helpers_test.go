@@ -1,6 +1,7 @@
 package fallback_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
@@ -162,4 +164,20 @@ func NewMockObject(name string) *MockObject {
 // DeepCopyObject is required for runtime.Object interface.
 func (m *MockObject) DeepCopyObject() runtime.Object {
 	return m
+}
+
+// getFromStore retrieves an object of type T from the given cache store.
+func getFromStore[T client.Object](c cache.Store, obj client.Object) (client.Object, error) {
+	o, exists, err := c.Get(obj)
+	if !exists {
+		return nil, errors.New("object not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get object: %w", err)
+	}
+	typedObject, ok := o.(T)
+	if !ok {
+		return nil, fmt.Errorf("expected object of type %T, got %T", typedObject, o)
+	}
+	return typedObject, nil
 }

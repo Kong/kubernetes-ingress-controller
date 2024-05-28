@@ -4,6 +4,7 @@
 
 | Flag | Type | Description | Default |
 | ---- | ---- | ----------- | ------- |
+| `----use-last-valid-config-for-fallback` | `bool` | When recovering from config push failures, use the last valid configuration cache to backfill broken objects. | `false` |
 | `--admission-webhook-cert` | `string` | Admission server PEM certificate value. Mutually exclusive with --admission-webhook-cert-file. |  |
 | `--admission-webhook-cert-file` | `string` | Admission server PEM certificate file path. If both this and the cert value is unset, defaults to /admission-webhook/tls.crt. Mutually exclusive with --admission-webhook-cert. |  |
 | `--admission-webhook-key` | `string` | Admission server PEM private key value. Mutually exclusive with --admission-webhook-key-file. |  |

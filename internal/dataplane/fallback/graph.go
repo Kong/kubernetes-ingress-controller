@@ -1,6 +1,7 @@
 package fallback
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dominikbraun/graph"
@@ -88,7 +89,17 @@ func (g *ConfigGraph) AdjacencyMap() (AdjacencyMap, error) {
 
 // SubgraphObjects returns all objects in the graph reachable from the source object, including the source object.
 // It uses a depth-first search to traverse the graph.
+// If the source object is not in the graph, no objects are returned.
 func (g *ConfigGraph) SubgraphObjects(sourceHash ObjectHash) ([]client.Object, error) {
+	// First, ensure the source object is in the graph.
+	if _, err := g.graph.Vertex(sourceHash); err != nil {
+		// If the source object is not in the graph, return an empty list.
+		if errors.Is(err, graph.ErrVertexNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get source object from the graph: %w", err)
+	}
+
 	var objects []client.Object
 	if err := graph.DFS(g.graph, sourceHash, func(hash ObjectHash) bool {
 		obj, err := g.graph.Vertex(hash)

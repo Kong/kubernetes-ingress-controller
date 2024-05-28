@@ -37,7 +37,7 @@ func (g *Generator) GenerateExcludingBrokenObjects(
 		return store.CacheStores{}, fmt.Errorf("failed to build cache graph: %w", err)
 	}
 
-	fallbackCache, _, err := cache.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
+	fallbackCache, err := cache.TakeSnapshot()
 	if err != nil {
 		return store.CacheStores{}, fmt.Errorf("failed to take cache snapshot: %w", err)
 	}
@@ -59,5 +59,43 @@ func (g *Generator) GenerateExcludingBrokenObjects(
 		}
 	}
 
+	return fallbackCache, nil
+}
+
+func (g *Generator) GenerateBackfillingBrokenObjects(
+	currentCache store.CacheStores,
+	lastValidCacheSnapshot store.CacheStores,
+	brokenObjects []ObjectHash,
+) (store.CacheStores, error) {
+	// Generate a fallback cache snapshot excluding the broken objects.
+	fallbackCache, err := g.GenerateExcludingBrokenObjects(currentCache, brokenObjects)
+	if err != nil {
+		return store.CacheStores{}, fmt.Errorf("failed to generate fallback cache: %w", err)
+	}
+
+	// Build a graph from the last valid cache snapshot.
+	lastValidGraph, err := g.cacheGraphProvider.CacheToGraph(lastValidCacheSnapshot)
+	if err != nil {
+		return store.CacheStores{}, fmt.Errorf("failed to build cache graph: %w", err)
+	}
+
+	// Backfill the broken objects from the last valid cache snapshot.
+	for _, brokenObject := range brokenObjects {
+		objectsToBackfill, err := lastValidGraph.SubgraphObjects(brokenObject)
+		if err != nil {
+			return store.CacheStores{}, fmt.Errorf("failed to find dependants for %s: %w", brokenObject, err)
+		}
+
+		for _, obj := range objectsToBackfill {
+			if err := fallbackCache.Add(obj); err != nil {
+				return store.CacheStores{}, fmt.Errorf("failed to add %s to the cache: %w", GetObjectHash(obj), err)
+			}
+			g.logger.V(util.DebugLevel).Info("Backfilled object to fallback cache",
+				"object_kind", obj.GetObjectKind(),
+				"object_name", obj.GetName(),
+				"object_namespace", obj.GetNamespace(),
+			)
+		}
+	}
 	return fallbackCache, nil
 }

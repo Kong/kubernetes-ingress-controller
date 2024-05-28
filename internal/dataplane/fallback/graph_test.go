@@ -19,6 +19,7 @@ func TestConfigGraph_SubgraphObjects(t *testing.T) {
 		F = NewMockObject("F")
 		G = NewMockObject("G")
 		H = NewMockObject("H")
+		I = NewMockObject("I") // Not included in the graph.
 	)
 
 	// Graph structure (edges define dependency -> dependant relationship):
@@ -80,4 +81,8 @@ func TestConfigGraph_SubgraphObjects(t *testing.T) {
 	objects, err = g.SubgraphObjects(fallback.GetObjectHash(H))
 	require.NoError(t, err)
 	require.ElementsMatch(t, []client.Object{H}, objects)
+
+	objects, err = g.SubgraphObjects(fallback.GetObjectHash(I))
+	require.NoError(t, err)
+	require.Empty(t, objects, "expected no objects for a source object not in the graph")
 }

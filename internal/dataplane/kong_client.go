@@ -63,6 +63,11 @@ type KongConfigBuilder interface {
 // FallbackConfigGenerator generates a fallback configuration based on a cache snapshot and a set of broken objects.
 type FallbackConfigGenerator interface {
 	GenerateExcludingBrokenObjects(store.CacheStores, []fallback.ObjectHash) (store.CacheStores, error)
+	GenerateBackfillingBrokenObjects(
+		currentCache store.CacheStores,
+		lastValidCache store.CacheStores,
+		brokenObjects []fallback.ObjectHash,
+	) (store.CacheStores, error)
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
@@ -155,6 +160,11 @@ type KongClient struct {
 	// lastProcessedSnapshotHash stores the hash of the last processed Kubernetes objects cache snapshot. It's used to determine configuration
 	// changes. Please note it is always empty when the `FallbackConfiguration` feature gate is turned off.
 	lastProcessedSnapshotHash store.SnapshotHash
+
+	// lastValidCacheSnapshot stores the state of the cache that was last successfully synced with the gateways.
+	// Please note it is only populated when the `FallbackConfiguration` feature gate is turned on and the
+	// `--use-last-valid-config-for-fallback` flag is set.
+	lastValidCacheSnapshot store.CacheStores
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -469,6 +479,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 		return gatewaysSyncErr
 	}
 
+	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
+	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)
+
 	// report on configured Kubernetes objects if enabled
 	if c.AreKubernetesObjectReportsEnabled() {
 		// if the configuration SHAs that have just been pushed are different than
@@ -482,6 +495,15 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// maybePreserveTheLastValidConfigCache preserves the last valid configuration cache if the `FallbackConfiguration`
+// feature gate is enabled and the `--enable-last-valid-config-fallback` flag is set.
+func (c *KongClient) maybePreserveTheLastValidConfigCache(lastValidCache store.CacheStores) {
+	if c.kongConfig.FallbackConfiguration && c.kongConfig.UseLastValidConfigForFallback {
+		c.logger.V(util.DebugLevel).Info("Preserving the last valid configuration cache")
+		c.lastValidCacheSnapshot = lastValidCache
+	}
 }
 
 // tryRecoveringFromGatewaysSyncError tries to recover from a configuration rejection by:
@@ -520,7 +542,7 @@ func (c *KongClient) tryRecoveringFromGatewaysSyncError(
 // configuration excluding affected objects from the cache.
 func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	ctx context.Context,
-	cacheSnapshot store.CacheStores,
+	currentCache store.CacheStores,
 	gatewaysSyncErr error,
 ) error {
 	// Extract the broken objects from the update error and generate a fallback configuration excluding them.
@@ -528,10 +550,9 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	if err != nil {
 		return fmt.Errorf("failed to extract broken objects from update error: %w", err)
 	}
-	fallbackCache, err := c.fallbackConfigGenerator.GenerateExcludingBrokenObjects(
-		cacheSnapshot,
-		brokenObjects,
-	)
+
+	// Generate a fallback cache snapshot.
+	fallbackCache, err := c.generateFallbackCache(currentCache, brokenObjects)
 	if err != nil {
 		return fmt.Errorf("failed to generate fallback configuration: %w", err)
 	}
@@ -555,7 +576,30 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 		// If Konnect sync fails, we should log the error and carry on as it's not a critical error.
 		c.logger.Error(konnectSyncErr, "Failed to sync fallback configuration with Konnect")
 	}
+
+	// Configuration was successfully recovered with the fallback configuration. Store the last valid configuration.
+	c.maybePreserveTheLastValidConfigCache(fallbackCache)
 	return nil
+}
+
+// generateFallbackCache generates a fallback configuration based on the current cache and a set of broken objects.
+// It will either exclude the broken objects from the cache or backfill them from the last valid cache snapshot
+// depending on the UseLastValidConfigForFallback flag.
+func (c *KongClient) generateFallbackCache(
+	currentCache store.CacheStores,
+	brokenObjects []fallback.ObjectHash,
+) (store.CacheStores, error) {
+	if c.kongConfig.UseLastValidConfigForFallback {
+		return c.fallbackConfigGenerator.GenerateBackfillingBrokenObjects(
+			currentCache,
+			c.lastValidCacheSnapshot,
+			brokenObjects,
+		)
+	}
+	return c.fallbackConfigGenerator.GenerateExcludingBrokenObjects(
+		currentCache,
+		brokenObjects,
+	)
 }
 
 // extractBrokenObjectsFromUpdateError.

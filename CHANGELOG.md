@@ -145,6 +145,9 @@ Adding a new version? You'll need three changes:
 - Added `--use-last-valid-config-for-fallback` CLI flag to enable using the last valid configuration cache
   to backfill excluded broken objects when the `FallbackConfiguration` feature gate is enabled.
   [#6098](https://github.com/Kong/kubernetes-ingress-controller/pull/6098)
+- Added `FallbackKongConfigurationSucceeded`, `FallbackKongConfigurationTranslationFailed` and
+  `FallbackKongConfigurationApplyFailed` Kubernetes Events to report the status of the fallback configuration.
+  [#6099](https://github.com/Kong/kubernetes-ingress-controller/pull/6099)
 - Add support for Kubernetes Gateway API v1.1:
   - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
   - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.

@@ -48,6 +48,13 @@ const (
 	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
 	KongConfigurationApplyFailedEventReason = "KongConfigurationApplyFailed"
+
+	// FallbackKongConfigurationApplySucceededEventReason defines an event reason to tell the updating of fallback Kong configuration succeeded.
+	FallbackKongConfigurationApplySucceededEventReason = "FallbackKongConfigurationSucceeded"
+	// FallbackKongConfigurationTranslationFailedEventReason defines an event reason used for creating fallback translation resource failure events.
+	FallbackKongConfigurationTranslationFailedEventReason = "FallbackKongConfigurationTranslationFailed"
+	// FallbackKongConfigurationApplyFailedEventReason defines an event reason used for creating fallback config apply resource failure events.
+	FallbackKongConfigurationApplyFailedEventReason = "FallbackKongConfigurationApplyFailed"
 )
 
 // -----------------------------------------------------------------------------
@@ -459,8 +466,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.V(util.DebugLevel).Info("Successfully built data-plane configuration")
 	}
 
-	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig)
-	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
+	const isFallback = false
+	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig, isFallback)
+	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
 	// failures, calculate the config status and update it.
@@ -533,7 +541,8 @@ func (c *KongClient) tryRecoveringFromGatewaysSyncError(
 	// If FallbackConfiguration is disabled, or we failed to recover using the fallback configuration, we should
 	// apply the last valid configuration to the gateways.
 	if state, found := c.kongConfigFetcher.LastValidConfig(); found {
-		if _, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig); fallbackSyncErr != nil {
+		const isFallback = true
+		if _, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig, isFallback); fallbackSyncErr != nil {
 			return errors.Join(gatewaysSyncErr, fallbackSyncErr)
 		}
 		c.logger.V(util.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
@@ -564,17 +573,20 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	c.kongConfigBuilder.UpdateCache(fallbackCache)
 	fallbackParsingResult := c.kongConfigBuilder.BuildKongConfig()
 
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6081
-	// Emit Kubernetes events depending on fallback configuration parsing result.
+	if failuresCount := len(fallbackParsingResult.TranslationFailures); failuresCount > 0 {
+		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
+		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
+	}
 
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6082
 	// Expose Prometheus metrics for fallback configuration parsing result.
 
-	_, gatewaysSyncErr = c.sendOutToGatewayClients(ctx, fallbackParsingResult.KongState, c.kongConfig)
+	const isFallback = true
+	_, gatewaysSyncErr = c.sendOutToGatewayClients(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
 	if gatewaysSyncErr != nil {
 		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", gatewaysSyncErr)
 	}
-	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig)
+	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
 	if konnectSyncErr != nil {
 		// If Konnect sync fails, we should log the error and carry on as it's not a critical error.
 		c.logger.Error(konnectSyncErr, "Failed to sync fallback configuration with Konnect")
@@ -628,7 +640,10 @@ func extractBrokenObjectsFromUpdateError(err error) ([]fallback.ObjectHash, erro
 // sendOutToGatewayClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured gateway clients.
 func (c *KongClient) sendOutToGatewayClients(
-	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
+	ctx context.Context,
+	s *kongstate.KongState,
+	config sendconfig.Config,
+	isFallback bool,
 ) ([]string, error) {
 	gatewayClients := c.clientsProvider.GatewayClients()
 	if len(gatewayClients) == 0 {
@@ -645,7 +660,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
 
 	shas, err := iter.MapErr(gatewayClientsToConfigure, func(client **adminapi.Client) (string, error) {
-		return c.sendToClient(ctx, *client, s, config)
+		return c.sendToClient(ctx, *client, s, config, isFallback)
 	})
 	if err != nil {
 		return nil, err
@@ -673,14 +688,19 @@ func (c *KongClient) sendOutToGatewayClients(
 
 // maybeSendOutToKonnectClient sends out the configuration to Konnect when KonnectClient is provided.
 // It's a noop when Konnect integration is not enabled.
-func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongstate.KongState, config sendconfig.Config) error {
+func (c *KongClient) maybeSendOutToKonnectClient(
+	ctx context.Context,
+	s *kongstate.KongState,
+	config sendconfig.Config,
+	isFallback bool,
+) error {
 	konnectClient := c.clientsProvider.KonnectClient()
 	// There's no KonnectClient configured, that's totally fine.
 	if konnectClient == nil {
 		return nil
 	}
 
-	if _, err := c.sendToClient(ctx, konnectClient, s, config); err != nil {
+	if _, err := c.sendToClient(ctx, konnectClient, s, config, isFallback); err != nil {
 		// In case of an error, we only log it since we don't want the Konnect to affect the basic functionality
 		// of the controller.
 
@@ -723,6 +743,7 @@ func (c *KongClient) sendToClient(
 	client sendconfig.AdminAPIClient,
 	s *kongstate.KongState,
 	config sendconfig.Config,
+	isFallback bool,
 ) (string, error) {
 	logger := c.logger.WithValues("url", client.AdminAPIClient().BaseRootURL())
 
@@ -756,7 +777,7 @@ func (c *KongClient) sendToClient(
 	// Only record events on applying configuration to Kong gateway here.
 	// Nil error is expected to be passed to indicate success.
 	if !client.IsKonnect() {
-		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
+		c.recordApplyConfigurationEvents(err, client.BaseRootURL(), isFallback)
 	}
 	if err != nil {
 		var (
@@ -765,7 +786,11 @@ func (c *KongClient) sendToClient(
 			responseParsingErr sendconfig.ResponseParsingError
 		)
 		if errors.As(err, &updateErr) {
-			c.recordResourceFailureEvents(updateErr.ResourceFailures(), KongConfigurationApplyFailedEventReason)
+			reason := KongConfigurationApplyFailedEventReason
+			if isFallback {
+				reason = FallbackKongConfigurationApplyFailedEventReason
+			}
+			c.recordResourceFailureEvents(updateErr.ResourceFailures(), reason)
 		}
 		if errors.As(err, &responseParsingErr) {
 			rawResponseBody = responseParsingErr.ResponseBody()
@@ -915,7 +940,7 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 }
 
 // recordApplyConfigurationEvents records event attached to KIC pod after KIC applied Kong configuration.
-func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
+func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string, isFallback bool) {
 	podNN, ok := c.controllerPodReference.Get()
 	if !ok {
 		// Can't record an event without a controller pod reference to attach to.
@@ -926,10 +951,20 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 	reason := KongConfigurationApplySucceededEventReason
 	message := fmt.Sprintf("successfully applied Kong configuration to %s", rootURL)
 
+	if isFallback {
+		reason = FallbackKongConfigurationApplySucceededEventReason
+		message = fmt.Sprintf("successfully applied fallback Kong configuration to %s", rootURL)
+	}
+
 	if err != nil {
 		eventType = corev1.EventTypeWarning
 		reason = KongConfigurationApplyFailedEventReason
 		message = fmt.Sprintf("failed to apply Kong configuration to %s: %v", rootURL, err)
+
+		if isFallback {
+			reason = FallbackKongConfigurationApplyFailedEventReason
+			message = fmt.Sprintf("failed to apply fallback Kong configuration to %s: %v", rootURL, err)
+		}
 	}
 
 	pod := &corev1.Pod{

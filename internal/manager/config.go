@@ -180,7 +180,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong.`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
-	flagSet.BoolVar(&c.UseLastValidConfigForFallback, "--use-last-valid-config-for-fallback", false, `When recovering from config push failures, use the last valid configuration cache to backfill broken objects.`)
+	flagSet.BoolVar(&c.UseLastValidConfigForFallback, "use-last-valid-config-for-fallback", false, `When recovering from config push failures, use the last valid configuration cache to backfill broken objects.`)
 	// Default has to be explicitly passed to generate the proper docs. See https://github.com/kubernetes-sigs/controller-runtime/blob/f1c5dd3851ce3df8b4b7830d9b6eae6271f6932d/pkg/cache/cache.go#L146-L151.
 	flagSet.DurationVar(&c.SyncPeriod, "sync-period", 10*time.Hour, `Determine the minimum frequency at which watched resources are reconciled. Set to 0 to use default from controller-runtime.`)
 	flagSet.BoolVar(&c.SkipCACertificates, "skip-ca-certificates", false, `Disable syncing CA certificate syncing (for use with multi-workspace environments).`)

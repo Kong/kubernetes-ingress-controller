@@ -4,7 +4,6 @@
 
 | Flag | Type | Description | Default |
 | ---- | ---- | ----------- | ------- |
-| `----use-last-valid-config-for-fallback` | `bool` | When recovering from config push failures, use the last valid configuration cache to backfill broken objects. | `false` |
 | `--admission-webhook-cert` | `string` | Admission server PEM certificate value. Mutually exclusive with --admission-webhook-cert-file. |  |
 | `--admission-webhook-cert-file` | `string` | Admission server PEM certificate file path. If both this and the cert value is unset, defaults to /admission-webhook/tls.crt. Mutually exclusive with --admission-webhook-cert. |  |
 | `--admission-webhook-key` | `string` | Admission server PEM private key value. Mutually exclusive with --admission-webhook-key-file. |  |
@@ -92,4 +91,5 @@
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller. | `0s` |
 | `--update-status` | `bool` | Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, etc.). | `true` |
 | `--update-status-queue-buffer-size` | `int` | Buffer size of the underlying channels used to update the status of resources. | `8192` |
+| `--use-last-valid-config-for-fallback` | `bool` | When recovering from config push failures, use the last valid configuration cache to backfill broken objects. | `false` |
 | `--watch-namespace` | `strings` | Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces. | `[]` |

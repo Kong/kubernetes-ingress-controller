@@ -49,8 +49,8 @@ func (m *mockGraphProvider) CacheToGraphLastCalledWith() store.CacheStores {
 
 // CacheToGraphLastNCalledWith returns the last N cache stores that were passed to CacheToGraph.
 func (m *mockGraphProvider) CacheToGraphLastNCalledWith(n int) []store.CacheStores {
-	if n > len(m.cacheToGraphCalls) {
-		n = len(m.cacheToGraphCalls)
+	if maxLen := len(m.cacheToGraphCalls); n > maxLen {
+		n = maxLen
 	}
 	return m.cacheToGraphCalls[len(m.cacheToGraphCalls)-n:]
 }

@@ -84,5 +84,5 @@ func TestConfigGraph_SubgraphObjects(t *testing.T) {
 
 	objects, err = g.SubgraphObjects(fallback.GetObjectHash(I))
 	require.NoError(t, err)
-	require.Empty(t, objects, "expected no objects for a source object not in the graph")
+	require.Empty(t, objects, "expected no objects returned for a source object not in the graph")
 }

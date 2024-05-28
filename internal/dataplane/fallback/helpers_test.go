@@ -169,11 +169,11 @@ func (m *MockObject) DeepCopyObject() runtime.Object {
 // getFromStore retrieves an object of type T from the given cache store.
 func getFromStore[T client.Object](c cache.Store, obj client.Object) (client.Object, error) {
 	o, exists, err := c.Get(obj)
-	if !exists {
-		return nil, errors.New("object not found")
-	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object: %w", err)
+	}
+	if !exists {
+		return nil, errors.New("object not found")
 	}
 	typedObject, ok := o.(T)
 	if !ok {

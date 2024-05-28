@@ -1109,7 +1109,8 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			)
 
 			t.Log("Verifying that the last valid config is updated with the config excluding the broken consumer")
-			lastValidConfig, _ := lastValidConfigFetcher.LastValidConfig()
+			lastValidConfig, ok := lastValidConfigFetcher.LastValidConfig()
+			require.True(t, ok)
 			require.Len(t, lastValidConfig.Consumers, 1)
 			require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
 		})
@@ -1333,11 +1334,11 @@ func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
 			err = kongClient.Update(ctx)
 			require.NoError(t, err)
 
+			lastValid := kongClient.lastValidCacheSnapshot
 			if tc.expectLastValidCacheSnapshotToBeSet {
-				lastValid := kongClient.lastValidCacheSnapshot
 				require.NotEmpty(t, lastValid, "expected last valid cache snapshot to be set after successful update")
 			} else {
-				require.Empty(t, kongClient.lastValidCacheSnapshot, "expected last valid cache snapshot to remain empty")
+				require.Empty(t, lastValid, "expected last valid cache snapshot to remain empty")
 			}
 		})
 	}

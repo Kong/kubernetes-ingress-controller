@@ -164,6 +164,9 @@ type KongClient struct {
 	// lastValidCacheSnapshot stores the state of the cache that was last successfully synced with the gateways.
 	// Please note it is only populated when the `FallbackConfiguration` feature gate is turned on and the
 	// `--use-last-valid-config-for-fallback` flag is set.
+	// lastValidCacheSnapshot and lastProcessedSnapshotHash do not always keep values related to the same cache snapshot.
+	// While lastProcessedSnapshotHash keeps track of the last processed cache snapshot (the one kept in KongClient.cache),
+	// lastValidCacheSnapshot can also represent the fallback cache snapshot that was successfully synced with gateways.
 	lastValidCacheSnapshot store.CacheStores
 }
 

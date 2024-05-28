@@ -127,7 +127,9 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 // OR the present gateways are references to missing objects, this will return a unsupportedGW error.
 //
 // There is a parameter `specifiedGW` here, which is used to specific the gateway.
-func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName) ([]supportedGatewayWithCondition, error) {
+func getSupportedGatewayForRoute[T gatewayapi.RouteT](
+	ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName,
+) ([]supportedGatewayWithCondition, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(route)
 	if err != nil {
@@ -1019,7 +1021,6 @@ func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
 	// it it's possible it became orphaned after becoming queued. In either case
 	// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 	// configurations.
-	debug(log, route, "Ensuring that dataplane is updated to remove unsupported route (if applicable)")
 	setRouteStatusParents(route, newStatuses)
 	if err := cl.Status().Update(ctx, route); err != nil {
 		return false, fmt.Errorf("failed to remove Gateway parentRef from %s status: %w", kind, err)

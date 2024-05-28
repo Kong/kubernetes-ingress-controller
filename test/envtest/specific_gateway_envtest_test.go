@@ -4,13 +4,12 @@ package envtest
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
@@ -19,7 +18,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	t.Parallel()
 
 	const (
-		waitTime = time.Minute
+		waitTime = 5 * time.Second
 		tickTime = 500 * time.Millisecond
 	)
 
@@ -29,30 +28,36 @@ func TestSpecificGatewayNN(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	gw := deployGateway(ctx, t, ctrlClient)
-	ignoredGW := deployGateway(ctx, t, ctrlClient)
+
+	var (
+		gw        = deployGateway(ctx, t, ctrlClient)
+		nn        = client.ObjectKeyFromObject(&gw)
+		gwIgnored = deployGateway(ctx, t, ctrlClient)
+		nnIgnored = client.ObjectKeyFromObject(&gwIgnored)
+	)
+
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
-		WithGatewayToReconcile(fmt.Sprintf("%s/%s", gw.Namespace, gw.Name)),
+		WithGatewayToReconcile(nn.String()),
 	)
 
 	createHTTPRoutes(ctx, t, ctrlClient, gw, 1)
-	createHTTPRoutes(ctx, t, ctrlClient, ignoredGW, 1)
+	createHTTPRoutes(ctx, t, ctrlClient, gwIgnored, 1)
 
 	require.Eventually(t, func() bool {
-		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, &gw)
+		err := ctrlClient.Get(ctx, nn, &gw)
 		if err != nil {
-			t.Logf("Failed to get gateway %s/%s: %v", gw.Namespace, gw.Name, err)
+			t.Logf("Failed to get gateway %s: %v", nn, err)
 			return false
 		}
 		httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gatewayapi.ListenerStatus) bool {
 			return listener.Name == "http"
 		})
 		if !ok {
-			t.Logf("Failed to find http listener status in gateway %s/%s", gw.Namespace, gw.Name)
+			t.Logf("Failed to find http listener status in gateway %s", nn)
 			return false
 		}
 		if httpListener.AttachedRoutes != 1 {
@@ -60,18 +65,21 @@ func TestSpecificGatewayNN(t *testing.T) {
 			return false
 		}
 
-		err = ctrlClient.Get(ctx, k8stypes.NamespacedName{Namespace: ignoredGW.Namespace, Name: ignoredGW.Name}, &ignoredGW)
+		return true
+	}, waitTime, tickTime, "Failed to reconcile all HTTPRoutes")
+
+	require.Never(t, func() bool {
+		err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored)
 		if err != nil {
-			t.Logf("Failed to get gateway %s/%s: %v", ignoredGW.Namespace, ignoredGW.Name, err)
-			return false
+			t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
+			return true
 		}
 
 		// ignoredGW.Status.Listeners should be []
-		if len(ignoredGW.Status.Listeners) != 0 {
-			t.Logf("Expected %s/%s gateway should not be processed.", ignoredGW.Namespace, ignoredGW.Name)
-			return false
+		if len(gwIgnored.Status.Listeners) != 0 {
+			t.Logf("%s gateway should not be processed.", nnIgnored)
+			return true
 		}
-
-		return true
-	}, waitTime, tickTime, "failed to reconcile all HTTPRoutes")
+		return false
+	}, waitTime, tickTime, "Non configured gateway should not be processed")
 }

@@ -664,10 +664,12 @@ func isTLSSecretValid(secret *corev1.Secret) bool {
 
 // routeAcceptedByGateways finds all the Gateways the route has been accepted by
 // and returns them in the form of a NamespacedName slice.
-func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.RouteParentStatus) []k8stypes.NamespacedName {
+func routeAcceptedByGateways(
+	ctx context.Context, cl client.Client, logger logr.Logger, route *gatewayapi.HTTPRoute,
+) []k8stypes.NamespacedName {
 	gateways := []k8stypes.NamespacedName{}
-	for _, routeParentStatus := range parentStatuses {
-		gatewayNamespace := routeNamespace
+	for _, routeParentStatus := range getRouteStatusParents(route) {
+		gatewayNamespace := route.GetNamespace()
 		parentRef := routeParentStatus.ParentRef
 		if (parentRef.Group != nil && *parentRef.Group != gatewayapi.V1Group) ||
 			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
@@ -677,12 +679,33 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.
 			gatewayNamespace = string(*parentRef.Namespace)
 		}
 
-		gateways = append(gateways,
-			k8stypes.NamespacedName{
-				Namespace: gatewayNamespace,
-				Name:      string(parentRef.Name),
-			},
-		)
+		nn := k8stypes.NamespacedName{
+			Namespace: gatewayNamespace,
+			Name:      string(parentRef.Name),
+		}
+
+		var gateway gatewayapi.Gateway
+		if err := cl.Get(ctx, nn, &gateway); err != nil {
+			logger.Error(err, "Failed getting Gateway", "gateway", nn)
+			continue
+		}
+
+		for idx := range gateway.Spec.Listeners {
+			accepted, err := isRouteAcceptedByListener(ctx, cl, route, gateway, idx, parentRef)
+			if err != nil {
+				logger.Error(err, "Failed checking if Route is accepted by Listener",
+					"route", route, "listener", idx,
+				)
+				continue
+			}
+			if !accepted {
+				continue
+			}
+
+			gateways = append(gateways, client.ObjectKeyFromObject(&gateway))
+			break
+		}
+
 	}
 	return gateways
 }

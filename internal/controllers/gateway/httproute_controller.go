@@ -229,10 +229,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 		if string(gateway.Spec.GatewayClassName) == gwc.Name {
 			// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
-			if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-				if gatewayToReconcile.Namespace != gateway.Namespace || gatewayToReconcile.Name != gateway.Name {
-					continue
-				}
+			if !r.GatewayNN.Matches(&gateway) {
+				continue
 			}
 
 			_, ok := gateways[gateway.Namespace]
@@ -311,10 +309,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
-	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-		if gatewayToReconcile.Namespace != gw.Namespace || gatewayToReconcile.Name != gw.Name {
-			return nil
-		}
+	if !r.GatewayNN.Matches(gw) {
+		return nil
 	}
 
 	// map all HTTPRoute objects
@@ -418,7 +414,9 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Ensure we have no status for no-longer defined parentRefs.
 	if wasAnyStatusRemoved := ensureNoStaleParentStatus(httproute); wasAnyStatusRemoved {
 		if err := r.Status().Update(ctx, httproute); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("failed to prune stale Gateway parent statuses from %s status: %w",
+				client.ObjectKeyFromObject(httproute), err,
+			)
 		}
 		return ctrl.Result{}, nil
 	}

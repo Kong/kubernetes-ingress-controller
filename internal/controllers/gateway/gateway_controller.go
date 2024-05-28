@@ -316,7 +316,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
-func (r *GatewayReconciler) listGatewaysForHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj client.Object) []reconcile.Request {
 	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
 	if !ok {
 		r.Log.Error(
@@ -327,7 +327,7 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(ctx context.Context, obj cl
 		return nil
 	}
 	recs := []reconcile.Request{}
-	for _, gateway := range routeAcceptedByGateways(ctx, r.Client, r.Log, httpRoute) {
+	for _, gateway := range routeAcceptedByGateways(httpRoute) {
 		if !r.GatewayNN.MatchesNN(gateway) {
 			continue
 		}

@@ -32,7 +32,7 @@ func TestGatewayAddressOverride(t *testing.T) {
 	defer cancel()
 	expected := []string{"10.0.0.1", "10.0.0.2"}
 	udp := []string{"10.0.0.3", "10.0.0.4"}
-	gw := deployGateway(ctx, t, ctrlClient)
+	gw, _ := deployGateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
@@ -80,7 +80,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	gw := deployGateway(ctx, t, ctrlClient)
+	gw, _ := deployGateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
@@ -119,7 +119,7 @@ func createHTTPRoutes(
 	ctrlClient ctrlclient.Client,
 	gw gatewayapi.Gateway,
 	numOfRoutes int,
-) {
+) []*gatewayapi.HTTPRoute {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "backend-svc",
@@ -138,6 +138,7 @@ func createHTTPRoutes(
 	require.NoError(t, ctrlClient.Create(ctx, svc))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, svc) })
 
+	routes := make([]*gatewayapi.HTTPRoute, 0, numOfRoutes)
 	for i := 0; i < numOfRoutes; i++ {
 		httpPort := gatewayapi.PortNumber(80)
 		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
@@ -174,8 +175,9 @@ func createHTTPRoutes(
 			},
 		}
 
-		err := ctrlClient.Create(ctx, httpRoute)
-		require.NoError(t, err)
+		require.NoError(t, ctrlClient.Create(ctx, httpRoute))
 		t.Cleanup(func() { _ = ctrlClient.Delete(ctx, httpRoute) })
+		routes = append(routes, httpRoute)
 	}
+	return routes
 }

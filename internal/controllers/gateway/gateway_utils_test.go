@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
@@ -525,16 +523,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			s, err := scheme.Get()
-			require.NoError(t, err)
-			fakeClient := fake.NewClientBuilder().
-				WithScheme(s).
-				WithObjects(tc.gateways...).
-				Build()
-
-			gateways := routeAcceptedByGateways(
-				context.Background(), fakeClient, logr.Discard(), tc.route,
-			)
+			gateways := routeAcceptedByGateways(tc.route)
 			assert.Equal(t, tc.expectedGatewayNNs, gateways)
 		})
 	}

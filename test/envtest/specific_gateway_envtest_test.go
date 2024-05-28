@@ -81,11 +81,9 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return false
 			}
 			for _, p := range route.Status.Parents {
-				if lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
+				return lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
 					return c.Type == string(gatewayapi.RouteConditionAccepted) && c.Status == metav1.ConditionTrue
-				}) {
-					return true
-				}
+				})
 			}
 
 			return false

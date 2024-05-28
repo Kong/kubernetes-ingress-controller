@@ -62,7 +62,7 @@ type KongConfigBuilder interface {
 
 // FallbackConfigGenerator generates a fallback configuration based on a cache snapshot and a set of broken objects.
 type FallbackConfigGenerator interface {
-	GenerateExcludingAffected(store.CacheStores, []fallback.ObjectHash) (store.CacheStores, error)
+	GenerateExcludingBrokenObjects(store.CacheStores, []fallback.ObjectHash) (store.CacheStores, error)
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
@@ -151,6 +151,10 @@ type KongClient struct {
 
 	// fallbackConfigGenerator is used to generate a fallback configuration in case of sync failures.
 	fallbackConfigGenerator FallbackConfigGenerator
+
+	// lastProcessedSnapshotHash stores the hash of the last processed Kubernetes objects cache snapshot. It's used to determine configuration
+	// changes. Please note it is always empty when the `FallbackConfiguration` feature gate is turned off.
+	lastProcessedSnapshotHash store.SnapshotHash
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -413,13 +417,19 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// based on the cache contents, we need to ensure it is not modified during the process.
 	var cacheSnapshot store.CacheStores
 	if c.kongConfig.FallbackConfiguration {
-		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6080
-		// Use TakeSnapshotIfChanged to avoid taking a snapshot if the cache hasn't changed.
+		var newSnapshotHash store.SnapshotHash
 		var err error
-		cacheSnapshot, err = c.cache.TakeSnapshot()
+		cacheSnapshot, newSnapshotHash, err = c.cache.TakeSnapshotIfChanged(c.lastProcessedSnapshotHash)
 		if err != nil {
 			return fmt.Errorf("failed to take snapshot of cache: %w", err)
 		}
+		// Empty snapshot hash means that the cache hasn't changed since the last snapshot was taken. That optimization can be used
+		// in main code path to avoid unnecessary processing. TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6095
+		if newSnapshotHash == store.SnapshotHashEmpty {
+			c.logger.V(util.DebugLevel).Info("No configuration change; pushing config to gateway is not necessary, skipping")
+			return nil
+		}
+		c.lastProcessedSnapshotHash = newSnapshotHash
 		c.kongConfigBuilder.UpdateCache(cacheSnapshot)
 	}
 
@@ -518,7 +528,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	if err != nil {
 		return fmt.Errorf("failed to extract broken objects from update error: %w", err)
 	}
-	fallbackCache, err := c.fallbackConfigGenerator.GenerateExcludingAffected(
+	fallbackCache, err := c.fallbackConfigGenerator.GenerateExcludingBrokenObjects(
 		cacheSnapshot,
 		brokenObjects,
 	)

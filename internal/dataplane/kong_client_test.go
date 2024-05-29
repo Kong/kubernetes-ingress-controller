@@ -466,6 +466,12 @@ type mockKongConfigBuilder struct {
 	translationFailuresToReturn []failures.ResourceFailure
 	kongState                   *kongstate.KongState
 	updateCacheCalls            []store.CacheStores
+
+	// onlyFirstCallWithNoTranslationFailures is used to simulate a scenario where the first call to the
+	// KongConfigBuilder has no translation failures, but subsequent calls do (e.g. to trigger translation failures in
+	// fallback configuration).
+	onlyFirstBuildCallWithNoTranslationFailures bool
+	buildCalled                                 bool
 }
 
 func newMockKongConfigBuilder() *mockKongConfigBuilder {
@@ -475,6 +481,13 @@ func newMockKongConfigBuilder() *mockKongConfigBuilder {
 }
 
 func (p *mockKongConfigBuilder) BuildKongConfig() translator.KongConfigBuildingResult {
+	if p.onlyFirstBuildCallWithNoTranslationFailures && !p.buildCalled {
+		p.buildCalled = true
+		return translator.KongConfigBuildingResult{
+			KongState:           p.kongState,
+			TranslationFailures: nil,
+		}
+	}
 	return translator.KongConfigBuildingResult{
 		KongState:           p.kongState,
 		TranslationFailures: p.translationFailuresToReturn,
@@ -504,6 +517,11 @@ func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
 	} else {
 		p.translationFailuresToReturn = nil
 	}
+}
+
+func (p *mockKongConfigBuilder) returnTranslationFailuresForAllButFirstCall(failures []failures.ResourceFailure) {
+	p.onlyFirstBuildCallWithNoTranslationFailures = true
+	p.translationFailuresToReturn = failures
 }
 
 func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
@@ -648,6 +666,183 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 				require.NotEmpty(t, eventRecorder.Events())
 			} else {
 				require.Empty(t, eventRecorder.Events())
+			}
+		})
+	}
+}
+
+func TestKongClient_KubernetesEvents(t *testing.T) {
+	t.Setenv("POD_NAMESPACE", "test-namespace")
+	t.Setenv("POD_NAME", "test-pod")
+
+	ctx := context.Background()
+	testGatewayClient := mustSampleGatewayClient(t)
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{testGatewayClient},
+	}
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	testIngress := helpers.WithTypeMeta(t, &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "obj-1",
+			Namespace: "namespace",
+		},
+	})
+	testService := helpers.WithTypeMeta(t, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "obj-2",
+			Namespace: "namespace",
+		},
+	})
+
+	testCases := []struct {
+		name                                     string
+		fallbackConfiguration                    bool
+		translationFailures                      bool
+		updateError                              bool
+		entityErrors                             bool
+		fallbackConfigurationUpdateError         bool
+		fallbackConfigurationTranslationFailures bool
+		expectError                              bool
+		expectEmittingEvents                     []string
+	}{
+		{
+			name:        "successful update",
+			expectError: false,
+			expectEmittingEvents: []string{
+				"Normal KongConfigurationSucceeded",
+			},
+		},
+		{
+			name:                "translation failures",
+			translationFailures: true,
+			expectError:         false,
+			expectEmittingEvents: []string{
+				"Ingress: Warning KongConfigurationTranslationFailed",
+				"Service: Warning KongConfigurationTranslationFailed",
+				"Pod: Normal KongConfigurationSucceeded",
+			},
+		},
+		{
+			name:        "update error",
+			updateError: true,
+			expectError: true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+			},
+		},
+		{
+			name:         "update error with entity errors",
+			updateError:  true,
+			entityErrors: true,
+			expectError:  true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+			},
+		},
+		{
+			name:                  "update error with entity errors, fallback configuration applied",
+			fallbackConfiguration: true,
+			updateError:           true,
+			entityErrors:          true,
+			expectError:           true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+				"Pod: Normal FallbackKongConfigurationSucceeded",
+			},
+		},
+		{
+			name:                             "update error with entity errors, fallback configuration failures",
+			fallbackConfiguration:            true,
+			fallbackConfigurationUpdateError: true,
+			updateError:                      true,
+			entityErrors:                     true,
+			expectError:                      true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+				"Pod: Warning FallbackKongConfigurationApplyFailed",
+				"Ingress: Warning FallbackKongConfigurationApplyFailed",
+			},
+		},
+		{
+			name:                                     "update error with entity errors, fallback translation failures",
+			fallbackConfiguration:                    true,
+			updateError:                              true,
+			entityErrors:                             true,
+			expectError:                              true,
+			fallbackConfigurationTranslationFailures: true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning FallbackKongConfigurationTranslationFailed",
+				"Service: Warning FallbackKongConfigurationTranslationFailed",
+				"Pod: Normal FallbackKongConfigurationSucceeded",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			configBuilder := newMockKongConfigBuilder()
+			eventRecorder := mocks.NewEventRecorder()
+			lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, eventRecorder, lastValidConfigFetcher)
+			kongClient.kongConfig.FallbackConfiguration = tc.fallbackConfiguration
+
+			if tc.translationFailures {
+				configBuilder.translationFailuresToReturn = []failures.ResourceFailure{
+					lo.Must(failures.NewResourceFailure("some reason", testIngress)),
+					lo.Must(failures.NewResourceFailure("some reason", testService)),
+				}
+			}
+			if tc.updateError {
+				if tc.entityErrors {
+					updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateError(
+						[]failures.ResourceFailure{
+							lo.Must(failures.NewResourceFailure("violated constraint", testIngress)),
+							lo.Must(failures.NewResourceFailure("violated constraint", testService)),
+						},
+						errors.New("error on update"),
+					))
+				} else {
+					updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL())
+				}
+			}
+			if tc.updateError && tc.fallbackConfigurationUpdateError {
+				updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateError(
+					[]failures.ResourceFailure{
+						lo.Must(failures.NewResourceFailure("violated constraint", testIngress)),
+					}, errors.New("error on update"),
+				))
+			}
+			if tc.fallbackConfigurationTranslationFailures {
+				configBuilder.returnTranslationFailuresForAllButFirstCall([]failures.ResourceFailure{
+					lo.Must(failures.NewResourceFailure("some reason", testIngress)),
+					lo.Must(failures.NewResourceFailure("some reason", testService)),
+				})
+			}
+
+			err := kongClient.Update(ctx)
+			if tc.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			emittedEvents := eventRecorder.Events()
+			require.Len(t, emittedEvents, len(tc.expectEmittingEvents))
+			for _, expectedEvent := range tc.expectEmittingEvents {
+				containsExpectedEvent := lo.ContainsBy(emittedEvents, func(event string) bool {
+					return strings.Contains(event, expectedEvent)
+				})
+				require.True(t, containsExpectedEvent, "expected event %q not found in %v", expectedEvent, eventRecorder.Events())
 			}
 		})
 	}

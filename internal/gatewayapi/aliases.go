@@ -51,6 +51,7 @@ type (
 	HTTPRouteMatch            = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule             = gatewayv1.HTTPRouteRule
 	HTTPRouteTimeouts         = gatewayv1.HTTPRouteTimeouts
+	HTTPRequestMirrorFilter   = gatewayv1.HTTPRequestMirrorFilter
 	LocalObjectReference      = gatewayv1.LocalObjectReference
 	HTTPRouteSpec             = gatewayv1.HTTPRouteSpec
 	HTTPRouteStatus           = gatewayv1.HTTPRouteStatus

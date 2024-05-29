@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -29,6 +30,160 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
+
+func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var (
+		scheme     = Scheme(t, WithGatewayAPI)
+		envcfg     = Setup(t, scheme)
+		ctrlClient = NewControllerClient(t, scheme, envcfg)
+		ns         = CreateNamespace(ctx, t, ctrlClient)
+
+		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+			certificate.WithDNSNames("localhost"),
+		)
+		admissionWebhookPort = helpers.GetFreePort(t)
+
+		kongContainer = runKongEnterprise(ctx, t)
+	)
+
+	gateway := deployGateway(ctx, t, ctrlClient)
+
+	_, logs := RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithGatewayAPIControllers(),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
+		WithUpdateStatus(),
+	)
+	WaitForManagerStart(t, logs)
+	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+
+	testCases := []struct {
+		name                string
+		httproute           *gatewayapi.HTTPRoute
+		expectErrorContains string
+	}{
+		{
+			name: "should pass the validation",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-valid-1",
+					Namespace: gateway.Namespace,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: gatewayapi.ObjectName(gateway.Name),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should pass the validation when unknown group and kind is used in the rules backendref (rejection is signalled by setting status conditions)",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-invalid-backend-1",
+					Namespace: gateway.Namespace,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: gatewayapi.ObjectName(gateway.Name),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							BackendRefs: []gatewayapi.HTTPBackendRef{
+								{
+									BackendRef: gatewayapi.BackendRef{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Name:  "backendref-1",
+											Kind:  lo.ToPtr(gatewayapi.Kind("NonExistent")),
+											Group: lo.ToPtr(gatewayapi.Group("unknownkind.example.com")),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "route with unsupported HTTPRouteFilterRequestMirror filter is rejected",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-invalid-backend-1",
+					Namespace: gateway.Namespace,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: gatewayapi.ObjectName(gateway.Name),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Filters: []gatewayapi.HTTPRouteFilter{
+								{
+									Type: gatewayapi.HTTPRouteFilterRequestMirror,
+									RequestMirror: &gatewayapi.HTTPRequestMirrorFilter{
+										BackendRef: gatewayapi.BackendObjectReference{
+											Name: "backendref-1",
+											Port: lo.ToPtr(gatewayapi.PortNumber(8080)),
+										},
+									},
+								},
+							},
+							BackendRefs: []gatewayapi.HTTPBackendRef{
+								{
+									BackendRef: gatewayapi.BackendRef{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Name: "backendref-1",
+											Port: lo.ToPtr(gatewayapi.PortNumber(8080)),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectErrorContains: "filter type RequestMirror is unsupported",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ctrlClient.Create(ctx, tc.httproute)
+			if tc.expectErrorContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectErrorContains)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

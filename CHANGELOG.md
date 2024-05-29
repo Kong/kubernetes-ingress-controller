@@ -189,6 +189,10 @@ Adding a new version? You'll need three changes:
 - Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
   those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
   [6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
+- Fixed KIC admission webhook rejecting HTTPRoutes that have invalid `spec.rules.backendRefs`.
+  Those are now allowed on admission and will have their status conditions filled
+  as per the Gateway API spec.
+  [6104](https://github.com/Kong/kubernetes-ingress-controller/pull/6104)
 
 ### Changed
 

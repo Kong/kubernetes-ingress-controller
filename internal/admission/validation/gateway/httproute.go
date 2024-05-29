@@ -139,9 +139,6 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 	unsupportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
 		gatewayapi.HTTPRouteFilterRequestMirror: {},
 	}
-	const (
-		KindService = gatewayapi.Kind("Service")
-	)
 
 	for ruleIndex, rule := range httproute.Spec.Rules {
 		// Filter RequestMirror is not supported.
@@ -161,14 +158,13 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 			}
 
 			// We don't support any backendRef types except Kubernetes Services.
-			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
-				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported group for httproute backendRefs, only core is supported",
-					ruleIndex, refIndex, *ref.BackendRef.Group)
-			}
-			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != KindService {
-				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported kind for httproute backendRefs, only %s is supported",
-					ruleIndex, refIndex, *ref.BackendRef.Kind, KindService)
-			}
+			// We don't reject those here becuase Gateway API specifies that:
+			// "References to objects with invalid Group and Kind are not valid, and must
+			// be rejected by the implementation, with appropriate Conditions set
+			// on the containing object."
+			// In order to set those conditions on the HTTPRoute we must allow its admission.
+			//
+			// ref: https://github.com/kubernetes-sigs/gateway-api/blob/400e36da6929b98674e1d71bdd7eb65ca72e7438/apis/v1/object_reference_types.go#L91-L93
 		}
 
 		for matchIndex, match := range rule.Matches {

@@ -283,10 +283,8 @@ func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey
 			// We found a backendRef that matches the given service. We will keep all the backendRefs that are together
 			// with this backendRef in the rule.
 
-			// Below we're suppressing nolintlint to not force `//nolint` instead of `// nolint`. This is to allow
-			// correctly suppressing looppointer which expects the latter.
-			backendRefs = append(backendRefs, rule.BackendRefs[:matchingIdx]...)   // nolint:nolintlint,looppointer // We do not keep the reference to rule.BackendRefs, but copy it.
-			backendRefs = append(backendRefs, rule.BackendRefs[matchingIdx+1:]...) // nolint:nolintlint,looppointer // We do not keep the reference to rule.BackendRefs, but copy it.
+			backendRefs = append(backendRefs, rule.BackendRefs[:matchingIdx]...)   // We do not keep the reference to rule.BackendRefs, but copy it.
+			backendRefs = append(backendRefs, rule.BackendRefs[matchingIdx+1:]...) // We do not keep the reference to rule.BackendRefs, but copy it.
 		}
 	}
 	return backendRefs

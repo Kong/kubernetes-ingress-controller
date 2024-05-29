@@ -151,10 +151,8 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 		if string(gateway.Spec.GatewayClassName) == gwc.Name {
 			// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
-			if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-				if gatewayToReconcile.Namespace != gateway.Namespace || gatewayToReconcile.Name != gateway.Name {
-					continue
-				}
+			if !r.GatewayNN.Matches(&gateway) {
+				continue
 			}
 
 			_, ok := gateways[gateway.Namespace]
@@ -233,10 +231,8 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
-	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-		if gatewayToReconcile.Namespace != gw.Namespace || gatewayToReconcile.Name != gw.Name {
-			return nil
-		}
+	if !r.GatewayNN.Matches(gw) {
+		return nil
 	}
 
 	// map all UDPRoute objects

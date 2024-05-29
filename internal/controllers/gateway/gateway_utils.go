@@ -664,10 +664,11 @@ func isTLSSecretValid(secret *corev1.Secret) bool {
 
 // routeAcceptedByGateways finds all the Gateways the route has been accepted by
 // and returns them in the form of a NamespacedName slice.
-func routeAcceptedByGateways(routeNamespace string, parentStatuses []gatewayapi.RouteParentStatus) []k8stypes.NamespacedName {
+func routeAcceptedByGateways(route *gatewayapi.HTTPRoute,
+) []k8stypes.NamespacedName {
 	gateways := []k8stypes.NamespacedName{}
-	for _, routeParentStatus := range parentStatuses {
-		gatewayNamespace := routeNamespace
+	for _, routeParentStatus := range getRouteStatusParents(route) {
+		gatewayNamespace := route.GetNamespace()
 		parentRef := routeParentStatus.ParentRef
 		if (parentRef.Group != nil && *parentRef.Group != gatewayapi.V1Group) ||
 			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {

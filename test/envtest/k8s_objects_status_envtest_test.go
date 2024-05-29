@@ -28,7 +28,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	gw := deployGateway(ctx, t, ctrlClient)
+	gw, _ := deployGateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
@@ -127,7 +127,7 @@ func Test_WatchNamespaces(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	gw := deployGateway(ctx, t, ctrlClient)
+	gw, _ := deployGateway(ctx, t, ctrlClient)
 	hidden := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),

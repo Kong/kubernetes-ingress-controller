@@ -14,8 +14,6 @@ import (
 )
 
 // TakeSnapshot takes a snapshot of the CacheStores.
-//
-// Deprecated: use TakeSnapshotIfChanged instead.
 func (c CacheStores) TakeSnapshot() (CacheStores, error) {
 	// Create a fresh CacheStores instance to store the snapshot
 	// in the c.takeSnapshot method. It happens here because it's

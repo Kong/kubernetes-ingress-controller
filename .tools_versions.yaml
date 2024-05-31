@@ -17,6 +17,6 @@ yq: "4.44.1"
 # renovate: datasource=github-releases depName=jstemmer/go-junit-report
 gojunit-report: "2.1.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
-gotestsum: "1.11.0"
+gotestsum: "1.12.0"
 # renovate: datasource=github-releases depName=dominikh/go-tools
 staticcheck: "0.4.7"

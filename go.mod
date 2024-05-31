@@ -1,8 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.22.0
-
-toolchain go1.22.2
+go 1.22.3
 
 // TODO: this is disabled by FOSSA action doesn't support go 1.21's toolchain clause:
 //
@@ -58,6 +56,7 @@ require (
 	k8s.io/client-go v0.30.1
 	k8s.io/component-base v0.30.1
 	sigs.k8s.io/controller-runtime v0.18.3
+	sigs.k8s.io/e2e-framework v0.4.0
 	sigs.k8s.io/gateway-api v1.1.0
 	sigs.k8s.io/kustomize/api v0.17.2
 	sigs.k8s.io/kustomize/kyaml v0.17.1
@@ -227,7 +226,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 	k8s.io/kubectl v0.30.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
-	sigs.k8s.io/e2e-framework v0.3.1-0.20231113122213-262cac32d35e
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.22.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect

@@ -692,11 +692,11 @@ func (ks *KongState) FillCustomEntities(
 	schemaGetter SchemaGetter,
 	workspace string,
 ) {
-	logger = logger.WithName("fillCustomEntities")
 	entities := s.ListKongCustomEntities()
 	if len(entities) == 0 {
 		return
 	}
+	logger = logger.WithName("fillCustomEntities")
 
 	if ks.CustomEntities == nil {
 		ks.CustomEntities = map[string]*KongCustomEntityCollection{}
@@ -707,7 +707,7 @@ func (ks *KongState) FillCustomEntities(
 
 	for _, entity := range entities {
 		// reject the custom entity if its type is in "known" entity types that are already processed.
-		if _, isKnownType := KnownEntityTypeMap[entity.Spec.EntityType]; isKnownType {
+		if IsKnownEntityType(entity.Spec.EntityType) {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("cannot use known entity type %s in custom entity", entity.Spec.EntityType),
 				entity,
@@ -725,14 +725,13 @@ func (ks *KongState) FillCustomEntities(
 		}
 		// Unmarshal fields of the entity.
 		var parsedEntity map[string]interface{}
-		err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity)
-		if err != nil {
+		if err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity); err != nil {
 			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to unmarshal fields of entity: %v", err), entity)
 			continue
 		}
 		// Fill the "foreign" fields if the entity has such fields referencing services/routes/consumers.
 		ks.fillCustomEntityForeignFields(logger, entity, schema, parsedEntity, pluginRels, workspace)
-		// put the entity into custom collection.
+		// Put the entity into the custom collection to store the entities of its type.
 		if _, ok := ks.CustomEntities[entity.Spec.EntityType]; !ok {
 			ks.CustomEntities[entity.Spec.EntityType] = &KongCustomEntityCollection{
 				Schema: schema,
@@ -755,6 +754,7 @@ func (ks *KongState) fetchEntitySchema(schemaGetter SchemaGetter, entityType str
 	if ok {
 		return collection.Schema, nil
 	}
+	// Use `context.Background()` here because `BuildKongConfig` does not provide a context.
 	schema, err := schemaGetter.Get(context.Background(), entityType)
 	if err != nil {
 		return EntitySchema{}, err
@@ -772,7 +772,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 	logger logr.Logger,
 	k8sEntity *kongv1alpha1.KongCustomEntity,
 	schema EntitySchema,
-	parsedEntity map[string]interface{},
+	parsedEntity map[string]any,
 	pluginRelEntities PluginRelatedEntitiesRefs,
 	workspace string,
 ) {
@@ -804,12 +804,12 @@ func (ks *KongState) fillCustomEntityForeignFields(
 	logger.V(util.DebugLevel).Info("fetch references via plugin", "plugin_key", pluginKey)
 
 	// Traverse through the fields of the entity and fill the "foreign" fields with IDs of referring entities.
+	// Note: this procedure will make referred services'/routes'/consumers' ID to be filled. Should we set `FillIDs` feature gate as a prerequisite?
 	for fieldName, field := range schema.Fields {
 		if field.Type != EntityFieldTypeForeign {
 			continue
 		}
 		switch field.Reference {
-
 		case "services":
 			serviceIDs := getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
 			// TODO: we should generate multile entities if the plugin is attached to multiple services/routes/consumers.
@@ -889,6 +889,9 @@ func getServiceIDFromPluginRels(log logr.Logger, rels RelatedEntitiesRef, routeA
 // It basically does the same thing as getPluginRelations but stores the pointers
 // because we need to call the FillID method of the entities to fetch the ID,
 // as Kong gateway requires IDs in the "foreign" fields (not other identifiers such as name.)
+//
+// TODO: refactor the building of plugin related entities and share the result between here and building plugins:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/6115
 func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log logr.Logger) PluginRelatedEntitiesRefs {
 	pluginRels := PluginRelatedEntitiesRefs{
 		RelatedEntities:      map[string]RelatedEntitiesRef{},

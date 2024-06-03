@@ -12,7 +12,7 @@ import (
 
 // GenerateSHA generates a SHA256 checksum of targetContent, with the purpose
 // of change detection.
-func GenerateSHA(targetContent *file.Content, customEntities map[string][]map[string]interface{}) ([]byte, error) {
+func GenerateSHA(targetContent *file.Content, customEntities map[string][]map[string]any) ([]byte, error) {
 	jsonConfig, err := gojson.Marshal(targetContent)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)

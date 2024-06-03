@@ -6,7 +6,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/go-kong/kong/custom"
-	"github.com/samber/lo"
 
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
@@ -99,20 +98,22 @@ func ExtractEntityFieldDefinitions(schema kong.Schema) EntitySchema {
 	return retSchema
 }
 
-// KnownEntityTypeList includes the types of standard Kong entities that is processed elsewhere in KIC.
-// So the entities cannot be specified via KongCustomEntity types.
-var KnownEntityTypeList = []string{
-	"services",
-	"routes",
-	"upstreams",
-	"targets",
-	"consumers",
-	"consumer_groups",
-	"plugins",
+// IsKnownEntityType returns true if the entities of the type are "standard" and processed elsewhere in KIC.
+func IsKnownEntityType(entityType string) bool {
+	// Types of standard Kong entities that are processed elsewhere in KIC.
+	// So the entities cannot be specified via KongCustomEntity types.
+	knownEntities := map[string]struct{}{
+		"services":        {},
+		"routes":          {},
+		"upstreams":       {},
+		"targets":         {},
+		"consumers":       {},
+		"consumer_groups": {},
+		"plugins":         {},
+	}
+	_, ok := knownEntities[entityType]
+	return ok
 }
-
-// KnownEntityTypeMap is the map including standard entities used for checking whether a custom entity has one of the types.
-var KnownEntityTypeMap = lo.SliceToMap(KnownEntityTypeList, func(s string) (string, struct{}) { return s, struct{}{} })
 
 // KongCustomEntityCollection is a collection of custom Kong entities with the same type.
 type KongCustomEntityCollection struct {
@@ -142,9 +143,15 @@ func (ks *KongState) sortCustomEntities() {
 		sort.Slice(collection.Entities, func(i, j int) bool {
 			e1 := collection.Entities[i]
 			e2 := collection.Entities[j]
-			key1 := e1.k8sKongCustomEntity.Namespace + ":" + e1.k8sKongCustomEntity.Name
-			key2 := e2.k8sKongCustomEntity.Namespace + ":" + e2.k8sKongCustomEntity.Name
-			return key1 < key2
+			// Compare namespace first.
+			if e1.k8sKongCustomEntity.Namespace < e2.k8sKongCustomEntity.Namespace {
+				return true
+			}
+			if e1.k8sKongCustomEntity.Namespace > e2.k8sKongCustomEntity.Namespace {
+				return false
+			}
+			// If namespace are the same, compare name.
+			return e1.k8sKongCustomEntity.Name < e2.k8sKongCustomEntity.Name
 		})
 	}
 }

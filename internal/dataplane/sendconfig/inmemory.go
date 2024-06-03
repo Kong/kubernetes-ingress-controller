@@ -57,9 +57,8 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	}
 
 	if len(targetState.CustomEntities) > 0 {
-		unmarhsaledConfig := map[string]interface{}{}
-		err := json.Unmarshal(config, &unmarhsaledConfig)
-		if err != nil {
+		unmarhsaledConfig := map[string]any{}
+		if err := json.Unmarshal(config, &unmarhsaledConfig); err != nil {
 			return fmt.Errorf("unmarshaling config for adding custom entities: %w", err)
 		}
 		for entityType, entities := range targetState.CustomEntities {

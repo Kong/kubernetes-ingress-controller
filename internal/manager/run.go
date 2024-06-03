@@ -182,7 +182,13 @@ func Run(
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
 	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, func() kong.AbstractSchemaService {
-		return clientsManager.GatewayClients()[0].AdminAPIClient().Schemas
+		// returns schema service of an available gateway admin API client if there are any.
+		clients := clientsManager.GatewayClients()
+		if len(clients) > 0 {
+			return clients[0].AdminAPIClient().Schemas
+		}
+		// returns a fake schema service when no gateway clients available.
+		return translator.UnavailableSchemaService{}
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)

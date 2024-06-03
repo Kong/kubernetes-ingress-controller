@@ -269,7 +269,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
 	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
 	flagSet.BoolVar(&c.KongLicenseEnabled, "enable-controller-kong-license", true, "Enable the KongLicense controller.")
-	flagSet.BoolVar(&c.KongCustomEntityEnabled, "enable-controller-kong-custom-entity", true, "Enable the KongCustomEntity controller.")
+	// REVIEW: set custom entity controller to desabled by default or put it behind a default disabled feature gate?
+	flagSet.BoolVar(&c.KongCustomEntityEnabled, "enable-controller-kong-custom-entity", false, "Enable the KongCustomEntity controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",

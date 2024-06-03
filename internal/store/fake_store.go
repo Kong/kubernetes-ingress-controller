@@ -217,8 +217,7 @@ func NewFakeStore(
 	}
 	kongCustomEntityStore := cache.NewStore(namespacedKeyFunc)
 	for _, e := range objects.KongCustomEntities {
-		err := kongCustomEntityStore.Add(e)
-		if err != nil {
+		if err := kongCustomEntityStore.Add(e); err != nil {
 			return nil, err
 		}
 	}

@@ -1,6 +1,9 @@
 package translator
 
 import (
+	"context"
+	"errors"
+
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -259,4 +262,18 @@ func (t *Translator) registerSuccessfullyTranslatedObject(obj client.Object) {
 // that have been successfully translated as part of BuildKongConfig() call so far.
 func (t *Translator) popConfiguredKubernetesObjects() []client.Object {
 	return t.translatedObjectsCollector.Pop()
+}
+
+// UnavailableSchemaService is a fake schema service used when no gateway admin API clients available.
+// It always returns error in its Get and Validate methods.
+type UnavailableSchemaService struct{}
+
+var _ kong.AbstractSchemaService = UnavailableSchemaService{}
+
+func (s UnavailableSchemaService) Get(_ context.Context, _ string) (kong.Schema, error) {
+	return nil, errors.New("schema service unavailable")
+}
+
+func (s UnavailableSchemaService) Validate(_ context.Context, _ kong.EntityType, _ any) (bool, string, error) {
+	return false, "", errors.New("schema service unavailable")
 }

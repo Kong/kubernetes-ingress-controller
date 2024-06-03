@@ -1539,6 +1539,15 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 		APIVersion: kongv1alpha1.GroupVersion.Group + "/" + kongv1alpha1.GroupVersion.Version,
 		Kind:       "KongCustomEntity",
 	}
+	kongService1 := kong.Service{
+		Name: kong.String("service1"),
+	}
+	getKongServiceID := func(s *kong.Service) string {
+		err := s.FillID("")
+		require.NoError(t, err)
+		return *s.ID
+	}
+
 	testCases := []struct {
 		name                        string
 		initialState                *KongState
@@ -1569,8 +1578,14 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"sessions": {
-					"type":     "string",
-					"required": true,
+					"fields": []interface{}{
+						map[string]interface{}{
+							"name": map[string]interface{}{
+								"type":     "string",
+								"required": true,
+							},
+						},
+					},
 				},
 			},
 			expectedCustomEntities: map[string][]custom.Object{
@@ -1607,7 +1622,163 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				}: "failed to fetch entity schema for entity type sessions: schema not found",
 			},
 		},
-		// TODO: add cases including a custom entity referring to another service
+		{
+			name:         "multiple custom entities with same type",
+			initialState: &KongState{},
+			customEntities: []*kongv1alpha1.KongCustomEntity{
+				{
+					TypeMeta: customEntityTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "session-foo",
+					},
+					Spec: kongv1alpha1.KongCustomEntitySpec{
+						EntityType:     "sessions",
+						ControllerName: annotations.DefaultIngressClass,
+						Fields: apiextensionsv1.JSON{
+							Raw: []byte(`{"name":"session-foo"}`),
+						},
+					},
+				},
+				{
+					TypeMeta: customEntityTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "session-bar",
+					},
+					Spec: kongv1alpha1.KongCustomEntitySpec{
+						EntityType:     "sessions",
+						ControllerName: annotations.DefaultIngressClass,
+						Fields: apiextensionsv1.JSON{
+							Raw: []byte(`{"name":"session-bar"}`),
+						},
+					},
+				},
+				{
+					TypeMeta: customEntityTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default-1",
+						Name:      "session-foo",
+					},
+					Spec: kongv1alpha1.KongCustomEntitySpec{
+						EntityType:     "sessions",
+						ControllerName: annotations.DefaultIngressClass,
+						Fields: apiextensionsv1.JSON{
+							Raw: []byte(`{"name":"session-foo-1"}`),
+						},
+					},
+				},
+			},
+			schemas: map[string]kong.Schema{
+				"sessions": {
+					"fields": []interface{}{
+						map[string]interface{}{
+							"name": map[string]interface{}{
+								"type":     "string",
+								"required": true,
+							},
+						},
+					},
+				},
+			},
+			expectedCustomEntities: map[string][]custom.Object{
+				// Should be sorted by original KCE namespace/name.
+				"sessions": {
+					{
+						// from default/bar
+						"name": "session-bar",
+					},
+					{
+						// from default/foo
+						"name": "session-foo",
+					},
+					{
+						// from default-1/foo
+						"name": "session-foo-1",
+					},
+				},
+			},
+		},
+		{
+			name: "custom entities with reference to other entities (services)",
+			initialState: &KongState{
+				Services: []Service{
+					{
+						Service: kongService1,
+						K8sServices: map[string]*corev1.Service{
+							"default/service1": {
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "default",
+									Name:      "service1",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "degraphql-1",
+									},
+								},
+							},
+						},
+					}, // Service: service1
+				}, // Services
+			},
+			customEntities: []*kongv1alpha1.KongCustomEntity{
+				{
+					TypeMeta: customEntityTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "degraphql-1",
+					},
+					Spec: kongv1alpha1.KongCustomEntitySpec{
+						EntityType:     "degraphql_routes",
+						ControllerName: annotations.DefaultIngressClass,
+						Fields: apiextensionsv1.JSON{
+							Raw: []byte(`{"uri":"/api/me"}`),
+						},
+						ParentRef: &kongv1alpha1.ObjectReference{
+							Group: kong.String(kongv1.GroupVersion.Group),
+							Kind:  kong.String("KongPlugin"),
+							Name:  "degraphql-1",
+						},
+					},
+				},
+			},
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "degraphql-1",
+					},
+					PluginName: "degraphql",
+				},
+			},
+			schemas: map[string]kong.Schema{
+				"degraphql_routes": {
+					"fields": []interface{}{
+						map[string]interface{}{
+							"uri": map[string]interface{}{
+								"type":     "string",
+								"required": true,
+							},
+						},
+						map[string]interface{}{
+							"service": map[string]interface{}{
+								"type":      "foreign",
+								"reference": "services",
+							},
+						},
+					},
+				},
+			},
+			expectedCustomEntities: map[string][]custom.Object{
+				"degraphql_routes": {
+					{
+						"uri": "/api/me",
+						"service": map[string]interface{}{
+							// ID generated from Kong service "service1" in workspace "".
+							"id": getKongServiceID(&kongService1),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1634,7 +1805,6 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			}
 
 			translationFailures := failuresCollector.PopResourceFailures()
-			fmt.Println(translationFailures)
 			for nsName, message := range tc.expectedTranslationFailures {
 				hasError := lo.ContainsBy(translationFailures, func(f failures.ResourceFailure) bool {
 					fmt.Println(f.Message())

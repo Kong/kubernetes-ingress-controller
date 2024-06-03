@@ -149,8 +149,9 @@ func TestMain(m *testing.M) {
 }
 
 type featureSetupCfg struct {
-	controllerManagerOpts []helpers.ControllerManagerOpt
-	kongProxyEnvVars      map[string]string
+	controllerManagerOpts         []helpers.ControllerManagerOpt
+	controllerManagerFeatureGates map[string]string
+	kongProxyEnvVars              map[string]string
 }
 
 type featureSetupOpt func(*featureSetupCfg)
@@ -164,6 +165,12 @@ func withControllerManagerOpts(opts ...helpers.ControllerManagerOpt) featureSetu
 func withKongProxyEnvVars(envVars map[string]string) featureSetupOpt {
 	return func(o *featureSetupCfg) {
 		o.kongProxyEnvVars = envVars
+	}
+}
+
+func withControllerManagerFeatureGates(gates map[string]string) featureSetupOpt {
+	return func(o *featureSetupCfg) {
+		o.controllerManagerFeatureGates = gates
 	}
 }
 
@@ -313,6 +320,9 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		t.Logf("configuring feature gates")
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4849
 		featureGates := consts.DefaultFeatureGates
+		for gate, value := range setupCfg.controllerManagerFeatureGates {
+			featureGates += "," + fmt.Sprintf("%s=%s", gate, value)
+		}
 		t.Logf("feature gates enabled: %s", featureGates)
 
 		t.Logf("starting the controller manager")

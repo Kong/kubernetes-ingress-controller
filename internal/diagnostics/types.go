@@ -27,6 +27,16 @@ type ConfigDump struct {
 	RawResponseBody []byte
 }
 
+type configDumpResponse struct {
+	ConfigHash string       `json:"hash"`
+	Config     file.Content `json:"config"`
+}
+
+type problemObjectsResponse struct {
+	ConfigHash string           `json:"hash"`
+	Objects    []AffectedObject `json:"objects"`
+}
+
 // ConfigDumpDiagnostic contains settings and channels for receiving diagnostic configuration dumps.
 type ConfigDumpDiagnostic struct {
 	// DumpsIncludeSensitive is true if the configuration dump includes sensitive values, such as certificate private

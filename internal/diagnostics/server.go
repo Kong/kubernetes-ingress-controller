@@ -36,7 +36,8 @@ type Server struct {
 	successfulConfigDump file.Content
 	failedConfigDump     file.Content
 	problemObjects       []AffectedObject
-	associatedHash       string
+	failedHash           string
+	successHash          string
 	rawErrBody           []byte
 	configLock           *sync.RWMutex
 }
@@ -127,9 +128,10 @@ func (s *Server) receiveConfig(ctx context.Context) {
 				s.failedConfigDump = dump.Config
 				s.rawErrBody = dump.RawResponseBody
 				s.problemObjects = dump.Meta.AffectedObjects
-				s.associatedHash = dump.Meta.Hash
+				s.failedHash = dump.Meta.Hash
 			} else {
 				s.successfulConfigDump = dump.Config
+				s.successHash = dump.Meta.Hash
 			}
 			s.configLock.Unlock()
 		case <-ctx.Done():
@@ -177,27 +179,37 @@ func (s *Server) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) 
 	rw.Header().Set("Content-Type", "application/json")
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
-	if err := json.NewEncoder(rw).Encode(s.successfulConfigDump); err != nil {
+	if err := json.NewEncoder(rw).Encode(
+		configDumpResponse{
+			Config:     s.successfulConfigDump,
+			ConfigHash: s.successHash,
+		}); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
-	rw.Header().Set("Kong-Config-Hash", s.associatedHash)
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
-	if err := json.NewEncoder(rw).Encode(s.failedConfigDump); err != nil {
+	if err := json.NewEncoder(rw).Encode(
+		configDumpResponse{
+			Config:     s.failedConfigDump,
+			ConfigHash: s.failedHash,
+		}); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 func (s *Server) handleLastFailedProblemObjects(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
-	rw.Header().Set("Kong-Config-Hash", s.associatedHash)
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
-	if err := json.NewEncoder(rw).Encode(s.problemObjects); err != nil {
+	if err := json.NewEncoder(rw).Encode(
+		problemObjectsResponse{
+			ConfigHash: s.failedHash,
+			Objects:    s.problemObjects,
+		}); err != nil {
 		rw.WriteHeader(http.StatusOK)
 	}
 }

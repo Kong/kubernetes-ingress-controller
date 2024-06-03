@@ -13,6 +13,8 @@ type DumpMeta struct {
 	Fallback bool
 	// AffectedObjects are objects excluded from the fallback configuration.
 	AffectedObjects []AffectedObject
+	// Hash is the configuration hash.
+	Hash string
 }
 
 // ConfigDump contains a config dump and a flag indicating that the config was not successfully applid.

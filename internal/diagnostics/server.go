@@ -36,6 +36,7 @@ type Server struct {
 	successfulConfigDump file.Content
 	failedConfigDump     file.Content
 	problemObjects       []AffectedObject
+	associatedHash       string
 	rawErrBody           []byte
 	configLock           *sync.RWMutex
 }
@@ -126,6 +127,7 @@ func (s *Server) receiveConfig(ctx context.Context) {
 				s.failedConfigDump = dump.Config
 				s.rawErrBody = dump.RawResponseBody
 				s.problemObjects = dump.Meta.AffectedObjects
+				s.associatedHash = dump.Meta.Hash
 			} else {
 				s.successfulConfigDump = dump.Config
 			}
@@ -182,6 +184,7 @@ func (s *Server) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) 
 
 func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Kong-Config-Hash", s.associatedHash)
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(s.failedConfigDump); err != nil {
@@ -191,6 +194,7 @@ func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request)
 
 func (s *Server) handleLastFailedProblemObjects(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Kong-Config-Hash", s.associatedHash)
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(s.problemObjects); err != nil {

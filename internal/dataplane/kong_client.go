@@ -814,14 +814,14 @@ func (c *KongClient) sendToClient(
 		if errors.As(err, &responseParsingErr) {
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
-		sendDiagnostic(diagnostics.DumpMeta{Failed: true}, rawResponseBody)
+		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {
 			logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
 	}
-	sendDiagnostic(diagnostics.DumpMeta{Failed: false}, nil) // No error occurred.
+	sendDiagnostic(diagnostics.DumpMeta{Failed: false, Hash: string(newConfigSHA)}, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
 

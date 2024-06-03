@@ -95,7 +95,7 @@ const (
 	MetricNameFallbackConfigPushSuccessTime      = "ingress_controller_fallback_configuration_push_last"
 	MetricNameFallbackConfigPushDuration         = "ingress_controller_fallback_configuration_push_duration_milliseconds"
 	MetricNameFallbackConfigPushBrokenResources  = "ingress_controller_fallback_configuration_push_broken_resource_count"
-	MetricNameFallbackCacheGeneratingDuration    = "ingress_controller_fallback_cache_generating_duration_milliseconds"
+	MetricNameFallbackCacheGenerationDuration    = "ingress_controller_fallback_cache_generation_duration_milliseconds"
 	MetricNameProcessedConfigSnapshotCacheHit    = "ingress_controller_processed_config_snapshot_cache_hit"
 	MetricNameProcessedConfigSnapshotCacheMiss   = "ingress_controller_processed_config_snapshot_cache_miss"
 )
@@ -270,7 +270,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 
 	controllerMetrics.FallbackCacheGeneratingDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: MetricNameFallbackCacheGeneratingDuration,
+			Name: MetricNameFallbackCacheGenerationDuration,
 			Help: fmt.Sprintf("How long it took to generate a fallback cache, in milliseconds. "+
 				"`%s` describes whether the cache generation was successful (`%s`) or not (`%s`).",
 				SuccessKey, SuccessTrue, SuccessFalse,
@@ -370,10 +370,12 @@ func (c *CtrlFuncMetrics) RecordFallbackTranslationSuccess() {
 	}).Inc()
 }
 
+// RecordProcessedConfigSnapshotCacheHit records a hit on the processed config snapshot cache.
 func (c *CtrlFuncMetrics) RecordProcessedConfigSnapshotCacheHit() {
 	c.ProcessedConfigSnapshotCacheHit.Inc()
 }
 
+// RecordProcessedConfigSnapshotCacheMiss records a miss on the processed config snapshot cache.
 func (c *CtrlFuncMetrics) RecordProcessedConfigSnapshotCacheMiss() {
 	c.ProcessedConfigSnapshotCacheMiss.Inc()
 }
@@ -400,7 +402,8 @@ func (c *CtrlFuncMetrics) RecordFallbackPushFailure(p Protocol, duration time.Du
 	c.recordFallbackPushBrokenResources(brokenResourcesCount, dpOpt)
 }
 
-func (c *CtrlFuncMetrics) RecordFallbackCacheGeneratingDuration(d time.Duration, err error) {
+// RecordFallbackCacheGenerationDuration records the duration of a fallback cache generation.
+func (c *CtrlFuncMetrics) RecordFallbackCacheGenerationDuration(d time.Duration, err error) {
 	labels := prometheus.Labels{
 		SuccessKey: SuccessTrue,
 	}

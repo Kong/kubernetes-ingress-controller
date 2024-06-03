@@ -611,7 +611,7 @@ func (c *KongClient) generateFallbackCache(
 ) (s store.CacheStores, err error) {
 	start := time.Now()
 	defer func() {
-		c.prometheusMetrics.RecordFallbackCacheGeneratingDuration(time.Since(start), err)
+		c.prometheusMetrics.RecordFallbackCacheGenerationDuration(time.Since(start), err)
 	}()
 	if c.kongConfig.UseLastValidConfigForFallback {
 		return c.fallbackConfigGenerator.GenerateBackfillingBrokenObjects(

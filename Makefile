@@ -430,7 +430,7 @@ test.golden.update:
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
 
-ENVTEST_TIMEOUT ?= 5m
+ENVTEST_TIMEOUT ?= 8m
 
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest

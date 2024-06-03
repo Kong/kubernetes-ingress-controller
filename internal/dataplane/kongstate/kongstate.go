@@ -855,8 +855,7 @@ func getServiceIDFromPluginRels(log logr.Logger, rels RelatedEntitiesRef, routeA
 	// Return IDs of directly referred services.
 	if len(rels.Services) > 0 {
 		return lo.FilterMap(rels.Services, func(s *Service, _ int) (string, bool) {
-			err := s.FillID(workspace)
-			if err != nil {
+			if err := s.FillID(workspace); err != nil {
 				log.Error(err, "failed to fill ID for service")
 				return "", false
 			}

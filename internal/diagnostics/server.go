@@ -207,8 +207,8 @@ func (s *Server) handleLastFailedProblemObjects(rw http.ResponseWriter, _ *http.
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(
 		problemObjectsResponse{
-			ConfigHash: s.failedHash,
-			Objects:    s.problemObjects,
+			ConfigHash:    s.failedHash,
+			BrokenObjects: s.problemObjects,
 		}); err != nil {
 		rw.WriteHeader(http.StatusOK)
 	}

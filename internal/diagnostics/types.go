@@ -33,8 +33,8 @@ type configDumpResponse struct {
 }
 
 type problemObjectsResponse struct {
-	ConfigHash string           `json:"hash"`
-	Objects    []AffectedObject `json:"objects"`
+	ConfigHash    string           `json:"hash"`
+	BrokenObjects []AffectedObject `json:"brokenObjects"`
 }
 
 // ConfigDumpDiagnostic contains settings and channels for receiving diagnostic configuration dumps.

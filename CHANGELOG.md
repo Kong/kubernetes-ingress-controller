@@ -103,7 +103,7 @@ Adding a new version? You'll need three changes:
   enabling the filter is recommended as soon as is convenient.
   [#5856](https://github.com/Kong/kubernetes-ingress-controller/pull/5856)
 - Dynamically set the proxy protocol of GRPCRoute to `grpc` or `grpcs` based on the port listened by Gateway.
-  If you don't set the protocol for Service via "konghq.com/protocol" annotation, Kong will use grpc instead of grpcs.
+  If you don't set the protocol for Service via "konghq.com/protocol" annotation, Kong will use `grpc` instead of `grpcs`.
   [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)
 
 ### Added
@@ -161,7 +161,7 @@ Adding a new version? You'll need three changes:
   [#5965](https://github.com/Kong/kubernetes-ingress-controller/pull/5965)
 - Fallback configuration no longer omits licenses and vaults.
   [#6048](https://github.com/Kong/kubernetes-ingress-controller/pull/6048)
-- Add support for pass Kubernetes Gateway API GRPCRoute conformance test.
+- Add support for Gateway API GRPCRoute and pass related Gateway API conformance test.
   [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)
 
 ### Fixed

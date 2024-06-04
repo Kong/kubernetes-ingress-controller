@@ -33,6 +33,25 @@ type ConfigDumpDiagnostic struct {
 	DumpsIncludeSensitive bool
 	// Configs is the channel that receives configuration blobs from the configuration update strategy implementation.
 	Configs chan ConfigDump
+
 	// FallbackCacheMetadata is the channel that receives fallback metadata from the fallback cache generator.
 	FallbackCacheMetadata chan fallback.GeneratedCacheMetadata
+
+	// Diffs is the channel that receives diff info in DB mode.
+	Diffs chan ConfigDiff
+}
+
+// AffectedObject is a Kubernetes object associated with diagnostic information.
+type AffectedObject struct {
+	// UID is the unique identifier of the object.
+	UID k8stypes.UID
+
+	// Group is the object's group.
+	Group string
+	// Kind is the object's Kind.
+	Kind string
+	// Namespace is the object's Namespace.
+	Namespace string
+	// Name is the object's Name.
+	Name string
 }

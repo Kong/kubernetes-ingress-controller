@@ -26,7 +26,7 @@
 | `--enable-controller-ingress-class-networkingv1` | `bool` | Enable the networking.k8s.io/v1 IngressClass controller. | `true` |
 | `--enable-controller-ingress-class-parameters` | `bool` | Enable the IngressClassParameters controller. | `true` |
 | `--enable-controller-ingress-networkingv1` | `bool` | Enable the networking.k8s.io/v1 Ingress controller. | `true` |
-| `--enable-controller-kong-custom-entity` | `bool` | Enable the KongCustomEntity controller. | `false` |
+| `--enable-controller-kong-custom-entity` | `bool` | Enable the KongCustomEntity controller. | `true` |
 | `--enable-controller-kong-license` | `bool` | Enable the KongLicense controller. | `true` |
 | `--enable-controller-kong-service-facade` | `bool` | Enable the KongServiceFacade controller. | `true` |
 | `--enable-controller-kong-upstream-policy` | `bool` | Enable the KongUpstreamPolicy controller. | `true` |

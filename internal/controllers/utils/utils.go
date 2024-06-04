@@ -33,7 +33,7 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 			return true
 		}
 	}
-	// For KongCustomEntities, we whether the `spec.ControllerName` matches.
+	// For KongCustomEntities, we check whether the `spec.ControllerName` matches.
 	if customEntity, isKongCustomEntity := obj.(*kongv1alpha1.KongCustomEntity); isKongCustomEntity {
 		if customEntity.Spec.ControllerName == controllerIngressClass {
 			return true

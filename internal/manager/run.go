@@ -65,6 +65,10 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
+	// KongCustomEntity requires FillIDs to be enabled, because custom entities requires stable IDs to fill in its "foreign" fields.
+	if featureGates.Enabled(featuregates.KongCustomEntity) && !featureGates.Enabled(featuregates.FillIDsFeature) {
+		return fmt.Errorf("%s is required if %s is enabled", featuregates.FillIDsFeature, featuregates.KongCustomEntity)
+	}
 
 	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := c.GetKubeconfig()

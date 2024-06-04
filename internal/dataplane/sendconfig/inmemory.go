@@ -57,15 +57,15 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	}
 
 	if len(targetState.CustomEntities) > 0 {
-		unmarhsaledConfig := map[string]any{}
-		if err := json.Unmarshal(config, &unmarhsaledConfig); err != nil {
+		unmarshaledConfig := map[string]any{}
+		if err := json.Unmarshal(config, &unmarshaledConfig); err != nil {
 			return fmt.Errorf("unmarshaling config for adding custom entities: %w", err)
 		}
 		for entityType, entities := range targetState.CustomEntities {
-			unmarhsaledConfig[entityType] = entities
+			unmarshaledConfig[entityType] = entities
 			s.logger.V(util.DebugLevel).Info("Filled custom entities", "entity_type", entityType)
 		}
-		config, err = json.Marshal(unmarhsaledConfig)
+		config, err = json.Marshal(unmarshaledConfig)
 		if err != nil {
 			return fmt.Errorf("constructing kong configuration again with custom entities: %w", err)
 		}

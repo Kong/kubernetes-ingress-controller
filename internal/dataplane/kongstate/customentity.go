@@ -102,16 +102,16 @@ func ExtractEntityFieldDefinitions(schema kong.Schema) EntitySchema {
 func IsKnownEntityType(entityType string) bool {
 	// Types of standard Kong entities that are processed elsewhere in KIC.
 	// So the entities cannot be specified via KongCustomEntity types.
-	knownEntities := map[string]struct{}{
-		"services":        {},
-		"routes":          {},
-		"upstreams":       {},
-		"targets":         {},
-		"consumers":       {},
-		"consumer_groups": {},
-		"plugins":         {},
+	knownEntities := map[kong.EntityType]struct{}{
+		kong.EntityTypeServices:       {},
+		kong.EntityTypeRoutes:         {},
+		kong.EntityTypeUpstreams:      {},
+		kong.EntityTypeTargets:        {},
+		kong.EntityTypeConsumers:      {},
+		kong.EntityTypeConsumerGroups: {},
+		kong.EntityTypePlugins:        {},
 	}
-	_, ok := knownEntities[entityType]
+	_, ok := knownEntities[kong.EntityType(entityType)]
 	return ok
 }
 
@@ -126,8 +126,8 @@ type KongCustomEntityCollection struct {
 // CustomEntity saves content of a Kong custom entity with the pointer to the k8s resource translating to it.
 type CustomEntity struct {
 	custom.Object
-
-	k8sKongCustomEntity *kongv1alpha1.KongCustomEntity
+	// K8sKongCustomEntity refers to the KongCustomEntity resource that translate to it.
+	K8sKongCustomEntity *kongv1alpha1.KongCustomEntity
 }
 
 // SchemaGetter is the interface to fetch the schema of a Kong entity by its type.
@@ -144,14 +144,14 @@ func (ks *KongState) sortCustomEntities() {
 			e1 := collection.Entities[i]
 			e2 := collection.Entities[j]
 			// Compare namespace first.
-			if e1.k8sKongCustomEntity.Namespace < e2.k8sKongCustomEntity.Namespace {
+			if e1.K8sKongCustomEntity.Namespace < e2.K8sKongCustomEntity.Namespace {
 				return true
 			}
-			if e1.k8sKongCustomEntity.Namespace > e2.k8sKongCustomEntity.Namespace {
+			if e1.K8sKongCustomEntity.Namespace > e2.K8sKongCustomEntity.Namespace {
 				return false
 			}
 			// If namespace are the same, compare name.
-			return e1.k8sKongCustomEntity.Name < e2.k8sKongCustomEntity.Name
+			return e1.K8sKongCustomEntity.Name < e2.K8sKongCustomEntity.Name
 		})
 	}
 }

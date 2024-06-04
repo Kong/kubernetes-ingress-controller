@@ -1812,7 +1812,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 						return o.GetNamespace() == nsName.Namespace && o.GetName() == nsName.Name
 					})
 				})
-				require.Truef(t, hasError, "translation error for KongCustomEntity %s/%s not found", nsName.Namespace, nsName.Name)
+				require.Truef(t, hasError, "translation error for KongCustomEntity %s not found", nsName)
 			}
 		})
 	}

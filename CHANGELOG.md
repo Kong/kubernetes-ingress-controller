@@ -143,12 +143,13 @@ Adding a new version? You'll need three changes:
   defined in KIC yet. The current version only supports translating custom
   entities into declarative configuration in DBless mode, and cannot apply
   custom entities to DB backed Kong gateways.
-  Flag `--enable-controller-kong-custom-entity` should set to `true` to
-  enable the controller.
-  **Note: The IDs of Kong services, routes and consumers referred by custom
+  Feature gate `KongCustomEntity` is required to set to `true` to enabled the
+  `KongCustomEntity` controller.
+  **Note**: The IDs of Kong services, routes and consumers referred by custom
   entities via `foreign` type fields of custom entities are filled by the `FillID`
   method of the corresponding type because the IDs of these entities are required
-  to fill the `foreign` fields of custom entities. 
+  to fill the `foreign` fields of custom entities. So the `FillIDs` feature gate
+  is also required when `KongCustomEntity` is enabled.
   [#5982](https://github.com/Kong/kubernetes-ingress-controller/pull/5982)
   [#6006](https://github.com/Kong/kubernetes-ingress-controller/pull/6006)
   [#6055](https://github.com/Kong/kubernetes-ingress-controller/pull/6055)

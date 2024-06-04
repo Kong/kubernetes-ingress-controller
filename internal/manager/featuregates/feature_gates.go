@@ -32,6 +32,13 @@ const (
 	// of entity errors returned by the Kong Admin API.
 	FallbackConfiguration = "FallbackConfiguration"
 
+	// KongCustomEntity is the name of the feature-gate for enabling KongCustomEntity CR reconciliation
+	// for configuring custom Kong entities that KIC does not support yet.
+	// Requires feature gate `FillIDs` to be enabled.
+	// TODO: enable the feature gate by default when ready:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/6124
+	KongCustomEntity = "KongCustomEntity"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -73,5 +80,6 @@ func GetFeatureGatesDefaults() FeatureGates {
 		KongServiceFacade:          false,
 		SanitizeKonnectConfigDumps: true,
 		FallbackConfiguration:      false,
+		KongCustomEntity:           false,
 	}
 }

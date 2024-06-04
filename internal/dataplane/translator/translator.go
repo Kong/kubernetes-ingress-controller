@@ -201,6 +201,12 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 
 	// process custom entities
 	result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider(), t.workspace)
+	// Register successcully translated KCEs to set the status of these KCEs.
+	for _, collection := range result.CustomEntities {
+		for i := range collection.Entities {
+			t.registerSuccessfullyTranslatedObject(collection.Entities[i].K8sKongCustomEntity)
+		}
+	}
 
 	// generate Certificates and SNIs
 	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)

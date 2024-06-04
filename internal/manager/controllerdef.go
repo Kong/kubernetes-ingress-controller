@@ -297,7 +297,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongCustomEntityEnabled,
+			Enabled: featureGates.Enabled(featuregates.KongCustomEntity) && c.KongCustomEntityEnabled,
 			Controller: &configuration.KongV1Alpha1KongCustomEntityReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongCustomEntity"),

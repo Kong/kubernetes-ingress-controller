@@ -740,7 +740,7 @@ func (ks *KongState) FillCustomEntities(
 		collection := ks.CustomEntities[entity.Spec.EntityType]
 		collection.Entities = append(collection.Entities, CustomEntity{
 			Object:              parsedEntity,
-			k8sKongCustomEntity: entity,
+			K8sKongCustomEntity: entity,
 		})
 	}
 
@@ -804,22 +804,24 @@ func (ks *KongState) fillCustomEntityForeignFields(
 	logger.V(util.DebugLevel).Info("fetch references via plugin", "plugin_key", pluginKey)
 
 	// Traverse through the fields of the entity and fill the "foreign" fields with IDs of referring entities.
-	// Note: this procedure will make referred services'/routes'/consumers' ID to be filled. Should we set `FillIDs` feature gate as a prerequisite?
+	// Note: this procedure will make referred services'/routes'/consumers' ID to be filled.
+	// So it requires the `FillIDs` feature gate to be enabled.
 	for fieldName, field := range schema.Fields {
 		if field.Type != EntityFieldTypeForeign {
 			continue
 		}
 		switch field.Reference {
-		case "services":
+		case string(kong.EntityTypeServices):
 			serviceIDs := getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
 			// TODO: we should generate multile entities if the plugin is attached to multiple services/routes/consumers.
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/6123
 			if len(serviceIDs) > 0 {
 				parsedEntity[fieldName] = map[string]interface{}{
 					"id": serviceIDs[0],
 				}
 				logger.V(util.DebugLevel).Info("added ref to service", "service_id", serviceIDs[0])
 			}
-		case "routes":
+		case string(kong.EntityTypeRoutes):
 			routeIDs := lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
 				if err := r.FillID(workspace); err != nil {
 					return "", false
@@ -832,7 +834,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 				}
 				logger.V(util.DebugLevel).Info("added ref to route", "route_id", routeIDs[0])
 			}
-		case "consumers":
+		case string(kong.EntityTypeConsumers):
 			consumerIDs := lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
 				if err := c.FillID(workspace); err != nil {
 					return "", false

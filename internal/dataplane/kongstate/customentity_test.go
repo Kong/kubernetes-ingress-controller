@@ -119,7 +119,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e1",
 								"key":  "value1",
 							},
-							k8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "aab",
 									Namespace: "bbb",
@@ -131,7 +131,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e2",
 								"key":  "value2",
 							},
-							k8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "bbb",
@@ -143,7 +143,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e3",
 								"key":  "value3",
 							},
-							k8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "aaa",
@@ -161,7 +161,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e3",
 								"key":  "value3",
 							},
-							k8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "aaa",
@@ -173,7 +173,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e1",
 								"key":  "value1",
 							},
-							k8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "aab",
 									Namespace: "bbb",
@@ -185,7 +185,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e2",
 								"key":  "value2",
 							},
-							k8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "bbb",

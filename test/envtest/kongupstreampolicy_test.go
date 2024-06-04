@@ -180,14 +180,17 @@ func TestKongUpstreamPolicyWithoutHTTPRoute(t *testing.T) {
 		defer resp.Body.Close()
 
 		var (
-			config file.Content
-			buff   bytes.Buffer
+			configDump configDumpResponse
+			config     file.Content
+			buff       bytes.Buffer
 		)
 
-		if err := gojson.NewDecoder(io.TeeReader(resp.Body, &buff)).Decode(&config); err != nil {
+		if err := gojson.NewDecoder(io.TeeReader(resp.Body, &buff)).Decode(&configDump); err != nil {
 			t.Logf("WARNING: error while decoding config: %+v, response: %s", err, buff.String())
 			return false
 		}
+
+		config = configDump.Config
 
 		if len(config.Upstreams) != 1 {
 			t.Logf("WARNING: expected 1 upstream in config: %+v", config)

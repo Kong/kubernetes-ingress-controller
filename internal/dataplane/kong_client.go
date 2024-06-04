@@ -790,6 +790,7 @@ func (c *KongClient) sendToClient(
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
+	// TRR this is the point in kongclient where db events maybe happen, but it's not differentiated by strategy here
 	newConfigSHA, err := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,

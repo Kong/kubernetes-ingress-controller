@@ -73,6 +73,7 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
 			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
 			FallbackCacheMetadata: make(chan fallback.GeneratedCacheMetadata, diagnosticConfigBufferDepth),
+			Diffs:                 make(chan ConfigDiff, diagnosticConfigBufferDepth),
 		}
 	}
 

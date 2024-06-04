@@ -30,17 +30,3 @@ spec:
             - name: CONTROLLER_KONNECT_ADDRESS
               value: https://us.kic.api.konghq.tech
           image: kic-placeholder:placeholder
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: proxy-kong
-  namespace: kong
-spec:
-  template:
-    spec:
-      containers:
-        - name: proxy
-          env:
-            - name: KONG_ROUTER_FLAVOR
-              value: traditional_compatible

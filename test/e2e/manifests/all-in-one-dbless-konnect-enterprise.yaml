@@ -3648,8 +3648,6 @@ spec:
       automountServiceAccountToken: false
       containers:
       - env:
-        - name: KONG_ROUTER_FLAVOR
-          value: traditional_compatible
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport
             backlog=16384
@@ -3671,6 +3669,8 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
+        - name: KONG_ROUTER_FLAVOR
+          value: expressions
         image: kong/kong-gateway:3.5
         lifecycle:
           preStop:

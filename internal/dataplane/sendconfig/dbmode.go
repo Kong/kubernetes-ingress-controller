@@ -18,6 +18,7 @@ import (
 	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
@@ -90,7 +91,11 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	go s.handleEvents(ctx, syncer.GetResultChan())
+	// TRR this is where db mode update strat handles events. resultchan is the entityaction channel
+	// TRR targetContent.Hash is the config hash
+	// TRR TODO need to plumb the actual channel from the diag server over here. standin black hole for now
+	diffs := make(chan diagnostics.ConfigDiff, 3)
+	go s.HandleEvents(ctx, syncer.GetResultChan(), diffs, string(targetContent.Hash))
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
@@ -116,10 +121,50 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	return mo.None[int](), nil
 }
 
-// handleEvents handles logging and error reporting for individual entity change events generated during a sync by
+// TRR upstream type
+//// EntityAction describes an entity processed by the diff engine and the action taken on it.
+//type EntityAction struct {
+//	// Action is the ReconcileAction taken on the entity.
+//	Action ReconcileAction `json:"action"` // string
+//	// Entity holds the processed entity.
+//	Entity Entity `json:"entity"`
+//	// Diff is diff string describing the modifications made to an entity.
+//	Diff string `json:"-"`
+//	// Error is the error encountered processing and entity, if any.
+//	Error error `json:"error,omitempty"`
+//}
+//
+//// Entity is an entity processed by the diff engine.
+//type Entity struct {
+//	// Name is the name of the entity.
+//	Name string `json:"name"`
+//	// Kind is the type of entity.
+//	Kind string `json:"kind"`
+//	// Old is the original entity in the current state, if any.
+//	Old any `json:"old,omitempty"`
+//	// New is the new entity in the target state, if any.
+//	New any `json:"new,omitempty"`
+//}
+
+// HandleEvents handles logging and error reporting for individual entity change events generated during a sync by
 // looping over an event channel. It terminates when its context dies.
-func (s *UpdateStrategyDBMode) handleEvents(ctx context.Context, events chan diff.EntityAction) {
+func (s *UpdateStrategyDBMode) HandleEvents(
+	ctx context.Context,
+	events chan diff.EntityAction,
+	diffChan chan diagnostics.ConfigDiff,
+	hash string,
+) {
+	// TRR this is where we get the diff info from deck
 	s.resourceErrorLock.Lock()
+	// TRR TODO this accumulator isn't great since we need to append to the array, which is... probably unsafe? maybe
+	// the for can't actually handle multiple select inbounds at once, but I think it can, and append calls would cause
+	// havoc. can maybe use something from https://pkg.go.dev/sync/atomic to increment a counter, use that as a map key
+	// and then convert the values into a slice for the Done handler. otherwise this would need to send individual
+	// EntityDiffs down a channel to the diag server, which seems less than ideal
+	diff := diagnostics.ConfigDiff{
+		Hash:     hash,
+		Entities: []diagnostics.EntityDiff{},
+	}
 	for {
 		select {
 		case event := <-events:

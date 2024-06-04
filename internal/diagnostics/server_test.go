@@ -11,7 +11,6 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
@@ -47,9 +46,9 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 		failed := false
 		for i := 0; i < configDumpsToWrite; i++ {
 			failed = !failed // Toggle failed flag.
-			configsCh <- util.ConfigDump{
+			configsCh <- ConfigDump{
 				Config:          file.Content{},
-				Failed:          failed,
+				Meta:            DumpMeta{Failed: failed},
 				RawResponseBody: []byte("fake error body"),
 			}
 		}

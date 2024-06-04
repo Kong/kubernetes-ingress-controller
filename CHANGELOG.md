@@ -102,6 +102,13 @@ Adding a new version? You'll need three changes:
   performance benefits, however, so labeling plugin configuration Secrets and
   enabling the filter is recommended as soon as is convenient.
   [#5856](https://github.com/Kong/kubernetes-ingress-controller/pull/5856)
+- The `/debug/config/failed` and `/debug/config/successful` diagnostic
+  endpoints now nest configuration dumps under a `config` key. These endpoints
+  previously returned the configuration dump at the root. They now return
+  additional metadata along with the configuration. This change should not
+  impact normal usage, but if you scrape these endpoints, be aware that their
+  output format has changed.
+  [#6101](https://github.com/Kong/kubernetes-ingress-controller/pull/6101)
 
 ### Added
 

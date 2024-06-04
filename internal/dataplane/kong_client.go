@@ -34,6 +34,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -102,7 +103,7 @@ type KongClient struct {
 
 	// diagnostic is the client and configuration for reporting diagnostic
 	// information during data-plane update runtime.
-	diagnostic util.ConfigDumpDiagnostic
+	diagnostic diagnostics.ConfigDumpDiagnostic
 
 	// prometheusMetrics is the client for shipping metrics information
 	// updates to the prometheus exporter.
@@ -175,6 +176,9 @@ type KongClient struct {
 	// While lastProcessedSnapshotHash keeps track of the last processed cache snapshot (the one kept in KongClient.cache),
 	// lastValidCacheSnapshot can also represent the fallback cache snapshot that was successfully synced with gateways.
 	lastValidCacheSnapshot store.CacheStores
+
+	// brokenObjects is a list of the Kubernetes resources that failed to sync and triggered a fallback sync.
+	brokenObjects []fallback.ObjectHash
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -182,7 +186,7 @@ type KongClient struct {
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	diagnostic util.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode dpconf.DBMode,
@@ -553,6 +557,10 @@ func (c *KongClient) tryRecoveringFromGatewaysSyncError(
 	return nil
 }
 
+func (c *KongClient) cacheBrokenObjectList(list []fallback.ObjectHash) {
+	c.brokenObjects = list
+}
+
 // tryRecoveringWithFallbackConfiguration tries to recover from a configuration rejection by generating a fallback
 // configuration excluding affected objects from the cache.
 func (c *KongClient) tryRecoveringWithFallbackConfiguration(
@@ -587,6 +595,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	}
 
 	const isFallback = true
+	c.cacheBrokenObjectList(brokenObjects)
 	_, gatewaysSyncErr = c.sendOutToGatewayClients(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
 	if gatewaysSyncErr != nil {
 		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", gatewaysSyncErr)
@@ -768,7 +777,7 @@ func (c *KongClient) sendToClient(
 		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, c.brokenObjects)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -805,14 +814,14 @@ func (c *KongClient) sendToClient(
 		if errors.As(err, &responseParsingErr) {
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
-		sendDiagnostic(true, rawResponseBody)
+		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {
 			logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
 	}
-	sendDiagnostic(false, nil) // No error occurred.
+	sendDiagnostic(diagnostics.DumpMeta{Failed: false, Hash: string(newConfigSHA)}, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
 
@@ -832,21 +841,22 @@ func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
 
-type sendDiagnosticFn func(failed bool, raw []byte)
+type sendDiagnosticFn func(meta diagnostics.DumpMeta, raw []byte)
 
 // prepareSendDiagnosticFn generates sendDiagnosticFn.
 // Diagnostics are sent only when provided diagnostic config (--dump-config) is set.
 func prepareSendDiagnosticFn(
 	ctx context.Context,
 	logger logr.Logger,
-	diagnosticConfig util.ConfigDumpDiagnostic,
+	diagnosticConfig diagnostics.ConfigDumpDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
+	broken []fallback.ObjectHash,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (util.ConfigDumpDiagnostic{}) {
+	if diagnosticConfig == (diagnostics.ConfigDumpDiagnostic{}) {
 		// noop, diagnostics won't be sent
-		return func(bool, []byte) {}
+		return func(diagnostics.DumpMeta, []byte) {}
 	}
 
 	var config *file.Content
@@ -861,7 +871,7 @@ func prepareSendDiagnosticFn(
 		config = redactedConfig
 	}
 
-	return func(failed bool, rawResponseBody []byte) {
+	return func(meta diagnostics.DumpMeta, rawResponseBody []byte) {
 		// Given that we can send multiple configs to this channel and
 		// the fact that the API that exposes that can only expose 1 config
 		// at a time it means that users utilizing the diagnostics API
@@ -869,12 +879,34 @@ func prepareSendDiagnosticFn(
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
 		select {
-		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, RawResponseBody: rawResponseBody}:
+		case diagnosticConfig.Configs <- diagnostics.ConfigDump{
+			Meta: diagnostics.DumpMeta{
+				Failed:          meta.Failed,
+				Fallback:        len(broken) != 0,
+				AffectedObjects: hashToAffected(broken),
+			},
+			Config:          *config,
+			RawResponseBody: rawResponseBody,
+		}:
 			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")
 		}
 	}
+}
+
+func hashToAffected(objs []fallback.ObjectHash) []diagnostics.AffectedObject {
+	affected := make([]diagnostics.AffectedObject, len(objs))
+	for i, obj := range objs {
+		affected[i] = diagnostics.AffectedObject{
+			UID:       obj.UID,
+			Group:     obj.Group,
+			Kind:      obj.Kind,
+			Namespace: obj.Namespace,
+			Name:      obj.Name,
+		}
+	}
+	return affected
 }
 
 // triggerKubernetesObjectReport will update the KongClient with a set which

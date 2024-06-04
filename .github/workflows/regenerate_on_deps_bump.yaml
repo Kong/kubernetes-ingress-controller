@@ -22,6 +22,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: regenerate
         run: make manifests
 

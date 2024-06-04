@@ -29,9 +29,13 @@ jobs:
       - name: regenerate
         run: make manifests
 
+      - name: Set github url and credentials
+        run: |
+          /usr/bin/git config --global --add url."https://${{ secrets.K8S_TEAM_BOT_GH_PAT }}:x-oauth-basic@github".insteadOf ssh://git@github
+          /usr/bin/git config --global --add url."https://${{ secrets.K8S_TEAM_BOT_GH_PAT }}:x-oauth-basic@github".insteadOf https://github
+          /usr/bin/git config --global --add url."https://${{ secrets.K8S_TEAM_BOT_GH_PAT }}:x-oauth-basic@github".insteadOf git@github
+
       - name: commit and push (if changes detected)
-        env:
-          GITHUB_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@users.noreply.github.com"

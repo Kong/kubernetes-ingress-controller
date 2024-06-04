@@ -53,13 +53,6 @@ type AdminAPIHandler struct {
 	// responding to a `POST /config` request.
 	configPostErrorBody []byte
 
-	// configPostErrorOnlyOnFirstRequest is a flag that indicates whether the error should be returned only on the first
-	// request to `POST /config`.
-	configPostErrorOnlyOnFirstRequest bool
-
-	// configPostCalled is a flag that indicates whether the `POST /config` endpoint was called.
-	configPostCalled bool
-
 	// rootResponse is the response body served by the admin API root "GET /" endpoint.
 	rootResponse []byte
 }
@@ -104,12 +97,6 @@ func WithConfigPostError(errorbody []byte) AdminAPIHandlerOpt {
 func WithRoot(response []byte) AdminAPIHandlerOpt {
 	return func(h *AdminAPIHandler) {
 		h.rootResponse = response
-	}
-}
-
-func WithConfigPostErrorOnlyOnFirstRequest() AdminAPIHandlerOpt {
-	return func(h *AdminAPIHandler) {
-		h.configPostErrorOnlyOnFirstRequest = true
 	}
 }
 
@@ -190,8 +177,7 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 			}
 
 		case http.MethodPost:
-			firstRequestErrorAlreadyReturned := h.configPostErrorOnlyOnFirstRequest && h.configPostCalled
-			if h.configPostErrorBody != nil && !firstRequestErrorAlreadyReturned {
+			if h.configPostErrorBody != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write(h.configPostErrorBody)
 			} else {
@@ -200,7 +186,6 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 				h.t.Logf("got config: %v", string(b))
 				h.config = b
 			}
-			h.configPostCalled = true
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 		}

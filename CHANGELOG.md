@@ -155,17 +155,6 @@ Adding a new version? You'll need three changes:
 - Added `FallbackKongConfigurationSucceeded`, `FallbackKongConfigurationTranslationFailed` and
   `FallbackKongConfigurationApplyFailed` Kubernetes Events to report the status of the fallback configuration.
   [#6099](https://github.com/Kong/kubernetes-ingress-controller/pull/6099)
-- Added Prometheus metrics covering `FallbackConfiguration` feature: 
-  - `ingress_controller_fallback_translation_count`
-  - `ingress_controller_fallback_translation_broken_resource_count`
-  - `ingress_controller_fallback_configuration_push_count`
-  - `ingress_controller_fallback_configuration_push_last`
-  - `ingress_controller_fallback_configuration_push_duration_milliseconds`
-  - `ingress_controller_fallback_configuration_push_broken_resource_count`
-  - `ingress_controller_fallback_cache_generating_duration_milliseconds`
-  - `ingress_controller_processed_config_snapshot_cache_hit`
-  - `ingress_controller_processed_config_snapshot_cache_miss`
-  [#6105](https://github.com/Kong/kubernetes-ingress-controller/pull/6105)
 - Add support for Kubernetes Gateway API v1.1:
   - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
   - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.

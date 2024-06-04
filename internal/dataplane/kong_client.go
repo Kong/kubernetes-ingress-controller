@@ -450,12 +450,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// Empty snapshot hash means that the cache hasn't changed since the last snapshot was taken. That optimization can be used
 		// in main code path to avoid unnecessary processing. TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6095
 		if newSnapshotHash == store.SnapshotHashEmpty {
-			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheHit()
 			c.logger.V(util.DebugLevel).Info("No configuration change; pushing config to gateway is not necessary, skipping")
 			return nil
 		}
-
-		c.prometheusMetrics.RecordProcessedConfigSnapshotCacheMiss()
 		c.lastProcessedSnapshotHash = newSnapshotHash
 		c.kongConfigBuilder.UpdateCache(cacheSnapshot)
 	}
@@ -586,13 +583,11 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 
 	if failuresCount := len(fallbackParsingResult.TranslationFailures); failuresCount > 0 {
 		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
-		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(failuresCount)
-		c.prometheusMetrics.RecordFallbackTranslationFailure()
 		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
-	} else {
-		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(0)
-		c.prometheusMetrics.RecordFallbackTranslationSuccess()
 	}
+
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6082
+	// Expose Prometheus metrics for fallback configuration parsing result.
 
 	const isFallback = true
 	c.cacheBrokenObjectList(brokenObjects)
@@ -617,11 +612,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 func (c *KongClient) generateFallbackCache(
 	currentCache store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
-) (s store.CacheStores, err error) {
-	start := time.Now()
-	defer func() {
-		c.prometheusMetrics.RecordFallbackCacheGenerationDuration(time.Since(start), err)
-	}()
+) (store.CacheStores, error) {
 	if c.kongConfig.UseLastValidConfigForFallback {
 		return c.fallbackConfigGenerator.GenerateBackfillingBrokenObjects(
 			currentCache,
@@ -791,7 +782,6 @@ func (c *KongClient) sendToClient(
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,
-		isFallback,
 	)
 	// Only record events on applying configuration to Kong gateway here.
 	// Nil error is expected to be passed to indicate success.

@@ -71,6 +71,10 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 				return r.Log
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
+			// In order to get up to date Admin API endpoints in all KIC replicas, we need to
+			// not require leader election so that AdminAPI controller runs in all replicas
+			// and notifies about the changes regardless of the leader election status.
+			NeedLeaderElection: lo.ToPtr(false),
 		}).
 		Watches(&discoveryv1.EndpointSlice{},
 			&handler.EnqueueRequestForObject{},

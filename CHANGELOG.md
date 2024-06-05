@@ -207,6 +207,9 @@ Adding a new version? You'll need three changes:
 - Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
   those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
   [6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
+- Fixed KIC non leaders correctly getting up to date Admin API addresses by not
+  requiring leader election for the related controller.
+  [6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
 
 ### Changed
 

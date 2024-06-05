@@ -30,16 +30,6 @@ func GenerateSHA(targetContent *file.Content, customEntities map[string][]map[st
 	return shaSum[:], nil
 }
 
-func GenerateSHAForCustomEntities(entities map[string][]map[string]interface{}) ([]byte, error) {
-	jsonConfig, err := gojson.Marshal(entities)
-	if err != nil {
-		return nil, fmt.Errorf("marshaling Kong custom entities to JSON: %w", err)
-	}
-
-	shaSum := sha256.Sum256(jsonConfig)
-	return shaSum[:], nil
-}
-
 // GetFCertificateFromKongCert converts a kong.Certificate to a file.FCertificate.
 func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate

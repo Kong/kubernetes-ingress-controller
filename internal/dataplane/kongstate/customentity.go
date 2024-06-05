@@ -100,19 +100,21 @@ func ExtractEntityFieldDefinitions(schema kong.Schema) EntitySchema {
 
 // IsKnownEntityType returns true if the entities of the type are "standard" and processed elsewhere in KIC.
 func IsKnownEntityType(entityType string) bool {
-	// Types of standard Kong entities that are processed elsewhere in KIC.
-	// So the entities cannot be specified via KongCustomEntity types.
-	knownEntities := map[kong.EntityType]struct{}{
-		kong.EntityTypeServices:       {},
-		kong.EntityTypeRoutes:         {},
-		kong.EntityTypeUpstreams:      {},
-		kong.EntityTypeTargets:        {},
-		kong.EntityTypeConsumers:      {},
-		kong.EntityTypeConsumerGroups: {},
-		kong.EntityTypePlugins:        {},
+	switch entityType {
+	case
+		// Types of standard Kong entities that are processed elsewhere in KIC.
+		// So the entities cannot be specified via KongCustomEntity types.
+		string(kong.EntityTypeServices),
+		string(kong.EntityTypeRoutes),
+		string(kong.EntityTypeUpstreams),
+		string(kong.EntityTypeTargets),
+		string(kong.EntityTypeConsumers),
+		string(kong.EntityTypeConsumerGroups),
+		string(kong.EntityTypePlugins):
+		return true
+	default:
+		return false
 	}
-	_, ok := knownEntities[kong.EntityType(entityType)]
-	return ok
 }
 
 // KongCustomEntityCollection is a collection of custom Kong entities with the same type.

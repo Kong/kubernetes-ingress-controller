@@ -777,7 +777,7 @@ func (c *KongClient) sendToClient(
 		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
-	customEntities := make(map[string][]map[string]any)
+	customEntities := make(sendconfig.CustomEntitiesByType)
 	for entityType, collection := range s.CustomEntities {
 		for _, entity := range collection.Entities {
 			customEntities[entityType] = append(customEntities[entityType], entity.Object)

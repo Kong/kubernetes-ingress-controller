@@ -12,10 +12,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
+// CustomEntitiesByType stores all custom entities by types.
+// The key is the type of the entity,
+// and the corresponding slice stores the sorted list of custom entities with that type.
+type CustomEntitiesByType map[string][]map[string]any
+
 // ContentWithHash encapsulates file.Content along with its precalculated hash.
 type ContentWithHash struct {
 	Content        *file.Content
-	CustomEntities map[string][]map[string]interface{}
+	CustomEntities CustomEntitiesByType
 	Hash           []byte
 }
 

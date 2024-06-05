@@ -41,7 +41,7 @@ func PerformUpdate(
 	client AdminAPIClient,
 	config Config,
 	targetContent *file.Content,
-	customEntities map[string][]map[string]interface{},
+	customEntities CustomEntitiesByType,
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,

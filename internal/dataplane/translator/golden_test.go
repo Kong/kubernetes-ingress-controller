@@ -50,6 +50,12 @@ const (
 	settingsFileSuffix = "_settings.yaml"
 )
 
+type fakeSchemaServiceProvier struct{}
+
+func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
+	return translator.UnavailableSchemaService{}
+}
+
 // TestTranslator_GoldenTests runs the golden tests for the translator.
 //
 // Command to update the golden files:
@@ -224,7 +230,7 @@ func runTranslatorGoldenTest(t *testing.T, tc translatorGoldenTestCase) {
 
 	// Create the translator.
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, func() kong.AbstractSchemaService { return nil })
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{})
 	require.NoError(t, err, "failed creating translator")
 
 	// MustBuild the Kong configuration.

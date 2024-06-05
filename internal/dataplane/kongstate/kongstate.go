@@ -813,7 +813,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 		switch field.Reference {
 		case string(kong.EntityTypeServices):
 			serviceIDs := getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
-			// TODO: we should generate multile entities if the plugin is attached to multiple services/routes/consumers.
+			// TODO: we should generate multiple entities if the plugin is attached to multiple services/routes/consumers.
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/6123
 			if len(serviceIDs) > 0 {
 				parsedEntity[fieldName] = map[string]interface{}{

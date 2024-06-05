@@ -49,6 +49,9 @@ type FeatureFlags struct {
 
 	// KongServiceFacade indicates whether we should support KongServiceFacades as Ingress backends.
 	KongServiceFacade bool
+
+	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
+	KongCusotomEntity bool
 }
 
 func NewFeatureFlags(
@@ -64,7 +67,13 @@ func NewFeatureFlags(
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
+		KongCusotomEntity:                 featureGates.Enabled(featuregates.KongCustomEntity),
 	}
+}
+
+// SchemaServiceProvider returns a kong schema service required for translating custom entities.
+type SchemaServiceProvider interface {
+	GetSchemaService() kong.AbstractSchemaService
 }
 
 // Translator translates Kubernetes objects and configurations into their
@@ -78,9 +87,7 @@ type Translator struct {
 	featureFlags  FeatureFlags
 
 	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
-	// Actually we only need the `Get()` method to fetch the schema of a certain entity type,
-	// So maybe we should define another interface inside `kongstate` package to omit methods we do not require here?
-	schemaServiceProvider func() kong.AbstractSchemaService
+	schemaServiceProvider SchemaServiceProvider
 
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
@@ -93,7 +100,7 @@ func NewTranslator(
 	storer store.Storer,
 	workspace string,
 	featureFlags FeatureFlags,
-	schemaServiceProvider func() kong.AbstractSchemaService,
+	schemaServiceProvider SchemaServiceProvider,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -200,11 +207,13 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// process custom entities
-	result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider(), t.workspace)
-	// Register successcully translated KCEs to set the status of these KCEs.
-	for _, collection := range result.CustomEntities {
-		for i := range collection.Entities {
-			t.registerSuccessfullyTranslatedObject(collection.Entities[i].K8sKongCustomEntity)
+	if t.featureFlags.KongCusotomEntity {
+		result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
+		// Register successcully translated KCEs to set the status of these KCEs.
+		for _, collection := range result.CustomEntities {
+			for i := range collection.Entities {
+				t.registerSuccessfullyTranslatedObject(collection.Entities[i].K8sKongCustomEntity)
+			}
 		}
 	}
 

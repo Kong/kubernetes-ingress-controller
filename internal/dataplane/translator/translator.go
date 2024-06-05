@@ -51,7 +51,7 @@ type FeatureFlags struct {
 	KongServiceFacade bool
 
 	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
-	KongCusotomEntity bool
+	KongCustomEntity bool
 }
 
 func NewFeatureFlags(
@@ -67,7 +67,7 @@ func NewFeatureFlags(
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
-		KongCusotomEntity:                 featureGates.Enabled(featuregates.KongCustomEntity),
+		KongCustomEntity:                  featureGates.Enabled(featuregates.KongCustomEntity),
 	}
 }
 
@@ -207,7 +207,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// process custom entities
-	if t.featureFlags.KongCusotomEntity {
+	if t.featureFlags.KongCustomEntity {
 		result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
 		// Register successcully translated KCEs to set the status of these KCEs.
 		for _, collection := range result.CustomEntities {

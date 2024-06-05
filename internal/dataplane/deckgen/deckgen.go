@@ -8,11 +8,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong/custom"
 )
 
 // GenerateSHA generates a SHA256 checksum of targetContent, with the purpose
 // of change detection.
-func GenerateSHA(targetContent *file.Content, customEntities map[string][]map[string]any) ([]byte, error) {
+func GenerateSHA(targetContent *file.Content, customEntities map[string][]custom.Object) ([]byte, error) {
 	jsonConfig, err := gojson.Marshal(targetContent)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)

@@ -127,18 +127,8 @@ func ensureGoldenTestOutputIsAccepted(
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		err, resourceErrors, rawErrBody, parseErr := sut.Update(ctx, sendconfig.ContentWithHash{Content: content})
-		if err != nil {
+		if err := sut.Update(ctx, sendconfig.ContentWithHash{Content: content}); err != nil {
 			t.Logf("error: %v", err)
-			return false
-		}
-		if len(resourceErrors) > 0 {
-			t.Logf("resource errors: %v", resourceErrors)
-			return false
-		}
-		if parseErr != nil {
-			t.Logf("parse error: %v", parseErr)
-			t.Logf("raw error: %v", rawErrBody)
 			return false
 		}
 		return true

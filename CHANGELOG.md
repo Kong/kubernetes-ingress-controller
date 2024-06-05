@@ -105,6 +105,13 @@ Adding a new version? You'll need three changes:
 - Dynamically set the proxy protocol of GRPCRoute to `grpc` or `grpcs` based on the port listened by Gateway.
   If you don't set the protocol for Service via "konghq.com/protocol" annotation, Kong will use `grpc` instead of `grpcs`.
   [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)
+- The `/debug/config/failed` and `/debug/config/successful` diagnostic
+  endpoints now nest configuration dumps under a `config` key. These endpoints
+  previously returned the configuration dump at the root. They now return
+  additional metadata along with the configuration. This change should not
+  impact normal usage, but if you scrape these endpoints, be aware that their
+  output format has changed.
+  [#6101](https://github.com/Kong/kubernetes-ingress-controller/pull/6101)
 
 ### Added
 
@@ -144,7 +151,24 @@ Adding a new version? You'll need three changes:
   [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)
   [#6010](https://github.com/Kong/kubernetes-ingress-controller/pull/6010)
   [#6047](https://github.com/Kong/kubernetes-ingress-controller/pull/6047)
-  
+  [#6071](https://github.com/Kong/kubernetes-ingress-controller/pull/6071)
+- Added `--use-last-valid-config-for-fallback` CLI flag to enable using the last valid configuration cache
+  to backfill excluded broken objects when the `FallbackConfiguration` feature gate is enabled.
+  [#6098](https://github.com/Kong/kubernetes-ingress-controller/pull/6098)
+- Added `FallbackKongConfigurationSucceeded`, `FallbackKongConfigurationTranslationFailed` and
+  `FallbackKongConfigurationApplyFailed` Kubernetes Events to report the status of the fallback configuration.
+  [#6099](https://github.com/Kong/kubernetes-ingress-controller/pull/6099)
+- Added Prometheus metrics covering `FallbackConfiguration` feature: 
+  - `ingress_controller_fallback_translation_count`
+  - `ingress_controller_fallback_translation_broken_resource_count`
+  - `ingress_controller_fallback_configuration_push_count`
+  - `ingress_controller_fallback_configuration_push_last`
+  - `ingress_controller_fallback_configuration_push_duration_milliseconds`
+  - `ingress_controller_fallback_configuration_push_broken_resource_count`
+  - `ingress_controller_fallback_cache_generating_duration_milliseconds`
+  - `ingress_controller_processed_config_snapshot_cache_hit`
+  - `ingress_controller_processed_config_snapshot_cache_miss`
+  [#6105](https://github.com/Kong/kubernetes-ingress-controller/pull/6105)
 - Add support for Kubernetes Gateway API v1.1:
   - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
   - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.
@@ -183,6 +207,14 @@ Adding a new version? You'll need three changes:
   [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
 - Redacted values no longer cause collisions in configuration reported to Konnect.
   [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+- The `--dump-sensitive-config` flag is no longer backwards.
+  [6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
+- Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
+  those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
+  [6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
+- Fixed KIC non leaders correctly getting up to date Admin API addresses by not
+  requiring leader election for the related controller.
+  [6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
 
 ### Changed
 

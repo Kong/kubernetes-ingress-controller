@@ -23,23 +23,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -169,16 +174,15 @@ func (p mockGatewayClientsProvider) GatewayClientsToConfigure() []*adminapi.Clie
 type mockUpdateStrategyResolver struct {
 	updateCalledForURLs       []string
 	lastUpdatedContentForURLs map[string]sendconfig.ContentWithHash
-	shouldReturnErrorOnUpdate map[string]struct{}
+	errorsToReturnOnUpdate    map[string][]error
 	t                         *testing.T
 	lock                      sync.RWMutex
-	singleError               bool
 }
 
 func newMockUpdateStrategyResolver(t *testing.T) *mockUpdateStrategyResolver {
 	return &mockUpdateStrategyResolver{
 		t:                         t,
-		shouldReturnErrorOnUpdate: map[string]struct{}{},
+		errorsToReturnOnUpdate:    map[string][]error{},
 		lastUpdatedContentForURLs: map[string]sendconfig.ContentWithHash{},
 	}
 }
@@ -188,47 +192,58 @@ func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateCl
 	defer f.lock.Unlock()
 
 	url := c.AdminAPIClient().BaseRootURL()
-	return &mockUpdateStrategy{onUpdate: f.updateCalledForURLCallback(url, f.singleError)}
+	return &mockUpdateStrategy{onUpdate: f.updateCalledForURLCallback(url)}
 }
 
 // returnErrorOnUpdate will cause the mockUpdateStrategy with a given Admin API URL to return an error on Update().
-func (f *mockUpdateStrategyResolver) returnErrorOnUpdate(url string, shouldReturnErr bool) {
+// Errors will be returned following FIFO order. Each call to this function adds a new error to the queue.
+func (f *mockUpdateStrategyResolver) returnErrorOnUpdate(url string) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	if shouldReturnErr {
-		f.shouldReturnErrorOnUpdate[url] = struct{}{}
-	} else {
-		delete(f.shouldReturnErrorOnUpdate, url)
-	}
+	f.errorsToReturnOnUpdate[url] = append(f.errorsToReturnOnUpdate[url], errors.New("error on update"))
+}
+
+// returnSpecificErrorOnUpdate will cause the mockUpdateStrategy with a given Admin API URL to return a specific error
+// on Update() call. Errors will be returned following FIFO order. Each call to this function adds a new error to the queue.
+func (f *mockUpdateStrategyResolver) returnSpecificErrorOnUpdate(url string, err error) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	f.errorsToReturnOnUpdate[url] = append(f.errorsToReturnOnUpdate[url], err)
 }
 
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
 // That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string, singleError bool) func(sendconfig.ContentWithHash) error {
+func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) error {
 	return func(content sendconfig.ContentWithHash) error {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
 		f.updateCalledForURLs = append(f.updateCalledForURLs, url)
-		if _, ok := f.shouldReturnErrorOnUpdate[url]; ok {
-			if singleError {
-				delete(f.shouldReturnErrorOnUpdate, url)
-			}
-			return errors.New("error on update")
-		}
 		f.lastUpdatedContentForURLs[url] = content
+		if errsToReturn, ok := f.errorsToReturnOnUpdate[url]; ok {
+			if len(errsToReturn) > 0 {
+				err := errsToReturn[0]
+				f.errorsToReturnOnUpdate[url] = errsToReturn[1:]
+				return err
+			}
+			return nil
+		}
 
 		return nil
 	}
 }
 
 // assertUpdateCalledForURLs asserts that the mockUpdateStrategy was called for the given URLs.
-func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLs(urls []string) {
+func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLs(urls []string, msgAndArgs ...any) {
 	f.lock.RLock()
 	defer f.lock.RUnlock()
 
-	require.ElementsMatch(f.t, urls, f.updateCalledForURLs, "update was not called for all URLs")
+	if len(msgAndArgs) == 0 {
+		msgAndArgs = []any{"update was not called for all URLs"}
+	}
+	require.ElementsMatch(f.t, urls, f.updateCalledForURLs, msgAndArgs...)
 }
 
 func (f *mockUpdateStrategyResolver) assertNoUpdateCalled() {
@@ -250,14 +265,8 @@ type mockUpdateStrategy struct {
 	onUpdate func(content sendconfig.ContentWithHash) error
 }
 
-func (m *mockUpdateStrategy) Update(_ context.Context, content sendconfig.ContentWithHash) (
-	err error,
-	resourceErrors []sendconfig.ResourceError,
-	rawErrBody []byte,
-	resourceErrorsParseErr error,
-) {
-	err = m.onUpdate(content)
-	return err, nil, nil, nil
+func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (err error) {
+	return m.onUpdate(targetContent)
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
@@ -278,6 +287,35 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 	context.Context, []byte, []byte, *file.Content, sendconfig.KonnectAwareClient, sendconfig.StatusClient,
 ) (bool, error) {
 	return m.hasConfigurationChanged, nil
+}
+
+// mockKongLastValidConfigFetcher is a mock implementation of FallbackConfigGenerator interface.
+type mockFallbackConfigGenerator struct {
+	GenerateResult store.CacheStores
+
+	GenerateExcludingBrokenObjectsCalledWith   lo.Tuple2[store.CacheStores, []fallback.ObjectHash]
+	GenerateBackfillingBrokenObjectsCalledWith lo.Tuple3[store.CacheStores, store.CacheStores, []fallback.ObjectHash]
+}
+
+func newMockFallbackConfigGenerator() *mockFallbackConfigGenerator {
+	return &mockFallbackConfigGenerator{}
+}
+
+func (m *mockFallbackConfigGenerator) GenerateExcludingBrokenObjects(
+	stores store.CacheStores,
+	hashes []fallback.ObjectHash,
+) (store.CacheStores, error) {
+	m.GenerateExcludingBrokenObjectsCalledWith = lo.T2(stores, hashes)
+	return m.GenerateResult, nil
+}
+
+func (m *mockFallbackConfigGenerator) GenerateBackfillingBrokenObjects(
+	currentStores store.CacheStores,
+	lastValidStores store.CacheStores,
+	brokenObjects []fallback.ObjectHash,
+) (store.CacheStores, error) {
+	m.GenerateBackfillingBrokenObjectsCalledWith = lo.T3(currentStores, lastValidStores, brokenObjects)
+	return m.GenerateResult, nil
 }
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
@@ -351,7 +389,7 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 			}
 			updateStrategyResolver := newMockUpdateStrategyResolver(t)
 			for _, url := range tc.errorOnUpdateForURLs {
-				updateStrategyResolver.returnErrorOnUpdate(url, true)
+				updateStrategyResolver.returnErrorOnUpdate(url)
 			}
 			// always return true for HasConfigurationChanged to trigger an update
 			configChangeDetector := mockConfigurationChangeDetector{
@@ -427,7 +465,13 @@ func (m *mockConfigStatusQueue) Notifications() []clients.ConfigStatus {
 type mockKongConfigBuilder struct {
 	translationFailuresToReturn []failures.ResourceFailure
 	kongState                   *kongstate.KongState
-	updateCacheCalled           bool
+	updateCacheCalls            []store.CacheStores
+
+	// onlyFirstCallWithNoTranslationFailures is used to simulate a scenario where the first call to the
+	// KongConfigBuilder has no translation failures, but subsequent calls do (e.g. to trigger translation failures in
+	// fallback configuration).
+	onlyFirstBuildCallWithNoTranslationFailures bool
+	buildCalled                                 bool
 }
 
 func newMockKongConfigBuilder() *mockKongConfigBuilder {
@@ -437,18 +481,21 @@ func newMockKongConfigBuilder() *mockKongConfigBuilder {
 }
 
 func (p *mockKongConfigBuilder) BuildKongConfig() translator.KongConfigBuildingResult {
+	if p.onlyFirstBuildCallWithNoTranslationFailures && !p.buildCalled {
+		p.buildCalled = true
+		return translator.KongConfigBuildingResult{
+			KongState:           p.kongState,
+			TranslationFailures: nil,
+		}
+	}
 	return translator.KongConfigBuildingResult{
 		KongState:           p.kongState,
 		TranslationFailures: p.translationFailuresToReturn,
 	}
 }
 
-func (p *mockKongConfigBuilder) UpdateCache(store.CacheStores) {
-	p.updateCacheCalled = true
-}
-
-func (p *mockKongConfigBuilder) IngressClassName() string {
-	return "kong"
+func (p *mockKongConfigBuilder) UpdateCache(s store.CacheStores) {
+	p.updateCacheCalls = append(p.updateCacheCalls, s)
 }
 
 func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
@@ -472,6 +519,11 @@ func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
 	}
 }
 
+func (p *mockKongConfigBuilder) returnTranslationFailuresForAllButFirstCall(failures []failures.ResourceFailure) {
+	p.onlyFirstBuildCallWithNoTranslationFailures = true
+	p.translationFailuresToReturn = failures
+}
+
 func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 	var (
 		ctx               = context.Background()
@@ -483,72 +535,70 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 			konnectClient:  testKonnectClient,
 		}
 
-		updateStrategyResolver = newMockUpdateStrategyResolver(t)
-		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
-		configBuilder          = newMockKongConfigBuilder()
-		kongRawStateGetter     = &mockKongLastValidConfigFetcher{}
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+		configChangeDetector = mockConfigurationChangeDetector{hasConfigurationChanged: true}
+		configBuilder        = newMockKongConfigBuilder()
 	)
 
 	testCases := []struct {
-		name                string
-		gatewayFailure      bool
-		konnectFailure      bool
-		translationFailures bool
-		expectedStatus      clients.ConfigStatus
+		name                 string
+		gatewayFailuresCount int
+		konnectFailuresCount int
+		translationFailures  bool
+		expectedStatus       clients.ConfigStatus
 	}{
 		{
 			name:                "success",
-			gatewayFailure:      false,
-			konnectFailure:      false,
 			translationFailures: false,
 			expectedStatus:      clients.ConfigStatusOK,
 		},
 		{
-			name:                "gateway failure",
-			gatewayFailure:      true,
-			konnectFailure:      false,
-			translationFailures: false,
-			expectedStatus:      clients.ConfigStatusApplyFailed,
+			name:                 "gateway failure",
+			gatewayFailuresCount: 2,
+			translationFailures:  false,
+			expectedStatus:       clients.ConfigStatusApplyFailed,
 		},
 		{
 			name:                "translation failures",
-			gatewayFailure:      false,
-			konnectFailure:      false,
 			translationFailures: true,
 			expectedStatus:      clients.ConfigStatusTranslationErrorHappened,
 		},
 		{
-			name:                "konnect failure",
-			gatewayFailure:      false,
-			konnectFailure:      true,
-			translationFailures: false,
-			expectedStatus:      clients.ConfigStatusOKKonnectApplyFailed,
+			name:                 "konnect failure",
+			konnectFailuresCount: 2,
+			translationFailures:  false,
+			expectedStatus:       clients.ConfigStatusOKKonnectApplyFailed,
 		},
 		{
-			name:                "both gateway and konnect failure",
-			gatewayFailure:      true,
-			konnectFailure:      true,
-			translationFailures: false,
-			expectedStatus:      clients.ConfigStatusApplyFailedKonnectApplyFailed,
+			name:                 "both gateway and konnect failure",
+			gatewayFailuresCount: 2,
+			konnectFailuresCount: 2,
+			translationFailures:  false,
+			expectedStatus:       clients.ConfigStatusApplyFailedKonnectApplyFailed,
 		},
 		{
-			name:                "translation failures and konnect failure",
-			gatewayFailure:      false,
-			konnectFailure:      true,
-			translationFailures: true,
-			expectedStatus:      clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
+			name:                 "translation failures and konnect failure",
+			konnectFailuresCount: 2,
+			translationFailures:  true,
+			expectedStatus:       clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Reset the status queue. We want to make sure that the status is always notified.
-			statusQueue := newMockConfigStatusQueue()
-			kongClient.SetConfigStatusNotifier(statusQueue)
+			var (
+				kongRawStateGetter     = &mockKongLastValidConfigFetcher{}
+				updateStrategyResolver = newMockUpdateStrategyResolver(t)
+				statusQueue            = newMockConfigStatusQueue()
+				kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+			)
 
-			updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL(), tc.gatewayFailure)
-			updateStrategyResolver.returnErrorOnUpdate(testKonnectClient.BaseRootURL(), tc.konnectFailure)
+			kongClient.SetConfigStatusNotifier(statusQueue)
+			for range tc.gatewayFailuresCount {
+				updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL())
+			}
+			for range tc.konnectFailuresCount {
+				updateStrategyResolver.returnErrorOnUpdate(testKonnectClient.BaseRootURL())
+			}
 			configBuilder.returnTranslationFailures(tc.translationFailures)
 
 			_ = kongClient.Update(ctx)
@@ -616,6 +666,183 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 				require.NotEmpty(t, eventRecorder.Events())
 			} else {
 				require.Empty(t, eventRecorder.Events())
+			}
+		})
+	}
+}
+
+func TestKongClient_KubernetesEvents(t *testing.T) {
+	t.Setenv("POD_NAMESPACE", "test-namespace")
+	t.Setenv("POD_NAME", "test-pod")
+
+	ctx := context.Background()
+	testGatewayClient := mustSampleGatewayClient(t)
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{testGatewayClient},
+	}
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	testIngress := helpers.WithTypeMeta(t, &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "obj-1",
+			Namespace: "namespace",
+		},
+	})
+	testService := helpers.WithTypeMeta(t, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "obj-2",
+			Namespace: "namespace",
+		},
+	})
+
+	testCases := []struct {
+		name                                     string
+		fallbackConfiguration                    bool
+		translationFailures                      bool
+		updateError                              bool
+		entityErrors                             bool
+		fallbackConfigurationUpdateError         bool
+		fallbackConfigurationTranslationFailures bool
+		expectError                              bool
+		expectEmittingEvents                     []string
+	}{
+		{
+			name:        "successful update",
+			expectError: false,
+			expectEmittingEvents: []string{
+				"Normal KongConfigurationSucceeded",
+			},
+		},
+		{
+			name:                "translation failures",
+			translationFailures: true,
+			expectError:         false,
+			expectEmittingEvents: []string{
+				"Ingress: Warning KongConfigurationTranslationFailed",
+				"Service: Warning KongConfigurationTranslationFailed",
+				"Pod: Normal KongConfigurationSucceeded",
+			},
+		},
+		{
+			name:        "update error",
+			updateError: true,
+			expectError: true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+			},
+		},
+		{
+			name:         "update error with entity errors",
+			updateError:  true,
+			entityErrors: true,
+			expectError:  true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+			},
+		},
+		{
+			name:                  "update error with entity errors, fallback configuration applied",
+			fallbackConfiguration: true,
+			updateError:           true,
+			entityErrors:          true,
+			expectError:           true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+				"Pod: Normal FallbackKongConfigurationSucceeded",
+			},
+		},
+		{
+			name:                             "update error with entity errors, fallback configuration failures",
+			fallbackConfiguration:            true,
+			fallbackConfigurationUpdateError: true,
+			updateError:                      true,
+			entityErrors:                     true,
+			expectError:                      true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+				"Pod: Warning FallbackKongConfigurationApplyFailed",
+				"Ingress: Warning FallbackKongConfigurationApplyFailed",
+			},
+		},
+		{
+			name:                                     "update error with entity errors, fallback translation failures",
+			fallbackConfiguration:                    true,
+			updateError:                              true,
+			entityErrors:                             true,
+			expectError:                              true,
+			fallbackConfigurationTranslationFailures: true,
+			expectEmittingEvents: []string{
+				"Pod: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning KongConfigurationApplyFailed",
+				"Service: Warning KongConfigurationApplyFailed",
+				"Ingress: Warning FallbackKongConfigurationTranslationFailed",
+				"Service: Warning FallbackKongConfigurationTranslationFailed",
+				"Pod: Normal FallbackKongConfigurationSucceeded",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			configBuilder := newMockKongConfigBuilder()
+			eventRecorder := mocks.NewEventRecorder()
+			lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, eventRecorder, lastValidConfigFetcher)
+			kongClient.kongConfig.FallbackConfiguration = tc.fallbackConfiguration
+
+			if tc.translationFailures {
+				configBuilder.translationFailuresToReturn = []failures.ResourceFailure{
+					lo.Must(failures.NewResourceFailure("some reason", testIngress)),
+					lo.Must(failures.NewResourceFailure("some reason", testService)),
+				}
+			}
+			if tc.updateError {
+				if tc.entityErrors {
+					updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateError(
+						[]failures.ResourceFailure{
+							lo.Must(failures.NewResourceFailure("violated constraint", testIngress)),
+							lo.Must(failures.NewResourceFailure("violated constraint", testService)),
+						},
+						errors.New("error on update"),
+					))
+				} else {
+					updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL())
+				}
+			}
+			if tc.updateError && tc.fallbackConfigurationUpdateError {
+				updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateError(
+					[]failures.ResourceFailure{
+						lo.Must(failures.NewResourceFailure("violated constraint", testIngress)),
+					}, errors.New("error on update"),
+				))
+			}
+			if tc.fallbackConfigurationTranslationFailures {
+				configBuilder.returnTranslationFailuresForAllButFirstCall([]failures.ResourceFailure{
+					lo.Must(failures.NewResourceFailure("some reason", testIngress)),
+					lo.Must(failures.NewResourceFailure("some reason", testService)),
+				})
+			}
+
+			err := kongClient.Update(ctx)
+			if tc.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			emittedEvents := eventRecorder.Events()
+			require.Len(t, emittedEvents, len(tc.expectEmittingEvents))
+			for _, expectedEvent := range tc.expectEmittingEvents {
+				containsExpectedEvent := lo.ContainsBy(emittedEvents, func(event string) bool {
+					return strings.Contains(event, expectedEvent)
+				})
+				require.True(t, containsExpectedEvent, "expected event %q not found in %v", expectedEvent, eventRecorder.Events())
 			}
 		})
 	}
@@ -689,7 +916,7 @@ func setupTestKongClient(
 ) *KongClient {
 	logger := zapr.NewLogger(zap.NewNop())
 	timeout := time.Second
-	diagnostic := util.ConfigDumpDiagnostic{}
+	diagnostic := diagnostics.ConfigDumpDiagnostic{}
 	config := sendconfig.Config{
 		SanitizeKonnectConfigDumps: true,
 	}
@@ -711,6 +938,7 @@ func setupTestKongClient(
 		kongRawStateGetter,
 		configBuilder,
 		store.NewCacheStores(),
+		newMockFallbackConfigGenerator(),
 	)
 	require.NoError(t, err)
 	return kongClient
@@ -746,7 +974,6 @@ func mapClientsToUrls(clients mockGatewayClientsProvider) []string {
 type mockKongLastValidConfigFetcher struct {
 	kongRawState  *utils.KongRawState
 	lastKongState *kongstate.KongState
-	status        kong.Status
 }
 
 func (cf *mockKongLastValidConfigFetcher) LastValidConfig() (*kongstate.KongState, bool) {
@@ -778,9 +1005,8 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 			},
 		}
 
-		updateStrategyResolver = newMockUpdateStrategyResolver(t)
-		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
-		lastKongRawState       = &utils.KongRawState{
+		configChangeDetector = mockConfigurationChangeDetector{hasConfigurationChanged: true}
+		lastKongRawState     = &utils.KongRawState{
 			Services: []*kong.Service{
 				{
 					Name: kong.String("last_service"),
@@ -820,9 +1046,8 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 
 	testCases := []struct {
 		name                  string
-		gatewayFailure        bool
 		translationFailures   bool
-		singleError           bool
+		gatewayFailuresCount  int
 		lastValidKongRawState *utils.KongRawState
 		lastKongStatusHash    string
 		expectedLastKongState *kongstate.KongState
@@ -836,16 +1061,14 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 		},
 		{
 			name:                  "no previous state, failure",
-			gatewayFailure:        true,
-			singleError:           true,
+			gatewayFailuresCount:  1,
 			expectedLastKongState: nil,
 			errorsSize:            1,
 			lastKongStatusHash:    sendconfig.WellKnownInitialHash,
 		},
 		{
 			name:                  "previous state, failure, fallback pushed with success",
-			gatewayFailure:        true,
-			singleError:           true,
+			gatewayFailuresCount:  1,
 			lastValidKongRawState: lastKongRawState,
 			expectedLastKongState: lastKongState,
 			errorsSize:            1,
@@ -853,8 +1076,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 		},
 		{
 			name:                  "previous state, failure, fallback pushed with failure",
-			gatewayFailure:        true,
-			singleError:           false,
+			gatewayFailuresCount:  2,
 			lastValidKongRawState: lastKongRawState,
 			expectedLastKongState: lastKongState,
 			errorsSize:            3,
@@ -864,13 +1086,14 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			updateStrategyResolver.returnErrorOnUpdate(clientsProvider.gatewayClients[0].BaseRootURL(), tc.gatewayFailure)
-			updateStrategyResolver.returnErrorOnUpdate(clientsProvider.gatewayClients[1].BaseRootURL(), tc.gatewayFailure)
+			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			for range tc.gatewayFailuresCount {
+				updateStrategyResolver.returnErrorOnUpdate(clientsProvider.gatewayClients[0].BaseRootURL())
+				updateStrategyResolver.returnErrorOnUpdate(clientsProvider.gatewayClients[1].BaseRootURL())
+			}
 
-			updateStrategyResolver.singleError = tc.singleError
 			configChangeDetector.status.ConfigurationHash = tc.lastKongStatusHash
 			kongRawStateGetter := &mockKongLastValidConfigFetcher{
-				status:       configChangeDetector.status,
 				kongRawState: tc.lastValidKongRawState,
 			}
 			kongClient := setupTestKongClient(
@@ -938,19 +1161,219 @@ func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
 	require.Equal(t, "{vault://redacted-value}", *cert.Key, "expected Konnect to have redacted certificate key")
 }
 
-func TestKongClient_FallbackConfiguration(t *testing.T) {
+func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	ctx := context.Background()
+	gwClient := mustSampleGatewayClient(t)
+	konnectClient := mustSampleKonnectClient(t)
 	clientsProvider := mockGatewayClientsProvider{
-		gatewayClients: []*adminapi.Client{mustSampleGatewayClient(t)},
+		gatewayClients: []*adminapi.Client{gwClient},
+		konnectClient:  konnectClient,
+	}
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
+
+	// We'll use KongConsumer as an example of a broken object, but it could be any supported type
+	// for the purpose of this test as the fallback config generator is mocked anyway.
+	someConsumer := func(name string) *kongv1.KongConsumer {
+		return &kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: name,
+		}
+	}
+	validConsumer := someConsumer("valid")
+	brokenConsumer := someConsumer("broken")
+	originalCache := cacheStoresFromObjs(t, validConsumer, brokenConsumer)
+	lastValidCache := cacheStoresFromObjs(t, validConsumer)
+
+	testCases := []struct {
+		name                                             string
+		enableLastValidConfigFallback                    bool
+		expectGenerateExcludingBrokenObjectsCalled       bool
+		expectGenerateBackfillingBrokenObjectsCalledWith bool
+	}{
+		{
+			name:                          "last valid config is disabled",
+			enableLastValidConfigFallback: false,
+			expectGenerateExcludingBrokenObjectsCalled: true,
+		},
+		{
+			name:                          "last valid config is enabled",
+			enableLastValidConfigFallback: true,
+			expectGenerateBackfillingBrokenObjectsCalledWith: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			configBuilder := newMockKongConfigBuilder()
+			fallbackConfigGenerator := newMockFallbackConfigGenerator()
+			kongClient, err := NewKongClient(
+				zapr.NewLogger(zap.NewNop()),
+				time.Second,
+				diagnostics.ConfigDumpDiagnostic{
+					Configs: diagnosticsCh,
+				},
+				sendconfig.Config{
+					FallbackConfiguration:         true,
+					UseLastValidConfigForFallback: tc.enableLastValidConfigFallback,
+				},
+				mocks.NewEventRecorder(),
+				dpconf.DBModeOff,
+				clientsProvider,
+				updateStrategyResolver,
+				configChangeDetector,
+				lastValidConfigFetcher,
+				configBuilder,
+				originalCache,
+				fallbackConfigGenerator,
+			)
+			require.NoError(t, err)
+
+			t.Log("Injecting the last valid cache snapshot to be used for recovery")
+			kongClient.lastValidCacheSnapshot = lastValidCache
+
+			t.Log("Setting update strategy to return an error on the first call to trigger fallback configuration generation")
+			updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
+				[]failures.ResourceFailure{
+					lo.Must(failures.NewResourceFailure("violated constraint", brokenConsumer)),
+				},
+				errors.New("error on update"),
+			))
+
+			t.Log("Setting the config builder to return KongState with the valid consumer only")
+			configBuilder.kongState = &kongstate.KongState{
+				Consumers: []kongstate.Consumer{
+					{
+						Consumer: kong.Consumer{
+							Username: lo.ToPtr(validConsumer.Username),
+						},
+					},
+				},
+			}
+
+			t.Log("Setting the fallback config generator to return a snapshot excluding the broken consumer")
+			fallbackCacheStoresToBeReturned := cacheStoresFromObjs(t, validConsumer)
+			fallbackConfigGenerator.GenerateResult = fallbackCacheStoresToBeReturned
+
+			t.Log("Calling KongClient.Update")
+			err = kongClient.Update(ctx)
+			require.Error(t, err)
+
+			t.Log("Verifying that the config builder cache was updated twice")
+			require.Len(t, configBuilder.updateCacheCalls, 2,
+				"expected cache to be updated with a snapshot twice: first with the initial cache snapshot, then with the fallback one")
+
+			t.Log("Verifying that the first cache update contains both consumers")
+			firstCacheUpdate := configBuilder.updateCacheCalls[0]
+			require.NotEqual(t, originalCache, firstCacheUpdate, "expected cache to be updated with a new snapshot")
+			_, hasConsumer, err := firstCacheUpdate.Consumer.Get(brokenConsumer)
+			require.NoError(t, err)
+			require.True(t, hasConsumer, "expected consumer to be in the first cache snapshot")
+
+			if tc.expectGenerateExcludingBrokenObjectsCalled {
+				t.Log("Verifying that the fallback config generator was called with the first cache snapshot and the broken object hash")
+				expectedGenerateExcludingBrokenObjectsArgs := lo.T2(firstCacheUpdate, []fallback.ObjectHash{fallback.GetObjectHash(brokenConsumer)})
+				require.Equal(t, expectedGenerateExcludingBrokenObjectsArgs, fallbackConfigGenerator.GenerateExcludingBrokenObjectsCalledWith,
+					"expected fallback config generator to be called with the first cache snapshot and the broken object hash")
+
+				require.Empty(t, fallbackConfigGenerator.GenerateBackfillingBrokenObjectsCalledWith)
+			}
+			if tc.expectGenerateBackfillingBrokenObjectsCalledWith {
+				t.Log("Verifying that the fallback config generator was called with the first and last valid cache snapshots and the broken object hash")
+				expectedGenerateBackfillingBrokenObjectsArgs := lo.T3(firstCacheUpdate, lastValidCache, []fallback.ObjectHash{fallback.GetObjectHash(brokenConsumer)})
+				require.Equal(t, expectedGenerateBackfillingBrokenObjectsArgs, fallbackConfigGenerator.GenerateBackfillingBrokenObjectsCalledWith,
+					"expected fallback config generator to be called with the current and last valid cache snapshots and the broken object hash")
+			}
+
+			t.Log("Verifying that the second config builder cache update contains the fallback snapshot")
+			secondCacheUpdate := configBuilder.updateCacheCalls[1]
+			require.Equal(t, fallbackCacheStoresToBeReturned, secondCacheUpdate,
+				"expected cache to be updated with the fallback snapshot on second call")
+
+			t.Log("Verifying that the update strategy was called twice for gateway and Konnect")
+			updateStrategyResolver.assertUpdateCalledForURLs(
+				[]string{
+					gwClient.BaseRootURL(), konnectClient.BaseRootURL(),
+					gwClient.BaseRootURL(), konnectClient.BaseRootURL(),
+				},
+				"expected update to be called twice: first with the initial config, then with the fallback one",
+			)
+
+			t.Log("Verifying that the last valid config is updated with the config excluding the broken consumer")
+			lastValidConfig, ok := lastValidConfigFetcher.LastValidConfig()
+			require.True(t, ok)
+			require.Len(t, lastValidConfig.Consumers, 1)
+			require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
+		})
+	}
+
+	t.Log("Verifying that the last valid config is updated with the config excluding the broken consumer")
+	lastValidConfig, _ := lastValidConfigFetcher.LastValidConfig()
+	require.Len(t, lastValidConfig.Consumers, 1)
+	require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
+
+	t.Log("Verifying that the diagnostic server received a dump indicating that the broken consumer caused a problem")
+	// the test will have pushed several successful configs that we don't care about into the diag buffer. this is a
+	// silly hack to churn through those until we get to the successful fallback
+	var dump diagnostics.ConfigDump
+	require.Eventually(t, func() bool {
+		dump = <-diagnosticsCh
+		return len(dump.Meta.AffectedObjects) > 0
+	}, time.Second, time.Nanosecond)
+
+	// once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push triggered by
+	// the expected broken consumer
+	require.False(t, dump.Meta.Failed)
+	require.True(t, dump.Meta.Fallback)
+
+	require.Equal(t, dump.Meta.AffectedObjects[0].Namespace, brokenConsumer.ObjectMeta.Namespace)
+	require.Equal(t, dump.Meta.AffectedObjects[0].Name, brokenConsumer.ObjectMeta.Name)
+}
+
+func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing.T) {
+	ctx := context.Background()
+	gwClient := mustSampleGatewayClient(t)
+	konnectClient := mustSampleKonnectClient(t)
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{gwClient},
+		konnectClient:  konnectClient,
 	}
 	updateStrategyResolver := newMockUpdateStrategyResolver(t)
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
-	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
+	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+	fallbackConfigGenerator := newMockFallbackConfigGenerator()
+	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
+
+	// We'll use KongConsumer as an example of an object, but it could be any supported type
+	// for the purpose of this test as the fallback config generator is mocked anyway.
+	someConsumer := func(name string) *kongv1.KongConsumer {
+		return &kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: name,
+		}
+	}
+
+	originalCache := cacheStoresFromObjs(t, someConsumer("valid"))
 	kongClient, err := NewKongClient(
 		zapr.NewLogger(zap.NewNop()),
 		time.Second,
-		util.ConfigDumpDiagnostic{},
+		diagnostics.ConfigDumpDiagnostic{
+			Configs: diagnosticsCh,
+		},
 		sendconfig.Config{
 			FallbackConfiguration: true,
 		},
@@ -959,12 +1382,284 @@ func TestKongClient_FallbackConfiguration(t *testing.T) {
 		clientsProvider,
 		updateStrategyResolver,
 		configChangeDetector,
-		kongRawStateGetter,
+		lastValidConfigFetcher,
 		configBuilder,
-		store.NewCacheStores(),
+		originalCache,
+		fallbackConfigGenerator,
 	)
 	require.NoError(t, err)
 
+	t.Log("Calling KongClient.Update")
 	require.NoError(t, kongClient.Update(ctx))
-	require.True(t, configBuilder.updateCacheCalled, "expected store to be updated with a snapshot")
+
+	t.Log("Verifying that the config builder cache was updated once")
+	require.Len(t, configBuilder.updateCacheCalls, 1)
+
+	t.Log("Calling KongClient.Update again")
+	require.NoError(t, kongClient.Update(ctx))
+
+	t.Log("Verifying that the config builder cache was not updated when config was not changed")
+	require.Len(t, configBuilder.updateCacheCalls, 1)
+}
+
+func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
+	ctx := context.Background()
+	gwClient := mustSampleGatewayClient(t)
+	konnectClient := mustSampleKonnectClient(t)
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{gwClient},
+		konnectClient:  konnectClient,
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
+	fallbackConfigGenerator := newMockFallbackConfigGenerator()
+	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
+
+	// We'll use KongConsumer as an example of a broken object, but it could be any supported type
+	// for the purpose of this test as the fallback config generator is mocked anyway.
+	someConsumer := func(name string) *kongv1.KongConsumer {
+		return &kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: name,
+		}
+	}
+	brokenConsumer := someConsumer("broken")
+	originalCache := cacheStoresFromObjs(t, brokenConsumer)
+	kongClient, err := NewKongClient(
+		zapr.NewLogger(zap.NewNop()),
+		time.Second,
+		diagnostics.ConfigDumpDiagnostic{
+			Configs: diagnosticsCh,
+		},
+		sendconfig.Config{
+			FallbackConfiguration: true,
+		},
+		mocks.NewEventRecorder(),
+		dpconf.DBModeOff,
+		clientsProvider,
+		updateStrategyResolver,
+		configChangeDetector,
+		lastValidConfigFetcher,
+		configBuilder,
+		originalCache,
+		fallbackConfigGenerator,
+	)
+	require.NoError(t, err)
+
+	t.Log("Setting update strategy to return an error on the first call to trigger fallback configuration generation")
+	updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
+		[]failures.ResourceFailure{
+			lo.Must(failures.NewResourceFailure("violated constraint", brokenConsumer)),
+		},
+		errors.New("error on update"),
+	))
+
+	t.Log("Setting update strategy to return an error on the second call (fallback) to trigger a failed recovery")
+	updateStrategyResolver.returnErrorOnUpdate(gwClient.BaseRootURL())
+
+	t.Log("Calling KongClient.Update")
+	err = kongClient.Update(ctx)
+	require.Error(t, err)
+
+	t.Log("Verifying that the update strategy was called twice for gateway, skipping Konnect on fallback failure")
+	updateStrategyResolver.assertUpdateCalledForURLs(
+		[]string{
+			gwClient.BaseRootURL(), konnectClient.BaseRootURL(),
+			gwClient.BaseRootURL(),
+		},
+		"expected update to be called twice: first with the initial config, then with the fallback one",
+	)
+
+	t.Log("Verifying that the last valid config is empty")
+	_, hasLastValidConfig := lastValidConfigFetcher.LastValidConfig()
+	require.False(t, hasLastValidConfig, "expected no last valid config to be stored as no successful recovery happened")
+
+	t.Log("Verifying that the diagnostic server received a dump indicating that the broken consumer caused a problem")
+	// the test will have pushed several successful configs that we don't care about into the diag buffer. this is a
+	// silly hack to churn through those until we get to the failed fallback
+	var dump diagnostics.ConfigDump
+	require.Eventually(t, func() bool {
+		dump = <-diagnosticsCh
+		return len(dump.Meta.AffectedObjects) > 0
+	}, time.Second, time.Nanosecond)
+
+	// once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push triggered by
+	// the expected broken consumer
+	require.True(t, dump.Meta.Failed)
+	require.True(t, dump.Meta.Fallback)
+
+	require.Equal(t, dump.Meta.AffectedObjects[0].Namespace, brokenConsumer.ObjectMeta.Namespace)
+	require.Equal(t, dump.Meta.AffectedObjects[0].Name, brokenConsumer.ObjectMeta.Name)
+}
+
+func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
+	var (
+		ctx               = context.Background()
+		testKonnectClient = mustSampleKonnectClient(t)
+		testGatewayClient = mustSampleGatewayClient(t)
+
+		clientsProvider = mockGatewayClientsProvider{
+			gatewayClients: []*adminapi.Client{testGatewayClient},
+			konnectClient:  testKonnectClient,
+		}
+
+		updateStrategyResolver  = newMockUpdateStrategyResolver(t)
+		configChangeDetector    = mockConfigurationChangeDetector{hasConfigurationChanged: true}
+		configBuilder           = newMockKongConfigBuilder()
+		lastValidConfigFetcher  = &mockKongLastValidConfigFetcher{}
+		originalCache           = cacheStoresFromObjs(t)
+		fallbackConfigGenerator = newMockFallbackConfigGenerator()
+	)
+
+	testCases := []struct {
+		name                                 string
+		fallbackConfigurationFeatureEnabled  bool
+		useLastValidConfigForFallbackEnabled bool
+		expectLastValidCacheSnapshotToBeSet  bool
+	}{
+		{
+			name:                                 "FallbackConfiguration=true, UseLastValidConfigForFallback=false",
+			fallbackConfigurationFeatureEnabled:  true,
+			useLastValidConfigForFallbackEnabled: false,
+			expectLastValidCacheSnapshotToBeSet:  false,
+		},
+		{
+			name:                                 "FallbackConfiguration=true, UseLastValidConfigForFallback=true",
+			fallbackConfigurationFeatureEnabled:  true,
+			useLastValidConfigForFallbackEnabled: true,
+			expectLastValidCacheSnapshotToBeSet:  true,
+		},
+		{
+			name:                                 "FallbackConfiguration=false, UseLastValidConfigForFallback=false",
+			fallbackConfigurationFeatureEnabled:  false,
+			useLastValidConfigForFallbackEnabled: false,
+			expectLastValidCacheSnapshotToBeSet:  false,
+		},
+		{
+			name:                                 "FallbackConfiguration=false, UseLastValidConfigForFallback=true",
+			fallbackConfigurationFeatureEnabled:  false,
+			useLastValidConfigForFallbackEnabled: true,
+			expectLastValidCacheSnapshotToBeSet:  false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			kongClient, err := NewKongClient(
+				zapr.NewLogger(zap.NewNop()),
+				time.Second,
+				diagnostics.ConfigDumpDiagnostic{},
+				sendconfig.Config{
+					FallbackConfiguration:         tc.fallbackConfigurationFeatureEnabled,
+					UseLastValidConfigForFallback: tc.useLastValidConfigForFallbackEnabled,
+				},
+				mocks.NewEventRecorder(),
+				dpconf.DBModeOff,
+				clientsProvider,
+				updateStrategyResolver,
+				configChangeDetector,
+				lastValidConfigFetcher,
+				configBuilder,
+				originalCache,
+				fallbackConfigGenerator,
+			)
+			require.NoError(t, err)
+
+			require.Empty(t, kongClient.lastValidCacheSnapshot, "expected last valid cache snapshot to be empty")
+
+			err = kongClient.Update(ctx)
+			require.NoError(t, err)
+
+			lastValid := kongClient.lastValidCacheSnapshot
+			if tc.expectLastValidCacheSnapshotToBeSet {
+				require.NotEmpty(t, lastValid, "expected last valid cache snapshot to be set after successful update")
+			} else {
+				require.Empty(t, lastValid, "expected last valid cache snapshot to remain empty")
+			}
+		})
+	}
+}
+
+func cacheStoresFromObjs(t *testing.T, objs ...runtime.Object) store.CacheStores {
+	for i := range objs {
+		obj := objs[i].(client.Object)
+		obj = helpers.WithTypeMeta(t, obj)
+		objs[i] = obj
+	}
+	s, err := store.NewCacheStoresFromObjs(objs...)
+	require.NoError(t, err)
+	return s
+}
+
+func TestKongClient_ConfigDumpSanitization(t *testing.T) {
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{
+			mustSampleGatewayClient(t),
+		},
+		konnectClient: mustSampleKonnectClient(t),
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
+
+	const testPrivateKey = "private-key-string"
+	configBuilder.kongState = &kongstate.KongState{
+		Certificates: []kongstate.Certificate{
+			{
+				Certificate: kong.Certificate{
+					ID:  kong.String("new_cert"),
+					Key: kong.String(testPrivateKey), // This should be redacted.
+				},
+			},
+		},
+	}
+	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+
+	testCases := []struct {
+		name                  string
+		dumpsIncludeSensitive bool
+		expectSanitizedDump   bool
+	}{
+		{
+			name:                  "when DumpsIncludeSensitive is true, expect no sanitization",
+			dumpsIncludeSensitive: true,
+			expectSanitizedDump:   false,
+		},
+		{
+			name:                  "when DumpsIncludeSensitive is false, expect sanitization",
+			dumpsIncludeSensitive: false,
+			expectSanitizedDump:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			diagnosticsCh := make(chan diagnostics.ConfigDump, 1) // make it buffered to avoid blocking
+			kongClient.diagnostic = diagnostics.ConfigDumpDiagnostic{
+				Configs:               diagnosticsCh,
+				DumpsIncludeSensitive: tc.dumpsIncludeSensitive,
+			}
+			ctx := context.Background()
+			err := kongClient.Update(ctx)
+			require.NoError(t, err)
+
+			dump := <-diagnosticsCh
+			require.NotNil(t, dump.Config)
+			require.Len(t, dump.Config.Certificates, 1)
+			dumpedCert := dump.Config.Certificates[0]
+			if tc.expectSanitizedDump {
+				require.Equal(t, "{vault://redacted-value}", *dumpedCert.Key)
+			} else {
+				require.Equal(t, testPrivateKey, *dumpedCert.Key)
+			}
+		})
+	}
 }

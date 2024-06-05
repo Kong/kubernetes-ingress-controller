@@ -169,7 +169,7 @@ func deployIngressClass(ctx context.Context, t *testing.T, name string, client c
 }
 
 // deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
-func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) gatewayapi.Gateway {
+func deployGatewayUsingGatewayClass(ctx context.Context, t *testing.T, client ctrlclient.Client, gwc gatewayapi.GatewayClass) gatewayapi.Gateway {
 	ns := CreateNamespace(ctx, t, client)
 
 	publishSvc := corev1.Service{
@@ -188,29 +188,15 @@ func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) 
 	require.NoError(t, client.Create(ctx, &publishSvc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
 
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
-		},
-	}
-
-	require.NoError(t, client.Create(ctx, &gwc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-
 	gw := gatewayapi.Gateway{
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
 				{
-					Name:     "http",
-					Protocol: gatewayapi.HTTPProtocolType,
-					Port:     gatewayapi.PortNumber(8000),
+					Name:          "http",
+					Protocol:      gatewayapi.HTTPProtocolType,
+					Port:          gatewayapi.PortNumber(8000),
+					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},
 		},
@@ -223,4 +209,24 @@ func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) 
 	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
 
 	return gw
+}
+
+func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) (gatewayapi.Gateway, gatewayapi.GatewayClass) {
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+
+	gw := deployGatewayUsingGatewayClass(ctx, t, client, gwc)
+
+	return gw, gwc
 }

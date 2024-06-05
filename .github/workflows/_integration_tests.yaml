@@ -118,6 +118,12 @@ jobs:
             # https://github.com/Kong/kubernetes-ingress-controller/issues/5127 is resolved.
             router-flavor: 'traditional'
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
+          - name: postgres-fallback-config
+            test: postgres
+            feature_gates: "GatewayAlpha=true,FallbackConfiguration=true"
+          - name: dbless-fallback-config
+            test: dbless
+            feature_gates: "GatewayAlpha=true,FallbackConfiguration=true"
           # Experimental tests, in the future all integration tests will be migrated to them.
           # Set enterprise to 'true' to enable isolated integration test cases requiring enterprise features.
           - name: isolated-dbless

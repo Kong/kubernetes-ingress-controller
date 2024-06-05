@@ -16,63 +16,13 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 const examplesDIR = "../../examples"
-
-func TestHTTPRouteExample(t *testing.T) {
-	var (
-		httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
-		ctx                       = context.Background()
-	)
-
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("configuring test and setting up API clients")
-	gwc, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Logf("applying yaml manifest %s", httprouteExampleManifests)
-	b, err := os.ReadFile(httprouteExampleManifests)
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
-	cleaner.AddManifest(string(b))
-
-	t.Logf("verifying that the Gateway receives listen addresses")
-	var gatewayIP string
-	require.Eventually(t, func() bool {
-		obj, err := gwc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		for _, addr := range obj.Status.Addresses {
-			if addr.Type != nil && *addr.Type == gatewayapi.IPAddressType {
-				gatewayIP = addr.Value
-				return true
-			}
-		}
-
-		return false
-	}, gatewayUpdateWaitTime, waitTick)
-
-	require.NoError(t, err)
-	t.Logf("verifying that the HTTPRoute becomes routable")
-	helpers.EventuallyGETPath(
-		t, nil, gatewayIP, "/httproute-testing", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick,
-	)
-
-	t.Logf("verifying that the backendRefs are being loadbalanced")
-	helpers.EventuallyGETPath(
-		t, nil, gatewayIP, "/httproute-testing", http.StatusOK, "<title>Welcome to nginx!</title>", nil, ingressWait, waitTick,
-	)
-}
 
 func TestTCPRouteExample(t *testing.T) {
 	RunWhenKongExpressionRouter(context.Background(), t)

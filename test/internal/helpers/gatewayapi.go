@@ -119,7 +119,7 @@ func gatewayLinkStatusMatches(
 		groute, gerr := c.GatewayV1().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
-			t.Logf("error getting grpc route: %v", err)
+			t.Logf("error getting grpc route: %v", gerr)
 		} else {
 			if err == nil {
 				return newRouteParentsStatus(route.Status.Parents).

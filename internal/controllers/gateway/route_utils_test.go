@@ -582,7 +582,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.NewOptionalNamespacedName(mo.None[k8stypes.NamespacedName]()))
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -1425,14 +1425,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			},
 			{
 				name:  "HTTPRoute with other parent Gateway finds no matching Gateways",
-				route: basicHTTPRoute("bad-gateway"),
+				route: basicHTTPRoute("good-gateway"),
 				objects: []client.Object{
 					namedGateway("bad-gateway"),
 					gatewayClass,
 					namespace,
 				},
 				expected:    []expected{},
-				expectedErr: fmt.Errorf("no supported Gateway found for route"),
+				expectedErr: ErrNoSupportedGateway,
 			},
 		}
 
@@ -1450,10 +1450,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					logr.Discard(),
 					fakeClient,
 					tt.route,
-					mo.Some(k8stypes.NamespacedName{
-						Namespace: namespace.Name,
-						Name:      "good-gateway",
-					}),
+					controllers.NewOptionalNamespacedName(
+						mo.Some(
+							k8stypes.NamespacedName{
+								Namespace: namespace.Name,
+								Name:      "good-gateway",
+							},
+						),
+					),
 				)
 				if tt.expectedErr != nil {
 					require.Equal(t, tt.expectedErr, err)

@@ -1,7 +1,6 @@
-# NOTE The Gateway APIs are not yet available by default in Kubernetes.
-# Follow these instructions to install them before using this example:
-# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
----
+# This configuration file presents fallback configuration (feature gate FallbackConfiguration=true),
+# it contains a plugin that is misconfigured and will not work. The whole route /for-auth-users won't
+# be configured. Only the route /httproute-testing will be configured.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -75,7 +74,7 @@ spec:
         resources:
           limits:
             memory: "64Mi"
-            cpu: "250m"
+            cpu: "250m"          
 ---
 apiVersion: v1
 kind: Service
@@ -135,3 +134,38 @@ spec:
       kind: Service
       port: 8080
       weight: 25
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-testing2
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: key-auth
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /for-auth-users
+    backendRefs:
+    - name: echo-1
+      kind: Service
+      port: 80
+      weight: 75
+    - name: echo-2
+      kind: Service
+      port: 8080
+      weight: 25
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: key-auth
+  namespace: default
+plugin: key-auth
+config:
+  # Should be key_names, not keys.
+  keys: ["key"]

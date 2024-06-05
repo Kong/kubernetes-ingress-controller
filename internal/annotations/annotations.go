@@ -421,6 +421,7 @@ func ExtractRewriteURI(anns map[string]string) (string, bool) {
 	return s, ok
 }
 
+// ExtractUpstreamPolicy extracts the upstream policy annotation value.
 func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
 	s, ok := anns[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return s, ok

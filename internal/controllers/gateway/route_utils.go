@@ -27,17 +27,16 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	unsupportedGW = "no supported Gateway found for route"
-)
-
-const (
 	ConditionTypeProgrammed                                            = "Programmed"
 	ConditionReasonProgrammedUnknown   gatewayapi.RouteConditionReason = "Unknown"
 	ConditionReasonConfiguredInGateway gatewayapi.RouteConditionReason = "ConfiguredInGateway"
 	ConditionReasonTranslationError    gatewayapi.RouteConditionReason = "TranslationError"
 )
 
-var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
+var (
+	ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
+	ErrNoSupportedGateway         = fmt.Errorf("no supported gateway found for route")
+)
 
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.
@@ -128,7 +127,9 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 // OR the present gateways are references to missing objects, this will return a unsupportedGW error.
 //
 // There is a parameter `specifiedGW` here, which is used to specific the gateway.
-func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName) ([]supportedGatewayWithCondition, error) {
+func getSupportedGatewayForRoute[T gatewayapi.RouteT](
+	ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName,
+) ([]supportedGatewayWithCondition, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(route)
 	if err != nil {
@@ -351,7 +352,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 	}
 
 	if len(gateways) == 0 {
-		return nil, fmt.Errorf(unsupportedGW)
+		return nil, ErrNoSupportedGateway
 	}
 
 	return gateways, nil
@@ -984,4 +985,65 @@ func isRouteAcceptedByListener[T gatewayapi.RouteT](ctx context.Context,
 	}
 
 	return true, nil
+}
+
+// ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
+// implementation to prune status references to Gateways supported by this controller
+// in the provided route.
+func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
+	ctx context.Context, cl client.Client, log logr.Logger, route routeT,
+) (bool, error) {
+	debug(log, route, "Unsupported route found, processing to verify whether it was ever supported")
+	kind := route.GetObjectKind().GroupVersionKind().Kind
+	parents := getRouteStatusParents(route)
+
+	// Drop all status references to supported Gateway objects.
+	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
+	for _, status := range parents {
+		if status.ControllerName != GetControllerName() {
+			newStatuses = append(newStatuses, status)
+		} else {
+			parentRefNN := string(status.ParentRef.Name)
+			if status.ParentRef.Namespace != nil {
+				parentRefNN = fmt.Sprintf("%s/%s", *status.ParentRef.Namespace, parentRefNN)
+			}
+			debug(log, route, "Removing parentRef from route status", "parentRef", parentRefNN, "kind", kind)
+		}
+	}
+
+	// If the new list of statuses is the same length as the old
+	// nothing has changed and we're all done.
+	if len(newStatuses) == len(parents) {
+		return false, nil
+	}
+
+	// If the route doesn't have a supported Gateway+GatewayClass associated with
+	// it it's possible it became orphaned after becoming queued. In either case
+	// ensure that it's removed from the proxy cache to avoid orphaned data-plane
+	// configurations.
+	setRouteStatusParents(route, newStatuses)
+	if err := cl.Status().Update(ctx, route); err != nil {
+		return false, fmt.Errorf("failed to remove Gateway parentRef from %s status: %w", kind, err)
+	}
+
+	debug(log, route, "Unsupported route was previously supported, status was updated")
+	// The status needed to be updated and it was updated successfully.
+	return true, nil
+}
+
+func getRouteParentRefs[T gatewayapi.RouteT](route T) []gatewayapi.ParentReference {
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.TCPRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.UDPRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.TLSRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.GRPCRoute:
+		return r.Spec.ParentRefs
+	default:
+		return nil
+	}
 }

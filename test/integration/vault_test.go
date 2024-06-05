@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -114,11 +115,23 @@ func TestCustomVault(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("attach plugin to ingress and check if the config from vault takes effect")
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = "request-transformer-advanced"
-	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	ingressName := ingress.Name
+	require.Eventually(t, func() bool {
+		ingClient := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name)
+		ingress, err = ingClient.Get(ctx, ingressName, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting %s: %v", client.ObjectKeyFromObject(ingress), err)
+			return false
+		}
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = "request-transformer-advanced"
+		_, err = ingClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error annotating %s: %v", client.ObjectKeyFromObject(ingress), err)
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
+
 	require.Eventuallyf(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyHTTPURL))
 		if err != nil {

@@ -1,6 +1,7 @@
 package fallback_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -8,10 +9,12 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
@@ -28,13 +31,30 @@ func testIngressClass(t *testing.T, name string) *netv1.IngressClass {
 	})
 }
 
-func testService(t *testing.T, name string) *corev1.Service {
-	return helpers.WithTypeMeta(t, &corev1.Service{
+func testService(t *testing.T, name string, modifiers ...func(s *corev1.Service)) *corev1.Service {
+	svc := helpers.WithTypeMeta(t, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: testNamespace,
 		},
 	})
+	for _, mod := range modifiers {
+		mod(svc)
+	}
+	return svc
+}
+
+func testSecret(t *testing.T, name string, modifiers ...func(s *corev1.Secret)) *corev1.Secret {
+	s := helpers.WithTypeMeta(t, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+		},
+	})
+	for _, mod := range modifiers {
+		mod(s)
+	}
+	return s
 }
 
 func testKongServiceFacade(t *testing.T, name string) *incubatorv1alpha1.KongServiceFacade {
@@ -62,6 +82,19 @@ func testKongClusterPlugin(t *testing.T, name string) *kongv1.KongClusterPlugin 
 			Namespace: testNamespace,
 		},
 	})
+}
+
+func testKongUpstreamPolicy(t *testing.T, name string, modifiers ...func(kup *kongv1beta1.KongUpstreamPolicy)) *kongv1beta1.KongUpstreamPolicy {
+	kup := helpers.WithTypeMeta(t, &kongv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+		},
+	})
+	for _, mod := range modifiers {
+		mod(kup)
+	}
+	return kup
 }
 
 // GraphBuilder is a helper to build a graph for testing.
@@ -131,4 +164,20 @@ func NewMockObject(name string) *MockObject {
 // DeepCopyObject is required for runtime.Object interface.
 func (m *MockObject) DeepCopyObject() runtime.Object {
 	return m
+}
+
+// getFromStore retrieves an object of type T from the given cache store.
+func getFromStore[T client.Object](c cache.Store, obj client.Object) (client.Object, error) {
+	o, exists, err := c.Get(obj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get object: %w", err)
+	}
+	if !exists {
+		return nil, errors.New("object not found")
+	}
+	typedObject, ok := o.(T)
+	if !ok {
+		return nil, fmt.Errorf("expected object of type %T, got %T", typedObject, o)
+	}
+	return typedObject, nil
 }

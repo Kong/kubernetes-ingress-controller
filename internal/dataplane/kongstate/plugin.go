@@ -4,121 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
-
-// Plugin represents a plugin Object in Kong.
-type Plugin struct {
-	kong.Plugin
-	K8sParent           client.Object
-	SensitiveFieldsMeta PluginSensitiveFieldsMetadata
-}
-
-func (p Plugin) DeepCopy() Plugin {
-	return Plugin{
-		Plugin:              *p.Plugin.DeepCopy(),
-		K8sParent:           p.K8sParent,
-		SensitiveFieldsMeta: p.SensitiveFieldsMeta,
-	}
-}
-
-func (p Plugin) SanitizedCopy() Plugin {
-	// We do not want to return an error if any of below fails - the best we can do
-	// is to return a plugin with wholly redacted config.
-	// Let's have a closure returning a plugin with wholly redacted config prepared.
-	whollySanitized := func() Plugin {
-		p := p.DeepCopy()
-		p.Config = sanitizeWholePluginConfig(p.Config)
-		return p
-	}
-
-	// If the whole config is sensitive, we need to redact the entire config.
-	if p.SensitiveFieldsMeta.WholeConfigIsSensitive {
-		return whollySanitized()
-	}
-
-	// If there are JSON paths, we need to redact them.
-	if len(p.SensitiveFieldsMeta.JSONPaths) > 0 {
-		var patchOperations []string
-		for _, path := range p.SensitiveFieldsMeta.JSONPaths {
-			// If the path is empty, we need to sanitize the whole config.
-			// An empty path means that the patch is on the root of the config.
-			if path == "" {
-				return whollySanitized()
-			}
-
-			patchOperations = append(patchOperations, fmt.Sprintf(
-				`{"op":"replace","path":"%s","value":"%s"}`,
-				path,
-				*redactedString,
-			))
-		}
-
-		// Decode the patch and apply it to the config.
-		// We need to marshal the config to JSON and then unmarshal it back to Configuration
-		// because the patch library works with bytes.
-		patch, err := jsonpatch.DecodePatch([]byte(fmt.Sprintf("[%s]", strings.Join(patchOperations, ","))))
-		if err != nil {
-			return whollySanitized()
-		}
-		configB, err := json.Marshal(p.Config)
-		if err != nil {
-			return whollySanitized()
-		}
-		sanitizedConfigB, err := patch.Apply(configB)
-		if err != nil {
-			return whollySanitized()
-		}
-		sanitizedConfig := kong.Configuration{}
-		if err := json.Unmarshal(sanitizedConfigB, &sanitizedConfig); err != nil {
-			return whollySanitized()
-		}
-
-		sanitized := p.DeepCopy()
-		sanitized.Config = sanitizedConfig
-		return sanitized
-	}
-
-	// Nothing to sanitize.
-	return p
-}
-
-// sanitizeWholePluginConfig redacts the entire config of a plugin by replacing all of its
-// values with a redacted string.
-func sanitizeWholePluginConfig(config kong.Configuration) kong.Configuration {
-	sanitized := config.DeepCopy()
-	for k := range config {
-		sanitized[k] = *redactedString
-	}
-	return sanitized
-}
-
-// PluginSensitiveFieldsMetadata holds metadata about sensitive fields in a plugin's configuration.
-// It can be used to sanitize them before exposing the configuration to the user (e.g. in debug dumps
-// or in Konnect Admin API).
-type PluginSensitiveFieldsMetadata struct {
-	// WholeConfigIsSensitive indicates that the entire configuration of the plugin is sensitive.
-	// If this is true, the configuration should be redacted entirely (each of its fields' values
-	// should be replaced with a redacted string).
-	WholeConfigIsSensitive bool
-
-	// JSONPaths holds a list of JSON paths to sensitive fields in the plugin's configuration.
-	// If this is not empty, the configuration should be redacted by replacing the values of the
-	// fields at these paths with a redacted string.
-	JSONPaths []string
-}
 
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
 // If both are not found, an error is returned.
@@ -181,14 +77,6 @@ func kongPluginFromK8SClusterPlugin(
 		}
 	}
 
-	// Prepare sensitive fields metadata for the plugin.
-	sensitiveFieldsMeta := PluginSensitiveFieldsMetadata{
-		JSONPaths: lo.Map(k8sPlugin.ConfigPatches, func(patch kongv1.NamespacedConfigPatch, _ int) string {
-			return patch.Path
-		}),
-		WholeConfigIsSensitive: k8sPlugin.ConfigFrom != nil,
-	}
-
 	return Plugin{
 		Plugin: plugin{
 			Name:   k8sPlugin.PluginName,
@@ -201,8 +89,7 @@ func kongPluginFromK8SClusterPlugin(
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
 			Tags:         util.GenerateTagsForObject(&k8sPlugin),
 		}.toKongPlugin(),
-		K8sParent:           &k8sPlugin,
-		SensitiveFieldsMeta: sensitiveFieldsMeta,
+		K8sParent: &k8sPlugin,
 	}, nil
 }
 
@@ -244,14 +131,6 @@ func kongPluginFromK8SPlugin(
 		}
 	}
 
-	// Prepare sensitive fields metadata for the plugin.
-	sensitiveFieldsMeta := PluginSensitiveFieldsMetadata{
-		JSONPaths: lo.Map(k8sPlugin.ConfigPatches, func(patch kongv1.ConfigPatch, _ int) string {
-			return patch.Path
-		}),
-		WholeConfigIsSensitive: k8sPlugin.ConfigFrom != nil,
-	}
-
 	return Plugin{
 		Plugin: plugin{
 			Name:   k8sPlugin.PluginName,
@@ -264,8 +143,7 @@ func kongPluginFromK8SPlugin(
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
 			Tags:         util.GenerateTagsForObject(&k8sPlugin),
 		}.toKongPlugin(),
-		K8sParent:           &k8sPlugin,
-		SensitiveFieldsMeta: sensitiveFieldsMeta,
+		K8sParent: &k8sPlugin,
 	}, nil
 }
 

@@ -366,7 +366,7 @@ PKG_LIST = ./pkg/...,./internal/...
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 E2E_TEST_RUN ?= ""
-KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
+KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true,KongCustomEntity=true
 GOTESTSUM_FORMAT ?= standard-verbose
 KONG_CLUSTER_VERSION ?= v1.28.0
 JUNIT_REPORT ?= /dev/null

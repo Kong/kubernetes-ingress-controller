@@ -58,7 +58,7 @@ type AdminAPIHandler struct {
 	configPostErrorOnlyOnFirstRequest bool
 
 	// configPostCalled is a flag that indicates whether the `POST /config` endpoint was called.
-	configPostCalled bool
+	configPostCalled atomic.Bool
 
 	// rootResponse is the response body served by the admin API root "GET /" endpoint.
 	rootResponse []byte
@@ -190,7 +190,7 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 			}
 
 		case http.MethodPost:
-			firstRequestErrorAlreadyReturned := h.configPostErrorOnlyOnFirstRequest && h.configPostCalled
+			firstRequestErrorAlreadyReturned := h.configPostErrorOnlyOnFirstRequest && h.configPostCalled.CompareAndSwap(false, true)
 			if h.configPostErrorBody != nil && !firstRequestErrorAlreadyReturned {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write(h.configPostErrorBody)
@@ -200,7 +200,6 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 				h.t.Logf("got config: %v", string(b))
 				h.config = b
 			}
-			h.configPostCalled = true
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 		}

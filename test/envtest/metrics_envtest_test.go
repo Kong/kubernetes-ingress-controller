@@ -36,11 +36,9 @@ func TestMetricsAreServed(t *testing.T) {
 		withPushError                bool
 		fallbackConfigurationEnabled bool
 		expectedMetrics              []string
-		skippedMessage               string
 	}{
 		{
 			name:                         "with push error and FallbackConfiguration enabled",
-			skippedMessage:               "flaky, see https://github.com/Kong/kubernetes-ingress-controller/issues/6125",
 			withPushError:                true,
 			fallbackConfigurationEnabled: true,
 			expectedMetrics: []string{
@@ -76,9 +74,6 @@ func TestMetricsAreServed(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.skippedMessage != "" {
-				t.Skip(tc.skippedMessage)
-			}
 			ctx, cancel := context.WithTimeout(context.Background(), waitTime)
 			defer cancel()
 

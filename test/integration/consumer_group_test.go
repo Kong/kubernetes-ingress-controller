@@ -96,7 +96,11 @@ func TestConsumerGroup(t *testing.T) {
 		ctx, t, ns.Name, "test-consumer-group-2", pluginRateLimit.Name,
 	)
 	cleaner.Add(rateLimitGroup)
-	// for consistency in the number scheme, 3 is omitted, as yet to be created consumer 3 will have _no_ consumer groups
+	// 3 has consumers but no plugins
+	nothingGroup := configureConsumerGroupWithPlugins(
+		ctx, t, ns.Name, "test-consumer-group-3",
+	)
+	cleaner.Add(nothingGroup)
 	addHeaderRouteGroup := configureConsumerGroupWithPlugins(
 		ctx, t, ns.Name, "test-consumer-group-4", pluginRespTrans.Name,
 	)
@@ -171,7 +175,8 @@ func TestConsumerGroup(t *testing.T) {
 		}, ingressWait, waitTick)
 	}
 
-	four, fourSecret := configureConsumerWithAPIKey(ctx, t, ns.Name, "test-consumer-4", "test-consumer-group-3")
+	t.Log("checking plugins attached to a consumer group and route only apply when request matches both")
+	four, fourSecret := configureConsumerWithAPIKey(ctx, t, ns.Name, "test-consumer-4", "test-consumer-group-4")
 	cleaner.Add(four)
 	cleaner.Add(fourSecret)
 
@@ -185,6 +190,7 @@ func TestConsumerGroup(t *testing.T) {
 	cleaner.Add(multiIngress)
 
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		// this should see the header, it uses a consumer in the group on the associated route
 		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
 			"apikey": four.Name,
 		})
@@ -201,6 +207,7 @@ func TestConsumerGroup(t *testing.T) {
 			return
 		}
 
+		// this should not see the header, it uses a consumer in the group on another route
 		clear := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 			"apikey": four.Name,
 		})
@@ -217,6 +224,7 @@ func TestConsumerGroup(t *testing.T) {
 			return
 		}
 
+		// this should not see the header, it uses a consumer outside the group on the associated route
 		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
 			"apikey": "test-consumer-3",
 		})
@@ -228,7 +236,7 @@ func TestConsumerGroup(t *testing.T) {
 		if !assert.Equal(c, emptyResp.StatusCode, http.StatusOK) {
 			return
 		}
-		hv = resp.Header.Get(addedHeader.K)
+		hv = emptyResp.Header.Get(addedHeader.K)
 		if !assert.NotEqual(c, addedHeader.V, hv) {
 			return
 		}

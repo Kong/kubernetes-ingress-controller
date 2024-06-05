@@ -11,7 +11,9 @@ type Rel struct {
 func (relations *ForeignRelations) GetCombinations() []Rel {
 	var cartesianProduct []Rel
 
-	if len(relations.Consumer) > 0 {
+	// gocritic I don't care that you think switch statements are the one true god of readability, the language offers
+	// multiple options for a reason. go away, gocritic.
+	if len(relations.Consumer) > 0 { //nolint:gocritic
 		consumers := relations.Consumer
 		if len(relations.Route)+len(relations.Service) > 0 {
 			for _, service := range relations.Service {
@@ -35,10 +37,31 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 				cartesianProduct = append(cartesianProduct, Rel{Consumer: consumer})
 			}
 		}
-	} else {
-		for _, consumerGroup := range relations.ConsumerGroup {
-			cartesianProduct = append(cartesianProduct, Rel{ConsumerGroup: consumerGroup})
+	} else if len(relations.ConsumerGroup) > 0 {
+		groups := relations.ConsumerGroup
+		if len(relations.Route)+len(relations.Service) > 0 {
+			for _, service := range relations.Service {
+				for _, group := range groups {
+					cartesianProduct = append(cartesianProduct, Rel{
+						Service:       service,
+						ConsumerGroup: group,
+					})
+				}
+			}
+			for _, route := range relations.Route {
+				for _, group := range groups {
+					cartesianProduct = append(cartesianProduct, Rel{
+						Route:         route,
+						ConsumerGroup: group,
+					})
+				}
+			}
+		} else {
+			for _, group := range relations.ConsumerGroup {
+				cartesianProduct = append(cartesianProduct, Rel{ConsumerGroup: group})
+			}
 		}
+	} else {
 		for _, service := range relations.Service {
 			cartesianProduct = append(cartesianProduct, Rel{Service: service})
 		}

@@ -220,6 +220,11 @@ Adding a new version? You'll need three changes:
 - Fixed KIC non leaders correctly getting up to date Admin API addresses by not
   requiring leader election for the related controller.
   [6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
+- Plugins attached to both a KongConsumerGroup and a route-like resource or
+  Service now properly generate a plugin attached to both a Kong consumer group
+  and route or service. Previously, these incorrectly generated plugins
+  attached to the route or service only.
+  [6132](https://github.com/Kong/kubernetes-ingress-controller/pull/6132)
 
 ### Changed
 

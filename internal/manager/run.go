@@ -64,7 +64,6 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
-
 	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
@@ -180,7 +179,7 @@ func Run(
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager))
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
 	}

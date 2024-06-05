@@ -46,6 +46,7 @@ type CacheStores struct {
 	IngressClassParametersV1alpha1 cache.Store
 	KongServiceFacade              cache.Store
 	KongVault                      cache.Store
+	KongCustomEntity               cache.Store
 
 	l *sync.RWMutex
 }
@@ -76,6 +77,7 @@ func NewCacheStores() CacheStores {
 		IngressClassParametersV1alpha1: cache.NewStore(namespacedKeyFunc),
 		KongServiceFacade:              cache.NewStore(namespacedKeyFunc),
 		KongVault:                      cache.NewStore(clusterWideKeyFunc),
+		KongCustomEntity:               cache.NewStore(namespacedKeyFunc),
 
 		l: &sync.RWMutex{},
 	}
@@ -133,6 +135,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.KongServiceFacade.Get(obj)
 	case *kongv1alpha1.KongVault:
 		return c.KongVault.Get(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		return c.KongCustomEntity.Get(obj)
 	}
 	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
 }
@@ -190,6 +194,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.KongServiceFacade.Add(obj)
 	case *kongv1alpha1.KongVault:
 		return c.KongVault.Add(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		return c.KongCustomEntity.Add(obj)
 	}
 	return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
 }
@@ -247,6 +253,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.KongServiceFacade.Delete(obj)
 	case *kongv1alpha1.KongVault:
 		return c.KongVault.Delete(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		return c.KongCustomEntity.Delete(obj)
 	}
 	return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
 }
@@ -277,6 +285,7 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.IngressClassParametersV1alpha1,
 		c.KongServiceFacade,
 		c.KongVault,
+		c.KongCustomEntity,
 	}
 }
 
@@ -306,5 +315,6 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&kongv1alpha1.IngressClassParameters{},
 		&incubatorv1alpha1.KongServiceFacade{},
 		&kongv1alpha1.KongVault{},
+		&kongv1alpha1.KongCustomEntity{},
 	}
 }

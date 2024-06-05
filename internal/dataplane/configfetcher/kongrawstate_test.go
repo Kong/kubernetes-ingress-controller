@@ -344,6 +344,9 @@ func ensureAllKongStateFieldsAreTested(t *testing.T, testedFields []string) {
 		"Plugins",
 		// Licenses are injected from the license getter rather than extracted from the last state.
 		"Licenses",
+		// CustomEntities are not supported yet because go-database-reconciler does not include custom entities.
+		// TODO: support custom entities: https://github.com/Kong/kubernetes-ingress-controller/issues/6054
+		"CustomEntities",
 	}
 	allKongStateFields := func() []string {
 		var fields []string

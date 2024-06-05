@@ -140,9 +140,19 @@ Adding a new version? You'll need three changes:
   is more robust - leading and trailing whitespace characters are discarded.
   [#5977](https://github.com/Kong/kubernetes-ingress-controller/pull/5977)
 - Added the CRD `KongCustomEntity` to support custom Kong entities that are not
-  defined in KIC yet.
+  defined in KIC yet. The current version only supports translating custom
+  entities into declarative configuration in DBless mode, and cannot apply
+  custom entities to DB backed Kong gateways.
+  Feature gate `KongCustomEntity` is required to set to `true` to enabled the
+  `KongCustomEntity` controller.
+  **Note**: The IDs of Kong services, routes and consumers referred by custom
+  entities via `foreign` type fields of custom entities are filled by the `FillID`
+  method of the corresponding type because the IDs of these entities are required
+  to fill the `foreign` fields of custom entities. So the `FillIDs` feature gate
+  is also required when `KongCustomEntity` is enabled.
   [#5982](https://github.com/Kong/kubernetes-ingress-controller/pull/5982)
   [#6006](https://github.com/Kong/kubernetes-ingress-controller/pull/6006)
+  [#6055](https://github.com/Kong/kubernetes-ingress-controller/pull/6055)
 - Added `FallbackConfiguration` feature gate to enable the controller to generate a fallback configuration
   for Kong when it fails to apply the original one. The feature gate is disabled by default.
   [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)

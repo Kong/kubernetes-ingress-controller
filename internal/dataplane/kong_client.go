@@ -777,6 +777,13 @@ func (c *KongClient) sendToClient(
 		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
+	customEntities := make(sendconfig.CustomEntitiesByType)
+	for entityType, collection := range s.CustomEntities {
+		for _, entity := range collection.Entities {
+			customEntities[entityType] = append(customEntities[entityType], entity.Object)
+		}
+	}
+
 	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, c.brokenObjects)
 
 	// apply the configuration update in Kong
@@ -788,6 +795,7 @@ func (c *KongClient) sendToClient(
 		client,
 		config,
 		targetContent,
+		customEntities,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,

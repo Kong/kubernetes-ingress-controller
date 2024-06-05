@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
@@ -29,6 +30,12 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 	}
 	if ing, isV1Ingress := obj.(*netv1.Ingress); isV1Ingress {
 		if ing.Spec.IngressClassName != nil && *ing.Spec.IngressClassName == controllerIngressClass {
+			return true
+		}
+	}
+	// For KongCustomEntities, we check whether the `spec.ControllerName` matches.
+	if customEntity, isKongCustomEntity := obj.(*kongv1alpha1.KongCustomEntity); isKongCustomEntity {
+		if customEntity.Spec.ControllerName == controllerIngressClass {
 			return true
 		}
 	}

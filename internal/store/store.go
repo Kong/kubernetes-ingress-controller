@@ -73,6 +73,7 @@ type Storer interface {
 	GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error)
 	GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error)
 	GetKongVault(name string) (*kongv1alpha1.KongVault, error)
+	GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error)
 
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
@@ -93,6 +94,7 @@ type Storer interface {
 	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
 	ListCACerts() ([]*corev1.Secret, error)
 	ListKongVaults() []*kongv1alpha1.KongVault
+	ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -562,6 +564,18 @@ func (s Store) GetKongVault(name string) (*kongv1alpha1.KongVault, error) {
 	return p.(*kongv1alpha1.KongVault), nil
 }
 
+func (s Store) GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	e, exists, err := s.stores.KongCustomEntity.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongCustomEntity %s/%s not found", namespace, name)}
+	}
+	return e.(*kongv1alpha1.KongCustomEntity), nil
+}
+
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
 // annotation.
 func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
@@ -670,6 +684,21 @@ func (s Store) ListKongVaults() []*kongv1alpha1.KongVault {
 	return kongVaults
 }
 
+func (s Store) ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity {
+	var kongCustomEntities []*kongv1alpha1.KongCustomEntity
+	for _, obj := range s.stores.KongCustomEntity.List() {
+		kongCustomEntity, ok := obj.(*kongv1alpha1.KongCustomEntity)
+		if ok && s.isValidIngressClass(
+			&metav1.ObjectMeta{
+				Annotations: map[string]string{annotations.IngressClassKey: kongCustomEntity.Spec.ControllerName},
+			}, annotations.IngressClassKey, s.getIngressClassHandling(),
+		) {
+			kongCustomEntities = append(kongCustomEntities, kongCustomEntity)
+		}
+	}
+	return kongCustomEntities
+}
+
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or
 // annotations.ExactClassMatch if the IngressClass is not default or does not exist.
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
@@ -760,6 +789,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1beta1.KongUpstreamPolicy{}, nil
 	case incubatorv1alpha1.SchemeGroupVersion.WithKind("KongServiceFacade"):
 		return &incubatorv1alpha1.KongServiceFacade{}, nil
+	case kongv1alpha1.GroupVersion.WithKind(kongv1alpha1.KongCustomEntityKind):
+		return &kongv1alpha1.KongCustomEntity{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

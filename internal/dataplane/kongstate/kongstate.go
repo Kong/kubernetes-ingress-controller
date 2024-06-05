@@ -1,7 +1,9 @@
 package kongstate
 
 import (
+	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -37,6 +39,8 @@ type KongState struct {
 	Consumers      []Consumer
 	ConsumerGroups []ConsumerGroup
 	Vaults         []Vault
+
+	CustomEntities map[string]*KongCustomEntityCollection
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -68,6 +72,7 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 		}(),
 		ConsumerGroups: ks.ConsumerGroups,
 		Vaults:         ks.Vaults,
+		CustomEntities: ks.CustomEntities,
 	}
 }
 
@@ -361,22 +366,10 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 		//
 		// Code in buildPlugins() will combine plugin associations into
 		// multi-entity plugins within the local namespace
-		namespace := referer.GetNamespace()
-		if plugin.Namespace != "" {
-			// remote KongPlugin, permitted if ReferenceGrant allows
-			if err := isRemotePluginReferenceAllowed(
-				cacheStore,
-				pluginReference{
-					Referer:   referer,
-					Namespace: plugin.Namespace,
-					Name:      plugin.Name,
-				},
-			); err != nil {
-				log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
-				return
-			}
-
-			namespace = plugin.Namespace
+		namespace, err := extractReferredPluginNamespace(cacheStore, referer, plugin)
+		if err != nil {
+			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			return
 		}
 
 		pluginKey := namespace + ":" + plugin.Name
@@ -689,4 +682,306 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 			)
 		}
 	}
+}
+
+// FillCustomEntities fills custom entities in KongState.
+func (ks *KongState) FillCustomEntities(
+	logger logr.Logger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+	schemaGetter SchemaGetter,
+	workspace string,
+) {
+	entities := s.ListKongCustomEntities()
+	if len(entities) == 0 {
+		return
+	}
+	logger = logger.WithName("fillCustomEntities")
+
+	if ks.CustomEntities == nil {
+		ks.CustomEntities = map[string]*KongCustomEntityCollection{}
+	}
+	// Fetch relations between plugins and services/routes/consumers and store the pointer to translated Kong entities.
+	// Used for fetching entity referred by a custom entity and fill the ID of referred entity.
+	pluginRels := ks.getPluginRelatedEntitiesRef(s, logger)
+
+	for _, entity := range entities {
+		// reject the custom entity if its type is in "known" entity types that are already processed.
+		if IsKnownEntityType(entity.Spec.EntityType) {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("cannot use known entity type %s in custom entity", entity.Spec.EntityType),
+				entity,
+			)
+			continue
+		}
+		// Fetch the entity schema.
+		schema, err := ks.fetchEntitySchema(schemaGetter, entity.Spec.EntityType)
+		if err != nil {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("failed to fetch entity schema for entity type %s: %v", entity.Spec.EntityType, err),
+				entity,
+			)
+			continue
+		}
+		// Unmarshal fields of the entity.
+		var parsedEntity map[string]interface{}
+		if err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity); err != nil {
+			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to unmarshal fields of entity: %v", err), entity)
+			continue
+		}
+		// Fill the "foreign" fields if the entity has such fields referencing services/routes/consumers.
+		ks.fillCustomEntityForeignFields(logger, entity, schema, parsedEntity, pluginRels, workspace)
+		// Put the entity into the custom collection to store the entities of its type.
+		if _, ok := ks.CustomEntities[entity.Spec.EntityType]; !ok {
+			ks.CustomEntities[entity.Spec.EntityType] = &KongCustomEntityCollection{
+				Schema: schema,
+			}
+		}
+		collection := ks.CustomEntities[entity.Spec.EntityType]
+		collection.Entities = append(collection.Entities, CustomEntity{
+			Object:              parsedEntity,
+			K8sKongCustomEntity: entity,
+		})
+	}
+
+	ks.sortCustomEntities()
+}
+
+// fetchEntitySchema fetches schema of an entity by its type and stores the schema in its custom entity collection
+// as a cache to avoid excessive calling of Kong admin APIs.
+func (ks *KongState) fetchEntitySchema(schemaGetter SchemaGetter, entityType string) (EntitySchema, error) {
+	collection, ok := ks.CustomEntities[entityType]
+	if ok {
+		return collection.Schema, nil
+	}
+	// Use `context.Background()` here because `BuildKongConfig` does not provide a context.
+	schema, err := schemaGetter.Get(context.Background(), entityType)
+	if err != nil {
+		return EntitySchema{}, err
+	}
+	return ExtractEntityFieldDefinitions(schema), nil
+}
+
+// fillCustomEntityForeignFields fills the "foreign" fields of a custom Kong entity
+// if it refers to a service/route/consumer.
+// Because Kong gateway requires the "foreign" fields to use IDs of the referred entity,
+// it fills ID of the referred entity and fill the ID of the entity to the field.
+// So the function has the side effect that the referred entity will have a generated fixed ID.
+// It does not support fields referring to other types of entities.
+func (ks *KongState) fillCustomEntityForeignFields(
+	logger logr.Logger,
+	k8sEntity *kongv1alpha1.KongCustomEntity,
+	schema EntitySchema,
+	parsedEntity map[string]any,
+	pluginRelEntities PluginRelatedEntitiesRefs,
+	workspace string,
+) {
+	logger = logger.WithValues("entity_namespace", k8sEntity.Namespace, "entity_name", k8sEntity.Name)
+	// Find referred entity via the plugin in its spec.parentRef.
+	// Then we can fetch the referred service/route/consumer from the reference relations of the plugin.
+	parentRef := k8sEntity.Spec.ParentRef
+	var namespace string
+	// Abort if the parentRef is empty or does not refer to a plugin.
+	if parentRef == nil ||
+		(parentRef.Group == nil || *parentRef.Group != kongv1alpha1.GroupVersion.Group) {
+		return
+	}
+	if parentRef.Kind == nil || (*parentRef.Kind != "KongPlugin" && *parentRef.Kind != "KongClusterPlugin") {
+		return
+	}
+	// Extract the plugin key to get the plugin relations.
+	if parentRef.Namespace == nil || *parentRef.Namespace == "" {
+		namespace = k8sEntity.Namespace
+	} else {
+		namespace = *parentRef.Namespace
+	}
+	pluginKey := namespace + ":" + parentRef.Name
+	// Get the relations with other entities of the plugin.
+	rels, ok := pluginRelEntities.RelatedEntities[pluginKey]
+	if !ok {
+		return
+	}
+	logger.V(util.DebugLevel).Info("fetch references via plugin", "plugin_key", pluginKey)
+
+	// Traverse through the fields of the entity and fill the "foreign" fields with IDs of referring entities.
+	// Note: this procedure will make referred services'/routes'/consumers' ID to be filled.
+	// So it requires the `FillIDs` feature gate to be enabled.
+	for fieldName, field := range schema.Fields {
+		if field.Type != EntityFieldTypeForeign {
+			continue
+		}
+		switch field.Reference {
+		case string(kong.EntityTypeServices):
+			serviceIDs := getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
+			// TODO: we should generate multiple entities if the plugin is attached to multiple services/routes/consumers.
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/6123
+			if len(serviceIDs) > 0 {
+				parsedEntity[fieldName] = map[string]interface{}{
+					"id": serviceIDs[0],
+				}
+				logger.V(util.DebugLevel).Info("added ref to service", "service_id", serviceIDs[0])
+			}
+		case string(kong.EntityTypeRoutes):
+			routeIDs := lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
+				if err := r.FillID(workspace); err != nil {
+					return "", false
+				}
+				return *r.ID, true
+			})
+			if len(routeIDs) > 0 {
+				parsedEntity[fieldName] = map[string]interface{}{
+					"id": routeIDs[0],
+				}
+				logger.V(util.DebugLevel).Info("added ref to route", "route_id", routeIDs[0])
+			}
+		case string(kong.EntityTypeConsumers):
+			consumerIDs := lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
+				if err := c.FillID(workspace); err != nil {
+					return "", false
+				}
+				return *c.ID, true
+			})
+			if len(consumerIDs) > 0 {
+				parsedEntity[fieldName] = map[string]interface{}{
+					"id": consumerIDs[0],
+				}
+				logger.V(util.DebugLevel).Info("added ref to consumer", "consumer_id", consumerIDs[0])
+			}
+		}
+	}
+}
+
+// getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.
+// It fills the IDs of services directly referred, and IDs of services where referred routes attaches to.
+func getServiceIDFromPluginRels(log logr.Logger, rels RelatedEntitiesRef, routeAttachedService map[string]*Service, workspace string) []string {
+	// Return IDs of directly referred services.
+	if len(rels.Services) > 0 {
+		return lo.FilterMap(rels.Services, func(s *Service, _ int) (string, bool) {
+			if err := s.FillID(workspace); err != nil {
+				log.Error(err, "failed to fill ID for service")
+				return "", false
+			}
+			return *s.ID, true
+		},
+		)
+	}
+	// Returns IDs of services where the referred routes attaches.
+	if len(rels.Routes) > 0 {
+		serviceIDs := lo.FilterMap(
+			rels.Routes, func(r *Route, _ int) (string, bool) {
+				svc, ok := routeAttachedService[*r.Name]
+				if !ok {
+					return "", false
+				}
+				if err := svc.FillID(workspace); err != nil {
+					log.Error(err, "failed to fill ID for service")
+					return "", false
+				}
+				return *svc.ID, true
+			},
+		)
+		return lo.Uniq(serviceIDs)
+	}
+	return nil
+}
+
+// getPluginRelatedEntitiesRef gets services/routes/consumers referred by each plugin and returns the pointer to them.
+// It is for the custom entities to fill the IDs of the referred entities into their "foreign" fields.
+// It basically does the same thing as getPluginRelations but stores the pointers
+// because we need to call the FillID method of the entities to fetch the ID,
+// as Kong gateway requires IDs in the "foreign" fields (not other identifiers such as name.)
+//
+// TODO: refactor the building of plugin related entities and share the result between here and building plugins:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/6115
+func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log logr.Logger) PluginRelatedEntitiesRefs {
+	pluginRels := PluginRelatedEntitiesRefs{
+		RelatedEntities:      map[string]RelatedEntitiesRef{},
+		RouteAttachedService: map[string]*Service{},
+	}
+	addRelation := func(referer client.Object, plugin annotations.NamespacedKongPlugin, entity any) {
+		namespace, err := extractReferredPluginNamespace(cacheStore, referer, plugin)
+		if err != nil {
+			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			return
+		}
+		pluginKey := namespace + ":" + plugin.Name
+		relations, ok := pluginRels.RelatedEntities[pluginKey]
+		if !ok {
+			relations = RelatedEntitiesRef{}
+		}
+		switch e := entity.(type) {
+		case *Consumer:
+			relations.Consumers = append(relations.Consumers, e)
+		case *Route:
+			relations.Routes = append(relations.Routes, e)
+		case *Service:
+			relations.Services = append(relations.Services, e)
+		}
+		pluginRels.RelatedEntities[pluginKey] = relations
+	}
+
+	for i := range ks.Services {
+		for _, svc := range ks.Services[i].K8sServices {
+			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(svc.GetAnnotations())
+			for _, plugin := range pluginList {
+				addRelation(svc, plugin, &ks.Services[i])
+			}
+		}
+
+		for j, r := range ks.Services[i].Routes {
+			ingress := ks.Services[i].Routes[j].Ingress
+			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
+			for _, plugin := range pluginList {
+				// Pretend we have a full Ingress struct for reference checks.
+				virtualIngress := netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ingress.Namespace,
+						Name:      ingress.Name,
+					},
+				}
+				addRelation(&virtualIngress, plugin, &ks.Services[i].Routes[j])
+				// For some entities, we need to find the referred service via route
+				// but the `Service` field of translated routes are empty because we do not want the field to appear in final declarative config.
+				// So we need to maintain a map from route name to service to find the service object.
+				pluginRels.RouteAttachedService[*r.Name] = &ks.Services[i]
+			}
+		}
+	}
+
+	for i, c := range ks.Consumers {
+		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
+		for _, plugin := range pluginList {
+			addRelation(&c.K8sKongConsumer, plugin, &ks.Consumers[i])
+		}
+	}
+	return pluginRels
+}
+
+func extractReferredPluginNamespace(
+	cacheStore store.Storer, referer client.Object, plugin annotations.NamespacedKongPlugin,
+) (string, error) {
+	// There are 2 types of KongPlugin references: local and remote.
+	// A local reference is one where the KongPlugin is in the same namespace as the referer.
+	// A remote reference is one where the KongPlugin is in a different namespace.
+	// By default a KongPlugin is considered local.
+	// If the plugin has a namespace specified, it is considered remote.
+	//
+	// The referer is the entity that the KongPlugin is associated with.
+	if plugin.Namespace == "" {
+		return referer.GetNamespace(), nil
+	}
+
+	// remote KongPlugin, permitted if ReferenceGrant allows.
+	err := isRemotePluginReferenceAllowed(
+		cacheStore,
+		pluginReference{
+			Referer:   referer,
+			Namespace: plugin.Namespace,
+			Name:      plugin.Name,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+	return plugin.Namespace, nil
 }

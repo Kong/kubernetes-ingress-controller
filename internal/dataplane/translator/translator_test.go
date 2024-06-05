@@ -5019,13 +5019,20 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 	}
 }
 
+type fakeSchemaServiceProvier struct{}
+
+func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
+	return UnavailableSchemaService{}
+}
+
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer, "", FeatureFlags{
 		// We'll assume these are true for all tests.
 		FillIDs:                           true,
 		ReportConfiguredKubernetesObjects: true,
 		KongServiceFacade:                 true,
-	})
+	}, fakeSchemaServiceProvier{},
+	)
 	require.NoError(t, err)
 	return p
 }

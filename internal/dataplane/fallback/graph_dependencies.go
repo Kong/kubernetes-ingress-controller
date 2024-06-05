@@ -63,6 +63,10 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		*kongv1alpha1.IngressClassParameters,
 		*kongv1alpha1.KongVault:
 		return nil, nil
+	case *kongv1alpha1.KongCustomEntity:
+		// TODO: KongCustomEnity is not supported in failure domain yet.
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/6122
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type: %T", obj)
 	}

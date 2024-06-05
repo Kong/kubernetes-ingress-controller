@@ -360,6 +360,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-fillids=true;"+
 			"feature-gateway-service-discovery=false;"+
 			"feature-gatewayalpha=false;"+
+			"feature-kongcustomentity=false;"+
 			"feature-kongservicefacade=false;"+
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
+	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -48,6 +49,12 @@ const (
 	goldenFileSuffix   = "_golden.yaml"
 	settingsFileSuffix = "_settings.yaml"
 )
+
+type fakeSchemaServiceProvier struct{}
+
+func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
+	return translator.UnavailableSchemaService{}
+}
 
 // TestTranslator_GoldenTests runs the golden tests for the translator.
 //
@@ -223,7 +230,7 @@ func runTranslatorGoldenTest(t *testing.T, tc translatorGoldenTestCase) {
 
 	// Create the translator.
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags)
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{})
 	require.NoError(t, err, "failed creating translator")
 
 	// MustBuild the Kong configuration.

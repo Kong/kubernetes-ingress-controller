@@ -41,13 +41,14 @@ func PerformUpdate(
 	client AdminAPIClient,
 	config Config,
 	targetContent *file.Content,
+	customEntities CustomEntitiesByType,
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
 	isFallback bool,
 ) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()
-	newSHA, err := deckgen.GenerateSHA(targetContent)
+	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		return oldSHA, fmt.Errorf("failed to generate SHA for target content: %w", err)
 	}
@@ -72,8 +73,9 @@ func PerformUpdate(
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
 	err = updateStrategy.Update(ctx, ContentWithHash{
-		Content: targetContent,
-		Hash:    newSHA,
+		Content:        targetContent,
+		CustomEntities: customEntities,
+		Hash:           newSHA,
 	})
 	duration := time.Since(timeStart)
 

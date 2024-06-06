@@ -1,8 +1,9 @@
 package util
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetCombinations(t *testing.T) {
@@ -217,45 +218,43 @@ func TestGetCombinations(t *testing.T) {
 			},
 			want: []Rel{
 				{
-					Consumer: "cg1",
-					Service:  "s1",
+					ConsumerGroup: "cg1",
+					Service:       "s1",
 				},
 				{
-					Consumer: "cg2",
-					Service:  "s1",
+					ConsumerGroup: "cg2",
+					Service:       "s1",
 				},
 				{
-					Consumer: "cg1",
-					Service:  "s2",
+					ConsumerGroup: "cg1",
+					Service:       "s2",
 				},
 				{
-					Consumer: "cg2",
-					Service:  "s2",
+					ConsumerGroup: "cg2",
+					Service:       "s2",
 				},
 				{
-					Consumer: "cg1",
-					Route:    "r1",
+					ConsumerGroup: "cg1",
+					Route:         "r1",
 				},
 				{
-					Consumer: "cg2",
-					Route:    "r1",
+					ConsumerGroup: "cg2",
+					Route:         "r1",
 				},
 				{
-					Consumer: "cg1",
-					Route:    "r2",
+					ConsumerGroup: "cg1",
+					Route:         "r2",
 				},
 				{
-					Consumer: "cg2",
-					Route:    "r2",
+					ConsumerGroup: "cg2",
+					Route:         "r2",
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.args.relations.GetCombinations(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetCombinations() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, tt.args.relations.GetCombinations())
 		})
 	}
 }

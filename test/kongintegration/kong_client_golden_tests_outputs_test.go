@@ -16,6 +16,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
@@ -106,12 +107,9 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			err = yaml.Unmarshal(goldenTestOutput, content)
 			require.NoError(t, err)
 
-			require.Eventually(t, func() bool {
-				if err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content}); err != nil {
-					t.Logf("error: %v", err)
-					return false
-				}
-				return true
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
+				assert.NoError(t, err)
 			}, timeout, tick)
 		})
 	}
@@ -121,20 +119,16 @@ func ensureGoldenTestOutputIsAccepted(ctx context.Context, t *testing.T, goldenT
 	goldenTestOutput, err := os.ReadFile(goldenTestOutputPath)
 	require.NoError(t, err)
 
-	cfg := map[string]interface{}{}
+	cfg := map[string]any{}
 	err = yaml.Unmarshal(goldenTestOutput, &cfg)
 	require.NoError(t, err)
 
 	cfgAsJSON, err := json.Marshal(cfg)
 	require.NoError(t, err)
 
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
-		if err != nil {
-			t.Logf("error: %v, resp: %s", err, string(resp))
-			return false
-		}
-		return true
+		assert.NoErrorf(t, err, "failed to reload declarative config, resp: %s", string(resp))
 	}, timeout, tick)
 }
 

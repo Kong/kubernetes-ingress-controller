@@ -215,12 +215,18 @@ func unmarshalSettingsFile(t *testing.T, path string) testCaseSettings {
 // kongClientGoldenTestCase represents a single test case for the KongClient with an input file and an expected output golden
 // file for a specific combination of feature flags.
 type kongClientGoldenTestCase struct {
+	// k8sConfigFile is the path to the input file with K8s objects to be loaded into the store.
 	k8sConfigFile string
-	goldenFile    string
-	featureFlags  translator.FeatureFlags
+	// goldenFile is the path to the expected output golden file.
+	goldenFile string
+	// featureFlags is the set of Translator feature flags to use in the test case.
+	featureFlags translator.FeatureFlags
 }
 
+// runKongClientGoldenTest runs a single golden test case for the KongClient.
 func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
+	t.Helper()
+
 	logger := zapr.NewLogger(zap.NewNop())
 
 	// Load the K8s objects from the YAML file.
@@ -236,8 +242,6 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{})
 	require.NoError(t, err, "failed creating translator")
 
-	timeout := time.Second
-
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.
 	t.Log("Starting mock Admin API server")
 	adminAPIHandler := mocks.NewAdminAPIHandler(t)
@@ -251,6 +255,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the KongClient using _mostly_ real dependencies' implementations (except for the clients provider
 	// as we want to avoid spinning up a real Kong Gateway to keep the tests fast).
 	t.Log("Building KongClient")
+	const timeout = time.Second
 	cfg := sendconfig.Config{
 		InMemory:         true, // We're running in DB-less mode only for now. In the future, we may want to test DB mode as well.
 		ExpressionRoutes: tc.featureFlags.ExpressionRoutes,

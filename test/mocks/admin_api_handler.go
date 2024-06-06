@@ -448,7 +448,9 @@ const defaultDBLessStatusResponseWithoutConfigurationHash = `{
 // convertReceivedJSONConfigIntoGetConfigResponse converts the received JSON config into a response for a `GET /config` request.
 // That's the way Kong Gateway behaves and to satisfy kong.Client expectations we need to do the same in the mock server.
 func convertReceivedJSONConfigIntoGetConfigResponse(t *testing.T, jsonConfig []byte) []byte {
-	cfg := map[string]interface{}{}
+	t.Helper()
+
+	cfg := map[string]any{}
 	err := json.Unmarshal(jsonConfig, &cfg)
 	require.NoError(t, err, "failed unmarshalling result")
 	resultB, err := yaml.Marshal(cfg)

@@ -423,7 +423,7 @@ test.unit.pretty:
 
 .PHONY: test.golden.update
 test.golden.update:
-	@go test -v -run TestTranslator_GoldenTests ./internal/dataplane/translator -update
+	@go test -v -run TestKongClient_GoldenTests ./internal/dataplane -update
 
 
 .PHONY: use-setup-envtest

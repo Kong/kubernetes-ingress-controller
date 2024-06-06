@@ -1,4 +1,11 @@
 _format_version: "3.0"
+consumer_group_consumers:
+- consumer: consumer-2
+  consumer_group: consumer-group-1
+- consumer: consumer-2
+  consumer_group: consumer-group-2
+- consumer: consumer-1
+  consumer_group: consumer-group-1
 consumer_groups:
 - id: 876a1c78-f75a-570e-a918-26506344add0
   name: consumer-group-2
@@ -15,19 +22,14 @@ consumer_groups:
   - k8s-group:configuration.konghq.com
   - k8s-version:v1beta1
 consumers:
-- groups:
-  - name: consumer-group-1
-  - name: consumer-group-2
-  id: 71168e5f-1d0b-5465-8bb9-a3b032fbc4c4
+- id: 71168e5f-1d0b-5465-8bb9-a3b032fbc4c4
   tags:
   - k8s-name:consumer-2
   - k8s-kind:KongConsumer
   - k8s-group:configuration.konghq.com
   - k8s-version:v1
   username: consumer-2
-- groups:
-  - name: consumer-group-1
-  id: e23d9ef8-1cc4-5b55-abd1-db89aa90346c
+- id: e23d9ef8-1cc4-5b55-abd1-db89aa90346c
   tags:
   - k8s-name:consumer-1
   - k8s-kind:KongConsumer

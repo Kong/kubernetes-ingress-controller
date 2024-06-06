@@ -1,7 +1,9 @@
 package kongintegration
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-database-reconciler/pkg/file"
+	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
@@ -28,8 +31,8 @@ const (
 	tick    = 100 * time.Millisecond
 )
 
-// TestGoldenTestsOutputs ensures that the translators' golden tests outputs are accepted by Kong.
-func TestTranslatorsGoldenTestsOutputs(t *testing.T) {
+// TestKongClientGoldenTestsOutputs ensures that the KongClient's golden tests outputs are accepted by Kong.
+func TestKongClientGoldenTestsOutputs(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -56,15 +59,9 @@ func TestTranslatorsGoldenTestsOutputs(t *testing.T) {
 		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), helpers.DefaultHTTPClient())
 		require.NoError(t, err)
 
-		sut := sendconfig.NewUpdateStrategyInMemory(
-			kongClient,
-			sendconfig.DefaultContentToDBLessConfigConverter{},
-			logr.Discard(),
-		)
-
 		for _, goldenTestOutputPath := range expressionRoutesOutputsPaths {
 			t.Run(goldenTestOutputPath, func(t *testing.T) {
-				ensureGoldenTestOutputIsAccepted(ctx, t, goldenTestOutputPath, sut)
+				ensureGoldenTestOutputIsAccepted(ctx, t, goldenTestOutputPath, kongClient)
 			})
 		}
 	})
@@ -76,23 +73,17 @@ func TestTranslatorsGoldenTestsOutputs(t *testing.T) {
 		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), helpers.DefaultHTTPClient())
 		require.NoError(t, err)
 
-		sut := sendconfig.NewUpdateStrategyInMemory(
-			kongClient,
-			sendconfig.DefaultContentToDBLessConfigConverter{},
-			logr.Discard(),
-		)
-
 		for _, goldenTestOutputPath := range defaultOutputsPaths {
 			t.Run(goldenTestOutputPath, func(t *testing.T) {
-				ensureGoldenTestOutputIsAccepted(ctx, t, goldenTestOutputPath, sut)
+				ensureGoldenTestOutputIsAccepted(ctx, t, goldenTestOutputPath, kongClient)
 			})
 		}
 	})
 }
 
-// TestGoldenTestsOutputs ensures that the translators' golden tests outputs are accepted by Konnect Control Plane
+// TestKongClientGoldenTestsOutputs ensures that the KongClient's golden tests outputs are accepted by Konnect Control Plane
 // Admin API.
-func TestTranslatorsGoldenTestsOutputs_Konnect(t *testing.T) {
+func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	konnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 	t.Parallel()
 
@@ -108,27 +99,39 @@ func TestTranslatorsGoldenTestsOutputs_Konnect(t *testing.T) {
 
 	for _, goldenTestOutputPath := range allGoldenTestsOutputsPaths(t) {
 		t.Run(goldenTestOutputPath, func(t *testing.T) {
-			ensureGoldenTestOutputIsAccepted(ctx, t, goldenTestOutputPath, updateStrategy)
+			goldenTestOutput, err := os.ReadFile(goldenTestOutputPath)
+			require.NoError(t, err)
+
+			content := &file.Content{}
+			err = yaml.Unmarshal(goldenTestOutput, content)
+			require.NoError(t, err)
+
+			require.Eventually(t, func() bool {
+				if err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content}); err != nil {
+					t.Logf("error: %v", err)
+					return false
+				}
+				return true
+			}, timeout, tick)
 		})
 	}
 }
 
-func ensureGoldenTestOutputIsAccepted(
-	ctx context.Context,
-	t *testing.T,
-	goldenTestOutputPath string,
-	sut sendconfig.UpdateStrategy,
-) {
+func ensureGoldenTestOutputIsAccepted(ctx context.Context, t *testing.T, goldenTestOutputPath string, kongClient *kong.Client) {
 	goldenTestOutput, err := os.ReadFile(goldenTestOutputPath)
 	require.NoError(t, err)
 
-	content := &file.Content{}
-	err = yaml.Unmarshal(goldenTestOutput, content)
+	cfg := map[string]interface{}{}
+	err = yaml.Unmarshal(goldenTestOutput, &cfg)
+	require.NoError(t, err)
+
+	cfgAsJSON, err := json.Marshal(cfg)
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		if err := sut.Update(ctx, sendconfig.ContentWithHash{Content: content}); err != nil {
-			t.Logf("error: %v", err)
+		resp, err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
+		if err != nil {
+			t.Logf("error: %v, resp: %s", err, string(resp))
 			return false
 		}
 		return true
@@ -136,7 +139,7 @@ func ensureGoldenTestOutputIsAccepted(
 }
 
 func allGoldenTestsOutputsPaths(t *testing.T) []string {
-	const goldenTestsOutputsGlob = "../../internal/dataplane/translator/testdata/golden/*/*_golden.yaml"
+	const goldenTestsOutputsGlob = "../../internal/dataplane/testdata/golden/*/*_golden.yaml"
 	goldenTestsOutputsPaths, err := filepath.Glob(goldenTestsOutputsGlob)
 	require.NoError(t, err)
 	require.NotEmpty(t, goldenTestsOutputsPaths, "no golden tests outputs found")

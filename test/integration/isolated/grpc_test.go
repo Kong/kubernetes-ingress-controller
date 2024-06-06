@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -30,7 +29,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
@@ -43,9 +41,12 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
-		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTPS", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			// On purpose omit protocol annotation to test defaulting to "grpcs" that is preserved to not break users' configs.
+		WithSetup("deploy kong addon into cluster", featureSetup(
+			withKongProxyEnvVars(map[string]string{
+				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
+			}),
+		)).
+		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTP", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -61,45 +62,12 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 			cleaner.Add(gwc)
 
-			t.Log("configuring secret")
-			const tlsRouteHostname = "tls-route.example"
-			tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(tlsRouteHostname))
-			const tlsSecretName = "secret-test"
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
-					Name:      tlsSecretName,
-					Namespace: namespace,
-				},
-				Data: map[string][]byte{
-					"tls.crt": tlsRouteExampleTLSCert,
-					"tls.key": tlsRouteExampleTLSKey,
-				},
-			}
-
-			t.Log("deploying secret")
-			secret, err = cluster.Client().CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
-			assert.NoError(t, err)
-			cleaner.Add(secret)
-
 			t.Log("deploying a new gateway")
 			gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				// Besides default HTTP listener, add a HTTPS listener.
-				gw.Spec.Listeners = append(
-					gw.Spec.Listeners,
-					builder.NewListener("https").
-						HTTPS().
-						WithPort(ktfkong.DefaultProxyTLSServicePort).
-						WithHostname(testHostname).
-						WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-							CertificateRefs: []gatewayapi.SecretObjectReference{
-								{
-									Name: gatewayapi.ObjectName(secret.Name),
-								},
-							},
-						}).
-						Build(),
-				)
+				gw.Spec.Listeners = builder.NewListener("grpc").
+					HTTP().
+					WithPort(ktfkong.DefaultProxyHTTPPort).
+					IntoSlice()
 			})
 			assert.NoError(t, err)
 			cleaner.Add(gateway)
@@ -168,7 +136,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			return ctx
 		}).
 		Assess("checking if GRPCRoute is linked correctly and client can connect properly to the exposed service", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			grpcAddr := GetHTTPSURLFromCtx(ctx).Host // For GRPC, we use the same address as for HTTPS, but without the scheme (https://).
+			grpcAddr := GetHTTPURLFromCtx(ctx).Host // For GRPC, we use the same address as for HTTP, but without the scheme (http://).
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			grpcRoute := GetFromCtxForT[*gatewayapi.GRPCRoute](ctx, t)
@@ -184,14 +152,14 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 			t.Log("waiting for routes from GRPCRoute to become operational")
 			assert.Eventually(t, func() bool {
-				err := grpcEchoResponds(ctx, grpcAddr, testHostname, "kong", true)
+				err := grpcEchoResponds(ctx, grpcAddr, testHostname, "kong", false)
 				if err != nil {
 					t.Log(err)
 				}
 				return err == nil
 			}, consts.IngressWait, consts.WaitTick)
 
-			client, closeGrpcConn, err := grpcBinClient(grpcAddr, testHostname, true)
+			client, closeGrpcConn, err := grpcBinClient(grpcAddr, testHostname, false)
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				err := closeGrpcConn()

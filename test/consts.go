@@ -24,7 +24,9 @@ const (
 	// GRPCBinImage is the container image name we use for deploying the "grpcbin" GRPC testing tool.
 	// See: https://github.com/Kong/grpcbin
 	GRPCBinImage = "kong/grpcbin:latest"
-	GRPCBinPort  = 9001
+
+	GRPCBinPort  int32 = 9000
+	GRPCSBinPort int32 = 9001
 
 	// EnvironmentCleanupTimeout is the amount of time that will be given by the test suite to the
 	// testing environment to perform its cleanup when the test suite is shutting down.

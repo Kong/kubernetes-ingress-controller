@@ -116,7 +116,7 @@ func gatewayLinkStatusMatches(
 	switch protocolType {
 	case gatewayapi.HTTPProtocolType:
 		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		groute, gerr := c.GatewayV1().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
 			t.Logf("error getting grpc route: %v", gerr)
@@ -211,7 +211,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	switch protocolType {
 	case gatewayapi.HTTPProtocolType:
 		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		groute, gerr := c.GatewayV1().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
 			t.Logf("error getting grpc route: %v", err)

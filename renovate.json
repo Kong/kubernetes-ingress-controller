@@ -61,6 +61,20 @@
       "addLabels": [
         "renovate/auto-regenerate"
       ]
+    },
+    {
+      "description": "Match versions in config/image/oss and config/image/enterprise kustomize files that are properly annotated with `# renovate: datasource={} versioning={} depName={}`.",
+      "customType": "regex",
+      "fileMatch": [
+        "^config/image/enterprise/.*\\.yaml$",
+        "^config/image/oss/.*\\.yaml$"
+      ],
+      "matchStrings": [
+        "'(?<currentValue>.+)' # renovate: datasource=(?<datasource>.*) versioning=(?<versioning>.*) depName=(?<depName>.+)"
+      ],
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ]
     }
   ]
 }

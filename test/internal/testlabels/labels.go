@@ -13,6 +13,7 @@ const (
 	KindKongTCPIngress     = "TCPIngress"
 	KindKongUpstreamPolicy = "KongUpstreamPolicy"
 	KindKongLicense        = "KongLicense"
+	KindKongCustomEntity   = "KongCustomEntity"
 )
 
 const (

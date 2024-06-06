@@ -3,7 +3,7 @@
 # The example requires KIC to set `KongCustomEntity` and `FillIDs` feature gates enabled.
 # The example will use `degraphql_routes` entity and `degraphql` plugin for
 # demonstration. Since `degraphql` plugin can be only used with Kong gateway
-# enterprise, the demo can be only used with Kong gateway enterprised installed.
+# enterprise, the demo can be only used with Kong gateway enterprise installed.
 
 apiVersion: apps/v1
 kind: Deployment
@@ -138,5 +138,5 @@ spec:
     name: "degraphql-example"
   fields:
     uri: "/contacts"
-    query: "query{ contacts { name phone } }"
+    query: "query{ contacts { name } }"
 

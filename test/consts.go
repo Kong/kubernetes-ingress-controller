@@ -32,13 +32,4 @@ const (
 
 	// RequestTimeout is the amount of time that will be given to any request to complete.
 	RequestTimeout = 10 * time.Second
-
-	// HasuraGraphQLEngineImage is the image that provides graphQL service from data in postgres database.
-	// The graqhQL image is used to test degraphql_routes custom entity and degraphql plugin.
-	HasuraGraphQLEngineImage = "hasura/graphql-engine:v2.38.0"
-	// HasuraGraphQLEnginePort is the port that hasura graphQL engine provides services.
-	HasuraGraphQLEnginePort = 8080
-	// PostgresImage is the image that serves postgres database for the graphQL service.
-	PostgresImage = "postgres:15"
-	PostgresPort  = 5432
 )

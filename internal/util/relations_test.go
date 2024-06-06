@@ -206,6 +206,50 @@ func TestGetCombinations(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "plugins on combination of service,route and consumer group",
+			args: args{
+				relations: ForeignRelations{
+					Route:         []string{"r1", "r2"},
+					Service:       []string{"s1", "s2"},
+					ConsumerGroup: []string{"cg1", "cg2"},
+				},
+			},
+			want: []Rel{
+				{
+					Consumer: "cg1",
+					Service:  "s1",
+				},
+				{
+					Consumer: "cg2",
+					Service:  "s1",
+				},
+				{
+					Consumer: "cg1",
+					Service:  "s2",
+				},
+				{
+					Consumer: "cg2",
+					Service:  "s2",
+				},
+				{
+					Consumer: "cg1",
+					Route:    "r1",
+				},
+				{
+					Consumer: "cg2",
+					Route:    "r1",
+				},
+				{
+					Consumer: "cg1",
+					Route:    "r2",
+				},
+				{
+					Consumer: "cg2",
+					Route:    "r2",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -214,4 +258,31 @@ func TestGetCombinations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkGetCombinations(b *testing.B) {
+	b.Run("consumer groups", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			relationsCG := ForeignRelations{
+				Route:         []string{"r1", "r2"},
+				Service:       []string{"s1", "s2"},
+				ConsumerGroup: []string{"cg1", "cg2"},
+			}
+
+			rels := relationsCG.GetCombinations()
+			_ = rels
+		}
+	})
+	b.Run("consumers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			relationsCG := ForeignRelations{
+				Route:    []string{"r1", "r2"},
+				Service:  []string{"s1", "s2"},
+				Consumer: []string{"c1", "c2", "c3"},
+			}
+
+			rels := relationsCG.GetCombinations()
+			_ = rels
+		}
+	})
 }

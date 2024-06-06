@@ -21,7 +21,7 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 
 	// gocritic I don't care that you think switch statements are the one true god of readability, the language offers
 	// multiple options for a reason. go away, gocritic.
-	if lConsumer > 0 { // nolint:gocritic
+	if lConsumer > 0 { //nolint:gocritic
 		if l > 0 {
 			cartesianProduct = make([]Rel, 0, l*lConsumer)
 			for _, consumer := range relations.Consumer {

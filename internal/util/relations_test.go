@@ -123,12 +123,12 @@ func TestGetCombinations(t *testing.T) {
 					Route:    "foo",
 				},
 				{
-					Consumer: "bar",
-					Route:    "foo",
-				},
-				{
 					Consumer: "foo",
 					Route:    "bar",
+				},
+				{
+					Consumer: "bar",
+					Route:    "foo",
 				},
 				{
 					Consumer: "bar",
@@ -150,12 +150,12 @@ func TestGetCombinations(t *testing.T) {
 					Service:  "foo",
 				},
 				{
-					Consumer: "bar",
-					Service:  "foo",
-				},
-				{
 					Consumer: "foo",
 					Service:  "bar",
+				},
+				{
+					Consumer: "bar",
+					Service:  "foo",
 				},
 				{
 					Consumer: "bar",
@@ -178,28 +178,28 @@ func TestGetCombinations(t *testing.T) {
 					Service:  "s1",
 				},
 				{
-					Consumer: "c2",
-					Service:  "s1",
-				},
-				{
 					Consumer: "c1",
 					Service:  "s2",
 				},
 				{
-					Consumer: "c2",
-					Service:  "s2",
-				},
-				{
 					Consumer: "c1",
-					Route:    "r1",
-				},
-				{
-					Consumer: "c2",
 					Route:    "r1",
 				},
 				{
 					Consumer: "c1",
 					Route:    "r2",
+				},
+				{
+					Consumer: "c2",
+					Service:  "s1",
+				},
+				{
+					Consumer: "c2",
+					Service:  "s2",
+				},
+				{
+					Consumer: "c2",
+					Route:    "r1",
 				},
 				{
 					Consumer: "c2",
@@ -222,28 +222,28 @@ func TestGetCombinations(t *testing.T) {
 					Service:       "s1",
 				},
 				{
-					ConsumerGroup: "cg2",
-					Service:       "s1",
-				},
-				{
 					ConsumerGroup: "cg1",
 					Service:       "s2",
 				},
 				{
-					ConsumerGroup: "cg2",
-					Service:       "s2",
-				},
-				{
 					ConsumerGroup: "cg1",
-					Route:         "r1",
-				},
-				{
-					ConsumerGroup: "cg2",
 					Route:         "r1",
 				},
 				{
 					ConsumerGroup: "cg1",
 					Route:         "r2",
+				},
+				{
+					ConsumerGroup: "cg2",
+					Service:       "s1",
+				},
+				{
+					ConsumerGroup: "cg2",
+					Service:       "s2",
+				},
+				{
+					ConsumerGroup: "cg2",
+					Route:         "r1",
 				},
 				{
 					ConsumerGroup: "cg2",
@@ -262,25 +262,25 @@ func TestGetCombinations(t *testing.T) {
 func BenchmarkGetCombinations(b *testing.B) {
 	b.Run("consumer groups", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			relationsCG := ForeignRelations{
+			relations := ForeignRelations{
 				Route:         []string{"r1", "r2"},
 				Service:       []string{"s1", "s2"},
 				ConsumerGroup: []string{"cg1", "cg2"},
 			}
 
-			rels := relationsCG.GetCombinations()
+			rels := relations.GetCombinations()
 			_ = rels
 		}
 	})
 	b.Run("consumers", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			relationsCG := ForeignRelations{
+			relations := ForeignRelations{
 				Route:    []string{"r1", "r2"},
 				Service:  []string{"s1", "s2"},
 				Consumer: []string{"c1", "c2", "c3"},
 			}
 
-			rels := relationsCG.GetCombinations()
+			rels := relations.GetCombinations()
 			_ = rels
 		}
 	})

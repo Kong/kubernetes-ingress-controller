@@ -6,7 +6,7 @@ kind: Component
 images:
 - name: kong
   newName: kong/kong-gateway
-  newTag: '3.7' # renovate: datasource=docker versioning=docker depName=kong/kong-gateway
+  newTag: '3.7' # renovate: datasource=docker versioning=docker depName=kong/kong-gateway@regenerate
 - name: kong-placeholder
   newName: kong/kong-gateway
-  newTag: '3.7' # renovate: datasource=docker versioning=docker depName=kong/kong-gateway
+  newTag: '3.7' # renovate: datasource=docker versioning=docker depName=kong/kong-gateway@regenerate

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type PortMode int
@@ -63,5 +64,18 @@ func (c *Certificate) SanitizedCopy() *Certificate {
 			SNIs:      c.SNIs,
 			Tags:      c.Tags,
 		},
+	}
+}
+
+// Plugin represents a plugin Object in Kong.
+type Plugin struct {
+	kong.Plugin
+	K8sParent client.Object
+}
+
+func (p Plugin) DeepCopy() Plugin {
+	return Plugin{
+		Plugin:    *p.Plugin.DeepCopy(),
+		K8sParent: p.K8sParent,
 	}
 }

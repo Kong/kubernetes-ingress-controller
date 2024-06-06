@@ -211,15 +211,17 @@ Adding a new version? You'll need three changes:
   is seen as a parent other than the controller and ignored in parentRef check.
   [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
 - Redacted values no longer cause collisions in configuration reported to Konnect.
-  [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+  [#5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
 - The `--dump-sensitive-config` flag is no longer backwards.
-  [6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
+  [#6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
 - Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
   those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
-  [6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
+  [#6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
 - Fixed KIC non leaders correctly getting up to date Admin API addresses by not
   requiring leader election for the related controller.
-  [6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
+  [#6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
+- KongPlugin's `config` field is no longer incorrectly sanitized.
+  [#6138](https://github.com/Kong/kubernetes-ingress-controller/pull/6138)
 
 ### Changed
 

@@ -3823,7 +3823,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong/kong-gateway:3.5
+        image: kong/kong-gateway:3.7
         lifecycle:
           preStop:
             exec:
@@ -3910,6 +3910,9 @@ spec:
         - containerPort: 10255
           name: cmetrics
           protocol: TCP
+        - containerPort: 10256
+          name: diagnostics
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -3942,7 +3945,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong/kong-gateway:3.5
+        image: kong/kong-gateway:3.7
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -4041,7 +4044,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:3.5
+        image: kong/kong-gateway:3.7
         name: kong-migrations
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
@@ -4056,7 +4059,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:3.5
+        image: kong/kong-gateway:3.7
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

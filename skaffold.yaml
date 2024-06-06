@@ -62,6 +62,22 @@ profiles:
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
           GOCACHE: "{{ .GOCACHE }}"
+- name: multi_gw_enterprise
+  manifests:
+    kustomize:
+      paths:
+      - config/variants/multi-gw/enterprise
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile
+        target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
 - name: multi_gw_postgres
   manifests:
     kustomize:

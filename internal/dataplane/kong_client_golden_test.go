@@ -227,7 +227,8 @@ type kongClientGoldenTestCase struct {
 func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	t.Helper()
 
-	logger := zapr.NewLogger(zap.NewNop())
+	t.Logf("Running test case with input file %s and golden file %s", tc.k8sConfigFile, tc.goldenFile)
+	t.Logf("Feature flags: %+v", tc.featureFlags)
 
 	// Load the K8s objects from the YAML file.
 	objects := extractObjectsFromYAML(t, tc.k8sConfigFile)
@@ -238,6 +239,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	require.NoError(t, err, "failed creating cache stores")
 
 	// Create the translator.
+	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
 	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{})
 	require.NoError(t, err, "failed creating translator")

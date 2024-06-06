@@ -139,6 +139,8 @@ func pruneTestCaseDirectory(t *testing.T, path string) {
 // The function iterates over a test case directory containing zero or more files named "<name>_settings.yaml".
 // If it doesn't find any settings files, it returns a single testCaseSettings with default feature flags and Kong version.
 func resolveSetsOfSettingsForTestCaseDir(t *testing.T, path string) []testCaseSettings {
+	t.Helper()
+
 	// Iterate over all files in the directory and look for settings files.
 	files, err := os.ReadDir(path)
 	require.NoErrorf(t, err, "failed to iterate over files in test case directory %s", path)

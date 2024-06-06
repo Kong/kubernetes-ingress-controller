@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"k8s.io/kubectl/pkg/cmd/util"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
@@ -83,6 +84,10 @@ const (
 //
 // If you introduce a change that may affect many test cases, and you're sure about it correctness, you can run the
 // update command as well to update all golden files at once.
+//
+// If you want to make the mocked Admin API server return errors for specific objects, you can add an annotation
+// "test.konghq.com/broken: true" to the object in the in.yaml file. If there's at least one object with this annotation,
+// the test will expect an error from the KongClient.Update method and will turn the FallbackConfiguration feature on.
 func TestKongClient_GoldenTests(t *testing.T) {
 	// First, let's prepare the test cases basing on the testdata/golden directory contents.
 	var testCases []kongClientGoldenTestCase
@@ -240,6 +245,16 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	cacheStores, err := store.NewCacheStoresFromObjYAML(objects...)
 	require.NoError(t, err, "failed creating cache stores")
 
+	var objectsToBeConsideredBroken []fallback.ObjectHash
+	for _, s := range cacheStores.ListAllStores() {
+		for _, o := range s.List() {
+			o := o.(client.Object)
+			if o.GetAnnotations()["test.konghq.com/broken"] == "true" {
+				objectsToBeConsideredBroken = append(objectsToBeConsideredBroken, fallback.GetObjectHash(o))
+			}
+		}
+	}
+
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
@@ -248,7 +263,16 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.
 	t.Log("Starting mock Admin API server")
-	adminAPIHandler := mocks.NewAdminAPIHandler(t)
+	var adminAPIOpts []mocks.AdminAPIHandlerOpt
+	if len(objectsToBeConsideredBroken) > 0 {
+		t.Logf("Configuring the mock Admin API server to return errors for broken objects: %v", objectsToBeConsideredBroken)
+		adminAPIOpts = append(adminAPIOpts,
+			mocks.WithConfigPostError(buildPostConfigErrorResponseWithBrokenObjects(objectsToBeConsideredBroken)),
+			mocks.WithConfigPostErrorOnlyOnFirstRequest(),
+		)
+	}
+
+	adminAPIHandler := mocks.NewAdminAPIHandler(t, adminAPIOpts...)
 	adminAPIServer := httptest.NewServer(adminAPIHandler)
 	defer adminAPIServer.Close()
 
@@ -261,8 +285,9 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	t.Log("Building KongClient")
 	const timeout = time.Second
 	cfg := sendconfig.Config{
-		InMemory:         true, // We're running in DB-less mode only for now. In the future, we may want to test DB mode as well.
-		ExpressionRoutes: tc.featureFlags.ExpressionRoutes,
+		InMemory:              true, // We're running in DB-less mode only for now. In the future, we may want to test DB mode as well.
+		ExpressionRoutes:      tc.featureFlags.ExpressionRoutes,
+		FallbackConfiguration: len(objectsToBeConsideredBroken) > 0,
 	}
 	clientsProvider := &mockGatewayClientsProvider{
 		gatewayClients: []*adminapi.Client{adminAPIClient},
@@ -290,7 +315,11 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	t.Log("Triggering KongClient.Update")
 	ctx := context.Background()
 	err = kongClient.Update(ctx)
-	require.NoError(t, err, "failed updating Kong configuration")
+	if len(objectsToBeConsideredBroken) > 0 {
+		require.Error(t, err, "expected an error when fallback configuration is enabled")
+	} else {
+		require.NoError(t, err, "failed updating Kong configuration")
+	}
 
 	t.Log("Fetching the last received configuration from the Admin API")
 	resultB, err := adminAPIClient.AdminAPIClient().Config(ctx)
@@ -342,4 +371,16 @@ type fakeSchemaServiceProvier struct{}
 
 func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
 	return translator.UnavailableSchemaService{}
+}
+
+func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []fallback.ObjectHash) []byte {
+	var flattenedErrors []string
+	for _, o := range brokenObjects {
+		flattenedError := fmt.Sprintf(`{"errors": [{"messages": ["broken object"]}], "entity_tags": ["k8s-name:%s","k8s-namespace:%s","k8s-kind:%s","k8s-group:%s", "k8s-uid:%s"]}`,
+			o.Name, o.Namespace, o.Kind, o.Group, o.UID,
+		)
+		flattenedErrors = append(flattenedErrors, flattenedError)
+	}
+
+	return []byte(fmt.Sprintf(`{"flattened_errors": [%s]}`, strings.Join(flattenedErrors, ",")))
 }

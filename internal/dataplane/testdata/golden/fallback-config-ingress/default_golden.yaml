@@ -1,0 +1,48 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: svc.foo-namespace.80.svc
+  id: b39d28b5-b340-5fdf-951c-7533171d95bb
+  name: foo-namespace.svc.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - hosts:
+    - example.com
+    https_redirect_status_code: 426
+    id: 6ac99766-f0f3-51ec-ae0f-df376a67738e
+    name: foo-namespace.valid-ingress.svc.example.com.80
+    path_handling: v0
+    paths:
+    - ~/valid$
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:valid-ingress
+    - k8s-namespace:foo-namespace
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:svc
+  - k8s-namespace:foo-namespace
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: svc.foo-namespace.80.svc
+  tags:
+  - k8s-name:svc
+  - k8s-namespace:foo-namespace
+  - k8s-kind:Service
+  - k8s-version:v1

@@ -47,9 +47,7 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 			return
 		}(),
 		CACertificates: ks.CACertificates,
-		Plugins: lo.Map(ks.Plugins, func(p Plugin, _ int) Plugin {
-			return p.SanitizedCopy()
-		}),
+		Plugins:        ks.Plugins,
 		Consumers: func() (res []Consumer) {
 			for _, v := range ks.Consumers {
 				res = append(res, *v.SanitizedCopy(uuidGenerator))

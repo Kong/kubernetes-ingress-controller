@@ -3790,6 +3790,9 @@ spec:
         - containerPort: 10255
           name: cmetrics
           protocol: TCP
+        - containerPort: 10256
+          name: diagnostics
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:

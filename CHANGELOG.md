@@ -102,6 +102,9 @@ Adding a new version? You'll need three changes:
   performance benefits, however, so labeling plugin configuration Secrets and
   enabling the filter is recommended as soon as is convenient.
   [#5856](https://github.com/Kong/kubernetes-ingress-controller/pull/5856)
+- Dynamically set the proxy protocol of GRPCRoute to `grpc` or `grpcs` based on the port listened by Gateway.
+  If you don't set the protocol for Service via `konghq.com/protocol` annotation, Kong will use `grpc` instead of `grpcs`.
+  [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)
 - The `/debug/config/failed` and `/debug/config/successful` diagnostic
   endpoints now nest configuration dumps under a `config` key. These endpoints
   previously returned the configuration dump at the root. They now return
@@ -192,6 +195,8 @@ Adding a new version? You'll need three changes:
   [#5965](https://github.com/Kong/kubernetes-ingress-controller/pull/5965)
 - Fallback configuration no longer omits licenses and vaults.
   [#6048](https://github.com/Kong/kubernetes-ingress-controller/pull/6048)
+- Add support for Gateway API GRPCRoute and pass related Gateway API conformance test.
+  [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)
 
 ### Fixed
 
@@ -211,12 +216,12 @@ Adding a new version? You'll need three changes:
   is seen as a parent other than the controller and ignored in parentRef check.
   [#5919](https://github.com/Kong/kubernetes-ingress-controller/pull/5919)
 - Redacted values no longer cause collisions in configuration reported to Konnect.
-  [5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+  [#5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
 - The `--dump-sensitive-config` flag is no longer backwards.
-  [6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
+  [#6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
 - Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
   those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
-  [6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
+  [#6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
 - Fixed KIC non leaders correctly getting up to date Admin API addresses by not
   requiring leader election for the related controller.
   [6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
@@ -225,6 +230,9 @@ Adding a new version? You'll need three changes:
   and route or service. Previously, these incorrectly generated plugins
   attached to the route or service only.
   [6132](https://github.com/Kong/kubernetes-ingress-controller/pull/6132)
+  [#6126](https://github.com/Kong/kubernetes-ingress-controller/pull/6126)
+- KongPlugin's `config` field is no longer incorrectly sanitized.
+  [#6138](https://github.com/Kong/kubernetes-ingress-controller/pull/6138)
 
 ### Changed
 

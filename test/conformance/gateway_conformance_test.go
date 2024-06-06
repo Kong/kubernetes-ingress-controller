@@ -34,8 +34,9 @@ var skippedTestsForTraditionalRoutes = []string{
 }
 
 var skippedTestsForExpressionRoutes = []string{
-	// When processing this scenario, the Kong's expression router currently needs to
-	// add `priority` to the route.
+	// When processing this scenario, the Kong's expressions router requires `priority`
+	// to be specified for routes.
+	// We cannot provide that for routes that are part of the conformance suite.
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 

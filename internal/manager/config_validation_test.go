@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -299,6 +300,24 @@ func TestConfigValidate(t *testing.T) {
 			c := validWithTokenPath()
 			c.KongAdminToken = "non-empty-token"
 			require.ErrorContains(t, c.Validate(), "both admin token and admin token file specified, only one allowed")
+		})
+	})
+
+	t.Run("--use-last-valid-config-for-fallback", func(t *testing.T) {
+		t.Run("enabled without feature gate is rejected", func(t *testing.T) {
+			c := manager.Config{
+				UseLastValidConfigForFallback: true,
+			}
+			require.ErrorContains(t, c.Validate(), "--use-last-valid-config-for-fallback can only be used with FallbackConfiguration feature gate enabled")
+		})
+		t.Run("enabled with feature gate is accepted", func(t *testing.T) {
+			c := manager.Config{
+				UseLastValidConfigForFallback: true,
+				FeatureGates: map[string]bool{
+					featuregates.FallbackConfiguration: true,
+				},
+			}
+			require.NoError(t, c.Validate())
 		})
 	})
 }

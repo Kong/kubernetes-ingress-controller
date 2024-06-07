@@ -92,5 +92,5 @@
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller. | `0s` |
 | `--update-status` | `bool` | Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, etc.). | `true` |
 | `--update-status-queue-buffer-size` | `int` | Buffer size of the underlying channels used to update the status of resources. | `8192` |
-| `--use-last-valid-config-for-fallback` | `bool` | When recovering from config push failures, use the last valid configuration cache to backfill broken objects. | `false` |
+| `--use-last-valid-config-for-fallback` | `bool` | When recovering from config push failures, use the last valid configuration cache to backfill broken objects. It can only be used with the FallbackConfiguration feature gate enabled. | `false` |
 | `--watch-namespace` | `strings` | Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces. | `[]` |

@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 )
 
 // https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
@@ -70,6 +71,9 @@ func (c *Config) Validate() error {
 	if err := c.validateKongAdminAPI(); err != nil {
 		return fmt.Errorf("invalid kong admin api configuration: %w", err)
 	}
+	if err := c.validateFallbackConfiguration(); err != nil {
+		return fmt.Errorf("invalid fallback config settings: %w", err)
+	}
 
 	return nil
 }
@@ -101,6 +105,16 @@ func (c *Config) validateKonnect() error {
 func (c *Config) validateKongAdminAPI() error {
 	if err := validateClientTLS(c.KongAdminAPIConfig.TLSClient); err != nil {
 		return fmt.Errorf("TLS client config invalid: %w", err)
+	}
+	return nil
+}
+
+func (c *Config) validateFallbackConfiguration() error {
+	if !c.FeatureGates[featuregates.FallbackConfiguration] && c.UseLastValidConfigForFallback {
+		return fmt.Errorf(
+			"--use-last-valid-config-for-fallback or CONTROLLER_USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with %s feature gate enabled",
+			featuregates.FallbackConfiguration,
+		)
 	}
 	return nil
 }

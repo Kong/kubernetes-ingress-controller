@@ -66,13 +66,6 @@ func MustHTTPRequest(t *testing.T, method string, host, path string, headers map
 	return req
 }
 
-// MustParseURL parses a string format URL to *url.URL. If error happens, fails the test.
-func MustParseURL(t *testing.T, urlStr string) *url.URL {
-	u, err := url.Parse(urlStr)
-	require.NoErrorf(t, err, "Failed to parse URL %s: %v", urlStr, err)
-	return u
-}
-
 // -----------------------------------------------------------------------------
 // Testing Utility Functions - Various HTTP related
 // -----------------------------------------------------------------------------
@@ -92,9 +85,10 @@ func EventuallyGETPath(
 	path string,
 	statusCode int,
 	bodyContent string,
-	headers map[string]string,
+	requestHeaders map[string]string,
 	waitDuration time.Duration,
 	waitTick time.Duration,
+	responseMatchers ...ResponseMatcher,
 ) {
 	t.Helper()
 	var client *http.Client
@@ -105,7 +99,7 @@ func EventuallyGETPath(
 	}
 
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		resp, err := client.Do(MustHTTPRequest(t, http.MethodGet, host, path, headers))
+		resp, err := client.Do(MustHTTPRequest(t, http.MethodGet, host, path, requestHeaders))
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -127,6 +121,10 @@ func EventuallyGETPath(
 			return
 		}
 		assert.Contains(c, b.String(), bodyContent)
+		for _, matcher := range responseMatchers {
+			reason, ok := matcher(resp, b.String())
+			assert.Truef(t, ok, "response did not match %s", reason)
+		}
 	}, waitDuration, waitTick)
 }
 

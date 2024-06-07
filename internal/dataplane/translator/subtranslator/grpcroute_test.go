@@ -30,6 +30,7 @@ func makeTestGRPCRoute(
 	name string, namespace string, annotations map[string]string,
 	hostnames []string,
 	rules []gatewayapi.GRPCRouteRule,
+	parentRef []gatewayapi.ParentReference,
 ) *gatewayapi.GRPCRoute {
 	return &gatewayapi.GRPCRoute{
 		TypeMeta: metav1.TypeMeta{
@@ -46,6 +47,9 @@ func makeTestGRPCRoute(
 				return gatewayapi.Hostname(h)
 			}),
 			Rules: rules,
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: parentRef,
+			},
 		},
 	}
 }
@@ -58,6 +62,8 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 		hostnames      []string
 		rule           gatewayapi.GRPCRouteRule
 		expectedRoutes []kongstate.Route
+		parentRef      []gatewayapi.ParentReference
+		storer         store.Storer
 	}{
 		{
 			name:        "single match without hostname",
@@ -278,14 +284,70 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "no match with hostname from gateway",
+			objectName:  "hostname-from-gateway",
+			annotations: map[string]string{},
+			rule:        gatewayapi.GRPCRouteRule{},
+			expectedRoutes: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:             "hostname-from-gateway",
+						Namespace:        "default",
+						Annotations:      map[string]string{},
+						GroupVersionKind: grpcRouteGVK,
+					},
+					Route: kong.Route{
+						Name:      kong.String("grpcroute.default.hostname-from-gateway.0.0"),
+						Hosts:     kong.StringSlice("bar.com"),
+						Protocols: kong.StringSlice("grpc", "grpcs"),
+						Tags: kong.StringSlice(
+							"k8s-name:hostname-from-gateway",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1",
+						),
+					},
+				},
+			},
+			parentRef: []gatewayapi.ParentReference{
+				{
+					Name:        "gateway",
+					Namespace:   lo.ToPtr(gatewayapi.Namespace("default")),
+					SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+				},
+			},
+			storer: lo.Must(store.NewFakeStore(store.FakeObjects{
+				Gateways: []*gatewayapi.Gateway{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gateway",
+							Namespace: "default",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Gateway",
+							APIVersion: "gateway.networking.k8s.io/v1",
+						},
+						Spec: gatewayapi.GatewaySpec{
+							Listeners: []gatewayapi.Listener{
+								{
+									Name:     "listener-1",
+									Hostname: lo.ToPtr(gatewayapi.Hostname("bar.com")),
+								},
+							},
+						},
+					},
+				},
+			})),
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			storer := lo.Must(store.NewFakeStore(store.FakeObjects{}))
-			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule})
-			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, storer)
+			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule}, tc.parentRef)
+			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, tc.storer)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
 	}

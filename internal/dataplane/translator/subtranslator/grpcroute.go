@@ -138,11 +138,8 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // by kong.Route{}.
 // The hostname field is optional. If not specified, the configured value will be obtained from parentRefs.
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []*string {
-	hostnames := make([]gatewayapi.Hostname, 0)
-
 	if len(grpcroute.Spec.Hostnames) > 0 {
-		hostnames = grpcroute.Spec.Hostnames
-		return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
+		return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
 			return lo.ToPtr(string(h))
 		})
 	}
@@ -155,6 +152,7 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 		return nil
 	}
 
+	hostnames := make([]gatewayapi.Hostname, 0)
 	for _, parentRef := range grpcroute.Spec.ParentRefs {
 		// we only care about Gateways
 		if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
@@ -168,9 +166,11 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 		name := string(parentRef.Name)
 
 		gateway, err := storer.GetGateway(namespace, name)
-		// If we got an error, we will just return nil.
-		// Users need to check whether the relevant configurations are correct.
+		// As parentRef has already been validated before, the error here will not actually occur.
+		// This is where defensive programming takes place.
 		if err != nil {
+			// TODO: Add logging.
+			// https://github.com/Kong/kubernetes-ingress-controller/pull/6166#discussion_r1631250776
 			return nil
 		}
 

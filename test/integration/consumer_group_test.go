@@ -145,7 +145,7 @@ func TestConsumerGroup(t *testing.T) {
 	t.Log("checking if consumer has plugin configured correctly based on consumer group membership")
 	for _, consumer := range consumers {
 		require.Eventually(t, func() bool {
-			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, "/", map[string]string{
+			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, path, map[string]string{
 				"apikey": consumer.Name,
 			})
 			resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)

@@ -12,6 +12,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,11 +37,16 @@ func TestConsumerGroup(t *testing.T) {
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
-	d, s, i, p := deployMinimalSvcWithKeyAuth(ctx, t, ns.Name)
-	cleaner.Add(d)
-	cleaner.Add(s)
-	cleaner.Add(i)
-	cleaner.Add(p)
+	// path is the basic path used for most of the test
+	path := "/test-consumer-group/basic"
+	// multiPath is the path used to test consumer group + route plugins
+	multiPath := "/test-consumer-group/multi"
+
+	deployment, service, ingress, keyauthPlugin := deployMinimalSvcWithKeyAuth(ctx, t, ns.Name, path)
+	cleaner.Add(deployment)
+	cleaner.Add(service)
+	cleaner.Add(ingress)
+	cleaner.Add(keyauthPlugin)
 
 	addedHeader := header{
 		K: "X-Test-Header",
@@ -89,6 +95,15 @@ func TestConsumerGroup(t *testing.T) {
 		ctx, t, ns.Name, "test-consumer-group-2", pluginRateLimit.Name,
 	)
 	cleaner.Add(rateLimitGroup)
+	// 3 has consumers but no plugins
+	nothingGroup := configureConsumerGroupWithPlugins(
+		ctx, t, ns.Name, "test-consumer-group-3",
+	)
+	cleaner.Add(nothingGroup)
+	addHeaderRouteGroup := configureConsumerGroupWithPlugins(
+		ctx, t, ns.Name, "test-consumer-group-4", pluginRespTrans.Name,
+	)
+	cleaner.Add(addHeaderRouteGroup)
 
 	rateLimitHeader := header{
 		K: "RateLimit-Limit",
@@ -158,10 +173,77 @@ func TestConsumerGroup(t *testing.T) {
 			return true
 		}, ingressWait, waitTick)
 	}
+
+	t.Log("checking plugins attached to a consumer group and route only apply when request matches both")
+	four, fourSecret := configureConsumerWithAPIKey(ctx, t, ns.Name, "test-consumer-4", "test-consumer-group-4")
+	cleaner.Add(four)
+	cleaner.Add(fourSecret)
+
+	multiIngress := generators.NewIngressForService(multiPath, map[string]string{
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+		annotations.AnnotationPrefix + annotations.PluginsKey:   strings.Join([]string{keyauthPlugin.Name, pluginRespTrans.Name}, ","),
+	}, service)
+	multiIngress.Spec.IngressClassName = kong.String(consts.IngressClass)
+	multiIngress.Name = "multi"
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, multiIngress))
+	cleaner.Add(multiIngress)
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		// this should see the header, it uses a consumer in the group on the associated route
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+			"apikey": four.Name,
+		})
+		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer resp.Body.Close()
+		if !assert.Equal(c, resp.StatusCode, http.StatusOK) {
+			return
+		}
+		hv := resp.Header.Get(addedHeader.K)
+		if !assert.Equal(c, addedHeader.V, hv) {
+			return
+		}
+
+		// this should not see the header, it uses a consumer in the group on another route
+		clear := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+			"apikey": four.Name,
+		})
+		clearResp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(clear)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer clearResp.Body.Close()
+		if !assert.Equal(c, clearResp.StatusCode, http.StatusOK) {
+			return
+		}
+		hv = clearResp.Header.Get(addedHeader.K)
+		if !assert.NotEqual(c, addedHeader.V, hv) {
+			return
+		}
+
+		// this should not see the header, it uses a consumer outside the group on the associated route
+		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+			"apikey": "test-consumer-3",
+		})
+		emptyResp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(empty)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer emptyResp.Body.Close()
+		if !assert.Equal(c, emptyResp.StatusCode, http.StatusOK) {
+			return
+		}
+		hv = emptyResp.Header.Get(addedHeader.K)
+		if !assert.NotEqual(c, addedHeader.V, hv) {
+			return
+		}
+	}, ingressWait, waitTick)
 }
 
 func deployMinimalSvcWithKeyAuth(
-	ctx context.Context, t *testing.T, namespace string,
+	ctx context.Context, t *testing.T, namespace, path string,
 ) (*appsv1.Deployment, *corev1.Service, *netv1.Ingress, *kongv1.KongPlugin) {
 	const pluginKeyAuthName = "key-auth"
 	t.Logf("configuring plugin %q (to give consumers an identity)", pluginKeyAuthName)
@@ -194,7 +276,7 @@ func deployMinimalSvcWithKeyAuth(
 	require.NoError(t, err)
 
 	t.Logf("creating an ingress for service %q with plugin %q attached", service.Name, pluginKeyAuthName)
-	ingress := generators.NewIngressForService("/", map[string]string{
+	ingress := generators.NewIngressForService(path, map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.PluginsKey:   pluginKeyAuthName,
 	}, service)

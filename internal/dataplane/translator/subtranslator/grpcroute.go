@@ -144,6 +144,10 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 	if len(grpcroute.Spec.Hostnames) == 0 {
 		namespace := grpcroute.GetNamespace()
 
+		if grpcroute.Spec.ParentRefs == nil {
+			return nil
+		}
+
 		for _, parentRef := range grpcroute.Spec.ParentRefs {
 			// we only care about Gateways
 			if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {

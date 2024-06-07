@@ -175,7 +175,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("assign broken broken plugin to a working route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("assign broken plugin to a working route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 
 			client, err := clientset.NewForConfig(cluster.Config())

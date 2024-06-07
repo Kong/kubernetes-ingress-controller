@@ -3,7 +3,9 @@
 package isolated
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -14,6 +16,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -83,6 +87,38 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 				consts.IngressWait,
 				consts.WaitTick,
 			)
+			return ctx
+		}).
+		Assess("verify diagnostic server fallback info indicates ", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			diagURL := GetDiagURLFromCtx(ctx)
+			t.Logf("verifying diag available")
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				cl := helpers.DefaultHTTPClient()
+				resp, err := cl.Do(helpers.MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
+				if !assert.NoError(c, err) {
+					return
+				}
+				defer resp.Body.Close()
+
+				if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
+					return
+				}
+
+				b := new(bytes.Buffer)
+				_, err = b.ReadFrom(resp.Body)
+				if !assert.NoError(c, err) {
+					return
+				}
+				cause := gjson.GetBytes(b.Bytes(), "objects")
+				var diags []diagnostics.FallbackDiagnostic
+				if !assert.NoError(c, json.Unmarshal([]byte(cause.Raw), &diags)) {
+					return
+				}
+				for _, diag := range diags {
+					assert.Contains(c, "configuration.konghq.com/KongPlugin:default/key-auth", diag.CausingObject)
+					assert.Contains(c, "excluded", diag.Status)
+				}
+			}, consts.IngressWait, consts.WaitTick)
 			return ctx
 		}).
 		Teardown(featureTeardown())

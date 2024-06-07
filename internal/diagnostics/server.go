@@ -35,11 +35,13 @@ type Server struct {
 
 	successfulConfigDump file.Content
 	failedConfigDump     file.Content
-	problemObjects       []AffectedObject
-	failedHash           string
-	successHash          string
-	rawErrBody           []byte
-	configLock           *sync.RWMutex
+
+	fallback     FallbackDiagnosticCollection
+	failedHash   string
+	successHash  string
+	rawErrBody   []byte
+	configLock   *sync.RWMutex
+	fallbackLock *sync.RWMutex
 }
 
 // ServerConfig contains configuration for the diagnostics server.
@@ -60,12 +62,14 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 		logger:           logger,
 		profilingEnabled: cfg.ProfilingEnabled,
 		configLock:       &sync.RWMutex{},
+		fallbackLock:     &sync.RWMutex{},
 	}
 
 	if cfg.ConfigDumpsEnabled {
 		s.configDumps = ConfigDumpDiagnostic{
 			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
 			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
+			Fallbacks:             make(chan FallbackDiagnosticCollection, diagnosticConfigBufferDepth),
 		}
 	}
 
@@ -127,13 +131,16 @@ func (s *Server) receiveConfig(ctx context.Context) {
 			if dump.Meta.Failed {
 				s.failedConfigDump = dump.Config
 				s.rawErrBody = dump.RawResponseBody
-				s.problemObjects = dump.Meta.AffectedObjects
 				s.failedHash = dump.Meta.Hash
 			} else {
 				s.successfulConfigDump = dump.Config
 				s.successHash = dump.Meta.Hash
 			}
 			s.configLock.Unlock()
+		case fallback := <-s.configDumps.Fallbacks:
+			s.fallbackLock.Lock()
+			s.fallback = fallback
+			s.fallbackLock.Unlock()
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
 				s.logger.Error(err, "Shutting down diagnostic config collection: context completed with error")
@@ -164,7 +171,7 @@ func installProfilingHandlers(mux *http.ServeMux) {
 func (s *Server) installDumpHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/config/successful", s.handleLastValidConfig)
 	mux.HandleFunc("/debug/config/failed", s.handleLastFailedConfig)
-	mux.HandleFunc("/debug/config/problems", s.handleLastFailedProblemObjects)
+	mux.HandleFunc("/debug/config/fallback", s.handleLastFallback)
 	mux.HandleFunc("/debug/config/raw-error", s.handleLastErrBody)
 }
 
@@ -201,14 +208,13 @@ func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request)
 	}
 }
 
-func (s *Server) handleLastFailedProblemObjects(rw http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleLastFallback(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(
-		problemObjectsResponse{
-			ConfigHash:    s.failedHash,
-			BrokenObjects: s.problemObjects,
+		fallbackResponse{
+			FallbackObjects: s.fallback.Objects,
 		}); err != nil {
 		rw.WriteHeader(http.StatusOK)
 	}

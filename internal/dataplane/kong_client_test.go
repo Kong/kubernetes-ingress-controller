@@ -293,7 +293,7 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 type mockFallbackConfigGenerator struct {
 	GenerateResult store.CacheStores
 
-	GenerateExcludingBrokenObjectsCalledWith   lo.Tuple2[store.CacheStores, []fallback.ObjectHash]
+	GenerateExcludingBrokenObjectsCalledWith   lo.Tuple3[store.CacheStores, []diagnostics.FallbackDiagnostic, []fallback.ObjectHash]
 	GenerateBackfillingBrokenObjectsCalledWith lo.Tuple3[store.CacheStores, *store.CacheStores, []fallback.ObjectHash]
 }
 
@@ -304,18 +304,18 @@ func newMockFallbackConfigGenerator() *mockFallbackConfigGenerator {
 func (m *mockFallbackConfigGenerator) GenerateExcludingBrokenObjects(
 	stores store.CacheStores,
 	hashes []fallback.ObjectHash,
-) (store.CacheStores, error) {
-	m.GenerateExcludingBrokenObjectsCalledWith = lo.T2(stores, hashes)
-	return m.GenerateResult, nil
+) (store.CacheStores, []diagnostics.FallbackDiagnostic, error) {
+	m.GenerateExcludingBrokenObjectsCalledWith = lo.T3(stores, []diagnostics.FallbackDiagnostic{}, hashes)
+	return m.GenerateResult, []diagnostics.FallbackDiagnostic{}, nil
 }
 
 func (m *mockFallbackConfigGenerator) GenerateBackfillingBrokenObjects(
 	currentStores store.CacheStores,
 	lastValidStores *store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
-) (store.CacheStores, error) {
+) (store.CacheStores, []diagnostics.FallbackDiagnostic, error) {
 	m.GenerateBackfillingBrokenObjectsCalledWith = lo.T3(currentStores, lastValidStores, brokenObjects)
-	return m.GenerateResult, nil
+	return m.GenerateResult, []diagnostics.FallbackDiagnostic{}, nil
 }
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {

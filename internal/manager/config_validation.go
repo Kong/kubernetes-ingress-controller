@@ -112,7 +112,7 @@ func (c *Config) validateKongAdminAPI() error {
 func (c *Config) validateFallbackConfiguration() error {
 	if !c.FeatureGates[featuregates.FallbackConfiguration] && c.UseLastValidConfigForFallback {
 		return fmt.Errorf(
-			"--use-last-valid-config-for-fallback can only be used with %s feature gate enabled",
+			"--use-last-valid-config-for-fallback or USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with %s feature gate enabled",
 			featuregates.FallbackConfiguration,
 		)
 	}

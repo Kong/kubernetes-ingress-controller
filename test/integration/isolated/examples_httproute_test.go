@@ -4,7 +4,9 @@ package isolated
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 
@@ -89,11 +91,31 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 	httprouteExampleManifest := examplesManifestPath("gateway-httproute.yaml")
 	const (
-		namespace                   = "default"
-		additionalRouteName         = "httproute-testing-additional"
-		additionalRoutePath         = "/additional-route"
-		additionalRoutServiceTarget = "echo-1"
+		namespace                    = "default"
+		additionalRouteName          = "httproute-testing-additional"
+		additionalRoutePath          = "/additional-route"
+		additionalRouteServiceTarget = "echo-1"
+
+		additionalHeaderKey   = "X-Additional-Header"
+		additionalHeaderValue = "additional-header-value"
 	)
+	testAdditionalRoute := func(t *testing.T, proxyURL *url.URL) {
+		t.Helper()
+		t.Log("verifying that routing to additional route works and header added by plugin is returned")
+		helpers.EventuallyGETPath(
+			t,
+			proxyURL,
+			proxyURL.Host,
+			additionalRoutePath,
+			http.StatusOK,
+			additionalRouteServiceTarget,
+			map[string]string{
+				additionalHeaderKey: additionalHeaderValue,
+			},
+			consts.IngressWait,
+			consts.WaitTick,
+		)
+	}
 
 	f := features.
 		New("example").
@@ -110,12 +132,13 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		Assess("deploying to cluster works and HTTP requests are routed properly", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			runHTTPRouteExampleTestScenario(httprouteExampleManifest)(ctx, t, c)
 
+			clusterCfg := GetClusterFromCtx(ctx).Config()
 			t.Log("getting a gateway client")
-			gatewayClient, err := gatewayclient.NewForConfig(GetClusterFromCtx(ctx).Config())
+			gatewayClient, err := gatewayclient.NewForConfig(clusterCfg)
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, gatewayClient)
 
-			t.Log("adding additional properly configured route")
+			t.Log("adding additional properly configured route with plugin")
 			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Create(ctx, &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -147,7 +170,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-											Name: additionalRoutServiceTarget,
+											Name: additionalRouteServiceTarget,
 											Port: lo.ToPtr(gatewayapi.PortNumber(80)),
 										},
 									},
@@ -158,29 +181,11 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				},
 			}, metav1.CreateOptions{})
 			assert.NoError(t, err)
-
-			t.Logf("verifying that routing to %s works", additionalRoutePath)
-			proxyURL := GetHTTPURLFromCtx(ctx)
-			helpers.EventuallyGETPath(
-				t,
-				proxyURL,
-				proxyURL.Host,
-				additionalRoutePath,
-				http.StatusOK,
-				additionalRoutServiceTarget,
-				nil,
-				consts.IngressWait,
-				consts.WaitTick,
-			)
-
-			return ctx
-		}).
-		Assess("assign broken plugin to a working route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			cluster := GetClusterFromCtx(ctx)
-
-			client, err := clientset.NewForConfig(cluster.Config())
+			client, err := clientset.NewForConfig(clusterCfg)
 			require.NoError(t, err)
-			brokenPlugin := &kongv1.KongPlugin{
+			ctx = SetInCtxForT(ctx, t, client)
+
+			workingPlugin := &kongv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      "response-transformer",
@@ -188,39 +193,47 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				PluginName: "response-transformer",
 				// Misconfigured on purpose.
 				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"test": "test"}`),
+					Raw: []byte(fmt.Sprintf(`
+						{
+							"config": {"add": {"headers": ["%s:%s"]}}
+						}`, additionalHeaderKey, additionalHeaderValue),
+					),
 				},
 			}
-			_, err = client.ConfigurationV1().KongPlugins(namespace).Create(ctx, brokenPlugin, metav1.CreateOptions{})
+			_, err = client.ConfigurationV1().KongPlugins(namespace).Create(ctx, workingPlugin, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			t.Logf("verifying that routing to %s works and header added by plugin is returned", additionalRoutePath)
+			testAdditionalRoute(t, GetHTTPURLFromCtx(ctx))
+
+			return ctx
+		}).
+		Assess("attach broken plugin to a working route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			client := GetFromCtxForT[*clientset.Clientset](ctx, t)
+
+			plugin, err := client.ConfigurationV1().KongPlugins(namespace).Get(ctx, "response-transformer", metav1.GetOptions{})
+			require.NoError(t, err)
+			plugin.Config = apiextensionsv1.JSON{
+				Raw: []byte(`{"test": "test"}`),
+			}
+			_, err = client.ConfigurationV1().KongPlugins(namespace).Update(ctx, plugin, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
 			t.Log("getting a gateway client")
-			gatewayClient, err := gatewayclient.NewForConfig(cluster.Config())
+			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, gatewayClient)
 
 			route, err := gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, additionalRouteName, metav1.GetOptions{})
 			assert.NoError(t, err)
-			route.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = brokenPlugin.Name
+			route.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = plugin.Name
 			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, route, metav1.UpdateOptions{})
 			assert.NoError(t, err)
 
 			return ctx
 		}).
-		Assess("verify that route with misconfigured plugin is not operational", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetHTTPURLFromCtx(ctx)
-			t.Logf("verifying that Kong gateway response in returned instead of desired site")
-			helpers.EventuallyGETPath(
-				t,
-				proxyURL,
-				proxyURL.Host,
-				additionalRoutePath,
-				http.StatusNotFound,
-				"no Route matched with those values",
-				nil,
-				consts.IngressWait,
-				consts.WaitTick,
-			)
+		Assess("verify that route with misconfigured plugin operates with previous config", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			testAdditionalRoute(t, GetHTTPURLFromCtx(ctx))
 			return ctx
 		}).
 		Assess("modify working route /httproute-testing to /new-route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
@@ -233,10 +246,11 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("verify that route with misconfigured plugin is not operational", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("verify that all routes are operational", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
-			const newRoute = "/new-route"
+			testAdditionalRoute(t, proxyURL)
 
+			const newRoute = "/new-route"
 			t.Logf("verifying that /httproute-testing is no longer operational")
 			helpers.EventuallyGETPath(
 				t,

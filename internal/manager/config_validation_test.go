@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -13,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 )
 
 func TestConfigValidatedVars(t *testing.T) {

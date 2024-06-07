@@ -190,10 +190,10 @@ func TestConsumerGroup(t *testing.T) {
 
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		// this should see the header, it uses a consumer in the group on the associated route
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, multiPath, map[string]string{
 			"apikey": four.Name,
 		})
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -207,10 +207,10 @@ func TestConsumerGroup(t *testing.T) {
 		}
 
 		// this should not see the header, it uses a consumer in the group on another route
-		clear := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+		clear := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, path, map[string]string{
 			"apikey": four.Name,
 		})
-		clearResp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(clear)
+		clearResp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(clear)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -224,10 +224,10 @@ func TestConsumerGroup(t *testing.T) {
 		}
 
 		// this should not see the header, it uses a consumer outside the group on the associated route
-		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, multiPath, map[string]string{
 			"apikey": "test-consumer-3",
 		})
-		emptyResp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(empty)
+		emptyResp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(empty)
 		if !assert.NoError(c, err) {
 			return
 		}

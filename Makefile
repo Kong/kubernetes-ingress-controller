@@ -71,11 +71,11 @@ export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 .PHONY: mise-plugin-install
 mise-plugin-install: mise
-	$(MISE) plugin install --yes -q $(DEP) $(URL)
+	@$(MISE) plugin install --yes -q $(DEP) $(URL)
 
 .PHONY: mise-install
 mise-install: mise
-	$(MISE) install -q $(DEP_VER)
+	@$(MISE) install -q $(DEP_VER)
 
 CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
@@ -483,6 +483,7 @@ _test.integration: _check.container.environment go-junit-report
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
@@ -501,6 +502,7 @@ _test.integration.isolated: _check.container.environment go-junit-report
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
@@ -585,11 +587,11 @@ test.istio: gotestsum
 
 .PHONY: test.kongintegration
 test.kongintegration:
-	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
+	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
 
 .PHONY: test.kongintegration.pretty
 test.kongintegration.pretty:
-	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
+	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
 
 .PHONY: _test.kongintegration
 _test.kongintegration: gotestsum go-junit-report
@@ -599,6 +601,7 @@ _test.kongintegration: gotestsum go-junit-report
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
 		-parallel $(NCPU) \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.kongintegration.out \

@@ -308,7 +308,7 @@ func TestConfigValidate(t *testing.T) {
 			c := manager.Config{
 				UseLastValidConfigForFallback: true,
 			}
-			require.ErrorContains(t, c.Validate(), "--use-last-valid-config-for-fallback or USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with FallbackConfiguration feature gate enabled")
+			require.ErrorContains(t, c.Validate(), "--use-last-valid-config-for-fallback or CONTROLLER_USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with FallbackConfiguration feature gate enabled")
 		})
 		t.Run("enabled with feature gate is accepted", func(t *testing.T) {
 			c := manager.Config{

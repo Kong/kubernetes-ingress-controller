@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+ - [3.1.5](#315)
  - [3.1.4](#314)
  - [3.1.3](#313)
  - [3.1.2](#312)
@@ -86,6 +87,10 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## Unreleased
+
+> Release date: TBA
 
 ### Breaking changes
 
@@ -241,6 +246,19 @@ Adding a new version? You'll need three changes:
   [#5824](https://github.com/Kong/kubernetes-ingress-controller/pull/5824)
 
 [Updates to CRDs]: https://github.com/Kong/charts/blob/main/charts/kong/UPGRADE.md#updates-to-crds
+
+## [3.1.5]
+
+> Release date: 2024-05-17
+
+### Fixed
+
+- Support to apply licenses to DB backed Kong gateway from `KongLicense`.
+  [#5648](https://github.com/Kong/kubernetes-ingress-controller/pull/5648)
+- Redacted values no longer cause collisions in configuration reported to Konnect.
+  [#5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
+- Assign a default value for `weight` in Kong target if the `weight` is nil.
+  [#5946](https://github.com/Kong/kubernetes-ingress-controller/pull/5946)
 
 ## [3.1.4]
 
@@ -3493,6 +3511,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.1.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.4...v3.1.5
 [3.1.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.3...v3.1.4
 [3.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.2...v3.1.3
 [3.1.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.1...v3.1.2

@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -282,8 +283,9 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			storer := lo.Must(store.NewFakeStore(store.FakeObjects{}))
 			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule})
-			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0)
+			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, storer)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
 	}
@@ -325,7 +327,8 @@ func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 		},
 	} {
 		t.Run(tC.name, func(t *testing.T) {
-			result := getGRPCRouteHostnamesAsSliceOfStringPointers(tC.grpcroute)
+			storer := lo.Must(store.NewFakeStore(store.FakeObjects{}))
+			result := getGRPCRouteHostnamesAsSliceOfStringPointers(tC.grpcroute, storer)
 			require.Equal(t, tC.expected, result)
 		})
 	}

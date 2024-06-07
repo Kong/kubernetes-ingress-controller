@@ -34,6 +34,17 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+\"(?<currentValue>.*?)\""
       ]
+    },
+    {
+      "description": "Match versions in config/image/oss and config/image/enterprise kustomize files that are properly annotated with `# renovate: datasource={} versioning={} depName={}`.",
+      "customType": "regex",
+      "fileMatch": [
+        "^config/image/enterprise/.*\\.yaml$",
+        "^config/image/oss/.*\\.yaml$"
+      ],
+      "matchStrings": [
+        "'(?<currentValue>.+)' # renovate: datasource=(?<datasource>.*) versioning=(?<versioning>.*) depName=(?<depName>.+)"
+      ]
     }
   ],
   "customDatasources": {
@@ -57,6 +68,15 @@
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files to trigger regenerate_on_deps_bump.yaml workflow.",
       "matchManagers": [
         "kustomize"
+      ],
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ]
+    },
+    {
+      "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files containing images to trigger regenerate_on_deps_bump.yaml workflow.",
+      "matchDepPatterns": [
+        ".*@regenerate"
       ],
       "addLabels": [
         "renovate/auto-regenerate"

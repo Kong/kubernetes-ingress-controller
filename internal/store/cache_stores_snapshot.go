@@ -97,7 +97,7 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash SnapshotHash) (
 			return string(uid) + resourceVer
 		})
 		if capturedErr != nil {
-			return CacheStores{}, "", capturedErr
+			return CacheStores{}, SnapshotHashEmpty, capturedErr
 		}
 		// Strings have to be used instead of byte slices, because Cmp.Ordered has to be satisfied.
 		slices.Sort(valuesForHashComputation)
@@ -110,12 +110,12 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash SnapshotHash) (
 
 	// If the hash of the current state is the same as the hash of the previous snapshot, return an empty snapshot.
 	if newHash == previousSnapshotHash {
-		return CacheStores{}, "", nil
+		return CacheStores{}, SnapshotHashEmpty, nil
 	}
 
 	// Take a snapshot of the current state as the hash of the current state differs from the previous one.
 	if err := takeSnapshot(&snapshot, listOfStores); err != nil {
-		return CacheStores{}, "", fmt.Errorf("failed to take snapshot: %w", err)
+		return CacheStores{}, SnapshotHashEmpty, fmt.Errorf("failed to take snapshot: %w", err)
 	}
 	return snapshot, newHash, nil
 }

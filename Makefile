@@ -423,14 +423,14 @@ test.unit.pretty:
 
 .PHONY: test.golden.update
 test.golden.update:
-	@go test -v -run TestTranslator_GoldenTests ./internal/dataplane/translator -update
+	@go test -v -run TestKongClient_GoldenTests ./internal/dataplane -update
 
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
 
-ENVTEST_TIMEOUT ?= 5m
+ENVTEST_TIMEOUT ?= 8m
 
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest

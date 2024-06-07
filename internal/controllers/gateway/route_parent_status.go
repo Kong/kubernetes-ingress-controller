@@ -46,6 +46,11 @@ func routeParentStatusKey[routeT gatewayapi.RouteT](
 			namespace,
 			parentRef.GetName(),
 			parentRef.GetSectionName().OrEmpty())
+	case *gatewayapi.GRPCRoute:
+		return fmt.Sprintf("%s/%s/%s",
+			namespace,
+			parentRef.GetName(),
+			parentRef.GetSectionName().OrEmpty())
 	default:
 		return fmt.Sprintf("%s/%s", namespace, parentRef.GetName())
 	}
@@ -87,5 +92,37 @@ func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
 		Namespace:   lo.ToPtr(string(*parentStatus.ParentRef.Namespace)),
 		Name:        string(parentStatus.ParentRef.Name),
 		SectionName: sectionName,
+	}
+}
+
+func getRouteStatusParents[T gatewayapi.RouteT](route T) []gatewayapi.RouteParentStatus {
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		return r.Status.Parents
+	case *gatewayapi.TCPRoute:
+		return r.Status.Parents
+	case *gatewayapi.UDPRoute:
+		return r.Status.Parents
+	case *gatewayapi.TLSRoute:
+		return r.Status.Parents
+	case *gatewayapi.GRPCRoute:
+		return r.Status.Parents
+	default:
+		return nil
+	}
+}
+
+func setRouteStatusParents[T gatewayapi.RouteT](route T, parents []gatewayapi.RouteParentStatus) {
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.TCPRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.UDPRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.TLSRoute:
+		r.Status.Parents = parents
+	case *gatewayapi.GRPCRoute:
+		r.Status.Parents = parents
 	}
 }

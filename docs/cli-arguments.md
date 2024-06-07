@@ -26,6 +26,7 @@
 | `--enable-controller-ingress-class-networkingv1` | `bool` | Enable the networking.k8s.io/v1 IngressClass controller. | `true` |
 | `--enable-controller-ingress-class-parameters` | `bool` | Enable the IngressClassParameters controller. | `true` |
 | `--enable-controller-ingress-networkingv1` | `bool` | Enable the networking.k8s.io/v1 Ingress controller. | `true` |
+| `--enable-controller-kong-custom-entity` | `bool` | Enable the KongCustomEntity controller. | `true` |
 | `--enable-controller-kong-license` | `bool` | Enable the KongLicense controller. | `true` |
 | `--enable-controller-kong-service-facade` | `bool` | Enable the KongServiceFacade controller. | `true` |
 | `--enable-controller-kong-upstream-policy` | `bool` | Enable the KongUpstreamPolicy controller. | `true` |
@@ -91,4 +92,5 @@
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller. | `0s` |
 | `--update-status` | `bool` | Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, etc.). | `true` |
 | `--update-status-queue-buffer-size` | `int` | Buffer size of the underlying channels used to update the status of resources. | `8192` |
+| `--use-last-valid-config-for-fallback` | `bool` | When recovering from config push failures, use the last valid configuration cache to backfill broken objects. | `false` |
 | `--watch-namespace` | `strings` | Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces. | `[]` |

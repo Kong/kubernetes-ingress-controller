@@ -16,13 +16,13 @@ import (
 
 var grpcRouteGVK = schema.GroupVersionKind{
 	Group:   "gateway.networking.k8s.io",
-	Version: "v1alpha2",
+	Version: "v1",
 	Kind:    "GRPCRoute",
 }
 
 var grpcRouteTypeMeta = metav1.TypeMeta{
 	Kind:       "GRPCRoute",
-	APIVersion: "gateway.networking.k8s.io/v1alpha2",
+	APIVersion: "gateway.networking.k8s.io/v1",
 }
 
 func makeTestGRPCRoute(
@@ -33,7 +33,7 @@ func makeTestGRPCRoute(
 	return &gatewayapi.GRPCRoute{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "GRPCRoute",
-			APIVersion: "gateway.networking.k8s.io/v1alpha2",
+			APIVersion: "gateway.networking.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -98,7 +98,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",
-							"k8s-version:v1alpha2",
+							"k8s-version:v1",
 						),
 					},
 				},
@@ -139,7 +139,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",
-							"k8s-version:v1alpha2",
+							"k8s-version:v1",
 						),
 					},
 				},
@@ -194,7 +194,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",
-							"k8s-version:v1alpha2",
+							"k8s-version:v1",
 						),
 					},
 				},
@@ -214,7 +214,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",
-							"k8s-version:v1alpha2",
+							"k8s-version:v1",
 						),
 					},
 				},
@@ -243,7 +243,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",
-							"k8s-version:v1alpha2",
+							"k8s-version:v1",
 						),
 					},
 				},
@@ -270,7 +270,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",
-							"k8s-version:v1alpha2",
+							"k8s-version:v1",
 						),
 						Paths: kong.StringSlice("/"),
 					},

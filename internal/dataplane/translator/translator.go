@@ -1,7 +1,11 @@
 package translator
 
 import (
+	"context"
+	"errors"
+
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -45,6 +49,9 @@ type FeatureFlags struct {
 
 	// KongServiceFacade indicates whether we should support KongServiceFacades as Ingress backends.
 	KongServiceFacade bool
+
+	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
+	KongCustomEntity bool
 }
 
 func NewFeatureFlags(
@@ -60,7 +67,13 @@ func NewFeatureFlags(
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
+		KongCustomEntity:                  featureGates.Enabled(featuregates.KongCustomEntity),
 	}
+}
+
+// SchemaServiceProvider returns a kong schema service required for translating custom entities.
+type SchemaServiceProvider interface {
+	GetSchemaService() kong.AbstractSchemaService
 }
 
 // Translator translates Kubernetes objects and configurations into their
@@ -73,6 +86,9 @@ type Translator struct {
 	licenseGetter license.Getter
 	featureFlags  FeatureFlags
 
+	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
+	schemaServiceProvider SchemaServiceProvider
+
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
 }
@@ -84,6 +100,7 @@ func NewTranslator(
 	storer store.Storer,
 	workspace string,
 	featureFlags FeatureFlags,
+	schemaServiceProvider SchemaServiceProvider,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -98,6 +115,7 @@ func NewTranslator(
 		storer:                     storer,
 		workspace:                  workspace,
 		featureFlags:               featureFlags,
+		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
 	}, nil
@@ -188,6 +206,17 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 		t.registerSuccessfullyTranslatedObject(result.Plugins[i].K8sParent)
 	}
 
+	// process custom entities
+	if t.featureFlags.KongCustomEntity {
+		result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
+		// Register successcully translated KCEs to set the status of these KCEs.
+		for _, collection := range result.CustomEntities {
+			for i := range collection.Entities {
+				t.registerSuccessfullyTranslatedObject(collection.Entities[i].K8sKongCustomEntity)
+			}
+		}
+	}
+
 	// generate Certificates and SNIs
 	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)
 	gatewayCerts := t.getGatewayCerts()
@@ -248,4 +277,18 @@ func (t *Translator) registerSuccessfullyTranslatedObject(obj client.Object) {
 // that have been successfully translated as part of BuildKongConfig() call so far.
 func (t *Translator) popConfiguredKubernetesObjects() []client.Object {
 	return t.translatedObjectsCollector.Pop()
+}
+
+// UnavailableSchemaService is a fake schema service used when no gateway admin API clients available.
+// It always returns error in its Get and Validate methods.
+type UnavailableSchemaService struct{}
+
+var _ kong.AbstractSchemaService = UnavailableSchemaService{}
+
+func (s UnavailableSchemaService) Get(_ context.Context, _ string) (kong.Schema, error) {
+	return nil, errors.New("schema service unavailable")
+}
+
+func (s UnavailableSchemaService) Validate(_ context.Context, _ kong.EntityType, _ any) (bool, string, error) {
+	return false, "", errors.New("schema service unavailable")
 }

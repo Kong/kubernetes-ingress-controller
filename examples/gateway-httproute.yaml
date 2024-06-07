@@ -5,73 +5,91 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: httpbin
+  name: echo-1
   labels:
-    app: httpbin
+    app: echo-1
 spec:
   selector:
     matchLabels:
-      app: httpbin
+      app: echo-1
   template:
     metadata:
       labels:
-        app: httpbin
+        app: echo-1
     spec:
       containers:
-      - name: httpbin
-        image: kong/httpbin:0.1.0
+      - name: echo-1
+        image: kong/go-echo:0.3.0
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
         ports:
         - containerPort: 80
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: httpbin
-  name: httpbin
+    app: echo-1
+  name: echo-1
 spec:
   ports:
   - port: 80
     protocol: TCP
-    targetPort: 80
+    targetPort: 1027
   selector:
-    app: httpbin
+    app: echo-1
   type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx
+  name: echo-2
   labels:
-    app: nginx
+    app: echo-2
 spec:
   selector:
     matchLabels:
-      app: nginx
+      app: echo-2
   template:
     metadata:
       labels:
-        app: nginx
+        app: echo-2
     spec:
       containers:
-      - name: nginx
-        image: nginx
+      - name: echo-2
+        image: kong/go-echo:0.3.0
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
         ports:
         - containerPort: 80
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: nginx
-  name: nginx
+    app: echo-2
+  name: echo-2
 spec:
   ports:
   - port: 8080
     protocol: TCP
-    targetPort: 80
+    targetPort: 1027
   selector:
-    app: nginx
+    app: echo-2
   type: ClusterIP
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -109,11 +127,11 @@ spec:
         type: PathPrefix
         value: /httproute-testing
     backendRefs:
-    - name: httpbin
+    - name: echo-1
       kind: Service
       port: 80
       weight: 75
-    - name: nginx
+    - name: echo-2
       kind: Service
       port: 8080
       weight: 25

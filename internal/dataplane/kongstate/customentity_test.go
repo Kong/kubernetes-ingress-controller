@@ -4,7 +4,11 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong/custom"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 func TestExtractEntityFieldDefinitions(t *testing.T) {
@@ -95,6 +99,112 @@ func TestExtractEntityFieldDefinitions(t *testing.T) {
 				require.Truef(t, ok, "field %s should exist", fieldName)
 				require.Equalf(t, expectedField, actualField, "field %s should be same as expected", fieldName)
 			}
+		})
+	}
+}
+
+func TestSortCustomEntities(t *testing.T) {
+	tesCases := []struct {
+		name                    string
+		customEntityCollections map[string]*KongCustomEntityCollection
+		sortedCollections       map[string]*KongCustomEntityCollection
+	}{
+		{
+			name: "custom entities in multiple namespaces",
+			customEntityCollections: map[string]*KongCustomEntityCollection{
+				"foo": {
+					Entities: []CustomEntity{
+						{
+							Object: custom.Object{
+								"name": "e1",
+								"key":  "value1",
+							},
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "aab",
+									Namespace: "bbb",
+								},
+							},
+						},
+						{
+							Object: custom.Object{
+								"name": "e2",
+								"key":  "value2",
+							},
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "abc",
+									Namespace: "bbb",
+								},
+							},
+						},
+						{
+							Object: custom.Object{
+								"name": "e3",
+								"key":  "value3",
+							},
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "abc",
+									Namespace: "aaa",
+								},
+							},
+						},
+					},
+				},
+			},
+			sortedCollections: map[string]*KongCustomEntityCollection{
+				"foo": {
+					Entities: []CustomEntity{
+						{
+							Object: custom.Object{
+								"name": "e3",
+								"key":  "value3",
+							},
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "abc",
+									Namespace: "aaa",
+								},
+							},
+						},
+						{
+							Object: custom.Object{
+								"name": "e1",
+								"key":  "value1",
+							},
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "aab",
+									Namespace: "bbb",
+								},
+							},
+						},
+						{
+							Object: custom.Object{
+								"name": "e2",
+								"key":  "value2",
+							},
+							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "abc",
+									Namespace: "bbb",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tesCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ks := &KongState{
+				CustomEntities: tc.customEntityCollections,
+			}
+			ks.sortCustomEntities()
+			require.Equal(t, tc.sortedCollections, ks.CustomEntities)
 		})
 	}
 }

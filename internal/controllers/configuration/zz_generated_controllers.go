@@ -2017,6 +2017,171 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 }
 
 // -----------------------------------------------------------------------------
+// KongV1Alpha1 KongCustomEntity - Reconciler
+// -----------------------------------------------------------------------------
+
+// KongV1Alpha1KongCustomEntityReconciler reconciles KongCustomEntity resources
+type KongV1Alpha1KongCustomEntityReconciler struct {
+	client.Client
+
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
+
+	IngressClassName           string
+	DisableIngressClassLookups bool
+}
+
+var _ controllers.Reconciler = &KongV1Alpha1KongCustomEntityReconciler{}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1Alpha1KongCustomEntityReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Alpha1KongCustomEntity").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	// if configured, start the status updater controller
+	if r.StatusQueue != nil {
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1alpha1",
+					Kind:    "KongCustomEntity",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
+	}
+	if !r.DisableIngressClassLookups {
+		blder.Watches(&netv1.IngressClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listClassless),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+		)
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
+	return blder.Watches(&kongv1alpha1.KongCustomEntity{},
+		&handler.EnqueueRequestForObject{},
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
+}
+
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1Alpha1KongCustomEntityReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
+	resourceList := &kongv1alpha1.KongCustomEntityList{}
+	if err := r.Client.List(ctx, resourceList); err != nil {
+		r.Log.Error(err, "Failed to list classless kongcustomentities")
+		return nil
+	}
+	var recs []reconcile.Request
+	for i, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1Alpha1KongCustomEntityReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *KongV1Alpha1KongCustomEntityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1Alpha1KongCustomEntity", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(kongv1alpha1.KongCustomEntity)
+
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		}
+		return ctrl.Result{}, err
+	}
+	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongCustomEntity", "namespace", req.Namespace, "name", req.Name)
+
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	class := new(netv1.IngressClass)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
+	}
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	} else {
+		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+			"class", r.IngressClassName)
+	}
+
+	// update the kong Admin API with the changes
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+		)
+		obj.Status.Conditions = conditions
+		if updateNeeded {
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		}
+		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
 // API Group "" resource nodes
 // -----------------------------------------------------------------------------
 

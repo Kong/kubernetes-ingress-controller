@@ -37,4 +37,8 @@ type Config struct {
 	// FallbackConfiguration indicates whether to generate fallback configuration in the case of entity
 	// errors returned by the Kong Admin API.
 	FallbackConfiguration bool
+
+	// UseLastValidConfigForFallback indicates whether to use the last valid config cache to backfill broken objects
+	// when recovering from a config push failure.
+	UseLastValidConfigForFallback bool
 }

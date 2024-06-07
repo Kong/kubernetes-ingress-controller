@@ -1,6 +1,7 @@
 package fallback
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/dominikbraun/graph"
@@ -33,19 +34,27 @@ type ObjectHash struct {
 	// UID is the unique identifier of the object.
 	UID k8stypes.UID
 
-	// Kind, Namespace and Name are the object's kind, namespace and name - included for debugging purposes.
-	Kind      string
+	// Group is the object's group.
+	Group string
+	// Kind is the object's Kind.
+	Kind string
+	// Namespace is the object's Namespace.
 	Namespace string
-	Name      string
+	// Name is the object's Name.
+	Name string
 }
 
 // String returns a string representation of the ObjectHash. It intentionally does not include the UID
 // as it is not human-readable and is not necessary for debugging purposes.
 func (h ObjectHash) String() string {
-	if h.Namespace == "" {
-		return fmt.Sprintf("%s:%s", h.Kind, h.Name)
+	group := h.Group
+	if group == "" {
+		group = "core"
 	}
-	return fmt.Sprintf("%s:%s/%s", h.Kind, h.Namespace, h.Name)
+	if h.Namespace == "" {
+		return fmt.Sprintf("%s/%s:%s", group, h.Kind, h.Name)
+	}
+	return fmt.Sprintf("%s/%s:%s/%s", group, h.Kind, h.Namespace, h.Name)
 }
 
 // GetObjectHash is a function that returns a unique identifier for a given object that is used as a
@@ -53,6 +62,7 @@ func (h ObjectHash) String() string {
 func GetObjectHash(obj client.Object) ObjectHash {
 	return ObjectHash{
 		UID:       obj.GetUID(),
+		Group:     obj.GetObjectKind().GroupVersionKind().Group,
 		Kind:      obj.GetObjectKind().GroupVersionKind().Kind,
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
@@ -88,7 +98,17 @@ func (g *ConfigGraph) AdjacencyMap() (AdjacencyMap, error) {
 
 // SubgraphObjects returns all objects in the graph reachable from the source object, including the source object.
 // It uses a depth-first search to traverse the graph.
+// If the source object is not in the graph, no objects are returned.
 func (g *ConfigGraph) SubgraphObjects(sourceHash ObjectHash) ([]client.Object, error) {
+	// First, ensure the source object is in the graph.
+	if _, err := g.graph.Vertex(sourceHash); err != nil {
+		// If the source object is not in the graph, return an empty list.
+		if errors.Is(err, graph.ErrVertexNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get source object from the graph: %w", err)
+	}
+
 	var objects []client.Object
 	if err := graph.DFS(g.graph, sourceHash, func(hash ObjectHash) bool {
 		obj, err := g.graph.Vertex(hash)

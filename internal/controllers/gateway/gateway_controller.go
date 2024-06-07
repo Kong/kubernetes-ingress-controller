@@ -170,10 +170,8 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
-	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-		if gatewayToReconcile.Namespace != gateway.Namespace || gatewayToReconcile.Name != gateway.Name {
-			return false
-		}
+	if !r.GatewayNN.Matches(gateway) {
+		return false
 	}
 
 	gatewayClass := &gatewayapi.GatewayClass{}
@@ -203,6 +201,20 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 // by a gatewayclass to enqueue them for reconciliation. This is generally used when a GatewayClass
 // is updated to ensure that idle gateways are initialized when their gatewayclass becomes available.
 func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gatewayClass client.Object) []reconcile.Request {
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
+		gw := gatewayapi.Gateway{}
+		if err := r.Client.Get(ctx, gatewayToReconcile, &gw); err != nil {
+			r.Log.Error(err, "Failed to get gateways for gatewayclass in watch",
+				"gatewayclass", gatewayClass.GetName(), "gateway", gatewayToReconcile.String(),
+			)
+			return nil
+		}
+
+		return reconcileGatewaysIfClassMatches(gatewayClass, []gatewayapi.Gateway{gw})
+	}
+
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
@@ -223,11 +235,26 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 		)
 		return nil
 	}
-	gateways := &gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
-		return nil
+
+	var gateways gatewayapi.GatewayList
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
+		gw := gatewayapi.Gateway{}
+		if err := r.Client.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
+			r.Log.Error(err, "Failed to get gateway for referencegrant in watch",
+				"referencegrant", client.ObjectKeyFromObject(grant), "gateway", gatewayToReconcileNN.String(),
+			)
+			return nil
+		}
+		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
+	} else {
+		if err := r.Client.List(ctx, &gateways); err != nil {
+			r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
+			return nil
+		}
 	}
+
 	recs := []reconcile.Request{}
 	for _, gateway := range gateways.Items {
 		for _, from := range grant.Spec.From {
@@ -251,16 +278,30 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
 func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc client.Object) (recs []reconcile.Request) {
-	gateways := &gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "Failed to list gateways for service in watch predicates", "service", svc)
-		return
+	var gateways gatewayapi.GatewayList
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
+		gw := gatewayapi.Gateway{}
+		if err := r.Client.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
+			r.Log.Error(err, "Failed to get gateway for service in watch",
+				"service", client.ObjectKeyFromObject(svc), "gateway", gatewayToReconcileNN.String(),
+			)
+			return nil
+		}
+		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
+	} else {
+		if err := r.Client.List(ctx, &gateways); err != nil {
+			r.Log.Error(err, "Failed to list gateways for service in watch", "service", svc.GetName())
+			return nil
+		}
 	}
+
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayapi.GatewayClass{}
 		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
-			return
+			return nil
 		}
 		if isGatewayClassControlled(gatewayClass) {
 			recs = append(recs, reconcile.Request{
@@ -271,7 +312,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 			})
 		}
 	}
-	return
+	return nil
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
@@ -286,7 +327,11 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj clie
 		return nil
 	}
 	recs := []reconcile.Request{}
-	for _, gateway := range routeAcceptedByGateways(httpRoute.Namespace, httpRoute.Status.Parents) {
+	for _, gateway := range routeAcceptedByGateways(httpRoute) {
+		if !r.GatewayNN.MatchesNN(gateway) {
+			continue
+		}
+
 		recs = append(recs, reconcile.Request{
 			NamespacedName: gateway,
 		})
@@ -330,11 +375,13 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Gateway", req.NamespacedName)
 
-	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-		if req.Namespace != gatewayToReconcile.Namespace || req.Name != gatewayToReconcile.Name {
-			r.Log.V(util.DebugLevel).Info("The request does not match the specified Gateway and will be skipped.", "gateway", gatewayToReconcile.String())
-			return ctrl.Result{}, nil
-		}
+	if nn, isSet := r.GatewayNN.Get(); isSet && !r.GatewayNN.MatchesNN(req.NamespacedName) {
+		r.Log.V(util.DebugLevel).Info(
+			"The request does not match the specified Gateway and will be skipped.",
+			"gateway", nn,
+			"request", req.String(),
+		)
+		return ctrl.Result{}, nil
 	}
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object

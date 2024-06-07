@@ -139,54 +139,58 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // The hostname field is optional. If not specified, the configured value will be obtained from parentRefs.
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []*string {
 	hostnames := make([]gatewayapi.Hostname, 0)
+
+	if len(grpcroute.Spec.Hostnames) > 0 {
+		hostnames = grpcroute.Spec.Hostnames
+		return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
+			return lo.ToPtr(string(h))
+		})
+	}
+
 	// If no hostnames are specified, we will use the hostname from the Gateway
 	// that the GRPCRoute is attached to.
-	if len(grpcroute.Spec.Hostnames) == 0 {
-		namespace := grpcroute.GetNamespace()
+	namespace := grpcroute.GetNamespace()
 
-		if grpcroute.Spec.ParentRefs == nil {
+	if grpcroute.Spec.ParentRefs == nil {
+		return nil
+	}
+
+	for _, parentRef := range grpcroute.Spec.ParentRefs {
+		// we only care about Gateways
+		if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
+			continue
+		}
+
+		if parentRef.Namespace != nil {
+			namespace = string(*parentRef.Namespace)
+		}
+
+		name := string(parentRef.Name)
+
+		gateway, err := storer.GetGateway(namespace, name)
+		// If we got an error, we will just return nil.
+		// Users need to check whether the relevant configurations are correct.
+		if err != nil {
 			return nil
 		}
 
-		for _, parentRef := range grpcroute.Spec.ParentRefs {
-			// we only care about Gateways
-			if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
-				continue
-			}
+		if parentRef.SectionName != nil {
+			sectionName := string(*parentRef.SectionName)
 
-			if parentRef.Namespace != nil {
-				namespace = string(*parentRef.Namespace)
-			}
-
-			name := string(parentRef.Name)
-
-			gateway, err := storer.GetGateway(namespace, name)
-			// If we got an error, we will just return nil.
-			// Users need to check whether the relevant configurations are correct.
-			if err != nil {
-				return nil
-			}
-
-			if parentRef.SectionName != nil {
-				sectionName := string(*parentRef.SectionName)
-
-				for _, listener := range gateway.Spec.Listeners {
-					if string(listener.Name) == sectionName {
-						if listener.Hostname != nil {
-							hostnames = append(hostnames, *listener.Hostname)
-						}
-					}
-				}
-			} else {
-				for _, listener := range gateway.Spec.Listeners {
+			for _, listener := range gateway.Spec.Listeners {
+				if string(listener.Name) == sectionName {
 					if listener.Hostname != nil {
 						hostnames = append(hostnames, *listener.Hostname)
 					}
 				}
 			}
+		} else {
+			for _, listener := range gateway.Spec.Listeners {
+				if listener.Hostname != nil {
+					hostnames = append(hostnames, *listener.Hostname)
+				}
+			}
 		}
-	} else {
-		hostnames = grpcroute.Spec.Hostnames
 	}
 
 	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {

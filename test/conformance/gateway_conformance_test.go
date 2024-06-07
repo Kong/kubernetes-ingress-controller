@@ -30,7 +30,7 @@ var skippedTestsForTraditionalRoutes = []string{
 	// tests.GRPCRouteHeaderMatching.ShortName and tests.GRPCExactMethodMatching.ShortName may
 	// have some conflicts, skipping either one will still pass normally.
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6144
-	tests.GRPCExactMethodMatching.ShortName,
+	tests.GRPCRouteHeaderMatching.ShortName,
 }
 
 var skippedTestsForExpressionRoutes = []string{

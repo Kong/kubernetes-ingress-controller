@@ -28,7 +28,7 @@ const (
 	// SanitizeKonnectConfigDumps is the name of the feature-gate that enables sanitization of Konnect config dumps.
 	SanitizeKonnectConfigDumps = "SanitizeKonnectConfigDumps"
 
-	// FallbackConfiguration is the name of the featuer-gate that enables generating fallback configuration in the case
+	// FallbackConfiguration is the name of the feature-gate that enables generating fallback configuration in the case
 	// of entity errors returned by the Kong Admin API.
 	FallbackConfiguration = "FallbackConfiguration"
 

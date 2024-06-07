@@ -5,6 +5,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 //go:generate go run ../../hack/generators/cache-stores
@@ -12,6 +15,10 @@ import (
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
 // YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
 func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
+	s, err := scheme.Get()
+	if err != nil {
+		return c, err
+	}
 	kobjs := make([]runtime.Object, 0, len(objs))
 	sr := serializer.NewYAMLSerializer(
 		yamlserializer.DefaultMetaFactory,
@@ -22,6 +29,9 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 		kobj, _, decodeErr := sr.Decode(yaml, nil, nil)
 		if err = decodeErr; err != nil {
 			return
+		}
+		if err := util.PopulateTypeMeta(kobj, s); err != nil {
+			return c, err
 		}
 		kobjs = append(kobjs, kobj)
 	}

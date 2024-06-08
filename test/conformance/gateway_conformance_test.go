@@ -24,9 +24,6 @@ import (
 var skippedTestsForTraditionalRoutes = []string{
 	// core conformance
 	tests.HTTPRouteHeaderMatching.ShortName,
-	// There is an issue with KIC when processing this scenario.
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6136
-	tests.GRPCRouteListenerHostnameMatching.ShortName,
 	// tests.GRPCRouteHeaderMatching.ShortName and tests.GRPCExactMethodMatching.ShortName may
 	// have some conflicts, skipping either one will still pass normally.
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6144

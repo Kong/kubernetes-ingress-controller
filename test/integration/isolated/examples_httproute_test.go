@@ -14,6 +14,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -21,6 +22,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -109,11 +111,15 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			additionalRoutePath,
 			http.StatusOK,
 			additionalRouteServiceTarget,
-			map[string]string{
-				additionalHeaderKey: additionalHeaderValue,
-			},
+			nil,
 			consts.IngressWait,
 			consts.WaitTick,
+			func(resp *http.Response, _ string) (reason string, ok bool) {
+				if resp.Header.Get(additionalHeaderKey) != additionalHeaderValue {
+					return fmt.Sprintf("response header %s == %s not found", additionalHeaderKey, additionalHeaderValue), false
+				}
+				return "", true
+			},
 		)
 	}
 
@@ -145,6 +151,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 					Name:      additionalRouteName,
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+						annotations.AnnotationPrefix + annotations.PluginsKey:   "response-transformer",
 					},
 				},
 				Spec: gatewayapi.HTTPRouteSpec{
@@ -191,11 +198,10 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 					Name:      "response-transformer",
 				},
 				PluginName: "response-transformer",
-				// Misconfigured on purpose.
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(fmt.Sprintf(`
 						{
-							"config": {"add": {"headers": ["%s:%s"]}}
+							"add": {"headers": ["%s:%s"]}
 						}`, additionalHeaderKey, additionalHeaderValue),
 					),
 				},
@@ -208,7 +214,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("attach broken plugin to a working route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("break plugin's configuration and wait for event indicating that", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			client := GetFromCtxForT[*clientset.Clientset](ctx, t)
 
 			plugin, err := client.ConfigurationV1().KongPlugins(namespace).Get(ctx, "response-transformer", metav1.GetOptions{})
@@ -219,16 +225,19 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			_, err = client.ConfigurationV1().KongPlugins(namespace).Update(ctx, plugin, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
-			t.Log("getting a gateway client")
-			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			assert.NoError(t, err)
-			ctx = SetInCtxForT(ctx, t, gatewayClient)
-
-			route, err := gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, additionalRouteName, metav1.GetOptions{})
-			assert.NoError(t, err)
-			route.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = plugin.Name
-			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, route, metav1.UpdateOptions{})
-			assert.NoError(t, err)
+			k8sClient := GetClusterFromCtx(ctx).Client()
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				events, err := k8sClient.EventsV1().Events(namespace).List(ctx, metav1.ListOptions{
+					FieldSelector: fmt.Sprintf("reason=%s", dataplane.KongConfigurationApplyFailedEventReason),
+				})
+				if !assert.NoError(t, err) {
+					return
+				}
+				contains := lo.ContainsBy(events.Items, func(e eventsv1.Event) bool {
+					return e.Regarding.Name == plugin.Name && e.Regarding.Kind == "KongPlugin"
+				})
+				assert.Truef(t, contains, "expected events to contain one for plugin %s, events: %v", plugin.Name, events.Items)
+			}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).

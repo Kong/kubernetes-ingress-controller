@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // mockGraphProvider is a mock implementation of the CacheGraphProvider interface.
@@ -177,40 +176,46 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 	// Dependency resolving between the objects is tested in TestResolveDependencies_* tests.
 	//
 	// Graph structure (edges define dependency -> dependant relationship):
-	//  ┌────────────┐  ┌──────┐
-	//  │ingressClass│  │plugin│
-	//  └──────┬─────┘  └──────┘
-	//         │
-	//     ┌───▼───┐
-	//     │service│
-	//     └───┬───┘
-	//         │
-	//  ┌──────▼──────┐
-	//  │serviceFacade│
-	//  └─────────────┘
-	graph, err := NewGraphBuilder().
+	//   ┌────────────┐  ┌──────┐
+	//   │ingressClass│  │plugin│
+	//   └──────┬─────┘  └───┬──┘
+	//          │            │
+	//          ├────────────┘
+	//          │
+	//      ┌───▼───┐
+	//      │service│
+	//      └───┬───┘
+	//          │
+	//   ┌──────▼──────┐
+	//   │serviceFacade│
+	//   └─────────────┘
+	currentGraph, err := NewGraphBuilder().
 		WithVertices(ingressClass, service, serviceFacade, plugin).
 		WithEdge(ingressClass, service).
+		WithEdge(plugin, service).
 		WithEdge(service, serviceFacade).
 		Build()
 	require.NoError(t, err)
 
-	// Fallback graph differs from the input graph by lack of the serviceFacade.
-	//  ┌────────────┐  ┌──────┐
-	//  │ingressClass│  │plugin│
-	//  └──────┬─────┘  └──────┘
-	//         │
-	//     ┌───▼───┐
-	//     │service│
-	//     └───────┘
+	// Last valid graph differs from the input graph by lack of the serviceFacade.
+	//   ┌────────────┐  ┌──────┐
+	//   │ingressClass│  │plugin│
+	//   └──────┬─────┘  └───┬──┘
+	//          │            │
+	//          ├────────────┘
+	//          │
+	//      ┌───▼───┐
+	//      │service│
+	//      └───────┘
 	lastValidGraph, err := NewGraphBuilder().
 		WithVertices(lastValidIngressClass, lastValidService, lastValidPlugin).
 		WithEdge(lastValidIngressClass, lastValidService).
+		WithEdge(lastValidPlugin, lastValidService).
 		Build()
 	require.NoError(t, err)
 
 	graphProvider := &mockGraphProvider{}
-	graphProvider.ReturnGraphOn(inputCacheStores, graph)
+	graphProvider.ReturnGraphOn(inputCacheStores, currentGraph)
 	graphProvider.ReturnGraphOn(lastValidCacheStores, lastValidGraph)
 	g := fallback.NewGenerator(graphProvider, logr.Discard())
 
@@ -294,12 +299,10 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		requireNotAnnotatedLastValid(t, fallbackIngressClass)
 
 		fallbackService, err := getFromStore[*corev1.Service](fallbackCache.Service, service)
-		require.NoError(t, err)
-		requireNotAnnotatedLastValid(t, fallbackService)
+		require.NoError(t, err, "service should be backfilled as it was present in the last valid state and is directly affected by broken plugin")
+		requireAnnotatedLastValid(t, fallbackService)
 
-		fallbackServiceFacade, err := getFromStore[*incubatorv1alpha1.KongServiceFacade](fallbackCache.KongServiceFacade, serviceFacade)
-		require.NoError(t, err)
-		requireNotAnnotatedLastValid(t, fallbackServiceFacade)
+		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade shouldn't be recovered as it wasn't in the last valid cache snapshot and it's indirectly affected by broken plugin")
 	})
 
 	t.Run("multiple objects are broken", func(t *testing.T) {

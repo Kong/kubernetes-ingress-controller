@@ -5,5 +5,5 @@ const (
 	// provided if none are provided by the user. This generally includes features
 	// that are innocuous, or otherwise don't actually get triggered unless the
 	// user takes further action.
-	DefaultFeatureGates = "GatewayAlpha=true,KongServiceFacade=true,RewriteURIs=true,FallbackConfiguration=true,KongCustomEntity=true"
+	DefaultFeatureGates = "GatewayAlpha=true,KongServiceFacade=true,KongCustomEntity=true"
 )

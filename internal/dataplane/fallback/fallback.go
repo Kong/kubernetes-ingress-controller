@@ -64,7 +64,7 @@ func (g *Generator) GenerateExcludingBrokenObjects(
 
 func (g *Generator) GenerateBackfillingBrokenObjects(
 	currentCache store.CacheStores,
-	lastValidCacheSnapshot store.CacheStores,
+	lastValidCacheSnapshot *store.CacheStores,
 	brokenObjects []ObjectHash,
 ) (store.CacheStores, error) {
 	// Build a graph from the current cache.
@@ -100,8 +100,13 @@ func (g *Generator) GenerateBackfillingBrokenObjects(
 		}
 	}
 
+	if lastValidCacheSnapshot == nil {
+		g.logger.V(util.DebugLevel).Info("No previous valid cache snapshot found, skipping backfilling")
+		return fallbackCache, nil
+	}
+
 	// Build a graph from the last valid cache snapshot.
-	lastValidGraph, err := g.cacheGraphProvider.CacheToGraph(lastValidCacheSnapshot)
+	lastValidGraph, err := g.cacheGraphProvider.CacheToGraph(*lastValidCacheSnapshot)
 	if err != nil {
 		return store.CacheStores{}, fmt.Errorf("failed to build cache graph: %w", err)
 	}

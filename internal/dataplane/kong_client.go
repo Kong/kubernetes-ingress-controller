@@ -73,7 +73,7 @@ type FallbackConfigGenerator interface {
 	GenerateExcludingBrokenObjects(store.CacheStores, []fallback.ObjectHash) (store.CacheStores, error)
 	GenerateBackfillingBrokenObjects(
 		currentCache store.CacheStores,
-		lastValidCache store.CacheStores,
+		lastValidCache *store.CacheStores,
 		brokenObjects []fallback.ObjectHash,
 	) (store.CacheStores, error)
 }
@@ -175,7 +175,7 @@ type KongClient struct {
 	// lastValidCacheSnapshot and lastProcessedSnapshotHash do not always keep values related to the same cache snapshot.
 	// While lastProcessedSnapshotHash keeps track of the last processed cache snapshot (the one kept in KongClient.cache),
 	// lastValidCacheSnapshot can also represent the fallback cache snapshot that was successfully synced with gateways.
-	lastValidCacheSnapshot store.CacheStores
+	lastValidCacheSnapshot *store.CacheStores
 
 	// brokenObjects is a list of the Kubernetes resources that failed to sync and triggered a fallback sync.
 	brokenObjects []fallback.ObjectHash
@@ -520,7 +520,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 func (c *KongClient) maybePreserveTheLastValidConfigCache(lastValidCache store.CacheStores) {
 	if c.kongConfig.FallbackConfiguration && c.kongConfig.UseLastValidConfigForFallback {
 		c.logger.V(util.DebugLevel).Info("Preserving the last valid configuration cache")
-		c.lastValidCacheSnapshot = lastValidCache
+		c.lastValidCacheSnapshot = &lastValidCache
 	}
 }
 

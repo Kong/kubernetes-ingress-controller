@@ -294,7 +294,7 @@ type mockFallbackConfigGenerator struct {
 	GenerateResult store.CacheStores
 
 	GenerateExcludingBrokenObjectsCalledWith   lo.Tuple2[store.CacheStores, []fallback.ObjectHash]
-	GenerateBackfillingBrokenObjectsCalledWith lo.Tuple3[store.CacheStores, store.CacheStores, []fallback.ObjectHash]
+	GenerateBackfillingBrokenObjectsCalledWith lo.Tuple3[store.CacheStores, *store.CacheStores, []fallback.ObjectHash]
 }
 
 func newMockFallbackConfigGenerator() *mockFallbackConfigGenerator {
@@ -311,7 +311,7 @@ func (m *mockFallbackConfigGenerator) GenerateExcludingBrokenObjects(
 
 func (m *mockFallbackConfigGenerator) GenerateBackfillingBrokenObjects(
 	currentStores store.CacheStores,
-	lastValidStores store.CacheStores,
+	lastValidStores *store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
 ) (store.CacheStores, error) {
 	m.GenerateBackfillingBrokenObjectsCalledWith = lo.T3(currentStores, lastValidStores, brokenObjects)
@@ -1237,7 +1237,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Log("Injecting the last valid cache snapshot to be used for recovery")
-			kongClient.lastValidCacheSnapshot = lastValidCache
+			kongClient.lastValidCacheSnapshot = &lastValidCache
 
 			t.Log("Setting update strategy to return an error on the first call to trigger fallback configuration generation")
 			updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
@@ -1287,7 +1287,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			}
 			if tc.expectGenerateBackfillingBrokenObjectsCalledWith {
 				t.Log("Verifying that the fallback config generator was called with the first and last valid cache snapshots and the broken object hash")
-				expectedGenerateBackfillingBrokenObjectsArgs := lo.T3(firstCacheUpdate, lastValidCache, []fallback.ObjectHash{fallback.GetObjectHash(brokenConsumer)})
+				expectedGenerateBackfillingBrokenObjectsArgs := lo.T3(firstCacheUpdate, &lastValidCache, []fallback.ObjectHash{fallback.GetObjectHash(brokenConsumer)})
 				require.Equal(t, expectedGenerateBackfillingBrokenObjectsArgs, fallbackConfigGenerator.GenerateBackfillingBrokenObjectsCalledWith,
 					"expected fallback config generator to be called with the current and last valid cache snapshots and the broken object hash")
 			}

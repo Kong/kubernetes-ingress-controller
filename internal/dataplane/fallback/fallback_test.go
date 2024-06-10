@@ -220,7 +220,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 	g := fallback.NewGenerator(graphProvider, logr.Discard())
 
 	t.Run("ingressClass is broken", func(t *testing.T) {
-		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass)})
+		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2),
 			"expected the generator to call CacheToGraph with the input cache stores and the last valid cache stores")
@@ -242,7 +242,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 	})
 
 	t.Run("service is broken", func(t *testing.T) {
-		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(service)})
+		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(service)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2),
 			"expected the generator to call CacheToGraph with the input cache stores and fallback cache")
@@ -264,7 +264,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 	})
 
 	t.Run("serviceFacade is broken", func(t *testing.T) {
-		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(serviceFacade)})
+		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(serviceFacade)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
 		require.NotSame(t, inputCacheStores, fallbackCache)
@@ -285,7 +285,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 	})
 
 	t.Run("plugin is broken", func(t *testing.T) {
-		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(plugin)})
+		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(plugin)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
 		require.NotSame(t, inputCacheStores, fallbackCache)
@@ -306,7 +306,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 	})
 
 	t.Run("multiple objects are broken", func(t *testing.T) {
-		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass), fallback.GetObjectHash(service)})
+		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass), fallback.GetObjectHash(service)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
 		require.NotSame(t, inputCacheStores, fallbackCache)
@@ -320,6 +320,21 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		requireAnnotatedLastValid(t, fallbackService)
 
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade shouldn't be recovered as it wasn't in the last valid cache snapshot")
+
+		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		require.NoError(t, err)
+		requireNotAnnotatedLastValid(t, fallbackPlugin)
+	})
+
+	t.Run("multiple objects are broken and last valid cache is nil", func(t *testing.T) {
+		fallbackCache, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, nil, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass), fallback.GetObjectHash(service)})
+		require.NoError(t, err)
+		require.Equal(t, []store.CacheStores{inputCacheStores}, graphProvider.CacheToGraphLastNCalledWith(1), "expected the generator to call CacheToGraph with the input cache stores only")
+		require.NotSame(t, inputCacheStores, fallbackCache)
+
+		require.Empty(t, fallbackCache.IngressClassV1.List(), "ingressClass should be excluded as it's broken and there's no last valid cache snapshot")
+		require.Empty(t, fallbackCache.Service.List(), "service should be excluded as it's broken and there's no last valid cache snapshot")
+		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it depends on service and there's no last valid cache snapshot")
 
 		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)

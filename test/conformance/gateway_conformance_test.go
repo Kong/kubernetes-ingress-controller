@@ -24,10 +24,11 @@ import (
 var skippedTestsForTraditionalRoutes = []string{
 	// core conformance
 	tests.HTTPRouteHeaderMatching.ShortName,
-	// tests.GRPCRouteHeaderMatching.ShortName and tests.GRPCExactMethodMatching.ShortName may
-	// have some conflicts, skipping either one will still pass normally.
+	// NOTE: Skipping tests.GRPCRouteHeaderMatching.ShortName and
+	// tests.GRPCExactMethodMatching.ShortName since they are flaky on CI.
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6144
 	tests.GRPCRouteHeaderMatching.ShortName,
+	tests.GRPCExactMethodMatching.ShortName,
 }
 
 var skippedTestsForExpressionRoutes = []string{

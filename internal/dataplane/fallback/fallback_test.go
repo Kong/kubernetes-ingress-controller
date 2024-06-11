@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
@@ -23,12 +22,12 @@ type mockGraphProvider struct {
 }
 
 // CacheToGraph returns the graph that was set on the mockGraphProvider. It also records the last store that was passed to it.
-func (m *mockGraphProvider) CacheToGraph(s store.CacheStores) (*fallback.ConfigGraph, []diagnostics.FallbackDiagnostic, error) {
-	m.cacheToGraphCalls = append(m.cacheToGraphCalls, s)
-	if g, ok := m.graphToReturnOn[s]; ok {
-		return g, nil, nil
+func (m *mockGraphProvider) CacheToGraph(c store.CacheStores) (*fallback.ConfigGraph, error) {
+	m.cacheToGraphCalls = append(m.cacheToGraphCalls, c)
+	if g, ok := m.graphToReturnOn[c]; ok {
+		return g, nil
 	}
-	return nil, nil, errors.New("unexpected call")
+	return nil, errors.New("unexpected call")
 }
 
 // ReturnGraphOn sets the graph that should be returned when CacheToGraph is called with the given cache stores.
@@ -340,5 +339,44 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackPlugin)
+	})
+}
+
+func TestGenerator_ReturnsMetadata(t *testing.T) {
+	ingressClass := testIngressClass(t, "ingressClass")
+	service := testService(t, "service")
+	inputCacheStores := cacheStoresFromObjs(t, ingressClass, service)
+
+	lastValidCacheStores := cacheStoresFromObjs(t, ingressClass, service)
+
+	configGraph, err := NewGraphBuilder().
+		WithVertices(ingressClass, service).
+		WithEdge(ingressClass, service).
+		Build()
+	require.NoError(t, err)
+
+	graphProvider := &mockGraphProvider{}
+	graphProvider.ReturnGraphOn(inputCacheStores, configGraph)
+	graphProvider.ReturnGraphOn(lastValidCacheStores, configGraph)
+	g := fallback.NewGenerator(graphProvider, logr.Discard())
+
+	t.Run("on excluding", func(t *testing.T) {
+		_, meta, err := g.GenerateExcludingBrokenObjects(inputCacheStores, []fallback.ObjectHash{
+			fallback.GetObjectHash(ingressClass),
+		})
+		require.NoError(t, err)
+		require.Len(t, meta.BrokenObjects, 1)
+		require.Len(t, meta.ExcludedObjects, 2)
+		require.Len(t, meta.BackfilledObjects, 0)
+	})
+	t.Run("on backfilling", func(t *testing.T) {
+		_, meta, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{
+			fallback.GetObjectHash(ingressClass),
+			fallback.GetObjectHash(service),
+		})
+		require.NoError(t, err)
+		require.Len(t, meta.BrokenObjects, 2)
+		require.Len(t, meta.ExcludedObjects, 2)
+		require.Len(t, meta.BackfilledObjects, 2)
 	})
 }

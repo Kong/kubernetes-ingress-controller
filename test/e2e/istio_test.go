@@ -214,7 +214,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			return false
 		}
-		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
+		if health, err = getKialiWorkloadHealthIstio1_22(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
 			return false
 		}
 		inboundHTTPRequests = health.Requests.Inbound.HTTP
@@ -238,7 +238,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		if err := verifyStatusForURL(serverErrorURL, http.StatusInternalServerError); err != nil {
 			return false
 		}
-		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
+		if health, err = getKialiWorkloadHealthIstio1_22(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
 			return false
 		}
 		inboundHTTPRequests = health.Requests.Inbound.HTTP
@@ -364,6 +364,25 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 	return &health, nil
 }
 
+func getKialiWorkloadHealthIstio1_22(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	kialiWorkloadURL := fmt.Sprintf("%s/namespaces/%s/workloads/%s", kialiAPIUrl, namespace, workloadName)
+	resp, err := helpers.DefaultHTTPClient().Get(kialiWorkloadURL)
+	require.NoErrorf(t, err, "failed to call Kiali workload API %s", kialiWorkloadURL)
+	defer resp.Body.Close()
+	// verify the workload response
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "Got code %d from Kiali workload API %s", resp.StatusCode, kialiWorkloadURL)
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	status := workloadStatus{}
+	err = json.Unmarshal(b, &status)
+	if err != nil {
+		return nil, err
+	}
+	return &status.Health, nil
+}
+
 // -----------------------------------------------------------------------------
 // Private Testing Types - Kiali API Responses
 // -----------------------------------------------------------------------------
@@ -387,4 +406,9 @@ type requests struct {
 
 type workloadHealth struct {
 	Requests requests `json:"requests"`
+}
+
+type workloadStatus struct {
+	Name   string         `json:"name"`
+	Health workloadHealth `json:"health"`
 }

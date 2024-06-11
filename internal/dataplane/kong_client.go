@@ -588,8 +588,8 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 		return fmt.Errorf("failed to generate fallback configuration: %w", err)
 	}
 	c.logFallbackCacheMetadata(generatedCacheMetadata)
-	if ch := c.diagnostic.FallbackCacheMetadata; ch != nil {
-		ch <- generatedCacheMetadata
+	if err := c.maybeSendFallbackConfigDiagnostics(ctx, generatedCacheMetadata); err != nil {
+		return fmt.Errorf("failed to send fallback configuration diagnostics: %w", err)
 	}
 
 	// Update the KongConfigBuilder with the fallback configuration and build the KongConfig.
@@ -1071,4 +1071,18 @@ func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMe
 			"causing_objects", strings.Join(causingObjects, ","),
 		)
 	}
+}
+
+func (c *KongClient) maybeSendFallbackConfigDiagnostics(ctx context.Context, generatedCacheMetadata fallback.GeneratedCacheMetadata) error {
+	if ch := c.diagnostic.FallbackCacheMetadata; ch != nil {
+		select {
+		case ch <- generatedCacheMetadata:
+			c.logger.V(util.DebugLevel).Info("Shipping fallback cache metadata to diagnostics server")
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			c.logger.Error(nil, "Fallback cache metadata buffer full, dropping diagnostics")
+		}
+	}
+	return nil
 }

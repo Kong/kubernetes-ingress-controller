@@ -46,7 +46,8 @@ var (
 	//
 	// See: https://docs.konghq.com/hub/kong-inc/rate-limiting/
 	perHourRateLimit = 3
-
+	// workloadEndpointIstioVersionCutoff is the lowest version that supports Kiali API /namespaces/<ns>/workloads/<workload>
+	// that returns the metrics of a workload.
 	workloadEndpointIstioVersionCutoff = semver.MustParse("1.18.0")
 )
 
@@ -327,7 +328,8 @@ func verifyStatusForURL(getURL string, statusCode int) error {
 
 // getKialiWorkloadHealth produces the health metrics of a workload given the namespace and name of that workload.
 func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
-	istioVersion := semver.MustParse(istioVersionStr)
+	istioVersion, err := semver.Parse(istioVersionStr)
+	require.NoError(t, err, "failed to parse istio version")
 	if istioVersion.GTE(workloadEndpointIstioVersionCutoff) {
 		return getKialiWorkloadHealthIstioByWorkloadEndpoint(t, kialiAPIUrl, namespace, workloadName)
 	}

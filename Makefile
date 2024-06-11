@@ -304,10 +304,8 @@ generate.clientsets: client-gen
 		--clientset-name clientset \
 		--input-base $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/apis/ \
 		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1,incubator/v1alpha1 \
-		--input-dirs $(REPO_URL)/pkg/apis/configuration/v1alpha1/,$(REPO_URL)/pkg/apis/configuration/v1beta1/,$(REPO_URL)/pkg/apis/configuration/v1/,$(REPO_URL)/pkg/apis/incubator/v1alpha1 \
-		--output-base pkg/ \
-		--output-package $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/ \
-		--trim-path-prefix pkg/$(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/
+		--output-dir pkg/ \
+		--output-pkg $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/
 
 .PHONY: generate.docs
 generate.docs: generate.apidocs generate.cli-arguments-docs

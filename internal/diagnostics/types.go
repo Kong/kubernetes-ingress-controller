@@ -44,6 +44,8 @@ type ConfigDumpDiagnostic struct {
 	DumpsIncludeSensitive bool
 	// Configs is the channel that receives configuration blobs from the configuration update strategy implementation.
 	Configs chan ConfigDump
+	// Diffs is the channel that receives diff info in DB mode.
+	Diffs chan ConfigDiff
 }
 
 // AffectedObject is a Kubernetes object associated with diagnostic information.

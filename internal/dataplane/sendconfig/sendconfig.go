@@ -72,6 +72,7 @@ func PerformUpdate(
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
+	// TRR this is the point in sendconfig where db events maybe happen, but it's not differentiated by strategy here
 	err = updateStrategy.Update(ctx, ContentWithHash{
 		Content:        targetContent,
 		CustomEntities: customEntities,

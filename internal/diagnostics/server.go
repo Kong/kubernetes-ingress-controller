@@ -66,6 +66,7 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 		s.configDumps = ConfigDumpDiagnostic{
 			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
 			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
+			Diffs:                 make(chan ConfigDiff, diagnosticConfigBufferDepth),
 		}
 	}
 

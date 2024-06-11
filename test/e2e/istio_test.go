@@ -333,7 +333,7 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 	istioVersion, err := semver.Parse(istioVersionStr)
 	require.NoError(t, err, "failed to parse istio version")
 	if istioVersion.GTE(workloadEndpointIstioVersionCutoff) {
-		return getKialiWorkloadHealthIstioByWorkloadEndpoint(t, kialiAPIUrl, namespace, workloadName)
+		return getKialiWorkloadHealthIstioByWorkloadEndpoint(t, kialiAPIUrl, namespace, workloadName), nil
 	}
 	return getKialiWorkloadHealthByHealthEndpoint(t, kialiAPIUrl, namespace, workloadName)
 }
@@ -384,7 +384,7 @@ func getKialiWorkloadHealthByHealthEndpoint(t *testing.T, kialiAPIUrl string, na
 
 // getKialiWorkloadHealthIstioByWorkloadEndpoint gets metrics of workload by /namespaces/<ns>/workloads/<workload> API.
 // Used in Istio 1.18 and later. Istio 1.17 does not have this API.
-func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) *workloadHealth {
 	t.Helper()
 
 	kialiWorkloadURL := fmt.Sprintf("%s/namespaces/%s/workloads/%s", kialiAPIUrl, namespace, workloadName)
@@ -396,10 +396,8 @@ func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl str
 	b, err := io.ReadAll(resp.Body)
 	require.NoError(t, err, "failed to read from response from Kiali workload API")
 	status := workloadStatus{}
-	if err := json.Unmarshal(b, &status); err != nil {
-		return nil, err
-	}
-	return &status.Health, nil
+	require.NoError(t, json.Unmarshal(b, &status), "failed to parse JSON from Kiali workload API")
+	return &status.Health
 }
 
 // -----------------------------------------------------------------------------

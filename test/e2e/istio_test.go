@@ -46,6 +46,8 @@ var (
 	//
 	// See: https://docs.konghq.com/hub/kong-inc/rate-limiting/
 	perHourRateLimit = 3
+
+	workloadEndpointIstioVersionCutoff = semver.MustParse("1.18.0")
 )
 
 // TestIstioWithKongIngressGateway verifies integration of Kong Gateway as an Ingress
@@ -214,7 +216,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			return false
 		}
-		if health, err = getKialiWorkloadHealthIstio1_22(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
+		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
 			return false
 		}
 		inboundHTTPRequests = health.Requests.Inbound.HTTP
@@ -238,7 +240,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		if err := verifyStatusForURL(serverErrorURL, http.StatusInternalServerError); err != nil {
 			return false
 		}
-		if health, err = getKialiWorkloadHealthIstio1_22(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
+		if health, err = getKialiWorkloadHealth(t, kialiAPIUrl, namespace.Name, workload.Name); err != nil {
 			return false
 		}
 		inboundHTTPRequests = health.Requests.Inbound.HTTP
@@ -325,6 +327,16 @@ func verifyStatusForURL(getURL string, statusCode int) error {
 
 // getKialiWorkloadHealth produces the health metrics of a workload given the namespace and name of that workload.
 func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	istioVersion := semver.MustParse(istioVersionStr)
+	if istioVersion.GTE(workloadEndpointIstioVersionCutoff) {
+		return getKialiWorkloadHealthIstioByWorkloadEndpoint(t, kialiAPIUrl, namespace, workloadName)
+	}
+	return getKialiWorkloadHealthByHealthEndpoint(t, kialiAPIUrl, namespace, workloadName)
+}
+
+// getKialiWorkloadHealthByHealthEndpoint gets health metrics of ALL workloads from /namespaces/<ns>/health?type=workload API.
+// Used in istio 1.17 and prior. Istio 1.22 does not have this API.
+func getKialiWorkloadHealthByHealthEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
 	// generate the URL for the namespace health metrics
 	kialiHealthURL := fmt.Sprintf("%s/namespaces/%s/health", kialiAPIUrl, namespace)
 	req, err := http.NewRequest("GET", kialiHealthURL, nil)
@@ -364,7 +376,9 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 	return &health, nil
 }
 
-func getKialiWorkloadHealthIstio1_22(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+// getKialiWorkloadHealthIstioByWorkloadEndpoint gets metrics of workload by /namespaces/<ns>/workloads/<workload> API.
+// Used in Istio 1.18 and later. Istio 1.17 does not have this API.
+func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
 	kialiWorkloadURL := fmt.Sprintf("%s/namespaces/%s/workloads/%s", kialiAPIUrl, namespace, workloadName)
 	resp, err := helpers.DefaultHTTPClient().Get(kialiWorkloadURL)
 	require.NoErrorf(t, err, "failed to call Kiali workload API %s", kialiWorkloadURL)

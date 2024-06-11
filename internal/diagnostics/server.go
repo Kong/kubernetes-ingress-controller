@@ -161,7 +161,9 @@ func (s *Server) onConfigDump(dump ConfigDump) {
 		// If the regular config push was successful, we can drop the fallback cache metadata as it is
 		// no longer relevant.
 		if !dump.Meta.Fallback {
+			s.fallbackLock.Lock()
 			s.currentFallbackCacheMetadata = nil
+			s.fallbackLock.Unlock()
 		}
 	}
 }

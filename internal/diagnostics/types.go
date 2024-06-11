@@ -2,7 +2,8 @@ package diagnostics
 
 import (
 	"github.com/kong/go-database-reconciler/pkg/file"
-	k8stypes "k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 )
 
 // DumpMeta annotates a config dump.
@@ -11,8 +12,6 @@ type DumpMeta struct {
 	Failed bool
 	// Fallback indicates that the dump is a fallback configuration attempted after a failed config update.
 	Fallback bool
-	// AffectedObjects are objects excluded from the fallback configuration.
-	AffectedObjects []AffectedObject
 	// Hash is the configuration hash.
 	Hash string
 }
@@ -27,57 +26,13 @@ type ConfigDump struct {
 	RawResponseBody []byte
 }
 
-type configDumpResponse struct {
-	ConfigHash string       `json:"hash"`
-	Config     file.Content `json:"config"`
-}
-
-type fallbackResponse struct {
-	FallbackObjects []FallbackDiagnostic `json:"objects"`
-}
-
-// FallbackDiagnosticCollection is a set of fallback object diagnostics associated with a config hash.
-type FallbackDiagnosticCollection struct {
-	Objects []FallbackDiagnostic
-}
-
-// FallbackDiagnostic are fallback objects.
-type FallbackDiagnostic struct {
-	// GroupKind is the object group and kind.
-	GroupKind string `json:"resource"`
-	// Namespace is the object namespace.
-	Namespace string `json:"namespace"`
-	// Namespace is the object name.
-	Name string `json:"name"`
-	// ID is the object UID.
-	ID string `json:"id"`
-	// Status is the object's fallback status.
-	Status string `json:"status"`
-	// CausingObject is the object that triggered this
-	CausingObject string `json:"cause"`
-}
-
 // ConfigDumpDiagnostic contains settings and channels for receiving diagnostic configuration dumps.
 type ConfigDumpDiagnostic struct {
 	// DumpsIncludeSensitive is true if the configuration dump includes sensitive values, such as certificate private
 	// keys and credential secrets.
 	DumpsIncludeSensitive bool
 	// Configs is the channel that receives configuration blobs from the configuration update strategy implementation.
-	Configs   chan ConfigDump
-	Fallbacks chan FallbackDiagnosticCollection
-}
-
-// AffectedObject is a Kubernetes object associated with diagnostic information.
-type AffectedObject struct {
-	// UID is the unique identifier of the object.
-	UID k8stypes.UID
-
-	// Group is the object's group.
-	Group string
-	// Kind is the object's Kind.
-	Kind string
-	// Namespace is the object's Namespace.
-	Namespace string
-	// Name is the object's Name.
-	Name string
+	Configs chan ConfigDump
+	// FallbackCacheMetadata is the channel that receives fallback metadata from the fallback cache generator.
+	FallbackCacheMetadata chan fallback.GeneratedCacheMetadata
 }

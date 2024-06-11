@@ -336,7 +336,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := fallback.NewDefaultCacheGraphProvider()
-			g, _, err := p.CacheToGraph(tc.cache)
+			g, err := p.CacheToGraph(tc.cache)
 			require.NoError(t, err)
 			require.NotNil(t, g)
 			require.Equal(t, tc.expectedAdjacencyMap, adjacencyGraphStrings(t, g))

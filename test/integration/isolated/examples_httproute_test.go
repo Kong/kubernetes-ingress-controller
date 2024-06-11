@@ -3,7 +3,6 @@
 package isolated
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,20 +102,17 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 					return
 				}
 
-				b := new(bytes.Buffer)
-				_, err = b.ReadFrom(resp.Body)
+				response := diagnostics.FallbackResponse{}
+				err = json.NewDecoder(resp.Body).Decode(&response)
 				if !assert.NoError(c, err) {
 					return
 				}
-				cause := gjson.GetBytes(b.Bytes(), "objects")
-				var diags []diagnostics.FallbackDiagnostic
-				if !assert.NoError(c, json.Unmarshal([]byte(cause.Raw), &diags)) {
-					return
-				}
-				for _, diag := range diags {
-					assert.Contains(c, "configuration.konghq.com/KongPlugin:default/key-auth", diag.CausingObject)
-					assert.Contains(c, "excluded", diag.Status)
-				}
+				assert.Equal(t, response.Status, diagnostics.FallbackStatusTriggered)
+				assert.NotEmpty(t, response.ExcludedObjects)
+				contains := lo.ContainsBy(response.ExcludedObjects, func(obj diagnostics.FallbackAffectedObjectMeta) bool {
+					return obj.Group == "configuration.konghq.com" && obj.Kind == "KongPlugin" && obj.Name == "key-auth"
+				})
+				assert.Truef(t, contains, "expected to find KongPlugin key-auth in excluded objects, got: %v", response.ExcludedObjects)
 			}, consts.IngressWait, consts.WaitTick)
 			return ctx
 		}).

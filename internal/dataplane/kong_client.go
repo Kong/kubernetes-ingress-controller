@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,12 +74,12 @@ type FallbackConfigGenerator interface {
 	GenerateExcludingBrokenObjects(
 		store.CacheStores,
 		[]fallback.ObjectHash,
-	) (store.CacheStores, []diagnostics.FallbackDiagnostic, error)
+	) (store.CacheStores, fallback.GeneratedCacheMetadata, error)
 	GenerateBackfillingBrokenObjects(
 		currentCache store.CacheStores,
 		lastValidCache *store.CacheStores,
 		brokenObjects []fallback.ObjectHash,
-	) (store.CacheStores, []diagnostics.FallbackDiagnostic, error)
+	) (store.CacheStores, fallback.GeneratedCacheMetadata, error)
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
@@ -504,9 +505,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 		return gatewaysSyncErr
 	}
 
-	// if we've gotten here we've pushed a successful config, so purge any existing fallback diagnostic info
-	c.diagnostic.Fallbacks <- diagnostics.FallbackDiagnosticCollection{Objects: []diagnostics.FallbackDiagnostic{}}
-
 	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
 	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)
 
@@ -585,11 +583,14 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	}
 
 	// Generate a fallback cache snapshot.
-	fallbackCache, fallbackDiag, err := c.generateFallbackCache(currentCache, brokenObjects)
+	fallbackCache, generatedCacheMetadata, err := c.generateFallbackCache(currentCache, brokenObjects)
 	if err != nil {
 		return fmt.Errorf("failed to generate fallback configuration: %w", err)
 	}
-	c.diagnostic.Fallbacks <- diagnostics.FallbackDiagnosticCollection{Objects: fallbackDiag}
+	c.logFallbackCacheMetadata(generatedCacheMetadata)
+	if ch := c.diagnostic.FallbackCacheMetadata; ch != nil {
+		ch <- generatedCacheMetadata
+	}
 
 	// Update the KongConfigBuilder with the fallback configuration and build the KongConfig.
 	c.kongConfigBuilder.UpdateCache(fallbackCache)
@@ -628,7 +629,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 func (c *KongClient) generateFallbackCache(
 	currentCache store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
-) (s store.CacheStores, diag []diagnostics.FallbackDiagnostic, err error) {
+) (s store.CacheStores, metadata fallback.GeneratedCacheMetadata, err error) {
 	start := time.Now()
 	defer func() {
 		c.prometheusMetrics.RecordFallbackCacheGenerationDuration(time.Since(start), err)
@@ -795,7 +796,7 @@ func (c *KongClient) sendToClient(
 		}
 	}
 
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, c.brokenObjects)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, isFallback)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -871,7 +872,7 @@ func prepareSendDiagnosticFn(
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
-	broken []fallback.ObjectHash,
+	isFallback bool,
 ) sendDiagnosticFn {
 	if diagnosticConfig == (diagnostics.ConfigDumpDiagnostic{}) {
 		// noop, diagnostics won't be sent
@@ -900,9 +901,8 @@ func prepareSendDiagnosticFn(
 		select {
 		case diagnosticConfig.Configs <- diagnostics.ConfigDump{
 			Meta: diagnostics.DumpMeta{
-				Failed:          meta.Failed,
-				Fallback:        len(broken) != 0,
-				AffectedObjects: hashToAffected(broken),
+				Failed:   meta.Failed,
+				Fallback: isFallback,
 			},
 			Config:          *config,
 			RawResponseBody: rawResponseBody,
@@ -912,20 +912,6 @@ func prepareSendDiagnosticFn(
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")
 		}
 	}
-}
-
-func hashToAffected(objs []fallback.ObjectHash) []diagnostics.AffectedObject {
-	affected := make([]diagnostics.AffectedObject, len(objs))
-	for i, obj := range objs {
-		affected[i] = diagnostics.AffectedObject{
-			UID:       obj.UID,
-			Group:     obj.Group,
-			Kind:      obj.Kind,
-			Namespace: obj.Namespace,
-			Name:      obj.Name,
-		}
-	}
-	return affected
 }
 
 // triggerKubernetesObjectReport will update the KongClient with a set which
@@ -1049,4 +1035,40 @@ func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus client
 	c.logger.V(util.DebugLevel).Info("Config status changed, notifying", "configStatus", configStatus)
 	c.currentConfigStatus = configStatus
 	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
+}
+
+func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMetadata) {
+	log := c.logger.WithName("fallback-cache-generator")
+
+	// Log excluded objects.
+	for _, excluded := range metadata.ExcludedObjects {
+		gvk := excluded.Object.GetObjectKind().GroupVersionKind()
+		obj := excluded.Object
+		causingObjects := lo.Map(excluded.CausingObjects, func(causing fallback.ObjectHash, _ int) string {
+			return causing.String()
+		})
+		log.V(util.DebugLevel).Info("Excluded object from fallback cache",
+			"kind", gvk.Kind,
+			"group", gvk.Group,
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+			"causing_objects", strings.Join(causingObjects, ","),
+		)
+	}
+
+	// Log backfilled objects.
+	for _, backfilled := range metadata.BackfilledObjects {
+		gvk := backfilled.Object.GetObjectKind().GroupVersionKind()
+		obj := backfilled.Object
+		causingObjects := lo.Map(backfilled.CausingObjects, func(causing fallback.ObjectHash, _ int) string {
+			return causing.String()
+		})
+		log.V(util.DebugLevel).Info("Backfilled object in fallback cache",
+			"kind", gvk.Kind,
+			"group", gvk.Group,
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+			"causing_objects", strings.Join(causingObjects, ","),
+		)
+	}
 }

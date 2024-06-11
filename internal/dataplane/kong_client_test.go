@@ -293,7 +293,7 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 type mockFallbackConfigGenerator struct {
 	GenerateResult store.CacheStores
 
-	GenerateExcludingBrokenObjectsCalledWith   lo.Tuple3[store.CacheStores, []diagnostics.FallbackDiagnostic, []fallback.ObjectHash]
+	GenerateExcludingBrokenObjectsCalledWith   lo.Tuple2[store.CacheStores, []fallback.ObjectHash]
 	GenerateBackfillingBrokenObjectsCalledWith lo.Tuple3[store.CacheStores, *store.CacheStores, []fallback.ObjectHash]
 }
 
@@ -304,18 +304,18 @@ func newMockFallbackConfigGenerator() *mockFallbackConfigGenerator {
 func (m *mockFallbackConfigGenerator) GenerateExcludingBrokenObjects(
 	stores store.CacheStores,
 	hashes []fallback.ObjectHash,
-) (store.CacheStores, []diagnostics.FallbackDiagnostic, error) {
-	m.GenerateExcludingBrokenObjectsCalledWith = lo.T3(stores, []diagnostics.FallbackDiagnostic{}, hashes)
-	return m.GenerateResult, []diagnostics.FallbackDiagnostic{}, nil
+) (store.CacheStores, fallback.GeneratedCacheMetadata, error) {
+	m.GenerateExcludingBrokenObjectsCalledWith = lo.T2(stores, hashes)
+	return m.GenerateResult, fallback.GeneratedCacheMetadata{}, nil
 }
 
 func (m *mockFallbackConfigGenerator) GenerateBackfillingBrokenObjects(
 	currentStores store.CacheStores,
 	lastValidStores *store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
-) (store.CacheStores, []diagnostics.FallbackDiagnostic, error) {
+) (store.CacheStores, fallback.GeneratedCacheMetadata, error) {
 	m.GenerateBackfillingBrokenObjectsCalledWith = lo.T3(currentStores, lastValidStores, brokenObjects)
-	return m.GenerateResult, []diagnostics.FallbackDiagnostic{}, nil
+	return m.GenerateResult, fallback.GeneratedCacheMetadata{}, nil
 }
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
@@ -1320,21 +1320,17 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	require.Equal(t, validConsumer.Username, *lastValidConfig.Consumers[0].Username)
 
 	t.Log("Verifying that the diagnostic server received a dump indicating that the broken consumer caused a problem")
-	// the test will have pushed several successful configs that we don't care about into the diag buffer. this is a
-	// silly hack to churn through those until we get to the successful fallback
+	// The test will have pushed several successful configs that we don't care about into the diag buffer. This is a
+	// silly hack to churn through those until we get to the successful fallback.
 	var dump diagnostics.ConfigDump
 	require.Eventually(t, func() bool {
 		dump = <-diagnosticsCh
-		return len(dump.Meta.AffectedObjects) > 0
+		return dump.Meta.Fallback
 	}, time.Second, time.Nanosecond)
 
-	// once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push triggered by
-	// the expected broken consumer
+	// Once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push.
 	require.False(t, dump.Meta.Failed)
 	require.True(t, dump.Meta.Fallback)
-
-	require.Equal(t, dump.Meta.AffectedObjects[0].Namespace, brokenConsumer.ObjectMeta.Namespace)
-	require.Equal(t, dump.Meta.AffectedObjects[0].Name, brokenConsumer.ObjectMeta.Name)
 }
 
 func TestKongClient_FallbackConfiguration_SkipMakingRedundantSnapshot(t *testing.T) {
@@ -1483,21 +1479,16 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	require.False(t, hasLastValidConfig, "expected no last valid config to be stored as no successful recovery happened")
 
 	t.Log("Verifying that the diagnostic server received a dump indicating that the broken consumer caused a problem")
-	// the test will have pushed several successful configs that we don't care about into the diag buffer. this is a
-	// silly hack to churn through those until we get to the failed fallback
+	// The test will have pushed several successful configs that we don't care about into the diag buffer. This is a
+	// silly hack to churn through those until we get to the failed fallback.
 	var dump diagnostics.ConfigDump
 	require.Eventually(t, func() bool {
 		dump = <-diagnosticsCh
-		return len(dump.Meta.AffectedObjects) > 0
+		return dump.Meta.Fallback
 	}, time.Second, time.Nanosecond)
 
-	// once we have the fallback diagnostic dump, check to confirm that it was a successful fallback push triggered by
-	// the expected broken consumer
+	// Once we have the fallback diagnostic dump, check to confirm that it was a failed fallback push.
 	require.True(t, dump.Meta.Failed)
-	require.True(t, dump.Meta.Fallback)
-
-	require.Equal(t, dump.Meta.AffectedObjects[0].Namespace, brokenConsumer.ObjectMeta.Namespace)
-	require.Equal(t, dump.Meta.AffectedObjects[0].Name, brokenConsumer.ObjectMeta.Name)
 }
 
 func TestKongClient_LastValidCacheSnapshot(t *testing.T) {

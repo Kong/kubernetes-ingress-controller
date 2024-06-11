@@ -88,9 +88,23 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## 3.2
 
-> Release date: TBA
+> Release date: 2024-06-12
+
+### Highlights
+
+- 🚀 **Fallback Configuration**: New `FallbackConfiguration` feature enables isolating configuration failure domains so
+  that one broken object does no longer prevent the entire configuration from being applied. See [Fallback Configuration guide]
+  to learn more.
+- 🏗️ **Custom Kong Entities**: New `KongCustomEntity` CRD allows defining Kong custom entities programmatically in KIC.
+  See [Using Custom Entities guide] to learn more.
+- 📨 **GRPCRoute v1 support**: Following the GA graduation in the Gateway API, KIC now supports the v1 version of the GRPCRoute.
+  See [GRPCRoute reference] to learn more. _Requires upgrading the Gateway API's CRDs to v1.1._
+
+[Fallback Configuration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/high-availability/fallback-config/
+[Using Custom Entities guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/services/custom-entity
+[GRPCRoute reference]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 
 ### Breaking changes
 
@@ -120,6 +134,50 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
+- Added `FallbackConfiguration` feature gate to enable the controller to generate a fallback configuration
+  for Kong when it fails to apply the original one. The feature gate is disabled by default.
+  [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)
+  [#6010](https://github.com/Kong/kubernetes-ingress-controller/pull/6010)
+  [#6047](https://github.com/Kong/kubernetes-ingress-controller/pull/6047)
+  [#6071](https://github.com/Kong/kubernetes-ingress-controller/pull/6071)
+- Added `--use-last-valid-config-for-fallback` CLI flag to enable using the last valid configuration cache
+  to backfill excluded broken objects when the `FallbackConfiguration` feature gate is enabled.
+  [#6098](https://github.com/Kong/kubernetes-ingress-controller/pull/6098)
+- Added `FallbackKongConfigurationSucceeded`, `FallbackKongConfigurationTranslationFailed` and
+  `FallbackKongConfigurationApplyFailed` Kubernetes Events to report the status of the fallback configuration.
+  [#6099](https://github.com/Kong/kubernetes-ingress-controller/pull/6099)
+- Added Prometheus metrics covering `FallbackConfiguration` feature:
+  - `ingress_controller_fallback_translation_count`
+  - `ingress_controller_fallback_translation_broken_resource_count`
+  - `ingress_controller_fallback_configuration_push_count`
+  - `ingress_controller_fallback_configuration_push_last`
+  - `ingress_controller_fallback_configuration_push_duration_milliseconds`
+  - `ingress_controller_fallback_configuration_push_broken_resource_count`
+  - `ingress_controller_fallback_cache_generating_duration_milliseconds`
+  - `ingress_controller_processed_config_snapshot_cache_hit`
+  - `ingress_controller_processed_config_snapshot_cache_miss`
+    [#6105](https://github.com/Kong/kubernetes-ingress-controller/pull/6105)
+- Added a `GET /debug/config/fallback` diagnostic endpoint to expose the fallback configuration
+  details (currently broken, excluded and backfilled objects, as well as the overall status).
+  [#6184](https://github.com/Kong/kubernetes-ingress-controller/pull/6184)
+- Added the CRD `KongCustomEntity` to support custom Kong entities that are not
+  defined in KIC yet. The current version only supports translating custom
+  entities into declarative configuration in DBless mode, and cannot apply
+  custom entities to DB backed Kong gateways.
+  Feature gate `KongCustomEntity` is required to set to `true` to enabled the
+  `KongCustomEntity` controller.
+  **Note**: The IDs of Kong services, routes and consumers referred by custom
+  entities via `foreign` type fields of custom entities are filled by the `FillID`
+  method of the corresponding type because the IDs of these entities are required
+  to fill the `foreign` fields of custom entities. So the `FillIDs` feature gate
+  is also required when `KongCustomEntity` is enabled.
+  [#5982](https://github.com/Kong/kubernetes-ingress-controller/pull/5982)
+  [#6006](https://github.com/Kong/kubernetes-ingress-controller/pull/6006)
+  [#6055](https://github.com/Kong/kubernetes-ingress-controller/pull/6055)
+- Add support for Kubernetes Gateway API v1.1:
+  - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
+  - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.
+    [#5918](https://github.com/Kong/kubernetes-ingress-controller/pull/5918)
 - Add a `/debug/config/raw-error` endpoint to the config dump diagnostic
   server. This endpoint outputs the original Kong `/config` endpoint error for
   failed configuration pushes in case error parsing fails. Attempt to log the
@@ -147,47 +205,6 @@ Adding a new version? You'll need three changes:
   for headers specified with `konghq.com/headers.*` annotations. Moreover parsing a content of `konghq.com/headers.*`
   is more robust - leading and trailing whitespace characters are discarded.
   [#5977](https://github.com/Kong/kubernetes-ingress-controller/pull/5977)
-- Added the CRD `KongCustomEntity` to support custom Kong entities that are not
-  defined in KIC yet. The current version only supports translating custom
-  entities into declarative configuration in DBless mode, and cannot apply
-  custom entities to DB backed Kong gateways.
-  Feature gate `KongCustomEntity` is required to set to `true` to enabled the
-  `KongCustomEntity` controller.
-  **Note**: The IDs of Kong services, routes and consumers referred by custom
-  entities via `foreign` type fields of custom entities are filled by the `FillID`
-  method of the corresponding type because the IDs of these entities are required
-  to fill the `foreign` fields of custom entities. So the `FillIDs` feature gate
-  is also required when `KongCustomEntity` is enabled.
-  [#5982](https://github.com/Kong/kubernetes-ingress-controller/pull/5982)
-  [#6006](https://github.com/Kong/kubernetes-ingress-controller/pull/6006)
-  [#6055](https://github.com/Kong/kubernetes-ingress-controller/pull/6055)
-- Added `FallbackConfiguration` feature gate to enable the controller to generate a fallback configuration
-  for Kong when it fails to apply the original one. The feature gate is disabled by default.
-  [#5993](https://github.com/Kong/kubernetes-ingress-controller/pull/5993)
-  [#6010](https://github.com/Kong/kubernetes-ingress-controller/pull/6010)
-  [#6047](https://github.com/Kong/kubernetes-ingress-controller/pull/6047)
-  [#6071](https://github.com/Kong/kubernetes-ingress-controller/pull/6071)
-- Added `--use-last-valid-config-for-fallback` CLI flag to enable using the last valid configuration cache
-  to backfill excluded broken objects when the `FallbackConfiguration` feature gate is enabled.
-  [#6098](https://github.com/Kong/kubernetes-ingress-controller/pull/6098)
-- Added `FallbackKongConfigurationSucceeded`, `FallbackKongConfigurationTranslationFailed` and
-  `FallbackKongConfigurationApplyFailed` Kubernetes Events to report the status of the fallback configuration.
-  [#6099](https://github.com/Kong/kubernetes-ingress-controller/pull/6099)
-- Added Prometheus metrics covering `FallbackConfiguration` feature: 
-  - `ingress_controller_fallback_translation_count`
-  - `ingress_controller_fallback_translation_broken_resource_count`
-  - `ingress_controller_fallback_configuration_push_count`
-  - `ingress_controller_fallback_configuration_push_last`
-  - `ingress_controller_fallback_configuration_push_duration_milliseconds`
-  - `ingress_controller_fallback_configuration_push_broken_resource_count`
-  - `ingress_controller_fallback_cache_generating_duration_milliseconds`
-  - `ingress_controller_processed_config_snapshot_cache_hit`
-  - `ingress_controller_processed_config_snapshot_cache_miss`
-  [#6105](https://github.com/Kong/kubernetes-ingress-controller/pull/6105)
-- Add support for Kubernetes Gateway API v1.1:
-  - add a flag `--enable-controller-gwapi-grpcroute` to control whether enable or disable GRPCRoute controller.
-  - add support for `GRPCRoute` v1, which requires users to upgrade the Gateway API's CRD to v1.1.
-  [#5918](https://github.com/Kong/kubernetes-ingress-controller/pull/5918)
 - The `konghq.com/plugins` annotation supports a new `<namespace>:<name>`
   format. This format requests a KongPlugin from a remote namespace. Binding
   plugins across namespaces requires a ReferenceGrant from the requesting
@@ -198,7 +215,7 @@ Adding a new version? You'll need three changes:
   for consumers managed by other users without requiring those users to create
   consumers in the Service's namespace.
   [#5965](https://github.com/Kong/kubernetes-ingress-controller/pull/5965)
-- Fallback configuration no longer omits licenses and vaults.
+- The last valid configuration no longer omits licenses and vaults.
   [#6048](https://github.com/Kong/kubernetes-ingress-controller/pull/6048)
 - Add support for Gateway API GRPCRoute and pass related Gateway API conformance test.
   [#5776](https://github.com/Kong/kubernetes-ingress-controller/pull/5776)

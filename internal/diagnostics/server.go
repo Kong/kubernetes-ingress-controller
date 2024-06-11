@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/file"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -33,13 +34,17 @@ type Server struct {
 	profilingEnabled bool
 	configDumps      ConfigDumpDiagnostic
 
-	successfulConfigDump file.Content
-	failedConfigDump     file.Content
-	problemObjects       []AffectedObject
-	failedHash           string
-	successHash          string
-	rawErrBody           []byte
-	configLock           *sync.RWMutex
+	lastSuccessfulConfigDump file.Content
+	lastSuccessHash          string
+
+	lastFailedConfigDump file.Content
+	lastFailedHash       string
+	lastRawErrBody       []byte
+
+	currentFallbackCacheMetadata *fallback.GeneratedCacheMetadata
+
+	configLock   *sync.RWMutex
+	fallbackLock *sync.RWMutex
 }
 
 // ServerConfig contains configuration for the diagnostics server.
@@ -60,12 +65,14 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 		logger:           logger,
 		profilingEnabled: cfg.ProfilingEnabled,
 		configLock:       &sync.RWMutex{},
+		fallbackLock:     &sync.RWMutex{},
 	}
 
 	if cfg.ConfigDumpsEnabled {
 		s.configDumps = ConfigDumpDiagnostic{
 			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
 			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
+			FallbackCacheMetadata: make(chan fallback.GeneratedCacheMetadata, diagnosticConfigBufferDepth),
 		}
 	}
 
@@ -82,7 +89,7 @@ func (s *Server) ConfigDumps() ConfigDumpDiagnostic {
 func (s *Server) Listen(ctx context.Context, port int) error {
 	mux := http.NewServeMux()
 	if s.configDumps != (ConfigDumpDiagnostic{}) {
-		s.installDumpHandlers(mux)
+		s.installConfigDebugHandlers(mux)
 	}
 	if s.profilingEnabled {
 		installProfilingHandlers(mux)
@@ -123,17 +130,9 @@ func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
 		case dump := <-s.configDumps.Configs:
-			s.configLock.Lock()
-			if dump.Meta.Failed {
-				s.failedConfigDump = dump.Config
-				s.rawErrBody = dump.RawResponseBody
-				s.problemObjects = dump.Meta.AffectedObjects
-				s.failedHash = dump.Meta.Hash
-			} else {
-				s.successfulConfigDump = dump.Config
-				s.successHash = dump.Meta.Hash
-			}
-			s.configLock.Unlock()
+			s.onConfigDump(dump)
+		case meta := <-s.configDumps.FallbackCacheMetadata:
+			s.onFallbackCacheMetadata(meta)
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
 				s.logger.Error(err, "Shutting down diagnostic config collection: context completed with error")
@@ -143,6 +142,36 @@ func (s *Server) receiveConfig(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (s *Server) onConfigDump(dump ConfigDump) {
+	s.configLock.Lock()
+	defer s.configLock.Unlock()
+
+	if dump.Meta.Failed {
+		// If the config push failed, we need to keep the failed config dump and the raw error body.
+		s.lastFailedConfigDump = dump.Config
+		s.lastFailedHash = dump.Meta.Hash
+		s.lastRawErrBody = dump.RawResponseBody
+	} else {
+		// If the config push was successful, we need to keep successful config dump and the hash.
+		s.lastSuccessfulConfigDump = dump.Config
+		s.lastSuccessHash = dump.Meta.Hash
+
+		// If the regular config push was successful, we can drop the fallback cache metadata as it is
+		// no longer relevant.
+		if !dump.Meta.Fallback {
+			s.fallbackLock.Lock()
+			s.currentFallbackCacheMetadata = nil
+			s.fallbackLock.Unlock()
+		}
+	}
+}
+
+func (s *Server) onFallbackCacheMetadata(meta fallback.GeneratedCacheMetadata) {
+	s.fallbackLock.Lock()
+	defer s.fallbackLock.Unlock()
+	s.currentFallbackCacheMetadata = &meta
 }
 
 // installProfilingHandlers adds the Profiling webservice to the given mux.
@@ -160,11 +189,11 @@ func installProfilingHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }
 
-// installDumpHandlers adds the config dump webservice to the given mux.
-func (s *Server) installDumpHandlers(mux *http.ServeMux) {
+// installConfigDebugHandlers adds the config dump webservice to the given mux.
+func (s *Server) installConfigDebugHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/config/successful", s.handleLastValidConfig)
 	mux.HandleFunc("/debug/config/failed", s.handleLastFailedConfig)
-	mux.HandleFunc("/debug/config/problems", s.handleLastFailedProblemObjects)
+	mux.HandleFunc("/debug/config/fallback", s.handleCurrentFallback)
 	mux.HandleFunc("/debug/config/raw-error", s.handleLastErrBody)
 }
 
@@ -180,9 +209,9 @@ func (s *Server) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) 
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(
-		configDumpResponse{
-			Config:     s.successfulConfigDump,
-			ConfigHash: s.successHash,
+		ConfigDumpResponse{
+			Config:     s.lastSuccessfulConfigDump,
+			ConfigHash: s.lastSuccessHash,
 		}); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
@@ -193,23 +222,20 @@ func (s *Server) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request)
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 	if err := json.NewEncoder(rw).Encode(
-		configDumpResponse{
-			Config:     s.failedConfigDump,
-			ConfigHash: s.failedHash,
+		ConfigDumpResponse{
+			Config:     s.lastFailedConfigDump,
+			ConfigHash: s.lastFailedHash,
 		}); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (s *Server) handleLastFailedProblemObjects(rw http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleCurrentFallback(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
-	if err := json.NewEncoder(rw).Encode(
-		problemObjectsResponse{
-			ConfigHash:    s.failedHash,
-			BrokenObjects: s.problemObjects,
-		}); err != nil {
+	resp := mapFallbackCacheMetadataIntoFallbackResponse(s.currentFallbackCacheMetadata)
+	if err := json.NewEncoder(rw).Encode(resp); err != nil {
 		rw.WriteHeader(http.StatusOK)
 	}
 }
@@ -218,7 +244,7 @@ func (s *Server) handleLastErrBody(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "text/plain")
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
-	raw := s.rawErrBody
+	raw := s.lastRawErrBody
 	if len(raw) == 0 {
 		raw = []byte("No raw error body available.\n")
 	}

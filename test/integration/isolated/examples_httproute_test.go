@@ -4,6 +4,7 @@ package isolated
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -83,6 +85,35 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 				consts.IngressWait,
 				consts.WaitTick,
 			)
+			return ctx
+		}).
+		Assess("verify diagnostic server fallback info indicates ", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			diagURL := GetDiagURLFromCtx(ctx)
+			t.Logf("verifying diag available")
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				cl := helpers.DefaultHTTPClient()
+				resp, err := cl.Do(helpers.MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
+				if !assert.NoError(c, err) {
+					return
+				}
+				defer resp.Body.Close()
+
+				if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
+					return
+				}
+
+				response := diagnostics.FallbackResponse{}
+				err = json.NewDecoder(resp.Body).Decode(&response)
+				if !assert.NoError(c, err) {
+					return
+				}
+				assert.Equal(t, response.Status, diagnostics.FallbackStatusTriggered)
+				assert.NotEmpty(t, response.ExcludedObjects)
+				contains := lo.ContainsBy(response.ExcludedObjects, func(obj diagnostics.FallbackAffectedObjectMeta) bool {
+					return obj.Group == "configuration.konghq.com" && obj.Kind == "KongPlugin" && obj.Name == "key-auth"
+				})
+				assert.Truef(t, contains, "expected to find KongPlugin key-auth in excluded objects, got: %v", response.ExcludedObjects)
+			}, consts.IngressWait, consts.WaitTick)
 			return ctx
 		}).
 		Teardown(featureTeardown())

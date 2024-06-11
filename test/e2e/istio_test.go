@@ -328,6 +328,8 @@ func verifyStatusForURL(getURL string, statusCode int) error {
 
 // getKialiWorkloadHealth produces the health metrics of a workload given the namespace and name of that workload.
 func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
 	istioVersion, err := semver.Parse(istioVersionStr)
 	require.NoError(t, err, "failed to parse istio version")
 	if istioVersion.GTE(workloadEndpointIstioVersionCutoff) {
@@ -339,6 +341,8 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 // getKialiWorkloadHealthByHealthEndpoint gets health metrics of ALL workloads from /namespaces/<ns>/health?type=workload API.
 // Used in istio 1.17 and prior. Istio 1.22 does not have this API.
 func getKialiWorkloadHealthByHealthEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
 	// generate the URL for the namespace health metrics
 	kialiHealthURL := fmt.Sprintf("%s/namespaces/%s/health", kialiAPIUrl, namespace)
 	req, err := http.NewRequest("GET", kialiHealthURL, nil)
@@ -381,19 +385,18 @@ func getKialiWorkloadHealthByHealthEndpoint(t *testing.T, kialiAPIUrl string, na
 // getKialiWorkloadHealthIstioByWorkloadEndpoint gets metrics of workload by /namespaces/<ns>/workloads/<workload> API.
 // Used in Istio 1.18 and later. Istio 1.17 does not have this API.
 func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
 	kialiWorkloadURL := fmt.Sprintf("%s/namespaces/%s/workloads/%s", kialiAPIUrl, namespace, workloadName)
 	resp, err := helpers.DefaultHTTPClient().Get(kialiWorkloadURL)
 	require.NoErrorf(t, err, "failed to call Kiali workload API %s", kialiWorkloadURL)
 	defer resp.Body.Close()
-	// verify the workload response
+	// Verify the workload response.
 	require.Equalf(t, http.StatusOK, resp.StatusCode, "Got code %d from Kiali workload API %s", resp.StatusCode, kialiWorkloadURL)
 	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err, "failed to read from response from Kiali workload API")
 	status := workloadStatus{}
-	err = json.Unmarshal(b, &status)
-	if err != nil {
+	if err := json.Unmarshal(b, &status); err != nil {
 		return nil, err
 	}
 	return &status.Health, nil

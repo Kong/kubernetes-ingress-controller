@@ -95,7 +95,7 @@ Adding a new version? You'll need three changes:
 ### Highlights
 
 - 🚀 **Fallback Configuration**: New `FallbackConfiguration` feature enables isolating configuration failure domains so
-  that one broken object does no longer prevent the entire configuration from being applied. See [Fallback Configuration guide]
+  that one broken object no longer prevents the entire configuration from being applied. See [Fallback Configuration guide]
   to learn more.
 - 🏗️ **Custom Kong Entities**: New `KongCustomEntity` CRD allows defining Kong custom entities programmatically in KIC.
   See [Using Custom Entities guide] to learn more.

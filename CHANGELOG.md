@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+ - [3.1.6](#316)
  - [3.1.5](#315)
  - [3.1.4](#314)
  - [3.1.3](#313)
@@ -263,6 +264,21 @@ Adding a new version? You'll need three changes:
   [#5824](https://github.com/Kong/kubernetes-ingress-controller/pull/5824)
 
 [Updates to CRDs]: https://github.com/Kong/charts/blob/main/charts/kong/UPGRADE.md#updates-to-crds
+
+## [3.1.6]
+
+> Release date: 2024-06-11
+
+### Fixed
+
+- Konnect instances report correct plugin configuration to Konnect.
+  [#6138](https://github.com/Kong/kubernetes-ingress-controller/pull/6138)
+- Plugins attached to both a KongConsumerGroup and a route-like resource or
+  Service now properly generate a plugin attached to both a Kong consumer group
+  and route or service. Previously, these incorrectly generated plugins
+  attached to the route or service only.
+  [#6132](https://github.com/Kong/kubernetes-ingress-controller/pull/6132)
+
 
 ## [3.1.5]
 
@@ -3528,6 +3544,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.1.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.5...v3.1.6
 [3.1.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.4...v3.1.5
 [3.1.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.3...v3.1.4
 [3.1.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.2...v3.1.3

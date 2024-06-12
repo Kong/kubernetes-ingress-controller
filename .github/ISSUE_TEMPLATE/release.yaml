@@ -16,13 +16,6 @@ body:
   validations:
     required: true
 - type: checkboxes
-  id: release_branch
-  attributes:
-    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
-    options:
-      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
-      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main"
-- type: checkboxes
   id: prepare_release_branch
   attributes:
     label: "**For all releases** Create `prepare-release/x.y.z` Branch"
@@ -46,6 +39,13 @@ body:
       - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), approve and merge the automatic backport PR and [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml) on the `main` branch for major or minor release, for patch use the release branch. Your tag must use `vX.Y.Z` format. Set `latest` to true if this is be the latest release. That should be the case if a new major.minor release is done or a patch release is done on the latest minor version.
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
       - label: The release workflow ([.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml)) will update the `latest` branch - if the released version was set to be `latest` - to the just released tag.
+- type: checkboxes
+  id: release_branch
+  attributes:
+    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
+    options:
+      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
+      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main. It should be done after the release workflow has run successfully."
 - type: checkboxes
   id: release_documents
   attributes:

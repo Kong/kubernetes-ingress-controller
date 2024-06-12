@@ -40,6 +40,10 @@ jobs:
           fetch-tags: true
           ref: ${{ github.event.inputs.tag }}
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: setup golang
         uses: actions/setup-go@v5
         with:

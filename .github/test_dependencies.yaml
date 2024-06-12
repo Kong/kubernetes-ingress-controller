@@ -20,7 +20,15 @@ e2e:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.30.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
+      istio: '1.22.1'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.30.0'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
       istio: '1.21.2'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.29.4'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
+      istio: '1.20.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
       kind: 'v1.28.9'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
@@ -29,10 +37,6 @@ e2e:
       kind: 'v1.27.13'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.18.7'
-    - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.26.15'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
-      istio: '1.17.8'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
   kuma: '2.7.3'

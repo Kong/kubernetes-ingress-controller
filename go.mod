@@ -50,11 +50,11 @@ require (
 	github.com/testcontainers/testcontainers-go v0.31.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/api v0.184.0
-	k8s.io/api v0.30.1
+	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.30.1
-	k8s.io/apimachinery v0.30.1
-	k8s.io/client-go v0.30.1
-	k8s.io/component-base v0.30.1
+	k8s.io/apimachinery v0.30.2
+	k8s.io/client-go v0.30.2
+	k8s.io/component-base v0.30.2
 	sigs.k8s.io/controller-runtime v0.18.4
 	sigs.k8s.io/e2e-framework v0.4.0
 	sigs.k8s.io/gateway-api v1.1.0
@@ -221,10 +221,10 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.30.1
+	k8s.io/cli-runtime v0.30.2
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
-	k8s.io/kubectl v0.30.1
+	k8s.io/kubectl v0.30.2
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.22.0 // indirect

@@ -268,9 +268,11 @@ manifests.rbac: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
+# NOTE: We don't store the produced webhook manifest in the repository, as the source
+# of truth is the config/webhook kustomization dir.
 .PHONY: manifests.webhook
-manifests.webhook: controller-gen ## Generate ValidatingWebhookConfiguration.
-	$(CONTROLLER_GEN) webhook paths="./internal/admission/..." output:webhook:artifacts:config=config/webhook
+manifests.webhook: controller-gen kustomize ## Generate ValidatingWebhookConfiguration.
+	$(CONTROLLER_GEN) webhook paths="./internal/admission/..." output:webhook:artifacts:config=config/webhook/base/
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks

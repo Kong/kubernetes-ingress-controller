@@ -13,7 +13,7 @@ setup-envtest: "0.18.4"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.0.12"
 # renovate: datasource=github-releases depName=mikefarah/yq
-yq: "4.44.1"
+yq: "4.44.2"
 # renovate: datasource=github-releases depName=jstemmer/go-junit-report
 gojunit-report: "2.1.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum

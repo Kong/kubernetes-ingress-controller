@@ -33,7 +33,7 @@ require (
 	github.com/kong/go-database-reconciler v1.12.2
 	github.com/kong/go-kong v0.55.0
 	github.com/kong/kubernetes-telemetry v0.1.3
-	github.com/kong/kubernetes-testing-framework v0.47.0
+	github.com/kong/kubernetes-testing-framework v0.47.1-0.20240617122902-35b37c9caf8a
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
@@ -227,6 +227,6 @@ require (
 	k8s.io/kubectl v0.30.2
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/kind v0.22.0 // indirect
+	sigs.k8s.io/kind v0.23.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )

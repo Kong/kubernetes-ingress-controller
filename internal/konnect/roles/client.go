@@ -86,7 +86,7 @@ func (c *Client) ListControlPlanesRoles(ctx context.Context) ([]Role, error) {
 		return nil, fmt.Errorf("failed to decode roles response: %w", err)
 	}
 
-	var roles []Role
+	roles := make([]Role, 0, len(rolesResponse.Data))
 	for _, role := range rolesResponse.Data {
 		r, err := NewRole(role.ID, role.EntityID)
 		if err != nil {

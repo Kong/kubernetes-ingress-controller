@@ -161,8 +161,11 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
 func (s Store) ListIngressesV1() []*netv1.Ingress {
 	// filter ingress rules
-	var ingresses []*netv1.Ingress
-	for _, item := range s.stores.IngressV1.List() {
+	var (
+		list      = s.stores.IngressV1.List()
+		ingresses = make([]*netv1.Ingress, 0, len(list))
+	)
+	for _, item := range list {
 		ing, ok := item.(*netv1.Ingress)
 		if !ok {
 			s.logger.Error(nil, "ListIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
@@ -201,8 +204,11 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 // ListIngressClassesV1 returns the list of Ingresses in the Ingress v1 store.
 func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 	// filter ingress rules
-	var classes []*netv1.IngressClass
-	for _, item := range s.stores.IngressClassV1.List() {
+	var (
+		list    = s.stores.IngressClassV1.List()
+		classes = make([]*netv1.IngressClass, 0, len(list))
+	)
+	for _, item := range list {
 		class, ok := item.(*netv1.IngressClass)
 		if !ok {
 			s.logger.Error(nil, "ListIngressClassesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
@@ -223,7 +229,7 @@ func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 
 // ListIngressClassParametersV1Alpha1 returns the list of IngressClassParameters in the Ingress v1alpha1 store.
 func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters {
-	var classParams []*kongv1alpha1.IngressClassParameters
+	var classParams []*kongv1alpha1.IngressClassParameters //nolint:prealloc
 	for _, item := range s.stores.IngressClassParametersV1alpha1.List() {
 		classParam, ok := item.(*kongv1alpha1.IngressClassParameters)
 		if !ok {

@@ -117,7 +117,7 @@ func (r *Route) overrideProtocols(anns map[string]string) {
 	if len(protocols) == 0 {
 		return
 	}
-	var prots []*string
+	var prots []*string //nolint:prealloc
 	for _, prot := range protocols {
 		if !util.ValidateProtocol(prot) {
 			return

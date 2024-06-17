@@ -32,7 +32,7 @@ func ValidateIngress(
 	storer store.Storer,
 	managerClient client.Client,
 ) (bool, string, error) {
-	var (
+	var ( //nolint:prealloc
 		errMsgs           []string
 		failuresCollector = failures.NewResourceFailuresCollector(logger)
 	)

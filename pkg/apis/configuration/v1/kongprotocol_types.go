@@ -7,24 +7,26 @@ package v1
 type KongProtocol string
 
 // KongProtocolsToStrings converts a slice of KongProtocol to plain strings.
-func KongProtocolsToStrings(protocols []KongProtocol) (res []string) {
+func KongProtocolsToStrings(protocols []KongProtocol) []string {
+	res := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
 		res = append(res, string(protocol))
 	}
-	return
+	return res
 }
 
 // StringsToKongProtocols converts a slice of strings to KongProtocols.
-func StringsToKongProtocols(strings []string) (res []KongProtocol) {
+func StringsToKongProtocols(strings []string) []KongProtocol {
+	res := make([]KongProtocol, 0, len(strings))
 	for _, protocol := range strings {
 		res = append(res, KongProtocol(protocol))
 	}
-	return
+	return res
 }
 
 // ProtocolSlice converts a slice of string to a slice of *KongProtocol.
 func ProtocolSlice(elements ...string) []*KongProtocol {
-	var res []*KongProtocol
+	res := make([]*KongProtocol, 0, len(elements))
 	for _, element := range elements {
 		e := KongProtocol(element)
 		res = append(res, &e)

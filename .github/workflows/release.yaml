@@ -112,7 +112,7 @@ jobs:
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: false
           file: Dockerfile
@@ -128,7 +128,7 @@ jobs:
             GOCACHE=${{ env.GOCACHE}}
       - name: Build and push distroless image to DockerHub
         id: docker_build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: true
           file: Dockerfile

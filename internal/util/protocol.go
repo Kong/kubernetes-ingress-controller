@@ -1,14 +1,11 @@
 package util
 
-import "regexp"
-
-// ValidateProtocol returns a bool of whether string is a valid protocol.
+// ValidateProtocol returns true if the provided protocol is valid.
 func ValidateProtocol(protocol string) bool {
-	if protocol == "" {
+	switch protocol {
+	case "", "http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough":
 		return true
+	default:
+		return false
 	}
-	match := validProtocols.MatchString(protocol)
-	return match
 }
-
-var validProtocols = regexp.MustCompile(`\Ahttps$|\Ahttp$|\Agrpc$|\Agrpcs|\Aws$|\Awss|\Atcp|\Atls|\Atls_passthrough$`)

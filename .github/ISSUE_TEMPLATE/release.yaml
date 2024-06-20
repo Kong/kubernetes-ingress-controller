@@ -82,7 +82,7 @@ body:
   id: post_release_testing
   attributes:
     label: Post release testing
-    value: Appoint volunteer to perform end to end testing of newly released features by following official documentation.
+    value: Appoint volunteer(s) to perform end-to-end testing of newly released features by following official documentation. Testing should cover following all the newly added or modified guides/tutorials, etc.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

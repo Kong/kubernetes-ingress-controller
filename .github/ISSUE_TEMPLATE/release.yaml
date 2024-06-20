@@ -71,13 +71,18 @@ body:
       - label: Synchronize `config/crd/bases` with [`kong/kong` charts CRDs][https://github.com/Kong/charts/blob/6c1421bf2f4/charts/kong/crds/custom-resource-definitions.yaml]
       - label: Update RBAC policy rules (`kong.kubernetesRBACRules` template) in [`kong/kong`'s `charts/kong/templates`][https://github.com/Kong/charts/blob/0b1f635f180220f86d17f5b1b4dd60fc0dc35aae/charts/kong/templates/_helpers.tpl#L1292].
       - label: Bump the KIC version in the [`kong/kong` Helm chart](https://github.com/Kong/charts/blob/main/charts/kong/values.yaml#L528).
-      - label: Relase new version of the `kong/kong` Helm chart.
+      - label: Release new version of the `kong/kong` Helm chart.
       - label: After `kong/kong` is released, bump the dependency on `kong/kong` chart in the [`kong/ingress` Helm chart](https://github.com/Kong/charts/blob/main/charts/ingress/Chart.yaml#L15) and release a new version of the chart.
 - type: textarea
   id: conformance_tests_report
   attributes:
     label: Conformance tests report
-    value: Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/conformance_tests_report.yaml), verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase. Update the KIC version in the README's Gateway API conformance badge.
+    value: Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/conformance_tests_report.yaml), verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. Update the KIC version in the README's Gateway API conformance badge.
+- type: textarea
+  id: post_release_testing
+  attributes:
+    label: Post release testing
+    value: Appoint volunteer(s) to perform end-to-end testing of newly released features by following official documentation. Testing should cover following all the newly added or modified guides/tutorials, etc.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

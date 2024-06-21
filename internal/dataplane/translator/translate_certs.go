@@ -172,9 +172,18 @@ func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	return certs
 }
 
-func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Certificate {
+type certIDToMergedCertID map[string]string
+
+type identicalCertIDSet struct {
+	mergedCertID string
+	certIDs      []string
+}
+
+func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Certificate, certIDToMergedCertID) {
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
+	certIDSets := make(map[string]identicalCertIDSet)
+
 	for _, cl := range certLists {
 		for _, cw := range cl {
 			current, ok := certsSeen[cw.identifier]
@@ -214,6 +223,12 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Cert
 				}
 			}
 			certsSeen[current.identifier] = current
+
+			idSet := certIDSets[current.identifier]
+			idSet.mergedCertID = *current.cert.ID
+			idSet.certIDs = append(certIDSets[current.identifier].certIDs, *cw.cert.ID)
+			certIDSets[current.identifier] = idSet
+
 		}
 	}
 	res := make([]kongstate.Certificate, 0, len(certsSeen))
@@ -225,5 +240,12 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Cert
 			Certificate: cw.cert,
 		})
 	}
-	return res
+
+	idToMergedID := certIDToMergedCertID{}
+	for _, idSet := range certIDSets {
+		for _, certID := range idSet.certIDs {
+			idToMergedID[certID] = idSet.mergedCertID
+		}
+	}
+	return res, idToMergedID
 }

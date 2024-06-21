@@ -256,7 +256,19 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)
 	gatewayCerts := p.getGatewayCerts()
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
-	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
+	var certIDsSeen certIDToMergedCertID
+	result.Certificates, certIDsSeen = mergeCerts(p.logger, ingressCerts, gatewayCerts)
+
+	// re-fill client certificate IDs of services after certificates are merged.
+	for i, s := range result.Services {
+		if s.ClientCertificate != nil && s.ClientCertificate.ID != nil {
+			certID := s.ClientCertificate.ID
+			mergedCertID := certIDsSeen[*certID]
+			result.Services[i].ClientCertificate = &kong.Certificate{
+				ID: kong.String(mergedCertID),
+			}
+		}
+	}
 
 	// populate CA certificates in Kong
 	result.CACertificates = p.getCACerts()
@@ -657,9 +669,18 @@ func (p *Parser) registerResourceFailureNotSupportedForExpressionRoutes(obj clie
 	}
 }
 
-func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.Certificate {
+type certIDToMergedCertID map[string]string
+
+type identicalCertIDSet struct {
+	mergedCertID string
+	certIDs      []string
+}
+
+func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) ([]kongstate.Certificate, certIDToMergedCertID) {
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
+	certIDSets := make(map[string]identicalCertIDSet)
+
 	for _, cl := range certLists {
 		for _, cw := range cl {
 			current, ok := certsSeen[cw.identifier]
@@ -700,6 +721,12 @@ func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.
 				}
 			}
 			certsSeen[current.identifier] = current
+
+			idSet := certIDSets[current.identifier]
+			idSet.mergedCertID = *current.cert.ID
+			idSet.certIDs = append(idSet.certIDs, *cw.cert.ID)
+			certIDSets[current.identifier] = idSet
+
 		}
 	}
 	var res []kongstate.Certificate
@@ -709,7 +736,14 @@ func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.
 		})
 		res = append(res, kongstate.Certificate{Certificate: cw.cert})
 	}
-	return res
+
+	idToMergedID := certIDToMergedCertID{}
+	for _, idSet := range certIDSets {
+		for _, certID := range idSet.certIDs {
+			idToMergedID[certID] = idSet.mergedCertID
+		}
+	}
+	return res, idToMergedID
 }
 
 func getServiceEndpoints(

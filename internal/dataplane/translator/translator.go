@@ -221,7 +221,19 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)
 	gatewayCerts := t.getGatewayCerts()
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
-	result.Certificates = mergeCerts(t.logger, ingressCerts, gatewayCerts)
+	var certIDsSeen certIDToMergedCertID
+	result.Certificates, certIDsSeen = mergeCerts(t.logger, ingressCerts, gatewayCerts)
+
+	// re-fill client certificate IDs of services after certificates are merged.
+	for i, s := range result.Services {
+		if s.ClientCertificate != nil && s.ClientCertificate.ID != nil {
+			certID := s.ClientCertificate.ID
+			mergedCertID := certIDsSeen[*certID]
+			result.Services[i].ClientCertificate = &kong.Certificate{
+				ID: kong.String(mergedCertID),
+			}
+		}
+	}
 
 	// populate CA certificates in Kong
 	result.CACertificates = t.getCACerts()

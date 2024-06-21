@@ -226,7 +226,7 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 
 			idSet := certIDSets[current.identifier]
 			idSet.mergedCertID = *current.cert.ID
-			idSet.certIDs = append(certIDSets[current.identifier].certIDs, *cw.cert.ID)
+			idSet.certIDs = append(idSet.certIDs, *cw.cert.ID)
 			certIDSets[current.identifier] = idSet
 
 		}

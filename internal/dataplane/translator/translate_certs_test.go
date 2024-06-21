@@ -6,9 +6,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/stretchr/testify/require"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMergeCerts(t *testing.T) {

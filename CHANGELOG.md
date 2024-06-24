@@ -96,6 +96,9 @@ Adding a new version? You'll need three changes:
 - Services using `Secret`s containing the same certificate as client certificates
   by annotation `konghq.com/client-cert` can be correctly translated.
   [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+- Do not try recovering from gateways synchronization errors with fallback configuration
+  (either generated or the last valid one) when an unexpected error (e.g. 5xx or network issue) occurs.
+  [#6237](https://github.com/Kong/kubernetes-ingress-controller/pull/6237)
 
 ## 3.2.0
 

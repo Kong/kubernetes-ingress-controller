@@ -20,29 +20,48 @@ jobs:
     with:
       kic-image: kong/nightly-ingress-controller:nightly
 
-  performance-tests-unreleased-kong:
-    needs: ensure-nightly-image-was-built
-    uses: ./.github/workflows/_performance_tests.yaml
-    secrets: inherit
-    with:
-      kic-image: kong/nightly-ingress-controller:nightly
-      # TODO: Previously we've used kong/kong:amd64-latest but that image reports
-      # its version (through AdminAPI / endpoint) as SHA instead of a semver.
-      # This breaks KIC's Admin root configuration verification on startup.
-      # To unblock this, we're switching to kong/kong-gateway-dev:nightly because
-      # it reports the next release to be released as semver in the version field.
-      # ref: https://github.com/Kong/kubernetes-ingress-controller/issues/4014
-      kong-image: kong/kong-gateway-dev:nightly
-      kong-effective-version: "3.4.1"
-
   test-reports:
     needs:
       - performance-tests
-      - performance-tests-unreleased-kong
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit
     with:
       coverage: false
+
+  performance-reports:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    needs: performance-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+          bundler-cache: true
+      - name: install uplot
+        run: |
+          gem install youplot
+
+      - name: download performance test results
+        uses: actions/download-artifact@v3
+        with:
+          name: performance-tests-results
+          path: perf-results
+
+      - name: drawing
+        run: |
+          cat perf-results/all_resource_apply*.txt >> result_of_all_resource_apply
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to apply to cluster" result_of_all_resource_apply
+
+          cat perf-results/all_resource_take_effect*.txt >> result_of_all_resource_take_effect
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to take effect." result_of_all_resource_take_effect
+
+          cat perf-results/one_resource_update*.txt >> result_of_one_resource_update
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress." result_of_one_resource_update
+
+          cat perf-results/one_resource_take_effect*.txt >> result_of_one_resource_take_effect
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress to take effect." result_of_one_resource_take_effect
 
   notify-on-slack:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
@@ -50,7 +69,6 @@ jobs:
     needs:
       - ensure-nightly-image-was-built
       - performance-tests
-      - performance-tests-unreleased-kong
       - test-reports
     if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
     steps:

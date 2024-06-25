@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.12.5](#2125)
  - [2.12.4](#2124)
  - [2.12.3](#2123)
  - [2.12.2](#2122)
@@ -79,7 +80,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [2.12.5]
+
+> Release date: 2024-06-25
 
 ### Fixed
 
@@ -2876,6 +2879,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.5
 [2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.3
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1

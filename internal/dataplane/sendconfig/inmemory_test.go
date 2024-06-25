@@ -76,8 +76,8 @@ type mockConfigService struct {
 	err error
 }
 
-func (m *mockConfigService) ReloadDeclarativeRawConfig(context.Context, io.Reader, bool, bool) ([]byte, error) {
-	return nil, m.err
+func (m *mockConfigService) ReloadDeclarativeRawConfig(context.Context, io.Reader, bool, bool) error {
+	return m.err
 }
 
 type mockConfigConverter struct {

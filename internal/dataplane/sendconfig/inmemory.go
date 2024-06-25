@@ -23,7 +23,7 @@ type ConfigService interface {
 		config io.Reader,
 		checkHash bool,
 		flattenErrors bool,
-	) ([]byte, error)
+	) error
 }
 
 type ContentToDBLessConfigConverter interface {
@@ -74,7 +74,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		}
 	}
 
-	if _, reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
+	if reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
 		ctx,
 		bytes.NewReader(config),
 		true,

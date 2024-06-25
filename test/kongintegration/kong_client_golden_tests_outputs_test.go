@@ -128,7 +128,7 @@ func ensureGoldenTestOutputIsAccepted(ctx context.Context, t *testing.T, goldenT
 	require.NoError(t, err)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		_, err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
+		err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
 		if !assert.NoErrorf(t, err, "failed to reload declarative config") {
 			apiErr := &kong.APIError{}
 			if errors.As(err, &apiErr) {

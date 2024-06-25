@@ -89,7 +89,17 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## 3.2
+## 3.2.1
+
+> Release date: TBA
+
+### Fixed
+
+- Do not try recovering from gateways synchronization errors with fallback configuration
+  (either generated or the last valid one) when an unexpected error (e.g. 5xx or network issue) occurs.
+  [#6237](https://github.com/Kong/kubernetes-ingress-controller/pull/6237)
+
+## 3.2.0
 
 > Release date: 2024-06-12
 

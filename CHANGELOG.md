@@ -2879,7 +2879,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.4
+[2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.5
 [2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.3
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1

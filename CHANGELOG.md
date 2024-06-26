@@ -18,6 +18,8 @@ Adding a new version? You'll need three changes:
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.5](#2125)
+ - [2.12.4](#2124)
  - [2.12.3](#2123)
  - [2.12.2](#2122)
  - [2.12.1](#2121)
@@ -775,6 +777,26 @@ Adding a new version? You'll need three changes:
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
+
+## [2.12.5]
+
+> Release date: 2024-06-25
+
+### Fixed
+
+- Services using `Secret`s containing the same certificate as client certificates
+  by annotation `konghq.com/client-cert` can be correctly translated.
+  [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+
+## [2.12.4]
+
+> Release date: 2024-04-30
+
+- Bump golang version to 1.21.9 to fix CVE [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687).
+  [#5916](https://github.com/Kong/kubernetes-ingress-controller/pull/5916)
+- Bump `golang.org/x/net` to `0.23.0` and `google.golang.org/protobuf` to `1.33.0`
+  To fix [GO-2024-2687](https://pkg.go.dev/vuln/GO-2024-2687) and [GO-2024-2611](https://pkg.go.dev/vuln/GO-2024-2611).
+  [#5947](https://github.com/Kong/kubernetes-ingress-controller/pull/5947)
 
 ## [2.12.3]
 
@@ -3566,6 +3588,9 @@ Please read the changelog and test in your environment.
 [3.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4...v2.12.5
+[2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.3...v2.12.4
+[2.12.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.2...v2.12.3
 [2.12.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.1...v2.12.2
 [2.12.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v2.12.1
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0

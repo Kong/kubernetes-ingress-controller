@@ -578,7 +578,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.Equal(t, ErrTextConsumerExists, errText)
 	})
 
-	t.Run("fails when many plugins of the same type are attached", func(t *testing.T) {
+	t.Run("passes when many plugins of the same type are attached", func(t *testing.T) {
 		s, err := store.NewFakeStore(store.FakeObjects{})
 		require.NoError(t, err)
 		const cfgNamespace = "default"
@@ -616,7 +616,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+		valid, _, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
@@ -626,12 +626,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			Username: "username",
 		})
 		require.NoError(t, err)
-		require.False(t, valid)
-		require.Equal(
-			t,
-			"KongConsumer has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
-			errText,
-		)
+		require.True(t, valid)
 	})
 
 	t.Run("pass when different valid plugins and one no existing are attached", func(t *testing.T) {
@@ -732,7 +727,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:             "Enterprise Kong Gateway and KongConsumerGroup with multiple plugins of the same type attached",
+			name:             "Enterprise Kong Gateway and KongConsumerGroup with multiple plugins of the same type attached passes",
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
 			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			ManagerClientObjects: []client.Object{
@@ -767,9 +762,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 					},
 				},
 			},
-			wantOK:      false,
-			wantMessage: "KongConsumerGroup has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
-			wantErr:     false,
+			wantOK: true,
 		},
 		{
 			name:             "Enterprise Kong Gateway and KongConsumerGroup with plugins of the different types and non-existing one attached",
@@ -1081,7 +1074,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 			wantOK: true,
 		},
 		{
-			name: "valid Ingress fails when many plugins of the same type are attached",
+			name: "valid Ingress passes when many plugins of the same type are attached",
 			ingress: builder.NewIngress("ingress", "kong").
 				WithNamespace("default").
 				WithKongPlugins("plugin1", "plugin2", "plugin3").
@@ -1119,8 +1112,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 					PluginName: "foo",
 				},
 			},
-			wantOK:      false,
-			wantMessage: "Ingress has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+			wantOK: true,
 		},
 		{
 			name: "valid Ingress with different valid plugins and one no existing are attached passes",

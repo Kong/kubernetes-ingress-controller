@@ -10,6 +10,7 @@ import (
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
@@ -25,6 +26,7 @@ type Client struct {
 	isKonnect           bool
 	konnectControlPlane string
 	lastConfigSHA       []byte
+	lastCacheStoresHash store.SnapshotHash
 
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
@@ -152,6 +154,16 @@ func (c *Client) KonnectControlPlane() string {
 	}
 
 	return c.konnectControlPlane
+}
+
+// SetLastCacheStoresHash overrides last cache stores hash.
+func (c *Client) SetLastCacheStoresHash(s store.SnapshotHash) {
+	c.lastCacheStoresHash = s
+}
+
+// LastCacheStoresHash returns a checksum of the last successful cache stores push.
+func (c *Client) LastCacheStoresHash() store.SnapshotHash {
+	return c.lastCacheStoresHash
 }
 
 // SetLastConfigSHA overrides last config SHA.

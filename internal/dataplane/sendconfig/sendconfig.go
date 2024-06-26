@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -27,6 +28,7 @@ type AdminAPIClient interface {
 	AdminAPIClient() *kong.Client
 	LastConfigSHA() []byte
 	SetLastConfigSHA([]byte)
+	SetLastCacheStoresHash(store.SnapshotHash)
 	BaseRootURL() string
 	PluginSchemaStore() *util.PluginSchemaStore
 
@@ -110,7 +112,3 @@ func PerformUpdate(
 
 	return newSHA, nil
 }
-
-// -----------------------------------------------------------------------------
-// Sendconfig - Private Functions
-// -----------------------------------------------------------------------------

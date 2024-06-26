@@ -23,7 +23,7 @@ type ConfigService interface {
 		config io.Reader,
 		checkHash bool,
 		flattenErrors bool,
-	) ([]byte, error)
+	) error
 }
 
 type ContentToDBLessConfigConverter interface {
@@ -74,7 +74,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		}
 	}
 
-	if errBody, reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
+	if reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
 		ctx,
 		bytes.NewReader(config),
 		true,
@@ -84,12 +84,12 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		// resource errors and produce an UpdateError with them.
 		var apiError *kong.APIError
 		if errors.As(reloadConfigErr, &apiError) && apiError.Code() == http.StatusBadRequest {
-			resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.logger)
+			resourceErrors, parseErr := parseFlatEntityErrors(apiError.Raw(), s.logger)
 			if parseErr != nil {
 				return fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
 			}
 			return NewUpdateErrorWithResponseBody(
-				errBody,
+				apiError.Raw(),
 				resourceErrorsToResourceFailures(resourceErrors, s.logger),
 				reloadConfigErr,
 			)

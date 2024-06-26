@@ -73,12 +73,11 @@ const validFlattenedErrorsResponse = `{
 }`
 
 type mockConfigService struct {
-	responseBody []byte
-	err          error
+	err error
 }
 
-func (m *mockConfigService) ReloadDeclarativeRawConfig(context.Context, io.Reader, bool, bool) ([]byte, error) {
-	return m.responseBody, m.err
+func (m *mockConfigService) ReloadDeclarativeRawConfig(context.Context, io.Reader, bool, bool) error {
+	return m.err
 }
 
 type mockConfigConverter struct {
@@ -118,9 +117,8 @@ func TestUpdateStrategyInMemory(t *testing.T) {
 			expectedError:      sendconfig.NewUpdateError(nil, kong.NewAPIError(400, "bad request")),
 		},
 		{
-			name:                      "APIError 400 with resource failures returned from config service",
-			configServiceError:        kong.NewAPIError(400, "bad request"),
-			configServiceResponseBody: []byte(validFlattenedErrorsResponse),
+			name:               "APIError 400 with resource failures returned from config service",
+			configServiceError: kong.NewAPIErrorWithRaw(400, "bad request", []byte(validFlattenedErrorsResponse)),
 			expectedError: sendconfig.NewUpdateErrorWithResponseBody(
 				[]byte(validFlattenedErrorsResponse),
 				[]failures.ResourceFailure{
@@ -136,14 +134,14 @@ func TestUpdateStrategyInMemory(t *testing.T) {
 						},
 					})),
 				},
-				kong.NewAPIError(400, "bad request"),
+				kong.NewAPIErrorWithRaw(400, "bad request", []byte(validFlattenedErrorsResponse)),
 			),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			configService := &mockConfigService{responseBody: tc.configServiceResponseBody, err: tc.configServiceError}
+			configService := &mockConfigService{err: tc.configServiceError}
 			configConverter := &mockConfigConverter{}
 			s := sendconfig.NewUpdateStrategyInMemory(configService, configConverter, logr.Discard())
 			err := s.Update(context.Background(), sendconfig.ContentWithHash{})

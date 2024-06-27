@@ -98,6 +98,10 @@ Adding a new version? You'll need three changes:
 - Do not try recovering from gateways synchronization errors with fallback configuration
   (either generated or the last valid one) when an unexpected error (e.g. 5xx or network issue) occurs.
   [#6237](https://github.com/Kong/kubernetes-ingress-controller/pull/6237)
+- Admission webhook will accept multiple plugins of the same type associated with a single route-like,
+  Service, KongConsumer, KongConsumerGroup object to allow plugins to be associated with combinations
+  of those objects.
+  [#6252](https://github.com/Kong/kubernetes-ingress-controller/pull/6252)
 
 ## 3.2.0
 

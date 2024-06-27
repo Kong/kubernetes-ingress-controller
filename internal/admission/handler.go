@@ -152,7 +152,7 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 	case kongCustomEntityGVResource:
 		return h.handleKongCustomEntity(ctx, request, responseBuilder)
 	case serviceGVResource:
-		return h.handleService(ctx, request, responseBuilder)
+		return h.handleService(request, responseBuilder)
 	case ingressGVResource:
 		return h.handleIngress(ctx, request, responseBuilder)
 	default:
@@ -446,7 +446,7 @@ const (
 
 // +kubebuilder:webhook:verbs=create;update,groups=core,resources=services,versions=v1,name=services.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleService(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+func (h RequestHandler) handleService(request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	service := corev1.Service{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &service)
 	if err != nil {
@@ -460,12 +460,7 @@ func (h RequestHandler) handleService(ctx context.Context, request admissionv1.A
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 
-	ok, message, err := h.Validator.ValidateService(ctx, service)
-	if err != nil {
-		return nil, err
-	}
-
-	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+	return responseBuilder.Allowed(true).Build(), nil
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=networking.k8s.io,resources=ingresses,versions=v1,name=ingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1

@@ -8,10 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/kongplugin"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
@@ -30,7 +28,6 @@ func ValidateIngress(
 	ingress *netv1.Ingress,
 	logger logr.Logger,
 	storer store.Storer,
-	managerClient client.Client,
 ) (bool, string, error) {
 	var (
 		errMsgs           []string
@@ -39,10 +36,6 @@ func ValidateIngress(
 
 	if err := validation.ValidateRouteSourceAnnotations(ingress); err != nil {
 		return false, fmt.Sprintf("Ingress has invalid Kong annotations: %s", err), nil
-	}
-
-	if err := kongplugin.ValidatePluginUniquenessPerObject(ctx, managerClient, ingress); err != nil {
-		return false, fmt.Sprintf("Ingress has invalid KongPlugin annotation: %s", err), nil
 	}
 
 	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, storer) {

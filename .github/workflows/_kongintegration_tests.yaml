@@ -5,7 +5,7 @@ on:
 
 jobs:
   kongintegration-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

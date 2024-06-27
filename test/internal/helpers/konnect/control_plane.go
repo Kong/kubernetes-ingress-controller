@@ -16,8 +16,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	cp "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -32,11 +30,6 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		}),
 	)
 	require.NoError(t, err)
-	rolesClient := roles.NewClient(
-		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
-		konnectRolesBaseURL,
-		accessToken(),
-	)
 
 	var rgID uuid.UUID
 	createRgErr := retry.Do(func() error {
@@ -82,15 +75,22 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		//
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
-		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
-		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
-		for _, role := range rgRoles {
-			if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
-				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
-				err := rolesClient.DeleteRole(ctx, role.ID)
-				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
-			}
-		}
+		//
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6253
+		// rolesClient := roles.NewClient(
+		// 	helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
+		// 	konnectRolesBaseURL,
+		// 	accessToken(),
+		// )
+		// rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
+		// require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
+		// for _, role := range rgRoles {
+		// 	if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
+		// 		t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
+		// 		err := rolesClient.DeleteRole(ctx, role.ID)
+		// 		assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
+		// 	}
+		// }
 	})
 
 	t.Logf("created test Konnect Control Plane: %q", rgID.String())

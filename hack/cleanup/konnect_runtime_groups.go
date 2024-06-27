@@ -115,29 +115,31 @@ func deleteControlPlanes(ctx context.Context, log logr.Logger, cpsIDs []types.UU
 }
 
 // findOrphanedRolesToDelete gets a list of roles that belong to the orphaned control planes.
-func findOrphanedRolesToDelete(ctx context.Context, log logr.Logger, orphanedCPsIDs []types.UUID, rolesClient *roles.Client) ([]string, error) {
+func findOrphanedRolesToDelete(_ context.Context, log logr.Logger, orphanedCPsIDs []types.UUID, _ *roles.Client) ([]string, error) { //nolint:unparam
 	if len(orphanedCPsIDs) < 1 {
 		log.Info("No control planes to clean up, skipping listing roles")
 		return nil, nil
 	}
 
-	existingRoles, err := rolesClient.ListControlPlanesRoles(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list control plane roles: %w", err)
-	}
-
-	var rolesIDsToDelete []string
-	for _, role := range existingRoles {
-		belongsToOrphanedControlPlane := lo.ContainsBy(orphanedCPsIDs, func(cpID types.UUID) bool {
-			return cpID.String() == role.EntityID
-		})
-		if !belongsToOrphanedControlPlane {
-			log.Info("Role is not assigned to an orphaned control plane, skipping", "id", role.ID)
-			continue
-		}
-		rolesIDsToDelete = append(rolesIDsToDelete, role.ID)
-	}
-	return rolesIDsToDelete, nil
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6253
+	return nil, nil
+	// existingRoles, err := rolesClient.ListControlPlanesRoles(ctx)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to list control plane roles: %w", err)
+	// }
+	//
+	// var rolesIDsToDelete []string
+	// for _, role := range existingRoles {
+	// 	belongsToOrphanedControlPlane := lo.ContainsBy(orphanedCPsIDs, func(cpID types.UUID) bool {
+	// 		return cpID.String() == role.EntityID
+	// 	})
+	// 	if !belongsToOrphanedControlPlane {
+	// 		log.Info("Role is not assigned to an orphaned control plane, skipping", "id", role.ID)
+	// 		continue
+	// 	}
+	// 	rolesIDsToDelete = append(rolesIDsToDelete, role.ID)
+	// }
+	// return rolesIDsToDelete, nil
 }
 
 // deleteRoles deletes roles by their IDs.

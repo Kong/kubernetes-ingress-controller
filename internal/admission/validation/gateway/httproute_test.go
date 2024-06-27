@@ -163,7 +163,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid: true,
 		},
 		{
-			msg: "valid HTTPRoute with multiple plugins of the same type attached - does not pass validation",
+			msg: "valid HTTPRoute with multiple plugins of the same type attached - passes validation",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
@@ -224,8 +224,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 					PluginName: "foo",
 				},
 			},
-			valid:         false,
-			validationMsg: "HTTPRoute has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+			valid: true,
 		},
 		{
 			msg: "valid HTTPRoute with multiple plugins of different types and one no-existing attached - passes validation",

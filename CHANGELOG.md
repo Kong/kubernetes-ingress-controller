@@ -89,7 +89,18 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## 3.2
+## 3.2.1
+
+> Release date: TBA
+
+### Fixed
+
+- Admission webhook will accept multiple plugins of the same type associated with a single route-like,
+  Service, KongConsumer, KongConsumerGroup object to allow plugins to be associated with combinations
+  of those objects.
+  [#6252](https://github.com/Kong/kubernetes-ingress-controller/pull/6252)
+
+## 3.2.0
 
 > Release date: 2024-06-12
 

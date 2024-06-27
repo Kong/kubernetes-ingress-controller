@@ -26,7 +26,7 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 		return nil
 	}
 
-	var caCerts []kong.CACertificate
+	caCerts := make([]kong.CACertificate, 0, len(caCertSecrets))
 	for _, certSecret := range caCertSecrets {
 		idBytes, ok := certSecret.Data["id"]
 		if !ok {

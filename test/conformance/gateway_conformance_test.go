@@ -24,13 +24,14 @@ import (
 var skippedTestsForTraditionalRoutes = []string{
 	// core conformance
 	tests.HTTPRouteHeaderMatching.ShortName,
-	// There is an issue with KIC when processing this scenario.
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6136
-	tests.GRPCRouteListenerHostnameMatching.ShortName,
-	// tests.GRPCRouteHeaderMatching.ShortName and tests.GRPCExactMethodMatching.ShortName may
-	// have some conflicts, skipping either one will still pass normally.
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6144
+	// NOTE: Skipped tests.GRPCRouteHeaderMatching.ShortName and
+	// tests.GRPCExactMethodMatching.ShortName because in traditional mode,
+	// when wanting to proxy different gRPC services and route requests based on Header or Method,
+	// it is necessary to create separate catch-all routes for them.
+	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
+	// ref: https://github.com/Kong/kubernetes-ingress-controller/issues/6144
 	tests.GRPCRouteHeaderMatching.ShortName,
+	tests.GRPCExactMethodMatching.ShortName,
 }
 
 var skippedTestsForExpressionRoutes = []string{

@@ -16,13 +16,6 @@ body:
   validations:
     required: true
 - type: checkboxes
-  id: release_branch
-  attributes:
-    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
-    options:
-      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
-      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main"
-- type: checkboxes
   id: prepare_release_branch
   attributes:
     label: "**For all releases** Create `prepare-release/x.y.z` Branch"
@@ -47,6 +40,13 @@ body:
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
       - label: The release workflow ([.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml)) will update the `latest` branch - if the released version was set to be `latest` - to the just released tag.
 - type: checkboxes
+  id: release_branch
+  attributes:
+    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
+    options:
+      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
+      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main. It should be done after the release workflow has run successfully."
+- type: checkboxes
   id: release_documents
   attributes:
     label: "**For major/minor releases only** Update Release documents"
@@ -68,13 +68,21 @@ body:
   attributes:
     label: "**For major/minor releases only** Bump charts' dependencies"
     options:
-      - label: Bump the KIC version in the [`kong/kong` Helm chart](https://github.com/Kong/charts/blob/main/charts/kong/values.yaml#L528) and release a new version of the chart.
+      - label: Synchronize `config/crd/bases` with [`kong/kong` charts CRDs][https://github.com/Kong/charts/blob/6c1421bf2f4/charts/kong/crds/custom-resource-definitions.yaml]
+      - label: Update RBAC policy rules (`kong.kubernetesRBACRules` template) in [`kong/kong`'s `charts/kong/templates`][https://github.com/Kong/charts/blob/0b1f635f180220f86d17f5b1b4dd60fc0dc35aae/charts/kong/templates/_helpers.tpl#L1292].
+      - label: Bump the KIC version in the [`kong/kong` Helm chart](https://github.com/Kong/charts/blob/main/charts/kong/values.yaml#L528).
+      - label: Release new version of the `kong/kong` Helm chart.
       - label: After `kong/kong` is released, bump the dependency on `kong/kong` chart in the [`kong/ingress` Helm chart](https://github.com/Kong/charts/blob/main/charts/ingress/Chart.yaml#L15) and release a new version of the chart.
 - type: textarea
   id: conformance_tests_report
   attributes:
     label: Conformance tests report
-    value: Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/conformance_tests_report.yaml), verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase. Update the KIC version in the README's Gateway API conformance badge.
+    value: Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/conformance_tests_report.yaml), verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. Update the KIC version in the README's Gateway API conformance badge.
+- type: textarea
+  id: post_release_testing
+  attributes:
+    label: Post release testing
+    value: Appoint volunteer(s) to perform end-to-end testing of newly released features by following official documentation. Testing should cover following all the newly added or modified guides/tutorials, etc.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

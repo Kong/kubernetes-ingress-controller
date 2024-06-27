@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,8 +128,13 @@ func ensureGoldenTestOutputIsAccepted(ctx context.Context, t *testing.T, goldenT
 	require.NoError(t, err)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		resp, err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
-		assert.NoErrorf(t, err, "failed to reload declarative config, resp: %s", string(resp))
+		err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
+		if !assert.NoErrorf(t, err, "failed to reload declarative config") {
+			apiErr := &kong.APIError{}
+			if errors.As(err, &apiErr) {
+				t.Errorf("Kong Admin API response: %s", apiErr.Raw())
+			}
+		}
 	}, timeout, tick)
 }
 

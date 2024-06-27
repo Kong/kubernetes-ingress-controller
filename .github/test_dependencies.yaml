@@ -20,7 +20,15 @@ e2e:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.30.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
+      istio: '1.22.1'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.30.0'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
       istio: '1.21.2'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.29.4'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
+      istio: '1.20.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
       kind: 'v1.28.9'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
@@ -29,32 +37,25 @@ e2e:
       kind: 'v1.27.13'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.18.7'
-    - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.26.15'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
-      istio: '1.17.8'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.7.3'
+  kuma: '2.7.4'
 
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.38.0'
+    kong: '2.39.3'
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.30.0'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.7.0'
+  kong-oss: '3.7.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.7.0.0'
+  kong-ee: '3.7.1.1'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.7.0'
+  kong-oss: '3.7.1'
 
 envtests:
-  # Because of a bug that was introduced in Kong EE 3.5 (https://konghq.atlassian.net/browse/KAG-3699),
-  # we need to stick to 3.4 in order to make our KongVault validation tests stable.
-  # This version should be bumped to the current one once the bug is fixed.
-  # PLEASE DO NOT BUMP THIS VERSION BEFORE KAG-3699 IS FIXED. renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.4.3.4'
+  # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
+  kong-ee: '3.7.1.1'

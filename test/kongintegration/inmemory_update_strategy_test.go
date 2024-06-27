@@ -13,6 +13,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,52 +96,45 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	expectedBody := map[string]interface{}{}
 	require.NoError(t, json.Unmarshal(expectedRawErrBody, &expectedBody))
 
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := sut.Update(ctx, faultyConfig)
-		if err == nil {
-			t.Logf("expected error: %v", err)
-			return false
+		if !assert.Error(t, err) {
+			return
 		}
 		var updateError sendconfig.UpdateError
-		if !errors.As(err, &updateError) {
-			t.Logf("expected UpdateError, got: %T", err)
-			return false
+		if !assert.True(t, errors.As(err, &updateError)) {
+			return
 		}
-		if len(updateError.ResourceFailures()) == 0 {
-			t.Log("expected resource errors")
-			return false
+		if wrappedErr := updateError.Unwrap(); !assert.Error(t, wrappedErr) || !assert.IsType(t, &kong.APIError{}, wrappedErr) {
+			return
 		}
-		if len(updateError.RawResponseBody()) == 0 {
-			t.Log("expected error response body")
-			return false
+		if !assert.NotEmpty(t, updateError.ResourceFailures()) {
+			return
+		}
+		if !assert.NotEmpty(t, updateError.RawResponseBody()) {
+			return
 		}
 		resourceErr, found := lo.Find(updateError.ResourceFailures(), func(r failures.ResourceFailure) bool {
 			return lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
 				return obj.GetName() == "test-service"
 			})
 		})
-		if !found {
-			t.Logf("expected resource error for test-service, got: %+v", updateError.ResourceFailures())
-			return false
+		if !assert.Truef(t, found, "expected resource error for test-service, got: %+v", updateError.ResourceFailures()) {
+			return
 		}
-		if resourceErr.Message() != expectedMessage {
-			t.Logf("expected resource error message to be %q, got %q", expectedMessage, resourceErr.Message())
-			return false
+		if !assert.Equal(t, resourceErr.Message(), expectedMessage) {
+			return
 		}
-		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); diff != "" {
-			t.Logf("expected resource error to match, got diff: %s", diff)
-			return false
+		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); !assert.Empty(t, diff) {
+			return
 		}
 		actualBody := map[string]interface{}{}
-		if err := json.Unmarshal(updateError.RawResponseBody(), &actualBody); err != nil {
-			t.Logf("could not unmarshal error body: %s", err)
-			return false
+		err = json.Unmarshal(updateError.RawResponseBody(), &actualBody)
+		if !assert.NoError(t, err) {
+			return
 		}
-		if diff := cmp.Diff(expectedBody, actualBody); diff != "" {
-			t.Logf("unexpected error body diff: %s", diff)
-			return false
+		if diff := cmp.Diff(expectedBody, actualBody); !assert.Empty(t, diff) {
+			return
 		}
-
-		return true
 	}, timeout, period)
 }

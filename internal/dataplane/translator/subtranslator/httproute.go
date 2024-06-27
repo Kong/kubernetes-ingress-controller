@@ -365,8 +365,6 @@ func SetRoutePlugins(
 	filters []gatewayapi.HTTPRouteFilter,
 	path string,
 	tags []*string,
-	// As of now, expressions router is not supported for URLRewrite with PrefixMatchHTTPPathModifier.
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3686
 	expressionsRouterEnabled bool,
 ) error {
 	generatedPlugins, err := generatePluginsFromHTTPRouteFilters(filters, path, tags, expressionsRouterEnabled)

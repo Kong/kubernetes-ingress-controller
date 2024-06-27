@@ -2,6 +2,7 @@ package fallback
 
 import (
 	"fmt"
+	"slices"
 
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,9 +73,25 @@ func resolveKongClusterPluginDependencies(cache store.CacheStores, kongClusterPl
 
 // resolveKongConsumerDependencies resolves potential dependencies for a KongConsumer object:
 // - KongPlugin
-// - KongClusterPlugin.
+// - KongClusterPlugin
+// - Secret.
 func resolveKongConsumerDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
-	return resolveObjectDependenciesPlugin(cache, kongConsumer)
+	return slices.Concat(
+		resolveObjectDependenciesPlugin(cache, kongConsumer),
+		resolveKongConsumerSecretDependencies(cache, kongConsumer),
+	)
+}
+
+// resolveKongConsumerSecretDependencies resolves Secret dependencies for a KongConsumer object.
+func resolveKongConsumerSecretDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
+	var dependencies []client.Object
+	for _, credSecret := range kongConsumer.Credentials {
+		secret, exists, err := cache.Secret.GetByKey(fmt.Sprintf("%s/%s", kongConsumer.Namespace, credSecret))
+		if err == nil && exists {
+			dependencies = append(dependencies, secret.(client.Object))
+		}
+	}
+	return dependencies
 }
 
 // resolveKongConsumerGroupDependencies resolves potential dependencies for a KongConsumerGroup object:

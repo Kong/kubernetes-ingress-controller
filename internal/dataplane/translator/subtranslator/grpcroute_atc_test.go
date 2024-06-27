@@ -220,7 +220,7 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule})
+			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule}, nil)
 			routes := GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, 0)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})

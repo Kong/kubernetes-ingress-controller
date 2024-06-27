@@ -588,11 +588,7 @@ func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, err
 	for _, plugin := range duplicates {
 		delete(res, plugin)
 	}
-	var plugins []Plugin
-	for _, p := range res {
-		plugins = append(plugins, p)
-	}
-	return plugins, nil
+	return lo.Values(res), nil
 }
 
 func (ks *KongState) FillPlugins(

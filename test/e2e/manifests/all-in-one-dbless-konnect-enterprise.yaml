@@ -3783,7 +3783,7 @@ spec:
         envFrom:
         - configMapRef:
             name: konnect-config
-        image: kong/kubernetes-ingress-controller:3.1
+        image: kong/kubernetes-ingress-controller:3.2
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

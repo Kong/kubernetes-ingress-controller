@@ -183,7 +183,7 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 }
 
 func tcpIngressToNetworkingTLS(tls []kongv1beta1.IngressTLS) []netv1.IngressTLS {
-	var result []netv1.IngressTLS
+	result := make([]netv1.IngressTLS, 0, len(tls))
 
 	for _, t := range tls {
 		result = append(result, netv1.IngressTLS{

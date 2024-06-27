@@ -176,6 +176,22 @@ func GetAdminURLFromCtx(ctx context.Context) *url.URL {
 	return u.(*url.URL)
 }
 
+type _diagURL struct{}
+
+// SetDiagURLInCtx sets the diag URL in the context.
+func SetDiagURLInCtx(ctx context.Context, url *url.URL) context.Context {
+	return setInCtx(ctx, _diagURL{}, url)
+}
+
+// GetDiagURLFromCtx gets the diag URL from the context.
+func GetDiagURLFromCtx(ctx context.Context) *url.URL {
+	u := ctx.Value(_diagURL{})
+	if u == nil {
+		return nil
+	}
+	return u.(*url.URL)
+}
+
 type _ingressClass struct{}
 
 // GetIngressClassFromCtx gets the Ingress Class from the context.

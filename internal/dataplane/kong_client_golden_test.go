@@ -245,12 +245,12 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	cacheStores, err := store.NewCacheStoresFromObjYAML(objects...)
 	require.NoError(t, err, "failed creating cache stores")
 
-	var objectsToBeConsideredBroken []fallback.ObjectHash
+	var objectsToBeConsideredBroken []client.Object
 	for _, s := range cacheStores.ListAllStores() {
 		for _, o := range s.List() {
 			o := o.(client.Object)
 			if o.GetAnnotations()["test.konghq.com/broken"] == "true" {
-				objectsToBeConsideredBroken = append(objectsToBeConsideredBroken, fallback.GetObjectHash(o))
+				objectsToBeConsideredBroken = append(objectsToBeConsideredBroken, o)
 			}
 		}
 	}
@@ -373,11 +373,12 @@ func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService 
 	return translator.UnavailableSchemaService{}
 }
 
-func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []fallback.ObjectHash) []byte {
+func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []client.Object) []byte {
 	var flattenedErrors []string
 	for _, o := range brokenObjects {
-		flattenedError := fmt.Sprintf(`{"errors": [{"messages": ["broken object"]}], "entity_tags": ["k8s-name:%s","k8s-namespace:%s","k8s-kind:%s","k8s-group:%s", "k8s-uid:%s"]}`,
-			o.Name, o.Namespace, o.Kind, o.Group, o.UID,
+		gvk := o.GetObjectKind().GroupVersionKind()
+		flattenedError := fmt.Sprintf(`{"errors": [{"messages": ["broken object"]}], "entity_tags": ["k8s-name:%s","k8s-namespace:%s","k8s-kind:%s","k8s-group:%s", "k8s-version:%s", "k8s-uid:%s"]}`,
+			o.GetName(), o.GetNamespace(), gvk.Kind, gvk.Group, gvk.Version, o.GetUID(),
 		)
 		flattenedErrors = append(flattenedErrors, flattenedError)
 	}

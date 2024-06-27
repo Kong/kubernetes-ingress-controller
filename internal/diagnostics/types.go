@@ -2,7 +2,8 @@ package diagnostics
 
 import (
 	"github.com/kong/go-database-reconciler/pkg/file"
-	k8stypes "k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 )
 
 // DumpMeta annotates a config dump.
@@ -11,8 +12,6 @@ type DumpMeta struct {
 	Failed bool
 	// Fallback indicates that the dump is a fallback configuration attempted after a failed config update.
 	Fallback bool
-	// AffectedObjects are objects excluded from the fallback configuration.
-	AffectedObjects []AffectedObject
 	// Hash is the configuration hash.
 	Hash string
 }
@@ -27,16 +26,6 @@ type ConfigDump struct {
 	RawResponseBody []byte
 }
 
-type configDumpResponse struct {
-	ConfigHash string       `json:"hash"`
-	Config     file.Content `json:"config"`
-}
-
-type problemObjectsResponse struct {
-	ConfigHash    string           `json:"hash"`
-	BrokenObjects []AffectedObject `json:"brokenObjects"`
-}
-
 // ConfigDumpDiagnostic contains settings and channels for receiving diagnostic configuration dumps.
 type ConfigDumpDiagnostic struct {
 	// DumpsIncludeSensitive is true if the configuration dump includes sensitive values, such as certificate private
@@ -44,19 +33,6 @@ type ConfigDumpDiagnostic struct {
 	DumpsIncludeSensitive bool
 	// Configs is the channel that receives configuration blobs from the configuration update strategy implementation.
 	Configs chan ConfigDump
-}
-
-// AffectedObject is a Kubernetes object associated with diagnostic information.
-type AffectedObject struct {
-	// UID is the unique identifier of the object.
-	UID k8stypes.UID
-
-	// Group is the object's group.
-	Group string
-	// Kind is the object's Kind.
-	Kind string
-	// Namespace is the object's Namespace.
-	Namespace string
-	// Name is the object's Name.
-	Name string
+	// FallbackCacheMetadata is the channel that receives fallback metadata from the fallback cache generator.
+	FallbackCacheMetadata chan fallback.GeneratedCacheMetadata
 }

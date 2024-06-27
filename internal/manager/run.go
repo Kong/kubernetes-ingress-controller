@@ -115,15 +115,16 @@ func Run(
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:                    kongSemVersion,
-		InMemory:                   dbMode.IsDBLessMode(),
-		Concurrency:                c.Concurrency,
-		FilterTags:                 c.FilterTags,
-		SkipCACertificates:         c.SkipCACertificates,
-		EnableReverseSync:          c.EnableReverseSync,
-		ExpressionRoutes:           dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		SanitizeKonnectConfigDumps: featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
-		FallbackConfiguration:      featureGates.Enabled(featuregates.FallbackConfiguration),
+		Version:                       kongSemVersion,
+		InMemory:                      dbMode.IsDBLessMode(),
+		Concurrency:                   c.Concurrency,
+		FilterTags:                    c.FilterTags,
+		SkipCACertificates:            c.SkipCACertificates,
+		EnableReverseSync:             c.EnableReverseSync,
+		ExpressionRoutes:              dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		SanitizeKonnectConfigDumps:    featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
+		FallbackConfiguration:         featureGates.Enabled(featuregates.FallbackConfiguration),
+		UseLastValidConfigForFallback: c.UseLastValidConfigForFallback,
 	}
 
 	setupLog.Info("Configuring and building the controller manager")

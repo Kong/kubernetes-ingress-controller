@@ -5,6 +5,7 @@ package isolated
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -261,6 +262,13 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		if !assert.NoError(t, err) {
 			return ctx
 		}
+
+		ctrlDiagURL, err := url.Parse("http://localhost:10256")
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetDiagURLInCtx(ctx, ctrlDiagURL)
+
 		proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
@@ -339,6 +347,8 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--anonymous-reports=false",
 			"--log-level=trace",
+			"--dump-config=true",
+			"--dump-sensitive-config=true",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			// Use fixed election namespace `kong` because RBAC roles for leader election are in the namespace,
 			// so we create resources for leader election in the namespace to make sure that KIC can operate these resources.

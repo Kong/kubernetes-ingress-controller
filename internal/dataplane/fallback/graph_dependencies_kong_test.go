@@ -284,6 +284,35 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 			),
 			expected: []client.Object{testKongClusterPlugin(t, "3")},
 		},
+		{
+			name: "KongConsumer -> Secret from credentials",
+			object: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongconsumer",
+					Namespace: testNamespace,
+				},
+				Credentials: []string{"1"},
+			},
+			cache: cacheStoresFromObjs(t,
+				testSecret(t, "1"),
+				testKongPlugin(t, "1"),
+			),
+			expected: []client.Object{testSecret(t, "1")},
+		},
+		{
+			name: "KongConsumer -> non existing Secret from credentials",
+			object: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongconsumer",
+					Namespace: testNamespace,
+				},
+				Credentials: []string{"non-existing"},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+			),
+			expected: []client.Object{},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -42,8 +42,7 @@ func (m *OrMatcher) Expression() string {
 		return m.subMatchers[0].Expression()
 	}
 
-	var grouped []string
-
+	grouped := make([]string, 0, len(m.subMatchers))
 	for _, m := range m.subMatchers {
 		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
 	}
@@ -92,8 +91,7 @@ func (m *AndMatcher) Expression() string {
 		return m.subMatchers[0].Expression()
 	}
 
-	var grouped []string
-
+	grouped := make([]string, 0, len(m.subMatchers))
 	for _, m := range m.subMatchers {
 		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
 	}

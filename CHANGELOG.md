@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.2.1](#321)
  - [3.2.0](#320)
  - [3.1.6](#316)
  - [3.1.5](#315)
@@ -98,6 +99,13 @@ Adding a new version? You'll need three changes:
 - Services using `Secret`s containing the same certificate as client certificates
   by annotation `konghq.com/client-cert` can be correctly translated.
   [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+
+## 3.2.1 
+
+> Release date: 2024-06-28
+
+### Fixed
+
 - Do not try recovering from gateways synchronization errors with fallback configuration
   (either generated or the last valid one) when an unexpected error (e.g. 5xx or network issue) occurs.
   [#6237](https://github.com/Kong/kubernetes-ingress-controller/pull/6237)
@@ -3581,6 +3589,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.6...v3.2.0
 [3.1.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.5...v3.1.6
 [3.1.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.4...v3.1.5

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ type CtrlFuncMetrics struct {
 	TranslationBrokenResources prometheus.Gauge
 	ConfigPushDuration         *prometheus.HistogramVec
 	ConfigPushSuccessTime      *prometheus.GaugeVec
+	AdmissionCount             *prometheus.CounterVec
 
 	// Fallback config push metrics.
 	FallbackTranslationCount           *prometheus.CounterVec
@@ -77,6 +79,16 @@ const (
 	DataplaneKey string = "dataplane"
 )
 
+const (
+	// AllowedKey defines the key of the metric label indicating admission was allowed.
+	AllowedKey string = "allowed"
+)
+
+const (
+	// AdmissionResourceKey defines the name of the metric label indicating which dataplane this time series is relevant for.
+	AdmissionResourceKey string = "resource"
+)
+
 // Regular config push metrics names.
 const (
 	MetricNameConfigPushCount            = "ingress_controller_configuration_push_count"
@@ -85,6 +97,7 @@ const (
 	MetricNameTranslationCount           = "ingress_controller_translation_count"
 	MetricNameTranslationBrokenResources = "ingress_controller_translation_broken_resource_count"
 	MetricNameConfigPushDuration         = "ingress_controller_configuration_push_duration_milliseconds"
+	MetricNameAdmissionCount             = "ingress_controller_admission_count"
 )
 
 // Fallback config push metrics names.
@@ -187,6 +200,20 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 			),
 		},
 		[]string{DataplaneKey},
+	)
+
+	controllerMetrics.AdmissionCount = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: MetricNameAdmissionCount,
+			Help: fmt.Sprintf(
+				"Count of admissions processed by Kong. "+
+					"`%s` describes whether an admission was allowed. "+
+					"`%s` describes the resource under admission. ",
+				AllowedKey,
+				AdmissionResourceKey,
+			),
+		},
+		[]string{AllowedKey, AdmissionResourceKey},
 	)
 
 	controllerMetrics.FallbackTranslationCount = prometheus.NewCounterVec(
@@ -302,6 +329,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		controllerMetrics.TranslationBrokenResources,
 		controllerMetrics.ConfigPushDuration,
 		controllerMetrics.ConfigPushSuccessTime,
+		controllerMetrics.AdmissionCount,
 		controllerMetrics.FallbackTranslationBrokenResources,
 		controllerMetrics.FallbackTranslationCount,
 		controllerMetrics.FallbackConfigPushCount,
@@ -354,6 +382,13 @@ func (c *CtrlFuncMetrics) RecordTranslationFailure() {
 // RecordTranslationBrokenResources records the number of resources failing translation.
 func (c *CtrlFuncMetrics) RecordTranslationBrokenResources(count int) {
 	c.TranslationBrokenResources.Set(float64(count))
+}
+
+func (c *CtrlFuncMetrics) RecordAdmissionCount(allowed bool, resource string) {
+	c.ConfigPushCount.With(prometheus.Labels{
+		AllowedKey:           strconv.FormatBool(allowed),
+		AdmissionResourceKey: resource,
+	}).Inc()
 }
 
 // RecordFallbackTranslationFailure records a failed fallback configuration translation.

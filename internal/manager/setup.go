@@ -34,6 +34,7 @@ import (
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
@@ -195,6 +196,7 @@ func setupAdmissionServer(
 	logger logr.Logger,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
+	promMetrics *metrics.CtrlFuncMetrics,
 ) error {
 	admissionLogger := logger.WithName("admission-server")
 
@@ -214,6 +216,7 @@ func setupAdmissionServer(
 			storer,
 		),
 		ReferenceIndexers: referenceIndexers,
+		PromMetrics:       promMetrics,
 		Logger:            admissionLogger,
 	}, admissionLogger)
 	if err != nil {

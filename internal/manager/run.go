@@ -206,7 +206,7 @@ func Run(
 		configurationChangeDetector,
 		kongConfigFetcher,
 		configTranslator,
-		cache,
+		&cache,
 		fallbackConfigGenerator,
 	)
 	if err != nil {

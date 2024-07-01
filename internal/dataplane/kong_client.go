@@ -196,7 +196,7 @@ func NewKongClient(
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	kongConfigFetcher configfetcher.LastValidConfigFetcher,
 	kongConfigBuilder KongConfigBuilder,
-	cacheStores store.CacheStores,
+	cacheStores *store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
 ) (*KongClient, error) {
 	c := &KongClient{
@@ -204,7 +204,7 @@ func NewKongClient(
 		requestTimeout:          timeout,
 		diagnostic:              diagnostic,
 		prometheusMetrics:       metrics.NewCtrlFuncMetrics(),
-		cache:                   &cacheStores,
+		cache:                   cacheStores,
 		kongConfig:              kongConfig,
 		eventRecorder:           eventRecorder,
 		dbmode:                  dbMode,
@@ -444,23 +444,30 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.kongConfig.FallbackConfiguration {
 		var newSnapshotHash store.SnapshotHash
 		var err error
+		// Empty snapshot hash means that the cache hasn't changed since the last snapshot was taken. That optimization can be used
+		// in main code path to avoid unnecessary processing. TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6095
 		cacheSnapshot, newSnapshotHash, err = c.cache.TakeSnapshotIfChanged(c.lastProcessedSnapshotHash)
 		if err != nil {
 			return fmt.Errorf("failed to take snapshot of cache: %w", err)
 		}
-		// Empty snapshot hash means that the cache hasn't changed since the last snapshot was taken. That optimization can be used
-		// in main code path to avoid unnecessary processing. TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6095
-		// TODO: We should short-circuit here only if all the Gateways were successfully synced with the current configuration.
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/6219
-		if newSnapshotHash == store.SnapshotHashEmpty {
+		hasNewSnapshotToBeProcessed := newSnapshotHash != store.SnapshotHashEmpty
+		if !hasNewSnapshotToBeProcessed {
 			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheHit()
-			c.logger.V(util.DebugLevel).Info("No configuration change; pushing config to gateway is not necessary, skipping")
-			return nil
+		} else {
+			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheMiss()
+		}
+		if hasNewSnapshotToBeProcessed {
+			c.logger.V(util.DebugLevel).Info("New configuration snapshot detected", "hash", newSnapshotHash)
+			c.lastProcessedSnapshotHash = newSnapshotHash
+			c.kongConfigBuilder.UpdateCache(cacheSnapshot)
 		}
 
-		c.prometheusMetrics.RecordProcessedConfigSnapshotCacheMiss()
-		c.lastProcessedSnapshotHash = newSnapshotHash
-		c.kongConfigBuilder.UpdateCache(cacheSnapshot)
+		if allGatewaysAreInSync := lo.EveryBy(c.clientsProvider.GatewayClientsToConfigure(), func(cl *adminapi.Client) bool {
+			return cl.LastCacheStoresHash() == c.lastProcessedSnapshotHash
+		}); allGatewaysAreInSync {
+			c.logger.V(util.DebugLevel).Info("All gateways are in sync; pushing config is not necessary, skipping")
+			return nil
+		}
 	}
 
 	c.logger.V(util.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
@@ -700,6 +707,12 @@ func (c *KongClient) sendOutToGatewayClients(
 		len(gatewayClients) > 1 {
 		for _, client := range gatewayClients {
 			client.SetLastConfigSHA([]byte(shas[0]))
+
+			// If the last processed snapshot hash is not empty, we should set it to the clients as well.
+			// It can be empty when FallbackConfiguration feature gate is off.
+			if c.lastProcessedSnapshotHash != "" {
+				client.SetLastCacheStoresHash(c.lastProcessedSnapshotHash)
+			}
 		}
 	}
 
@@ -840,7 +853,7 @@ func (c *KongClient) sendToClient(
 	sendDiagnostic(diagnostics.DumpMeta{Failed: false, Hash: string(newConfigSHA)}, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
-
+	client.SetLastCacheStoresHash(c.lastProcessedSnapshotHash)
 	return string(newConfigSHA), nil
 }
 

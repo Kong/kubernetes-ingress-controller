@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.2.2](#322)
  - [3.2.1](#321)
  - [3.2.0](#320)
  - [3.1.6](#316)
@@ -99,13 +100,20 @@ Adding a new version? You'll need three changes:
 - Services using `Secret`s containing the same certificate as client certificates
   by annotation `konghq.com/client-cert` can be correctly translated.
   [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+
+## 3.2.2
+
+> Release date: 2024-07-01
+
+### Fixed
+
 - Fixed an issue where new gateways were not being populated with the current configuration when
   `FallbackConfiguration` feature gate was turned on. Previously, configuration updates were skipped
   if the Kubernetes config cache did not change, leading to inconsistencies. Now, the system ensures
   that all gateways are populated with the latest configuration regardless of cache changes.
   [#6271](https://github.com/Kong/kubernetes-ingress-controller/pull/6271)
 
-## 3.2.1 
+## 3.2.1
 
 > Release date: 2024-06-28
 
@@ -3594,6 +3602,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.6...v3.2.0
 [3.1.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.5...v3.1.6

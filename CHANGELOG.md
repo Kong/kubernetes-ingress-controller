@@ -99,6 +99,11 @@ Adding a new version? You'll need three changes:
 - Services using `Secret`s containing the same certificate as client certificates
   by annotation `konghq.com/client-cert` can be correctly translated.
   [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+- Fixed an issue where new gateways were not being populated with the current configuration when
+  `FallbackConfiguration` feature gate was turned on. Previously, configuration updates were skipped
+  if the Kubernetes config cache did not change, leading to inconsistencies. Now, the system ensures
+  that all gateways are populated with the latest configuration regardless of cache changes.
+  [#6271](https://github.com/Kong/kubernetes-ingress-controller/pull/6271)
 
 ## 3.2.1 
 

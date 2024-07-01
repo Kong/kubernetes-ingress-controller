@@ -307,7 +307,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 		sendconfig.NewDefaultConfigurationChangeDetector(logger),
 		lastValidConfigFetcher,
 		p,
-		cacheStores,
+		&cacheStores,
 		fallbackConfigGenerator,
 	)
 	require.NoError(t, err)

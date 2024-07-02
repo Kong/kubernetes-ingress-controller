@@ -18,7 +18,7 @@ on:
 
 jobs:
   coverage:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: ${{ inputs.coverage && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +43,7 @@ jobs:
           verbose: true
 
   buildpulse-report:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: ${{ inputs.buildpulse && !cancelled() }}
     runs-on: ubuntu-latest
     steps:

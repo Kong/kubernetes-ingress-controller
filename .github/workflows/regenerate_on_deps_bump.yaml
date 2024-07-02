@@ -9,7 +9,7 @@ on:
 
 jobs:
   regenerate:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: contains(github.event.*.labels.*.name, 'renovate/auto-regenerate')
     runs-on: ubuntu-latest
     steps:

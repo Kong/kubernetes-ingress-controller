@@ -148,18 +148,12 @@ func (ks *KongState) sortCustomEntities() {
 			e1 := collection.Entities[i]
 			e2 := collection.Entities[j]
 			// Compare namespace first.
-			if e1.K8sKongCustomEntity.Namespace < e2.K8sKongCustomEntity.Namespace {
-				return true
-			}
-			if e1.K8sKongCustomEntity.Namespace > e2.K8sKongCustomEntity.Namespace {
-				return false
+			if e1.K8sKongCustomEntity.Namespace != e2.K8sKongCustomEntity.Namespace {
+				return e1.K8sKongCustomEntity.Namespace < e2.K8sKongCustomEntity.Namespace
 			}
 			// If namespace are the same, compare names.
-			if e1.K8sKongCustomEntity.Name < e2.K8sKongCustomEntity.Name {
-				return true
-			}
-			if e1.K8sKongCustomEntity.Name > e2.K8sKongCustomEntity.Name {
-				return false
+			if e1.K8sKongCustomEntity.Name != e2.K8sKongCustomEntity.Name {
+				return e1.K8sKongCustomEntity.Name < e2.K8sKongCustomEntity.Name
 			}
 			// Namespace and name are all the same.
 			// This means the two entities are generated from the same KCE resource but attached to different foreign entities.

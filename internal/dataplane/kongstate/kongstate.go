@@ -724,9 +724,13 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 		// Fill the "foreign" fields if the entity has such fields referencing services/routes/consumers.
+		// First Find out possible foreign field combinations attached to the KCE resource.
 		foreignFieldCombinations := ks.findCustomEntityForeignFields(logger, entity, schema, pluginRels, workspace)
+		// If there are any foreign fields, generate one entity per each foreign entity combination.
 		if len(foreignFieldCombinations) > 0 {
 			for _, combination := range foreignFieldCombinations {
+				// REVIEW: We do not have a built-in or common method to deep copy a `map[string]any`,
+				// so we decode it from the original JSON each time when generate an entity.
 				var parsedEntity map[string]any
 				if err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity); err != nil {
 					continue
@@ -735,10 +739,12 @@ func (ks *KongState) FillCustomEntities(
 					K8sKongCustomEntity: entity,
 					ForeignEntityIDs:    make(map[kong.EntityType]string),
 				}
+				// fill the fields referring to foreign entities.
 				for _, foreignField := range combination {
 					parsedEntity[foreignField.fieldName] = map[string]any{
 						"id": foreignField.foreignEntityID,
 					}
+					// save the referred foreign entity IDs for sorting.
 					generatedEntity.ForeignEntityIDs[foreignField.foreignEntityType] = foreignField.foreignEntityID
 				}
 				generatedEntity.Object = parsedEntity
@@ -753,12 +759,12 @@ func (ks *KongState) FillCustomEntities(
 				},
 			)
 		}
-
 	}
 
 	ks.sortCustomEntities()
 }
 
+// addCustomEntity adds a custom entity into the collection of its type.
 func (ks *KongState) addCustomEntity(entityType string, schema EntitySchema, e CustomEntity) {
 	// Put the entity into the custom collection to store the entities of its type.
 	if _, ok := ks.CustomEntities[entityType]; !ok {

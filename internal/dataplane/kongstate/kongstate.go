@@ -718,27 +718,56 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 		// Unmarshal fields of the entity.
-		var parsedEntity map[string]interface{}
+		var parsedEntity map[string]any
 		if err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity); err != nil {
 			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to unmarshal fields of entity: %v", err), entity)
 			continue
 		}
 		// Fill the "foreign" fields if the entity has such fields referencing services/routes/consumers.
-		ks.fillCustomEntityForeignFields(logger, entity, schema, parsedEntity, pluginRels, workspace)
-		// Put the entity into the custom collection to store the entities of its type.
-		if _, ok := ks.CustomEntities[entity.Spec.EntityType]; !ok {
-			ks.CustomEntities[entity.Spec.EntityType] = &KongCustomEntityCollection{
-				Schema: schema,
+		foreignFieldCombinations := ks.findCustomEntityForeignFields(logger, entity, schema, pluginRels, workspace)
+		if len(foreignFieldCombinations) > 0 {
+			for _, combination := range foreignFieldCombinations {
+				var parsedEntity map[string]any
+				if err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity); err != nil {
+					continue
+				}
+				generatedEntity := CustomEntity{
+					K8sKongCustomEntity: entity,
+					ForeignEntityIDs:    make(map[kong.EntityType]string),
+				}
+				for _, foreignField := range combination {
+					parsedEntity[foreignField.fieldName] = map[string]any{
+						"id": foreignField.foreignEntityID,
+					}
+					generatedEntity.ForeignEntityIDs[foreignField.foreignEntityType] = foreignField.foreignEntityID
+				}
+				generatedEntity.Object = parsedEntity
+				ks.addCustomEntity(entity.Spec.EntityType, schema, generatedEntity)
 			}
+		} else {
+			ks.addCustomEntity(
+				entity.Spec.EntityType, schema,
+				CustomEntity{
+					Object:              parsedEntity,
+					K8sKongCustomEntity: entity,
+				},
+			)
 		}
-		collection := ks.CustomEntities[entity.Spec.EntityType]
-		collection.Entities = append(collection.Entities, CustomEntity{
-			Object:              parsedEntity,
-			K8sKongCustomEntity: entity,
-		})
+
 	}
 
 	ks.sortCustomEntities()
+}
+
+func (ks *KongState) addCustomEntity(entityType string, schema EntitySchema, e CustomEntity) {
+	// Put the entity into the custom collection to store the entities of its type.
+	if _, ok := ks.CustomEntities[entityType]; !ok {
+		ks.CustomEntities[entityType] = &KongCustomEntityCollection{
+			Schema: schema,
+		}
+	}
+	collection := ks.CustomEntities[entityType]
+	collection.Entities = append(collection.Entities, e)
 }
 
 // fetchEntitySchema fetches schema of an entity by its type and stores the schema in its custom entity collection
@@ -756,21 +785,7 @@ func (ks *KongState) fetchEntitySchema(schemaGetter SchemaGetter, entityType str
 	return ExtractEntityFieldDefinitions(schema), nil
 }
 
-// fillCustomEntityForeignFields fills the "foreign" fields of a custom Kong entity
-// if it refers to a service/route/consumer.
-// Because Kong gateway requires the "foreign" fields to use IDs of the referred entity,
-// it fills ID of the referred entity and fill the ID of the entity to the field.
-// So the function has the side effect that the referred entity will have a generated fixed ID.
-// It does not support fields referring to other types of entities.
-func (ks *KongState) fillCustomEntityForeignFields(
-	logger logr.Logger,
-	k8sEntity *kongv1alpha1.KongCustomEntity,
-	schema EntitySchema,
-	parsedEntity map[string]any,
-	pluginRelEntities PluginRelatedEntitiesRefs,
-	workspace string,
-) {
-	logger = logger.WithValues("entity_namespace", k8sEntity.Namespace, "entity_name", k8sEntity.Name)
+func (ks *KongState) findCustomEntityRelatedPlugin(k8sEntity *kongv1alpha1.KongCustomEntity) (string, bool) {
 	// Find referred entity via the plugin in its spec.parentRef.
 	// Then we can fetch the referred service/route/consumer from the reference relations of the plugin.
 	parentRef := k8sEntity.Spec.ParentRef
@@ -778,10 +793,10 @@ func (ks *KongState) fillCustomEntityForeignFields(
 	// Abort if the parentRef is empty or does not refer to a plugin.
 	if parentRef == nil ||
 		(parentRef.Group == nil || *parentRef.Group != kongv1alpha1.GroupVersion.Group) {
-		return
+		return "", false
 	}
 	if parentRef.Kind == nil || (*parentRef.Kind != "KongPlugin" && *parentRef.Kind != "KongClusterPlugin") {
-		return
+		return "", false
 	}
 	// Extract the plugin key to get the plugin relations.
 	if parentRef.Namespace == nil || *parentRef.Namespace == "" {
@@ -789,60 +804,88 @@ func (ks *KongState) fillCustomEntityForeignFields(
 	} else {
 		namespace = *parentRef.Namespace
 	}
-	pluginKey := namespace + ":" + parentRef.Name
+	return namespace + ":" + parentRef.Name, true
+}
+
+func (ks *KongState) findCustomEntityForeignFields(
+	logger logr.Logger,
+	k8sEntity *kongv1alpha1.KongCustomEntity,
+	schema EntitySchema,
+	pluginRelEntities PluginRelatedEntitiesRefs,
+	workspace string,
+) [][]entityForeignFieldValue {
+	pluginKey, ok := ks.findCustomEntityRelatedPlugin(k8sEntity)
+	if !ok {
+		return nil
+	}
 	// Get the relations with other entities of the plugin.
 	rels, ok := pluginRelEntities.RelatedEntities[pluginKey]
 	if !ok {
-		return
+		return nil
 	}
-	logger.V(util.DebugLevel).Info("fetch references via plugin", "plugin_key", pluginKey)
 
-	// Traverse through the fields of the entity and fill the "foreign" fields with IDs of referring entities.
-	// Note: this procedure will make referred services'/routes'/consumers' ID to be filled.
-	// So it requires the `FillIDs` feature gate to be enabled.
+	var (
+		foreignRelations      util.ForeignRelations
+		foreignServiceFields  []string
+		foreignRouteFields    []string
+		foreignConsumerFields []string
+	)
+
+	ret := [][]entityForeignFieldValue{}
 	for fieldName, field := range schema.Fields {
 		if field.Type != EntityFieldTypeForeign {
 			continue
 		}
 		switch field.Reference {
 		case string(kong.EntityTypeServices):
-			serviceIDs := getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
-			// TODO: we should generate multiple entities if the plugin is attached to multiple services/routes/consumers.
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/6123
-			if len(serviceIDs) > 0 {
-				parsedEntity[fieldName] = map[string]interface{}{
-					"id": serviceIDs[0],
-				}
-				logger.V(util.DebugLevel).Info("added ref to service", "service_id", serviceIDs[0])
-			}
+			foreignServiceFields = append(foreignServiceFields, fieldName)
+			foreignRelations.Service = getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
 		case string(kong.EntityTypeRoutes):
-			routeIDs := lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
+			foreignRouteFields = append(foreignRouteFields, fieldName)
+			foreignRelations.Route = lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
 				if err := r.FillID(workspace); err != nil {
 					return "", false
 				}
 				return *r.ID, true
 			})
-			if len(routeIDs) > 0 {
-				parsedEntity[fieldName] = map[string]interface{}{
-					"id": routeIDs[0],
-				}
-				logger.V(util.DebugLevel).Info("added ref to route", "route_id", routeIDs[0])
-			}
 		case string(kong.EntityTypeConsumers):
-			consumerIDs := lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
+			foreignConsumerFields = append(foreignConsumerFields, fieldName)
+			foreignRelations.Consumer = lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
 				if err := c.FillID(workspace); err != nil {
 					return "", false
 				}
 				return *c.ID, true
 			})
-			if len(consumerIDs) > 0 {
-				parsedEntity[fieldName] = map[string]interface{}{
-					"id": consumerIDs[0],
-				}
-				logger.V(util.DebugLevel).Info("added ref to consumer", "consumer_id", consumerIDs[0])
-			}
-		}
+		} // end of switch
 	}
+
+	for _, combination := range foreignRelations.GetCombinations() {
+		foreignFieldValues := []entityForeignFieldValue{}
+		for _, fieldName := range foreignServiceFields {
+			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
+				fieldName:         fieldName,
+				foreignEntityType: kong.EntityTypeServices,
+				foreignEntityID:   combination.Service,
+			})
+		}
+		for _, fieldName := range foreignRouteFields {
+			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
+				fieldName:         fieldName,
+				foreignEntityType: kong.EntityTypeRoutes,
+				foreignEntityID:   combination.Route,
+			})
+		}
+		for _, fieldName := range foreignConsumerFields {
+			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
+				fieldName:         fieldName,
+				foreignEntityType: kong.EntityTypeConsumers,
+				foreignEntityID:   combination.Consumer,
+			})
+		}
+		ret = append(ret, foreignFieldValues)
+	}
+
+	return ret
 }
 
 // getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.

@@ -130,6 +130,8 @@ type CustomEntity struct {
 	custom.Object
 	// K8sKongCustomEntity refers to the KongCustomEntity resource that translate to it.
 	K8sKongCustomEntity *kongv1alpha1.KongCustomEntity
+	// ForeignEntityIDs stores the IDs of the foreign Kong entities attached to the entity.
+	ForeignEntityIDs map[kong.EntityType]string
 }
 
 // SchemaGetter is the interface to fetch the schema of a Kong entity by its type.
@@ -152,8 +154,38 @@ func (ks *KongState) sortCustomEntities() {
 			if e1.K8sKongCustomEntity.Namespace > e2.K8sKongCustomEntity.Namespace {
 				return false
 			}
-			// If namespace are the same, compare name.
-			return e1.K8sKongCustomEntity.Name < e2.K8sKongCustomEntity.Name
+			// If namespace are the same, compare names.
+			if e1.K8sKongCustomEntity.Name < e2.K8sKongCustomEntity.Name {
+				return true
+			}
+			if e1.K8sKongCustomEntity.Name > e2.K8sKongCustomEntity.Name {
+				return false
+			}
+			// Namespace and name are all the same.
+			// This means the two entities are generated from the same KCE resource but attached to different foreign entities.
+			// So we need to compare foreign entities.
+			if e1.ForeignEntityIDs != nil && e2.ForeignEntityIDs != nil {
+				// Compare IDs of attached entities in services, routes, consumers order.
+				foreignEntityTypeList := []kong.EntityType{
+					kong.EntityTypeServices,
+					kong.EntityTypeRoutes,
+					kong.EntityTypeConsumers,
+				}
+				for _, t := range foreignEntityTypeList {
+					if e1.ForeignEntityIDs[t] != e2.ForeignEntityIDs[t] {
+						return e1.ForeignEntityIDs[t] < e2.ForeignEntityIDs[t]
+					}
+				}
+			}
+			// Should not reach here when k8s namespace/names are the same, and foreign entities are also the same.
+			// This means we generated two Kong entities from one KCE (and attached to the same foreign entities if any).
+			return true
 		})
 	}
+}
+
+type entityForeignFieldValue struct {
+	fieldName         string
+	foreignEntityType kong.EntityType
+	foreignEntityID   string
 }

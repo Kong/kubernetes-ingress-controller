@@ -14,6 +14,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
@@ -129,6 +132,65 @@ func TestCustomEntityExample(t *testing.T) {
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
 			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+
+			return ctx
+		}).
+		Assess("another ingress using the same degraphql plugin should also work", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			const (
+				ingressNamespace = "default"
+				serviceName      = "hasura"
+				ingressName      = "hasura-ingress-graphql"
+				alterServiceName = "hasura-alter"
+				alterIngressName = "hasura-ingress-graphql-alter"
+			)
+			r := conf.Client().Resources()
+
+			t.Log("creating alternative service")
+			svc := corev1.Service{}
+			require.NoError(t, r.Get(ctx, serviceName, ingressNamespace, &svc))
+			alterService := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        alterServiceName,
+					Namespace:   ingressNamespace,
+					Labels:      svc.Labels,
+					Annotations: svc.Annotations,
+				},
+			}
+			alterService.Spec = *svc.Spec.DeepCopy()
+			alterService.Spec.ClusterIP = ""
+			alterService.Spec.ClusterIPs = []string{}
+			require.NoError(t, r.Create(ctx, alterService))
+
+			t.Log("creating alternative ingress with the same degraphql plugin attached")
+			ingress := netv1.Ingress{}
+			require.NoError(t, r.Get(ctx, ingressName, ingressNamespace, &ingress))
+			alterIngress := &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        alterIngressName,
+					Namespace:   ingressNamespace,
+					Labels:      ingress.Labels,
+					Annotations: ingress.Annotations,
+				},
+			}
+			alterIngress.Spec = *ingress.Spec.DeepCopy()
+			for i := range alterIngress.Spec.Rules {
+				alterIngress.Spec.Rules[i].Host = "alter-graphql.service.example"
+				for j := range alterIngress.Spec.Rules[i].HTTP.Paths {
+					alterIngress.Spec.Rules[i].HTTP.Paths[j].Backend = netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: alterServiceName,
+							Port: netv1.ServiceBackendPort{
+								Number: int32(80),
+							},
+						},
+					}
+				}
+			}
+			require.NoError(t, r.Create(ctx, alterIngress))
+
+			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
+			proxyURL := GetHTTPURLFromCtx(ctx)
+			helpers.EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).

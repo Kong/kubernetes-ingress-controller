@@ -100,6 +100,9 @@ Adding a new version? You'll need three changes:
 - Services using `Secret`s containing the same certificate as client certificates
   by annotation `konghq.com/client-cert` can be correctly translated.
   [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+- Generate one entity for each attached foreign entity if a `KongCustomEntity`
+  resource is attached to multiple foreign Kong entities.
+  [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
 
 ## 3.2.2
 

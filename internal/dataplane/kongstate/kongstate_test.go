@@ -1535,11 +1535,11 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 	}
 	kongService1 := kong.Service{
 		Name: kong.String("service1"),
+		ID:   kong.String("service1"),
 	}
-	getKongServiceID := func(s *kong.Service) string {
-		err := s.FillID("")
-		require.NoError(t, err)
-		return *s.ID
+	kongService2 := kong.Service{
+		Name: kong.String("service2"),
+		ID:   kong.String("service2"),
 	}
 
 	testCases := []struct {
@@ -1767,7 +1767,108 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 						"uri": "/api/me",
 						"service": map[string]interface{}{
 							// ID generated from Kong service "service1" in workspace "".
-							"id": getKongServiceID(&kongService1),
+							"id": "service1",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "custom entity attached to multiple services via plugin",
+			initialState: &KongState{
+				Services: []Service{
+					{
+						Service: kongService1,
+						K8sServices: map[string]*corev1.Service{
+							"default/service1": {
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "default",
+									Name:      "service1",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "degraphql-1",
+									},
+								},
+							},
+						},
+					}, // Service: service1
+					{
+						Service: kongService2,
+						K8sServices: map[string]*corev1.Service{
+							"default/service2": {
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "default",
+									Name:      "service2",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "degraphql-1",
+									},
+								},
+							},
+						},
+					}, // Service: service2
+				}, // Services
+			},
+			customEntities: []*kongv1alpha1.KongCustomEntity{
+				{
+					TypeMeta: customEntityTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "degraphql-1",
+					},
+					Spec: kongv1alpha1.KongCustomEntitySpec{
+						EntityType:     "degraphql_routes",
+						ControllerName: annotations.DefaultIngressClass,
+						Fields: apiextensionsv1.JSON{
+							Raw: []byte(`{"uri":"/api/me"}`),
+						},
+						ParentRef: &kongv1alpha1.ObjectReference{
+							Group: kong.String(kongv1.GroupVersion.Group),
+							Kind:  kong.String("KongPlugin"),
+							Name:  "degraphql-1",
+						},
+					},
+				},
+			},
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "degraphql-1",
+					},
+					PluginName: "degraphql",
+				},
+			},
+			schemas: map[string]kong.Schema{
+				"degraphql_routes": {
+					"fields": []interface{}{
+						map[string]interface{}{
+							"uri": map[string]interface{}{
+								"type":     "string",
+								"required": true,
+							},
+						},
+						map[string]interface{}{
+							"service": map[string]interface{}{
+								"type":      "foreign",
+								"reference": "services",
+							},
+						},
+					},
+				},
+			},
+			expectedCustomEntities: map[string][]custom.Object{
+				"degraphql_routes": {
+					{
+						"uri": "/api/me",
+						"service": map[string]interface{}{
+							// ID generated from Kong service "service1" in workspace "".
+							"id": "service1",
+						},
+					},
+					{
+						"uri": "/api/me",
+						"service": map[string]interface{}{
+							// ID generated from Kong service "service2" in workspace "".
+							"id": "service2",
 						},
 					},
 				},

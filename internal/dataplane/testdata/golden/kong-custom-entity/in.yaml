@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: s1
+  name: s1
+  namespace: default
+  uid: ddc15c38-7f1b-41cb-8b57-46465a7f4427
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: s1
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: i1
+  namespace: default
+  uid: 39ec2b6a-f919-4308-ad2f-07511ab424dd
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: "p1"
+spec:
+  ingressClassName: kong
+  rules:
+    -  http:
+         paths:
+           - path: /
+             pathType: Prefix
+             backend:
+               service:
+                 name: s1
+                 port:
+                   number: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  namespace: default
+  name: p1
+  uid: e97ca177-6bd2-425f-b3b1-10a521ac02a0
+plugin: p1
+config:
+  pluginConfigKey: pluginConfigValue
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  namespace: default
+  name: ce1
+  uid: af6056e0-e5c7-4bfa-8643-79ef16311686
+spec:
+  controllerName: kong
+  type: test-custom-entities
+  parentRef:
+    group: "configuration.konghq.com"
+    kind: "KongPlugin"
+    name: "p1"
+  fields:
+    customEntityField: 1

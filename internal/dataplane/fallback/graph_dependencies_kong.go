@@ -9,6 +9,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -139,4 +140,37 @@ func resolveTCPIngressDependencies(cache store.CacheStores, tcpIngress *kongv1be
 // - KongUpstreamPolicy.
 func resolveKongServiceFacadeDependencies(cache store.CacheStores, kongServiceFacade *incubatorv1alpha1.KongServiceFacade) []client.Object {
 	return resolveDependenciesForServiceLikeObj(cache, kongServiceFacade)
+}
+
+// resolveKongCustomEntityDependencies resolves potential dependencies for a KongCustomEntities object:
+// - KongPlugin
+// - KongClusterPlugin.
+func resolveKongCustomEntityDependencies(cache store.CacheStores, obj *kongv1alpha1.KongCustomEntity) []client.Object {
+	if obj.Spec.ParentRef == nil {
+		return nil
+	}
+
+	parentRef := *obj.Spec.ParentRef
+	groupMatches := parentRef.Group != nil && *parentRef.Group == "configuration.konghq.com"
+
+	if isKongPlugin := parentRef.Kind != nil && *parentRef.Kind == "KongPlugin" && groupMatches; isKongPlugin {
+		// TODO: Cross-namespace references are not supported yet.
+		if parentRef.Namespace != nil && *parentRef.Namespace != "" &&
+			*parentRef.Namespace != obj.GetNamespace() {
+			return nil
+		}
+		if plugin, exists, err := cache.Plugin.GetByKey(
+			fmt.Sprintf("%s/%s", obj.GetNamespace(), parentRef.Name),
+		); err == nil && exists {
+			return []client.Object{plugin.(client.Object)}
+		}
+	}
+
+	if isKongClusterPlugin := parentRef.Kind != nil && *parentRef.Kind == "KongClusterPlugin" && groupMatches; isKongClusterPlugin {
+		if plugin, exists, err := cache.ClusterPlugin.GetByKey(parentRef.Name); err == nil && exists {
+			return []client.Object{plugin.(client.Object)}
+		}
+	}
+
+	return nil
 }

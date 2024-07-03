@@ -7,8 +7,8 @@ cloud.google.com/go/auth/oauth2adapt v0.2.2 h1:+TTV8aXpjeChS9M+aTtN/TjdQnzJvmzKF
 cloud.google.com/go/auth/oauth2adapt v0.2.2/go.mod h1:wcYjgpZI9+Yu7LyYBg4pqSiaRkfEK3GQcpb7C/uyF1Q=
 cloud.google.com/go/compute/metadata v0.3.0 h1:Tz+eQXMEqDIKRsmY3cHTL6FVaynIjX2QxYC4trgAKZc=
 cloud.google.com/go/compute/metadata v0.3.0/go.mod h1:zFmK7XCadkQkj6TtorcaGlCW1hT1fIilQDwofLpJ20k=
-cloud.google.com/go/container v1.37.1 h1:9g/2zHz4yHeNPNCRsghWBVoZKcGxVaIEb9T0DXAg5gc=
-cloud.google.com/go/container v1.37.1/go.mod h1:8zwisvfdwqsXB/0TSxoUhTrfTrlfDV0pK9hcDtyFQ1c=
+cloud.google.com/go/container v1.37.2 h1:g5zm1SUBZ+q7IvtI5hM/6xcpf2C/bFfN2EXzS07Iz9k=
+cloud.google.com/go/container v1.37.2/go.mod h1:2ly7zpBmWtYjjuoB3fHyq8Gqrxaj2NIwzwVRpUcKYXk=
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 h1:bvDV9vkmnHYOMsOr4WLk+Vo07yKIzd94sVoIqshQ4bU=

@@ -193,19 +193,13 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 
-		// Unmarshal fields of the entity.
-		var parsedEntity map[string]any
-		if err = json.Unmarshal(entity.Spec.Fields.Raw, &parsedEntity); err != nil {
-			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to unmarshal fields of entity: %v", err), entity)
-			continue
-		}
 		// Fill the "foreign" fields if the entity has such fields referencing services/routes/consumers.
 		// First Find out possible foreign field combinations attached to the KCE resource.
 		foreignFieldCombinations := findCustomEntityForeignFields(logger, entity, schema, pluginRels, workspace)
 		// generate Kong entities from the fields in the KCE itself and attached foreign entities.
 		generatedEntities, err := generateCustomEntities(entity, foreignFieldCombinations)
 		if err != nil {
-			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to generate entities from itself and attached foreign entities: %v", err), entity)
+			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to generate entities from itself and attach foreign entities: %v", err), entity)
 			continue
 		}
 		for _, generatedEntity := range generatedEntities {

@@ -222,7 +222,7 @@ func TestSortCustomEntities(t *testing.T) {
 	}
 }
 
-func TestFindustomEntityForeignFields(t *testing.T) {
+func TestFindCustomEntityForeignFields(t *testing.T) {
 	testCustomEntity := &kongv1alpha1.KongCustomEntity{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",

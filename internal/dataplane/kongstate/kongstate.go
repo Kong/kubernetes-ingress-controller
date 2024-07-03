@@ -441,6 +441,19 @@ func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
 	if err != nil {
 		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
 	}
+	// TRR this is giving us the wrong thing
+	//
+	// (dlv) p allowedRefs
+	// map[sigs.k8s.io/gateway-api/apis/v1.Namespace][]sigs.k8s.io/gateway-api/apis/v1beta1.ReferenceGrantTo [
+	// "kualalumpur": [
+	// (*"sigs.k8s.io/gateway-api/apis/v1beta1.ReferenceGrantTo")(0xc000cbdd40),
+	// ],
+	// ]
+	// (dlv) p br
+	// github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi.PluginLabelReference {
+	// Namespace: *"qyzylorda",
+	// Name: "rate-limit-aygerim",}
+	// (dlv)
 	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
 		Group:     gatewayapi.Group(r.Referer.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayapi.Kind(r.Referer.GetObjectKind().GroupVersionKind().Kind),
@@ -962,7 +975,7 @@ func extractReferredPluginNamespace(
 	//
 	// The referer is the entity that the KongPlugin is associated with.
 	if plugin.Namespace == "" {
-		return referer.GetNamespace(), nil
+		return plugin.Namespace, nil
 	}
 
 	// remote KongPlugin, permitted if ReferenceGrant allows.
@@ -977,5 +990,5 @@ func extractReferredPluginNamespace(
 	if err != nil {
 		return "", err
 	}
-	return plugin.Namespace, nil
+	return referer.GetNamespace(), nil
 }

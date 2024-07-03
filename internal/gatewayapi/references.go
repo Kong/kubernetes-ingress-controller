@@ -101,6 +101,7 @@ func isRefAllowedByGrant(
 	name string,
 	group string,
 	kind string,
+	// TRR this is backwards keyed
 	allowed map[Namespace][]ReferenceGrantTo,
 ) bool {
 	if namespace == nil {
@@ -138,7 +139,7 @@ func GetPermittedForReferenceGrantFrom(
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				allowed[Namespace(grant.ObjectMeta.Namespace)] = append(allowed[Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
+				allowed[Namespace(otherFrom.Namespace)] = append(allowed[Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
 			}
 		}
 	}

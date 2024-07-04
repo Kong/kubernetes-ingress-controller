@@ -7,6 +7,14 @@ jobs:
   kongintegration-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    strategy:
+      matrix:
+        include:
+          - name: enterprise
+            enterprise: true
+          - name: oss
+            enterprise: false
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -16,10 +24,22 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: set kong version
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: set kong oss version
+        if: ${{ !matrix.enterprise }}
         run: |
           echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
           echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
+
+      - name: set kong ee version
+        if: ${{ matrix.enterprise }}
+        run: |
+          echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
 
       - uses: jdx/mise-action@v2
         with:
@@ -30,13 +50,15 @@ jobs:
         env:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
-          GOTESTSUM_JUNITFILE: kongintegration-tests.xml
+          GOTESTSUM_JUNITFILE: kongintegration-${{ matrix.name }}-tests.xml
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          TEST_KONG_ENTERPRISE: ${{ matrix.enterprise }}
 
       - name: collect test coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-kongintegration
+          name: coverage-kongintegration-${{ matrix.name }}
           path: "coverage.*.out"
 
       - name: collect test report

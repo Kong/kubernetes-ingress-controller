@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/lo"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -195,7 +196,11 @@ func (ks *KongState) FillCustomEntities(
 
 		// Fill the "foreign" fields if the entity has such fields referencing services/routes/consumers.
 		// First Find out possible foreign field combinations attached to the KCE resource.
-		foreignFieldCombinations := findCustomEntityForeignFields(logger, entity, schema, pluginRels, workspace)
+		foreignFieldCombinations, err := findCustomEntityForeignFields(logger, s, entity, schema, pluginRels, workspace)
+		if err != nil {
+			failuresCollector.PushResourceFailure(fmt.Sprintf("failed to find attached foreign entities for custom entity: %v", err), entity)
+			continue
+		}
 		// generate Kong entities from the fields in the KCE itself and attached foreign entities.
 		generatedEntities, err := generateCustomEntities(entity, foreignFieldCombinations)
 		if err != nil {
@@ -275,43 +280,55 @@ func (ks *KongState) sortCustomEntities() {
 	}
 }
 
-func findCustomEntityRelatedPlugin(k8sEntity *kongv1alpha1.KongCustomEntity) (string, bool) {
+func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, k8sEntity *kongv1alpha1.KongCustomEntity) (string, bool, error) {
 	// Find referred entity via the plugin in its spec.parentRef.
 	// Then we can fetch the referred service/route/consumer from the reference relations of the plugin.
 	parentRef := k8sEntity.Spec.ParentRef
-	var namespace string
 	// Abort if the parentRef is empty or does not refer to a plugin.
 	if parentRef == nil ||
 		(parentRef.Group == nil || *parentRef.Group != kongv1alpha1.GroupVersion.Group) {
-		return "", false
+		return "", false, nil
 	}
 	if parentRef.Kind == nil || (*parentRef.Kind != "KongPlugin" && *parentRef.Kind != "KongClusterPlugin") {
-		return "", false
+		return "", false, nil
 	}
+
 	// Extract the plugin key to get the plugin relations.
-	if parentRef.Namespace == nil || *parentRef.Namespace == "" {
-		namespace = k8sEntity.Namespace
-	} else {
-		namespace = *parentRef.Namespace
+	paretRefNamespace := lo.FromPtrOr(parentRef.Namespace, "")
+	// if the namespace in parentRef is not same as the namespace of KCE itself, check if the reference is allowed by ReferenceGrant.
+	if paretRefNamespace != "" && paretRefNamespace != k8sEntity.Namespace {
+		paretRefNamespace, err := extractReferredPluginNamespace(logger, cacheStore, k8sEntity, annotations.NamespacedKongPlugin{
+			Namespace: paretRefNamespace,
+			Name:      parentRef.Name,
+		})
+		if err != nil {
+			return "", false, err
+		}
+		return paretRefNamespace + ":" + parentRef.Name, true, nil
 	}
-	return namespace + ":" + parentRef.Name, true
+
+	return k8sEntity.Namespace + ":" + parentRef.Name, true, nil
 }
 
 func findCustomEntityForeignFields(
 	logger logr.Logger,
+	cacheStore store.Storer,
 	k8sEntity *kongv1alpha1.KongCustomEntity,
 	schema EntitySchema,
 	pluginRelEntities PluginRelatedEntitiesRefs,
 	workspace string,
-) [][]entityForeignFieldValue {
-	pluginKey, ok := findCustomEntityRelatedPlugin(k8sEntity)
+) ([][]entityForeignFieldValue, error) {
+	pluginKey, ok, err := findCustomEntityRelatedPlugin(logger, cacheStore, k8sEntity)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	// Get the relations with other entities of the plugin.
 	rels, ok := pluginRelEntities.RelatedEntities[pluginKey]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	var (
@@ -378,7 +395,7 @@ func findCustomEntityForeignFields(
 		ret = append(ret, foreignFieldValues)
 	}
 
-	return ret
+	return ret, nil
 }
 
 // generateCustomEntities generates Kong entities from KongCustomEntity resource and combinations of attached foreign entities.

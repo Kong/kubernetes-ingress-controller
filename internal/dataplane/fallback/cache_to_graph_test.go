@@ -367,13 +367,13 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			),
 			expectedAdjacencyMap: map[string][]string{
 				"configuration.konghq.com/KongPlugin:test-namespace/test-plugin": {
-					"configuration.konghq.com/KongCustomEntities:test-namespace/test-entity-kong-plugin",
+					"configuration.konghq.com/KongCustomEntity:test-namespace/test-entity-kong-plugin",
 				},
 				"configuration.konghq.com/KongClusterPlugin:test-namespace/test-cluster-plugin": {
-					"configuration.konghq.com/KongCustomEntities:test-namespace/test-entity-kong-cluster-plugin",
+					"configuration.konghq.com/KongCustomEntity:test-namespace/test-entity-kong-cluster-plugin",
 				},
-				"configuration.konghq.com/KongCustomEntities:test-namespace/test-entity-kong-plugin":         {},
-				"configuration.konghq.com/KongCustomEntities:test-namespace/test-entity-kong-cluster-plugin": {},
+				"configuration.konghq.com/KongCustomEntity:test-namespace/test-entity-kong-plugin":         {},
+				"configuration.konghq.com/KongCustomEntity:test-namespace/test-entity-kong-cluster-plugin": {},
 			},
 		},
 	}

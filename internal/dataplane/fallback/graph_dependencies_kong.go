@@ -151,7 +151,7 @@ func resolveKongCustomEntityDependencies(cache store.CacheStores, obj *kongv1alp
 	}
 
 	parentRef := *obj.Spec.ParentRef
-	groupMatches := parentRef.Group != nil && *parentRef.Group == "configuration.konghq.com"
+	groupMatches := parentRef.Group != nil && *parentRef.Group == kongv1.GroupVersion.Group
 
 	if isKongPlugin := parentRef.Kind != nil && *parentRef.Kind == "KongPlugin" && groupMatches; isKongPlugin {
 		// TODO: Cross-namespace references are not supported yet.

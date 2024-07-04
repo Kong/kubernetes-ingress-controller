@@ -380,7 +380,7 @@ type fakeSchemaService struct{}
 
 func (f fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schema, error) {
 	switch entityType {
-	case "test-custom-entities":
+	case "degraphql_routes":
 		return kong.Schema{
 			"fields": []interface{}{
 				map[string]interface{}{

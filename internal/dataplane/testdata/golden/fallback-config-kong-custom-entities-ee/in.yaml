@@ -48,9 +48,9 @@ metadata:
   namespace: default
   name: p1
   uid: e97ca177-6bd2-425f-b3b1-10a521ac02a0
-plugin: p1
+plugin: degraphql
 config:
-  pluginConfigKey: pluginConfigValue
+  graphql_server_path: /v1/graphql
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongCustomEntity
@@ -62,13 +62,14 @@ metadata:
     test.konghq.com/broken: "true"
 spec:
   controllerName: kong
-  type: test-custom-entities
+  type: degraphql_routes
   parentRef:
-    group: "configuration.konghq.com"
-    kind: "KongPlugin"
-    name: "p1"
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p1
   fields:
-    customEntityField: 1
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
 
 # Set n. 2: Service s2, Ingress i2, Plugin p2, CustomEntity ce2. i2 is broken.
 # We expect that no service, route or plugin is created. Only the custom entity with no references is created.
@@ -118,9 +119,9 @@ metadata:
   namespace: default
   name: p2
   uid: 993e367c-0cd4-4808-8a55-7da0289b0400
-plugin: p2
+plugin: degraphql
 config:
-  pluginConfigKey: pluginConfigValue
+  graphql_server_path: /v1/graphql
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongCustomEntity
@@ -130,13 +131,14 @@ metadata:
   uid: cece05c0-543d-4080-b470-7cd7bd4151d3
 spec:
   controllerName: kong
-  type: test-custom-entities
+  type: degraphql_routes
   parentRef:
-    group: "configuration.konghq.com"
-    kind: "KongPlugin"
-    name: "p2"
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p2
   fields:
-    customEntityField: 2
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
 
 # Set n. 3: Service s3, Ingress i3, Plugin p3, CustomEntity ce3. p3 is broken.
 # We expect that no entities are created at all as all of them depend on the broken plugin.
@@ -187,28 +189,29 @@ metadata:
   uid: 65dcd9c3-2cdb-4ce2-aff7-6e5764730029
   annotations:
     test.konghq.com/broken: "true"
-plugin: p3
+plugin: degraphql
 config:
-  pluginConfigKey: pluginConfigValue
+  graphql_server_path: /v1/graphql
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongCustomEntity
 metadata:
   namespace: default
-  name: degraphql-route
+  name: ce3
   uid: 24e0ef06-b08a-460f-8472-8823684644d5
 spec:
   controllerName: kong
-  type: test-custom-entities
+  type: degraphql_routes
   parentRef:
-    group: "configuration.konghq.com"
-    kind: "KongPlugin"
-    name: "p3"
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p3
   fields:
-    customEntityField: 3
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
 
-# Set n. 4: Service s4, Ingress i4, Plugin p4, CustomEntity ce4. s4 is broken.
-# We expect that no service, route or plugin is created. Only the custom entity with no references is created.
+## Set n. 4: Service s4, Ingress i4, Plugin p4, CustomEntity ce4. s4 is broken.
+## We expect that no service, route or plugin is created. Only the custom entity with no references is created.
 ---
 apiVersion: v1
 kind: Service
@@ -256,9 +259,9 @@ metadata:
   namespace: default
   name: p4
   uid: 770be827-8328-4fc5-8bef-200157e532ab
-plugin: p3
+plugin: degraphql
 config:
-  pluginConfigKey: pluginConfigValue
+  graphql_server_path: /v1/graphql
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongCustomEntity
@@ -268,10 +271,11 @@ metadata:
   uid: 220db4f5-bba4-4a1d-924f-39280fb9049c
 spec:
   controllerName: kong
-  type: test-custom-entities
+  type: degraphql_routes
   parentRef:
-    group: "configuration.konghq.com"
-    kind: "KongPlugin"
-    name: "p4"
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p4
   fields:
-    customEntityField: 4
+    uri: "/contacts"
+    query: "query{ contacts { name } }"

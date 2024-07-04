@@ -40,11 +40,11 @@ apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
   namespace: default
-  name: p1
+  name: degraphql
   uid: e97ca177-6bd2-425f-b3b1-10a521ac02a0
-plugin: p1
+plugin: degraphql
 config:
-  pluginConfigKey: pluginConfigValue
+  graphql_server_path: /v1/graphql
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongCustomEntity
@@ -54,10 +54,11 @@ metadata:
   uid: af6056e0-e5c7-4bfa-8643-79ef16311686
 spec:
   controllerName: kong
-  type: test-custom-entities
+  type: degraphql_routes
   parentRef:
-    group: "configuration.konghq.com"
-    kind: "KongPlugin"
-    name: "p1"
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p1
   fields:
-    customEntityField: 1
+    uri: "/contacts"
+    query: "query{ contacts { name } }"

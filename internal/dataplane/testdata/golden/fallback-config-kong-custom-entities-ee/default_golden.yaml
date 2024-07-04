@@ -1,8 +1,8 @@
 _format_version: "3.0"
 plugins:
 - config:
-    pluginConfigKey: pluginConfigValue
-  name: p1
+    graphql_server_path: /v1/graphql
+  name: degraphql
   route: default.i1.s1..80
   tags:
   - k8s-name:p1

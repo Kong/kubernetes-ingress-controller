@@ -1,16 +1,4 @@
 _format_version: "3.0"
-plugins:
-- config:
-    pluginConfigKey: pluginConfigValue
-  name: p1
-  route: default.i1.s1..80
-  tags:
-  - k8s-name:p1
-  - k8s-namespace:default
-  - k8s-kind:KongPlugin
-  - k8s-uid:e97ca177-6bd2-425f-b3b1-10a521ac02a0
-  - k8s-group:configuration.konghq.com
-  - k8s-version:v1
 services:
 - connect_timeout: 60000
   host: s1.default.80.svc
@@ -50,9 +38,6 @@ services:
   - k8s-uid:ddc15c38-7f1b-41cb-8b57-46465a7f4427
   - k8s-version:v1
   write_timeout: 60000
-test-custom-entities:
-- customEntityField: 2
-- customEntityField: 4
 upstreams:
 - algorithm: round-robin
   name: s1.default.80.svc

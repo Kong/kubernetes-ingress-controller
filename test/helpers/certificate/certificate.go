@@ -54,7 +54,7 @@ func WithAlreadyExpired() SelfSignedCertificateOption {
 
 // MustGenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
 // Certificate is self-signed thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.Certificate {
+func MustGenerateSelfSignedCert(opts ...SelfSignedCertificateOption) tls.Certificate {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -66,8 +66,8 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.C
 		DNSNames:   []string{},
 	}
 
-	for _, decorator := range decorators {
-		options = decorator(options)
+	for _, opt := range opts {
+		options = opt(options)
 	}
 
 	notBefore := time.Now()
@@ -112,8 +112,8 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.C
 // MustGenerateSelfSignedCertPEMFormat generates self-signed certificate
 // and returns certificate and key in PEM format. Certificate is self-signed
 // thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCertificateOption) (cert []byte, key []byte) {
-	tlsCert := MustGenerateSelfSignedCert(decorators...)
+func MustGenerateSelfSignedCertPEMFormat(opts ...SelfSignedCertificateOption) (cert []byte, key []byte) {
+	tlsCert := MustGenerateSelfSignedCert(opts...)
 
 	certBlock := &pem.Block{
 		Type:  "CERTIFICATE",

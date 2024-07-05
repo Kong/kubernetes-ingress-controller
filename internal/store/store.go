@@ -799,6 +799,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1alpha1.KongCustomEntity{}, nil
 	case kongv1alpha1.GroupVersion.WithKind("KongVault"):
 		return &kongv1alpha1.KongVault{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongCustomEntity"):
+		return &kongv1alpha1.KongCustomEntity{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

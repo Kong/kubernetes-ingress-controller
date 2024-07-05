@@ -95,6 +95,11 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- `KongCustomEntity` is now supported by the `FallbackConfiguration` feature.
+  [#6286](https://github.com/Kong/kubernetes-ingress-controller/pull/6286)
+
 ### Fixed
 
 - Services using `Secret`s containing the same certificate as client certificates

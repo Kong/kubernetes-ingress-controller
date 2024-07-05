@@ -48,6 +48,7 @@ var (
 			// Feature flags that are directly propagated from the feature gates get their defaults.
 			FillIDs:           defaults.Enabled(featuregates.FillIDsFeature),
 			KongServiceFacade: defaults.Enabled(featuregates.KongServiceFacade),
+			KongCustomEntity:  defaults.Enabled(featuregates.KongCustomEntity),
 		}
 	}
 )
@@ -370,7 +371,33 @@ func extractObjectsFromYAML(t *testing.T, filePath string) [][]byte {
 type fakeSchemaServiceProvier struct{}
 
 func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
-	return translator.UnavailableSchemaService{}
+	return fakeSchemaService{}
+}
+
+// fakeSchemaService is a stub implementation of the kong.AbstractSchemaService interface returning hardcoded schemas
+// for testing purposes.
+type fakeSchemaService struct{}
+
+func (f fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schema, error) {
+	switch entityType {
+	case "degraphql_routes":
+		return kong.Schema{
+			"fields": []interface{}{
+				map[string]interface{}{
+					"service": map[string]interface{}{
+						"type":      "foreign",
+						"reference": "services",
+					},
+				},
+			},
+		}, nil
+	default:
+		return kong.Schema{}, nil
+	}
+}
+
+func (f fakeSchemaService) Validate(context.Context, kong.EntityType, any) (bool, string, error) {
+	return true, "", nil
 }
 
 func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []client.Object) []byte {

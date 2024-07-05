@@ -21,7 +21,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -398,8 +397,14 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
 			for _, plugin := range pluginList {
-				// pretend we have a full Ingress struct for reference checks
+				// pretend we have a full Ingress struct for reference checks.
+				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: ingress.GroupVersionKind.Group + "/" + ingress.GroupVersionKind.Version,
+						Kind:       ingress.GroupVersionKind.Kind,
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,
@@ -445,19 +450,20 @@ func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
 		Namespace: gatewayapi.Namespace(r.Referer.GetNamespace()),
 	}, grants)
 
+	for ns, allowedItems := range allowed {
+		for _, item := range allowedItems {
+			fmt.Printf("Allow grant to %s/%s in namespace %s\n", item.Group, item.Kind, ns)
+		}
+	}
+
 	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
 	// name and namespace
-	virtualReference := gatewayapi.PluginLabelReference{
-		Namespace: lo.ToPtr(r.Referer.GetNamespace()),
+	pluginReference := gatewayapi.PluginLabelReference{
+		Namespace: &r.Namespace,
 		Name:      r.Name,
 	}
-	virtualPlugin := &kongv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name,
-		},
-	}
-	if !gatewayapi.NewRefCheckerForKongPlugin(virtualPlugin, virtualReference).IsRefAllowedByGrant(allowed) {
+
+	if !gatewayapi.NewRefCheckerForKongPlugin(r.Referer, pluginReference).IsRefAllowedByGrant(allowed) {
 		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
 			r.Referer.GetObjectKind().GroupVersionKind().Kind, r.Referer.GetNamespace(), r.Name, r.Namespace)
 	}
@@ -759,6 +765,11 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 			for _, plugin := range pluginList {
 				// Pretend we have a full Ingress struct for reference checks.
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: ingress.GroupVersionKind.Group + "/" + ingress.GroupVersionKind.Version,
+						Kind:       ingress.GroupVersionKind.Kind,
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,

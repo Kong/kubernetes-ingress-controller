@@ -1633,7 +1633,7 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 			})
 			require.NoError(t, err)
 			err = isRemotePluginReferenceAllowed(s, pluginReference{
-				Referer:   tc.referrer,
+				Referrer:  tc.referrer,
 				Namespace: tc.pluginNamespace,
 				Name:      tc.pluginName,
 			})

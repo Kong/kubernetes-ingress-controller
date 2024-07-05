@@ -433,7 +433,7 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 }
 
 type pluginReference struct {
-	Referer   client.Object
+	Referrer  client.Object
 	Namespace string
 	Name      string
 }
@@ -445,27 +445,22 @@ func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
 		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
 	}
 	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
-		Group:     gatewayapi.Group(r.Referer.GetObjectKind().GroupVersionKind().Group),
-		Kind:      gatewayapi.Kind(r.Referer.GetObjectKind().GroupVersionKind().Kind),
-		Namespace: gatewayapi.Namespace(r.Referer.GetNamespace()),
+		Group:     gatewayapi.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
+		Kind:      gatewayapi.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
+		Namespace: gatewayapi.Namespace(r.Referrer.GetNamespace()),
 	}, grants)
 
-	for ns, allowedItems := range allowed {
-		for _, item := range allowedItems {
-			fmt.Printf("Allow grant to %s/%s in namespace %s\n", item.Group, item.Kind, ns)
-		}
-	}
-
 	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
-	// name and namespace
+	// name and namespace.
 	pluginReference := gatewayapi.PluginLabelReference{
 		Namespace: &r.Namespace,
 		Name:      r.Name,
 	}
-
-	if !gatewayapi.NewRefCheckerForKongPlugin(r.Referer, pluginReference).IsRefAllowedByGrant(allowed) {
+	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
+	// we should put the referrer on the "target" and the plugin on the "backendRef".
+	if !gatewayapi.NewRefCheckerForKongPlugin(r.Referrer, pluginReference).IsRefAllowedByGrant(allowed) {
 		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
-			r.Referer.GetObjectKind().GroupVersionKind().Kind, r.Referer.GetNamespace(), r.Name, r.Namespace)
+			r.Referrer.GetObjectKind().GroupVersionKind().Kind, r.Referrer.GetNamespace(), r.Name, r.Namespace)
 	}
 	return nil
 }
@@ -794,7 +789,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 }
 
 func extractReferredPluginNamespace(
-	cacheStore store.Storer, referer client.Object, plugin annotations.NamespacedKongPlugin,
+	cacheStore store.Storer, referrer client.Object, plugin annotations.NamespacedKongPlugin,
 ) (string, error) {
 	// There are 2 types of KongPlugin references: local and remote.
 	// A local reference is one where the KongPlugin is in the same namespace as the referer.
@@ -804,14 +799,14 @@ func extractReferredPluginNamespace(
 	//
 	// The referer is the entity that the KongPlugin is associated with.
 	if plugin.Namespace == "" {
-		return referer.GetNamespace(), nil
+		return referrer.GetNamespace(), nil
 	}
 
 	// remote KongPlugin, permitted if ReferenceGrant allows.
 	err := isRemotePluginReferenceAllowed(
 		cacheStore,
 		pluginReference{
-			Referer:   referer,
+			Referrer:  referrer,
 			Namespace: plugin.Namespace,
 			Name:      plugin.Name,
 		},

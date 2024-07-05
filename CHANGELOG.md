@@ -108,6 +108,9 @@ Adding a new version? You'll need three changes:
 - Generate one entity for each attached foreign entity if a `KongCustomEntity`
   resource is attached to multiple foreign Kong entities.
   [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
+- Fixed the reference checker in checking permission of remote plugins to use
+  the correct namespace of `ReferenceGrant` required.
+  [#6295](https://github.com/Kong/kubernetes-ingress-controller/pull/6295)
 
 ## 3.2.2
 

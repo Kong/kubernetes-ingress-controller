@@ -1,6 +1,7 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -109,44 +110,48 @@ func isRefAllowedByGrant(
 	kind string,
 	allowed map[Namespace][]ReferenceGrantTo,
 ) bool {
-	scoped := log.WithName("refchecker")
+	scoped := log.WithName("refchecker").WithValues(
+		"tmp-log-scope", "TRR",
+		"namespace", *namespace,
+		"requested-group", group,
+		"requested-kind", kind,
+		"requested-name", name,
+	)
 	if namespace == nil {
 		// local references are always fine
 		return true
 	}
-	for _, to := range allowed[Namespace(*namespace)] {
+	scoped.V(1).Info(fmt.Sprintf("checking %d entries for namespace", len(allowed[Namespace(*namespace)])))
+	for i, to := range allowed[Namespace(*namespace)] {
 		toName := ""
 		if to.Name != nil {
 			toName = string(*to.Name)
 		}
-		logValues := []any{
-			"tmp-log-scope", "TRR",
-			"namespace", *namespace,
+		scoped = scoped.WithValues(
 			"to-group", to.Group,
 			"to-kind", to.Kind,
 			"to-name", toName,
-			"requested-group", group,
-			"requested-kind", kind,
-			"requested-name", name,
-		}
+			"to-index", i,
+		)
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {
 					//scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
-					scoped.V(1).Info("requested ref allowed by grant", logValues...)
+					scoped.V(1).Info("requested ref allowed by grant")
 					return true
 				}
 			} else {
 				// if no referent name specified, matching group/kind is sufficient
 				//scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
-				scoped.V(1).Info("requested ref allowed by grant", logValues...)
+				scoped.V(1).Info("requested ref allowed by grant To")
 				return true
 			}
 		}
 		//scoped.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
-		scoped.V(1).Info("no grant match for requested ref", logValues...)
+		scoped.V(1).Info("grant To did not match requested ref target")
 	}
 
+	scoped.V(1).Info("no grants matching requested ref target")
 	return false
 }
 

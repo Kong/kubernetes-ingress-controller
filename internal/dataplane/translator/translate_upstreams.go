@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -79,7 +80,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port)
 
 				if len(newTargets) == 0 {
-					t.logger.V(util.InfoLevel).Info("No targets could be found for kubernetes service",
+					t.logger.V(logging.InfoLevel).Info("No targets could be found for kubernetes service",
 						"namespace", k8sService.Namespace, "name", k8sService.Name, "kong_service", *service.Name)
 				}
 
@@ -117,7 +118,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 			targets := lo.Values(targetMap)
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
-				t.logger.V(util.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
+				t.logger.V(logging.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
 			}
 
 			// define the upstream including all the newly populated targets
@@ -207,7 +208,7 @@ func getServiceEndpoints(
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
-		logger.V(util.DebugLevel).Info("Unable to retrieve IngressClassParameters", "error", err)
+		logger.V(logging.DebugLevel).Info("Unable to retrieve IngressClassParameters", "error", err)
 	} else {
 		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
@@ -219,7 +220,7 @@ func getServiceEndpoints(
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
-		logger.V(util.DebugLevel).Info("No active endpoints")
+		logger.V(logging.DebugLevel).Info("No active endpoints")
 	}
 
 	return targetsForEndpoints(endpoints)
@@ -277,7 +278,7 @@ func getEndpoints(
 
 	// ExternalName services
 	if service.Spec.Type == corev1.ServiceTypeExternalName {
-		logger.V(util.DebugLevel).Info("Found service of type=ExternalName")
+		logger.V(logging.DebugLevel).Info("Found service of type=ExternalName")
 		return []util.Endpoint{
 			{
 				Address: service.Spec.ExternalName,
@@ -286,13 +287,13 @@ func getEndpoints(
 		}
 	}
 
-	logger.V(util.DebugLevel).Info("Fetching EndpointSlices")
+	logger.V(logging.DebugLevel).Info("Fetching EndpointSlices")
 	endpointSlices, err := getEndpointSlices(service.Namespace, service.Name)
 	if err != nil {
 		logger.Error(err, "Error fetching EndpointSlices")
 		return []util.Endpoint{}
 	}
-	logger.V(util.DebugLevel).Info("Fetched EndpointSlices", "count", len(endpointSlices))
+	logger.V(logging.DebugLevel).Info("Fetched EndpointSlices", "count", len(endpointSlices))
 
 	// Avoid duplicated upstream servers when the service contains
 	// multiple port definitions sharing the same target port.
@@ -327,7 +328,7 @@ func getEndpoints(
 			}
 		}
 	}
-	logger.V(util.DebugLevel).Info("Found endpoints", "endpoints", upstreamServers)
+	logger.V(logging.DebugLevel).Info("Found endpoints", "endpoints", upstreamServers)
 	return upstreamServers
 }
 

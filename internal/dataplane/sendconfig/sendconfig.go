@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -63,9 +64,9 @@ func PerformUpdate(
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
-				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Konnect")
+				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Konnect")
 			} else {
-				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Kong")
+				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
 			return oldSHA, nil
 		}
@@ -105,9 +106,9 @@ func PerformUpdate(
 	}
 
 	if client.IsKonnect() {
-		logger.V(util.InfoLevel).Info("Successfully synced configuration to Konnect")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Konnect")
 	} else {
-		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Kong")
 	}
 
 	return newSHA, nil

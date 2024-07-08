@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -123,7 +124,7 @@ func ObjectReferenceIndexerReferent(obj interface{}) ([]string, error) {
 
 // SetObjectReference adds or updates a reference record between referrer and referent in reference cache.
 func (c CacheIndexers) SetObjectReference(referrer client.Object, referent client.Object) error {
-	c.logger.V(util.DebugLevel).Info("Set reference relation",
+	c.logger.V(logging.DebugLevel).Info("Set reference relation",
 		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
 		"referrer_namespace", referrer.GetNamespace(),
 		"referrer_name", referrer.GetName(),
@@ -140,7 +141,7 @@ func (c CacheIndexers) SetObjectReference(referrer client.Object, referent clien
 
 // DeleteObjectReference deletes the reference record between referrer and referent from reference cache.
 func (c CacheIndexers) DeleteObjectReference(referrer client.Object, referent client.Object) error {
-	c.logger.V(util.DebugLevel).Info("Delete reference relation",
+	c.logger.V(logging.DebugLevel).Info("Delete reference relation",
 		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
 		"referrer_namespace", referrer.GetNamespace(),
 		"referrer_name", referrer.GetName(),
@@ -244,7 +245,7 @@ func (c CacheIndexers) DeleteObjectIfNotReferred(obj client.Object, dataplaneCli
 		return err
 	}
 	if !referred {
-		c.logger.V(util.DebugLevel).Info("Delete object from cache because it is no longer referred",
+		c.logger.V(logging.DebugLevel).Info("Delete object from cache because it is no longer referred",
 			"kind", obj.GetObjectKind(),
 			"namespace", obj.GetNamespace(),
 			"name", obj.GetName(),

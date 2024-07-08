@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=list;watch
@@ -45,7 +45,7 @@ type DynamicCRDController struct {
 
 func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
 	if r.allRequiredCRDsInstalled() {
-		r.Log.V(util.DebugLevel).Info("All required CustomResourceDefinitions are installed, skipping DynamicCRDController set up")
+		r.Log.V(logging.DebugLevel).Info("All required CustomResourceDefinitions are installed, skipping DynamicCRDController set up")
 		return r.setupController(mgr)
 	}
 
@@ -72,21 +72,21 @@ func (r *DynamicCRDController) Reconcile(ctx context.Context, req ctrl.Request) 
 	crd := new(apiextensionsv1.CustomResourceDefinition)
 	if err := r.Manager.GetClient().Get(ctx, req.NamespacedName, crd); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
+			log.V(logging.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Processing CustomResourceDefinition", "name", req.Name)
+	log.V(logging.DebugLevel).Info("Processing CustomResourceDefinition", "name", req.Name)
 
 	if !r.allRequiredCRDsInstalled() {
-		log.V(util.DebugLevel).Info("Still not all required CustomResourceDefinitions are installed, waiting")
+		log.V(logging.DebugLevel).Info("Still not all required CustomResourceDefinitions are installed, waiting")
 		return ctrl.Result{}, nil
 	}
 
 	var startControllerErr error
 	r.startControllerOnce.Do(func() {
-		log.V(util.InfoLevel).Info("All required CustomResourceDefinitions are installed, setting up the controller")
+		log.V(logging.InfoLevel).Info("All required CustomResourceDefinitions are installed, setting up the controller")
 		startControllerErr = r.setupController(r.Manager)
 	})
 	if startControllerErr != nil {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -223,7 +224,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 					listener.Name, route.GetName(), gateway.Name, err,
 				)
 			} else if !ok {
-				listenerLogger.V(util.DebugLevel).Info("Route does not match listener's allowed routes")
+				listenerLogger.V(logging.DebugLevel).Info("Route does not match listener's allowed routes")
 				continue
 			}
 			allowedByAllowedRoutes = true
@@ -232,14 +233,14 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			// - Check if a listener status exists with a matching type (via SupportedKinds).
 			// - Check if it matches the requested listener by name (if specified).
 			if err := existsMatchingListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
-				listenerLogger.V(util.DebugLevel).Info("Listener does not support this route", "reason", err.Error())
+				listenerLogger.V(logging.DebugLevel).Info("Listener does not support this route", "reason", err.Error())
 				continue
 			} else { //nolint:revive
 				allowedBySupportedKinds = true
 			}
 
 			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
-				listenerLogger.V(util.DebugLevel).Info("Listener is not ready", "reason", err.Error())
+				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
 				continue
 			} else { //nolint:revive
 				listenerReady = true
@@ -248,7 +249,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			// Check if listener name matches.
 			if parentRef.SectionName != nil {
 				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
-					listenerLogger.V(util.DebugLevel).Info(
+					listenerLogger.V(logging.DebugLevel).Info(
 						"Listener name does not match parentRef.SectionName",
 						"parentRef_sectionName", parentRef.SectionName,
 					)
@@ -262,7 +263,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				if *parentRef.Port != listener.Port {
 					// This ParentRef has a port specified and it's different
 					// than current listener's port.
-					listenerLogger.V(util.DebugLevel).Info(
+					listenerLogger.V(logging.DebugLevel).Info(
 						"Listener port does not match parentRef.Port",
 						"listener_port", listener.Port, "parentRef_port", parentRef.Port,
 					)
@@ -273,7 +274,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 
 			// Check if listener protocol matches
 			if !routeTypeMatchesListenerType(route, listener) {
-				listenerLogger.V(util.DebugLevel).Info(
+				listenerLogger.V(logging.DebugLevel).Info(
 					"Route's type does not match listener's type",
 					"route_name", route.GetName(),
 				)
@@ -286,7 +287,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			} else {
 				condFalse := metav1.ConditionFalse
 				matchingHostname = &condFalse
-				listenerLogger.V(util.DebugLevel).Info("Route's hostname does not match listener's hostname")
+				listenerLogger.V(logging.DebugLevel).Info("Route's hostname does not match listener's hostname")
 				continue
 			}
 

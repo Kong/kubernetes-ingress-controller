@@ -143,6 +143,10 @@ func isRefAllowedByGrant(
 	kind string,
 	allowed map[Namespace][]ReferenceGrantTo,
 ) bool {
+	if namespace == nil {
+		// local references are always fine
+		return true
+	}
 	scoped := log.WithValues(
 		"tmp-log-scope", "TRR",
 		"namespace", *namespace,
@@ -150,10 +154,6 @@ func isRefAllowedByGrant(
 		"requested-kind", kind,
 		"requested-name", name,
 	)
-	if namespace == nil {
-		// local references are always fine
-		return true
-	}
 	scoped.V(1).Info(fmt.Sprintf("checking %d entries for namespace", len(allowed[Namespace(*namespace)])))
 	for i, to := range allowed[Namespace(*namespace)] {
 		toName := ""

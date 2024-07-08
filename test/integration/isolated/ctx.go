@@ -4,6 +4,7 @@ package isolated
 
 import (
 	"context"
+	"crypto/x509"
 	"net/url"
 	"strings"
 	"testing"
@@ -201,4 +202,20 @@ func GetIngressClassFromCtx(ctx context.Context) string {
 		return ""
 	}
 	return r.(string)
+}
+
+type _certPool struct{}
+
+// SetCertPoolInCtx sets the cert pool in the context.
+func SetCertPoolInCtx(ctx context.Context, certPool *x509.CertPool) context.Context {
+	return setInCtx(ctx, _certPool{}, certPool)
+}
+
+// GetCertPoolFromCtx gets the cert pool from the context.
+func GetCertPoolFromCtx(ctx context.Context) *x509.CertPool {
+	cp := ctx.Value(_certPool{})
+	if cp == nil {
+		return nil
+	}
+	return cp.(*x509.CertPool)
 }

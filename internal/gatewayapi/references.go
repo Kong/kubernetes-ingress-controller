@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -131,16 +130,19 @@ func isRefAllowedByGrant(
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {
-					log.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
+					//log.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
+					log.V(1).Info("requested ref allowed by grant", logValues...)
 					return true
 				}
 			} else {
 				// if no referent name specified, matching group/kind is sufficient
-				log.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
+				//log.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
+				log.V(1).Info("requested ref allowed by grant", logValues...)
 				return true
 			}
 		}
-		log.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
+		//log.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
+		log.V(1).Info("no grant match for requested ref", logValues...)
 	}
 
 	return false
@@ -162,7 +164,8 @@ func GetPermittedForReferenceGrantFrom(
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				log.V(util.DebugLevel).Info("grant from equal, adding to allowed",
+				//log.V(util.DebugLevel).Info("grant from equal, adding to allowed",
+				log.V(1).Info("grant from equal, adding to allowed",
 					"grant-namespace", grant.Name,
 					"grant-name", grant.Name,
 					"grant-from-namespace", otherFrom.Namespace,
@@ -178,7 +181,8 @@ func GetPermittedForReferenceGrantFrom(
 					if to.Name != nil {
 						name = string(*to.Name)
 					}
-					log.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
+					//log.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
+					log.V(1).Info("added ReferenceGrantTo to namespace allowed list",
 						"namespace", grant.ObjectMeta.Namespace,
 						"to-group", to.Group,
 						"to-kind", to.Kind,
@@ -186,7 +190,8 @@ func GetPermittedForReferenceGrantFrom(
 					)
 				}
 			} else {
-				log.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
+				//log.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
+				log.V(1).Info("grant from not equal, excluding from allowed",
 					"grant-namespace", grant.Name,
 					"grant-name", grant.Name,
 					"grant-from-namespace", otherFrom.Namespace,

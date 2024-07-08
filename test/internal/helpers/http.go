@@ -2,35 +2,76 @@ package helpers
 
 import (
 	"bytes"
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// DefaultHTTPClient returns a client that should be used by default in tests.
-// All defaults that should be propagated to tests for use should be changed in here.
-func DefaultHTTPClient() *http.Client {
-	return &http.Client{
-		Timeout: 10 * time.Second,
+type httpClientCfg struct {
+	resolveHostTo string
+	rootCAs       *x509.CertPool
+}
+
+// HTTPClientOption is a functional option for configuring the HTTP client.
+type HTTPClientOption func(*httpClientCfg)
+
+// WithResolveHostTo sets the host to resolve to (equivalent of `curl --resolve`).
+func WithResolveHostTo(host string) HTTPClientOption {
+	return func(opts *httpClientCfg) {
+		opts.resolveHostTo = host
 	}
 }
 
-func DefaultHTTPClientWithProxy(proxyURL *url.URL) *http.Client {
-	tr := &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
+// WithRootCAs sets the root CAs for the client.
+func WithRootCAs(rootCAs *x509.CertPool) HTTPClientOption {
+	return func(opts *httpClientCfg) {
+		opts.rootCAs = rootCAs
 	}
-	return &http.Client{
-		Transport: tr,
-		Timeout:   10 * time.Second,
+}
+
+// DefaultHTTPClient returns a client that should be used by default in tests.
+// All defaults that should be propagated to tests for use should be changed in here.
+func DefaultHTTPClient(opts ...HTTPClientOption) *http.Client {
+	var cfg httpClientCfg
+	for _, opt := range opts {
+		opt(&cfg)
 	}
+
+	tr := cleanhttp.DefaultPooledTransport()
+	if cfg.rootCAs != nil {
+		tr.TLSClientConfig = &tls.Config{
+			RootCAs:    cfg.rootCAs,
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+	// It provides the equivalent of `curl --resolve` for the client.
+	if cfg.resolveHostTo != "" {
+		tr.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext(ctx, network, cfg.resolveHostTo)
+		}
+	}
+
+	client := cleanhttp.DefaultClient()
+	client.Transport = tr
+	client.Timeout = 10 * time.Second
+
+	return client
 }
 
 // RetryableHTTPClient wraps a client with retry logic. That should be used when calling external services that might
@@ -77,12 +118,14 @@ func MustHTTPRequest(t *testing.T, method string, host, path string, headers map
 // doesn't eventually succeed the calling test will fail and stop.
 // Parameter proxyURL is the URL of Kong Gateway proxy (set nil when it's not different
 // from parameter host). Parameter host, path and headers are used to make the GET request.
+// Parameter certPool is used to validate the server certificate (nil to use system one).
 // Response is expected to have the given statusCode and contain the passed bodyContent.
 func EventuallyGETPath(
 	t *testing.T,
 	proxyURL *url.URL,
 	host string,
 	path string,
+	certPool *x509.CertPool,
 	statusCode int,
 	bodyContent string,
 	requestHeaders map[string]string,
@@ -91,12 +134,14 @@ func EventuallyGETPath(
 	responseMatchers ...ResponseMatcher,
 ) {
 	t.Helper()
-	var client *http.Client
+	var clientOptions []HTTPClientOption
 	if proxyURL != nil {
-		client = DefaultHTTPClientWithProxy(proxyURL)
-	} else {
-		client = DefaultHTTPClient()
+		clientOptions = append(clientOptions, WithResolveHostTo(proxyURL.Host))
 	}
+	if certPool != nil {
+		clientOptions = append(clientOptions, WithRootCAs(certPool))
+	}
+	client := DefaultHTTPClient(clientOptions...)
 
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		resp, err := client.Do(MustHTTPRequest(t, http.MethodGet, host, path, requestHeaders))
@@ -143,6 +188,7 @@ func EventuallyExpectHTTP404WithNoRoute(
 		proxyURL,
 		host,
 		path,
+		nil,
 		http.StatusNotFound,
 		"no Route matched with those values",
 		headers,
@@ -205,7 +251,7 @@ func CountHTTPGetResponses(
 }
 
 func countHTTPGetResponse(t *testing.T, req *http.Request, proxyURL *url.URL, matchCounter map[string]int, matchers ...ResponseMatcher) {
-	resp, err := DefaultHTTPClientWithProxy(proxyURL).Do(req)
+	resp, err := DefaultHTTPClient(WithResolveHostTo(proxyURL.Host)).Do(req)
 	if err != nil {
 		return
 	}

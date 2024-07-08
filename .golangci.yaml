@@ -171,7 +171,7 @@ issues:
   - path: _test\.go
     linters:
       - gosec
-    text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"
+    text: "Potential hardcoded credentials"
   # Ignore prealloc in tests
   - path: _test\.go
     linters:

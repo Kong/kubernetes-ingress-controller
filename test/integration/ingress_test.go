@@ -186,11 +186,11 @@ func TestIngressDefaultBackend(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("matching path")
-	helpers.EventuallyGETPath(t, nil, proxyHTTPURL.String(), "/foo", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, nil, proxyHTTPURL.String(), "/foo", nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 
 	t.Log("non matching path - use default backend")
 	helpers.EventuallyGETPath(
-		t, nil, proxyHTTPURL.String(), fmt.Sprintf("/status/%d", http.StatusTeapot), http.StatusTeapot, "", nil, ingressWait, waitTick,
+		t, nil, proxyHTTPURL.String(), fmt.Sprintf("/status/%d", http.StatusTeapot), nil, http.StatusTeapot, "", nil, ingressWait, waitTick,
 	)
 }
 
@@ -1001,7 +1001,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	t.Log("try to access the ingress by matching host")
 	req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -1019,7 +1019,7 @@ func TestIngressMatchByHost(t *testing.T) {
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
 	req = helpers.MustHTTPRequest(t, http.MethodGet, "foo.example", "/", nil)
-	resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+	resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
@@ -1044,7 +1044,7 @@ func TestIngressMatchByHost(t *testing.T) {
 
 	req = helpers.MustHTTPRequest(t, http.MethodGet, "test0.example", "/", nil)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -1062,7 +1062,7 @@ func TestIngressMatchByHost(t *testing.T) {
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
 	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.another", "/", nil)
-	resp, err = helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+	resp, err = helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
@@ -1109,7 +1109,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	// wait for first successful response. After it all subsequent must be successful too.
 	t.Log("wait for the Ingress direct to become available")
 	const path = "image/jpeg"
-	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainDirect, path, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainDirect, path, nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
 
 	waitForMainTestToFinish, cancelBackgroundTest := context.WithCancel(ctx)
 	backgroundTestError := make(chan error)
@@ -1136,7 +1136,7 @@ func TestIngressRewriteURI(t *testing.T) {
 			case <-time.After(50 * time.Millisecond):
 			}
 			cntAttempts++
-			resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(helpers.MustHTTPRequest(t, http.MethodGet, serviceDomainDirect, path, nil))
+			resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(helpers.MustHTTPRequest(t, http.MethodGet, serviceDomainDirect, path, nil))
 			if err != nil {
 				t.Logf("WARNING: Ingress without rewrite - http request failed for GET %s/%s to %s: %v", serviceDomainDirect, path, proxyHTTPURL, err)
 				continue
@@ -1181,10 +1181,10 @@ func TestIngressRewriteURI(t *testing.T) {
 	t.Log("rewrite uri feature is enabled")
 
 	t.Log("try to access the ingress with valid capture group")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
 
 	t.Log("try to access the ingress with invalid capture group, should return 404")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/", http.StatusNotFound, "", nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/", nil, http.StatusNotFound, "", nil, ingressWait, waitTick)
 
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -1197,7 +1197,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new valid capture group")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
 
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -1208,7 +1208,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new rewrite annotation")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/test/png", http.StatusOK, consts.PNGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/test/png", nil, http.StatusOK, consts.PNGMagicNumber, nil, ingressWait, waitTick)
 
 	cancelBackgroundTest()
 	require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")

@@ -109,12 +109,12 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 
 			// Matched requests should access the upstream service.
 			for _, req := range tc.matchRequests {
-				helpers.EventuallyGETPath(t, proxyParsedURL, req.host, req.path, http.StatusOK, "", nil, timeout, period)
+				helpers.EventuallyGETPath(t, proxyParsedURL, req.host, req.path, nil, http.StatusOK, "", nil, timeout, period)
 			}
 
 			// Unmatched requests should get a 404 from Kong.
 			for _, req := range tc.unmatchRequests {
-				helpers.EventuallyGETPath(t, proxyParsedURL, req.host, req.path, http.StatusNotFound, "", nil, timeout, period)
+				helpers.EventuallyGETPath(t, proxyParsedURL, req.host, req.path, nil, http.StatusNotFound, "", nil, timeout, period)
 			}
 		})
 	}

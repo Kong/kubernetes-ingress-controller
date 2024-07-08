@@ -595,10 +595,10 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 			)
 
 			kongClient.SetConfigStatusNotifier(statusQueue)
-			for range tc.gatewayFailuresCount {
+			for i := 0; i < tc.gatewayFailuresCount; i++ {
 				updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL())
 			}
-			for range tc.konnectFailuresCount {
+			for i := 0; i < tc.konnectFailuresCount; i++ {
 				updateStrategyResolver.returnErrorOnUpdate(testKonnectClient.BaseRootURL())
 			}
 			configBuilder.returnTranslationFailures(tc.translationFailures)
@@ -1095,7 +1095,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			updateStrategyResolver := newMockUpdateStrategyResolver(t)
-			for range tc.gatewayFailuresCount {
+			for i := 0; i < tc.gatewayFailuresCount; i++ {
 				updateStrategyResolver.returnSpecificErrorOnUpdate(clientsProvider.gatewayClients[0].BaseRootURL(), tc.errorOnGatewayFailures)
 				updateStrategyResolver.returnSpecificErrorOnUpdate(clientsProvider.gatewayClients[1].BaseRootURL(), tc.errorOnGatewayFailures)
 			}

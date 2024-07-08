@@ -21,6 +21,7 @@ func NewRefCheckerForRoute[T BackendRefT](log logr.Logger, route client.Object, 
 	return RefChecker[T]{
 		target:     route,
 		backendRef: ref,
+		log:        log.WithName("refchecker"),
 	}
 }
 
@@ -28,6 +29,7 @@ func NewRefCheckerForKongPlugin[T BackendRefT](log logr.Logger, target client.Ob
 	return RefChecker[T]{
 		target:     target,
 		backendRef: requester,
+		log:        log.WithName("refchecker"),
 	}
 }
 
@@ -58,6 +60,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			return true
 		}
 
+		rc.log.V(1).Info("checking reference for BackendRef")
 		return isRefAllowedByGrant(
 			rc.log,
 			(*string)(br.Namespace),
@@ -72,6 +75,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			return true
 		}
 
+		rc.log.V(1).Info("checking reference to Secret")
 		return isRefAllowedByGrant(
 			rc.log,
 			(*string)(br.Namespace),
@@ -82,6 +86,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		)
 
 	case PluginLabelReference:
+		rc.log.V(1).Info("checking reference to KongPlugin")
 		if br.Namespace == nil {
 			return true
 		}
@@ -94,10 +99,38 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			"KongPlugin",               // TODO These magic strings should become unnecessary once we work with client.Object
 			allowedRefs,
 		)
-	}
 
+		// TODO this is somewhat like the desired end state of issue #6000, but isn't viable at the moment because we
+		// don't actually have the From object here, we have the reference that describes it. the assertion here always
+		// fails because we've already extracted a type string into "br" from the reference. were we constructing an
+		// object from the reference that'd work, but refactoring that without a bunch of cases to build the object
+		// isn't obvious.
+
+		//default:
+		//	if obj, ok := br.(client.Object); ok {
+		//		if obj.GetNamespace() == "" {
+		//			return true
+		//		}
+		//		rc.log.V(1).Info(fmt.Sprintf("checking reference from client.Object (actual type %t", br))
+
+		//		return isRefAllowedByGrant(
+		//			rc.log,
+		//			lo.ToPtr(obj.GetNamespace()),
+		//			obj.GetName(),
+		//			obj.GetObjectKind().GroupVersionKind().Group,
+		//			obj.GetObjectKind().GroupVersionKind().Kind,
+		//			allowedRefs,
+		//		)
+		//	} else {
+		//		rc.log.V(1).Info(fmt.Sprintf("could not check reference for non-client.Object (actual type %t)", br))
+		//	}
+
+	}
 	return false
 }
+
+// TODO this does not indicate the relationship between the NN+GK args and the allowed arg, which makes it rather
+// difficult to understand
 
 // isRefAllowedByGrant checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set: allowed.
 // allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
@@ -110,7 +143,7 @@ func isRefAllowedByGrant(
 	kind string,
 	allowed map[Namespace][]ReferenceGrantTo,
 ) bool {
-	scoped := log.WithName("refchecker").WithValues(
+	scoped := log.WithValues(
 		"tmp-log-scope", "TRR",
 		"namespace", *namespace,
 		"requested-group", group,

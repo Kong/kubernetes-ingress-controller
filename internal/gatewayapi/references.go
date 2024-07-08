@@ -3,6 +3,7 @@ package gatewayapi
 import (
 	"reflect"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -11,17 +12,18 @@ import (
 type RefChecker[T BackendRefT] struct {
 	target     client.Object
 	backendRef T
+	log        logr.Logger
 }
 
 // NewRefCheckerForRoute returns a RefChecker for the provided route and backendRef.
-func NewRefCheckerForRoute[T BackendRefT](route client.Object, ref T) RefChecker[T] {
+func NewRefCheckerForRoute[T BackendRefT](log logr.Logger, route client.Object, ref T) RefChecker[T] {
 	return RefChecker[T]{
 		target:     route,
 		backendRef: ref,
 	}
 }
 
-func NewRefCheckerForKongPlugin[T BackendRefT](target client.Object, requester T) RefChecker[T] {
+func NewRefCheckerForKongPlugin[T BackendRefT](log logr.Logger, target client.Object, requester T) RefChecker[T] {
 	return RefChecker[T]{
 		target:     target,
 		backendRef: requester,
@@ -127,6 +129,7 @@ func isRefAllowedByGrant(
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferenceGrant with those Tos and the input From.
 func GetPermittedForReferenceGrantFrom(
+	log logr.Logger,
 	from ReferenceGrantFrom,
 	grants []*ReferenceGrant,
 ) map[Namespace][]ReferenceGrantTo {

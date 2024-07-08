@@ -468,7 +468,7 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 		"from-namespace", r.Referer.GetNamespace(),
 		"from-group", r.Referer.GetObjectKind().GroupVersionKind().Group,
 		"from-kind", r.Referer.GetObjectKind().GroupVersionKind().Kind,
-		"to-namespace", r.Referer.GetNamespace(),
+		"to-namespace", r.Namespace,
 		"to-name", r.Name,
 	)
 

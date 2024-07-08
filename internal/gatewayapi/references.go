@@ -106,7 +106,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		// object from the reference that'd work, but refactoring that without a bunch of cases to build the object
 		// isn't obvious.
 
-		//default:
+		// default:
 		//	if obj, ok := br.(client.Object); ok {
 		//		if obj.GetNamespace() == "" {
 		//			return true
@@ -169,18 +169,18 @@ func isRefAllowedByGrant(
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {
-					//scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
+					// scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
 					scoped.V(1).Info("requested ref allowed by grant")
 					return true
 				}
 			} else {
 				// if no referent name specified, matching group/kind is sufficient
-				//scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
+				// scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
 				scoped.V(1).Info("requested ref allowed by grant To")
 				return true
 			}
 		}
-		//scoped.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
+		// scoped.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
 		scoped.V(1).Info("grant To did not match requested ref target")
 	}
 
@@ -205,7 +205,7 @@ func GetPermittedForReferenceGrantFrom(
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				//scoped.V(util.DebugLevel).Info("grant from equal, adding to allowed",
+				// scoped.V(util.DebugLevel).Info("grant from equal, adding to allowed",
 				scoped.V(1).Info("grant from equal, adding to allowed",
 					"tmp-log-scope", "TRR",
 					"grant-namespace", grant.Namespace,
@@ -223,7 +223,7 @@ func GetPermittedForReferenceGrantFrom(
 					if to.Name != nil {
 						name = string(*to.Name)
 					}
-					//scoped.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
+					// scoped.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
 					scoped.V(1).Info("added ReferenceGrantTo to namespace allowed list",
 						"tmp-log-scope", "TRR",
 						"namespace", grant.ObjectMeta.Namespace,
@@ -233,7 +233,7 @@ func GetPermittedForReferenceGrantFrom(
 					)
 				}
 			} else {
-				//scoped.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
+				// scoped.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
 				scoped.V(1).Info("grant from not equal, excluding from allowed",
 					"tmp-log-scope", "TRR",
 					"grant-namespace", grant.Namespace,

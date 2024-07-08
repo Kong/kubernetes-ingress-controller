@@ -458,7 +458,7 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 		// wasn't designed with much guidance for future usage. Inexplicably, the way that this constructs plugin references
 		// is backwards for the way the reference checker wants to interpret them, so this intentionally flips the
 		// namespaces provided for the virtual objects, putting the referent namespace in the virtual reference...
-		//Namespace: lo.ToPtr(r.Referer.GetNamespace()),
+		// Namespace: lo.ToPtr(r.Referer.GetNamespace()),
 		Namespace: lo.ToPtr(r.Namespace),
 		Name:      r.Name,
 	}
@@ -470,7 +470,7 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 			// outputs. This is something of a testament to the need for a standardized set of SIG API Machinery-provided
 			// functions for loading ReferenceGrants and checking if they permit a reference between two objects if
 			// ReferenceGrant becomes more of a standard.
-			//Namespace: r.Namespace,
+			// Namespace: r.Namespace,
 			Namespace: r.Referer.GetNamespace(),
 			Name:      r.Name,
 		},

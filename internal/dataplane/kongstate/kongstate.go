@@ -453,12 +453,25 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
 	// name and namespace
 	virtualReference := gatewayapi.PluginLabelReference{
-		Namespace: lo.ToPtr(r.Referer.GetNamespace()),
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+		// Our reference checking code wasn't originally designed to handle multiple object types and relationships and
+		// wasn't designed with much guidance for future usage. Inexplicably, the way that this constructs plugin references
+		// is backwards for the way the reference checker wants to interpret them, so this intentionally flips the
+		// namespaces provided for the virtual objects, putting the referent namespace in the virtual reference...
+		//Namespace: lo.ToPtr(r.Referer.GetNamespace()),
+		Namespace: lo.ToPtr(r.Namespace),
 		Name:      r.Name,
 	}
 	virtualPlugin := &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+			// ... and the referrer namespace in the virtual referent plugin. This is an unfortunate hack to "correctly" check
+			// the relationship in practice without a holistic review and refactor of the reference checker inputs and
+			// outputs. This is something of a testament to the need for a standardized set of SIG API Machinery-provided
+			// functions for loading ReferenceGrants and checking if they permit a reference between two objects if
+			// ReferenceGrant becomes more of a standard.
+			//Namespace: r.Namespace,
+			Namespace: r.Referer.GetNamespace(),
 			Name:      r.Name,
 		},
 	}

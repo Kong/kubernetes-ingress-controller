@@ -120,6 +120,7 @@ func isRefAllowedByGrant(
 			toName = string(*to.Name)
 		}
 		logValues := []any{
+			"tmp-log-scope", "TRR",
 			"namespace", *namespace,
 			"to-group", to.Group,
 			"to-kind", to.Kind,
@@ -168,6 +169,7 @@ func GetPermittedForReferenceGrantFrom(
 			if reflect.DeepEqual(from, otherFrom) {
 				//scoped.V(util.DebugLevel).Info("grant from equal, adding to allowed",
 				scoped.V(1).Info("grant from equal, adding to allowed",
+					"tmp-log-scope", "TRR",
 					"grant-namespace", grant.Name,
 					"grant-name", grant.Name,
 					"grant-from-namespace", otherFrom.Namespace,
@@ -185,6 +187,7 @@ func GetPermittedForReferenceGrantFrom(
 					}
 					//scoped.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
 					scoped.V(1).Info("added ReferenceGrantTo to namespace allowed list",
+						"tmp-log-scope", "TRR",
 						"namespace", grant.ObjectMeta.Namespace,
 						"to-group", to.Group,
 						"to-kind", to.Kind,
@@ -194,6 +197,7 @@ func GetPermittedForReferenceGrantFrom(
 			} else {
 				//scoped.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
 				scoped.V(1).Info("grant from not equal, excluding from allowed",
+					"tmp-log-scope", "TRR",
 					"grant-namespace", grant.Name,
 					"grant-name", grant.Name,
 					"grant-from-namespace", otherFrom.Namespace,

@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -462,7 +463,8 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 		},
 	}
 
-	log.V(util.DebugLevel).Info("requested grant to plugins",
+	log.V(logging.DebugLevel).Info("requested grant to plugins",
+		"tmp-log-scope", "TRR",
 		"from-namespace", r.Referer.GetNamespace(),
 		"from-group", r.Referer.GetObjectKind().GroupVersionKind().Group,
 		"from-kind", r.Referer.GetObjectKind().GroupVersionKind().Kind,
@@ -739,7 +741,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 	addRelation := func(referer client.Object, plugin annotations.NamespacedKongPlugin, entity any) {
 		namespace, err := extractReferredPluginNamespace(log, cacheStore, referer, plugin)
 		if err != nil {
-			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			log.Error(err, "could not bind requested plugin", "tmp-log-scope", "TRR", "plugin", plugin.Name, "namespace", plugin.Namespace)
 			return
 		}
 		pluginKey := namespace + ":" + plugin.Name

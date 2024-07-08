@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -58,6 +59,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		}
 
 		return isRefAllowedByGrant(
+			rc.log,
 			(*string)(br.Namespace),
 			(string)(br.Name),
 			(string)(*br.Group),
@@ -71,6 +73,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		}
 
 		return isRefAllowedByGrant(
+			rc.log,
 			(*string)(br.Namespace),
 			(string)(br.Name),
 			(string)(*br.Group),
@@ -84,6 +87,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		}
 
 		return isRefAllowedByGrant(
+			rc.log,
 			(br.Namespace),
 			(br.Name),
 			"configuration.konghq.com", // TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
@@ -99,6 +103,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 // allowed is assumed to contain Tos that only match the backendRef's parent's From, as returned by
 // GetPermittedForReferenceGrantFrom.
 func isRefAllowedByGrant(
+	log logr.Logger,
 	namespace *string,
 	name string,
 	group string,
@@ -110,16 +115,32 @@ func isRefAllowedByGrant(
 		return true
 	}
 	for _, to := range allowed[Namespace(*namespace)] {
+		toName := ""
+		if to.Name != nil {
+			toName = string(*to.Name)
+		}
+		logValues := []any{
+			"namespace", *namespace,
+			"to-group", to.Group,
+			"to-kind", to.Kind,
+			"to-name", toName,
+			"requested-group", group,
+			"requested-kind", kind,
+			"requested-name", name,
+		}
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {
+					log.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
 					return true
 				}
 			} else {
 				// if no referent name specified, matching group/kind is sufficient
+				log.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
 				return true
 			}
 		}
+		log.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
 	}
 
 	return false
@@ -141,7 +162,40 @@ func GetPermittedForReferenceGrantFrom(
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
+				log.V(util.DebugLevel).Info("grant from equal, adding to allowed",
+					"grant-namespace", grant.Name,
+					"grant-name", grant.Name,
+					"grant-from-namespace", otherFrom.Namespace,
+					"grant-from-group", otherFrom.Group,
+					"grant-from-kind", otherFrom.Kind,
+					"requested-from-namespace", from.Namespace,
+					"requested-from-group", from.Group,
+					"requested-from-kind", from.Kind,
+				)
 				allowed[Namespace(grant.ObjectMeta.Namespace)] = append(allowed[Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
+				for _, to := range grant.Spec.To {
+					name := ""
+					if to.Name != nil {
+						name = string(*to.Name)
+					}
+					log.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
+						"namespace", grant.ObjectMeta.Namespace,
+						"to-group", to.Group,
+						"to-kind", to.Kind,
+						"to-name", name,
+					)
+				}
+			} else {
+				log.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
+					"grant-namespace", grant.Name,
+					"grant-name", grant.Name,
+					"grant-from-namespace", otherFrom.Namespace,
+					"grant-from-group", otherFrom.Group,
+					"grant-from-kind", otherFrom.Kind,
+					"requested-from-namespace", from.Namespace,
+					"requested-from-group", from.Group,
+					"requested-from-kind", from.Kind,
+				)
 			}
 		}
 	}

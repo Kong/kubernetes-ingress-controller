@@ -461,8 +461,17 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 			Name:      r.Name,
 		},
 	}
+
+	log.V(util.DebugLevel).Info("requested grant to plugins",
+		"from-namespace", r.Referer.GetNamespace(),
+		"from-group", r.Referer.GetObjectKind().GroupVersionKind().Group,
+		"from-kind", r.Referer.GetObjectKind().GroupVersionKind().Kind,
+		"to-namespace", r.Referer.GetNamespace(),
+		"to-name", r.Name,
+	)
+
 	if !gatewayapi.NewRefCheckerForKongPlugin(log, virtualPlugin, virtualReference).IsRefAllowedByGrant(allowed) {
-		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
+		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s",
 			r.Referer.GetObjectKind().GroupVersionKind().Kind, r.Referer.GetNamespace(), r.Name, r.Namespace)
 	}
 	return nil

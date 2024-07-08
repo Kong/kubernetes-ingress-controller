@@ -401,10 +401,7 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
 					// Fill the actual type of the object for reference checks.
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: ingress.GroupVersionKind.Group + "/" + ingress.GroupVersionKind.Version,
-						Kind:       ingress.GroupVersionKind.Kind,
-					},
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,
@@ -761,10 +758,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 				// Pretend we have a full Ingress struct for reference checks.
 				virtualIngress := netv1.Ingress{
 					// Fill the actual type of the object for reference checks.
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: ingress.GroupVersionKind.Group + "/" + ingress.GroupVersionKind.Version,
-						Kind:       ingress.GroupVersionKind.Kind,
-					},
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,

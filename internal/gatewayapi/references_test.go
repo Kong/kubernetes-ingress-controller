@@ -3,6 +3,7 @@ package gatewayapi
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,7 +151,7 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result := GetPermittedForReferenceGrantFrom(tt.from, grants)
+			result := GetPermittedForReferenceGrantFrom(logr.Discard(), tt.from, grants)
 			assert.Equal(t, tt.result, result)
 		})
 	}

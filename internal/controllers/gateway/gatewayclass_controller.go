@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -114,13 +115,13 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	gwc := new(gatewayapi.GatewayClass)
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(util.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
+			log.V(logging.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	log.V(util.DebugLevel).Info("Processing gatewayclass", "name", req.Name)
+	log.V(logging.DebugLevel).Info("Processing gatewayclass", "name", req.Name)
 
 	if isGatewayClassControlled(gwc) {
 		alreadyAccepted := util.CheckCondition(

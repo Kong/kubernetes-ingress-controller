@@ -33,9 +33,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
@@ -45,7 +45,7 @@ import (
 
 // SetupLoggers sets up the loggers for the controller manager.
 func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
-	zapBase, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
+	zapBase, err := logging.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
 		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}

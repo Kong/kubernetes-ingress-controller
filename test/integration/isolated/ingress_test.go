@@ -367,6 +367,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 					proxyURL,
 					proxyURL.Host,
 					path,
+					nil,
 					http.StatusOK,
 					expectedMagicNumber,
 					nil,

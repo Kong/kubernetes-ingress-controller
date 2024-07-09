@@ -622,8 +622,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("validating that plugin %s is not configured without a grant", kongplugin.Name)
 	assert.Never(t, func() bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			return false
 		}
@@ -657,8 +657,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPURL.String(), "/test_plugin_reference?apikey=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?apikey=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}

@@ -78,7 +78,7 @@ func TestCustomEntityExample(t *testing.T) {
 		Assess("degraphql plugin works as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			t.Log("Waiting for graphQL service to be available")
-			helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", nil, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
 
 			t.Log("injecting data for graphQL service")
 			injectDataURL := proxyURL.String() + "/v2/query"
@@ -131,7 +131,7 @@ func TestCustomEntityExample(t *testing.T) {
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).
@@ -190,7 +190,7 @@ func TestCustomEntityExample(t *testing.T) {
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			proxyURL := GetHTTPURLFromCtx(ctx)
-			helpers.EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).

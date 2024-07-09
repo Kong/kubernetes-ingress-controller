@@ -551,6 +551,10 @@ func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
 	}
 }
 
+func (p *mockKongConfigBuilder) CustomEntityTypes() []string {
+	return nil
+}
+
 func (p *mockKongConfigBuilder) returnTranslationFailuresForAllButFirstCall(failures []failures.ResourceFailure) {
 	p.onlyFirstBuildCallWithNoTranslationFailures = true
 	p.translationFailuresToReturn = failures
@@ -1020,7 +1024,7 @@ func (cf *mockKongLastValidConfigFetcher) StoreLastValidConfig(s *kongstate.Kong
 	cf.lastKongState = s
 }
 
-func (cf *mockKongLastValidConfigFetcher) TryFetchingValidConfigFromGateways(context.Context, logr.Logger, []*adminapi.Client) error {
+func (cf *mockKongLastValidConfigFetcher) TryFetchingValidConfigFromGateways(context.Context, logr.Logger, []*adminapi.Client, []string) error {
 	if cf.kongRawState != nil {
 		cf.lastKongState = configfetcher.KongRawStateToKongState(cf.kongRawState)
 	}

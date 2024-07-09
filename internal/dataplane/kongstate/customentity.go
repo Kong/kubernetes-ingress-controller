@@ -208,15 +208,18 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 		for _, generatedEntity := range generatedEntities {
-			ks.addCustomEntity(entity.Spec.EntityType, schema, generatedEntity)
+			ks.AddCustomEntity(entity.Spec.EntityType, schema, generatedEntity)
 		}
 	}
 
 	ks.sortCustomEntities()
 }
 
-// addCustomEntity adds a custom entity into the collection of its type.
-func (ks *KongState) addCustomEntity(entityType string, schema EntitySchema, e CustomEntity) {
+// AddCustomEntity adds a custom entity into the collection of its type.
+func (ks *KongState) AddCustomEntity(entityType string, schema EntitySchema, e CustomEntity) {
+	if ks.CustomEntities == nil {
+		ks.CustomEntities = map[string]*KongCustomEntityCollection{}
+	}
 	// Put the entity into the custom collection to store the entities of its type.
 	if _, ok := ks.CustomEntities[entityType]; !ok {
 		ks.CustomEntities[entityType] = &KongCustomEntityCollection{
@@ -225,6 +228,13 @@ func (ks *KongState) addCustomEntity(entityType string, schema EntitySchema, e C
 	}
 	collection := ks.CustomEntities[entityType]
 	collection.Entities = append(collection.Entities, e)
+}
+
+// CustomEntityTypes returns types of translated custom entities included in the KongState.
+func (ks *KongState) CustomEntityTypes() []string {
+	return lo.MapToSlice(ks.CustomEntities, func(entityType string, _ *KongCustomEntityCollection) string {
+		return entityType
+	})
 }
 
 // fetchEntitySchema fetches schema of an entity by its type and stores the schema in its custom entity collection

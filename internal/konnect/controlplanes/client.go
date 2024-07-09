@@ -534,7 +534,6 @@ func NewListControlPlanesRequest(server string, params *ListControlPlanesParams)
 	queryValues := queryURL.Query()
 
 	if params.PageSize != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page[size]", runtime.ParamLocationQuery, *params.PageSize); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -546,11 +545,9 @@ func NewListControlPlanesRequest(server string, params *ListControlPlanesParams)
 				}
 			}
 		}
-
 	}
 
 	if params.PageNumber != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page[number]", runtime.ParamLocationQuery, *params.PageNumber); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -562,11 +559,9 @@ func NewListControlPlanesRequest(server string, params *ListControlPlanesParams)
 				}
 			}
 		}
-
 	}
 
 	if params.FilterNameEq != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter[name][eq]", runtime.ParamLocationQuery, *params.FilterNameEq); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -578,11 +573,9 @@ func NewListControlPlanesRequest(server string, params *ListControlPlanesParams)
 				}
 			}
 		}
-
 	}
 
 	if params.FilterName != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter[name]", runtime.ParamLocationQuery, *params.FilterName); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -594,11 +587,9 @@ func NewListControlPlanesRequest(server string, params *ListControlPlanesParams)
 				}
 			}
 		}
-
 	}
 
 	if params.FilterNameContains != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter[name][contains]", runtime.ParamLocationQuery, *params.FilterNameContains); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -610,7 +601,6 @@ func NewListControlPlanesRequest(server string, params *ListControlPlanesParams)
 				}
 			}
 		}
-
 	}
 
 	queryURL.RawQuery = queryValues.Encode()

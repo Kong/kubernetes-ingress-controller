@@ -576,7 +576,6 @@ func NewGetDpClientCertificatesRequest(server string, params *GetDpClientCertifi
 	queryValues := queryURL.Query()
 
 	if params.PageSize != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -588,11 +587,9 @@ func NewGetDpClientCertificatesRequest(server string, params *GetDpClientCertifi
 				}
 			}
 		}
-
 	}
 
 	if params.PageNumber != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_number", runtime.ParamLocationQuery, *params.PageNumber); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -604,7 +601,6 @@ func NewGetDpClientCertificatesRequest(server string, params *GetDpClientCertifi
 				}
 			}
 		}
-
 	}
 
 	queryURL.RawQuery = queryValues.Encode()
@@ -774,7 +770,6 @@ func NewGetNodesRequest(server string, params *GetNodesParams) (*http.Request, e
 	queryValues := queryURL.Query()
 
 	if params.PageSize != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -786,11 +781,9 @@ func NewGetNodesRequest(server string, params *GetNodesParams) (*http.Request, e
 				}
 			}
 		}
-
 	}
 
 	if params.PageNumber != nil {
-
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_number", runtime.ParamLocationQuery, *params.PageNumber); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -802,7 +795,6 @@ func NewGetNodesRequest(server string, params *GetNodesParams) (*http.Request, e
 				}
 			}
 		}
-
 	}
 
 	queryURL.RawQuery = queryValues.Encode()
@@ -1525,7 +1517,6 @@ func ParseGetDpClientCertificatesHTTPResponse(rsp *http.Response) (*GetDpClientC
 			return nil, err
 		}
 		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -1565,7 +1556,6 @@ func ParsePostDpClientCertificatesHTTPResponse(rsp *http.Response) (*PostDpClien
 			return nil, err
 		}
 		response.JSON201 = &dest
-
 	}
 
 	return response, nil
@@ -1621,7 +1611,6 @@ func ParseGetDpClientCertificatesCertIdHTTPResponse(rsp *http.Response) (*GetDpC
 			return nil, err
 		}
 		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -1656,7 +1645,6 @@ func ParseGetExpectedConfigHashHTTPResponse(rsp *http.Response) (*GetExpectedCon
 			return nil, err
 		}
 		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -1699,7 +1687,6 @@ func ParseGetNodesHTTPResponse(rsp *http.Response) (*GetNodesHTTPResponse, error
 			return nil, err
 		}
 		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -1755,7 +1742,6 @@ func ParseGetNodesNodeIdHTTPResponse(rsp *http.Response) (*GetNodesNodeIdHTTPRes
 			return nil, err
 		}
 		response.JSON200 = &dest
-
 	}
 
 	return response, nil

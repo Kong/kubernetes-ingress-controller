@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -237,12 +238,12 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	}
 	info, err := infoSvc.Get(ctx)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("Failed to fetch Kong info", "error", err)
+		validator.Logger.V(logging.DebugLevel).Info("Failed to fetch Kong info", "error", err)
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("Failed to parse Kong version", "error", err)
+		validator.Logger.V(logging.DebugLevel).Info("Failed to parse Kong version", "error", err)
 	} else if !version.IsKongGatewayEnterprise() {
 		return false, ErrTextConsumerGroupUnsupported, nil
 	}
@@ -637,7 +638,7 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 	schemaService, hasClient := validator.AdminAPIServicesProvider.GetSchemasService()
 	// Skip validation on Kong gateway if we do not have available client.
 	if !hasClient {
-		logger.V(util.DebugLevel).Info("Skipped because no schema service available")
+		logger.V(logging.DebugLevel).Info("Skipped because no schema service available")
 		return true, "", nil
 	}
 
@@ -645,7 +646,7 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 	entityType := entity.Spec.EntityType
 	schema, err := schemaService.Get(ctx, entityType)
 	if err != nil {
-		logger.V(util.DebugLevel).Info("Failed to get schema of entity", "entity_type", entityType, "error", err)
+		logger.V(logging.DebugLevel).Info("Failed to get schema of entity", "entity_type", entityType, "error", err)
 		return false, fmt.Sprintf(ErrTextCustomEntityGetSchemaFailed, entityType, err), nil
 	}
 

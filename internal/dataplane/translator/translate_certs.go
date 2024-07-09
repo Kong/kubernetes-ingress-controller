@@ -14,6 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -62,7 +63,7 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 		for _, listener := range gateway.Spec.Listeners {
 			status, ok := statuses[listener.Name]
 			if !ok {
-				logger.V(util.DebugLevel).Info("Listener missing status information",
+				logger.V(logging.DebugLevel).Info("Listener missing status information",
 					"gateway", gateway.Name,
 					"listener", listener.Name,
 					"listener_protocol", listener.Protocol,

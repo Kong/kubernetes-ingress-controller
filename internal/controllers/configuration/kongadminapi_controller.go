@@ -22,7 +22,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // KongAdminAPIServiceReconciler reconciles Kong Admin API Service Endpointslices
@@ -126,7 +126,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	r.Log.Info("Reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 	if !endpoints.DeletionTimestamp.IsZero() {
-		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
+		r.Log.V(logging.DebugLevel).Info("EndpointSlice is being deleted",
 			"type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name,
 		)
 
@@ -177,7 +177,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *KongAdminAPIServiceReconciler) notify() {
 	discovered := flattenDiscoveredAdminAPIs(r.Cache)
 	addresses := lo.Map(discovered, func(d adminapi.DiscoveredAdminAPI, _ int) string { return d.Address })
-	r.Log.V(util.DebugLevel).
+	r.Log.V(logging.DebugLevel).
 		Info("Notifying about newly detected Admin APIs", "admin_apis", addresses)
 	r.EndpointsNotifier.Notify(discovered)
 }

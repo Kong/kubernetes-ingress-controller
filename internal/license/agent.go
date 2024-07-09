@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
@@ -119,7 +119,7 @@ func (a *Agent) NeedLeaderElection() bool {
 // Start starts the Agent. It attempts to pull an initial license from upstream, and then polls for updates on a
 // regular period, either the agent's initialPollingPeriod if it has not yet obtained a license or regularPollingPeriod if it has.
 func (a *Agent) Start(ctx context.Context) error {
-	a.logger.V(util.DebugLevel).Info("Starting license agent")
+	a.logger.V(logging.DebugLevel).Info("Starting license agent")
 
 	err := a.reconcileLicenseWithKonnect(ctx)
 	if err != nil {
@@ -134,7 +134,7 @@ func (a *Agent) Start(ctx context.Context) error {
 // as Kong will auto-populate these when adding the license to its config database.
 // It's optional because we may not have retrieved a license yet.
 func (a *Agent) GetLicense() mo.Option[kong.License] {
-	a.logger.V(util.DebugLevel).Info("Retrieving license from cache")
+	a.logger.V(logging.DebugLevel).Info("Retrieving license from cache")
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 
@@ -164,7 +164,7 @@ func (a *Agent) runPollingLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ch:
-			a.logger.V(util.DebugLevel).Info("Retrieving license from external service")
+			a.logger.V(logging.DebugLevel).Info("Retrieving license from external service")
 			if err := a.reconcileLicenseWithKonnect(ctx); err != nil {
 				a.logger.Error(err, "Could not reconcile license with Konnect")
 			}
@@ -197,23 +197,23 @@ func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 	retrievedLicense, retrievedLicenseOk := retrievedLicenseOpt.Get()
 	if !retrievedLicenseOk {
 		// If we get no license from Konnect, we cannot do anything.
-		a.logger.V(util.DebugLevel).Info("No license found in Konnect")
+		a.logger.V(logging.DebugLevel).Info("No license found in Konnect")
 		return nil
 	}
 
 	if a.cachedLicense.IsAbsent() {
-		a.logger.V(util.InfoLevel).Info("Caching initial license retrieved from the upstream",
+		a.logger.V(logging.InfoLevel).Info("Caching initial license retrieved from the upstream",
 			"updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
 	} else if cachedLicense, ok := a.cachedLicense.Get(); ok && retrievedLicense.UpdatedAt.After(cachedLicense.UpdatedAt) {
-		a.logger.V(util.InfoLevel).Info("Caching license retrieved from the upstream as it is newer than the cached one",
+		a.logger.V(logging.InfoLevel).Info("Caching license retrieved from the upstream as it is newer than the cached one",
 			"cached_updated_at", cachedLicense.UpdatedAt.String(),
 			"retrieved_updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
 	} else {
-		a.logger.V(util.DebugLevel).Info("License cache is up to date")
+		a.logger.V(logging.DebugLevel).Info("License cache is up to date")
 	}
 
 	return nil

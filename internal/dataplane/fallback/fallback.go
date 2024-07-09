@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type CacheGraphProvider interface {
@@ -97,7 +97,7 @@ func (g *Generator) GenerateBackfillingBrokenObjects(
 	}
 
 	if lastValidCacheSnapshot == nil {
-		g.logger.V(util.DebugLevel).Info("No previous valid cache snapshot found, skipping backfilling")
+		g.logger.V(logging.DebugLevel).Info("No previous valid cache snapshot found, skipping backfilling")
 		return fallbackCache, metadataCollector.Metadata(), nil
 	}
 

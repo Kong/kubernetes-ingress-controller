@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -457,7 +458,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheMiss()
 		}
 		if hasNewSnapshotToBeProcessed {
-			c.logger.V(util.DebugLevel).Info("New configuration snapshot detected", "hash", newSnapshotHash)
+			c.logger.V(logging.DebugLevel).Info("New configuration snapshot detected", "hash", newSnapshotHash)
 			c.lastProcessedSnapshotHash = newSnapshotHash
 			c.kongConfigBuilder.UpdateCache(cacheSnapshot)
 		}
@@ -465,22 +466,22 @@ func (c *KongClient) Update(ctx context.Context) error {
 		if allGatewaysAreInSync := lo.EveryBy(c.clientsProvider.GatewayClientsToConfigure(), func(cl *adminapi.Client) bool {
 			return cl.LastCacheStoresHash() == c.lastProcessedSnapshotHash
 		}); allGatewaysAreInSync {
-			c.logger.V(util.DebugLevel).Info("All gateways are in sync; pushing config is not necessary, skipping")
+			c.logger.V(logging.DebugLevel).Info("All gateways are in sync; pushing config is not necessary, skipping")
 			return nil
 		}
 	}
 
-	c.logger.V(util.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
+	c.logger.V(logging.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
-		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
+		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.prometheusMetrics.RecordTranslationBrokenResources(0)
-		c.logger.V(util.DebugLevel).Info("Successfully built data-plane configuration")
+		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration")
 	}
 
 	const isFallback = false
@@ -519,11 +520,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// if the configuration SHAs that have just been pushed are different than
 		// what's been previously pushed.
 		if !slices.Equal(shas, c.SHAs) {
-			c.logger.V(util.DebugLevel).Info("Triggering report for configured Kubernetes objects", "count",
+			c.logger.V(logging.DebugLevel).Info("Triggering report for configured Kubernetes objects", "count",
 				len(parsingResult.ConfiguredKubernetesObjects))
 			c.triggerKubernetesObjectReport(parsingResult.ConfiguredKubernetesObjects, parsingResult.TranslationFailures)
 		} else {
-			c.logger.V(util.DebugLevel).Info("No configuration change; resource status update not necessary, skipping")
+			c.logger.V(logging.DebugLevel).Info("No configuration change; resource status update not necessary, skipping")
 		}
 	}
 	return nil
@@ -533,7 +534,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 // feature gate is enabled and the `--enable-last-valid-config-fallback` flag is set.
 func (c *KongClient) maybePreserveTheLastValidConfigCache(lastValidCache store.CacheStores) {
 	if c.kongConfig.FallbackConfiguration && c.kongConfig.UseLastValidConfigForFallback {
-		c.logger.V(util.DebugLevel).Info("Preserving the last valid configuration cache")
+		c.logger.V(logging.DebugLevel).Info("Preserving the last valid configuration cache")
 		c.lastValidCacheSnapshot = &lastValidCache
 	}
 }
@@ -557,7 +558,7 @@ func (c *KongClient) maybeTryRecoveringFromGatewaysSyncError(
 	// If the error is not of the expected UpdateError type, we should log it and skip the recovery.
 	updateErr := sendconfig.UpdateError{}
 	if !errors.As(gatewaysSyncErr, &updateErr) {
-		c.logger.V(util.DebugLevel).Info("Skipping recovery from gateways sync error - not enough details to recover",
+		c.logger.V(logging.DebugLevel).Info("Skipping recovery from gateways sync error - not enough details to recover",
 			"error", gatewaysSyncErr)
 		return nil
 	}
@@ -583,7 +584,7 @@ func (c *KongClient) maybeTryRecoveringFromGatewaysSyncError(
 		if _, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig, isFallback); fallbackSyncErr != nil {
 			return errors.Join(gatewaysSyncErr, fallbackSyncErr)
 		}
-		c.logger.V(util.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
+		c.logger.V(logging.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
 	}
 	return nil
 }
@@ -613,7 +614,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
 		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(failuresCount)
 		c.prometheusMetrics.RecordFallbackTranslationFailure()
-		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
+		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
 	} else {
 		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(0)
 		c.prometheusMetrics.RecordFallbackTranslationSuccess()
@@ -690,7 +691,7 @@ func (c *KongClient) sendOutToGatewayClients(
 
 	gatewayClientsToConfigure := c.clientsProvider.GatewayClientsToConfigure()
 	configureGatewayClientURLs := lo.Map(gatewayClientsToConfigure, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
-	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
+	c.logger.V(logging.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
 
 	shas, err := iter.MapErr(gatewayClientsToConfigure, func(client **adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, *client, s, config, isFallback)
@@ -916,7 +917,7 @@ func prepareSendDiagnosticFn(
 			Config:          *config,
 			RawResponseBody: rawResponseBody,
 		}:
-			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
+			logger.V(logging.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")
 		}
@@ -1037,11 +1038,11 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string, i
 func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus clients.ConfigStatus) {
 	if c.currentConfigStatus == configStatus {
 		// No change in config status, nothing to do.
-		c.logger.V(util.DebugLevel).Info("No change in config status, not notifying")
+		c.logger.V(logging.DebugLevel).Info("No change in config status, not notifying")
 		return
 	}
 
-	c.logger.V(util.DebugLevel).Info("Config status changed, notifying", "configStatus", configStatus)
+	c.logger.V(logging.DebugLevel).Info("Config status changed, notifying", "configStatus", configStatus)
 	c.currentConfigStatus = configStatus
 	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
 }
@@ -1056,7 +1057,7 @@ func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMe
 		causingObjects := lo.Map(excluded.CausingObjects, func(causing fallback.ObjectHash, _ int) string {
 			return causing.String()
 		})
-		log.V(util.DebugLevel).Info("Excluded object from fallback cache",
+		log.V(logging.DebugLevel).Info("Excluded object from fallback cache",
 			"kind", gvk.Kind,
 			"group", gvk.Group,
 			"namespace", obj.GetNamespace(),
@@ -1072,7 +1073,7 @@ func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMe
 		causingObjects := lo.Map(backfilled.CausingObjects, func(causing fallback.ObjectHash, _ int) string {
 			return causing.String()
 		})
-		log.V(util.DebugLevel).Info("Backfilled object in fallback cache",
+		log.V(logging.DebugLevel).Info("Backfilled object in fallback cache",
 			"kind", gvk.Kind,
 			"group", gvk.Group,
 			"namespace", obj.GetNamespace(),
@@ -1086,7 +1087,7 @@ func (c *KongClient) maybeSendFallbackConfigDiagnostics(ctx context.Context, gen
 	if ch := c.diagnostic.FallbackCacheMetadata; ch != nil {
 		select {
 		case ch <- generatedCacheMetadata:
-			c.logger.V(util.DebugLevel).Info("Shipping fallback cache metadata to diagnostics server")
+			c.logger.V(logging.DebugLevel).Info("Shipping fallback cache metadata to diagnostics server")
 		case <-ctx.Done():
 			return ctx.Err()
 		default:

@@ -22,7 +22,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
@@ -328,11 +328,11 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !kongUpstreamPolicy.DeletionTimestamp.IsZero() && time.Now().After(kongUpstreamPolicy.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongUpstreamPolicy", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongUpstreamPolicy", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(kongUpstreamPolicy)
 		if err != nil {

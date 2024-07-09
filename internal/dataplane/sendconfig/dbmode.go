@@ -17,8 +17,8 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // UpdateStrategyDBMode implements the UpdateStrategy interface. It updates Kong's data-plane
@@ -123,7 +123,7 @@ func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan dif
 		select {
 		case event := <-events:
 			if event.Error == nil {
-				s.logger.V(util.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
+				s.logger.V(logging.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 			} else {
 				s.logger.Error(event.Error, "failed updating gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 				parsed, err := resourceErrorFromEntityAction(event)

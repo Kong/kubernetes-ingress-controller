@@ -11,6 +11,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -222,7 +223,7 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, logger log
 			},
 		}
 		for problemSource, problem := range ee.Problems {
-			logger.V(util.DebugLevel).Info("Adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
+			logger.V(logging.DebugLevel).Info("Adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
 			resourceFailure, failureCreateErr := failures.NewResourceFailure(
 				fmt.Sprintf("invalid %s: %s", problemSource, problem),
 				&obj,

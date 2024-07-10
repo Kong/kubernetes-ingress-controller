@@ -52,11 +52,12 @@ func NewTestClient(address string) (*Client, error) {
 
 type KonnectClient struct {
 	Client
-	backoffStrategy UpdateBackoffStrategy
+	disableConsumersSync bool
+	backoffStrategy      UpdateBackoffStrategy
 }
 
 // NewKonnectClient creates an Admin API client that is to be used with a Konnect Control Plane Admin API.
-func NewKonnectClient(c *kong.Client, controlPlane string) *KonnectClient {
+func NewKonnectClient(c *kong.Client, controlPlane string, disableConsumersSync bool) *KonnectClient {
 	return &KonnectClient{
 		Client: Client{
 			adminAPIClient:      c,
@@ -64,12 +65,17 @@ func NewKonnectClient(c *kong.Client, controlPlane string) *KonnectClient {
 			konnectControlPlane: controlPlane,
 			pluginSchemaStore:   util.NewPluginSchemaStore(c),
 		},
-		backoffStrategy: NewKonnectBackoffStrategy(clock.System{}),
+		backoffStrategy:      NewKonnectBackoffStrategy(clock.System{}),
+		disableConsumersSync: disableConsumersSync,
 	}
 }
 
 func (c *KonnectClient) BackoffStrategy() UpdateBackoffStrategy {
 	return c.backoffStrategy
+}
+
+func (c *KonnectClient) DisableConsumersSync() bool {
+	return c.disableConsumersSync
 }
 
 // AdminAPIClient returns an underlying go-kong's Admin API client.

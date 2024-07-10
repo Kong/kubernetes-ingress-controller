@@ -961,7 +961,7 @@ func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
 	require.NoError(t, err)
 
 	rgID := uuid.NewString()
-	return adminapi.NewKonnectClient(c, rgID)
+	return adminapi.NewKonnectClient(c, rgID, false)
 }
 
 func mapClientsToUrls(clients *mockGatewayClientsProvider) []string {

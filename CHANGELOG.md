@@ -99,6 +99,9 @@ Adding a new version? You'll need three changes:
 
 - `KongCustomEntity` is now supported by the `FallbackConfiguration` feature.
   [#6286](https://github.com/Kong/kubernetes-ingress-controller/pull/6286)
+- It is now possible to disable synchronization of consumers to Konnect through the
+  flag `--konnect-disable-consumers-sync`.
+  [#6313](https://github.com/Kong/kubernetes-ingress-controller/pull/6313)
 
 ### Fixed
 

@@ -23,7 +23,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -400,8 +399,11 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
 			for _, plugin := range pluginList {
-				// pretend we have a full Ingress struct for reference checks
+				// pretend we have a full Ingress struct for reference checks.
+				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,
@@ -430,7 +432,7 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 }
 
 type pluginReference struct {
-	Referer   client.Object
+	Referrer  client.Object
 	Namespace string
 	Name      string
 }
@@ -442,26 +444,22 @@ func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
 		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
 	}
 	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
-		Group:     gatewayapi.Group(r.Referer.GetObjectKind().GroupVersionKind().Group),
-		Kind:      gatewayapi.Kind(r.Referer.GetObjectKind().GroupVersionKind().Kind),
-		Namespace: gatewayapi.Namespace(r.Referer.GetNamespace()),
+		Group:     gatewayapi.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
+		Kind:      gatewayapi.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
+		Namespace: gatewayapi.Namespace(r.Referrer.GetNamespace()),
 	}, grants)
 
 	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
-	// name and namespace
-	virtualReference := gatewayapi.PluginLabelReference{
-		Namespace: lo.ToPtr(r.Referer.GetNamespace()),
+	// name and namespace.
+	pluginReference := gatewayapi.PluginLabelReference{
+		Namespace: &r.Namespace,
 		Name:      r.Name,
 	}
-	virtualPlugin := &kongv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name,
-		},
-	}
-	if !gatewayapi.NewRefCheckerForKongPlugin(virtualPlugin, virtualReference).IsRefAllowedByGrant(allowed) {
+	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
+	// we should put the referrer on the "target" and the plugin on the "backendRef".
+	if !gatewayapi.NewRefCheckerForKongPlugin(r.Referrer, pluginReference).IsRefAllowedByGrant(allowed) {
 		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
-			r.Referer.GetObjectKind().GroupVersionKind().Kind, r.Referer.GetNamespace(), r.Name, r.Namespace)
+			r.Referrer.GetObjectKind().GroupVersionKind().Kind, r.Referrer.GetNamespace(), r.Name, r.Namespace)
 	}
 	return nil
 }
@@ -932,6 +930,8 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 			for _, plugin := range pluginList {
 				// Pretend we have a full Ingress struct for reference checks.
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,
@@ -956,7 +956,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 }
 
 func extractReferredPluginNamespace(
-	cacheStore store.Storer, referer client.Object, plugin annotations.NamespacedKongPlugin,
+	cacheStore store.Storer, referrer client.Object, plugin annotations.NamespacedKongPlugin,
 ) (string, error) {
 	// There are 2 types of KongPlugin references: local and remote.
 	// A local reference is one where the KongPlugin is in the same namespace as the referer.
@@ -966,14 +966,14 @@ func extractReferredPluginNamespace(
 	//
 	// The referer is the entity that the KongPlugin is associated with.
 	if plugin.Namespace == "" {
-		return referer.GetNamespace(), nil
+		return referrer.GetNamespace(), nil
 	}
 
 	// remote KongPlugin, permitted if ReferenceGrant allows.
 	err := isRemotePluginReferenceAllowed(
 		cacheStore,
 		pluginReference{
-			Referer:   referer,
+			Referrer:  referrer,
 			Namespace: plugin.Namespace,
 			Name:      plugin.Name,
 		},

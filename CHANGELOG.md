@@ -116,6 +116,9 @@ Adding a new version? You'll need three changes:
 - Added `duration` field in logs after successfully sent configuration to Kong
   gateway or Konnect.
   [#6360](https://github.com/Kong/kubernetes-ingress-controller/pull/6360)
+- `KongCustomEntity` is now included in last valid configuration retrieved from
+  Kong gateways.
+  [#6305](https://github.com/Kong/kubernetes-ingress-controller/pull/6305)
 
 ### Fixed
 

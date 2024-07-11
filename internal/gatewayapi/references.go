@@ -130,7 +130,8 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 	return false
 }
 
-// TODO this does not indicate the relationship between the NN+GK args and the allowed arg, which makes it rather
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+// this does not indicate the relationship between the NN+GK args and the allowed arg, which makes it rather
 // difficult to understand
 
 // isRefAllowedByGrant checks if backendRef is permitted by the provided namespace-indexed ReferenceGrantTo set: allowed.

@@ -65,7 +65,7 @@ func backendRefsToKongStateBackends(
 		}
 
 		if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) ||
-			!gatewayapi.NewRefCheckerForRoute(route, backendRef).IsRefAllowedByGrant(allowed) {
+			!gatewayapi.NewRefCheckerForRoute(logger, route, backendRef).IsRefAllowedByGrant(allowed) {
 			// we log impermissible refs rather than failing the entire rule. while we cannot actually route to
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and

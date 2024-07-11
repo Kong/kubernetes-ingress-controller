@@ -5,8 +5,9 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // RefChecker is a wrapper type that facilitates checking whether a backendRef is allowed

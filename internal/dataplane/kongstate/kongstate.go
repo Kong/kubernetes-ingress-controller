@@ -22,7 +22,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -399,8 +398,11 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
 			for _, plugin := range pluginList {
-				// pretend we have a full Ingress struct for reference checks
+				// pretend we have a full Ingress struct for reference checks.
+				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,
@@ -450,31 +452,26 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 		grants,
 	)
 
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+	// Our reference checking code wasn't originally designed to handle multiple object types and relationships and
+	// wasn't designed with much guidance for future usage. It expects something akin to the BackendRef section of an
+	// HTTPRoute or similar, since that's what it was originally designed for. A future simplified model should probably
+	// work with source and target client.Object resources derived from the particular resources' reference specs, as
+	// those reference formats aren't necessarily consistent. We should possibly push for a standard upstream utility as
+	// part of https://github.com/kubernetes/enhancements/issues/3766 if it proceeds further, as this is can be difficult
+	// to wrap your head around when deep in the code that's checking an individual use case. A standard model for "these
+	// are the inputs and outputs for a reference grant check, derive them from your spec" should help avoid inconsistency
+	// in check implementation.
+
 	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
-	// name and namespace
-	virtualReference := gatewayapi.PluginLabelReference{
-		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
-		// Our reference checking code wasn't originally designed to handle multiple object types and relationships and
-		// wasn't designed with much guidance for future usage. Inexplicably, the way that this constructs plugin references
-		// is backwards for the way the reference checker wants to interpret them, so this intentionally flips the
-		// namespaces provided for the virtual objects, putting the referent namespace in the virtual reference...
-		// Namespace: lo.ToPtr(r.Referrer.GetNamespace()),
-		Namespace: lo.ToPtr(r.Namespace),
+	// name and namespace.
+	pluginReference := gatewayapi.PluginLabelReference{
+		Namespace: &r.Namespace,
 		Name:      r.Name,
 	}
-	virtualPlugin := &kongv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
-			// ... and the referrer namespace in the virtual referent plugin. This is an unfortunate hack to "correctly" check
-			// the relationship in practice without a holistic review and refactor of the reference checker inputs and
-			// outputs. This is something of a testament to the need for a standardized set of SIG API Machinery-provided
-			// functions for loading ReferenceGrants and checking if they permit a reference between two objects if
-			// ReferenceGrant becomes more of a standard.
-			// Namespace: r.Namespace,
-			Namespace: r.Referrer.GetNamespace(),
-			Name:      r.Name,
-		},
-	}
+
+	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
+	// we should put the referrer on the "target" and the plugin on the "backendRef".
 
 	log.V(logging.DebugLevel).Info("requested grant to plugins",
 		"tmp-log-scope", "TRR",
@@ -485,9 +482,13 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 		"to-name", r.Name,
 	)
 
-	if !gatewayapi.NewRefCheckerForKongPlugin(log, virtualPlugin, virtualReference).IsRefAllowedByGrant(allowed) {
-		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s",
+	if !gatewayapi.NewRefCheckerForKongPlugin(log, r.Referrer, pluginReference).IsRefAllowedByGrant(allowed) {
+		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
 			r.Referrer.GetObjectKind().GroupVersionKind().Kind, r.Referrer.GetNamespace(), r.Name, r.Namespace)
+
+		//if !gatewayapi.NewRefCheckerForKongPlugin(log, virtualPlugin, virtualReference).IsRefAllowedByGrant(allowed) {
+		//	return fmt.Errorf("no grant found for %s in %s to plugin %s in %s",
+		//		r.Referrer.GetObjectKind().GroupVersionKind().Kind, r.Referrer.GetNamespace(), r.Name, r.Namespace)
 	}
 	return nil
 }
@@ -787,6 +788,8 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 			for _, plugin := range pluginList {
 				// Pretend we have a full Ingress struct for reference checks.
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,

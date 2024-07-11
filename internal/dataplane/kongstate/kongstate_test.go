@@ -26,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -1525,4 +1526,122 @@ func (s *fakeSchemaGetter) Get(_ context.Context, entityType string) (kong.Schem
 		return nil, fmt.Errorf("schema not found")
 	}
 	return schema, nil
+}
+
+func TestIsRemotePluginReferenceAllowed(t *testing.T) {
+	serviceTypeMeta := metav1.TypeMeta{
+		Kind: "Service",
+	}
+
+	testCases := []struct {
+		name            string
+		referrer        client.Object
+		pluginNamespace string
+		pluginName      string
+		referenceGrants []*gatewayapi.ReferenceGrant
+		shouldAllow     bool
+	}{
+		{
+			name: "no reference grant",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			shouldAllow:     false,
+		},
+		{
+			name: "have reference grant",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "bar", // same namespace as plugin
+						Name:      "grant-1",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Kind:      gatewayapi.Kind("Service"),
+								Namespace: "foo",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			shouldAllow: true,
+		},
+		{
+			name: "reference grant created but in different namespace",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "foo", // Not same namespace as plugin
+						Name:      "grant-1",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Kind:      gatewayapi.Kind("Service"),
+								Namespace: "foo",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			shouldAllow: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := store.NewFakeStore(store.FakeObjects{
+				ReferenceGrants: tc.referenceGrants,
+			})
+			require.NoError(t, err)
+			err = isRemotePluginReferenceAllowed(logr.Discard(), s, pluginReference{
+				Referrer:  tc.referrer,
+				Namespace: tc.pluginNamespace,
+				Name:      tc.pluginName,
+			})
+			if tc.shouldAllow {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
 }

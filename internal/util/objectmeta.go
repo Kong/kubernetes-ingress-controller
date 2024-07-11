@@ -1,6 +1,7 @@
 package util
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,4 +24,17 @@ func FromK8sObject(obj client.Object) K8sObjectInfo {
 		Annotations:      obj.GetAnnotations(),
 		GroupVersionKind: obj.GetObjectKind().GroupVersionKind(),
 	}
+}
+
+// TypeMetaFromGVK returns typemeta from groupversionkind of a k8s object.
+func TypeMetaFromGVK(gvk schema.GroupVersionKind) metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+	}
+}
+
+// TypeMetaFromK8sObject returns the typemeta of a client Object by its GVK.
+func TypeMetaFromK8sObject(obj client.Object) metav1.TypeMeta {
+	return TypeMetaFromGVK(obj.GetObjectKind().GroupVersionKind())
 }

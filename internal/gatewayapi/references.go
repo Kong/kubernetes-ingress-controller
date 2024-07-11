@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,7 +61,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			return true
 		}
 
-		rc.log.V(1).Info("checking reference for BackendRef")
+		rc.log.V(logging.TraceLevel).Info("checking reference for BackendRef")
 		return isRefAllowedByGrant(
 			rc.log,
 			(*string)(br.Namespace),
@@ -75,7 +76,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			return true
 		}
 
-		rc.log.V(1).Info("checking reference to Secret")
+		rc.log.V(logging.TraceLevel).Info("checking reference to Secret")
 		return isRefAllowedByGrant(
 			rc.log,
 			(*string)(br.Namespace),
@@ -86,7 +87,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		)
 
 	case PluginLabelReference:
-		rc.log.V(1).Info("checking reference to KongPlugin")
+		rc.log.V(logging.TraceLevel).Info("checking reference to KongPlugin")
 		if br.Namespace == nil {
 			return true
 		}
@@ -111,7 +112,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		//		if obj.GetNamespace() == "" {
 		//			return true
 		//		}
-		//		rc.log.V(1).Info(fmt.Sprintf("checking reference from client.Object (actual type %t", br))
+		//		rc.log.V(logging.TraceLevel).Info(fmt.Sprintf("checking reference from client.Object (actual type %t", br))
 
 		//		return isRefAllowedByGrant(
 		//			rc.log,
@@ -122,7 +123,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		//			allowedRefs,
 		//		)
 		//	} else {
-		//		rc.log.V(1).Info(fmt.Sprintf("could not check reference for non-client.Object (actual type %t)", br))
+		//		rc.log.V(logging.TraceLevel).Info(fmt.Sprintf("could not check reference for non-client.Object (actual type %t)", br))
 		//	}
 
 	}
@@ -148,13 +149,12 @@ func isRefAllowedByGrant(
 		return true
 	}
 	scoped := log.WithValues(
-		"tmp-log-scope", "TRR",
 		"namespace", *namespace,
 		"requested-group", group,
 		"requested-kind", kind,
 		"requested-name", name,
 	)
-	scoped.V(1).Info(fmt.Sprintf("checking %d entries for namespace", len(allowed[Namespace(*namespace)])))
+	scoped.V(logging.TraceLevel).Info(fmt.Sprintf("checking %d entries for namespace", len(allowed[Namespace(*namespace)])))
 	for i, to := range allowed[Namespace(*namespace)] {
 		toName := ""
 		if to.Name != nil {
@@ -169,22 +169,19 @@ func isRefAllowedByGrant(
 		if string(to.Group) == group && string(to.Kind) == kind {
 			if to.Name != nil {
 				if string(*to.Name) == name {
-					// scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
-					scoped.V(1).Info("requested ref allowed by grant")
+					scoped.V(logging.TraceLevel).Info("requested ref allowed by grant")
 					return true
 				}
 			} else {
 				// if no referent name specified, matching group/kind is sufficient
-				// scoped.V(util.DebugLevel).Info("requested ref allowed by grant", logValues...)
-				scoped.V(1).Info("requested ref allowed by grant To")
+				scoped.V(logging.TraceLevel).Info("requested ref allowed by grant To")
 				return true
 			}
 		}
-		// scoped.V(util.DebugLevel).Info("no grant match for requested ref", logValues...)
-		scoped.V(1).Info("grant To did not match requested ref target")
+		scoped.V(logging.TraceLevel).Info("grant To did not match requested ref target")
 	}
 
-	scoped.V(1).Info("no grants matching requested ref target")
+	scoped.V(logging.TraceLevel).Info("no grants matching requested ref target")
 	return false
 }
 
@@ -205,9 +202,7 @@ func GetPermittedForReferenceGrantFrom(
 	for _, grant := range grants {
 		for _, otherFrom := range grant.Spec.From {
 			if reflect.DeepEqual(from, otherFrom) {
-				// scoped.V(util.DebugLevel).Info("grant from equal, adding to allowed",
-				scoped.V(1).Info("grant from equal, adding to allowed",
-					"tmp-log-scope", "TRR",
+				scoped.V(logging.TraceLevel).Info("grant from equal, adding to allowed",
 					"grant-namespace", grant.Namespace,
 					"grant-name", grant.Name,
 					"grant-from-namespace", otherFrom.Namespace,
@@ -223,9 +218,7 @@ func GetPermittedForReferenceGrantFrom(
 					if to.Name != nil {
 						name = string(*to.Name)
 					}
-					// scoped.V(util.DebugLevel).Info("added ReferenceGrantTo to namespace allowed list",
-					scoped.V(1).Info("added ReferenceGrantTo to namespace allowed list",
-						"tmp-log-scope", "TRR",
+					scoped.V(logging.TraceLevel).Info("added ReferenceGrantTo to namespace allowed list",
 						"namespace", grant.ObjectMeta.Namespace,
 						"to-group", to.Group,
 						"to-kind", to.Kind,
@@ -233,9 +226,7 @@ func GetPermittedForReferenceGrantFrom(
 					)
 				}
 			} else {
-				// scoped.V(util.DebugLevel).Info("grant from not equal, excluding from allowed",
-				scoped.V(1).Info("grant from not equal, excluding from allowed",
-					"tmp-log-scope", "TRR",
+				scoped.V(logging.TraceLevel).Info("grant from not equal, excluding from allowed",
 					"grant-namespace", grant.Namespace,
 					"grant-name", grant.Name,
 					"grant-from-namespace", otherFrom.Namespace,

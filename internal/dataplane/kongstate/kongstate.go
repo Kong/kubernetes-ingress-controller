@@ -473,8 +473,7 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
 	// we should put the referrer on the "target" and the plugin on the "backendRef".
 
-	log.V(logging.DebugLevel).Info("requested grant to plugins",
-		"tmp-log-scope", "TRR",
+	log.V(logging.TraceLevel).Info("requested grant to plugins",
 		"from-namespace", r.Referrer.GetNamespace(),
 		"from-group", r.Referrer.GetObjectKind().GroupVersionKind().Group,
 		"from-kind", r.Referrer.GetObjectKind().GroupVersionKind().Kind,
@@ -755,7 +754,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 	addRelation := func(referrer client.Object, plugin annotations.NamespacedKongPlugin, entity any) {
 		namespace, err := extractReferredPluginNamespace(log, cacheStore, referrer, plugin)
 		if err != nil {
-			log.Error(err, "could not bind requested plugin", "tmp-log-scope", "TRR", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
 			return
 		}
 		pluginKey := namespace + ":" + plugin.Name

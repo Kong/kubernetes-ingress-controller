@@ -54,6 +54,11 @@ var defaultKongStatus = kong.Status{
 	ConfigurationHash: sendconfig.WellKnownInitialHash,
 }
 
+const (
+	urlUpdatedWait     = time.Second
+	urlUpdatedWaitTick = 50 * time.Millisecond
+)
+
 func TestUniqueObjects(t *testing.T) {
 	t.Log("generating some objects to test the de-duplication of objects")
 	ing1 := &netv1.Ingress{
@@ -239,13 +244,15 @@ func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func
 
 // assertUpdateCalledForURLs asserts that the mockUpdateStrategy was called for the given URLs.
 func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLs(urls []string, msgAndArgs ...any) {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
-
 	if len(msgAndArgs) == 0 {
 		msgAndArgs = []any{"update was not called for all URLs"}
 	}
-	require.ElementsMatch(f.t, urls, f.updateCalledForURLs, msgAndArgs...)
+
+	require.Eventually(f.t, func() bool {
+		f.lock.RLock()
+		defer f.lock.RUnlock()
+		return assert.ElementsMatch(f.t, urls, f.updateCalledForURLs)
+	}, urlUpdatedWait, urlUpdatedWaitTick, msgAndArgs...)
 }
 
 func (f *mockUpdateStrategyResolver) assertNoUpdateCalled() {
@@ -260,6 +267,13 @@ func (f *mockUpdateStrategyResolver) lastUpdatedContentForURL(url string) (sendc
 	defer f.lock.RUnlock()
 	c, ok := f.lastUpdatedContentForURLs[url]
 	return c, ok
+}
+
+func (f *mockUpdateStrategyResolver) urlEventuallyUpdated(url string) {
+	require.Eventuallyf(f.t, func() bool {
+		_, ok := f.lastUpdatedContentForURL(url)
+		return ok
+	}, urlUpdatedWait, urlUpdatedWaitTick, "URL %s not updated in time", url)
 }
 
 // mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
@@ -604,13 +618,17 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 			configBuilder.returnTranslationFailures(tc.translationFailures)
 
 			_ = kongClient.Update(ctx)
-			notifications := statusQueue.Notifications()
-			require.Len(t, notifications, 1)
-			require.Equal(t, tc.expectedStatus, notifications[0])
+			var l int
+			require.Eventuallyf(t, func() bool {
+				notifications := statusQueue.Notifications()
+				l = len(notifications)
+				return l > 0 && notifications[l-1] == tc.expectedStatus
+			}, urlUpdatedWait, urlUpdatedWaitTick, "the latest notification should be equal to expected status %s: actual %s",
+				tc.expectedStatus, statusQueue.Notifications()[l-1])
 
 			_ = kongClient.Update(ctx)
-			notifications = statusQueue.Notifications()
-			require.Len(t, notifications, 1, "no new notification should be sent if the status hasn't changed")
+			notifications := statusQueue.Notifications()
+			require.Len(t, notifications, l, "no new notification should be sent if the status hasn't changed")
 		})
 	}
 }
@@ -865,10 +883,10 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder          = newMockKongConfigBuilder()
 		kongRawStateGetter     = &mockKongLastValidConfigFetcher{}
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 	)
 
 	t.Run("dbless", func(t *testing.T) {
+		kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 		kongClient.kongConfig.InMemory = true
 		err := kongClient.Update(ctx)
 		require.NoError(t, err)
@@ -886,12 +904,16 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 			},
 		}, "gateway content should have appended stub upstream")
 
+		// wait for Konnect client get updated since we are running in a separate goroutine.
+		updateStrategyResolver.urlEventuallyUpdated(testKonnectClient.BaseRootURL())
+
 		konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testKonnectClient.BaseRootURL())
 		require.True(t, ok)
 		require.True(t, deckgen.IsContentEmpty(konnectContent.Content), "konnect content should be empty")
 	})
 
 	t.Run("db", func(t *testing.T) {
+		kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 		kongClient.kongConfig.InMemory = false
 		err := kongClient.Update(ctx)
 		require.NoError(t, err)
@@ -899,6 +921,9 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		gwContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testGatewayClient.BaseRootURL())
 		require.True(t, ok)
 		require.True(t, deckgen.IsContentEmpty(gwContent.Content), "konnect content should be empty")
+
+		// wait for Konnect client get updated since we are running in a separate goroutine.
+		updateStrategyResolver.urlEventuallyUpdated(testKonnectClient.BaseRootURL())
 
 		konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testKonnectClient.BaseRootURL())
 		require.True(t, ok)
@@ -1160,6 +1185,9 @@ func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
 	)
 
 	require.NoError(t, kongClient.Update(ctx))
+
+	// wait for Konnect client get updated since we are running in a separate goroutine.
+	updateStrategyResolver.urlEventuallyUpdated(clientsProvider.konnectClient.BaseRootURL())
 
 	konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(clientsProvider.konnectClient.BaseRootURL())
 	require.True(t, ok, "expected Konnect to be updated")
@@ -1678,7 +1706,6 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 			},
 		},
 	}
-	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 
 	testCases := []struct {
 		name                  string
@@ -1699,6 +1726,7 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 			diagnosticsCh := make(chan diagnostics.ConfigDump, 1) // make it buffered to avoid blocking
 			kongClient.diagnostic = diagnostics.ConfigDumpDiagnostic{
 				Configs:               diagnosticsCh,

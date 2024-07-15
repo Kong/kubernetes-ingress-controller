@@ -103,6 +103,12 @@ Adding a new version? You'll need three changes:
   flag `--konnect-disable-consumers-sync`.
   [#6313](https://github.com/Kong/kubernetes-ingress-controller/pull/6313)
 
+### Changed
+
+- Spawn a goroutine to send configuration to Konnect. This prevents the process
+  of sending configuration to Konnect to block the syncing to Kong gateways.
+  [#6320](https://github.com/Kong/kubernetes-ingress-controller/pull/6320)
+
 ### Fixed
 
 - Services using `Secret`s containing the same certificate as client certificates

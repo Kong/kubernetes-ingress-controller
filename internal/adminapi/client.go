@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -27,6 +28,9 @@ type Client struct {
 	konnectControlPlane string
 	lastConfigSHA       []byte
 	lastCacheStoresHash store.SnapshotHash
+
+	// lastSHALock is the lock for reading/writing SHA of last configuration.
+	lastSHALock sync.RWMutex
 
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
@@ -164,21 +168,29 @@ func (c *Client) KonnectControlPlane() string {
 
 // SetLastCacheStoresHash overrides last cache stores hash.
 func (c *Client) SetLastCacheStoresHash(s store.SnapshotHash) {
+	c.lastSHALock.Lock()
+	defer c.lastSHALock.Unlock()
 	c.lastCacheStoresHash = s
 }
 
 // LastCacheStoresHash returns a checksum of the last successful cache stores push.
 func (c *Client) LastCacheStoresHash() store.SnapshotHash {
+	c.lastSHALock.RLock()
+	defer c.lastSHALock.RUnlock()
 	return c.lastCacheStoresHash
 }
 
 // SetLastConfigSHA overrides last config SHA.
 func (c *Client) SetLastConfigSHA(s []byte) {
+	c.lastSHALock.Lock()
+	defer c.lastSHALock.Unlock()
 	c.lastConfigSHA = s
 }
 
 // LastConfigSHA returns a checksum of the last successful configuration push.
 func (c *Client) LastConfigSHA() []byte {
+	c.lastSHALock.RLock()
+	defer c.lastSHALock.RUnlock()
 	return c.lastConfigSHA
 }
 

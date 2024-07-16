@@ -28,7 +28,7 @@ type KonnectConfig struct {
 	LicenseSynchronizationEnabled bool
 	InitialLicensePollingPeriod   time.Duration
 	LicensePollingPeriod          time.Duration
-	DisableConsumersSync          bool
+	ConsumersSyncDisabled         bool
 }
 
 func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error) {
@@ -60,7 +60,7 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 	if err != nil {
 		return nil, err
 	}
-	return NewKonnectClient(client, c.ControlPlaneID, c.DisableConsumersSync), nil
+	return NewKonnectClient(client, c.ControlPlaneID, c.ConsumersSyncDisabled), nil
 }
 
 // EnsureKonnectConnection ensures that the client is able to connect to Konnect.

@@ -67,6 +67,7 @@
 | `--kong-workspace` | `string` | Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces. |  |
 | `--konnect-address` | `string` | Base address of Konnect API. | `https://us.kic.api.konghq.com` |
 | `--konnect-control-plane-id` | `string` | An ID of a control plane that is to be synchronized with data plane configuration. |  |
+| `--konnect-disable-consumers-sync` | `bool` | Disable synchronization of consumers with Konnect. | `false` |
 | `--konnect-initial-license-polling-period` | `duration` | Polling period to be used before the first license is retrieved. | `1m0s` |
 | `--konnect-license-polling-period` | `duration` | Polling period to be used after the first license is retrieved. | `12h0m0s` |
 | `--konnect-licensing-enabled` | `bool` | Retrieve licenses from Konnect if available. Overrides licenses provided via the environment. | `false` |

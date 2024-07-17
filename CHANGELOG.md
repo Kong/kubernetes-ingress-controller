@@ -102,6 +102,11 @@ Adding a new version? You'll need three changes:
 - It is now possible to disable synchronization of consumers to Konnect through the
   flag `--konnect-disable-consumers-sync`.
   [#6313](https://github.com/Kong/kubernetes-ingress-controller/pull/6313)
+- Allow `KongCustomEntity` to refer to plugins in another namespace via 
+  `spec.parentRef.namespace`. The reference is allowed only when there is a
+  `ReferenceGrant` in the namespace of the `KongPlugin` to grant permissions
+  to `KongCustomEntity` of referring to `KongPlugin`.
+  [#6289](https://github.com/Kong/kubernetes-ingress-controller/pull/6289)
 
 ### Fixed
 

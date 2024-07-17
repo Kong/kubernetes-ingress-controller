@@ -18,11 +18,17 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
+
+var customEntityTypeMeta = metav1.TypeMeta{
+	APIVersion: kongv1alpha1.GroupVersion.Group + "/" + kongv1alpha1.GroupVersion.Version,
+	Kind:       "KongCustomEntity",
+}
 
 func TestExtractEntityFieldDefinitions(t *testing.T) {
 	testCases := []struct {
@@ -224,6 +230,7 @@ func TestSortCustomEntities(t *testing.T) {
 
 func TestFindCustomEntityForeignFields(t *testing.T) {
 	testCustomEntity := &kongv1alpha1.KongCustomEntity{
+		TypeMeta: customEntityTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "fake-entity",
@@ -267,9 +274,11 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 	}
 	testCases := []struct {
 		name                     string
+		referenceGrants          []*gatewayapi.ReferenceGrant
 		customEntity             *kongv1alpha1.KongCustomEntity
 		schema                   EntitySchema
 		pluginRelEntities        PluginRelatedEntitiesRefs
+		expectError              bool
 		foreignFieldCombinations [][]entityForeignFieldValue
 	}{
 		{
@@ -359,17 +368,167 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "attached to foreign plugin with reference grant allowed",
+			customEntity: func() *kongv1alpha1.KongCustomEntity {
+				e := testCustomEntity.DeepCopy()
+				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
+				return e
+			}(),
+			schema: EntitySchema{
+				Fields: map[string]EntityField{
+					"foo":     {Name: "foo", Type: EntityFieldTypeString, Required: true},
+					"service": {Name: "service", Type: EntityFieldTypeForeign, Reference: "services"},
+				},
+			},
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "another-namespace",
+						Name:      "grant-kce-to-plugin",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Namespace: gatewayapi.Namespace("default"),
+								Group:     gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Kind:      "KongCustomEntity",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			pluginRelEntities: PluginRelatedEntitiesRefs{
+				RelatedEntities: map[string]RelatedEntitiesRef{
+					"another-namespace:fake-plugin": {
+						Services: []*Service{
+							{
+								Service: kongService1,
+							},
+							{
+								Service: kongService2,
+							},
+						},
+					},
+				},
+			},
+			foreignFieldCombinations: [][]entityForeignFieldValue{
+				{
+					{fieldName: "service", foreignEntityType: kong.EntityTypeServices, foreignEntityID: "service1"},
+				},
+				{
+					{fieldName: "service", foreignEntityType: kong.EntityTypeServices, foreignEntityID: "service2"},
+				},
+			},
+		},
+		{
+			name: "attached to foreign plugin without reference grant allowed should fail",
+			customEntity: func() *kongv1alpha1.KongCustomEntity {
+				e := testCustomEntity.DeepCopy()
+				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
+				return e
+			}(),
+			schema: EntitySchema{
+				Fields: map[string]EntityField{
+					"foo":     {Name: "foo", Type: EntityFieldTypeString, Required: true},
+					"service": {Name: "service", Type: EntityFieldTypeForeign, Reference: "services"},
+				},
+			},
+			pluginRelEntities: PluginRelatedEntitiesRefs{
+				RelatedEntities: map[string]RelatedEntitiesRef{
+					"another-namespace:fake-plugin": {
+						Services: []*Service{
+							{
+								Service: kongService1,
+							},
+							{
+								Service: kongService2,
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "attached to foreign plugin with misconfigured reference grant should fail",
+			customEntity: func() *kongv1alpha1.KongCustomEntity {
+				e := testCustomEntity.DeepCopy()
+				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
+				return e
+			}(),
+			schema: EntitySchema{
+				Fields: map[string]EntityField{
+					"foo":     {Name: "foo", Type: EntityFieldTypeString, Required: true},
+					"service": {Name: "service", Type: EntityFieldTypeForeign, Reference: "services"},
+				},
+			},
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default", // same namespace as KCE but not same as KongPlugin
+						Name:      "grant-kce-to-plugin-misconfigured",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Namespace: gatewayapi.Namespace("default"),
+								Group:     gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Kind:      "KongCustomEntity",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			pluginRelEntities: PluginRelatedEntitiesRefs{
+				RelatedEntities: map[string]RelatedEntitiesRef{
+					"another-namespace:fake-plugin": {
+						Services: []*Service{
+							{
+								Service: kongService1,
+							},
+							{
+								Service: kongService2,
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			combinations := findCustomEntityForeignFields(
+			cacheStore, err := store.NewFakeStore(store.FakeObjects{
+				ReferenceGrants: tc.referenceGrants,
+			})
+			require.NoError(t, err)
+			combinations, err := findCustomEntityForeignFields(
 				logr.Discard(),
+				cacheStore,
 				tc.customEntity,
 				tc.schema,
 				tc.pluginRelEntities,
 				"",
 			)
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			for index, combination := range combinations {
 				sort.SliceStable(combination, func(i, j int) bool {
 					return combination[i].fieldName < combination[j].fieldName
@@ -384,10 +543,6 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 }
 
 func TestKongState_FillCustomEntities(t *testing.T) {
-	customEntityTypeMeta := metav1.TypeMeta{
-		APIVersion: kongv1alpha1.GroupVersion.Group + "/" + kongv1alpha1.GroupVersion.Version,
-		Kind:       "KongCustomEntity",
-	}
 	kongService1 := kong.Service{
 		Name: kong.String("service1"),
 		ID:   kong.String("service1"),

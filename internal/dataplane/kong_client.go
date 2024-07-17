@@ -740,6 +740,12 @@ func (c *KongClient) sendToClient(
 		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
+	// Remove consumers in target content when we send to Konnect if `--disable-consumers-sync` flag is set.
+	// REVIEW: add an option to `deckGenParams` to omit them in `ToDeckContent` to reduce the cost filling the contents?
+	if client.IsKonnect() && config.KonnectConsumersDisabled {
+		targetContent.Consumers = nil
+	}
+
 	customEntities := make(sendconfig.CustomEntitiesByType)
 	for entityType, collection := range s.CustomEntities {
 		for _, entity := range collection.Entities {

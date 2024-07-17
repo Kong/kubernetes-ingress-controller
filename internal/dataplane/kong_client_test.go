@@ -623,8 +623,7 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 				notifications := statusQueue.Notifications()
 				l = len(notifications)
 				return l > 0 && notifications[l-1] == tc.expectedStatus
-			}, urlUpdatedWait, urlUpdatedWaitTick, "the latest notification should be equal to expected status %s: actual %s",
-				tc.expectedStatus, statusQueue.Notifications()[l-1])
+			}, urlUpdatedWait, urlUpdatedWaitTick, "the latest notification should be equal to expected status %s", tc.expectedStatus)
 
 			_ = kongClient.Update(ctx)
 			notifications := statusQueue.Notifications()

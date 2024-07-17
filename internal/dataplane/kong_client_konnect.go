@@ -43,9 +43,8 @@ func (c *KongClient) sendOutToKonnectClient(
 ) {
 	// In case users have many consumers, konnect sync can be very slow and cause dataplane sync issues.
 	// For this reason, if the --disable-consumers-sync flag is set, we do not send consumers to Konnect.
-	// TODO: modify the implementation here not to modify the shared `Consumers`.
 	if konnectClient.ConsumersSyncDisabled() {
-		s.Consumers = nil
+		config.KonnectConsumersDisabled = true
 	}
 
 	if _, err := c.sendToClient(ctx, konnectClient, s, config, isFallback); err != nil {

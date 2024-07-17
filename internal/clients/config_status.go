@@ -33,14 +33,6 @@ type CalculateConfigStatusInput struct {
 	TranslationFailuresOccurred bool
 }
 
-func (i CalculateConfigStatusInput) SetKonnectFailed(failed bool) (CalculateConfigStatusInput, bool) {
-	if i.KonnectFailed != failed {
-		i.KonnectFailed = failed
-		return i, true
-	}
-	return i, false
-}
-
 // CalculateConfigStatus calculates a clients.ConfigStatus that sums up the configuration synchronisation result as
 // a single enumerated value.
 func CalculateConfigStatus(i CalculateConfigStatusInput) ConfigStatus {

@@ -286,6 +286,19 @@ func Run(
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
+
+		// Setup Konnect config syncer with dataplane Client.
+		konnectConfigSyncer := konnect.NewConfigSynchronizer(
+			logger.WithName("konnect-config-synchronizer"),
+			kongConfig,
+			clientsManager,
+			updateStrategyResolver,
+			configurationChangeDetector,
+		)
+		dataplaneClient.SetKonnectConfigSyncer(konnectConfigSyncer)
+		if err := mgr.Add(konnectConfigSyncer); err != nil {
+			setupLog.Error(err, "Failed to setup Konnect Configuration Synchronizer with manager, skipping")
+		}
 	}
 
 	// Setup and inject license getter.

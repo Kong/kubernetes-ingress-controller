@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.2.3](#323)
  - [3.2.2](#322)
  - [3.2.1](#321)
  - [3.2.0](#320)
@@ -116,9 +117,18 @@ Adding a new version? You'll need three changes:
 - Generate one entity for each attached foreign entity if a `KongCustomEntity`
   resource is attached to multiple foreign Kong entities.
   [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
+
+## 3.2.3
+
+> Release date: 2024-07-23
+
+### Fixed
+
 - Fixed the reference checker in checking permission of remote plugins to use
-  the correct namespace of `ReferenceGrant` required.
+  the correct namespace of `ReferenceGrant` required. Add trace logging to
+  `ReferenceGrant` check functions.
   [#6295](https://github.com/Kong/kubernetes-ingress-controller/pull/6295)
+  [#6302](https://github.com/Kong/kubernetes-ingress-controller/pull/6302)
 
 ## 3.2.2
 
@@ -3621,6 +3631,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.2.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.2...v3.2.3
 [3.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.6...v3.2.0

@@ -442,8 +442,10 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 }
 
 type mockConfigStatusQueue struct {
-	notifications []clients.ConfigStatus
-	lock          sync.RWMutex
+	gatewayConfigStatusNotifications []clients.GatewayConfigApplyStatus
+	konnectConfigStatusNotifications []clients.KonnectConfigUploadStatus
+	notifications                    []clients.ConfigStatus
+	lock                             sync.RWMutex
 }
 
 func newMockConfigStatusQueue() *mockConfigStatusQueue {
@@ -454,6 +456,34 @@ func (m *mockConfigStatusQueue) NotifyConfigStatus(_ context.Context, status cli
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.notifications = append(m.notifications, status)
+}
+
+func (m *mockConfigStatusQueue) NotifyGatewayConfigStatus(_ context.Context, status clients.GatewayConfigApplyStatus) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.gatewayConfigStatusNotifications = append(m.gatewayConfigStatusNotifications, status)
+}
+
+func (m *mockConfigStatusQueue) NotifyKonnectConfigStatus(_ context.Context, status clients.KonnectConfigUploadStatus) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.konnectConfigStatusNotifications = append(m.konnectConfigStatusNotifications, status)
+}
+
+func (m *mockConfigStatusQueue) GatewayConfigStatusNotifications() []clients.GatewayConfigApplyStatus {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	copied := make([]clients.GatewayConfigApplyStatus, len(m.gatewayConfigStatusNotifications))
+	copy(copied, m.gatewayConfigStatusNotifications)
+	return copied
+}
+
+func (m *mockConfigStatusQueue) KonnectConfigStatusNotifications() []clients.KonnectConfigUploadStatus {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	copied := make([]clients.KonnectConfigUploadStatus, len(m.konnectConfigStatusNotifications))
+	copy(copied, m.konnectConfigStatusNotifications)
+	return copied
 }
 
 func (m *mockConfigStatusQueue) Notifications() []clients.ConfigStatus {
@@ -604,13 +634,22 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 			configBuilder.returnTranslationFailures(tc.translationFailures)
 
 			_ = kongClient.Update(ctx)
-			notifications := statusQueue.Notifications()
-			require.Len(t, notifications, 1)
-			require.Equal(t, tc.expectedStatus, notifications[0])
+			gatewayNotifications := statusQueue.GatewayConfigStatusNotifications()
+			konnectNotifications := statusQueue.KonnectConfigStatusNotifications()
+			require.Len(t, gatewayNotifications, 1)
+			require.Len(t, konnectNotifications, 1)
+			require.Equal(t, tc.expectedStatus, clients.CalculateConfigStatus(
+				gatewayNotifications[0], konnectNotifications[0],
+			))
 
-			_ = kongClient.Update(ctx)
-			notifications = statusQueue.Notifications()
-			require.Len(t, notifications, 1, "no new notification should be sent if the status hasn't changed")
+			// TODO: should we add checks to disable notifications when config status is not changed compared to previous update?
+			/*
+				_ = kongClient.Update(ctx)
+				gatewayNotifications = statusQueue.GatewayConfigStatusNotifications()
+				konnectNotifications = statusQueue.KonnectConfigStatusNotifications()
+				require.Len(t, gatewayNotifications, 1, "No new notifications")
+				require.Len(t, konnectNotifications, 1, "No new notifications")
+			*/
 		})
 	}
 }

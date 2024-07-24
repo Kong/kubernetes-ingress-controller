@@ -69,6 +69,8 @@ type NodeAgent struct {
 	refreshPeriod time.Duration
 	refreshTicker Ticker
 
+	gatewayConfigStatus    clients.GatewayConfigApplyStatus
+	konnectConfigStatus    clients.KonnectConfigUploadStatus
 	configStatus           atomic.Value
 	configStatusSubscriber clients.ConfigStatusSubscriber
 
@@ -181,7 +183,8 @@ func sortNodesByLastPing(nodes []*nodes.NodeItem) {
 
 // subscribeConfigStatus subscribes and updates KIC status on translating and applying configurations to kong gateway.
 func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
-	ch := a.configStatusSubscriber.SubscribeConfigStatus()
+	gatewayStatusCh := a.configStatusSubscriber.SubscribeGatewayConfigStatus()
+	konnectStatusCh := a.configStatusSubscriber.SubscribeKonnectConfigStatus()
 	chDone := ctx.Done()
 
 	for {
@@ -189,18 +192,33 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 		case <-chDone:
 			a.logger.Info("Subscribe loop stopped", "message", ctx.Err().Error())
 			return
-		case configStatus := <-ch:
-			if configStatus == a.configStatus.Load() {
-				a.logger.V(logging.DebugLevel).Info("Config status not changed, skipping update")
-				continue
+		case gatewayConfigStatus := <-gatewayStatusCh:
+			// TODO: add debounce here to prevent updates of nodes being too close or do not trigger an update of nodes immediately?
+			if a.gatewayConfigStatus != gatewayConfigStatus {
+				a.logger.V(logging.DebugLevel).Info("Gateway config status changed")
+				a.gatewayConfigStatus = gatewayConfigStatus
+				a.maybeUpdateConfigStatus(ctx)
 			}
-
-			a.logger.V(logging.DebugLevel).Info("Config status changed, updating nodes")
-			a.configStatus.Store(configStatus)
-			if err := a.updateNodes(ctx); err != nil {
-				a.logger.Error(err, "Failed to update nodes after config status changed")
+		case konnectConfigStatus := <-konnectStatusCh:
+			if a.konnectConfigStatus != konnectConfigStatus {
+				a.logger.V(logging.DebugLevel).Info("Konnect config status changed")
+				a.konnectConfigStatus = konnectConfigStatus
+				a.maybeUpdateConfigStatus(ctx)
 			}
 		}
+	}
+}
+
+func (a *NodeAgent) maybeUpdateConfigStatus(ctx context.Context) {
+	configStatus := clients.CalculateConfigStatus(a.gatewayConfigStatus, a.konnectConfigStatus)
+	if configStatus == a.configStatus.Load() {
+		a.logger.V(logging.DebugLevel).Info("Config status not changed, skipping update")
+		return
+	}
+	a.logger.V(logging.DebugLevel).Info("Config status changed, updating nodes")
+	a.configStatus.Store(configStatus)
+	if err := a.updateNodes(ctx); err != nil {
+		a.logger.Error(err, "Failed to update nodes after config status changed")
 	}
 }
 

@@ -16,8 +16,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
 
-func buildCustomEntityWithObject(entityType string, obj custom.Object) custom.Entity {
-	e := custom.NewEntityObject(custom.Type(entityType))
+func buildCustomEntityWithObject(entityType custom.Type, obj custom.Object) custom.Entity {
+	e := custom.NewEntityObject(entityType)
 	e.SetObject(obj)
 	return e
 }

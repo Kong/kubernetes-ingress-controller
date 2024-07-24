@@ -823,7 +823,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 	if !ok {
 		return
 	}
-	logger.V(util.DebugLevel).Info("fetch references via plugin", "plugin_key", pluginKey)
+	logger.V(logging.DebugLevel).Info("fetch references via plugin", "plugin_key", pluginKey)
 
 	// Traverse through the fields of the entity and fill the "foreign" fields with IDs of referring entities.
 	// Note: this procedure will make referred services'/routes'/consumers' ID to be filled.
@@ -841,7 +841,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 				parsedEntity[fieldName] = map[string]interface{}{
 					"id": serviceIDs[0],
 				}
-				logger.V(util.DebugLevel).Info("added ref to service", "service_id", serviceIDs[0])
+				logger.V(logging.DebugLevel).Info("added ref to service", "service_id", serviceIDs[0])
 			}
 		case string(kong.EntityTypeRoutes):
 			routeIDs := lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
@@ -854,7 +854,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 				parsedEntity[fieldName] = map[string]interface{}{
 					"id": routeIDs[0],
 				}
-				logger.V(util.DebugLevel).Info("added ref to route", "route_id", routeIDs[0])
+				logger.V(logging.DebugLevel).Info("added ref to route", "route_id", routeIDs[0])
 			}
 		case string(kong.EntityTypeConsumers):
 			consumerIDs := lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
@@ -867,7 +867,7 @@ func (ks *KongState) fillCustomEntityForeignFields(
 				parsedEntity[fieldName] = map[string]interface{}{
 					"id": consumerIDs[0],
 				}
-				logger.V(util.DebugLevel).Info("added ref to consumer", "consumer_id", consumerIDs[0])
+				logger.V(logging.DebugLevel).Info("added ref to consumer", "consumer_id", consumerIDs[0])
 			}
 		}
 	}

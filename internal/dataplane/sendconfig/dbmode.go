@@ -30,6 +30,7 @@ type UpdateStrategyDBMode struct {
 	dumpConfig        dump.Config
 	version           semver.Version
 	concurrency       int
+	diagnostic        *diagnostics.ClientDiagnostic
 	isKonnect         bool
 	logger            logr.Logger
 	resourceErrors    []ResourceError
@@ -41,6 +42,7 @@ func NewUpdateStrategyDBMode(
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
+	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) *UpdateStrategyDBMode {
 	return &UpdateStrategyDBMode{
@@ -48,6 +50,7 @@ func NewUpdateStrategyDBMode(
 		dumpConfig:        dumpConfig,
 		version:           version,
 		concurrency:       concurrency,
+		diagnostic:        diagnostic,
 		logger:            logger,
 		resourceErrors:    []ResourceError{},
 		resourceErrorLock: &sync.Mutex{},
@@ -59,9 +62,10 @@ func NewUpdateStrategyDBModeKonnect(
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
+	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
-) *UpdateStrategyDBMode {
-	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, logger)
+) UpdateStrategyDBMode {
+	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, diagnostic, logger)
 	s.isKonnect = true
 	return s
 }
@@ -93,9 +97,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	ctx, cancel := context.WithCancel(ctx)
 	// TRR this is where db mode update strat handles events. resultchan is the entityaction channel
 	// TRR targetContent.Hash is the config hash
-	// TRR TODO need to plumb the actual channel from the diag server over here. standin black hole for now
-	diffs := make(chan diagnostics.ConfigDiff, 3)
-	go s.HandleEvents(ctx, syncer.GetResultChan(), diffs, string(targetContent.Hash))
+	go s.HandleEvents(ctx, syncer.GetResultChan(), s.diagnostic, string(targetContent.Hash))
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
@@ -151,16 +153,10 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 func (s *UpdateStrategyDBMode) HandleEvents(
 	ctx context.Context,
 	events chan diff.EntityAction,
-	diffChan chan diagnostics.ConfigDiff,
+	diagnostic *diagnostics.ClientDiagnostic,
 	hash string,
 ) {
-	// TRR this is where we get the diff info from deck
 	s.resourceErrorLock.Lock()
-	// TRR TODO this accumulator isn't great since we need to append to the array, which is... probably unsafe? maybe
-	// the for can't actually handle multiple select inbounds at once, but I think it can, and append calls would cause
-	// havoc. can maybe use something from https://pkg.go.dev/sync/atomic to increment a counter, use that as a map key
-	// and then convert the values into a slice for the Done handler. otherwise this would need to send individual
-	// EntityDiffs down a channel to the diag server, which seems less than ideal
 	diff := diagnostics.ConfigDiff{
 		Hash:     hash,
 		Entities: []diagnostics.EntityDiff{},
@@ -180,6 +176,22 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 				}
 			}
 		case <-ctx.Done():
+			// The DB mode update strategy is used for both DB mode gateways and Konnect-integrated controllers. In the
+			// Konnect case, we don't actually want to collect diffs, and don't actually provide a diagnostic when setting
+			// it up, so we only collect and send diffs if we're talking to a gateway.
+			//
+			// TRR TODO maybe this is wrong? I'm not sure if we actually support (or if not, explicitly prohibit)
+			// configuring a controller to use both DB mode and talk to Konnect, or if we only support DB-less when using
+			// Konnect. If those are mutually exclusive, maybe we can just collect diffs for Konnect mode? If they're
+			// not mutually exclusive, trying to do diagnostics diff updates for both the updates would have both attempt
+			// to store diffs. This is... maybe okay. They should be identical, but that's a load-bearing "should": we know
+			// Konnect can sometimes differ in what it accepts versus the gateway, and we have some Konnect configuration
+			// (consumer exclude, sensitive value mask) where they're _definitely_ different. That same configuration could
+			// make the diff confusing even if it's DB mode only, since it doesn't reflect what we're sending to the gateway
+			// in some cases.
+			if diagnostic != nil {
+				diagnostic.Diffs <- diff
+			}
 			s.resourceErrorLock.Unlock()
 			return
 		}

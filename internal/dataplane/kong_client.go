@@ -801,6 +801,7 @@ func (c *KongClient) sendToClient(
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,
+		&c.diagnostic,
 		isFallback,
 	)
 	// Only record events on applying configuration to Kong gateway here.

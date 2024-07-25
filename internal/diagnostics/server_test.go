@@ -21,7 +21,7 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 	s := NewServer(logr.Discard(), ServerConfig{
 		ConfigDumpsEnabled: true,
 	})
-	configsCh := s.configDumps.Configs
+	configsCh := s.clientDiagnostic.Configs
 
 	port := testhelpers.GetFreePort(t)
 	t.Logf("Obtained a free port: %d", port)

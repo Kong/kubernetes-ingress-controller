@@ -109,7 +109,7 @@ type KongClient struct {
 
 	// diagnostic is the client and configuration for reporting diagnostic
 	// information during data-plane update runtime.
-	diagnostic diagnostics.ConfigDumpDiagnostic
+	diagnostic diagnostics.ClientDiagnostic
 
 	// prometheusMetrics is the client for shipping metrics information
 	// updates to the prometheus exporter.
@@ -190,7 +190,7 @@ type KongClient struct {
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	diagnostic diagnostics.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ClientDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode dpconf.DBMode,
@@ -868,13 +868,13 @@ type sendDiagnosticFn func(meta diagnostics.DumpMeta, raw []byte)
 func prepareSendDiagnosticFn(
 	ctx context.Context,
 	logger logr.Logger,
-	diagnosticConfig diagnostics.ConfigDumpDiagnostic,
+	diagnosticConfig diagnostics.ClientDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
 	isFallback bool,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (diagnostics.ConfigDumpDiagnostic{}) {
+	if diagnosticConfig == (diagnostics.ClientDiagnostic{}) {
 		// noop, diagnostics won't be sent
 		return func(diagnostics.DumpMeta, []byte) {}
 	}

@@ -30,8 +30,7 @@ type ConfigSynchronizer struct {
 	prometheusMetrics      *metrics.CtrlFuncMetrics
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
-	// REVIEW: use *file.Content to pass Kong configuration because it has Deepcopy method
-	// so we can easily copy config to prevent data race and long term locks.
+
 	targetContent *file.Content
 
 	lock sync.RWMutex
@@ -46,11 +45,10 @@ func NewConfigSynchronizer(
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 ) *ConfigSynchronizer {
 	return &ConfigSynchronizer{
-		logger:          logger,
-		syncTicker:      time.NewTicker(configUploadPeriod),
-		kongConfig:      kongConfig,
-		clientsProvider: clientsProvider,
-		// REVIEW: can we run metrics.NewCtrlFuncMetrics() more than once?
+		logger:                 logger,
+		syncTicker:             time.NewTicker(configUploadPeriod),
+		kongConfig:             kongConfig,
+		clientsProvider:        clientsProvider,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,

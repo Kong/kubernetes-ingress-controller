@@ -253,6 +253,9 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 			return false
 		}
 		url := urls[l-1]
+		if url != testKonnectClient.BaseRootURL() {
+			return false
+		}
 		contentWithHash, ok := resolver.lastUpdatedContentForURL(url)
 		if !ok {
 			return false

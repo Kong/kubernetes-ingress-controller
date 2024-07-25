@@ -72,6 +72,8 @@ func PerformUpdate(
 		}
 	}
 
+	// TRR probably plumb the diag server channel down to here. this builds either strategy, but can have the dbless
+	// one just discard it
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()

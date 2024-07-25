@@ -2,6 +2,7 @@ package diagnostics
 
 import (
 	"github.com/kong/go-database-reconciler/pkg/file"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 )
@@ -26,11 +27,12 @@ type ConfigDump struct {
 	RawResponseBody []byte
 }
 
-// ConfigDumpDiagnostic contains settings and channels for receiving diagnostic configuration dumps.
-type ConfigDumpDiagnostic struct {
+// ClientDiagnostic contains settings and channels for receiving diagnostic data from the controller's Kong client.
+type ClientDiagnostic struct {
 	// DumpsIncludeSensitive is true if the configuration dump includes sensitive values, such as certificate private
 	// keys and credential secrets.
 	DumpsIncludeSensitive bool
+
 	// Configs is the channel that receives configuration blobs from the configuration update strategy implementation.
 	Configs chan ConfigDump
 

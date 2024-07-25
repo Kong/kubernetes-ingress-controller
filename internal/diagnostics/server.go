@@ -32,7 +32,7 @@ const (
 type Server struct {
 	logger           logr.Logger
 	profilingEnabled bool
-	configDumps      ConfigDumpDiagnostic
+	clientDiagnostic ClientDiagnostic
 
 	lastSuccessfulConfigDump file.Content
 	lastSuccessHash          string
@@ -69,7 +69,7 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 	}
 
 	if cfg.ConfigDumpsEnabled {
-		s.configDumps = ConfigDumpDiagnostic{
+		s.clientDiagnostic = ClientDiagnostic{
 			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
 			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
 			FallbackCacheMetadata: make(chan fallback.GeneratedCacheMetadata, diagnosticConfigBufferDepth),
@@ -82,14 +82,14 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 
 // ConfigDumps returns an object allowing dumping succeeded and failed configuration updates.
 // It will return a zero value of the type in case the config dumps are not enabled.
-func (s *Server) ConfigDumps() ConfigDumpDiagnostic {
-	return s.configDumps
+func (s *Server) ConfigDumps() ClientDiagnostic {
+	return s.clientDiagnostic
 }
 
 // Listen starts up the HTTP server and blocks until ctx expires.
 func (s *Server) Listen(ctx context.Context, port int) error {
 	mux := http.NewServeMux()
-	if s.configDumps != (ConfigDumpDiagnostic{}) {
+	if s.clientDiagnostic != (ClientDiagnostic{}) {
 		s.installConfigDebugHandlers(mux)
 	}
 	if s.profilingEnabled {
@@ -130,9 +130,9 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 func (s *Server) receiveConfig(ctx context.Context) {
 	for {
 		select {
-		case dump := <-s.configDumps.Configs:
+		case dump := <-s.clientDiagnostic.Configs:
 			s.onConfigDump(dump)
-		case meta := <-s.configDumps.FallbackCacheMetadata:
+		case meta := <-s.clientDiagnostic.FallbackCacheMetadata:
 			s.onFallbackCacheMetadata(meta)
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {

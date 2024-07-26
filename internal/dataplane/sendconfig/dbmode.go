@@ -166,6 +166,8 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 		case event := <-events:
 			if event.Error == nil {
 				s.logger.V(logging.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
+				eventDiff := diagnostics.NewEntityDiff(event.Diff, string(event.Action))
+				diff.Entities = append(diff.Entities, eventDiff)
 			} else {
 				s.logger.Error(event.Error, "failed updating gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 				parsed, err := resourceErrorFromEntityAction(event)

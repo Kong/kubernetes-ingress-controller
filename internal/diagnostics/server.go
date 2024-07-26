@@ -26,6 +26,9 @@ const (
 	// variable) but do want a small amount of leeway to account for goroutine scheduling, so it
 	// is not zero.
 	diagnosticConfigBufferDepth = 3
+
+	// diffHistorySize is the number of diffs to keep in history.
+	diffHistorySize = 5
 )
 
 // Server is an HTTP server running exposing the pprof profiling tool, and processing diagnostic dumps of Kong configurations.
@@ -43,8 +46,11 @@ type Server struct {
 
 	currentFallbackCacheMetadata *fallback.GeneratedCacheMetadata
 
+	diffs diffMap
+
 	configLock   *sync.RWMutex
 	fallbackLock *sync.RWMutex
+	diffLock     *sync.RWMutex
 }
 
 // ServerConfig contains configuration for the diagnostics server.
@@ -66,6 +72,8 @@ func NewServer(logger logr.Logger, cfg ServerConfig) Server {
 		profilingEnabled: cfg.ProfilingEnabled,
 		configLock:       &sync.RWMutex{},
 		fallbackLock:     &sync.RWMutex{},
+		diffLock:         &sync.RWMutex{},
+		diffs:            newDiffMap(diffHistorySize),
 	}
 
 	if cfg.ConfigDumpsEnabled {
@@ -103,7 +111,7 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 	}
 	errChan := make(chan error)
 
-	go s.receiveConfig(ctx)
+	go s.receiveDiagnostics(ctx)
 
 	go func() {
 		err := httpServer.ListenAndServe()
@@ -126,20 +134,22 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 	}
 }
 
-// receiveConfig watches the config update channel.
-func (s *Server) receiveConfig(ctx context.Context) {
+// receiveDiagnostics watches the diagnostic update channels.
+func (s *Server) receiveDiagnostics(ctx context.Context) {
 	for {
 		select {
 		case dump := <-s.clientDiagnostic.Configs:
 			s.onConfigDump(dump)
 		case meta := <-s.clientDiagnostic.FallbackCacheMetadata:
 			s.onFallbackCacheMetadata(meta)
+		case diff := <-s.clientDiagnostic.Diffs:
+			s.onDiff(diff)
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
-				s.logger.Error(err, "Shutting down diagnostic config collection: context completed with error")
+				s.logger.Error(err, "Shutting down diagnostic collection: context completed with error")
 				return
 			}
-			s.logger.V(logging.InfoLevel).Info("Shutting down diagnostic config collection: context completed")
+			s.logger.V(logging.InfoLevel).Info("Shutting down diagnostic collection: context completed")
 			return
 		}
 	}
@@ -173,6 +183,12 @@ func (s *Server) onFallbackCacheMetadata(meta fallback.GeneratedCacheMetadata) {
 	s.fallbackLock.Lock()
 	defer s.fallbackLock.Unlock()
 	s.currentFallbackCacheMetadata = &meta
+}
+
+func (s *Server) onDiff(diff ConfigDiff) {
+	s.diffLock.Lock()
+	defer s.diffLock.Unlock()
+	s.diffs.Update(diff)
 }
 
 // installProfilingHandlers adds the Profiling webservice to the given mux.

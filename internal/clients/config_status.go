@@ -21,33 +21,36 @@ const (
 	ConfigStatusUnknown                                    ConfigStatus = "Unknown"
 )
 
-// CalculateConfigStatusInput aggregates the input to CalculateConfigStatus.
-type CalculateConfigStatusInput struct {
-	// Any error occurred when syncing with Gateways.
-	GatewaysFailed bool
-
-	// Any error occurred when syncing with Konnect,
-	KonnectFailed bool
-
-	// Translation of some of Kubernetes objects failed.
+// GatewayConfigApplyStatus stores the status of building Kong configuration and sending configuration to Kong gateways.
+type GatewayConfigApplyStatus struct {
+	// TranslationFailuresOccurred is true means Translation of some of Kubernetes objects failed.
 	TranslationFailuresOccurred bool
+
+	// Any error occurred when syncing with Gateways.
+	ApplyConfigFailed bool
+}
+
+// KonnectConfigUploadStatus stores the status of uploading configuration to Konnect.
+
+type KonnectConfigUploadStatus struct {
+	Failed bool
 }
 
 // CalculateConfigStatus calculates a clients.ConfigStatus that sums up the configuration synchronisation result as
 // a single enumerated value.
-func CalculateConfigStatus(i CalculateConfigStatusInput) ConfigStatus {
+func CalculateConfigStatus(g GatewayConfigApplyStatus, k KonnectConfigUploadStatus) ConfigStatus {
 	switch {
-	case !i.GatewaysFailed && !i.KonnectFailed && !i.TranslationFailuresOccurred:
+	case !g.ApplyConfigFailed && !g.TranslationFailuresOccurred && !k.Failed:
 		return ConfigStatusOK
-	case !i.GatewaysFailed && !i.KonnectFailed && i.TranslationFailuresOccurred:
+	case !g.ApplyConfigFailed && g.TranslationFailuresOccurred && !k.Failed:
 		return ConfigStatusTranslationErrorHappened
-	case i.GatewaysFailed && !i.KonnectFailed: // We don't care about translation failures if we can't apply to gateways.
+	case g.ApplyConfigFailed && !k.Failed: // We don't care about translation failures if we can't apply to gateways.
 		return ConfigStatusApplyFailed
-	case !i.GatewaysFailed && i.KonnectFailed && !i.TranslationFailuresOccurred:
+	case !g.ApplyConfigFailed && !g.TranslationFailuresOccurred && k.Failed:
 		return ConfigStatusOKKonnectApplyFailed
-	case !i.GatewaysFailed && i.KonnectFailed && i.TranslationFailuresOccurred:
+	case !g.ApplyConfigFailed && g.TranslationFailuresOccurred && k.Failed:
 		return ConfigStatusTranslationErrorHappenedKonnectApplyFailed
-	case i.GatewaysFailed && i.KonnectFailed: // We don't care about translation failures if we can't apply to gateways.
+	case g.ApplyConfigFailed && k.Failed: // We don't care about translation failures if we can't apply to gateways.
 		return ConfigStatusApplyFailedKonnectApplyFailed
 	}
 
@@ -56,36 +59,43 @@ func CalculateConfigStatus(i CalculateConfigStatusInput) ConfigStatus {
 }
 
 type ConfigStatusNotifier interface {
-	NotifyConfigStatus(context.Context, ConfigStatus)
+	NotifyGatewayConfigStatus(context.Context, GatewayConfigApplyStatus)
+	NotifyKonnectConfigStatus(context.Context, KonnectConfigUploadStatus)
 }
 
 type ConfigStatusSubscriber interface {
-	SubscribeConfigStatus() chan ConfigStatus
+	SubscribeGatewayConfigStatus() chan GatewayConfigApplyStatus
+	SubscribeKonnectConfigStatus() chan KonnectConfigUploadStatus
 }
 
 type NoOpConfigStatusNotifier struct{}
 
 var _ ConfigStatusNotifier = NoOpConfigStatusNotifier{}
 
-func (n NoOpConfigStatusNotifier) NotifyConfigStatus(_ context.Context, _ ConfigStatus) {
+func (n NoOpConfigStatusNotifier) NotifyGatewayConfigStatus(_ context.Context, _ GatewayConfigApplyStatus) {
+}
+
+func (n NoOpConfigStatusNotifier) NotifyKonnectConfigStatus(_ context.Context, _ KonnectConfigUploadStatus) {
 }
 
 type ChannelConfigNotifier struct {
-	ch     chan ConfigStatus
-	logger logr.Logger
+	gatewayStatusCh chan GatewayConfigApplyStatus
+	konnectStatusCh chan KonnectConfigUploadStatus
+	logger          logr.Logger
 }
 
 var _ ConfigStatusNotifier = &ChannelConfigNotifier{}
 
 func NewChannelConfigNotifier(logger logr.Logger) *ChannelConfigNotifier {
 	return &ChannelConfigNotifier{
-		ch:     make(chan ConfigStatus),
-		logger: logger,
+		gatewayStatusCh: make(chan GatewayConfigApplyStatus),
+		konnectStatusCh: make(chan KonnectConfigUploadStatus),
+		logger:          logger,
 	}
 }
 
-// NotifyConfigStatus sends the status in a separate goroutine. If the notification is not received in 1s, it's dropped.
-func (n *ChannelConfigNotifier) NotifyConfigStatus(ctx context.Context, status ConfigStatus) {
+// NotifyGatewayConfigStatus notifies status of sending configuration to Kong gateway(s).
+func (n *ChannelConfigNotifier) NotifyGatewayConfigStatus(ctx context.Context, status GatewayConfigApplyStatus) {
 	const notifyTimeout = time.Second
 
 	go func() {
@@ -93,16 +103,39 @@ func (n *ChannelConfigNotifier) NotifyConfigStatus(ctx context.Context, status C
 		defer timeout.Stop()
 
 		select {
-		case n.ch <- status:
+		case n.gatewayStatusCh <- status:
 		case <-ctx.Done():
-			n.logger.Info("Context done, not notifying config status", "status", status)
+			n.logger.Info("Context done, not notifying gateway config status", "status", status)
 		case <-timeout.C:
-			n.logger.Info("Timed out notifying config status", "status", status)
+			n.logger.Info("Timed out notifying gateway config status", "status", status)
 		}
 	}()
 }
 
-func (n *ChannelConfigNotifier) SubscribeConfigStatus() chan ConfigStatus {
+// NotifyKonnectConfigStatus notifies status of sending configuration to Konnect.
+func (n *ChannelConfigNotifier) NotifyKonnectConfigStatus(ctx context.Context, status KonnectConfigUploadStatus) {
+	const notifyTimeout = time.Second
+
+	go func() {
+		timeout := time.NewTimer(notifyTimeout)
+		defer timeout.Stop()
+
+		select {
+		case n.konnectStatusCh <- status:
+		case <-ctx.Done():
+			n.logger.Info("Context done, not notifying Konnect config status", "status", status)
+		case <-timeout.C:
+			n.logger.Info("Timed out notifying Konnect config status", "status", status)
+		}
+	}()
+}
+
+func (n *ChannelConfigNotifier) SubscribeGatewayConfigStatus() chan GatewayConfigApplyStatus {
 	// TODO: in case of multiple subscribers, we should use a fan-out pattern.
-	return n.ch
+	return n.gatewayStatusCh
+}
+
+func (n *ChannelConfigNotifier) SubscribeKonnectConfigStatus() chan KonnectConfigUploadStatus {
+	// TODO: in case of multiple subscribers, we should use a fan-out pattern.
+	return n.konnectStatusCh
 }

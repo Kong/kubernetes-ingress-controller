@@ -164,9 +164,6 @@ type KongClient struct {
 	// It may be empty if the client is not running in a pod (e.g. in a unit test).
 	controllerPodReference mo.Option[k8stypes.NamespacedName]
 
-	// currentConfigStatus is the current status of the configuration synchronisation.
-	currentConfigStatus clients.ConfigStatus
-
 	// fallbackConfigGenerator is used to generate a fallback configuration in case of sync failures.
 	fallbackConfigGenerator FallbackConfigGenerator
 
@@ -490,13 +487,13 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
 	// failures, calculate the config status and update it.
-	c.updateConfigStatus(ctx, clients.CalculateConfigStatus(
-		clients.CalculateConfigStatusInput{
-			GatewaysFailed:              gatewaysSyncErr != nil,
-			KonnectFailed:               konnectSyncErr != nil,
-			TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
-		},
-	))
+	c.configStatusNotifier.NotifyGatewayConfigStatus(ctx, clients.GatewayConfigApplyStatus{
+		TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
+		ApplyConfigFailed:           gatewaysSyncErr != nil,
+	})
+	c.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
+		Failed: konnectSyncErr != nil,
+	})
 
 	// In case of a failure in syncing configuration with Gateways, propagate the error.
 	if gatewaysSyncErr != nil {
@@ -1037,20 +1034,6 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string, i
 		},
 	}
 	c.eventRecorder.Event(pod, eventType, reason, message)
-}
-
-// updateConfigStatus updates the current config status and notifies about the change. It is a no-op if the status
-// hasn't changed.
-func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus clients.ConfigStatus) {
-	if c.currentConfigStatus == configStatus {
-		// No change in config status, nothing to do.
-		c.logger.V(logging.DebugLevel).Info("No change in config status, not notifying")
-		return
-	}
-
-	c.logger.V(logging.DebugLevel).Info("Config status changed, notifying", "configStatus", configStatus)
-	c.currentConfigStatus = configStatus
-	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
 }
 
 func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMetadata) {

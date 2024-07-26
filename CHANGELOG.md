@@ -108,6 +108,11 @@ Adding a new version? You'll need three changes:
   `ReferenceGrant` in the namespace of the `KongPlugin` to grant permissions
   to `KongCustomEntity` of referring to `KongPlugin`.
   [#6289](https://github.com/Kong/kubernetes-ingress-controller/pull/6289)
+- Konnect configuration updates are now handled separately from gateway
+  updates. This allows the controller to handle sync errors for the gateway and
+  Konnect speparately, and avoids one blocking the other.
+  [#6341](https://github.com/Kong/kubernetes-ingress-controller/pull/6341)
+  [#6349](https://github.com/Kong/kubernetes-ingress-controller/pull/6349)
 
 ### Fixed
 

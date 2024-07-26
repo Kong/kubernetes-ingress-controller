@@ -30,7 +30,9 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
@@ -473,4 +475,30 @@ func setupLicenseGetter(
 	}
 
 	return nil, nil
+}
+
+func setupKonnectConfigSynchronizer(
+	ctx context.Context,
+	mgr manager.Manager,
+	kongConfig sendconfig.Config,
+	clientsProvider clients.AdminAPIClientsProvider,
+	updateStrategyResolver sendconfig.UpdateStrategyResolver,
+	configStatusNotifier clients.ConfigStatusNotifier,
+) (*konnect.ConfigSynchronizer, error) {
+	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
+	s := konnect.NewConfigSynchronizer(
+		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
+		kongConfig,
+		konnect.DefaultConfigUploadPeriod,
+		clientsProvider,
+		updateStrategyResolver,
+		sendconfig.NewDefaultConfigurationChangeDetector(logger),
+		configStatusNotifier,
+	)
+	err := mgr.Add(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }

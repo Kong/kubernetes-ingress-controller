@@ -274,18 +274,37 @@ func Run(
 		// connection.
 		go setupKonnectAdminAPIClientWithClientsMgr(ctx, c.Konnect, clientsManager, setupLog)
 
+		// Set channel to send config status.
+		configStatusNotifier := clients.NewChannelConfigNotifier(logger)
+		dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
+
+		// Setup Konnect config synchronizer.
+		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizer(
+			ctx,
+			mgr,
+			kongConfig,
+			clientsManager,
+			updateStrategyResolver,
+			configStatusNotifier,
+		)
+		if err != nil {
+			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")
+		}
+		dataplaneClient.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
+
 		// Setup Konnect NodeAgent with manager.
 		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
 			konnectNodesAPIClient,
-			dataplaneClient,
+			configStatusNotifier,
 			clientsManager,
 			setupLog,
 			instanceIDProvider,
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
+
 	}
 
 	// Setup and inject license getter.
@@ -388,7 +407,7 @@ func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
 	konnectNodeAPIClient *nodes.Client,
-	dataplaneClient *dataplane.KongClient,
+	configStatusSubscriber clients.ConfigStatusSubscriber,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 	instanceIDProvider *InstanceIDProvider,
@@ -404,17 +423,13 @@ func setupKonnectNodeAgentWithMgr(
 	}
 	version := metadata.Release
 
-	// Set channel to send config status.
-	configStatusNotifier := clients.NewChannelConfigNotifier(logger)
-	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
-
 	agent := konnect.NewNodeAgent(
 		hostname,
 		version,
 		c.Konnect.RefreshNodePeriod,
 		logger,
 		konnectNodeAPIClient,
-		configStatusNotifier,
+		configStatusSubscriber,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
 		instanceIDProvider,

@@ -30,6 +30,7 @@ type ConfigSynchronizer struct {
 	prometheusMetrics      *metrics.CtrlFuncMetrics
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
+	configStatusNotifier   clients.ConfigStatusNotifier
 
 	targetContent *file.Content
 
@@ -43,6 +44,7 @@ func NewConfigSynchronizer(
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	configStatusNotifier clients.ConfigStatusNotifier,
 ) *ConfigSynchronizer {
 	return &ConfigSynchronizer{
 		logger:                 logger,
@@ -52,6 +54,7 @@ func NewConfigSynchronizer(
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
+		configStatusNotifier:   configStatusNotifier,
 	}
 }
 
@@ -105,6 +108,9 @@ func (s *ConfigSynchronizer) runKonnectUpdateServer(ctx context.Context) {
 				s.logger.Error(err, "failed to upload configuration to Konnect")
 				logKonnectErrors(s.logger, err)
 			}
+			s.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
+				Failed: err != nil,
+			})
 		}
 	}
 }

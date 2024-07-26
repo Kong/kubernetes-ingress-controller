@@ -42,6 +42,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
@@ -624,6 +625,7 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 				kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 			)
 
+			attachKonnectConfigSynchronizer(kongClient, updateStrategyResolver, clientsProvider, configChangeDetector, statusQueue)
 			kongClient.SetConfigStatusNotifier(statusQueue)
 			for range tc.gatewayFailuresCount {
 				updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL())
@@ -635,9 +637,17 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 
 			_ = kongClient.Update(ctx)
 			gatewayNotifications := statusQueue.GatewayConfigStatusNotifications()
+			require.Len(t, gatewayNotifications, 1, "Should receive gateway configuration status right after update")
+			require.Eventually(
+				t, func() bool {
+					konnectNotifications := statusQueue.KonnectConfigStatusNotifications()
+
+					return len(konnectNotifications) == 1
+				}, 10*testKonnectUploadPeriod, testKonnectUploadPeriod,
+				"Should receive Konnect config status in time",
+			)
+
 			konnectNotifications := statusQueue.KonnectConfigStatusNotifications()
-			require.Len(t, gatewayNotifications, 1)
-			require.Len(t, konnectNotifications, 1)
 			require.Equal(t, tc.expectedStatus, clients.CalculateConfigStatus(
 				gatewayNotifications[0], konnectNotifications[0],
 			))
@@ -975,6 +985,33 @@ func setupTestKongClient(
 	)
 	require.NoError(t, err)
 	return kongClient
+}
+
+const (
+	testKonnectUploadPeriod = 10 * time.Millisecond
+)
+
+func attachKonnectConfigSynchronizer(
+	kc *KongClient,
+	updateStrategyResolver *mockUpdateStrategyResolver,
+	clientsProvider *mockGatewayClientsProvider,
+	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	configStatusNotifier clients.ConfigStatusNotifier,
+) {
+	config := sendconfig.Config{
+		SanitizeKonnectConfigDumps: true,
+	}
+	konnectConfigSynchronizer := konnect.NewConfigSynchronizer(
+		logr.Discard(),
+		config,
+		testKonnectUploadPeriod,
+		clientsProvider,
+		updateStrategyResolver,
+		configChangeDetector,
+		configStatusNotifier,
+	)
+	kc.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
+	konnectConfigSynchronizer.Start(context.Background())
 }
 
 func mustSampleGatewayClient(t *testing.T) *adminapi.Client {

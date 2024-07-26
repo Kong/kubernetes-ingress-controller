@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
@@ -186,6 +187,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: resolver,
 		configChangeDetector:   mockConfigurationChangeDetector{},
+		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

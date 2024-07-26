@@ -465,7 +465,6 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 		},
 	}
 
-	// expectedNodesUpdatesCount := 0
 	for _, tc := range testCases {
 		t.Run(fmt.Sprint(tc.expectedConfigStaus), func(t *testing.T) {
 			configStatusQueue.NotifyGatewayConfigStatus(tc.notifiedGatewayConfigStatus)
@@ -487,11 +486,6 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 
 				return true
 			}, time.Second, time.Millisecond)
-
-			// TODO: when we let node agent to subscribe gateway config status and konnect config status separately,
-			// It will trigger two updates when they are both changed.
-			// expectedNodesUpdatesCount++
-			// require.Equal(t, expectedNodesUpdatesCount, nodeClient.NodesUpdatesCount(), "expected only one more node update")
 		})
 	}
 }

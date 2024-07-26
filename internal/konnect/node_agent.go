@@ -193,7 +193,6 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 			a.logger.Info("Subscribe loop stopped", "message", ctx.Err().Error())
 			return
 		case gatewayConfigStatus := <-gatewayStatusCh:
-			// TODO: add debounce here to prevent updates of nodes being too close or do not trigger an update of nodes immediately?
 			if a.gatewayConfigStatus != gatewayConfigStatus {
 				a.logger.V(logging.DebugLevel).Info("Gateway config status changed")
 				a.gatewayConfigStatus = gatewayConfigStatus

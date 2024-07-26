@@ -31,7 +31,7 @@ type GatewayConfigApplyStatus struct {
 }
 
 // KonnectConfigUploadStatus stores the status of uploading configuration to Konnect.
-// REVIEW: should we just make an alias of `bool`?
+
 type KonnectConfigUploadStatus struct {
 	Failed bool
 }

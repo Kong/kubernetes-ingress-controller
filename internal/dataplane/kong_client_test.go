@@ -641,15 +641,6 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 			require.Equal(t, tc.expectedStatus, clients.CalculateConfigStatus(
 				gatewayNotifications[0], konnectNotifications[0],
 			))
-
-			// TODO: should we add checks to disable notifications when config status is not changed compared to previous update?
-			/*
-				_ = kongClient.Update(ctx)
-				gatewayNotifications = statusQueue.GatewayConfigStatusNotifications()
-				konnectNotifications = statusQueue.KonnectConfigStatusNotifications()
-				require.Len(t, gatewayNotifications, 1, "No new notifications")
-				require.Len(t, konnectNotifications, 1, "No new notifications")
-			*/
 		})
 	}
 }

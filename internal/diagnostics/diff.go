@@ -1,5 +1,10 @@
 package diagnostics
 
+import (
+	"github.com/golang-collections/collections/queue"
+	"github.com/kong/go-database-reconciler/pkg/diff"
+)
+
 // TRR TODO this holds guts for diff endpoints. need to reorg the types.go into something that splits out the
 // subcomponents into separate files and move the base stuff into server.go probably.
 // the /config/{successful|failed} API endpoint structure isn't great for anything other than "current failure, last
@@ -61,6 +66,21 @@ type EntityDiff struct {
 	Diff      string          `json:"diff,omitempty"`
 }
 
+// NewEntityDiff creates a diagnostic entity diff.
+func NewEntityDiff(diff string, action string, entity diff.Entity) EntityDiff {
+	return EntityDiff{
+		// TODO this is mostly a stub at present. Need to either derive the source from tags or just omit it for now with
+		// a nice to have feature issue, or a simpler YAGNI but if someone asks add it TODO here.
+		Source: sourceResource{},
+		Generated: generatedEntity{
+			Name: entity.Name,
+			Kind: entity.Kind,
+		},
+		Action: action,
+		Diff:   diff,
+	}
+}
+
 // TRR TODO this is stolen from the error event builder, which parses regurgitated entity tags into k8s parents.
 // we want the same here, minus the additional error info. could probably make it a function in
 // internal/util/k8s.go along with sourceResource, but for now it's just sitting here for reference.
@@ -91,3 +111,30 @@ type EntityDiff struct {
 //		}
 //	}
 //}
+
+// diffMap holds DB mode diff history.
+type diffMap struct {
+	diffs     map[string]ConfigDiff
+	hashQueue *queue.Queue
+	length    int
+}
+
+func newDiffMap(length int) diffMap {
+	return diffMap{
+		diffs:     map[string]ConfigDiff{},
+		length:    length,
+		hashQueue: queue.New(),
+	}
+}
+
+// Update adds a diff to the diffMap. If the diffMap holds the maximum number of diffs in history, it removes the
+// oldest diff.
+func (d *diffMap) Update(diff ConfigDiff) {
+	if d.hashQueue.Len() == d.length {
+		oldest := d.hashQueue.Dequeue().(string)
+		delete(d.diffs, oldest)
+	}
+	d.hashQueue.Enqueue(diff.Hash)
+	d.diffs[diff.Hash] = diff
+	return
+}

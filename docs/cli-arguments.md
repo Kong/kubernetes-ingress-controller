@@ -77,6 +77,7 @@
 | `--konnect-tls-client-cert-file` | `string` | Konnect TLS client certificate file path. |  |
 | `--konnect-tls-client-key` | `string` | Konnect TLS client key. |  |
 | `--konnect-tls-client-key-file` | `string` | Konnect TLS client key file path. |  |
+| `--konnect-upload-config-period` | `duration` | Period of uploading Kong configuration. | `30s` |
 | `--kubeconfig` | `string` | Path to the kubeconfig file. |  |
 | `--log-format` | `string` | Format of logs of the controller. Allowed values are text and json. | `text` |
 | `--log-level` | `string` | Level of logging for the controller. Allowed values are trace, debug, info, and error. | `info` |

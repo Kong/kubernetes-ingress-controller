@@ -233,6 +233,13 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		return assert.ObjectsAreEqual(content, contentWithHash.Content)
 	}, 10*sendConfigPeriod, sendConfigPeriod, "Should send expected configuration in time after received configuration")
 
+	t.Logf("Verifying that update is not called when config not changed")
+	l := len(resolver.getUpdateCalledForURLs())
+	s.SetTargetContent(content)
+	require.Never(t, func() bool {
+		return len(resolver.getUpdateCalledForURLs()) != l
+	}, 10*sendConfigPeriod, sendConfigPeriod)
+
 	t.Logf("Verifying that new config are not sent after context cancelled")
 	cancel()
 	<-ctx.Done()

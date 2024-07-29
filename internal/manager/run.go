@@ -282,6 +282,7 @@ func Run(
 		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizer(
 			ctx,
 			mgr,
+			c.Konnect.UploadConfigPeriod,
 			kongConfig,
 			clientsManager,
 			updateStrategyResolver,

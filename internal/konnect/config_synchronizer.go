@@ -18,8 +18,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
-// DefaultConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
-var DefaultConfigUploadPeriod = 30 * time.Second
+const (
+	// MinConfigUploadPeriod is the minimum period between operations to upload Kong configuration to Konnect.
+	MinConfigUploadPeriod = 10 * time.Second
+	// DefaultConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
+	DefaultConfigUploadPeriod = 30 * time.Second
+)
 
 // ConfigSynchronizer runs a loop to upload the traslated Kong configuration to Konnect in the given period.
 type ConfigSynchronizer struct {

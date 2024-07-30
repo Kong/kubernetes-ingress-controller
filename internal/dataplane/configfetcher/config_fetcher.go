@@ -119,7 +119,7 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	)
 	for _, client := range gatewayClients {
 		logger.V(logging.DebugLevel).Info("Fetching configuration", "url", client.BaseRootURL())
-		// copy dump configuration and add custom entity types for fetching config with custom entities
+		// Copy the dump configuration and add custom entity types to fetch config with custom entities.
 		config := cf.config
 		config.CustomEntityTypes = customEntityTypes
 		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient(), config)

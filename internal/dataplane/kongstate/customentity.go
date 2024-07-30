@@ -232,8 +232,7 @@ func (ks *KongState) AddCustomEntity(entityType string, schema EntitySchema, e C
 
 // CustomEntityTypes returns types of translated custom entities included in the KongState.
 func (ks *KongState) CustomEntityTypes() []string {
-	return lo.MapToSlice(ks.CustomEntities, func(entityType string, _ *KongCustomEntityCollection) string {
-		return entityType
+    return lo.Keys(ks.CustomEntities)
 	})
 }
 

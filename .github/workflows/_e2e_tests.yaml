@@ -174,7 +174,7 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.26.5'
+          - 'v1.28.11'
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: checkout repository

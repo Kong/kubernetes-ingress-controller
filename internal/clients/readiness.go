@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -118,25 +119,43 @@ func (c DefaultReadinessChecker) checkPendingClient(
 // checkAlreadyExistingClients checks if the already existing clients are still ready to be used and returns the ones
 // that are not.
 func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context, alreadyCreatedClients []AlreadyCreatedClient) (turnedPending []adminapi.DiscoveredAdminAPI) {
+	var wg sync.WaitGroup
+	pendingChan := make(chan adminapi.DiscoveredAdminAPI, len(alreadyCreatedClients))
+
 	for _, client := range alreadyCreatedClients {
-		// For ready clients we check readiness by calling the Status endpoint.
-		if ready := c.checkAlreadyCreatedClient(ctx, client); !ready {
-			podRef, ok := client.PodReference()
-			if !ok {
-				// This should never happen, but if it does, we want to log it.
-				c.logger.Error(
-					errors.New("missing pod reference"),
-					"Failed to get PodReference for client",
-					"address", client.BaseRootURL(),
-				)
-				continue
+		wg.Add(1)
+		go func(client AlreadyCreatedClient) {
+			defer wg.Done()
+
+			// For ready clients we check readiness by calling the Status endpoint.
+			if ready := c.checkAlreadyCreatedClient(ctx, client); !ready {
+				podRef, ok := client.PodReference()
+				if !ok {
+					// This should never happen, but if it does, we want to log it.
+					c.logger.Error(
+						errors.New("missing pod reference"),
+						"Failed to get PodReference for client",
+						"address", client.BaseRootURL(),
+					)
+					return
+				}
+				pendingChan <- adminapi.DiscoveredAdminAPI{
+					Address: client.BaseRootURL(),
+					PodRef:  podRef,
+				}
 			}
-			turnedPending = append(turnedPending, adminapi.DiscoveredAdminAPI{
-				Address: client.BaseRootURL(),
-				PodRef:  podRef,
-			})
-		}
+		}(client)
 	}
+
+	go func() {
+		wg.Wait()
+		close(pendingChan)
+	}()
+
+	for pendingClient := range pendingChan {
+		turnedPending = append(turnedPending, pendingClient)
+	}
+
 	return turnedPending
 }
 

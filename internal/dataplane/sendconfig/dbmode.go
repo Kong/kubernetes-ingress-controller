@@ -97,7 +97,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	ctx, cancel := context.WithCancel(ctx)
 	// TRR this is where db mode update strat handles events. resultchan is the entityaction channel
 	// TRR targetContent.Hash is the config hash
-	go s.HandleEvents(ctx, syncer.GetResultChan(), s.diagnostic, string(targetContent.Hash))
+	go s.HandleEvents(ctx, syncer.GetResultChan(), s.diagnostic, fmt.Sprintf("%x", targetContent.Hash))
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
@@ -166,7 +166,7 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 		case event := <-events:
 			if event.Error == nil {
 				s.logger.V(logging.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
-				eventDiff := diagnostics.NewEntityDiff(event.Diff, string(event.Action))
+				eventDiff := diagnostics.NewEntityDiff(event.Diff, string(event.Action), event.Entity)
 				diff.Entities = append(diff.Entities, eventDiff)
 			} else {
 				s.logger.Error(event.Error, "failed updating gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
@@ -193,6 +193,7 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 			// in some cases.
 			if diagnostic != nil {
 				diagnostic.Diffs <- diff
+				s.logger.V(logging.DebugLevel).Info("recorded database update events and diff", "hash", hash)
 			}
 			s.resourceErrorLock.Unlock()
 			return

@@ -1,6 +1,8 @@
 package diagnostics
 
 import (
+	"fmt"
+
 	"github.com/golang-collections/collections/queue"
 	"github.com/kong/go-database-reconciler/pkg/diff"
 )
@@ -60,7 +62,7 @@ type ConfigDiff struct {
 }
 
 type EntityDiff struct {
-	Source    sourceResource  `json:"kubernetesResource"`
+	//Source    sourceResource  `json:"kubernetesResource"`
 	Generated generatedEntity `json:"kongEntity"`
 	Action    string          `json:"action"`
 	Diff      string          `json:"diff,omitempty"`
@@ -71,7 +73,7 @@ func NewEntityDiff(diff string, action string, entity diff.Entity) EntityDiff {
 	return EntityDiff{
 		// TODO this is mostly a stub at present. Need to either derive the source from tags or just omit it for now with
 		// a nice to have feature issue, or a simpler YAGNI but if someone asks add it TODO here.
-		Source: sourceResource{},
+		//Source: sourceResource{},
 		Generated: generatedEntity{
 			Name: entity.Name,
 			Kind: entity.Kind,
@@ -137,4 +139,22 @@ func (d *diffMap) Update(diff ConfigDiff) {
 	d.hashQueue.Enqueue(diff.Hash)
 	d.diffs[diff.Hash] = diff
 	return
+}
+
+// Latest returns the newest diff hash.
+func (d *diffMap) Latest() string {
+	return d.hashQueue.Peek().(string)
+}
+
+// ByHash returns the diff array matching the given hash.
+func (d *diffMap) ByHash(hash string) ([]EntityDiff, error) {
+	if diff, ok := d.diffs[hash]; ok {
+		return diff.Entities, nil
+	}
+	return []EntityDiff{}, fmt.Errorf("no diff found for hash %s", hash)
+}
+
+// Len returns the number of cached diffs.
+func (d *diffMap) Len() int {
+	return len(d.diffs)
 }

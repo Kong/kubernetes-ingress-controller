@@ -49,3 +49,13 @@ type FallbackAffectedObjectMeta struct {
 	// CausingObjects is the object that triggered this
 	CausingObjects []string `json:"causingObjects,omitempty"`
 }
+
+// DiffResponse is the GET /debug/config/diff response schema.
+type DiffResponse struct {
+	// Message provides explanatory information, if any.
+	Message string `json:"message,omitempty"`
+	// ConfigHash is the config hash for the associated diffs.
+	ConfigHash string `json:"hash"`
+	// Diffs are the diffs for modified objects.
+	Diffs []EntityDiff `json:"diffs"`
+}

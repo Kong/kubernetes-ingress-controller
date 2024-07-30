@@ -28,7 +28,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
 | `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
-| `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
+| `config` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#json-v1-apiextensions-k8s-io)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
 | `configFrom` _[NamespacedConfigSource](#namespacedconfigsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
 | `configPatches` _[NamespacedConfigPatch](#namespacedconfigpatch) array_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
@@ -90,7 +90,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
 | `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
-| `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
+| `config` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#json-v1-apiextensions-k8s-io)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
 | `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
 | `configPatches` _[ConfigPatch](#configpatch) array_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
@@ -455,7 +455,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _string_ | EntityType is the type of the Kong entity. The type is used in generating declarative configuration. |
-| `fields` _[JSON](#json)_ | Fields defines the fields of the Kong entity itself. |
+| `fields` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#json-v1-apiextensions-k8s-io)_ | Fields defines the fields of the Kong entity itself. |
 | `controllerName` _string_ | ControllerName specifies the controller that should reconcile it, like ingress class. |
 | `parentRef` _[ObjectReference](#objectreference)_ | ParentRef references the kubernetes resource it attached to when its scope is "attached". Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached to the entity(service/route/consumer) where the plugin is attached. |
 
@@ -501,7 +501,7 @@ KongVaultSpec defines specification of a custom Kong vault.
 | `backend` _string_ | Backend is the type of the backend storing the secrets in the vault. The supported backends of Kong is listed here: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/backends/ |
 | `prefix` _string_ | Prefix is the prefix of vault URI for referencing values in the vault. It is immutable after created. |
 | `description` _string_ | Description is the additional information about the vault. |
-| `config` _[JSON](#json)_ | Config is the configuration of the vault. Varies for different backends. |
+| `config` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#json-v1-apiextensions-k8s-io)_ | Config is the configuration of the vault. Varies for different backends. |
 
 
 _Appears in:_

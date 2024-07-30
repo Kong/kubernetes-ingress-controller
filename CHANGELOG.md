@@ -123,6 +123,14 @@ Adding a new version? You'll need three changes:
   resource is attached to multiple foreign Kong entities.
   [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
 
+### Changed
+
+- Check Kong Gateway readiness concurrently. This greatly reduces the time which
+  is required to check all Gateway instances readiness, especially when there's many
+  of them.
+  [#6347](https://github.com/Kong/kubernetes-ingress-controller/pull/6347)
+  [#6357](https://github.com/Kong/kubernetes-ingress-controller/pull/6357)
+
 ## 3.2.3
 
 > Release date: 2024-07-23

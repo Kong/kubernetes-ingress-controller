@@ -11,7 +11,7 @@ skaffold: "2.13.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.18.4"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
-crd-ref-docs: "0.0.12"
+crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=mikefarah/yq
 yq: "4.44.2"
 # renovate: datasource=github-releases depName=jstemmer/go-junit-report

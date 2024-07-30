@@ -190,7 +190,7 @@ func TestMain(m *testing.M) {
 			// controller-runtime operates an internal leadership deadline and will abort if it cannot update leadership
 			// within a certain number of seconds. Pausing certain segments manager in a debugger can exceed this deadline,
 			// so elections are disabled in integration tests for convenience.
-			fmt.Sprintf("force-leader-election=%s", manager.LeaderElectionDisabled),
+			fmt.Sprintf("--force-leader-election=%s", manager.LeaderElectionDisabled),
 		}
 		allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
 		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs)

@@ -29,6 +29,9 @@ const (
 
 	// diffHistorySize is the number of diffs to keep in history.
 	diffHistorySize = 5
+
+	// diffHashQuery is the query string key for requesting a specific hash's diff.
+	diffHashQuery = "hash"
 )
 
 // Server is an HTTP server running exposing the pprof profiling tool, and processing diagnostic dumps of Kong configurations.
@@ -212,6 +215,7 @@ func (s *Server) installConfigDebugHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/config/failed", s.handleLastFailedConfig)
 	mux.HandleFunc("/debug/config/fallback", s.handleCurrentFallback)
 	mux.HandleFunc("/debug/config/raw-error", s.handleLastErrBody)
+	mux.HandleFunc("/debug/config/diff-report", s.handleDiffReport)
 }
 
 // redirectTo redirects request to a certain destination.
@@ -266,6 +270,68 @@ func (s *Server) handleLastErrBody(rw http.ResponseWriter, _ *http.Request) {
 		raw = []byte("No raw error body available.\n")
 	}
 	if _, err := rw.Write(raw); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) handleDiffReport(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	s.diffLock.RLock()
+	defer s.diffLock.RUnlock()
+
+	// GDR has no notion of sensitive data, so its raw diffs will include credentials and certificates when they
+	// change. We could make this fancier by walking through the entity types to exclude them if sensitive is not
+	// enabled, but would need to maintain a list of such types. Filter would probably happen on the producer (DB
+	// update strategy) side, since that's where we currently filter for the dump.
+	if !s.clientDiagnostic.DumpsIncludeSensitive {
+		if err := json.NewEncoder(rw).Encode(DiffResponse{
+			Message: "diffs include sensitive data: set CONTROLLER_DUMP_SENSITIVE_CONFIG=true in environment to enable",
+		}); err == nil {
+			rw.WriteHeader(http.StatusNotFound)
+		} else {
+			rw.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if s.diffs.Len() == 0 {
+		if err := json.NewEncoder(rw).Encode(DiffResponse{
+			Message: "no diffs available",
+		}); err == nil {
+			rw.WriteHeader(http.StatusOK)
+		} else {
+			rw.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	var requestedHash string
+	var message string
+	requestedHashQuery := r.URL.Query()[diffHashQuery]
+	if len(requestedHashQuery) == 0 {
+		requestedHash = s.diffs.Latest()
+	} else {
+		if len(requestedHashQuery) > 1 {
+			message = "this endpoint does not support requesting multiple diffs, using the first hash provided"
+		}
+		requestedHash = requestedHashQuery[0]
+	}
+
+	diffs, err := s.diffs.ByHash(requestedHash)
+	if err != nil {
+		message = err.Error()
+		rw.WriteHeader(http.StatusNotFound)
+	}
+
+	response := DiffResponse{
+		Message:    message,
+		ConfigHash: requestedHash,
+		Diffs:      diffs,
+	}
+
+	if err := json.NewEncoder(rw).Encode(response); err == nil {
+		rw.WriteHeader(http.StatusOK)
+	} else {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }

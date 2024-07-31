@@ -363,6 +363,5 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 		}()
 	}
-
 	wg.Wait()
 }

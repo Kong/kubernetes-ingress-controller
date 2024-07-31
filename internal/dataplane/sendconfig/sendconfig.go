@@ -106,9 +106,9 @@ func PerformUpdate(
 	}
 
 	if client.IsKonnect() {
-		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Konnect")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Konnect", "duration", duration.Truncate(time.Millisecond).String())
 	} else {
-		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Kong")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Kong", "duration", duration.Truncate(time.Millisecond).String())
 	}
 
 	return newSHA, nil

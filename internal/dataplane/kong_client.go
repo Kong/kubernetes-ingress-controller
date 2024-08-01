@@ -470,16 +470,19 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	c.logger.V(logging.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
+	translationStart := time.Now()
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
+	translationDuration := time.Since(translationStart)
+
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
-		c.prometheusMetrics.RecordTranslationFailure()
+		c.prometheusMetrics.RecordTranslationFailure(translationDuration)
 		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
 	} else {
-		c.prometheusMetrics.RecordTranslationSuccess()
+		c.prometheusMetrics.RecordTranslationSuccess(translationDuration)
 		c.prometheusMetrics.RecordTranslationBrokenResources(0)
-		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration")
+		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
 	}
 
 	const isFallback = false

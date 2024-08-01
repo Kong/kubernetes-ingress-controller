@@ -21,6 +21,7 @@ type CtrlFuncMetrics struct {
 	ConfigPushBrokenResources  *prometheus.GaugeVec
 	TranslationCount           *prometheus.CounterVec
 	TranslationBrokenResources prometheus.Gauge
+	TranslationDuration        *prometheus.HistogramVec
 	ConfigPushDuration         *prometheus.HistogramVec
 	ConfigPushSuccessTime      *prometheus.GaugeVec
 
@@ -84,6 +85,7 @@ const (
 	MetricNameConfigPushSuccessTime      = "ingress_controller_configuration_push_last_successful"
 	MetricNameTranslationCount           = "ingress_controller_translation_count"
 	MetricNameTranslationBrokenResources = "ingress_controller_translation_broken_resource_count"
+	MetricNameTranslationDuration        = "ingress_controller_translation_duration_milliseconds"
 	MetricNameConfigPushDuration         = "ingress_controller_configuration_push_duration_milliseconds"
 )
 
@@ -148,6 +150,23 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
 				SuccessKey, SuccessFalse, SuccessTrue,
 			),
+		},
+		[]string{SuccessKey},
+	)
+
+	// TODO: add new metric for fallback config generation or add a "fallback" label?
+	controllerMetrics.TranslationDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: MetricNameTranslationDuration,
+			Help: fmt.Sprintf(
+				"Duration of translations from Kubernetes state to Kong state."+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
+					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
+				SuccessKey, SuccessFalse, SuccessTrue,
+			),
+			// TODO: A simple configuration translation with 1 ingress and 1 service costs 100~200 microseconds.
+			// Should we use a smaller starting value of the buckets?
+			Buckets: prometheus.ExponentialBuckets(1, 2, 20),
 		},
 		[]string{SuccessKey},
 	)
@@ -299,6 +318,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		controllerMetrics.ConfigPushCount,
 		controllerMetrics.ConfigPushBrokenResources,
 		controllerMetrics.TranslationCount,
+		controllerMetrics.TranslationDuration,
 		controllerMetrics.TranslationBrokenResources,
 		controllerMetrics.ConfigPushDuration,
 		controllerMetrics.ConfigPushSuccessTime,
@@ -338,17 +358,23 @@ func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, datapla
 }
 
 // RecordTranslationSuccess records a successful configuration translation.
-func (c *CtrlFuncMetrics) RecordTranslationSuccess() {
+func (c *CtrlFuncMetrics) RecordTranslationSuccess(duration time.Duration) {
 	c.TranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessTrue,
 	}).Inc()
+	c.TranslationDuration.With(prometheus.Labels{
+		SuccessKey: SuccessTrue,
+	}).Observe(float64(duration.Milliseconds()))
 }
 
 // RecordTranslationFailure records a failed configuration translation.
-func (c *CtrlFuncMetrics) RecordTranslationFailure() {
+func (c *CtrlFuncMetrics) RecordTranslationFailure(duration time.Duration) {
 	c.TranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessFalse,
 	}).Inc()
+	c.TranslationDuration.With(prometheus.Labels{
+		SuccessKey: SuccessFalse,
+	}).Observe(float64(duration.Milliseconds()))
 }
 
 // RecordTranslationBrokenResources records the number of resources failing translation.

@@ -47,6 +47,7 @@ func TestMetricsAreServed(t *testing.T) {
 				metrics.MetricNameConfigPushCount,
 				metrics.MetricNameConfigPushBrokenResources,
 				metrics.MetricNameTranslationCount,
+				metrics.MetricNameTranslationDuration,
 				metrics.MetricNameTranslationBrokenResources,
 				metrics.MetricNameConfigPushDuration,
 
@@ -67,6 +68,7 @@ func TestMetricsAreServed(t *testing.T) {
 				metrics.MetricNameConfigPushCount,
 				metrics.MetricNameConfigPushBrokenResources,
 				metrics.MetricNameTranslationCount,
+				metrics.MetricNameTranslationDuration,
 				metrics.MetricNameTranslationBrokenResources,
 				metrics.MetricNameConfigPushDuration,
 				metrics.MetricNameConfigPushSuccessTime,

@@ -54,13 +54,13 @@ func TestRecordTranslation(t *testing.T) {
 	m := NewCtrlFuncMetrics()
 	t.Run("recording translation success works", func(t *testing.T) {
 		require.NotPanics(t, func() {
-			m.RecordTranslationSuccess()
+			m.RecordTranslationSuccess(10 * time.Millisecond)
 			m.RecordTranslationBrokenResources(0)
 		})
 	})
 	t.Run("recording translation failure works", func(t *testing.T) {
 		require.NotPanics(t, func() {
-			m.RecordTranslationFailure()
+			m.RecordTranslationFailure(10 * time.Millisecond)
 			m.RecordTranslationBrokenResources(9)
 		})
 	})

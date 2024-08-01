@@ -528,7 +528,9 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 
 	require.Eventually(t, func() bool {
 		start := time.Now()
-		defer t.Logf("Try fetching config from %q started at %s, duration %v", kongClient.BaseRootURL(), start.Format(time.RFC3339), time.Since(start))
+		defer func() {
+			t.Logf("Fetched config from %q, started at %s, duration %v", kongClient.BaseRootURL(), start.Format(time.RFC3339), time.Since(start))
+		}()
 
 		services, err := kongClient.Services.ListAll(ctx)
 		if err != nil {
@@ -536,7 +538,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 			return false
 		}
 		if len(services) != 1 || services[0].ID == nil {
-			t.Log("still no service found...")
+			t.Logf("%d services found, expected 1", len(services))
 			return false
 		}
 
@@ -546,7 +548,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 			return false
 		}
 		if len(routes) != 1 {
-			t.Log("still no route found...")
+			t.Logf("%d routes found under service %s, expected 1", len(routes), *services[0].ID)
 			return false
 		}
 
@@ -556,7 +558,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 			return false
 		}
 		if len(upstreams) != 1 || upstreams[0].ID == nil {
-			t.Logf("still no upstreams found...")
+			t.Logf("%d upstreams found, expected 1", len(upstreams))
 			return false
 		}
 
@@ -566,7 +568,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 			return false
 		}
 		if len(targets) != noReplicas {
-			t.Log("still no targets found...")
+			t.Logf("%d targets found, expected %d", len(targets), noReplicas)
 			return false
 		}
 		return true

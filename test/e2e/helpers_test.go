@@ -18,7 +18,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
-	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -528,31 +527,48 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 	t.Helper()
 
 	require.Eventually(t, func() bool {
-		d, err := dump.Get(ctx, kongClient, dump.Config{})
+		start := time.Now()
+		defer func() {
+			t.Logf("Fetched config from %q, started at %s, duration %v", kongClient.BaseRootURL(), start.Format(time.RFC3339), time.Since(start))
+		}()
+
+		services, err := kongClient.Services.ListAll(ctx)
 		if err != nil {
-			t.Logf("failed dumping config: %s", err)
+			t.Logf("failed to list services: %v", err)
 			return false
 		}
-		if len(d.Services) != 1 {
-			t.Log("still no service found...")
+		if len(services) != 1 || services[0].ID == nil {
+			t.Logf("%d services found, expected 1", len(services))
 			return false
 		}
-		if len(d.Routes) != 1 {
-			t.Log("still no route found...")
+
+		routes, _, err := kongClient.Routes.ListForService(ctx, services[0].ID, &kong.ListOpt{})
+		if err != nil {
+			t.Logf("failed to list routes for service %s: %v", *services[0].ID, err)
 			return false
 		}
-		if d.Services[0].ID == nil ||
-			d.Routes[0].Service.ID == nil ||
-			*d.Services[0].ID != *d.Routes[0].Service.ID {
-			t.Log("still no matching service found...")
+		if len(routes) != 1 {
+			t.Logf("%d routes found under service %s, expected 1", len(routes), *services[0].ID)
 			return false
 		}
-		if len(d.Targets) != noReplicas {
-			t.Log("still no target found...")
+
+		upstreams, err := kongClient.Upstreams.ListAll(ctx)
+		if err != nil {
+			t.Logf("failed to list upstreams: %v", err)
 			return false
 		}
-		if len(d.Upstreams) != 1 {
-			t.Log("still no upstream found...")
+		if len(upstreams) != 1 || upstreams[0].ID == nil {
+			t.Logf("%d upstreams found, expected 1", len(upstreams))
+			return false
+		}
+
+		targets, err := kongClient.Targets.ListAll(ctx, upstreams[0].ID)
+		if err != nil {
+			t.Logf("failed to list targets for upstream %s: %v", *upstreams[0].ID, err)
+			return false
+		}
+		if len(targets) != noReplicas {
+			t.Logf("%d targets found, expected %d", len(targets), noReplicas)
 			return false
 		}
 		return true

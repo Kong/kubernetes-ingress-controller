@@ -17,19 +17,18 @@ func GetFreePort(t *testing.T) int {
 		freePort    int
 		retriesLeft = 100
 	)
+	freePortLock.Lock()
+	defer freePortLock.Unlock()
 	for {
 		// Get a random free port, but do not use it yet...
 		var err error
-		freePortLock.Lock()
 		freePort, err = freeport.GetFreePort()
 		if err != nil {
-			freePortLock.Unlock()
 			continue
 		}
 
 		// ... First, check if the port has been used in this test run already to reduce chances of a race condition.
 		_, wasUsed := usedPorts.LoadOrStore(freePort, true)
-		freePortLock.Unlock()
 
 		// The port hasn't been used in this test run - we can use it. It was stored in usedPorts, so it will not be
 		// used again during this test run.

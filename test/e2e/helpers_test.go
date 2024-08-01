@@ -542,7 +542,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 			return false
 		}
 
-		routes, _, err := kongClient.Routes.ListForService(ctx, services[0].ID, &kong.ListOpt{Size: 10})
+		routes, _, err := kongClient.Routes.ListForService(ctx, services[0].ID, &kong.ListOpt{})
 		if err != nil {
 			t.Logf("failed to list routes for service %s: %v", *services[0].ID, err)
 			return false

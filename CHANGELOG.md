@@ -113,6 +113,9 @@ Adding a new version? You'll need three changes:
   Konnect speparately, and avoids one blocking the other.
   [#6341](https://github.com/Kong/kubernetes-ingress-controller/pull/6341)
   [#6349](https://github.com/Kong/kubernetes-ingress-controller/pull/6349)
+- Added `duration` field in logs after successfully sent configuration to Kong
+  gateway or Konnect.
+  [#6360](https://github.com/Kong/kubernetes-ingress-controller/pull/6360)
 
 ### Fixed
 

@@ -56,6 +56,12 @@ type DiffResponse struct {
 	Message string `json:"message,omitempty"`
 	// ConfigHash is the config hash for the associated diffs.
 	ConfigHash string `json:"hash"`
+	// Timestamp is the time this diff was received by the diff server. This is roughly the time the sync operation
+	// completed. May be a second or so after the last gateway API call, since it's taken when KIC finishes processing
+	// GDR events.
+	Timestamp string `json:"timestamp"`
 	// Diffs are the diffs for modified objects.
 	Diffs []EntityDiff `json:"diffs"`
+	// Available lists the currently available diff hashes and timestamps.
+	Available []DiffIndex
 }

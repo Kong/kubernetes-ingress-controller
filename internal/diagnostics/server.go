@@ -317,7 +317,7 @@ func (s *Server) handleDiffReport(rw http.ResponseWriter, r *http.Request) {
 		requestedHash = requestedHashQuery[0]
 	}
 
-	diffs, err := s.diffs.ByHash(requestedHash)
+	requested, err := s.diffs.ByHash(requestedHash)
 	if err != nil {
 		message = err.Error()
 		rw.WriteHeader(http.StatusNotFound)
@@ -326,12 +326,12 @@ func (s *Server) handleDiffReport(rw http.ResponseWriter, r *http.Request) {
 	response := DiffResponse{
 		Message:    message,
 		ConfigHash: requestedHash,
-		Diffs:      diffs,
+		Timestamp:  s.diffs.TimeByHash(requestedHash),
+		Diffs:      requested,
+		Available:  s.diffs.Available(),
 	}
 
-	if err := json.NewEncoder(rw).Encode(response); err == nil {
-		rw.WriteHeader(http.StatusOK)
-	} else {
+	if err := json.NewEncoder(rw).Encode(response); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
@@ -165,6 +166,12 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 		select {
 		case event := <-events:
 			if event.Error == nil {
+				// TODO GDR can sometimes send phantom events with no content whatsoever. This is a bug, but its cause is
+				// unclear. Ideally this is fixed in GDR and those events never get sent here, but as a workaround we can just
+				// discard anything that has no Action value as garbage, to avoid it showing up in the report endpoint.
+				if event.Action == "" {
+					continue
+				}
 				s.logger.V(logging.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 				eventDiff := diagnostics.NewEntityDiff(event.Diff, string(event.Action), event.Entity)
 				diff.Entities = append(diff.Entities, eventDiff)
@@ -192,6 +199,7 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 			// make the diff confusing even if it's DB mode only, since it doesn't reflect what we're sending to the gateway
 			// in some cases.
 			if diagnostic != nil {
+				diff.Timestamp = time.Now().Format(time.RFC3339)
 				diagnostic.Diffs <- diff
 				s.logger.V(logging.DebugLevel).Info("recorded database update events and diff", "hash", hash)
 			}

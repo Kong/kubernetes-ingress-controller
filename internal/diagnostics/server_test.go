@@ -1,13 +1,17 @@
 package diagnostics
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/stretchr/testify/require"
 
@@ -142,4 +146,109 @@ func TestServer_EventsHandling(t *testing.T) {
 		require.Equal(t, successfulDump.Meta.Hash, s.lastSuccessHash)
 		require.Nil(t, s.currentFallbackCacheMetadata, "expected fallback cache metadata to be dropped as it's no more relevant")
 	})
+}
+
+// TestDiagnosticsServer_Diffs tests the diff endpoint using fake data.
+func TestDiagnosticsServer_Diffs(t *testing.T) {
+	s := NewServer(logr.Discard(), ServerConfig{
+		ConfigDumpsEnabled:  true,
+		DumpSensitiveConfig: true,
+	})
+	diffCh := s.clientDiagnostic.Diffs
+
+	port := testhelpers.GetFreePort(t)
+	t.Logf("Obtained a free port: %d", port)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		err := s.Listen(ctx, port)
+		require.NoError(t, err)
+	}()
+	t.Log("Started diagnostics server")
+
+	// initially write the max number of cached diffs
+	configDumpsToWrite := diffHistorySize
+	configDiffs := map[string]ConfigDiff{}
+	var first, last string
+	init := sync.Once{}
+	for i := 0; i < configDumpsToWrite; i++ {
+		diff := testConfigDiff()
+		configDiffs[diff.Hash] = diff
+		init.Do(func() { first = diff.Hash })
+		diffCh <- diff
+		last = diff.Hash
+	}
+
+	// request the diff report
+	httpClient := &http.Client{}
+	resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	b := new(bytes.Buffer)
+	_, err = b.ReadFrom(resp.Body)
+	require.NoError(t, err)
+	got := DiffResponse{}
+	require.NoError(t, json.Unmarshal(b.Bytes(), &got))
+
+	// the diff returned should be the last one sent
+	require.Equal(t, last, got.ConfigHash)
+
+	// Having gotten a response, check that its available list contains all the diffs we've sent, and that we have the
+	// expected number of diffs.
+	actual := map[string]interface{}{}
+	for _, available := range got.Available {
+		actual[available.ConfigHash] = nil
+	}
+	require.Equal(t, len(actual), len(configDiffs))
+	for expected := range configDiffs {
+		_, ok := actual[expected]
+		require.Truef(t, ok, "expected hash %s not found in report", expected)
+	}
+
+	// send an additional diff and confirm that the ring buffer clears out an item, so its length does not exceed the max
+	extra := testConfigDiff()
+	configDiffs[extra.Hash] = extra
+	last = extra.Hash
+	diffCh <- extra
+
+	second, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))
+	require.NoError(t, err)
+	defer second.Body.Close()
+
+	b = new(bytes.Buffer)
+	_, err = b.ReadFrom(second.Body)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(b.Bytes(), &got))
+	require.Equal(t, len(got.Available), diffHistorySize)
+
+	// confirm that the by hash endpoints cannot retrieve the last diff sent, and get a 404 for the first (now discarded)
+	// diff sent
+	third, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report?hash=%s", port, extra.Hash))
+	require.NoError(t, err)
+	defer third.Body.Close()
+	require.Equal(t, third.StatusCode, http.StatusOK)
+
+	fourth, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report?hash=%s", port, first))
+	require.NoError(t, err)
+	defer fourth.Body.Close()
+	require.Equal(t, fourth.StatusCode, http.StatusNotFound)
+}
+
+func testConfigDiff() ConfigDiff {
+	return ConfigDiff{
+		Hash:      uuid.Must(uuid.NewV7()).String(),
+		Timestamp: time.Now().Format(time.RFC3339),
+		Entities: []EntityDiff{
+			{
+				Action: "fakeaction1",
+				Diff:   "fakediff1",
+			},
+			{
+				Action: "fakeaction2",
+				Diff:   "fakediff2",
+			},
+		},
+	}
 }

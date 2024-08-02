@@ -63,5 +63,5 @@ type DiffResponse struct {
 	// Diffs are the diffs for modified objects.
 	Diffs []EntityDiff `json:"diffs"`
 	// Available lists the currently available diff hashes and timestamps.
-	Available []DiffIndex
+	Available []DiffIndex `json:"available"`
 }

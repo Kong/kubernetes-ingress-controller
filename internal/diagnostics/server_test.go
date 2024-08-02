@@ -210,7 +210,6 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	// send an additional diff and confirm that the ring buffer clears out an item, so its length does not exceed the max
 	extra := testConfigDiff()
 	configDiffs[extra.Hash] = extra
-	last = extra.Hash
 	diffCh <- extra
 
 	second, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))

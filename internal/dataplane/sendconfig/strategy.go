@@ -112,7 +112,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
 			// Konnect case, we don't actually want to collect diffs, and don't actually provide a diagnostic when setting
 			// it up, so we only collect and send diffs if we're talking to a gateway.
 			//
-			// TRR TODO maybe this is wrong? I'm not sure if we actually support (or if not, explicitly prohibit)
+			// TODO maybe this is wrong? I'm not sure if we actually support (or if not, explicitly prohibit)
 			// configuring a controller to use both DB mode and talk to Konnect, or if we only support DB-less when using
 			// Konnect. If those are mutually exclusive, maybe we can just collect diffs for Konnect mode? If they're
 			// not mutually exclusive, trying to do diagnostics diff updates for both the updates would have both attempt

@@ -96,8 +96,6 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	// TRR this is where db mode update strat handles events. resultchan is the entityaction channel
-	// TRR targetContent.Hash is the config hash
 	go s.HandleEvents(ctx, syncer.GetResultChan(), s.diagnostic, fmt.Sprintf("%x", targetContent.Hash))
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
@@ -124,31 +122,6 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	return mo.None[int](), nil
 }
 
-// TRR upstream type
-//// EntityAction describes an entity processed by the diff engine and the action taken on it.
-//type EntityAction struct {
-//	// Action is the ReconcileAction taken on the entity.
-//	Action ReconcileAction `json:"action"` // string
-//	// Entity holds the processed entity.
-//	Entity Entity `json:"entity"`
-//	// Diff is diff string describing the modifications made to an entity.
-//	Diff string `json:"-"`
-//	// Error is the error encountered processing and entity, if any.
-//	Error error `json:"error,omitempty"`
-//}
-//
-//// Entity is an entity processed by the diff engine.
-//type Entity struct {
-//	// Name is the name of the entity.
-//	Name string `json:"name"`
-//	// Kind is the type of entity.
-//	Kind string `json:"kind"`
-//	// Old is the original entity in the current state, if any.
-//	Old any `json:"old,omitempty"`
-//	// New is the new entity in the target state, if any.
-//	New any `json:"new,omitempty"`
-//}
-
 // HandleEvents handles logging and error reporting for individual entity change events generated during a sync by
 // looping over an event channel. It terminates when its context dies.
 func (s *UpdateStrategyDBMode) HandleEvents(
@@ -166,7 +139,8 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 		select {
 		case event := <-events:
 			if event.Error == nil {
-				// TODO GDR can sometimes send phantom events with no content whatsoever. This is a bug, but its cause is
+				// TODO https://github.com/Kong/go-database-reconciler/issues/120
+				// GDR can sometimes send phantom events with no content whatsoever. This is a bug, but its cause is
 				// unclear. Ideally this is fixed in GDR and those events never get sent here, but as a workaround we can just
 				// discard anything that has no Action value as garbage, to avoid it showing up in the report endpoint.
 				if event.Action == "" {
@@ -185,19 +159,6 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 				}
 			}
 		case <-ctx.Done():
-			// The DB mode update strategy is used for both DB mode gateways and Konnect-integrated controllers. In the
-			// Konnect case, we don't actually want to collect diffs, and don't actually provide a diagnostic when setting
-			// it up, so we only collect and send diffs if we're talking to a gateway.
-			//
-			// TRR TODO maybe this is wrong? I'm not sure if we actually support (or if not, explicitly prohibit)
-			// configuring a controller to use both DB mode and talk to Konnect, or if we only support DB-less when using
-			// Konnect. If those are mutually exclusive, maybe we can just collect diffs for Konnect mode? If they're
-			// not mutually exclusive, trying to do diagnostics diff updates for both the updates would have both attempt
-			// to store diffs. This is... maybe okay. They should be identical, but that's a load-bearing "should": we know
-			// Konnect can sometimes differ in what it accepts versus the gateway, and we have some Konnect configuration
-			// (consumer exclude, sensitive value mask) where they're _definitely_ different. That same configuration could
-			// make the diff confusing even if it's DB mode only, since it doesn't reflect what we're sending to the gateway
-			// in some cases.
 			if diagnostic != nil {
 				diff.Timestamp = time.Now().Format(time.RFC3339)
 				diagnostic.Diffs <- diff

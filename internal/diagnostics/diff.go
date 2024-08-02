@@ -57,8 +57,9 @@ type generatedEntity struct {
 }
 
 type ConfigDiff struct {
-	Hash     string       `json:"hash"`
-	Entities []EntityDiff `json:"entities"`
+	Hash      string       `json:"hash"`
+	Entities  []EntityDiff `json:"entities"`
+	Timestamp string       `json:"timestamp"`
 }
 
 type EntityDiff struct {
@@ -119,11 +120,14 @@ type diffMap struct {
 	diffs     map[string]ConfigDiff
 	hashQueue *queue.Queue
 	length    int
+	times     map[string]string
+	latest    string
 }
 
 func newDiffMap(length int) diffMap {
 	return diffMap{
 		diffs:     map[string]ConfigDiff{},
+		times:     map[string]string{},
 		length:    length,
 		hashQueue: queue.New(),
 	}
@@ -138,12 +142,14 @@ func (d *diffMap) Update(diff ConfigDiff) {
 	}
 	d.hashQueue.Enqueue(diff.Hash)
 	d.diffs[diff.Hash] = diff
+	d.times[diff.Hash] = diff.Timestamp
+	d.latest = diff.Hash
 	return
 }
 
 // Latest returns the newest diff hash.
 func (d *diffMap) Latest() string {
-	return d.hashQueue.Peek().(string)
+	return d.latest
 }
 
 // ByHash returns the diff array matching the given hash.
@@ -152,6 +158,30 @@ func (d *diffMap) ByHash(hash string) ([]EntityDiff, error) {
 		return diff.Entities, nil
 	}
 	return []EntityDiff{}, fmt.Errorf("no diff found for hash %s", hash)
+}
+
+// TimeByHash returns the diff timestamp matching the given hash.
+func (d *diffMap) TimeByHash(hash string) string {
+	if time, ok := d.times[hash]; ok {
+		return time
+	}
+	return "not found"
+}
+
+// DiffIndex maps a hash to its timestamp.
+type DiffIndex struct {
+	// ConfigHash is the config hash for the associated diff.
+	ConfigHash string `json:"hash"`
+	Timestamp  string `json:"timestamp"`
+}
+
+// Available returns a list of cached diff hashes and their associated timestamps.
+func (d *diffMap) Available() []DiffIndex {
+	index := []DiffIndex{}
+	for hash, diff := range d.diffs {
+		index = append(index, DiffIndex{ConfigHash: hash, Timestamp: diff.Timestamp})
+	}
+	return index
 }
 
 // Len returns the number of cached diffs.

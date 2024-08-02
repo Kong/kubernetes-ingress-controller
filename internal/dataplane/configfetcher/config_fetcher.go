@@ -19,7 +19,7 @@ import (
 
 type LastValidConfigFetcher interface {
 	// TryFetchingValidConfigFromGateways tries to fetch a valid configuration from all gateways and persists it if found.
-	TryFetchingValidConfigFromGateways(ctx context.Context, logger logr.Logger, gatewayClients []*adminapi.Client) error
+	TryFetchingValidConfigFromGateways(ctx context.Context, logger logr.Logger, gatewayClients []*adminapi.Client, customEntityTypes []string) error
 
 	// LastValidConfig returns the last valid config and true if there's one available. Otherwise, second return value is false.
 	LastValidConfig() (*kongstate.KongState, bool)
@@ -108,6 +108,7 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	ctx context.Context,
 	logger logr.Logger,
 	gatewayClients []*adminapi.Client,
+	customEntityTypes []string,
 ) error {
 	logger.V(logging.DebugLevel).Info("Fetching last good configuration from gateway clients", "count", len(gatewayClients))
 
@@ -118,7 +119,10 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	)
 	for _, client := range gatewayClients {
 		logger.V(logging.DebugLevel).Info("Fetching configuration", "url", client.BaseRootURL())
-		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient())
+		// Copy the dump configuration and add custom entity types to fetch config with custom entities.
+		config := cf.config
+		config.CustomEntityTypes = customEntityTypes
+		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient(), config)
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -152,8 +156,8 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	return errs
 }
 
-func (cf *DefaultKongLastGoodConfigFetcher) getKongRawState(ctx context.Context, client *kong.Client) (*utils.KongRawState, error) {
-	return dump.Get(ctx, client, cf.config)
+func (cf *DefaultKongLastGoodConfigFetcher) getKongRawState(ctx context.Context, client *kong.Client, config dump.Config) (*utils.KongRawState, error) {
+	return dump.Get(ctx, client, config)
 }
 
 func (cf *DefaultKongLastGoodConfigFetcher) getKongStatus(ctx context.Context, client *kong.Client) (*kong.Status, error) {

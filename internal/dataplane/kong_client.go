@@ -68,6 +68,7 @@ const (
 type KongConfigBuilder interface {
 	BuildKongConfig() translator.KongConfigBuildingResult
 	UpdateCache(store.CacheStores)
+	CustomEntityTypes() []string
 }
 
 // FallbackConfigGenerator generates a fallback configuration based on a cache snapshot and a set of broken objects.
@@ -427,7 +428,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// configuration already stored in memory. This can happen when KIC restarts and there
 		// already is a Kong Proxy with a valid configuration loaded.
 		if _, found := c.kongConfigFetcher.LastValidConfig(); !found {
-			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients()); err != nil {
+			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients(), c.kongConfigBuilder.CustomEntityTypes()); err != nil {
 				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
 				c.logger.Error(err, "Failed to fetch last good configuration from gateways")

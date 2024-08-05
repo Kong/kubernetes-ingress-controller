@@ -669,6 +669,9 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 			)
 
 			attachKonnectConfigSynchronizer(ctx, t, kongClient, updateStrategyResolver, clientsProvider, configChangeDetector, statusQueue)
+			// Set an initial content in Konnect syncer to avoid that failure on gateway update causing no target content saved in Konnect config syncer
+			// thus uploading config to Konnect is not triggered.
+			kongClient.konnectConfigSynchronizer.SetTargetContent(&file.Content{})
 			kongClient.SetConfigStatusNotifier(statusQueue)
 			for range tc.gatewayFailuresCount {
 				updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL())

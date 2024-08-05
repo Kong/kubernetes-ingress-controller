@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
@@ -17,6 +18,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
@@ -28,6 +30,7 @@ type UpdateStrategyDBMode struct {
 	dumpConfig        dump.Config
 	version           semver.Version
 	concurrency       int
+	diagnostic        *diagnostics.ClientDiagnostic
 	isKonnect         bool
 	logger            logr.Logger
 	resourceErrors    []ResourceError
@@ -39,6 +42,7 @@ func NewUpdateStrategyDBMode(
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
+	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) UpdateStrategyDBMode {
 	return UpdateStrategyDBMode{
@@ -46,6 +50,7 @@ func NewUpdateStrategyDBMode(
 		dumpConfig:        dumpConfig,
 		version:           version,
 		concurrency:       concurrency,
+		diagnostic:        diagnostic,
 		logger:            logger,
 		resourceErrors:    []ResourceError{},
 		resourceErrorLock: &sync.Mutex{},
@@ -57,9 +62,10 @@ func NewUpdateStrategyDBModeKonnect(
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
+	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) UpdateStrategyDBMode {
-	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, logger)
+	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, diagnostic, logger)
 	s.isKonnect = true
 	return s
 }
@@ -89,7 +95,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	go s.HandleEvents(ctx, syncer.GetResultChan())
+	go s.HandleEvents(ctx, syncer.GetResultChan(), s.diagnostic, fmt.Sprintf("%x", targetContent.Hash))
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
@@ -117,13 +123,31 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 
 // HandleEvents handles logging and error reporting for individual entity change events generated during a sync by
 // looping over an event channel. It terminates when its context dies.
-func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan diff.EntityAction) {
+func (s *UpdateStrategyDBMode) HandleEvents(
+	ctx context.Context,
+	events chan diff.EntityAction,
+	diagnostic *diagnostics.ClientDiagnostic,
+	hash string,
+) {
 	s.resourceErrorLock.Lock()
+	diff := diagnostics.ConfigDiff{
+		Hash:     hash,
+		Entities: []diagnostics.EntityDiff{},
+	}
 	for {
 		select {
 		case event := <-events:
 			if event.Error == nil {
+				// TODO https://github.com/Kong/go-database-reconciler/issues/120
+				// GDR can sometimes send phantom events with no content whatsoever. This is a bug, but its cause is
+				// unclear. Ideally this is fixed in GDR and those events never get sent here, but as a workaround we can just
+				// discard anything that has no Action value as garbage, to avoid it showing up in the report endpoint.
+				if event.Action == "" {
+					continue
+				}
 				s.logger.V(logging.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
+				eventDiff := diagnostics.NewEntityDiff(event.Diff, string(event.Action), event.Entity)
+				diff.Entities = append(diff.Entities, eventDiff)
 			} else {
 				s.logger.Error(event.Error, "failed updating gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 				parsed, err := resourceErrorFromEntityAction(event)
@@ -134,6 +158,11 @@ func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan dif
 				}
 			}
 		case <-ctx.Done():
+			if diagnostic != nil {
+				diff.Timestamp = time.Now().Format(time.RFC3339)
+				diagnostic.Diffs <- diff
+				s.logger.V(logging.DebugLevel).Info("recorded database update events and diff", "hash", hash)
+			}
 			s.resourceErrorLock.Unlock()
 			return
 		}

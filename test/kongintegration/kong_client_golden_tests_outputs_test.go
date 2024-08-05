@@ -104,7 +104,7 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(adminAPIClient.AdminAPIClient(), dump.Config{
 		SkipCACerts:         true,
 		KonnectControlPlane: cpID,
-	}, semver.MustParse("3.5.0"), 10, logr.Discard())
+	}, semver.MustParse("3.5.0"), 10, nil, logr.Discard())
 
 	for _, goldenTestOutputPath := range allGoldenTestsOutputsPaths(t) {
 		t.Run(goldenTestOutputPath, func(t *testing.T) {

@@ -119,6 +119,15 @@ Adding a new version? You'll need three changes:
 - `KongCustomEntity` is now included in last valid configuration retrieved from
   Kong gateways.
   [#6305](https://github.com/Kong/kubernetes-ingress-controller/pull/6305)
+- Added `/debug/config/diff-report` diagnostic endpoint. This endpoint is
+  available in DB mode when the `--dump-config` and `--dump-sensitive-config`
+  are enabled. It returns the latest diff information for the controller's last
+  configuration sync along with config hash and sync timestamp metadata. The
+  controller maintains the last 5 diffs in cache. You can retrieve older diffs
+  by appending a `?hash=<hash>` query string argument. Available config hashes
+  and their timestamps are listed under the `available` section of the
+  response.
+  [#6131](https://github.com/Kong/kubernetes-ingress-controller/pull/6131)
 
 ### Fixed
 

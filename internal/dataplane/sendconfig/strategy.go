@@ -10,6 +10,7 @@ import (
 	"github.com/kong/go-kong/kong/custom"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
@@ -77,8 +78,9 @@ func NewDefaultUpdateStrategyResolver(config Config, logger logr.Logger) Default
 // with the backoff strategy it provides.
 func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	client UpdateClient,
+	diagnostic *diagnostics.ClientDiagnostic,
 ) UpdateStrategy {
-	updateStrategy := r.resolveUpdateStrategy(client)
+	updateStrategy := r.resolveUpdateStrategy(client, diagnostic)
 
 	if clientWithBackoff, ok := client.(UpdateClientWithBackoff); ok {
 		return NewUpdateStrategyWithBackoff(updateStrategy, clientWithBackoff.BackoffStrategy(), r.logger)
@@ -87,7 +89,10 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	return updateStrategy
 }
 
-func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient) UpdateStrategy {
+func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
+	client UpdateClient,
+	diagnostic *diagnostics.ClientDiagnostic,
+) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
@@ -100,6 +105,20 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			},
 			r.config.Version,
 			r.config.Concurrency,
+			// The DB mode update strategy is used for both DB mode gateways and Konnect-integrated controllers. In the
+			// Konnect case, we don't actually want to collect diffs, and don't actually provide a diagnostic when setting
+			// it up, so we only collect and send diffs if we're talking to a gateway.
+			//
+			// TODO maybe this is wrong? I'm not sure if we actually support (or if not, explicitly prohibit)
+			// configuring a controller to use both DB mode and talk to Konnect, or if we only support DB-less when using
+			// Konnect. If those are mutually exclusive, maybe we can just collect diffs for Konnect mode? If they're
+			// not mutually exclusive, trying to do diagnostics diff updates for both the updates would have both attempt
+			// to store diffs. This is... maybe okay. They should be identical, but that's a load-bearing "should": we know
+			// Konnect can sometimes differ in what it accepts versus the gateway, and we have some Konnect configuration
+			// (consumer exclude, sensitive value mask) where they're _definitely_ different. That same configuration could
+			// make the diff confusing even if it's DB mode only, since it doesn't reflect what we're sending to the gateway
+			// in some cases.
+			nil,
 			r.logger,
 		)
 	}
@@ -114,6 +133,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			},
 			r.config.Version,
 			r.config.Concurrency,
+			diagnostic,
 			r.logger,
 		)
 	}

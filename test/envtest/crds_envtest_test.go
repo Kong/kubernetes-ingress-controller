@@ -105,7 +105,7 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 
 	// Reducing the cache sync timeout to speed up the test.
 	cfg.CacheSyncTimeout = time.Millisecond * 500
-	err := manager.Run(ctx, &cfg, diagnostics.ConfigDumpDiagnostic{}, logger)
+	err := manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
 	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 

@@ -26,10 +26,11 @@ type Client struct {
 	pluginSchemaStore   *util.PluginSchemaStore
 	isKonnect           bool
 	konnectControlPlane string
-	lastConfigSHA       []byte
+
 	lastCacheStoresHash store.SnapshotHash
 
-	lock sync.RWMutex
+	lastConfigSHALock sync.RWMutex
+	lastConfigSHA     []byte
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
 }
@@ -176,15 +177,15 @@ func (c *Client) LastCacheStoresHash() store.SnapshotHash {
 
 // SetLastConfigSHA overrides last config SHA.
 func (c *Client) SetLastConfigSHA(s []byte) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lastConfigSHALock.Lock()
+	defer c.lastConfigSHALock.Unlock()
 	c.lastConfigSHA = s
 }
 
 // LastConfigSHA returns a checksum of the last successful configuration push.
 func (c *Client) LastConfigSHA() []byte {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lastConfigSHALock.RLock()
+	defer c.lastConfigSHALock.RUnlock()
 	return c.lastConfigSHA
 }
 

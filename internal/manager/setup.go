@@ -477,6 +477,7 @@ func setupLicenseGetter(
 	return nil, nil
 }
 
+// setupKonnectConfigSynchronizer sets up Konnect config sychronizer and adds it to the manager runnables.
 func setupKonnectConfigSynchronizer(
 	ctx context.Context,
 	mgr manager.Manager,
@@ -489,7 +490,8 @@ func setupKonnectConfigSynchronizer(
 	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
 	if configUploadPeriod < konnect.MinConfigUploadPeriod {
 		logger.Info("Cannot set config upload period to be smaller than the minimum upload period; use the minimum upload period instead",
-			"upload_period", configUploadPeriod, "minimum_upload_period", konnect.MinConfigUploadPeriod)
+			"upload_period", configUploadPeriod, "minimum_upload_period", konnect.MinConfigUploadPeriod,
+		)
 		configUploadPeriod = konnect.MinConfigUploadPeriod
 	}
 	s := konnect.NewConfigSynchronizer(

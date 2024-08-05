@@ -178,13 +178,11 @@ type mockUpdateStrategyResolver struct {
 	updateCalledForURLs       []string
 	lastUpdatedContentForURLs map[string]sendconfig.ContentWithHash
 	errorsToReturnOnUpdate    map[string][]error
-	t                         *testing.T
 	lock                      sync.RWMutex
 }
 
-func newMockUpdateStrategyResolver(t *testing.T) *mockUpdateStrategyResolver {
+func newMockUpdateStrategyResolver() *mockUpdateStrategyResolver {
 	return &mockUpdateStrategyResolver{
-		t:                         t,
 		errorsToReturnOnUpdate:    map[string][]error{},
 		lastUpdatedContentForURLs: map[string]sendconfig.ContentWithHash{},
 	}
@@ -239,17 +237,21 @@ func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func
 }
 
 // assertUpdateCalledForURLs asserts that the mockUpdateStrategy was called for the given URLs.
-func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLs(urls []string, msgAndArgs ...any) {
+func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLs(t *testing.T, urls []string, msgAndArgs ...any) {
+	t.Helper()
+
 	f.lock.RLock()
 	defer f.lock.RUnlock()
 
 	if len(msgAndArgs) == 0 {
 		msgAndArgs = []any{"update was not called for all URLs"}
 	}
-	require.ElementsMatch(f.t, urls, f.updateCalledForURLs, msgAndArgs...)
+	require.ElementsMatch(t, urls, f.updateCalledForURLs, msgAndArgs...)
 }
 
-func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLsWithGivenCount(urlToCount map[string]int, msgAndArgs ...any) {
+func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLsWithGivenCount(t *testing.T, urlToCount map[string]int, msgAndArgs ...any) {
+	t.Helper()
+
 	f.lock.RLock()
 	defer f.lock.RUnlock()
 	actualURLToCount := lo.CountValues(f.updateCalledForURLs)
@@ -258,15 +260,17 @@ func (f *mockUpdateStrategyResolver) assertUpdateCalledForURLsWithGivenCount(url
 			fmt.Sprintf("URL %s should receive %d update calls", url, callCount),
 		}
 		m = append(m, msgAndArgs...)
-		require.Equal(f.t, callCount, actualURLToCount[url], m...)
+		require.Equal(t, callCount, actualURLToCount[url], m...)
 	}
 }
 
-func (f *mockUpdateStrategyResolver) assertNoUpdateCalled() {
+func (f *mockUpdateStrategyResolver) assertNoUpdateCalled(t *testing.T) {
+	t.Helper()
+
 	f.lock.RLock()
 	defer f.lock.RUnlock()
 
-	require.Empty(f.t, f.updateCalledForURLs, "update was called")
+	require.Empty(t, f.updateCalledForURLs, "update was called")
 }
 
 func (f *mockUpdateStrategyResolver) lastUpdatedContentForURL(url string) (sendconfig.ContentWithHash, bool) {
@@ -277,13 +281,15 @@ func (f *mockUpdateStrategyResolver) lastUpdatedContentForURL(url string) (sendc
 }
 
 func (f *mockUpdateStrategyResolver) eventuallyGetLastUpdatedContentForURL(
-	url string, waitTime, waitTick time.Duration, msgAndArgs ...any,
+	t *testing.T, url string, waitTime, waitTick time.Duration, msgAndArgs ...any,
 ) sendconfig.ContentWithHash {
+	t.Helper()
+
 	var content sendconfig.ContentWithHash
 	if len(msgAndArgs) == 0 {
 		msgAndArgs = []any{"update was not called for URL " + url}
 	}
-	require.Eventually(f.t, func() bool {
+	require.Eventually(t, func() bool {
 		c, ok := f.lastUpdatedContentForURL(url)
 		if ok {
 			content = c
@@ -421,7 +427,7 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 				gatewayClients: tc.gatewayClients,
 				konnectClient:  tc.konnectClient,
 			}
-			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			updateStrategyResolver := newMockUpdateStrategyResolver()
 			for _, url := range tc.errorOnUpdateForURLs {
 				updateStrategyResolver.returnErrorOnUpdate(url)
 			}
@@ -449,11 +455,11 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 			expectedURLsCalled := lo.SliceToMap(clientsProvider.GatewayClients(), func(c *adminapi.Client) (string, int) {
 				return c.BaseRootURL(), 1
 			})
-			updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(expectedURLsCalled)
+			updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(t, expectedURLsCalled)
 			// Verify that Konnect client is called eventually.
 			if tc.konnectClient != nil {
 				// Should eventually get content in Konnect client if Konnect client enabled.
-				_ = updateStrategyResolver.eventuallyGetLastUpdatedContentForURL(tc.konnectClient.BaseRootURL(), testKonenctUploadWait, testKonnectUploadPeriod)
+				_ = updateStrategyResolver.eventuallyGetLastUpdatedContentForURL(t, tc.konnectClient.BaseRootURL(), testKonenctUploadWait, testKonnectUploadPeriod)
 			}
 		})
 	}
@@ -467,7 +473,7 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 		},
 		konnectClient: mustSampleKonnectClient(t),
 	}
-	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	updateStrategyResolver := newMockUpdateStrategyResolver()
 
 	// no change in config, we'll expect no update to be called
 	configChangeDetector := mockConfigurationChangeDetector{
@@ -482,7 +488,7 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 	err := kongClient.Update(ctx)
 	require.NoError(t, err)
 
-	updateStrategyResolver.assertNoUpdateCalled()
+	updateStrategyResolver.assertNoUpdateCalled(t)
 }
 
 type mockConfigStatusQueue struct {
@@ -663,7 +669,7 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var (
 				kongRawStateGetter     = &mockKongLastValidConfigFetcher{}
-				updateStrategyResolver = newMockUpdateStrategyResolver(t)
+				updateStrategyResolver = newMockUpdateStrategyResolver()
 				statusQueue            = newMockConfigStatusQueue()
 				kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 			)
@@ -705,7 +711,7 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 	clientsProvider := &mockGatewayClientsProvider{
 		gatewayClients: []*adminapi.Client{testGatewayClient},
 	}
-	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	updateStrategyResolver := newMockUpdateStrategyResolver()
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
 
@@ -872,7 +878,7 @@ func TestKongClient_KubernetesEvents(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			updateStrategyResolver := newMockUpdateStrategyResolver()
 			configBuilder := newMockKongConfigBuilder()
 			eventRecorder := mocks.NewEventRecorder()
 			lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
@@ -946,7 +952,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 			konnectClient:  testKonnectClient,
 		}
 
-		updateStrategyResolver = newMockUpdateStrategyResolver(t)
+		updateStrategyResolver = newMockUpdateStrategyResolver()
 		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder          = newMockKongConfigBuilder()
 		kongRawStateGetter     = &mockKongLastValidConfigFetcher{}
@@ -1211,7 +1217,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			updateStrategyResolver := newMockUpdateStrategyResolver()
 			for range tc.gatewayFailuresCount {
 				updateStrategyResolver.returnSpecificErrorOnUpdate(clientsProvider.gatewayClients[0].BaseRootURL(), tc.errorOnGatewayFailures)
 				updateStrategyResolver.returnSpecificErrorOnUpdate(clientsProvider.gatewayClients[1].BaseRootURL(), tc.errorOnGatewayFailures)
@@ -1251,7 +1257,7 @@ func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
 		gatewayClients: []*adminapi.Client{mustSampleGatewayClient(t)},
 		konnectClient:  mustSampleKonnectClient(t),
 	}
-	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	updateStrategyResolver := newMockUpdateStrategyResolver()
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
 	configBuilder.kongState = &kongstate.KongState{
@@ -1278,7 +1284,7 @@ func TestKongClientUpdate_KonnectUpdatesAreSanitized(t *testing.T) {
 	attachKonnectConfigSynchronizer(ctx, t, kongClient, updateStrategyResolver, clientsProvider, configChangeDetector, clients.NoOpConfigStatusNotifier{})
 	require.NoError(t, kongClient.Update(ctx))
 
-	konnectContent := updateStrategyResolver.eventuallyGetLastUpdatedContentForURL(clientsProvider.konnectClient.BaseRootURL(), testKonenctUploadWait, testKonnectUploadPeriod)
+	konnectContent := updateStrategyResolver.eventuallyGetLastUpdatedContentForURL(t, clientsProvider.konnectClient.BaseRootURL(), testKonenctUploadWait, testKonnectUploadPeriod)
 	require.Len(t, konnectContent.Content.Certificates, 1, "expected Konnect to have 1 certificate")
 	cert := konnectContent.Content.Certificates[0]
 	require.NotNil(t, cert.Key, "expected Konnect to have certificate key")
@@ -1317,7 +1323,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			updateStrategyResolver := newMockUpdateStrategyResolver()
 			configBuilder := newMockKongConfigBuilder()
 			fallbackConfigGenerator := newMockFallbackConfigGenerator()
 			gwClient := mustSampleGatewayClient(t)
@@ -1411,6 +1417,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 
 			t.Log("Verifying that the update strategy was called twice for gateway")
 			updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(
+				t,
 				map[string]int{
 					gwClient.BaseRootURL(): 2,
 				}, "expected update to be called twice: first with the initial config, then with the fallback one",
@@ -1451,7 +1458,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		gatewayClients: []*adminapi.Client{gwClient},
 		konnectClient:  konnectClient,
 	}
-	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	updateStrategyResolver := newMockUpdateStrategyResolver()
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
@@ -1490,7 +1497,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.Len(t, configBuilder.updateCacheCalls, 1)
 
 		t.Log("Verifying that the update strategy was called once for gateway")
-		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{gwClient.BaseRootURL(): 1})
+		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(t, map[string]int{gwClient.BaseRootURL(): 1})
 	})
 
 	t.Run("without clients change, on second update clients are not updated", func(t *testing.T) {
@@ -1501,7 +1508,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.Len(t, configBuilder.updateCacheCalls, 1)
 
 		t.Log("Verifying that the update strategy was not called again")
-		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{gwClient.BaseRootURL(): 1})
+		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(t, map[string]int{gwClient.BaseRootURL(): 1})
 	})
 
 	newGwClient := mustSampleGatewayClient(t)
@@ -1516,10 +1523,12 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.Len(t, configBuilder.updateCacheCalls, 1)
 
 		t.Log("Verifying that the update strategies were called for the client that was added")
-		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{
-			gwClient.BaseRootURL():    2, // First series of updates + Second series of updates
-			newGwClient.BaseRootURL(): 1, // Second series of updates only
-		})
+		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(
+			t,
+			map[string]int{
+				gwClient.BaseRootURL():    2, // First series of updates + Second series of updates
+				newGwClient.BaseRootURL(): 1, // Second series of updates only
+			})
 	})
 
 	t.Run("when generating fallback, all clients are updated", func(t *testing.T) {
@@ -1538,10 +1547,12 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.Error(t, kongClient.Update(ctx))
 
 		t.Log("Verifying that the update strategy was called again for all gateways")
-		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{
-			gwClient.BaseRootURL():    4, // First series of updates + Second series of updates + rejected/fallback
-			newGwClient.BaseRootURL(): 3, // Second series of updates + rejected/fallback
-		})
+		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(
+			t,
+			map[string]int{
+				gwClient.BaseRootURL():    4, // First series of updates + Second series of updates + rejected/fallback
+				newGwClient.BaseRootURL(): 3, // Second series of updates + rejected/fallback
+			})
 	})
 
 	anotherNewGwClient := mustSampleGatewayClient(t)
@@ -1559,10 +1570,12 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.Error(t, kongClient.Update(ctx))
 
 		t.Log("Verifying that the update strategy was called again for all gateways")
-		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{
-			gwClient.BaseRootURL():    6, // First series of updates + Second series of updates + rejected/fallback * 2
-			newGwClient.BaseRootURL(): 5, // Second series of updates + rejected/fallback * 2
-		})
+		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(
+			t,
+			map[string]int{
+				gwClient.BaseRootURL():    6, // First series of updates + Second series of updates + rejected/fallback * 2
+				newGwClient.BaseRootURL(): 5, // Second series of updates + rejected/fallback * 2
+			})
 	})
 
 	t.Run("after fallback, when new config is correct, all clients are updated", func(t *testing.T) {
@@ -1573,10 +1586,12 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.NoError(t, kongClient.Update(ctx))
 
 		t.Log("Verifying that the update strategy was called again for all gateways")
-		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{
-			gwClient.BaseRootURL():    7, // First series of updates + Second series of updates + rejected/fallback * 2 + third update
-			newGwClient.BaseRootURL(): 6, // Second series of updates + rejected/fallback + rejected/fallback * 2 + third update
-		})
+		updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(
+			t,
+			map[string]int{
+				gwClient.BaseRootURL():    7, // First series of updates + Second series of updates + rejected/fallback * 2 + third update
+				newGwClient.BaseRootURL(): 6, // Second series of updates + rejected/fallback + rejected/fallback * 2 + third update
+			})
 	})
 }
 
@@ -1588,7 +1603,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 		gatewayClients: []*adminapi.Client{gwClient},
 		konnectClient:  konnectClient,
 	}
-	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	updateStrategyResolver := newMockUpdateStrategyResolver()
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
@@ -1636,7 +1651,9 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	require.Error(t, err)
 
 	t.Log("Verifying that the update strategy was called twice for gateway")
-	updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(map[string]int{gwClient.BaseRootURL(): 2},
+	updateStrategyResolver.assertUpdateCalledForURLsWithGivenCount(
+		t,
+		map[string]int{gwClient.BaseRootURL(): 2},
 		"expected update to be called twice: first with the initial config, then with the fallback one")
 
 	t.Log("Verifying that the last valid config is empty")
@@ -1659,7 +1676,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
 	var (
 		ctx                     = context.Background()
-		updateStrategyResolver  = newMockUpdateStrategyResolver(t)
+		updateStrategyResolver  = newMockUpdateStrategyResolver()
 		configChangeDetector    = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder           = newMockKongConfigBuilder()
 		lastValidConfigFetcher  = &mockKongLastValidConfigFetcher{}
@@ -1760,7 +1777,7 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 		},
 		konnectClient: mustSampleKonnectClient(t),
 	}
-	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	updateStrategyResolver := newMockUpdateStrategyResolver()
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
 	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
@@ -1894,7 +1911,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Logf("Preparing %d gateway clients", len(tc.errorsFromGateways))
-			updateStrategyResolver := newMockUpdateStrategyResolver(t)
+			updateStrategyResolver := newMockUpdateStrategyResolver()
 			gwClients := make([]*adminapi.Client, len(tc.errorsFromGateways))
 			for i := range gwClients {
 				gwClients[i] = mustSampleGatewayClient(t)
@@ -1960,7 +1977,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 				expectedUpdatedURLs = slices.Concat(expectedUpdatedURLs, expectedUpdatedURLs)
 			}
 			t.Logf("Ensuring that the update strategy was called %d times", len(expectedUpdatedURLs))
-			updateStrategyResolver.assertUpdateCalledForURLs(expectedUpdatedURLs)
+			updateStrategyResolver.assertUpdateCalledForURLs(t, expectedUpdatedURLs)
 
 			expectedContent := func(consumerUsername string) *file.Content {
 				return &file.Content{

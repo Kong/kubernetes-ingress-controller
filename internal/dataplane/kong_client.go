@@ -180,7 +180,7 @@ type KongClient struct {
 	lastValidCacheSnapshot *store.CacheStores
 
 	// konnectConfigSynchronizer receives latest successfully applied Kong configuration from KongClient
-	// and upload it to Konnect.
+	// and uploads it to Konnect.
 	konnectConfigSynchronizer *konnect.ConfigSynchronizer
 }
 

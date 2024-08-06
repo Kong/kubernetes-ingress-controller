@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.2.3](#323)
  - [3.2.2](#322)
  - [3.2.1](#321)
  - [3.2.0](#320)
@@ -95,21 +96,25 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
-### Added
+### Fixed
 
-- `KongCustomEntity` is now supported by the `FallbackConfiguration` feature.
-  [#6286](https://github.com/Kong/kubernetes-ingress-controller/pull/6286)
+- Bump `github.com/kong/go-database-reconciler` to v1.14.3 to include a fix for
+  correctly comparing IPv6 addresses.
+  [#6378](https://github.com/Kong/kubernetes-ingress-controller/pull/6378)
+
+## [3.2.3]
+
+> Release date: 2024-07-23
 
 ### Fixed
 
-- Services using `Secret`s containing the same certificate as client certificates
-  by annotation `konghq.com/client-cert` can be correctly translated.
-  [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
-- Generate one entity for each attached foreign entity if a `KongCustomEntity`
-  resource is attached to multiple foreign Kong entities.
-  [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
+- Fixed the reference checker in checking permission of remote plugins to use
+  the correct namespace of `ReferenceGrant` required. Add trace logging to
+  `ReferenceGrant` check functions.
+  [#6295](https://github.com/Kong/kubernetes-ingress-controller/pull/6295)
+  [#6302](https://github.com/Kong/kubernetes-ingress-controller/pull/6302)
 
-## 3.2.2
+## [3.2.2]
 
 > Release date: 2024-07-01
 
@@ -121,7 +126,7 @@ Adding a new version? You'll need three changes:
   that all gateways are populated with the latest configuration regardless of cache changes.
   [#6271](https://github.com/Kong/kubernetes-ingress-controller/pull/6271)
 
-## 3.2.1
+## [3.2.1]
 
 > Release date: 2024-06-28
 
@@ -135,7 +140,7 @@ Adding a new version? You'll need three changes:
   of those objects.
   [#6252](https://github.com/Kong/kubernetes-ingress-controller/pull/6252)
 
-## 3.2.0
+## [3.2.0]
 
 > Release date: 2024-06-12
 
@@ -3610,6 +3615,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.2.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.2...v3.2.3
 [3.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.6...v3.2.0

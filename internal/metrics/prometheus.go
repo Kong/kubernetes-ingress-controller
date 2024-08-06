@@ -160,12 +160,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		prometheus.HistogramOpts{
 			Name: MetricNameTranslationDuration,
 			Help: fmt.Sprintf(
-				"Duration of  translating Kubernetes resources intoo Kong state. "+
+				"Duration of  translating Kubernetes resources into Kong state. "+
 					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
 					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
 				SuccessKey, SuccessFalse, SuccessTrue,
 			),
-			Buckets: prometheus.ExponentialBucketsRange(1, float64(time.Hour.Milliseconds()), 30),
+			Buckets: prometheus.ExponentialBucketsRange(1, float64(time.Minute.Milliseconds()), 30),
 		},
 		[]string{SuccessKey},
 	)
@@ -231,12 +231,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		prometheus.HistogramOpts{
 			Name: MetricNameFallbackTranslationDuration,
 			Help: fmt.Sprintf(
-				"Duration of translating Kubernetes resources intoo Kong state in fallback mode. "+
+				"Duration of translating Kubernetes resources into Kong state in fallback mode. "+
 					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
 					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
 				SuccessKey, SuccessFalse, SuccessTrue,
 			),
-			Buckets: prometheus.ExponentialBucketsRange(1, float64(time.Hour.Milliseconds()), 30),
+			Buckets: prometheus.ExponentialBucketsRange(1, float64(time.Minute.Milliseconds()), 30),
 		},
 		[]string{SuccessKey},
 	)

@@ -470,16 +470,19 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	c.logger.V(logging.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
+	translationStart := time.Now()
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
+	translationDuration := time.Since(translationStart)
+
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
-		c.prometheusMetrics.RecordTranslationFailure()
+		c.prometheusMetrics.RecordTranslationFailure(translationDuration)
 		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
 	} else {
-		c.prometheusMetrics.RecordTranslationSuccess()
+		c.prometheusMetrics.RecordTranslationSuccess(translationDuration)
 		c.prometheusMetrics.RecordTranslationBrokenResources(0)
-		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration")
+		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
 	}
 
 	const isFallback = false
@@ -605,17 +608,20 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	}
 
 	// Update the KongConfigBuilder with the fallback configuration and build the KongConfig.
+	translationStart := time.Now()
 	c.kongConfigBuilder.UpdateCache(fallbackCache)
 	fallbackParsingResult := c.kongConfigBuilder.BuildKongConfig()
+	translationDuration := time.Since(translationStart)
 
 	if failuresCount := len(fallbackParsingResult.TranslationFailures); failuresCount > 0 {
 		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
 		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(failuresCount)
-		c.prometheusMetrics.RecordFallbackTranslationFailure()
-		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
+		c.prometheusMetrics.RecordFallbackTranslationFailure(translationDuration)
+		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount, "duration", translationDuration.String())
 	} else {
 		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(0)
-		c.prometheusMetrics.RecordFallbackTranslationSuccess()
+		c.prometheusMetrics.RecordFallbackTranslationSuccess(translationDuration)
+		c.logger.V(logging.DebugLevel).Info("Successfully built fallback configuration from caches", "duration", translationDuration.String())
 	}
 
 	const isFallback = true

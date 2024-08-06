@@ -21,12 +21,14 @@ type CtrlFuncMetrics struct {
 	ConfigPushBrokenResources  *prometheus.GaugeVec
 	TranslationCount           *prometheus.CounterVec
 	TranslationBrokenResources prometheus.Gauge
+	TranslationDuration        *prometheus.HistogramVec
 	ConfigPushDuration         *prometheus.HistogramVec
 	ConfigPushSuccessTime      *prometheus.GaugeVec
 
 	// Fallback config push metrics.
 	FallbackTranslationCount           *prometheus.CounterVec
 	FallbackTranslationBrokenResources prometheus.Gauge
+	FallbackTranslationDuration        *prometheus.HistogramVec
 	FallbackConfigPushCount            *prometheus.CounterVec
 	FallbackConfigPushSuccessTime      *prometheus.GaugeVec
 	FallbackConfigPushBrokenResources  *prometheus.GaugeVec
@@ -84,6 +86,7 @@ const (
 	MetricNameConfigPushSuccessTime      = "ingress_controller_configuration_push_last_successful"
 	MetricNameTranslationCount           = "ingress_controller_translation_count"
 	MetricNameTranslationBrokenResources = "ingress_controller_translation_broken_resource_count"
+	MetricNameTranslationDuration        = "ingress_controller_translation_duration_milliseconds"
 	MetricNameConfigPushDuration         = "ingress_controller_configuration_push_duration_milliseconds"
 )
 
@@ -91,6 +94,7 @@ const (
 const (
 	MetricNameFallbackTranslationCount           = "ingress_controller_fallback_translation_count"
 	MetricNameFallbackTranslationBrokenResources = "ingress_controller_fallback_translation_broken_resource_count"
+	MetricNameFallbackTranslationDuration        = "ingress_controller_fallback_translation_duration_milliseconds"
 	MetricNameFallbackConfigPushCount            = "ingress_controller_fallback_configuration_push_count"
 	MetricNameFallbackConfigPushSuccessTime      = "ingress_controller_fallback_configuration_push_last"
 	MetricNameFallbackConfigPushDuration         = "ingress_controller_fallback_configuration_push_duration_milliseconds"
@@ -152,6 +156,20 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{SuccessKey},
 	)
 
+	controllerMetrics.TranslationDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: MetricNameTranslationDuration,
+			Help: fmt.Sprintf(
+				"Duration of  translating Kubernetes resources into Kong state. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
+					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
+				SuccessKey, SuccessFalse, SuccessTrue,
+			),
+			Buckets: prometheus.ExponentialBucketsRange(1, float64(time.Minute.Milliseconds()), 30),
+		},
+		[]string{SuccessKey},
+	)
+
 	controllerMetrics.TranslationBrokenResources = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: MetricNameTranslationBrokenResources,
@@ -208,6 +226,19 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 				"configuration in fallback mode.",
 			),
 		},
+	)
+	controllerMetrics.FallbackTranslationDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: MetricNameFallbackTranslationDuration,
+			Help: fmt.Sprintf(
+				"Duration of translating Kubernetes resources into Kong state in fallback mode. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
+					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
+				SuccessKey, SuccessFalse, SuccessTrue,
+			),
+			Buckets: prometheus.ExponentialBucketsRange(1, float64(time.Minute.Milliseconds()), 30),
+		},
+		[]string{SuccessKey},
 	)
 
 	controllerMetrics.FallbackConfigPushCount = prometheus.NewCounterVec(
@@ -299,10 +330,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		controllerMetrics.ConfigPushCount,
 		controllerMetrics.ConfigPushBrokenResources,
 		controllerMetrics.TranslationCount,
+		controllerMetrics.TranslationDuration,
 		controllerMetrics.TranslationBrokenResources,
 		controllerMetrics.ConfigPushDuration,
 		controllerMetrics.ConfigPushSuccessTime,
 		controllerMetrics.FallbackTranslationBrokenResources,
+		controllerMetrics.FallbackTranslationDuration,
 		controllerMetrics.FallbackTranslationCount,
 		controllerMetrics.FallbackConfigPushCount,
 		controllerMetrics.FallbackConfigPushSuccessTime,
@@ -338,17 +371,23 @@ func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, datapla
 }
 
 // RecordTranslationSuccess records a successful configuration translation.
-func (c *CtrlFuncMetrics) RecordTranslationSuccess() {
+func (c *CtrlFuncMetrics) RecordTranslationSuccess(duration time.Duration) {
 	c.TranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessTrue,
 	}).Inc()
+	c.TranslationDuration.With(prometheus.Labels{
+		SuccessKey: SuccessTrue,
+	}).Observe(float64(duration.Milliseconds()))
 }
 
 // RecordTranslationFailure records a failed configuration translation.
-func (c *CtrlFuncMetrics) RecordTranslationFailure() {
+func (c *CtrlFuncMetrics) RecordTranslationFailure(duration time.Duration) {
 	c.TranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessFalse,
 	}).Inc()
+	c.TranslationDuration.With(prometheus.Labels{
+		SuccessKey: SuccessFalse,
+	}).Observe(float64(duration.Milliseconds()))
 }
 
 // RecordTranslationBrokenResources records the number of resources failing translation.
@@ -357,17 +396,23 @@ func (c *CtrlFuncMetrics) RecordTranslationBrokenResources(count int) {
 }
 
 // RecordFallbackTranslationFailure records a failed fallback configuration translation.
-func (c *CtrlFuncMetrics) RecordFallbackTranslationFailure() {
+func (c *CtrlFuncMetrics) RecordFallbackTranslationFailure(duration time.Duration) {
 	c.FallbackTranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessFalse,
 	}).Inc()
+	c.FallbackTranslationDuration.With(prometheus.Labels{
+		SuccessKey: SuccessFalse,
+	}).Observe(float64(duration))
 }
 
 // RecordFallbackTranslationSuccess records a failed fallback configuration translation.
-func (c *CtrlFuncMetrics) RecordFallbackTranslationSuccess() {
+func (c *CtrlFuncMetrics) RecordFallbackTranslationSuccess(duration time.Duration) {
 	c.FallbackTranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessTrue,
 	}).Inc()
+	c.FallbackTranslationDuration.With(prometheus.Labels{
+		SuccessKey: SuccessTrue,
+	}).Observe(float64(duration))
 }
 
 // RecordProcessedConfigSnapshotCacheHit records a hit on the processed config snapshot cache.

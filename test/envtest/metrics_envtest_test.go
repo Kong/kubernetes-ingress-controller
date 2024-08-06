@@ -53,6 +53,7 @@ func TestMetricsAreServed(t *testing.T) {
 
 				metrics.MetricNameFallbackTranslationBrokenResources,
 				metrics.MetricNameFallbackTranslationCount,
+				metrics.MetricNameFallbackTranslationDuration,
 				metrics.MetricNameFallbackConfigPushCount,
 				metrics.MetricNameFallbackConfigPushSuccessTime,
 				metrics.MetricNameFallbackConfigPushDuration,

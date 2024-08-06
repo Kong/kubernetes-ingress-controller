@@ -119,6 +119,11 @@ Adding a new version? You'll need three changes:
 - `KongCustomEntity` is now included in last valid configuration retrieved from
   Kong gateways.
   [#6305](https://github.com/Kong/kubernetes-ingress-controller/pull/6305)
+- Added Prometheus metrics `ingress_controller_translation_duration_milliseconds`
+  and `ingress_controller_fallback_translation_duration_milliseconds` to
+  record duration of translating Kubernetes resources to Kong state in normal
+  state and fallback mode.
+  [#6366](https://github.com/Kong/kubernetes-ingress-controller/pull/6366)
 
 ### Fixed
 

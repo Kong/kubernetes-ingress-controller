@@ -608,17 +608,20 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	}
 
 	// Update the KongConfigBuilder with the fallback configuration and build the KongConfig.
+	translationStart := time.Now()
 	c.kongConfigBuilder.UpdateCache(fallbackCache)
 	fallbackParsingResult := c.kongConfigBuilder.BuildKongConfig()
+	translationDuration := time.Since(translationStart)
 
 	if failuresCount := len(fallbackParsingResult.TranslationFailures); failuresCount > 0 {
 		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
 		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(failuresCount)
-		c.prometheusMetrics.RecordFallbackTranslationFailure()
-		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
+		c.prometheusMetrics.RecordFallbackTranslationFailure(translationDuration)
+		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount, "duration", translationDuration.String())
 	} else {
 		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(0)
-		c.prometheusMetrics.RecordFallbackTranslationSuccess()
+		c.prometheusMetrics.RecordFallbackTranslationSuccess(translationDuration)
+		c.logger.V(logging.DebugLevel).Info("Successfully built fallback configuration from caches", "duration", translationDuration.String())
 	}
 
 	const isFallback = true

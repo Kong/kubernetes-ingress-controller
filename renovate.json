@@ -59,10 +59,10 @@
       "matchUpdateTypes": [
         "minor"
       ],
-      "matchDepPatterns": [
-        ".*@only-patch"
-      ],
-      "enabled": false
+      "enabled": false,
+      "matchDepNames": [
+        "/.*@only-patch/"
+      ]
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files to trigger regenerate_on_deps_bump.yaml workflow.",
@@ -75,11 +75,11 @@
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files containing images to trigger regenerate_on_deps_bump.yaml workflow.",
-      "matchDepPatterns": [
-        ".*@regenerate"
-      ],
       "addLabels": [
         "renovate/auto-regenerate"
+      ],
+      "matchDepNames": [
+        "/.*@regenerate/"
       ]
     }
   ]

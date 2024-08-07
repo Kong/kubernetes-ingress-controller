@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.22.5 as builder
+FROM --platform=$BUILDPLATFORM golang:1.22.6 as builder
 
 ARG GOPATH
 ARG GOCACHE

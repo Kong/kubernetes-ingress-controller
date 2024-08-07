@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 )
@@ -156,6 +158,7 @@ func TestConfigValidate(t *testing.T) {
 						Cert: "not-empty-cert",
 						Key:  "not-empty-key",
 					},
+					UploadConfigPeriod: konnect.DefaultConfigUploadPeriod,
 				},
 			}
 		}
@@ -217,6 +220,12 @@ func TestConfigValidate(t *testing.T) {
 			c := validEnabled()
 			c.KongAdminSvc = manager.OptionalNamespacedName{}
 			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
+		})
+
+		t.Run("enabled with too small upload config period is rejected", func(t *testing.T) {
+			c := validEnabled()
+			c.Konnect.UploadConfigPeriod = time.Second
+			require.ErrorContains(t, c.Validate(), "cannot set upload config period to be smaller than 10s")
 		})
 	})
 

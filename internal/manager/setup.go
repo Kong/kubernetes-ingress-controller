@@ -488,12 +488,6 @@ func setupKonnectConfigSynchronizer(
 	configStatusNotifier clients.ConfigStatusNotifier,
 ) (*konnect.ConfigSynchronizer, error) {
 	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
-	if configUploadPeriod < konnect.MinConfigUploadPeriod {
-		logger.Info("Cannot set config upload period to be smaller than the minimum upload period; use the minimum upload period instead",
-			"upload_period", configUploadPeriod, "minimum_upload_period", konnect.MinConfigUploadPeriod,
-		)
-		configUploadPeriod = konnect.MinConfigUploadPeriod
-	}
 	s := konnect.NewConfigSynchronizer(
 		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
 		kongConfig,

@@ -111,8 +111,9 @@ Adding a new version? You'll need three changes:
 - Konnect configuration updates are now handled separately from gateway
   updates. This allows the controller to handle sync errors for the gateway and
   Konnect speparately, and avoids one blocking the other.
-  The period of uploading configuration to Konnect can be set by the added flag
-  `--konnect-upload-config-period`.
+  The period of uploading configuration to Konnect changed to 30 seconds by
+  default. The period can be set by the added flag
+  `--konnect-upload-config-period`, with a minimum period of 10 seconds.
   [#6341](https://github.com/Kong/kubernetes-ingress-controller/pull/6341)
   [#6349](https://github.com/Kong/kubernetes-ingress-controller/pull/6349)
   [#6352](https://github.com/Kong/kubernetes-ingress-controller/pull/6352)

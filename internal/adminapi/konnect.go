@@ -22,6 +22,7 @@ type KonnectConfig struct {
 	ConfigSynchronizationEnabled bool
 	ControlPlaneID               string
 	Address                      string
+	UploadConfigPeriod           time.Duration
 	RefreshNodePeriod            time.Duration
 	TLSClient                    TLSClientConfig
 

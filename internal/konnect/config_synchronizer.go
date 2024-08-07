@@ -18,8 +18,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
-// DefaultConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
-var DefaultConfigUploadPeriod = 30 * time.Second
+const (
+	// MinConfigUploadPeriod is the minimum period between operations to upload Kong configuration to Konnect.
+	MinConfigUploadPeriod = 10 * time.Second
+	// DefaultConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
+	DefaultConfigUploadPeriod = 30 * time.Second
+)
 
 // ConfigSynchronizer runs a loop to upload the traslated Kong configuration to Konnect in the given period.
 type ConfigSynchronizer struct {
@@ -30,6 +34,7 @@ type ConfigSynchronizer struct {
 	prometheusMetrics      *metrics.CtrlFuncMetrics
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
+	configStatusNotifier   clients.ConfigStatusNotifier
 
 	targetContent *file.Content
 
@@ -43,6 +48,7 @@ func NewConfigSynchronizer(
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	configStatusNotifier clients.ConfigStatusNotifier,
 ) *ConfigSynchronizer {
 	return &ConfigSynchronizer{
 		logger:                 logger,
@@ -52,6 +58,7 @@ func NewConfigSynchronizer(
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
+		configStatusNotifier:   configStatusNotifier,
 	}
 }
 
@@ -105,6 +112,9 @@ func (s *ConfigSynchronizer) runKonnectUpdateServer(ctx context.Context) {
 				s.logger.Error(err, "failed to upload configuration to Konnect")
 				logKonnectErrors(s.logger, err)
 			}
+			s.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
+				Failed: err != nil,
+			})
 		}
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
@@ -186,6 +187,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: resolver,
 		configChangeDetector:   mockConfigurationChangeDetector{},
+		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -230,6 +232,13 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		}
 		return assert.ObjectsAreEqual(content, contentWithHash.Content)
 	}, 10*sendConfigPeriod, sendConfigPeriod, "Should send expected configuration in time after received configuration")
+
+	t.Logf("Verifying that update is not called when config not changed")
+	l := len(resolver.getUpdateCalledForURLs())
+	s.SetTargetContent(content)
+	require.Never(t, func() bool {
+		return len(resolver.getUpdateCalledForURLs()) != l
+	}, 10*sendConfigPeriod, sendConfigPeriod)
 
 	t.Logf("Verifying that new config are not sent after context cancelled")
 	cancel()

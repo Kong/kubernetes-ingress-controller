@@ -28,7 +28,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
@@ -36,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -179,6 +179,10 @@ type KongClient struct {
 	// While lastProcessedSnapshotHash keeps track of the last processed cache snapshot (the one kept in KongClient.cache),
 	// lastValidCacheSnapshot can also represent the fallback cache snapshot that was successfully synced with gateways.
 	lastValidCacheSnapshot *store.CacheStores
+
+	// konnectConfigSynchronizer receives latest successfully applied Kong configuration from KongClient
+	// and uploads it to Konnect.
+	konnectConfigSynchronizer *konnect.ConfigSynchronizer
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -487,16 +491,12 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	const isFallback = false
 	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig, isFallback)
-	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
 	// failures, calculate the config status and update it.
 	c.configStatusNotifier.NotifyGatewayConfigStatus(ctx, clients.GatewayConfigApplyStatus{
 		TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
 		ApplyConfigFailed:           gatewaysSyncErr != nil,
-	})
-	c.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
-		Failed: konnectSyncErr != nil,
 	})
 
 	// In case of a failure in syncing configuration with Gateways, propagate the error.
@@ -513,6 +513,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 		return gatewaysSyncErr
 	}
 
+	// Send configuration to Konnect ONLY when successfully applied configuration to gateways.
+	c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
 	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)
 
@@ -629,11 +631,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	if gatewaysSyncErr != nil {
 		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", gatewaysSyncErr)
 	}
-	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
-	if konnectSyncErr != nil {
-		// If Konnect sync fails, we should log the error and carry on as it's not a critical error.
-		c.logger.Error(konnectSyncErr, "Failed to sync fallback configuration with Konnect")
-	}
+	c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
 
 	// Configuration was successfully recovered with the fallback configuration. Store the last valid configuration.
 	c.maybePreserveTheLastValidConfigCache(fallbackCache)
@@ -736,56 +734,28 @@ func (c *KongClient) maybeSendOutToKonnectClient(
 	ctx context.Context,
 	s *kongstate.KongState,
 	config sendconfig.Config,
-	isFallback bool,
-) error {
+	_ bool,
+) {
+	if c.konnectConfigSynchronizer == nil {
+		return
+	}
 	konnectClient := c.clientsProvider.KonnectClient()
-	// There's no KonnectClient configured, that's totally fine.
 	if konnectClient == nil {
-		return nil
+		return
 	}
 
-	// In case users have many consumers, konnect sync can be very slow and cause dataplane sync issues.
-	// For this reason, if the --disable-consumers-sync flag is set, we do not send consumers to Konnect.
-	if konnectClient.ConsumersSyncDisabled() {
-		s.Consumers = nil
+	if config.SanitizeKonnectConfigDumps {
+		s = s.SanitizedCopy(util.DefaultUUIDGenerator{})
 	}
 
-	if _, err := c.sendToClient(ctx, konnectClient, s, config, isFallback); err != nil {
-		// In case of an error, we only log it since we don't want the Konnect to affect the basic functionality
-		// of the controller.
-
-		if errors.As(err, &sendconfig.UpdateSkippedDueToBackoffStrategyError{}) {
-			c.logger.Info("Skipped pushing configuration to Konnect due to backoff strategy", "explanation", err.Error())
-		} else {
-			c.logger.Error(err, "Failed pushing configuration to Konnect")
-			logKonnectErrors(c.logger, err)
-		}
-		return err
+	deckGenParams := deckgen.GenerateDeckContentParams{
+		SelectorTags:                    config.FilterTags,
+		ExpressionRoutes:                config.ExpressionRoutes,
+		PluginSchemas:                   konnectClient.PluginSchemaStore(),
+		AppendStubEntityWhenConfigEmpty: false,
 	}
-
-	return nil
-}
-
-// logKonnectErrors logs details of each error response returned from Konnect API.
-func logKonnectErrors(logger logr.Logger, err error) {
-	if crudActionErrors := deckerrors.ExtractCRUDActionErrors(err); len(crudActionErrors) > 0 {
-		for _, actionErr := range crudActionErrors {
-			apiErr := &kong.APIError{}
-			if errors.As(actionErr.Err, &apiErr) {
-				logger.Error(actionErr, "Failed to send request to Konnect",
-					"operation_type", actionErr.OperationType.String(),
-					"entity_kind", actionErr.Kind,
-					"entity_name", actionErr.Name,
-					"details", apiErr.Details())
-			} else {
-				logger.Error(actionErr, "Failed to send request to Konnect",
-					"operation_type", actionErr.OperationType.String(),
-					"entity_kind", actionErr.Kind,
-					"entity_name", actionErr.Name,
-				)
-			}
-		}
-	}
+	targetContent := deckgen.ToDeckContent(ctx, c.logger, s, deckGenParams)
+	c.konnectConfigSynchronizer.SetTargetContent(targetContent)
 }
 
 func (c *KongClient) sendToClient(
@@ -875,6 +845,13 @@ func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 	defer c.lock.Unlock()
 
 	c.configStatusNotifier = n
+}
+
+func (c *KongClient) SetKonnectConfigSynchronizer(s *konnect.ConfigSynchronizer) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.konnectConfigSynchronizer = s
 }
 
 // -----------------------------------------------------------------------------

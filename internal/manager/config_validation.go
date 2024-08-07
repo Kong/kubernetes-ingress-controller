@@ -10,6 +10,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 )
@@ -79,25 +80,27 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) validateKonnect() error {
-	konnect := c.Konnect
-	if !konnect.ConfigSynchronizationEnabled {
+	if !c.Konnect.ConfigSynchronizationEnabled {
 		return nil
 	}
 
 	if c.KongAdminSvc.IsAbsent() {
 		return errors.New("--kong-admin-svc has to be set when using --konnect-sync-enabled")
 	}
-	if konnect.Address == "" {
+	if c.Konnect.Address == "" {
 		return errors.New("address not specified")
 	}
-	if konnect.ControlPlaneID == "" {
+	if c.Konnect.ControlPlaneID == "" {
 		return errors.New("control plane not specified")
 	}
-	if konnect.TLSClient.IsZero() {
+	if c.Konnect.TLSClient.IsZero() {
 		return fmt.Errorf("missing TLS client configuration")
 	}
-	if err := validateClientTLS(konnect.TLSClient); err != nil {
+	if err := validateClientTLS(c.Konnect.TLSClient); err != nil {
 		return fmt.Errorf("TLS client config invalid: %w", err)
+	}
+	if c.Konnect.UploadConfigPeriod < konnect.MinConfigUploadPeriod {
+		return fmt.Errorf("cannot set upload config period to be smaller than %s", konnect.MinConfigUploadPeriod.String())
 	}
 	return nil
 }

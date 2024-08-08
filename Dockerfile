@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.22.6 as builder
+FROM --platform=$BUILDPLATFORM golang:1.22.6 AS builder
 
 ARG GOPATH
 ARG GOCACHE
@@ -49,7 +49,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 ### FIPS 140-2 binary
 # Build the manager binary
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
-FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.10b7 as builder-fips
+FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.10b7 AS builder-fips
 
 ARG TARGETPLATFORM
 ARG TARGETOS

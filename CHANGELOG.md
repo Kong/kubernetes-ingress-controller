@@ -145,6 +145,8 @@ Adding a new version? You'll need three changes:
   of them. Increased individual readiness check timeout from 1s to 5s.
   [#6347](https://github.com/Kong/kubernetes-ingress-controller/pull/6347)
   [#6357](https://github.com/Kong/kubernetes-ingress-controller/pull/6357)
+- Promote `KongCustomEntity` feature gate to beta thus it is enabled by default.
+  [#6387](https://github.com/Kong/kubernetes-ingress-controller/pull/6387)
 
 ## 3.2.3
 

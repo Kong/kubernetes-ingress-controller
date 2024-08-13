@@ -725,8 +725,13 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		{{- end }}
 
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status",configurationStatus)
+		// REVIEW: Should we try to fetch the latest version of updated object to reduce probalility of race on update?
+		err := r.Client.Get(ctx,client.ObjectKeyFromObject(obj),obj)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to fetch the latest object to update status: %w",err)
+		}
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus, 
 			obj.Generation, 

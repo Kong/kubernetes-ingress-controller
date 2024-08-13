@@ -1,4 +1,9 @@
 _format_version: "3.0"
+degraphql_routes:
+- query: query{ contacts { name } }
+  uri: /contacts
+- query: query{ contacts { name } }
+  uri: /contacts
 plugins:
 - config:
     graphql_server_path: /v1/graphql

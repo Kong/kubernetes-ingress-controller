@@ -1,4 +1,9 @@
 _format_version: "3.0"
+degraphql_routes:
+- query: query{ contacts { name } }
+  service:
+    id: 9e262d22-26f2-5bcb-8d57-c5229fb8c5a2
+  uri: /contacts
 services:
 - connect_timeout: 60000
   host: s1.default.80.svc

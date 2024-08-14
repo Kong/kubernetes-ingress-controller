@@ -30,13 +30,6 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 			Reason:             string(kongv1.ReasonInvalid),
 			Message:            utils.ProgrammedConditionFalseInvalidMessage,
 		}
-		expectedProgrammedConditionUnknown = metav1.Condition{
-			Type:               string(kongv1.ConditionProgrammed),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: testObjectGeneration,
-			Reason:             string(kongv1.ReasonPending),
-			Message:            utils.ProgrammedConditionFalsePendingMessage,
-		}
 	)
 
 	testCases := []struct {

@@ -4,6 +4,7 @@ namespace: kong
 resources:
 - namespace.yaml
 - ../crd
+- ../crd/incubator
 - ../rbac
 - ../rbac/gateway
 - ../rbac/crds

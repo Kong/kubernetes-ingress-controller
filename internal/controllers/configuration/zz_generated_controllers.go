@@ -1016,8 +1016,8 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -1202,8 +1202,8 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -1833,8 +1833,8 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -1999,8 +1999,8 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -2164,8 +2164,8 @@ func (r *KongV1Alpha1KongCustomEntityReconciler) Reconcile(ctx context.Context, 
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,

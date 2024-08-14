@@ -61,6 +61,7 @@ type KonnectClient struct {
 
 // NewKonnectClient creates an Admin API client that is to be used with a Konnect Control Plane Admin API.
 func NewKonnectClient(c *kong.Client, controlPlane string, consumersSyncDisabled bool) *KonnectClient {
+	c.SetDoer(KonnectHTTPDoer())
 	return &KonnectClient{
 		Client: Client{
 			adminAPIClient:      c,

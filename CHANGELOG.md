@@ -128,6 +128,11 @@ Adding a new version? You'll need three changes:
   record duration of translating Kubernetes resources to Kong state in normal
   state and fallback mode.
   [#6366](https://github.com/Kong/kubernetes-ingress-controller/pull/6366)
+- Instrumented Konnect APIs clients (license, nodes, CP admin) with trace logging.
+  On responses with error status codes, downstream tracing headers are logged with
+  Error level to enable correlating Konnect-side logs and traces with customer-side
+  KIC logs. Successful responses are logged with Trace level.
+  [#6420](https://github.com/Kong/kubernetes-ingress-controller/pull/6420)
 
 ### Fixed
 

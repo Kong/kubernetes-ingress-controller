@@ -725,8 +725,8 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		{{- end }}
 
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
-		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status",configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus, 
 			obj.Generation, 

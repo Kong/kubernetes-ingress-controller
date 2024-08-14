@@ -208,10 +208,10 @@ func TestConsumerGroup(t *testing.T) {
 		}
 
 		// this should not see the header, it uses a consumer in the group on another route
-		clear := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+		clearReq := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 			"apikey": four.Name,
 		})
-		clearResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(clear)
+		clearResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(clearReq)
 		if !assert.NoError(c, err) {
 			return
 		}

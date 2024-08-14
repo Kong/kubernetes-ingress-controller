@@ -301,7 +301,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		gatewayClass := &gatewayapi.GatewayClass{}
 		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
-			return nil
+			continue
 		}
 		if isGatewayClassControlled(gatewayClass) {
 			recs = append(recs, reconcile.Request{
@@ -312,7 +312,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 			})
 		}
 	}
-	return nil
+	return recs
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.

@@ -30,13 +30,6 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 			Reason:             string(kongv1.ReasonInvalid),
 			Message:            utils.ProgrammedConditionFalseInvalidMessage,
 		}
-		expectedProgrammedConditionUnknown = metav1.Condition{
-			Type:               string(kongv1.ConditionProgrammed),
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: testObjectGeneration,
-			Reason:             string(kongv1.ReasonPending),
-			Message:            utils.ProgrammedConditionFalsePendingMessage,
-		}
 	)
 
 	testCases := []struct {
@@ -83,16 +76,23 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 		},
 		{
 			name:                "condition present with correct observed generation but different reason",
-			configurationStatus: object.ConfigurationStatusUnknown,
+			configurationStatus: object.ConfigurationStatusFailed,
 			conditions: []metav1.Condition{
 				func() metav1.Condition {
-					cond := expectedProgrammedConditionUnknown
-					cond.Reason = string(kongv1.ReasonInvalid)
+					cond := expectedProgrammedConditionFalse
+					cond.Reason = string("SomeOtherReason")
 					return cond
 				}(),
 			},
-			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionUnknown},
+			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionFalse},
 			expectedUpdateNeeded:      true,
+		},
+		{
+			name:                      "Unknown status should not modify existing Programmed condition",
+			configurationStatus:       object.ConfigurationStatusUnknown,
+			conditions:                []metav1.Condition{expectedProgrammedConditionTrue},
+			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionTrue},
+			expectedUpdateNeeded:      false,
 		},
 		{
 			name:                      "empty conditions",

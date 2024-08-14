@@ -74,6 +74,10 @@ func EnsureProgrammedCondition(configurationStatus object.ConfigurationStatus, o
 	if !ok {
 		conditions = append(conditions, desiredCondition)
 	} else {
+		// Do not update existing "Programmed" condition to Unknown to prevent races on updating status when new instance starts.
+		if configurationStatus == object.ConfigurationStatusUnknown {
+			return conditions, false
+		}
 		conditions[idx] = desiredCondition
 	}
 

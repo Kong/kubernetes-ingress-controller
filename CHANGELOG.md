@@ -80,6 +80,13 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
+  used as Kong credentials.
+
 ## [2.12.5]
 
 > Release date: 2024-06-25

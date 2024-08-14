@@ -87,6 +87,11 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 		return true
 	}
 
+	// reconcile secrets used as Kong credentials.
+	if _, ok := secret.Data["kongCredType"]; ok {
+		return true
+	}
+
 	referred, err := r.ReferenceIndexers.ObjectReferred(secret)
 	if err != nil {
 		r.Log.Error(err, "failed to check whether secret referred",

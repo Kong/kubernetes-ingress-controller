@@ -86,6 +86,7 @@ Adding a new version? You'll need three changes:
 
 - Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
   used as Kong credentials.
+  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
 
 ## [2.12.5]
 

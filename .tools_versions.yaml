@@ -19,4 +19,4 @@ gojunit-report: "2.1.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.12.0"
 # renovate: datasource=github-releases depName=dominikh/go-tools
-staticcheck: "0.4.7"
+staticcheck: "2024.1.1"

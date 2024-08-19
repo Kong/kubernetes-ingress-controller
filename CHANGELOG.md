@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.12.6](#2126)
  - [2.12.5](#2125)
  - [2.12.4](#2124)
  - [2.12.3](#2123)
@@ -80,10 +81,15 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [2.12.6]
+
+> Release date: 2024-08-19
 
 ### Fixed
 
+- Do not update `Programmed` condition in status of resources to `Unknown` when
+  there are existing `Programmed` condition.
+  [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
 - Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
   used as Kong credentials.
   [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
@@ -2887,6 +2893,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.12.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.6
 [2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.5
 [2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.3
 [2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0

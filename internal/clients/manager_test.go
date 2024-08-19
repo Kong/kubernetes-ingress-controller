@@ -86,6 +86,11 @@ func intoTurnedPending(urls ...string) []adminapi.DiscoveredAdminAPI {
 }
 
 func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.T) {
+	const (
+		testURL1 = "http://localhost:8001"
+		testURL2 = "http://localhost:8002"
+	)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -240,6 +245,11 @@ func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
 }
 
 func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
+	const (
+		testURL1 = "http://localhost:8001"
+		testURL2 = "http://localhost:8002"
+	)
+
 	t.Parallel()
 
 	readinessChecker := &mockReadinessChecker{}
@@ -330,6 +340,10 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 }
 
 func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
+	const (
+		testURL1 = "http://localhost:8001"
+	)
+
 	readinessChecker := &mockReadinessChecker{}
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL1)})
 	testClient, err := adminapi.NewTestClient(testURL1)
@@ -365,6 +379,11 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 }
 
 func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
+	const (
+		testURL1 = "http://localhost:8001"
+		testURL2 = "http://localhost:8002"
+	)
+
 	testClient, err := adminapi.NewTestClient(testURL1)
 	require.NoError(t, err)
 
@@ -459,6 +478,11 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 }
 
 func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
+	const (
+		testURL1 = "http://localhost:8001"
+		testURL2 = "http://localhost:8002"
+	)
+
 	testClient, err := adminapi.NewTestClient(testURL1)
 	require.NoError(t, err)
 

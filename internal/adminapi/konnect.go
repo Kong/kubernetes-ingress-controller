@@ -62,6 +62,10 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 	if err != nil {
 		return nil, err
 	}
+
+	// Set the Doer to KonnectHTTPDoer to decorate the HTTP client Do method with tracing information.
+	client.SetDoer(KonnectHTTPDoer())
+
 	return NewKonnectClient(client, c.ControlPlaneID, c.ConsumersSyncDisabled), nil
 }
 

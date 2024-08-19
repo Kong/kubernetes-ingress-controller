@@ -22,7 +22,11 @@ e2e:
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.23.0'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.30.0'
+      kind: 'v1.30.3'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
+      istio: '1.22.3'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.29.4'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
       istio: '1.21.2'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
@@ -33,10 +37,6 @@ e2e:
       kind: 'v1.28.9'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.19.10'
-    - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.27.13'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
-      istio: '1.18.7'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
   kuma: '2.8.2'

@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
@@ -183,33 +184,25 @@ func TestGetPodDetails(t *testing.T) {
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", "")
 	_, err1 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err1 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.Error(t, err1)
 
 	// POD_NAME not exist
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
 	_, err2 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err2 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.Error(t, err2)
 
 	// POD_NAMESPACE not exist
 	t.Setenv("POD_NAME", "testpod")
 	t.Setenv("POD_NAMESPACE", "")
 	_, err3 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err3 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.Error(t, err3)
 
-	// POD not exist
+	// POD exists
 	t.Setenv("POD_NAME", "testpod")
 	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
 	_, err4 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err4 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.NoError(t, err4)
 
 	// success to get PodInfo
 	fkClient := testclient.NewSimpleClientset(
@@ -238,14 +231,8 @@ func TestGetPodDetails(t *testing.T) {
 		}}})
 
 	epi, err5 := GetPodDetails(ctx, fkClient)
-	if err5 != nil {
-		t.Errorf("expected a PodInfo but returned error")
-		return
-	}
-
-	if epi == nil {
-		t.Errorf("expected a PodInfo but returned nil")
-	}
+	assert.NoError(t, err5)
+	assert.NotNil(t, epi)
 }
 
 func TestGenerateTagsForObject(t *testing.T) {

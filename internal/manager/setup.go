@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/cprint"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -18,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -74,6 +76,13 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 
 	// configure the general manager options
 	managerOpts := ctrl.Options{
+		Controller: config.Controller{
+			// This is needed because controller-runtime keeps a global list of controller
+			// names and panics if there are duplicates.
+			// This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
+		},
 		GracefulShutdownTimeout: c.GracefulShutdownTimeout,
 		Scheme:                  scheme,
 		Metrics: metricsserver.Options{

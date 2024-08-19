@@ -94,7 +94,7 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 					Kind:    "Service",
 				}),
 				handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-				source.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+				source.WithPredicates[client.Object, reconcile.Request](predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
 			),
 		).
 			WatchesRawSource(
@@ -104,7 +104,7 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 					Kind:    incubatorv1alpha1.KongServiceFacadeKind,
 				}),
 					handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-					source.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+					source.WithPredicates[client.Object, reconcile.Request](predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
 				),
 			)
 	}

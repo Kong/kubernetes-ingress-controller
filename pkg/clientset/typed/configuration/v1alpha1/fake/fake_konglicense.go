@@ -40,20 +40,22 @@ var konglicensesKind = v1alpha1.SchemeGroupVersion.WithKind("KongLicense")
 
 // Get takes name of the kongLicense, and returns the corresponding kongLicense object, and an error if there is any.
 func (c *FakeKongLicenses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KongLicense, err error) {
+	emptyResult := &v1alpha1.KongLicense{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(konglicensesResource, name), &v1alpha1.KongLicense{})
+		Invokes(testing.NewRootGetActionWithOptions(konglicensesResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongLicense), err
 }
 
 // List takes label and field selectors, and returns the list of KongLicenses that match those selectors.
 func (c *FakeKongLicenses) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.KongLicenseList, err error) {
+	emptyResult := &v1alpha1.KongLicenseList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(konglicensesResource, konglicensesKind, opts), &v1alpha1.KongLicenseList{})
+		Invokes(testing.NewRootListActionWithOptions(konglicensesResource, konglicensesKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -72,36 +74,39 @@ func (c *FakeKongLicenses) List(ctx context.Context, opts v1.ListOptions) (resul
 // Watch returns a watch.Interface that watches the requested kongLicenses.
 func (c *FakeKongLicenses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(konglicensesResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(konglicensesResource, opts))
 }
 
 // Create takes the representation of a kongLicense and creates it.  Returns the server's representation of the kongLicense, and an error, if there is any.
 func (c *FakeKongLicenses) Create(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.CreateOptions) (result *v1alpha1.KongLicense, err error) {
+	emptyResult := &v1alpha1.KongLicense{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(konglicensesResource, kongLicense), &v1alpha1.KongLicense{})
+		Invokes(testing.NewRootCreateActionWithOptions(konglicensesResource, kongLicense, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongLicense), err
 }
 
 // Update takes the representation of a kongLicense and updates it. Returns the server's representation of the kongLicense, and an error, if there is any.
 func (c *FakeKongLicenses) Update(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.UpdateOptions) (result *v1alpha1.KongLicense, err error) {
+	emptyResult := &v1alpha1.KongLicense{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(konglicensesResource, kongLicense), &v1alpha1.KongLicense{})
+		Invokes(testing.NewRootUpdateActionWithOptions(konglicensesResource, kongLicense, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongLicense), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKongLicenses) UpdateStatus(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.UpdateOptions) (*v1alpha1.KongLicense, error) {
+func (c *FakeKongLicenses) UpdateStatus(ctx context.Context, kongLicense *v1alpha1.KongLicense, opts v1.UpdateOptions) (result *v1alpha1.KongLicense, err error) {
+	emptyResult := &v1alpha1.KongLicense{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(konglicensesResource, "status", kongLicense), &v1alpha1.KongLicense{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(konglicensesResource, "status", kongLicense, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongLicense), err
 }
@@ -115,7 +120,7 @@ func (c *FakeKongLicenses) Delete(ctx context.Context, name string, opts v1.Dele
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongLicenses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(konglicensesResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(konglicensesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.KongLicenseList{})
 	return err
@@ -123,10 +128,11 @@ func (c *FakeKongLicenses) DeleteCollection(ctx context.Context, opts v1.DeleteO
 
 // Patch applies the patch and returns the patched kongLicense.
 func (c *FakeKongLicenses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongLicense, err error) {
+	emptyResult := &v1alpha1.KongLicense{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(konglicensesResource, name, pt, data, subresources...), &v1alpha1.KongLicense{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(konglicensesResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongLicense), err
 }

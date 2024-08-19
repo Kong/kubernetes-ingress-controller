@@ -268,6 +268,8 @@ func setupControllers(
 					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "httproutes",
 				}),
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 			},
 		},
 		{

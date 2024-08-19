@@ -299,7 +299,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 		}
 		resp, err := a.nodeClient.CreateNode(ctx, createNodeReq)
 		if err != nil {
-			return fmt.Errorf("Failed to create KIC node, hostname %s: %w", a.hostname, err)
+			return fmt.Errorf("failed to create KIC node, hostname %s: %w", a.hostname, err)
 		}
 		a.logger.Info("Created KIC node", "node_id", resp.Item.ID, "hostname", a.hostname)
 		return nil

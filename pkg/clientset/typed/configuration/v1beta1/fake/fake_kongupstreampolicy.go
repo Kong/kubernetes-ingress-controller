@@ -41,22 +41,24 @@ var kongupstreampoliciesKind = v1beta1.SchemeGroupVersion.WithKind("KongUpstream
 
 // Get takes name of the kongUpstreamPolicy, and returns the corresponding kongUpstreamPolicy object, and an error if there is any.
 func (c *FakeKongUpstreamPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.KongUpstreamPolicy, err error) {
+	emptyResult := &v1beta1.KongUpstreamPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongupstreampoliciesResource, c.ns, name), &v1beta1.KongUpstreamPolicy{})
+		Invokes(testing.NewGetActionWithOptions(kongupstreampoliciesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongUpstreamPolicy), err
 }
 
 // List takes label and field selectors, and returns the list of KongUpstreamPolicies that match those selectors.
 func (c *FakeKongUpstreamPolicies) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.KongUpstreamPolicyList, err error) {
+	emptyResult := &v1beta1.KongUpstreamPolicyList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongupstreampoliciesResource, kongupstreampoliciesKind, c.ns, opts), &v1beta1.KongUpstreamPolicyList{})
+		Invokes(testing.NewListActionWithOptions(kongupstreampoliciesResource, kongupstreampoliciesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeKongUpstreamPolicies) List(ctx context.Context, opts v1.ListOptions
 // Watch returns a watch.Interface that watches the requested kongUpstreamPolicies.
 func (c *FakeKongUpstreamPolicies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(kongupstreampoliciesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(kongupstreampoliciesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongUpstreamPolicy and creates it.  Returns the server's representation of the kongUpstreamPolicy, and an error, if there is any.
 func (c *FakeKongUpstreamPolicies) Create(ctx context.Context, kongUpstreamPolicy *v1beta1.KongUpstreamPolicy, opts v1.CreateOptions) (result *v1beta1.KongUpstreamPolicy, err error) {
+	emptyResult := &v1beta1.KongUpstreamPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongupstreampoliciesResource, c.ns, kongUpstreamPolicy), &v1beta1.KongUpstreamPolicy{})
+		Invokes(testing.NewCreateActionWithOptions(kongupstreampoliciesResource, c.ns, kongUpstreamPolicy, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongUpstreamPolicy), err
 }
 
 // Update takes the representation of a kongUpstreamPolicy and updates it. Returns the server's representation of the kongUpstreamPolicy, and an error, if there is any.
 func (c *FakeKongUpstreamPolicies) Update(ctx context.Context, kongUpstreamPolicy *v1beta1.KongUpstreamPolicy, opts v1.UpdateOptions) (result *v1beta1.KongUpstreamPolicy, err error) {
+	emptyResult := &v1beta1.KongUpstreamPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongupstreampoliciesResource, c.ns, kongUpstreamPolicy), &v1beta1.KongUpstreamPolicy{})
+		Invokes(testing.NewUpdateActionWithOptions(kongupstreampoliciesResource, c.ns, kongUpstreamPolicy, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongUpstreamPolicy), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKongUpstreamPolicies) UpdateStatus(ctx context.Context, kongUpstreamPolicy *v1beta1.KongUpstreamPolicy, opts v1.UpdateOptions) (*v1beta1.KongUpstreamPolicy, error) {
+func (c *FakeKongUpstreamPolicies) UpdateStatus(ctx context.Context, kongUpstreamPolicy *v1beta1.KongUpstreamPolicy, opts v1.UpdateOptions) (result *v1beta1.KongUpstreamPolicy, err error) {
+	emptyResult := &v1beta1.KongUpstreamPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(kongupstreampoliciesResource, "status", c.ns, kongUpstreamPolicy), &v1beta1.KongUpstreamPolicy{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(kongupstreampoliciesResource, "status", c.ns, kongUpstreamPolicy, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongUpstreamPolicy), err
 }
@@ -123,7 +128,7 @@ func (c *FakeKongUpstreamPolicies) Delete(ctx context.Context, name string, opts
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongUpstreamPolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongupstreampoliciesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(kongupstreampoliciesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.KongUpstreamPolicyList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeKongUpstreamPolicies) DeleteCollection(ctx context.Context, opts v1
 
 // Patch applies the patch and returns the patched kongUpstreamPolicy.
 func (c *FakeKongUpstreamPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.KongUpstreamPolicy, err error) {
+	emptyResult := &v1beta1.KongUpstreamPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongupstreampoliciesResource, c.ns, name, pt, data, subresources...), &v1beta1.KongUpstreamPolicy{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(kongupstreampoliciesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongUpstreamPolicy), err
 }

@@ -41,22 +41,24 @@ var kongconsumergroupsKind = v1beta1.SchemeGroupVersion.WithKind("KongConsumerGr
 
 // Get takes name of the kongConsumerGroup, and returns the corresponding kongConsumerGroup object, and an error if there is any.
 func (c *FakeKongConsumerGroups) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.KongConsumerGroup, err error) {
+	emptyResult := &v1beta1.KongConsumerGroup{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongconsumergroupsResource, c.ns, name), &v1beta1.KongConsumerGroup{})
+		Invokes(testing.NewGetActionWithOptions(kongconsumergroupsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongConsumerGroup), err
 }
 
 // List takes label and field selectors, and returns the list of KongConsumerGroups that match those selectors.
 func (c *FakeKongConsumerGroups) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.KongConsumerGroupList, err error) {
+	emptyResult := &v1beta1.KongConsumerGroupList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongconsumergroupsResource, kongconsumergroupsKind, c.ns, opts), &v1beta1.KongConsumerGroupList{})
+		Invokes(testing.NewListActionWithOptions(kongconsumergroupsResource, kongconsumergroupsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeKongConsumerGroups) List(ctx context.Context, opts v1.ListOptions) 
 // Watch returns a watch.Interface that watches the requested kongConsumerGroups.
 func (c *FakeKongConsumerGroups) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(kongconsumergroupsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(kongconsumergroupsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongConsumerGroup and creates it.  Returns the server's representation of the kongConsumerGroup, and an error, if there is any.
 func (c *FakeKongConsumerGroups) Create(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.CreateOptions) (result *v1beta1.KongConsumerGroup, err error) {
+	emptyResult := &v1beta1.KongConsumerGroup{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongconsumergroupsResource, c.ns, kongConsumerGroup), &v1beta1.KongConsumerGroup{})
+		Invokes(testing.NewCreateActionWithOptions(kongconsumergroupsResource, c.ns, kongConsumerGroup, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongConsumerGroup), err
 }
 
 // Update takes the representation of a kongConsumerGroup and updates it. Returns the server's representation of the kongConsumerGroup, and an error, if there is any.
 func (c *FakeKongConsumerGroups) Update(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (result *v1beta1.KongConsumerGroup, err error) {
+	emptyResult := &v1beta1.KongConsumerGroup{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongconsumergroupsResource, c.ns, kongConsumerGroup), &v1beta1.KongConsumerGroup{})
+		Invokes(testing.NewUpdateActionWithOptions(kongconsumergroupsResource, c.ns, kongConsumerGroup, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongConsumerGroup), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKongConsumerGroups) UpdateStatus(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (*v1beta1.KongConsumerGroup, error) {
+func (c *FakeKongConsumerGroups) UpdateStatus(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (result *v1beta1.KongConsumerGroup, err error) {
+	emptyResult := &v1beta1.KongConsumerGroup{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(kongconsumergroupsResource, "status", c.ns, kongConsumerGroup), &v1beta1.KongConsumerGroup{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(kongconsumergroupsResource, "status", c.ns, kongConsumerGroup, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongConsumerGroup), err
 }
@@ -123,7 +128,7 @@ func (c *FakeKongConsumerGroups) Delete(ctx context.Context, name string, opts v
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongConsumerGroups) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongconsumergroupsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(kongconsumergroupsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.KongConsumerGroupList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeKongConsumerGroups) DeleteCollection(ctx context.Context, opts v1.D
 
 // Patch applies the patch and returns the patched kongConsumerGroup.
 func (c *FakeKongConsumerGroups) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.KongConsumerGroup, err error) {
+	emptyResult := &v1beta1.KongConsumerGroup{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongconsumergroupsResource, c.ns, name, pt, data, subresources...), &v1beta1.KongConsumerGroup{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(kongconsumergroupsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.KongConsumerGroup), err
 }

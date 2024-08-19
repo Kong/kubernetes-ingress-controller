@@ -97,7 +97,7 @@ Adding a new version? You'll need three changes:
 
 ## [3.2.4]
 
-> Release date: 2024-08-16
+> Release date: 2024-08-19
 
 ### Fixed
 

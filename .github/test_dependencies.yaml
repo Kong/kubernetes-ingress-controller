@@ -1,15 +1,15 @@
 e2e:
   kind:
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.30.3'
+    - 'v1.31.0'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.28.9'
+    - 'v1.30.4'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.27.13'
+    - 'v1.29.8'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.26.15'
+    - 'v1.28.13'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.25.16'
+    - 'v1.27.16'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.30.3'
@@ -18,7 +18,7 @@ e2e:
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.30.3'
+      kind: 'v1.31.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.23.0'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
@@ -30,11 +30,11 @@ e2e:
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
       istio: '1.21.2'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.29.4'
+      kind: 'v1.29.8'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
       istio: '1.20.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.28.9'
+      kind: 'v1.28.13'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.19.10'
 
@@ -46,7 +46,7 @@ integration:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
     kong: '2.40.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.30.3'
+  kind: 'v1.31.0'
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.7.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker

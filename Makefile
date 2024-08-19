@@ -149,8 +149,7 @@ STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FIL
 STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
-# TODO: Use staticcheck plugin without alias aftrer https://github.com/pbr0ck3r/asdf-staticcheck/pull/6 is merged.
-	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pmalek/asdf-staticcheck.git
+	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pbr0ck3r/asdf-staticcheck.git
 	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))

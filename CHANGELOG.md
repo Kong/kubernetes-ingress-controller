@@ -83,7 +83,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.12.6]
 
-> Release date: 2024-08-19
+> Release date: 2024-08-20
 
 ### Fixed
 

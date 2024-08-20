@@ -97,7 +97,15 @@ Adding a new version? You'll need three changes:
 
 ## [3.2.4]
 
-> Release date: 2024-08-19
+> Release date: 2024-08-20
+
+### Changed
+
+- Check Kong Gateway readiness concurrently. This greatly reduces the time which
+  is required to check all Gateway instances readiness, especially when there's many
+  of them. Increased individual readiness check timeout from 1s to 5s.
+  [#6347](https://github.com/Kong/kubernetes-ingress-controller/pull/6347)
+  [#6357](https://github.com/Kong/kubernetes-ingress-controller/pull/6357)
 
 ### Fixed
 

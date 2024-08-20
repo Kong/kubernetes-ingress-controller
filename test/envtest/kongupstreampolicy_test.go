@@ -197,7 +197,7 @@ func TestKongUpstreamPolicyWithoutHTTPRoute(t *testing.T) {
 			return false
 		}
 		upstream := config.Upstreams[0]
-		return upstream.Algorithm != nil && *upstream.Algorithm == "round-robin"
+		return upstream.Algorithm != nil && *upstream.Algorithm == "round-robin" && upstream.Slots != nil && *upstream.Slots == 32
 	}, waitTime, tickTime)
 
 	t.Logf("verify that ancestor status of KongUpstreamPolicy is updated correctly")

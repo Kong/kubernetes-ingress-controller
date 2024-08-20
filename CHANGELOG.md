@@ -151,6 +151,11 @@ Adding a new version? You'll need three changes:
 - Generate one entity for each attached foreign entity if a `KongCustomEntity`
   resource is attached to multiple foreign Kong entities.
   [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
+- Only reconcile `KongUpstreamPolicy` referenced by `Services` or
+  `KongServiceFacades`(If `KongServiceFacade` features gate enabled) that are
+  used as backends of any `Ingress` or `HTTPRoute` reconciled by current
+  controller.
+  [#6421](https://github.com/Kong/kubernetes-ingress-controller/pull/6421)
 
 ### Changed
 

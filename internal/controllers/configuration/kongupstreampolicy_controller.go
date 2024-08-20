@@ -72,6 +72,12 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(&corev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
 			builder.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+		).
+		Watches(&netv1.Ingress{},
+			// Watch for Ingress changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
+			// used as backend of the Ingress.
+			// REVIEW: add predicate here to filter Ingresses not reconciled by current controller?
+			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForIngressServices),
 		)
 
 	if r.HTTPRouteEnabled {
@@ -306,6 +312,50 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPolicyForObject(ctx context.Co
 	}
 }
 
+// getUpstreamPoliciesForIngressServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
+// the Services of an Ingress.
+func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx context.Context, obj client.Object) []reconcile.Request {
+	ingress, ok := obj.(*netv1.Ingress)
+	if !ok {
+		return nil
+	}
+	var requests []reconcile.Request
+	for _, rule := range ingress.Spec.Rules {
+		for _, path := range rule.HTTP.Paths {
+			if path.Backend.Service == nil {
+				continue
+			}
+			service := &corev1.Service{}
+			if err := r.Client.Get(ctx, k8stypes.NamespacedName{
+				Namespace: ingress.Namespace,
+				Name:      path.Backend.Service.Name,
+			}, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					r.Log.Error(err, "Failed to retrieve Service in watch predicates",
+						"Service", fmt.Sprintf("%s/%s", ingress.Namespace, path.Backend.Service.Name),
+					)
+				}
+				continue
+			}
+
+			if service.Annotations == nil {
+				continue
+			}
+			upstreamPolicy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+			if !ok {
+				continue
+			}
+			requests = append(requests, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      upstreamPolicy,
+				},
+			})
+		}
+	}
+	return requests
+}
+
 // getUpstreamPoliciesForHTTPRouteServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
 // the Services of an HTTPRoute.
 func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -427,9 +477,7 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 	if !shouldStore {
-		log.V(logging.DebugLevel).Info("KongUpstreamPolicy is not referenced by Services used as backend of Ingress or HTTPRoute with matching class",
-			"namespace", req.Namespace, "name", req.Name,
-		)
+		log.V(logging.DebugLevel).Info("KongUpstreamPolicy is not referenced by Services used as backend of Ingress or HTTPRoute with matching class, skipping reconciliation")
 		return ctrl.Result{}, nil
 	}
 

@@ -896,7 +896,6 @@ Adding a new version? You'll need three changes:
   used as Kong credentials.	  used as Kong credentials.
   [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)	  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
 
-
 ## [2.12.5]
 
 > Release date: 2024-06-25

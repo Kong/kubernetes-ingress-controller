@@ -50,7 +50,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/zap v1.27.0
-	google.golang.org/api v0.191.0
+	google.golang.org/api v0.192.0
 	k8s.io/api v0.31.0
 	k8s.io/apiextensions-apiserver v0.31.0
 	k8s.io/apimachinery v0.31.0
@@ -65,7 +65,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/auth v0.8.0 // indirect
+	cloud.google.com/go/auth v0.8.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect

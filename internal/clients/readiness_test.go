@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -15,34 +16,27 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 )
 
-const (
-	testURL1 = "http://localhost:8001"
-	testURL2 = "http://localhost:8002"
-)
-
-var testPodRef = k8stypes.NamespacedName{
-	Namespace: "default",
-	Name:      "mock",
-}
-
 type mockClientFactory struct {
 	ready      map[string]bool // Maps address to readiness.
-	callsCount map[string]int  // Maps address to number of CreateAdminAPIClient calls.
+	lock       sync.RWMutex
+	callsCount map[string]int // Maps address to number of CreateAdminAPIClient calls.
 	t          *testing.T
 }
 
-func newMockClientFactory(t *testing.T, ready map[string]bool) mockClientFactory {
-	return mockClientFactory{
+func newMockClientFactory(t *testing.T, ready map[string]bool) *mockClientFactory {
+	return &mockClientFactory{
 		ready:      ready,
 		callsCount: map[string]int{},
 		t:          t,
 	}
 }
 
-func (cf mockClientFactory) CreateAdminAPIClient(_ context.Context, adminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
+func (cf *mockClientFactory) CreateAdminAPIClient(_ context.Context, adminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
 	address := adminAPI.Address
 
+	cf.lock.Lock()
 	cf.callsCount[address]++
+	cf.lock.Unlock()
 
 	ready, ok := cf.ready[address]
 	if !ok {
@@ -55,9 +49,16 @@ func (cf mockClientFactory) CreateAdminAPIClient(_ context.Context, adminAPI adm
 	return adminapi.NewTestClient(address)
 }
 
+func (cf *mockClientFactory) CallsForAddress(address string) int {
+	cf.lock.RLock()
+	defer cf.lock.RUnlock()
+	return cf.callsCount[address]
+}
+
 type mockAlreadyCreatedClient struct {
 	url     string
 	isReady bool
+	podRef  k8stypes.NamespacedName
 }
 
 func (m mockAlreadyCreatedClient) IsReady(context.Context) error {
@@ -68,7 +69,7 @@ func (m mockAlreadyCreatedClient) IsReady(context.Context) error {
 }
 
 func (m mockAlreadyCreatedClient) PodReference() (k8stypes.NamespacedName, bool) {
-	return testPodRef, true
+	return m.podRef, true
 }
 
 func (m mockAlreadyCreatedClient) BaseRootURL() string {
@@ -76,6 +77,18 @@ func (m mockAlreadyCreatedClient) BaseRootURL() string {
 }
 
 func TestDefaultReadinessChecker(t *testing.T) {
+	const (
+		testURL1 = "http://localhost:8001"
+		testURL2 = "http://localhost:8002"
+		testURL3 = "http://localhost:8003"
+		testURL4 = "http://localhost:8004"
+	)
+
+	testPodRef := k8stypes.NamespacedName{
+		Namespace: "default",
+		Name:      "mock",
+	}
+
 	testCases := []struct {
 		name string
 
@@ -90,6 +103,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			name: "ready turning pending",
 			alreadyCreatedClients: []clients.AlreadyCreatedClient{
 				mockAlreadyCreatedClient{
+					podRef:  testPodRef,
 					url:     testURL1,
 					isReady: false,
 				},
@@ -113,8 +127,14 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			name: "ready turning pending, pending turning ready at once",
 			alreadyCreatedClients: []clients.AlreadyCreatedClient{
 				mockAlreadyCreatedClient{
+					podRef:  testPodRef,
 					url:     testURL1,
 					isReady: false,
+				},
+				mockAlreadyCreatedClient{
+					podRef:  testPodRef,
+					url:     testURL3,
+					isReady: true,
 				},
 			},
 			pendingClients: []adminapi.DiscoveredAdminAPI{
@@ -126,13 +146,18 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			pendingClientsReadiness: map[string]bool{
 				testURL2: true,
 			},
-			expectedTurnedReady:   []string{testURL2},
-			expectedTurnedPending: []string{testURL1},
+			expectedTurnedReady: []string{
+				testURL2,
+			},
+			expectedTurnedPending: []string{
+				testURL1,
+			},
 		},
 		{
 			name: "no changes",
 			alreadyCreatedClients: []clients.AlreadyCreatedClient{
 				mockAlreadyCreatedClient{
+					podRef:  testPodRef,
 					url:     testURL1,
 					isReady: true,
 				},
@@ -158,10 +183,12 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			name: "multiple ready, one turning pending",
 			alreadyCreatedClients: []clients.AlreadyCreatedClient{
 				mockAlreadyCreatedClient{
+					podRef:  testPodRef,
 					url:     testURL1,
 					isReady: true,
 				},
 				mockAlreadyCreatedClient{
+					podRef:  testPodRef,
 					url:     testURL2,
 					isReady: false, // This one will turn pending.
 				},
@@ -191,6 +218,37 @@ func TestDefaultReadinessChecker(t *testing.T) {
 				testURL2,
 			},
 		},
+		{
+			name: "multiple pending, two turning ready",
+			pendingClients: []adminapi.DiscoveredAdminAPI{
+				{
+					Address: testURL1,
+					PodRef:  testPodRef,
+				},
+				{
+					Address: testURL2,
+					PodRef:  testPodRef,
+				},
+				{
+					Address: testURL3,
+					PodRef:  testPodRef,
+				},
+				{
+					Address: testURL4,
+					PodRef:  testPodRef,
+				},
+			},
+			pendingClientsReadiness: map[string]bool{
+				testURL1: false,
+				testURL2: true, // This one will turn ready.
+				testURL3: false,
+				testURL4: true, // This one will turn ready.
+			},
+			expectedTurnedReady: []string{
+				testURL2,
+				testURL4,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -207,12 +265,12 @@ func TestDefaultReadinessChecker(t *testing.T) {
 
 			// For every pending client turning ready we expect exactly one call to CreateAdminAPIClient.
 			for _, url := range tc.pendingClients {
-				require.Equal(t, 1, factory.callsCount[url.Address])
+				require.Equal(t, 1, factory.CallsForAddress(url.Address))
 			}
 
 			// For every already created client we expect NO calls to CreateAdminAPIClient.
 			for _, url := range tc.alreadyCreatedClients {
-				require.Zero(t, factory.callsCount[url.BaseRootURL()])
+				require.Zero(t, factory.CallsForAddress(url.BaseRootURL()))
 			}
 		})
 	}

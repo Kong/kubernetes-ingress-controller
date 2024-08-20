@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.2.4](#324)
  - [3.2.3](#323)
  - [3.2.2](#322)
  - [3.2.1](#321)
@@ -21,6 +22,7 @@ Adding a new version? You'll need three changes:
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.6](#2126)
  - [2.12.5](#2125)
  - [2.12.4](#2124)
  - [2.12.3](#2123)
@@ -145,13 +147,27 @@ Adding a new version? You'll need three changes:
 
 ### Changed
 
+
+- Promote `KongCustomEntity` feature gate to beta thus it is enabled by default.
+  [#6387](https://github.com/Kong/kubernetes-ingress-controller/pull/6387)
+
+## [3.2.4]
+
+> Release date: 2024-08-20
+
+### Changed
+
 - Check Kong Gateway readiness concurrently. This greatly reduces the time which
   is required to check all Gateway instances readiness, especially when there's many
   of them. Increased individual readiness check timeout from 1s to 5s.
   [#6347](https://github.com/Kong/kubernetes-ingress-controller/pull/6347)
   [#6357](https://github.com/Kong/kubernetes-ingress-controller/pull/6357)
-- Promote `KongCustomEntity` feature gate to beta thus it is enabled by default.
-  [#6387](https://github.com/Kong/kubernetes-ingress-controller/pull/6387)
+
+### Fixed
+
+- Do not update `Programmed` condition in status of resources to `Unknown` when
+  there are existing `Programmed` condition.
+  [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
 
 ## 3.2.3
 
@@ -866,6 +882,20 @@ Adding a new version? You'll need three changes:
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
+
+## [2.12.6]
+
+> Release date: 2024-08-20
+
+### Fixed
+
+- Do not update `Programmed` condition in status of resources to `Unknown` when
+  there are existing `Programmed` condition.
+  [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
+- Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
+  used as Kong credentials.	  used as Kong credentials.
+  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)	  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
+
 
 ## [2.12.5]
 
@@ -3666,6 +3696,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.2.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.3...v3.2.4
 [3.2.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.2...v3.2.3
 [3.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.0...v3.2.1
@@ -3680,6 +3711,7 @@ Please read the changelog and test in your environment.
 [3.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.6
 [2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4...v2.12.5
 [2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.3...v2.12.4
 [2.12.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.2...v2.12.3

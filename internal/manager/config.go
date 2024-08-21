@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
@@ -63,21 +64,25 @@ type Config struct {
 	GracefulShutdownTimeout           *time.Duration
 
 	// Kong Proxy configurations
-	APIServerHost               string
-	APIServerQPS                int
-	APIServerBurst              int
-	APIServerCAData             []byte
-	APIServerCertData           []byte
-	APIServerKeyData            []byte
-	MetricsAddr                 string
-	ProbeAddr                   string
-	KongAdminURLs               []string
-	KongAdminSvc                OptionalNamespacedName
-	GatewayDiscoveryDNSStrategy cfgtypes.DNSStrategy
-	KongAdminSvcPortNames       []string
-	ProxySyncSeconds            float32
-	InitCacheSyncDuration       time.Duration
-	ProxyTimeoutSeconds         float32
+	APIServerHost                          string
+	APIServerQPS                           int
+	APIServerBurst                         int
+	APIServerCAData                        []byte
+	APIServerCertData                      []byte
+	APIServerKeyData                       []byte
+	MetricsAddr                            string
+	ProbeAddr                              string
+	KongAdminURLs                          []string
+	KongAdminSvc                           OptionalNamespacedName
+	GatewayDiscoveryDNSStrategy            cfgtypes.DNSStrategy
+	GatewayDiscoveryReadinessCheckInterval time.Duration // REVIEW(naming): the name seems too long. Any idea to shorten it?
+	GatewayDiscoveryReadinessCheckTimeout  time.Duration
+	KongAdminSvcPortNames                  []string
+	ProxySyncSeconds                       float32
+	InitCacheSyncDuration                  time.Duration
+	ProxyTimeoutSeconds                    float32
+
+	// Gateway discovery configurations
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -204,6 +209,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		"Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery.")
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayDiscoveryDNSStrategy, dnsStrategyFromFlagValue, flags.WithDefault(cfgtypes.IPDNSStrategy), flags.WithTypeNameOverride[cfgtypes.DNSStrategy]("dns-strategy")),
 		"gateway-discovery-dns-strategy", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")
+	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckInterval, "gateway-discovery-readiness-check-interval", clients.DefaultReadinessReconciliationInterval,
+		"Interval of readiness checks on gateway admin API clients for discovery.")
+	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckTimeout, "gateway-discovery-readiness-check-timeout", clients.DefaultReadinessCheckTimeout,
+		"Timeout of readiness checks on gateway admin clients.")
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)

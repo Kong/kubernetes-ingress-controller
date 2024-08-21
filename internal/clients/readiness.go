@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	readinessCheckTimeout = 5 * time.Second
+	DefaultReadinessCheckTimeout = 5 * time.Second
 )
 
 // ReadinessCheckResult represents the result of a readiness check.
@@ -54,14 +54,16 @@ type AlreadyCreatedClient interface {
 }
 
 type DefaultReadinessChecker struct {
-	factory ClientFactory
-	logger  logr.Logger
+	factory               ClientFactory
+	readinessCheckTimeout time.Duration
+	logger                logr.Logger
 }
 
-func NewDefaultReadinessChecker(factory ClientFactory, logger logr.Logger) DefaultReadinessChecker {
+func NewDefaultReadinessChecker(factory ClientFactory, timeout time.Duration, logger logr.Logger) DefaultReadinessChecker {
 	return DefaultReadinessChecker{
-		factory: factory,
-		logger:  logger,
+		factory:               factory,
+		readinessCheckTimeout: timeout,
+		logger:                logger,
 	}
 }
 
@@ -129,7 +131,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	ctx context.Context,
 	pendingClient adminapi.DiscoveredAdminAPI,
 ) (client *adminapi.Client) {
-	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.readinessCheckTimeout)
 	defer cancel()
 
 	logger := c.logger.WithValues("address", pendingClient.Address)
@@ -203,7 +205,7 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, client AlreadyCreatedClient) (ready bool) {
 	logger := c.logger.WithValues("address", client.BaseRootURL())
 
-	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.readinessCheckTimeout)
 	defer cancel()
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.

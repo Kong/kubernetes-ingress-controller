@@ -42,6 +42,8 @@
 | `--feature-gates` | `list of string=bool` | A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. See the Feature Gates documentation for information and available options: https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md. |  |
 | `--gateway-api-controller-name` | `string` | The controller name to match on Gateway API resources. | `konghq.com/kic-gateway-controller` |
 | `--gateway-discovery-dns-strategy` | `dns-strategy` | DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod. | `"ip"` |
+| `--gateway-discovery-readiness-check-interval` | `duration` | Interval of readiness checks on gateway admin API clients for discovery. | `10s` |
+| `--gateway-discovery-readiness-check-timeout` | `duration` | Timeout of readiness checks on gateway admin clients. | `5s` |
 | `--gateway-to-reconcile` | `namespaced-name` | Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway. |  |
 | `--health-probe-bind-address` | `string` | The address the probe endpoint binds to. | `:10254` |
 | `--ingress-class` | `string` | Name of the ingress class to route through this controller. | `kong` |

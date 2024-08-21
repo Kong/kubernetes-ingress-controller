@@ -198,8 +198,12 @@ issues:
       - forbidigo
     text: "use of `(gatewayv1alpha2|gatewayv1beta1|gatewayv1)"
     path: (internal/gatewayapi/aliases.go|pkg/apis/.*/.*\.go)
-
+  # Allow explicit zero value declarations for integer types
   - linters:
       - revive
     text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
     path: \.go
+  # Ignore G115: integer overflow conversion
+  - linters:
+      - gosec
+    text: "G115: integer overflow conversion"

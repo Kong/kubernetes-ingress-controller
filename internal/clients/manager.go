@@ -15,9 +15,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
-// DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
-// It's the same as the default interval of a Kubernetes container's readiness probe.
-const DefaultReadinessReconciliationInterval = 10 * time.Second
+const (
+	// DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
+	// It's the same as the default interval of a Kubernetes container's readiness probe.
+	DefaultReadinessReconciliationInterval = 10 * time.Second
+	// MinReadinessReconciliationInterval is the minimum interval of readiness reconciliation loop.
+	MinReadinessReconciliationInterval = 3 * time.Second
+)
 
 // ClientFactory is responsible for creating Admin API clients.
 type ClientFactory interface {

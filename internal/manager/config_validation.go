@@ -131,10 +131,10 @@ func (c *Config) validateGatewayDiscovery() error {
 	if _, ok := c.KongAdminSvc.Get(); !ok {
 		return nil
 	}
-	// REVIEW: Should the reconciliation interval has a miniumum value and should it be the same as default interval?
-	if c.GatewayDiscoveryReadinessCheckInterval < clients.DefaultReadinessReconciliationInterval {
+
+	if c.GatewayDiscoveryReadinessCheckInterval < clients.MinReadinessReconciliationInterval {
 		return fmt.Errorf("Readiness check reconciliation interval cannot be less than %s",
-			clients.DefaultReadinessReconciliationInterval)
+			clients.MinReadinessReconciliationInterval)
 	}
 	if c.GatewayDiscoveryReadinessCheckTimeout >= c.GatewayDiscoveryReadinessCheckInterval {
 		return fmt.Errorf("Readiness check timeout must be less than readiness check recociliation interval")

@@ -353,8 +353,9 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("too small reconciliation interval should not pass", func(t *testing.T) {
 			c := validEnabled()
-			c.GatewayDiscoveryReadinessCheckInterval = 6 * time.Second
-			require.ErrorContains(t, c.Validate(), "Readiness check reconciliation interval cannot be less than 10s")
+			c.GatewayDiscoveryReadinessCheckInterval = 2 * time.Second
+			c.GatewayDiscoveryReadinessCheckTimeout = time.Second
+			require.ErrorContains(t, c.Validate(), "Readiness check reconciliation interval cannot be less than 3s")
 		})
 
 		t.Run("readiness check timeout must be less than reconciliation interval", func(t *testing.T) {

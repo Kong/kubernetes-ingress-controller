@@ -75,7 +75,7 @@ type Config struct {
 	KongAdminURLs                          []string
 	KongAdminSvc                           OptionalNamespacedName
 	GatewayDiscoveryDNSStrategy            cfgtypes.DNSStrategy
-	GatewayDiscoveryReadinessCheckInterval time.Duration // REVIEW(naming): the name seems too long. Any idea to shorten it?
+	GatewayDiscoveryReadinessCheckInterval time.Duration
 	GatewayDiscoveryReadinessCheckTimeout  time.Duration
 	KongAdminSvcPortNames                  []string
 	ProxySyncSeconds                       float32

@@ -241,8 +241,8 @@ github.com/kong/go-database-reconciler v1.14.3 h1:Vmw5NNePkr2mc9r+As87dPRIsrOduM
 github.com/kong/go-database-reconciler v1.14.3/go.mod h1:OsyUWH3SUvXAd5HJx3PhRU3PyzH0uCy7bTlzoSfw8Ew=
 github.com/kong/go-kong v0.57.1 h1:PATDsjrRr0SMMtN433ONoZqm+7UKmv49zgqQyvWbfPY=
 github.com/kong/go-kong v0.57.1/go.mod h1:lG2zDVU0yynwV9S7gJXDwwi6zVY+MgS8aUX4QhzpDz4=
-github.com/kong/kubernetes-telemetry v0.1.4 h1:Yz7OlECxWKgNRG1wJ5imA4+H0dQEpdU9d86uhwUVpu4=
-github.com/kong/kubernetes-telemetry v0.1.4/go.mod h1:z3yB5naZjUmQCFjzD3hsJ9PVYar7BgPJFKzskUuOejU=
+github.com/kong/kubernetes-telemetry v0.1.5 h1:xHwU1q0IvfEYqpj03po73ZKbVarnFPUwzkoFkdVnr9w=
+github.com/kong/kubernetes-telemetry v0.1.5/go.mod h1:1UXyZ6N3e8Fl6YguToQ6tKNveonkhjSqxzY7HVW+Ba4=
 github.com/kong/kubernetes-testing-framework v0.47.1 h1:BE2mQLC0Zj/NC5Y8B1Nm5VZymmrdVfu7cfwVKSobWtg=
 github.com/kong/kubernetes-testing-framework v0.47.1/go.mod h1:9E53E99mlIGLgBU7R529X7IAUnVY8H1IqZecvGLZeco=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=

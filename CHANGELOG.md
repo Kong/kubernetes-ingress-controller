@@ -135,6 +135,13 @@ Adding a new version? You'll need three changes:
   Error level to enable correlating Konnect-side logs and traces with customer-side
   KIC logs. Successful responses are logged with Trace level.
   [#6420](https://github.com/Kong/kubernetes-ingress-controller/pull/6420)
+- Added flags `--gateway-discovery-readiness-check-interval` and
+  `--gateway-discovery-readiness-check-timeout` to configure interval of
+  reconciliation to check readiness of gateways and timeouts of readiness
+  checks of a gateway instance.
+  Their default values are `10s` and `5s` and the readiness check timeout must
+  be less than the reconciliation interval.
+  [#6434](https://github.com/Kong/kubernetes-ingress-controller/pull/6434)
 
 ### Fixed
 
@@ -146,7 +153,6 @@ Adding a new version? You'll need three changes:
   [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
 
 ### Changed
-
 
 - Promote `KongCustomEntity` feature gate to beta thus it is enabled by default.
   [#6387](https://github.com/Kong/kubernetes-ingress-controller/pull/6387)

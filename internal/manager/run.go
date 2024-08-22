@@ -153,7 +153,7 @@ func Run(
 		eventRecorder = &record.FakeRecorder{}
 	}
 
-	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
+	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, c.GatewayDiscoveryReadinessCheckTimeout, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		logger,
@@ -164,6 +164,7 @@ func Run(
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
 	clientsManager = clientsManager.WithDBMode(dbMode)
+	clientsManager = clientsManager.WithReconciliationInterval(c.GatewayDiscoveryReadinessCheckInterval)
 
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")

@@ -254,7 +254,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			factory := newMockClientFactory(t, tc.pendingClientsReadiness)
-			checker := clients.NewDefaultReadinessChecker(factory, logr.Discard())
+			checker := clients.NewDefaultReadinessChecker(factory, clients.DefaultReadinessCheckTimeout, logr.Discard())
 			result := checker.CheckReadiness(context.Background(), tc.alreadyCreatedClients, tc.pendingClients)
 
 			turnedPending := lo.Map(result.ClientsTurnedPending, func(c adminapi.DiscoveredAdminAPI, _ int) string { return c.Address })

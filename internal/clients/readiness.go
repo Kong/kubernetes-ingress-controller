@@ -14,6 +14,8 @@ import (
 )
 
 const (
+	// DefaultReadinessCheckTimeout is the default timeout of readiness check.
+	// When a readiness check request did not get response within the timeout, the gateway instance will turn into `Pending` status.
 	DefaultReadinessCheckTimeout = 5 * time.Second
 )
 

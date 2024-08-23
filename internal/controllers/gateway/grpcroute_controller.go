@@ -112,13 +112,13 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return false // we don't need to enqueue from generic
 				},
 				CreateFunc: func(e event.CreateEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+					return IsRouteAttachedToReconciledGateway[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
 				},
 				UpdateFunc: func(e event.UpdateEvent) bool {
 					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
 				},
 				DeleteFunc: func(e event.DeleteEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+					return IsRouteAttachedToReconciledGateway[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
 				},
 			}),
 		).

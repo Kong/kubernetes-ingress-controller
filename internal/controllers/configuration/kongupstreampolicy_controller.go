@@ -76,8 +76,8 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(&netv1.Ingress{},
 			// Watch for Ingress changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
 			// used as backend of the Ingress.
-			// REVIEW: add predicate here to filter Ingresses not reconciled by current controller?
 			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForIngressServices),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.ingressMatchesIngressClass())),
 		)
 
 	if r.HTTPRouteEnabled {
@@ -413,6 +413,28 @@ func doesObjectReferUpstreamPolicy(obj client.Object) bool {
 	}
 	_, ok := annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return ok
+}
+
+// ingressMatchesIngressClass returns a function to judge whether an Ingress matches the ingress class.
+// Used in predicate to filter ingresses that should be reconciled by the current controller..
+func (r *KongUpstreamPolicyReconciler) ingressMatchesIngressClass() func(obj client.Object) bool {
+	return func(obj client.Object) bool {
+		ingress, ok := obj.(*netv1.Ingress)
+		if !ok {
+			return false
+		}
+		class := new(netv1.IngressClass)
+		if !r.DisableIngressClassLookups {
+			if err := r.Get(context.Background(), k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+				// we log this without taking action to support legacy configurations that only set ingressClassName or
+				// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+				// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+				// if none exists.
+				r.Log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			}
+		}
+		return ctrlutils.MatchesIngressClass(ingress, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class))
+	}
 }
 
 // -----------------------------------------------------------------------------

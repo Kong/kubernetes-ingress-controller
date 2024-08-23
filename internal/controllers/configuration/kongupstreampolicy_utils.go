@@ -132,7 +132,6 @@ func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingService(
 ) ([]gatewayapi.HTTPRoute, error) {
 	httpRoutes := &gatewayapi.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
-		client.InNamespace(serviceNN.Namespace),
 		client.MatchingFields{routeBackendRefServiceNameIndexKey: serviceNN.String()},
 	); err != nil {
 		return nil, fmt.Errorf("failed listing HTTPRoutes referencing services: %w", err)
@@ -147,7 +146,6 @@ func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingServiceFacade(
 ) ([]gatewayapi.HTTPRoute, error) {
 	httpRoutes := &gatewayapi.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
-		client.InNamespace(serviceFacadeNN.Namespace),
 		client.MatchingFields{routeBackendRefServiceFacadeIndexKey: serviceFacadeNN.String()},
 	); err != nil {
 		return nil, fmt.Errorf("failed listing HTTPRoutes referencing KongServiceFacades: %w", err)
@@ -181,9 +179,9 @@ func (r *KongUpstreamPolicyReconciler) maybeGetServiceFacadesReferencingUpstream
 // upstreamPolicyUsedByBackendsOfMatchingClass returns true is the KongUpstreamPolicy is referenced in
 // Services or KongServiceFacades that are used in backends of recociled Ingress or HTTPRoute.
 // If it returns false, the reconciliation is terminated and the controller will not update its status and put it into storage
-// because the KongUpstreamPokicy will not be translated into Kong configuration in such situation.
-// This is implmented for preventing races on updating status of KongUpstreamPolicy.
-// Ref:.
+// because the KongUpstreamPolicy will not be translated into Kong configuration in such situation.
+// This is implemented to prevent races on updating the status of KongUpstreamPolicy.
+// Ref: https://github.com/Kong/kubernetes-ingress-controller/issues/6270.
 func (r *KongUpstreamPolicyReconciler) upstreamPolicyUsedByBackendsOfMatchingClass(
 	ctx context.Context,
 	upstreamPolicyNN k8stypes.NamespacedName,
@@ -237,7 +235,7 @@ func (r *KongUpstreamPolicyReconciler) upstreamPolicyUsedByBackendsOfMatchingCla
 			}
 		}
 	}
-	// If no Ingress or HTTPRoute satisfies, return false.
+	// If no Ingress or HTTPRoute satisfied, return false.
 	return false, nil
 }
 

@@ -437,3 +437,198 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 		})
 	}, waitTime, tickTime)
 }
+
+func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
+	t.Parallel()
+
+	scheme := Scheme(t, WithKong)
+	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	ingressClassName := "kongenvtest"
+	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	alterIngressClassName := "kongenvtest-alter"
+	deployIngressClass(ctx, t, alterIngressClassName, ctrlClient)
+
+	logger := zapr.NewLogger(zap.NewNop())
+	ctrl.SetLogger(logger)
+
+	diagPort := helpers.GetFreePort(t)
+	ns := CreateNamespace(ctx, t, ctrlClient)
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithIngressClass(ingressClassName),
+		WithGatewayFeatureEnabled,
+		WithGatewayAPIControllers(),
+		WithProxySyncSeconds(0.10),
+		WithDiagnosticsServer(diagPort),
+	)
+
+	t.Log("creating a KongUpstreamPolicy")
+	const KongUpstreamPolicyName = "test-upstream-policy"
+	kup := &kongv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      KongUpstreamPolicyName,
+			Namespace: ns.Name,
+		},
+		Spec: kongv1beta1.KongUpstreamPolicySpec{
+			Algorithm: lo.ToPtr("round-robin"),
+			Slots:     lo.ToPtr(32),
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, kup))
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Template.Spec.Containers[0].Ports[0].Name = "http"
+	deployment.Namespace = ns.Name
+	require.NoError(t, ctrlClient.Create(ctx, deployment))
+
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.Namespace = ns.Name
+	service.Annotations = map[string]string{
+		kongv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
+	}
+	t.Logf("exposing deployment %s via service %s", deployment.Name, service.Name)
+	require.NoError(t, ctrlClient.Create(ctx, service))
+
+	pod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-1",
+			Namespace: ns.Name,
+			Labels: map[string]string{
+				"app": "httpbin",
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				func() corev1.Container {
+					c := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+					c.Ports[0].Name = "http"
+					return c
+				}(),
+			},
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, &pod))
+
+	es := discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewString(),
+			Namespace: ns.Name,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": service.Name,
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				Addresses: []string{"10.0.0.1"},
+				Conditions: discoveryv1.EndpointConditions{
+					Ready:       lo.ToPtr(true),
+					Terminating: lo.ToPtr(false),
+				},
+				TargetRef: testPodReference("pod-1", ns.Name),
+			},
+		},
+		Ports: builder.NewEndpointPort(80).WithName("http").IntoSlice(),
+	}
+	require.NoError(t, ctrlClient.Create(ctx, &es))
+	// KongUpstreamPolicy should not be reconciled when no reconciled Ingresses/HTTPRoutes reference it.
+	alterIngress := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      service.Name + "-alter",
+			Namespace: ns.Name,
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: lo.ToPtr(alterIngressClassName),
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Name: service.Spec.Ports[0].Name,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	t.Logf("creating ingress %s with another ingress class for service %s", alterIngress.Name, service.Name)
+	require.NoError(t, ctrlClient.Create(ctx, alterIngress))
+
+	t.Logf("verify that ancestor status of KongUpstreamPolicy is not updated when it is not referenced by reconciled Ingress")
+	require.Never(t, func() bool {
+		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+			Namespace: ns.Name,
+			Name:      KongUpstreamPolicyName,
+		}, kup)
+		require.NoError(t, err)
+		return len(kup.Status.Ancestors) != 0
+	}, waitTime, tickTime)
+
+	// KongUpstreamPolicy should get reconciled when a reconciled Ingress reference it.
+	ingress := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      service.Name,
+			Namespace: ns.Name,
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: lo.ToPtr(ingressClassName),
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Name: service.Spec.Ports[0].Name,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	t.Logf("creating ingress %s for service %s", ingress.Name, service.Name)
+	require.NoError(t, ctrlClient.Create(ctx, ingress))
+
+	t.Logf("verifying that ancestor status of KongUpstreamPolicy is updated when it is references by reconciled Ingress")
+	require.Eventually(t, func() bool {
+		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+			Namespace: ns.Name,
+			Name:      KongUpstreamPolicyName,
+		}, kup)
+		require.NoError(t, err)
+		if len(kup.Status.Ancestors) != 1 {
+			return false
+		}
+		ancestorRef := kup.Status.Ancestors[0].AncestorRef
+		return string(*ancestorRef.Kind) == "Service" && string(*ancestorRef.Namespace) == ns.Name && string(ancestorRef.Name) == service.Name
+	}, waitTime, tickTime)
+}

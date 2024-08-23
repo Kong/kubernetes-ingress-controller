@@ -35,6 +35,18 @@ func KongWithRouterFlavor(flavor string) KongOpt {
 	}
 }
 
+func KongWithDBMode(networkName string) KongOpt {
+	return func(req *testcontainers.ContainerRequest) {
+		req.Networks = []string{networkName}
+
+		req.Env["KONG_DATABASE"] = "postgres"
+		req.Env["KONG_PG_DATABASE"] = postgresDatabase
+		req.Env["KONG_PG_USER"] = postgresUser
+		req.Env["KONG_PG_PASSWORD"] = postgresPassword
+		req.Env["KONG_PG_HOST"] = postgresContainerNetworkAlias
+	}
+}
+
 // Kong represents a docker container running Kong.
 type Kong struct {
 	container testcontainers.Container

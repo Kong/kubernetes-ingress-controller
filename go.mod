@@ -39,7 +39,7 @@ require (
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
-	github.com/prometheus/client_golang v1.20.1
+	github.com/prometheus/client_golang v1.20.2
 	github.com/prometheus/common v0.55.0
 	github.com/samber/lo v1.47.0
 	github.com/samber/mo v1.13.0

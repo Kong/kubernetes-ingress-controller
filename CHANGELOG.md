@@ -101,6 +101,19 @@ Adding a new version? You'll need three changes:
 
 > Release date: 2024-08-26
 
+### Highlights
+
+- 📊 **Observability of Konnect Requests**: Instrumented tracing headers for B3
+  propogation and datadog in requests sent to Konnect APIs. When error happens in
+  requests to Konnect APIs, logs with error level are printed with status code
+  and returned tracing data from Konnnect side.
+- 🏗️ **KongCustomEntitty Promoted to Beta**: With multiple improvements of using
+  custom entities in KIC: supporting custom entities in last valid configurations,
+  generating one entity per each referenced foreign entity of `KongCustomEntity`,
+  and allowing `KongCustomEntity` to be referenced in `KongPlugin`s in other
+  namespaces, `KongCustomEntity` feature gate is promoted to beta and enabled by
+  default. This makes using custom entities easier.
+
 ### Added
 
 - `KongCustomEntity` is now supported by the `FallbackConfiguration` feature.

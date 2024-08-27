@@ -97,6 +97,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Fixed `KongUpstreamPolicy` reconciler to not index `HTTPRoute` when Gateway API
+  CRDs are not installed.
+  [#6454](https://github.com/Kong/kubernetes-ingress-controller/pull/6454)
+
 ## [3.3.0]
 
 > Release date: 2024-08-26

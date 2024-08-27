@@ -163,13 +163,16 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		); err != nil {
 			return fmt.Errorf("failed to index KongServiceFacades on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
 		}
-		if err := mgr.GetCache().IndexField(
-			context.Background(),
-			&gatewayapi.HTTPRoute{},
-			routeBackendRefServiceFacadeIndexKey,
-			indexRoutesOnBackendRefServiceFacadeName,
-		); err != nil {
-			return fmt.Errorf("failed to index HTTPRoutes on ServiceFacades in backendReferences: %w", err)
+
+		if r.HTTPRouteEnabled {
+			if err := mgr.GetCache().IndexField(
+				context.Background(),
+				&gatewayapi.HTTPRoute{},
+				routeBackendRefServiceFacadeIndexKey,
+				indexRoutesOnBackendRefServiceFacadeName,
+			); err != nil {
+				return fmt.Errorf("failed to index HTTPRoutes on ServiceFacades in backendReferences: %w", err)
+			}
 		}
 	}
 

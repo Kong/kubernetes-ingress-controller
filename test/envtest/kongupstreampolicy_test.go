@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -35,7 +34,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
-func TestKongUpstreamPolicyWithoutHTTPRoute(t *testing.T) {
+func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	t.Parallel()
 
 	scheme := Scheme(t, WithKong)
@@ -57,6 +56,7 @@ func TestKongUpstreamPolicyWithoutHTTPRoute(t *testing.T) {
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithGatewayFeatureEnabled,
+		WithKongServiceFacadeFeatureEnabled(),
 		WithGatewayAPIControllers(),
 		WithProxySyncSeconds(0.10),
 		WithDiagnosticsServer(diagPort),
@@ -92,49 +92,6 @@ func TestKongUpstreamPolicyWithoutHTTPRoute(t *testing.T) {
 	}
 	t.Logf("exposing deployment %s via service %s", deployment.Name, service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, service))
-
-	pod := corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod-1",
-			Namespace: ns.Name,
-			Labels: map[string]string{
-				"app": "httpbin",
-			},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				func() corev1.Container {
-					c := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
-					c.Ports[0].Name = "http"
-					return c
-				}(),
-			},
-		},
-	}
-	require.NoError(t, ctrlClient.Create(ctx, &pod))
-
-	es := discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: ns.Name,
-			Labels: map[string]string{
-				"kubernetes.io/service-name": service.Name,
-			},
-		},
-		AddressType: discoveryv1.AddressTypeIPv4,
-		Endpoints: []discoveryv1.Endpoint{
-			{
-				Addresses: []string{"10.0.0.1"},
-				Conditions: discoveryv1.EndpointConditions{
-					Ready:       lo.ToPtr(true),
-					Terminating: lo.ToPtr(false),
-				},
-				TargetRef: testPodReference("pod-1", ns.Name),
-			},
-		},
-		Ports: builder.NewEndpointPort(80).WithName("http").IntoSlice(),
-	}
-	require.NoError(t, ctrlClient.Create(ctx, &es))
 
 	ingress := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -359,48 +316,6 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	t.Logf("exposing deployment %s via service %s", deployment.Name, service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, service))
 
-	pod := corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod-1",
-			Namespace: ns.Name,
-			Labels: map[string]string{
-				"app": "httpbin",
-			},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				func() corev1.Container {
-					c := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
-					c.Ports[0].Name = "http"
-					return c
-				}(),
-			},
-		},
-	}
-	require.NoError(t, ctrlClient.Create(ctx, &pod))
-
-	es := discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: ns.Name,
-			Labels: map[string]string{
-				"kubernetes.io/service-name": service.Name,
-			},
-		},
-		AddressType: discoveryv1.AddressTypeIPv4,
-		Endpoints: []discoveryv1.Endpoint{
-			{
-				Addresses: []string{"10.0.0.1"},
-				Conditions: discoveryv1.EndpointConditions{
-					Ready:       lo.ToPtr(true),
-					Terminating: lo.ToPtr(false),
-				},
-				TargetRef: testPodReference("pod-1", ns.Name),
-			},
-		},
-		Ports: builder.NewEndpointPort(80).WithName("http").IntoSlice(),
-	}
-	require.NoError(t, ctrlClient.Create(ctx, &es))
 	route := gatewayapi.HTTPRoute{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HTTPRoute",

@@ -97,7 +97,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.3.1]
+
+> Release date: 2024-08-28
 
 ### Fixed
 

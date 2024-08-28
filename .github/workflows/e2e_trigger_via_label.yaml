@@ -8,6 +8,7 @@ on:
 jobs:
   check-permission:
     uses: ./.github/workflows/_permission_check.yaml
+    if: contains(github.event.*.labels.*.name, 'ci/run-e2e')
     secrets: inherit
   trigger-e2e-tests-targeted:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}

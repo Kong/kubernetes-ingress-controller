@@ -1,7 +1,7 @@
 name: trigger e2e (targeted) on label
 
 on:
-  pull_request:
+  pull_request_target:
     types:
     - labeled
 
@@ -35,7 +35,7 @@ jobs:
           echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
           echo "Job originally triggered by ${{ github.actor }}"
           exit 1
-      - name: checkout code
+      - name: checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}

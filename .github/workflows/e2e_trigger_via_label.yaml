@@ -1,15 +1,19 @@
 name: trigger e2e (targeted) on label
 
 on:
-  pull_request:
+  pull_request_target:
     types:
     - labeled
 
 jobs:
+  check-permission:
+    uses: ./.github/workflows/_permission_check.yaml
+    secrets: inherit
   trigger-e2e-tests-targeted:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
-    if: contains(github.event.*.labels.*.name, 'ci/run-e2e')
     runs-on: ubuntu-latest
+    if: contains(github.event.*.labels.*.name, 'ci/run-e2e')
+    needs: check-permission
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       WORKFLOW: .github/workflows/e2e_targeted.yaml
@@ -17,13 +21,16 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
-    - uses: actions/checkout@v4
-    # Do not run e2e tests on GKE-based clusters for specific PR, because currently
-    # there is no way to use an image built from PR's code for those tests.
-    # https://github.com/Kong/kubernetes-testing-framework/issues/587
-    - run: |
-        gh workflow run ${WORKFLOW} --ref ${BRANCH} \
-          -f run-gke=false \
-          -f run-istio=true \
-          -f all-supported-k8s-versions=true \
-          -f pr-number=${PR_NUMBER}
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      # Do not run e2e tests on GKE-based clusters for specific PR, because currently
+      # there is no way to use an image built from PR's code for those tests.
+      # https://github.com/Kong/kubernetes-testing-framework/issues/587
+      - run: |
+          gh workflow run ${WORKFLOW} --ref ${BRANCH} \
+            -f run-gke=false \
+            -f run-istio=true \
+            -f all-supported-k8s-versions=true \
+            -f pr-number=${PR_NUMBER}

@@ -119,6 +119,8 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -210,6 +212,8 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -321,6 +325,8 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5

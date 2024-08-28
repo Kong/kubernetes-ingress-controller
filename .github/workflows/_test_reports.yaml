@@ -19,11 +19,13 @@ on:
 jobs:
   coverage:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
-    if: ${{ inputs.coverage && !cancelled() }}
     runs-on: ubuntu-latest
+    if: ${{ inputs.coverage && !cancelled() }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: collect test coverage artifacts
         id: download-coverage
@@ -49,6 +51,8 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: download tests report
         id: download-coverage

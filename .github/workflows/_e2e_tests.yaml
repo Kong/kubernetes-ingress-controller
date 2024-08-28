@@ -117,8 +117,28 @@ jobs:
           docker load --input /tmp/image.tar
           docker image ls -a
 
-      - name: checkout repository
+      # The below allows PRs from forks to access the secrets in a secure way
+      # https://michaelheap.com/access-secrets-from-forks
+      # NOTE: Reviewer has to check whether the code in PR does not expose secrets!
+      - name: get user permission
+        id: checkAccess
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+          username: ${{ github.triggering_actor }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: check user permission
+        if: steps.checkAccess.outputs.require-result == 'false'
+        run: |
+          echo "${{ github.triggering_actor }} does not have permissions on this repo."
+          echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
+          echo "Job originally triggered by ${{ github.actor }}"
+          exit 1
+      - name: checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -208,8 +228,28 @@ jobs:
         kubernetes-version: ${{ fromJSON(needs.dependencies-versions.outputs.gke) }}
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
-      - name: checkout repository
+      # The below allows PRs from forks to access the secrets in a secure way
+      # https://michaelheap.com/access-secrets-from-forks
+      # NOTE: Reviewer has to check whether the code in PR does not expose secrets!
+      - name: get user permission
+        id: checkAccess
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+          username: ${{ github.triggering_actor }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: check user permission
+        if: steps.checkAccess.outputs.require-result == 'false'
+        run: |
+          echo "${{ github.triggering_actor }} does not have permissions on this repo."
+          echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
+          echo "Job originally triggered by ${{ github.actor }}"
+          exit 1
+      - name: checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -319,8 +359,28 @@ jobs:
           docker load --input /tmp/image.tar
           docker image ls -a
 
-      - name: checkout repository
+      # The below allows PRs from forks to access the secrets in a secure way
+      # https://michaelheap.com/access-secrets-from-forks
+      # NOTE: Reviewer has to check whether the code in PR does not expose secrets!
+      - name: get user permission
+        id: checkAccess
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+          username: ${{ github.triggering_actor }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: check user permission
+        if: steps.checkAccess.outputs.require-result == 'false'
+        run: |
+          echo "${{ github.triggering_actor }} does not have permissions on this repo."
+          echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
+          echo "Job originally triggered by ${{ github.actor }}"
+          exit 1
+      - name: checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5

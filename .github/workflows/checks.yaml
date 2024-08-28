@@ -21,27 +21,8 @@ on:
 
 jobs:
   check-permission:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
-    runs-on: ubuntu-latest
-    steps:
-      # The below allows PRs from forks to access the secrets in a secure way
-      # https://michaelheap.com/access-secrets-from-forks
-      # NOTE: Reviewer has to check whether the code in PR does not expose secrets!
-      - name: get user permission
-        id: checkAccess
-        uses: actions-cool/check-user-permission@v2
-        with:
-          require: write
-          username: ${{ github.triggering_actor }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: check user permission
-        if: steps.checkAccess.outputs.require-result == 'false'
-        run: |
-          echo "${{ github.triggering_actor }} does not have permissions on this repo."
-          echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
-          echo "Job originally triggered by ${{ github.actor }}"
-          exit 1
+    uses: ./.github/workflows/_permission_check.yaml
+    secrets: inherit
 
   up-to-date:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
@@ -96,7 +77,6 @@ jobs:
 
   envtest-tests:
     needs:
-    - check-permission
     - up-to-date
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_envtest_tests.yaml
@@ -104,7 +84,6 @@ jobs:
 
   kongintegration-tests:
     needs:
-    - check-permission
     - up-to-date
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_kongintegration_tests.yaml
@@ -112,7 +91,6 @@ jobs:
 
   integration-tests:
     needs:
-    - check-permission
     - up-to-date
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_integration_tests.yaml
@@ -163,7 +141,6 @@ jobs:
 
   test-reports:
     needs:
-      - check-permission
       - unit-tests
       - envtest-tests
       - kongintegration-tests

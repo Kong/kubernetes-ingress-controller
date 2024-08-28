@@ -30,7 +30,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.14.5
+	github.com/kong/go-database-reconciler v1.14.6
 	github.com/kong/go-kong v0.57.1
 	github.com/kong/kubernetes-telemetry v0.1.5
 	github.com/kong/kubernetes-testing-framework v0.47.2

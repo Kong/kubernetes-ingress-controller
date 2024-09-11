@@ -14,6 +14,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -62,7 +63,7 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 		for _, listener := range gateway.Spec.Listeners {
 			status, ok := statuses[listener.Name]
 			if !ok {
-				logger.V(util.DebugLevel).Info("Listener missing status information",
+				logger.V(logging.DebugLevel).Info("Listener missing status information",
 					"gateway", gateway.Name,
 					"listener", listener.Name,
 					"listener_protocol", listener.Protocol,
@@ -172,9 +173,18 @@ func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	return certs
 }
 
-func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Certificate {
+type certIDToMergedCertID map[string]string
+
+type identicalCertIDSet struct {
+	mergedCertID string
+	certIDs      []string
+}
+
+func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Certificate, certIDToMergedCertID) {
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
+	certIDSets := make(map[string]identicalCertIDSet)
+
 	for _, cl := range certLists {
 		for _, cw := range cl {
 			current, ok := certsSeen[cw.identifier]
@@ -214,14 +224,29 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Cert
 				}
 			}
 			certsSeen[current.identifier] = current
+
+			idSet := certIDSets[current.identifier]
+			idSet.mergedCertID = *current.cert.ID
+			idSet.certIDs = append(idSet.certIDs, *cw.cert.ID)
+			certIDSets[current.identifier] = idSet
+
 		}
 	}
-	var res []kongstate.Certificate
+	res := make([]kongstate.Certificate, 0, len(certsSeen))
 	for _, cw := range certsSeen {
 		sort.SliceStable(cw.cert.SNIs, func(i, j int) bool {
 			return strings.Compare(*cw.cert.SNIs[i], *cw.cert.SNIs[j]) < 0
 		})
-		res = append(res, kongstate.Certificate{Certificate: cw.cert})
+		res = append(res, kongstate.Certificate{
+			Certificate: cw.cert,
+		})
 	}
-	return res
+
+	idToMergedID := certIDToMergedCertID{}
+	for _, idSet := range certIDSets {
+		for _, certID := range idSet.certIDs {
+			idToMergedID[certID] = idSet.mergedCertID
+		}
+	}
+	return res, idToMergedID
 }

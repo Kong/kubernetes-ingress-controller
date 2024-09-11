@@ -33,7 +33,7 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // -----------------------------------------------------------------------------
@@ -301,7 +301,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		gatewayClass := &gatewayapi.GatewayClass{}
 		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
-			return nil
+			continue
 		}
 		if isGatewayClassControlled(gatewayClass) {
 			recs = append(recs, reconcile.Request{
@@ -312,7 +312,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 			})
 		}
 	}
-	return nil
+	return recs
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
@@ -376,7 +376,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log := r.Log.WithValues("GatewayV1Gateway", req.NamespacedName)
 
 	if nn, isSet := r.GatewayNN.Get(); isSet && !r.GatewayNN.MatchesNN(req.NamespacedName) {
-		r.Log.V(util.DebugLevel).Info(
+		r.Log.V(logging.DebugLevel).Info(
 			"The request does not match the specified Gateway and will be skipped.",
 			"gateway", nn,
 			"request", req.String(),
@@ -515,7 +515,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "Gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
 	var gatewayServices []*corev1.Service
 	for _, ref := range serviceRefs {
-		r.Log.V(util.DebugLevel).Info("Determining service for ref", "ref", ref)
+		r.Log.V(logging.DebugLevel).Info("Determining service for ref", "ref", ref)
 		svc, err := r.determineServiceForGateway(ctx, ref)
 		if err != nil {
 			const annotation = annotations.AnnotationPrefix + annotations.GatewayPublishServiceKey
@@ -687,7 +687,7 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	// retrieve the service for the kong gateway
 	svc := &corev1.Service{}
 	if name.Name == "" && name.Namespace == "" {
-		r.Log.V(util.DebugLevel).Info("Service not configured, discarding it", "ref", ref)
+		r.Log.V(logging.DebugLevel).Info("Service not configured, discarding it", "ref", ref)
 		return nil, nil
 	}
 	if err := r.Client.Get(ctx, name, svc); err != nil {

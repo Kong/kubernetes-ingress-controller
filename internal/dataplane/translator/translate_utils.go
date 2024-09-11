@@ -2,7 +2,6 @@ package translator
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
@@ -42,29 +41,6 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTP
 	return convertedHeaders, nil
 }
 
-// GetPermittedForReferenceGrantFrom takes a ReferenceGrant From (a namespace, group, and kind) and returns a map
-// from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
-// ReferenceGrant with those Tos and the input From.
-func GetPermittedForReferenceGrantFrom(
-	from gatewayapi.ReferenceGrantFrom,
-	grants []*gatewayapi.ReferenceGrant,
-) map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo {
-	allowed := make(map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo)
-	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
-	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
-	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
-	// matching To when checking if a ReferenceGrant allows a reference)
-	for _, grant := range grants {
-		for _, otherFrom := range grant.Spec.From {
-			if reflect.DeepEqual(from, otherFrom) {
-				allowed[gatewayapi.Namespace(grant.ObjectMeta.Namespace)] = append(allowed[gatewayapi.Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
-			}
-		}
-	}
-
-	return allowed
-}
-
 // generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is provided by the caller.
 func generateKongServiceFromBackendRefWithName(
@@ -82,11 +58,15 @@ func generateKongServiceFromBackendRefWithName(
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
-	allowed := GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
-		Group:     gatewayapi.Group(route.GetObjectKind().GroupVersionKind().Group),
-		Kind:      gatewayapi.Kind(route.GetObjectKind().GroupVersionKind().Kind),
-		Namespace: gatewayapi.Namespace(route.GetNamespace()),
-	}, grants)
+	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
+		logger,
+		gatewayapi.ReferenceGrantFrom{
+			Group:     gatewayapi.Group(route.GetObjectKind().GroupVersionKind().Group),
+			Kind:      gatewayapi.Kind(route.GetObjectKind().GroupVersionKind().Kind),
+			Namespace: gatewayapi.Namespace(route.GetNamespace()),
+		},
+		grants,
+	)
 
 	backends := backendRefsToKongStateBackends(logger, storer, route, backendRefs, allowed)
 

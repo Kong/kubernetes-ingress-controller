@@ -415,11 +415,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{Namespace: m.ingressNamespace, Name: m.ingressName}, ingressHost)
 
 	route := &kongstate.Route{
-		Ingress: util.K8sObjectInfo{
-			Namespace:   m.parentIngress.GetNamespace(),
-			Name:        m.parentIngress.GetName(),
-			Annotations: m.parentIngress.GetAnnotations(),
-		},
+		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
 			Name:              kong.String(routeName),
 			StripPath:         kong.Bool(false),
@@ -497,7 +493,7 @@ func PathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath) []*string {
 }
 
 func flattenMultipleSlashes(path string) string {
-	var out []rune
+	out := make([]rune, 0, len(path))
 	in := []rune(path)
 	for i := 0; i < len(in); i++ {
 		c := in[i]

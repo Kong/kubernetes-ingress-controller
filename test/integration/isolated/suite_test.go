@@ -5,6 +5,7 @@ package isolated
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -149,8 +150,9 @@ func TestMain(m *testing.M) {
 }
 
 type featureSetupCfg struct {
-	controllerManagerOpts []helpers.ControllerManagerOpt
-	kongProxyEnvVars      map[string]string
+	controllerManagerOpts         []helpers.ControllerManagerOpt
+	controllerManagerFeatureGates map[string]string
+	kongProxyEnvVars              map[string]string
 }
 
 type featureSetupOpt func(*featureSetupCfg)
@@ -164,6 +166,12 @@ func withControllerManagerOpts(opts ...helpers.ControllerManagerOpt) featureSetu
 func withKongProxyEnvVars(envVars map[string]string) featureSetupOpt {
 	return func(o *featureSetupCfg) {
 		o.kongProxyEnvVars = envVars
+	}
+}
+
+func withControllerManagerFeatureGates(gates map[string]string) featureSetupOpt {
+	return func(o *featureSetupCfg) {
+		o.controllerManagerFeatureGates = gates
 	}
 }
 
@@ -254,6 +262,13 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		if !assert.NoError(t, err) {
 			return ctx
 		}
+
+		ctrlDiagURL, err := url.Parse("http://localhost:10256")
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetDiagURLInCtx(ctx, ctrlDiagURL)
+
 		proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
@@ -313,6 +328,9 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		t.Logf("configuring feature gates")
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4849
 		featureGates := consts.DefaultFeatureGates
+		for gate, value := range setupCfg.controllerManagerFeatureGates {
+			featureGates += "," + fmt.Sprintf("%s=%s", gate, value)
+		}
 		t.Logf("feature gates enabled: %s", featureGates)
 
 		t.Logf("starting the controller manager")
@@ -329,6 +347,8 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--anonymous-reports=false",
 			"--log-level=trace",
+			"--dump-config=true",
+			"--dump-sensitive-config=true",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			// Use fixed election namespace `kong` because RBAC roles for leader election are in the namespace,
 			// so we create resources for leader election in the namespace to make sure that KIC can operate these resources.

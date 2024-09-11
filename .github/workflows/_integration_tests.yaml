@@ -41,7 +41,7 @@ on:
 
 jobs:
   dependencies-versions:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
       kind: ${{ steps.set-versions.outputs.kind }}
@@ -61,7 +61,7 @@ jobs:
           echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
 
   integration-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     needs: dependencies-versions
@@ -173,6 +173,8 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: setup golang
         uses: actions/setup-go@v5

@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -58,10 +60,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: kong.String("secret")}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins: []Plugin{{
-					SensitiveFieldsMeta: PluginSensitiveFieldsMetadata{WholeConfigIsSensitive: true},
-					Plugin:              kong.Plugin{ID: kong.String("1"), Config: kong.Configuration{"secret": "secretValue"}},
-				}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}},
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
 				}},
@@ -76,16 +75,32 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 						},
 					},
 				},
+				CustomEntities: map[string]*KongCustomEntityCollection{
+					"test_entities": {
+						Schema: EntitySchema{
+							Fields: map[string]EntityField{
+								"name": {
+									Type:     EntityFieldTypeString,
+									Required: true,
+								},
+							},
+						},
+						Entities: []CustomEntity{
+							{
+								Object: map[string]interface{}{
+									"name": "foo",
+								},
+							},
+						},
+					},
+				},
 			},
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins: []Plugin{{
-					SensitiveFieldsMeta: PluginSensitiveFieldsMetadata{WholeConfigIsSensitive: true},
-					Plugin:              kong.Plugin{ID: kong.String("1"), Config: kong.Configuration{"secret": *redactedString}},
-				}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}}, // We don't redact plugins' config.
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")}}},
 				}},
@@ -97,6 +112,25 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 					{
 						Vault: kong.Vault{
 							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						},
+					},
+				},
+				CustomEntities: map[string]*KongCustomEntityCollection{
+					"test_entities": {
+						Schema: EntitySchema{
+							Fields: map[string]EntityField{
+								"name": {
+									Type:     EntityFieldTypeString,
+									Required: true,
+								},
+							},
+						},
+						Entities: []CustomEntity{
+							{
+								Object: map[string]interface{}{
+									"name": "foo",
+								},
+							},
 						},
 					},
 				},
@@ -450,9 +484,13 @@ func TestGetPluginRelations(t *testing.T) {
 				"ns1:foo":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Service: []string{"foo-service"}},
 				"ns1:bar":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Service: []string{"foo-service"}},
 				"ns1:foobar": {Consumer: []string{"bar-consumer"}},
-				"ns2:foo":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Route: []string{"foo-route"}},
-				"ns2:bar":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group", "bar-consumer-group"}, Route: []string{"foo-route", "bar-route"}},
-				"ns2:baz":    {Route: []string{"bar-route"}, ConsumerGroup: []string{"bar-consumer-group"}},
+				"ns2:foo": {
+					Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Route: []string{"foo-route"},
+				},
+				"ns2:bar": {
+					Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group", "bar-consumer-group"}, Route: []string{"foo-route", "bar-route"},
+				},
+				"ns2:baz": {Route: []string{"bar-route"}, ConsumerGroup: []string{"bar-consumer-group"}},
 			},
 		},
 	}
@@ -1471,6 +1509,138 @@ func TestFillOverrides_ServiceFailures(t *testing.T) {
 					}), "should find expected translation failure caused by Service %s: should contain '%s'",
 						nsName.String(), expectedMessage)
 				}
+			}
+		})
+	}
+}
+
+type fakeSchemaGetter struct {
+	schemas map[string]kong.Schema
+}
+
+var _ SchemaGetter = &fakeSchemaGetter{}
+
+func (s *fakeSchemaGetter) Get(_ context.Context, entityType string) (kong.Schema, error) {
+	schema, ok := s.schemas[entityType]
+	if !ok {
+		return nil, fmt.Errorf("schema not found")
+	}
+	return schema, nil
+}
+
+func TestIsRemotePluginReferenceAllowed(t *testing.T) {
+	serviceTypeMeta := metav1.TypeMeta{
+		Kind: "Service",
+	}
+
+	testCases := []struct {
+		name            string
+		referrer        client.Object
+		pluginNamespace string
+		pluginName      string
+		referenceGrants []*gatewayapi.ReferenceGrant
+		shouldAllow     bool
+	}{
+		{
+			name: "no reference grant",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			shouldAllow:     false,
+		},
+		{
+			name: "have reference grant",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "bar", // same namespace as plugin
+						Name:      "grant-1",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Kind:      gatewayapi.Kind("Service"),
+								Namespace: "foo",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			shouldAllow: true,
+		},
+		{
+			name: "reference grant created but in different namespace",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "foo", // Not same namespace as plugin
+						Name:      "grant-1",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Kind:      gatewayapi.Kind("Service"),
+								Namespace: "foo",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			shouldAllow: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := store.NewFakeStore(store.FakeObjects{
+				ReferenceGrants: tc.referenceGrants,
+			})
+			require.NoError(t, err)
+			err = isRemotePluginReferenceAllowed(logr.Discard(), s, pluginReference{
+				Referrer:  tc.referrer,
+				Namespace: tc.pluginNamespace,
+				Name:      tc.pluginName,
+			})
+			if tc.shouldAllow {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
 			}
 		})
 	}

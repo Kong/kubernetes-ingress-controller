@@ -8,6 +8,4 @@ resources:
 
 components:
 - ../../../components/manager_dev_webhook
-
-patches:
-- path: manager.yaml
+- ../../../components/manager_dev_patch

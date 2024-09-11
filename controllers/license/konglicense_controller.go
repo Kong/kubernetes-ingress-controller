@@ -28,7 +28,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
@@ -183,7 +183,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 			}
 			if objectExistsInCache {
 				// Delete the object in the cache first.
-				log.V(util.DebugLevel).Info("KongLicense deleted in cluster, delete it in cache")
+				log.V(logging.DebugLevel).Info("KongLicense deleted in cluster, delete it in cache")
 				if err := r.LicenseCache.Delete(obj); err != nil {
 					return ctrl.Result{}, err
 				}
@@ -197,11 +197,11 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongLicense")
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongLicense")
 
 		_, objectExistsInCache, err := r.LicenseCache.Get(obj)
 		if err != nil {
@@ -230,7 +230,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 	// Trigger a compare on stored KongLicenses in cache and pick the newest.
 	chosenLicense := r.pickLicenseInCache()
 	if chosenLicense.Name == obj.Name {
-		log.V(util.DebugLevel).Info("Picked KongLicense being reconciled", "name", obj.Name)
+		log.V(logging.DebugLevel).Info("Picked KongLicense being reconciled", "name", obj.Name)
 		err := r.ensureControllerStatusConditions(ctx, obj, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
 		if err != nil {
 			return ctrl.Result{}, err
@@ -238,7 +238,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 
 		oldChosenLicense := r.getChosenLicense()
 		if oldChosenLicense != nil && oldChosenLicense.Name != chosenLicense.Name {
-			r.Log.V(util.DebugLevel).Info("Originally picked KongLicense replaced", "name", oldChosenLicense.Name)
+			r.Log.V(logging.DebugLevel).Info("Originally picked KongLicense replaced", "name", oldChosenLicense.Name)
 			err := r.ensureControllerStatusConditions(ctx, oldChosenLicense, metav1.ConditionFalse, ConditionReasonReplacedByNewer, "Replaced by newer created KongLicense")
 			if err != nil {
 				return ctrl.Result{}, err
@@ -264,10 +264,10 @@ type License struct {
 func (r *KongV1Alpha1KongLicenseReconciler) GetValidatedLicense() mo.Option[License] {
 	chosenLicense := r.getChosenLicense()
 	if chosenLicense == nil {
-		r.Log.V(util.DebugLevel).Info("No KongLicense available")
+		r.Log.V(logging.DebugLevel).Info("No KongLicense available")
 		return mo.None[License]()
 	}
-	r.Log.V(util.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
+	r.Log.V(logging.DebugLevel).Info("Get license from KongLicense resource", "name", chosenLicense.Name)
 	isValid := mo.None[bool]()
 	if r.licenseValidator != nil {
 		isValid = mo.Some(r.licenseValidator(chosenLicense.RawLicenseString) == nil)
@@ -362,7 +362,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Co
 		chosenLicense := r.pickLicenseInCache()
 		r.setChosenLicense(chosenLicense)
 		if chosenLicense != nil {
-			r.Log.V(util.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
+			r.Log.V(logging.DebugLevel).Info("Picked KongLicense remaining in cache", "name", chosenLicense.Name)
 			return r.ensureControllerStatusConditions(ctx, chosenLicense, metav1.ConditionTrue, ConditionReasonPickedAsLatest, "")
 		}
 	}

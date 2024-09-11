@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/file"
+	"github.com/kong/go-kong/kong"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
@@ -19,7 +23,7 @@ type ConfigService interface {
 		config io.Reader,
 		checkHash bool,
 		flattenErrors bool,
-	) ([]byte, error)
+	) error
 }
 
 type ContentToDBLessConfigConverter interface {
@@ -54,17 +58,44 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
-	if errBody, reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); reloadConfigErr != nil {
-		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.logger)
-		if parseErr != nil {
-			return fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
-		}
 
-		return NewUpdateErrorWithResponseBody(
-			errBody,
-			resourceErrorsToResourceFailures(resourceErrors, s.logger),
-			reloadConfigErr,
-		)
+	if len(targetState.CustomEntities) > 0 {
+		unmarshaledConfig := map[string]any{}
+		if err := json.Unmarshal(config, &unmarshaledConfig); err != nil {
+			return fmt.Errorf("unmarshaling config for adding custom entities: %w", err)
+		}
+		for entityType, entities := range targetState.CustomEntities {
+			unmarshaledConfig[entityType] = entities
+			s.logger.V(logging.DebugLevel).Info("Filled custom entities", "entity_type", entityType)
+		}
+		config, err = json.Marshal(unmarshaledConfig)
+		if err != nil {
+			return fmt.Errorf("constructing kong configuration again with custom entities: %w", err)
+		}
+	}
+
+	if reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
+		ctx,
+		bytes.NewReader(config),
+		true,
+		true,
+	); reloadConfigErr != nil {
+		// If the returned error is an APIError with a 400 status code, we can try to parse the response body to get the
+		// resource errors and produce an UpdateError with them.
+		var apiError *kong.APIError
+		if errors.As(reloadConfigErr, &apiError) && apiError.Code() == http.StatusBadRequest {
+			resourceErrors, parseErr := parseFlatEntityErrors(apiError.Raw(), s.logger)
+			if parseErr != nil {
+				return fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
+			}
+			return NewUpdateErrorWithResponseBody(
+				apiError.Raw(),
+				resourceErrorsToResourceFailures(resourceErrors, s.logger),
+				reloadConfigErr,
+			)
+		}
+		// ...otherwise, we return the original one.
+		return fmt.Errorf("failed to reload declarative configuration: %w", reloadConfigErr)
 	}
 	return nil
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
@@ -281,8 +280,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			obj := util.FromK8sObject(tt.route)
-			kongIngress, err := getKongIngressFromObjectMeta(storer, obj)
+			kongIngress, err := getKongIngressFromObjectMeta(storer, tt.route)
 
 			if tt.expectedError == nil {
 				require.NoError(t, err)

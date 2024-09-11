@@ -21,7 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -145,7 +145,7 @@ func TestHandleService(t *testing.T) {
 			isAllowed: true,
 		},
 		{
-			name: "fails when many plugins of the same type are attached",
+			name: "passes when many plugins of the same type are attached",
 			resource: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
@@ -185,8 +185,7 @@ func TestHandleService(t *testing.T) {
 					return fakeClient
 				}(),
 			},
-			isAllowed:   false,
-			wantMessage: "Service has invalid KongPlugin annotation: cannot attach multiple plugins: plugin1, plugin3 of the same type foo",
+			isAllowed: true,
 		},
 		{
 			name: "pass when many valid plugins are attached",
@@ -248,7 +247,7 @@ func TestHandleService(t *testing.T) {
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
 
-			got, err := handler.handleService(context.Background(), request, responseBuilder)
+			got, err := handler.handleService(request, responseBuilder)
 			require.NoError(t, err)
 			require.Equal(t, tt.isAllowed, got.Allowed)
 			require.Equal(t, tt.wantWarnings, got.Warnings)
@@ -415,7 +414,7 @@ func TestHandleSecret(t *testing.T) {
 				Operation: admissionv1.Update,
 			}
 
-			logger := testr.NewWithOptions(t, testr.Options{Verbosity: util.DebugLevel})
+			logger := testr.NewWithOptions(t, testr.Options{Verbosity: logging.DebugLevel})
 			referenceIndexer := ctrlref.NewCacheIndexers(logger)
 
 			handler := RequestHandler{

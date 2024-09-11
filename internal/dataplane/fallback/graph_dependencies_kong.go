@@ -2,12 +2,14 @@ package fallback
 
 import (
 	"fmt"
+	"slices"
 
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -72,9 +74,25 @@ func resolveKongClusterPluginDependencies(cache store.CacheStores, kongClusterPl
 
 // resolveKongConsumerDependencies resolves potential dependencies for a KongConsumer object:
 // - KongPlugin
-// - KongClusterPlugin.
+// - KongClusterPlugin
+// - Secret.
 func resolveKongConsumerDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
-	return resolveObjectDependenciesPlugin(cache, kongConsumer)
+	return slices.Concat(
+		resolveObjectDependenciesPlugin(cache, kongConsumer),
+		resolveKongConsumerSecretDependencies(cache, kongConsumer),
+	)
+}
+
+// resolveKongConsumerSecretDependencies resolves Secret dependencies for a KongConsumer object.
+func resolveKongConsumerSecretDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
+	var dependencies []client.Object
+	for _, credSecret := range kongConsumer.Credentials {
+		secret, exists, err := cache.Secret.GetByKey(fmt.Sprintf("%s/%s", kongConsumer.Namespace, credSecret))
+		if err == nil && exists {
+			dependencies = append(dependencies, secret.(client.Object))
+		}
+	}
+	return dependencies
 }
 
 // resolveKongConsumerGroupDependencies resolves potential dependencies for a KongConsumerGroup object:
@@ -122,4 +140,37 @@ func resolveTCPIngressDependencies(cache store.CacheStores, tcpIngress *kongv1be
 // - KongUpstreamPolicy.
 func resolveKongServiceFacadeDependencies(cache store.CacheStores, kongServiceFacade *incubatorv1alpha1.KongServiceFacade) []client.Object {
 	return resolveDependenciesForServiceLikeObj(cache, kongServiceFacade)
+}
+
+// resolveKongCustomEntityDependencies resolves potential dependencies for a KongCustomEntities object:
+// - KongPlugin
+// - KongClusterPlugin.
+func resolveKongCustomEntityDependencies(cache store.CacheStores, obj *kongv1alpha1.KongCustomEntity) []client.Object {
+	if obj.Spec.ParentRef == nil {
+		return nil
+	}
+
+	parentRef := *obj.Spec.ParentRef
+	groupMatches := parentRef.Group != nil && *parentRef.Group == kongv1.GroupVersion.Group
+
+	if isKongPlugin := parentRef.Kind != nil && *parentRef.Kind == "KongPlugin" && groupMatches; isKongPlugin {
+		// TODO: Cross-namespace references are not supported yet.
+		if parentRef.Namespace != nil && *parentRef.Namespace != "" &&
+			*parentRef.Namespace != obj.GetNamespace() {
+			return nil
+		}
+		if plugin, exists, err := cache.Plugin.GetByKey(
+			fmt.Sprintf("%s/%s", obj.GetNamespace(), parentRef.Name),
+		); err == nil && exists {
+			return []client.Object{plugin.(client.Object)}
+		}
+	}
+
+	if isKongClusterPlugin := parentRef.Kind != nil && *parentRef.Kind == "KongClusterPlugin" && groupMatches; isKongClusterPlugin {
+		if plugin, exists, err := cache.ClusterPlugin.GetByKey(parentRef.Name); err == nil && exists {
+			return []client.Object{plugin.(client.Object)}
+		}
+	}
+
+	return nil
 }

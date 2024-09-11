@@ -24,12 +24,28 @@ import (
 var skippedTestsForTraditionalRoutes = []string{
 	// core conformance
 	tests.HTTPRouteHeaderMatching.ShortName,
+	// NOTE: Skipped tests.GRPCRouteHeaderMatching.ShortName and
+	// tests.GRPCExactMethodMatching.ShortName because in traditional mode,
+	// when wanting to proxy different gRPC services and route requests based on Header or Method,
+	// it is necessary to create separate catch-all routes for them.
+	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
+	// ref: https://github.com/Kong/kubernetes-ingress-controller/issues/6144
+	tests.GRPCRouteHeaderMatching.ShortName,
+	tests.GRPCExactMethodMatching.ShortName,
+}
+
+var skippedTestsForExpressionRoutes = []string{
+	// When processing this scenario, the Kong's expressions router requires `priority`
+	// to be specified for routes.
+	// We cannot provide that for routes that are part of the conformance suite.
+	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
 var traditionalRoutesSupportedFeatures = []features.SupportedFeature{
 	// core features
 	features.SupportGateway,
 	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
 	// extended features
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRoutePathRewrite,
@@ -43,6 +59,7 @@ var expressionRoutesSupportedFeatures = []features.SupportedFeature{
 	// core features
 	features.SupportGateway,
 	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
 	// extended features
 	features.SupportHTTPRouteQueryParamMatching,
 	features.SupportHTTPRouteMethodMatching,
@@ -70,6 +87,7 @@ func TestGatewayConformance(t *testing.T) {
 		supportedFeatures = traditionalRoutesSupportedFeatures
 		mode = string(dpconf.RouterFlavorTraditionalCompatible)
 	case dpconf.RouterFlavorExpressions:
+		skippedTests = skippedTestsForExpressionRoutes
 		supportedFeatures = expressionRoutesSupportedFeatures
 		mode = string(dpconf.RouterFlavorExpressions)
 	default:
@@ -86,6 +104,7 @@ func TestGatewayConformance(t *testing.T) {
 	opts.SkipTests = skippedTests
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
 	)
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,

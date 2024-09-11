@@ -15,20 +15,6 @@ rules:
   - ""
   resources:
   - nodes
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - secrets
   verbs:
   - list
@@ -36,6 +22,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods
   - services
   verbs:
   - get
@@ -53,157 +40,16 @@ rules:
   - configuration.konghq.com
   resources:
   - ingressclassparameterses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongclusterplugins
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongclusterplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongconsumergroups
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongconsumergroups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongconsumers
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongconsumers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
+  - kongcustomentities
   - kongingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - konglicenses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - konglicenses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongplugins
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongupstreampolicies
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongupstreampolicies/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongvaults
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongvaults/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - tcpingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - tcpingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - udpingresses
   verbs:
   - get
@@ -212,6 +58,16 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - kongclusterplugins/status
+  - kongconsumergroups/status
+  - kongconsumers/status
+  - kongcustomentities/status
+  - kongingresses/status
+  - konglicenses/status
+  - kongplugins/status
+  - kongupstreampolicies/status
+  - kongvaults/status
+  - tcpingresses/status
   - udpingresses/status
   verbs:
   - get
@@ -253,13 +109,6 @@ rules:
   - networking.k8s.io
   resources:
   - ingressclasses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
   - ingresses
   verbs:
   - get

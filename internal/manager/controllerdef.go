@@ -268,6 +268,8 @@ func setupControllers(
 					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "httproutes",
 				}),
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 			},
 		},
 		{
@@ -293,6 +295,20 @@ func setupControllers(
 				CacheSyncTimeout:           c.CacheSyncTimeout,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				StatusQueue:                kubernetesStatusQueue,
+			},
+		},
+		{
+			Enabled: featureGates.Enabled(featuregates.KongCustomEntity) && c.KongCustomEntityEnabled,
+			Controller: &configuration.KongV1Alpha1KongCustomEntityReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongCustomEntity"),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				IngressClassName: c.IngressClassName,
+				// KongCustomEntities do not accept entities without `kubernetes.io/ingress.class` annotation
+				// even the controlled ingress class is the default to avoid putting resources not managed in,.
+				DisableIngressClassLookups: true,
 				StatusQueue:                kubernetesStatusQueue,
 			},
 		},

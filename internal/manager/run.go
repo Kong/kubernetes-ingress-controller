@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
@@ -49,7 +50,7 @@ import (
 func Run(
 	ctx context.Context,
 	c *Config,
-	diagnostic util.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ConfigDumpDiagnostic,
 	logger logr.Logger,
 ) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
@@ -63,7 +64,6 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
-
 	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
@@ -115,15 +115,16 @@ func Run(
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:                    kongSemVersion,
-		InMemory:                   dbMode.IsDBLessMode(),
-		Concurrency:                c.Concurrency,
-		FilterTags:                 c.FilterTags,
-		SkipCACertificates:         c.SkipCACertificates,
-		EnableReverseSync:          c.EnableReverseSync,
-		ExpressionRoutes:           dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		SanitizeKonnectConfigDumps: featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
-		FallbackConfiguration:      featureGates.Enabled(featuregates.FallbackConfiguration),
+		Version:                       kongSemVersion,
+		InMemory:                      dbMode.IsDBLessMode(),
+		Concurrency:                   c.Concurrency,
+		FilterTags:                    c.FilterTags,
+		SkipCACertificates:            c.SkipCACertificates,
+		EnableReverseSync:             c.EnableReverseSync,
+		ExpressionRoutes:              dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		SanitizeKonnectConfigDumps:    featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
+		FallbackConfiguration:         featureGates.Enabled(featuregates.FallbackConfiguration),
+		UseLastValidConfigForFallback: c.UseLastValidConfigForFallback,
 	}
 
 	setupLog.Info("Configuring and building the controller manager")
@@ -152,7 +153,7 @@ func Run(
 		eventRecorder = &record.FakeRecorder{}
 	}
 
-	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
+	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, c.GatewayDiscoveryReadinessCheckTimeout, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		logger,
@@ -163,6 +164,7 @@ func Run(
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
 	clientsManager = clientsManager.WithDBMode(dbMode)
+	clientsManager = clientsManager.WithReconciliationInterval(c.GatewayDiscoveryReadinessCheckInterval)
 
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")
@@ -179,7 +181,7 @@ func Run(
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager))
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
 	}
@@ -205,7 +207,7 @@ func Run(
 		configurationChangeDetector,
 		kongConfigFetcher,
 		configTranslator,
-		cache,
+		&cache,
 		fallbackConfigGenerator,
 	)
 	if err != nil {
@@ -273,18 +275,38 @@ func Run(
 		// connection.
 		go setupKonnectAdminAPIClientWithClientsMgr(ctx, c.Konnect, clientsManager, setupLog)
 
+		// Set channel to send config status.
+		configStatusNotifier := clients.NewChannelConfigNotifier(logger)
+		dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
+
+		// Setup Konnect config synchronizer.
+		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizer(
+			ctx,
+			mgr,
+			c.Konnect.UploadConfigPeriod,
+			kongConfig,
+			clientsManager,
+			updateStrategyResolver,
+			configStatusNotifier,
+		)
+		if err != nil {
+			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")
+		}
+		dataplaneClient.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
+
 		// Setup Konnect NodeAgent with manager.
 		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
 			konnectNodesAPIClient,
-			dataplaneClient,
+			configStatusNotifier,
 			clientsManager,
 			setupLog,
 			instanceIDProvider,
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
+
 	}
 
 	// Setup and inject license getter.
@@ -387,7 +409,7 @@ func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
 	konnectNodeAPIClient *nodes.Client,
-	dataplaneClient *dataplane.KongClient,
+	configStatusSubscriber clients.ConfigStatusSubscriber,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 	instanceIDProvider *InstanceIDProvider,
@@ -403,17 +425,13 @@ func setupKonnectNodeAgentWithMgr(
 	}
 	version := metadata.Release
 
-	// Set channel to send config status.
-	configStatusNotifier := clients.NewChannelConfigNotifier(logger)
-	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
-
 	agent := konnect.NewNodeAgent(
 		hostname,
 		version,
 		c.Konnect.RefreshNodePeriod,
 		logger,
 		konnectNodeAPIClient,
-		configStatusNotifier,
+		configStatusSubscriber,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
 		instanceIDProvider,

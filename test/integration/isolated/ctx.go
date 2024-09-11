@@ -4,6 +4,7 @@ package isolated
 
 import (
 	"context"
+	"crypto/x509"
 	"net/url"
 	"strings"
 	"testing"
@@ -176,6 +177,22 @@ func GetAdminURLFromCtx(ctx context.Context) *url.URL {
 	return u.(*url.URL)
 }
 
+type _diagURL struct{}
+
+// SetDiagURLInCtx sets the diag URL in the context.
+func SetDiagURLInCtx(ctx context.Context, url *url.URL) context.Context {
+	return setInCtx(ctx, _diagURL{}, url)
+}
+
+// GetDiagURLFromCtx gets the diag URL from the context.
+func GetDiagURLFromCtx(ctx context.Context) *url.URL {
+	u := ctx.Value(_diagURL{})
+	if u == nil {
+		return nil
+	}
+	return u.(*url.URL)
+}
+
 type _ingressClass struct{}
 
 // GetIngressClassFromCtx gets the Ingress Class from the context.
@@ -185,4 +202,20 @@ func GetIngressClassFromCtx(ctx context.Context) string {
 		return ""
 	}
 	return r.(string)
+}
+
+type _certPool struct{}
+
+// SetCertPoolInCtx sets the cert pool in the context.
+func SetCertPoolInCtx(ctx context.Context, certPool *x509.CertPool) context.Context {
+	return setInCtx(ctx, _certPool{}, certPool)
+}
+
+// GetCertPoolFromCtx gets the cert pool from the context.
+func GetCertPoolFromCtx(ctx context.Context) *x509.CertPool {
+	cp := ctx.Value(_certPool{})
+	if cp == nil {
+		return nil
+	}
+	return cp.(*x509.CertPool)
 }

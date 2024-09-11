@@ -3,18 +3,20 @@ package clients
 import (
 	"context"
 	"errors"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 const (
-	readinessCheckTimeout = time.Second
+	// DefaultReadinessCheckTimeout is the default timeout of readiness check.
+	// When a readiness check request did not get response within the timeout, the gateway instance will turn into `Pending` status.
+	DefaultReadinessCheckTimeout = 5 * time.Second
 )
 
 // ReadinessCheckResult represents the result of a readiness check.
@@ -54,14 +56,16 @@ type AlreadyCreatedClient interface {
 }
 
 type DefaultReadinessChecker struct {
-	factory ClientFactory
-	logger  logr.Logger
+	factory               ClientFactory
+	readinessCheckTimeout time.Duration
+	logger                logr.Logger
 }
 
-func NewDefaultReadinessChecker(factory ClientFactory, logger logr.Logger) DefaultReadinessChecker {
+func NewDefaultReadinessChecker(factory ClientFactory, timeout time.Duration, logger logr.Logger) DefaultReadinessChecker {
 	return DefaultReadinessChecker{
-		factory: factory,
-		logger:  logger,
+		factory:               factory,
+		readinessCheckTimeout: timeout,
+		logger:                logger,
 	}
 }
 
@@ -70,19 +74,55 @@ func (c DefaultReadinessChecker) CheckReadiness(
 	readyClients []AlreadyCreatedClient,
 	pendingClients []adminapi.DiscoveredAdminAPI,
 ) ReadinessCheckResult {
+	var (
+		turnedReadyCh   = make(chan []*adminapi.Client)
+		turnedPendingCh = make(chan []adminapi.DiscoveredAdminAPI)
+	)
+
+	go func(ctx context.Context, pendingClients []adminapi.DiscoveredAdminAPI) {
+		turnedReadyCh <- c.checkPendingGatewayClients(ctx, pendingClients)
+		close(turnedReadyCh)
+	}(ctx, pendingClients)
+
+	go func(ctx context.Context, readyClients []AlreadyCreatedClient) {
+		turnedPendingCh <- c.checkAlreadyExistingClients(ctx, readyClients)
+		close(turnedPendingCh)
+	}(ctx, readyClients)
+
 	return ReadinessCheckResult{
-		ClientsTurnedReady:   c.checkPendingGatewayClients(ctx, pendingClients),
-		ClientsTurnedPending: c.checkAlreadyExistingClients(ctx, readyClients),
+		ClientsTurnedReady:   <-turnedReadyCh,
+		ClientsTurnedPending: <-turnedPendingCh,
 	}
 }
 
 // checkPendingGatewayClients checks if the pending clients are ready to be used and returns the ones that are.
 func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context, lastPending []adminapi.DiscoveredAdminAPI) (turnedReady []*adminapi.Client) {
+	var (
+		wg sync.WaitGroup
+		ch = make(chan *adminapi.Client)
+	)
 	for _, adminAPI := range lastPending {
-		if client := c.checkPendingClient(ctx, adminAPI); client != nil {
-			turnedReady = append(turnedReady, client)
-		}
+		wg.Add(1)
+		go func(adminAPI adminapi.DiscoveredAdminAPI) {
+			defer wg.Done()
+			if client := c.checkPendingClient(ctx, adminAPI); client != nil {
+				select {
+				case ch <- client:
+				case <-ctx.Done():
+				}
+			}
+		}(adminAPI)
 	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for client := range ch {
+		turnedReady = append(turnedReady, client)
+	}
+
 	return turnedReady
 }
 
@@ -93,24 +133,25 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	ctx context.Context,
 	pendingClient adminapi.DiscoveredAdminAPI,
 ) (client *adminapi.Client) {
-	defer func() {
-		c.logger.V(util.DebugLevel).
-			Info(fmt.Sprintf("Checking readiness of pending client for %q", pendingClient.Address),
-				"ok", client != nil,
-			)
-	}()
-
-	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.readinessCheckTimeout)
 	defer cancel()
+
+	logger := c.logger.WithValues("address", pendingClient.Address)
+
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Info("Pending client is not ready yet",
+		logger.V(logging.DebugLevel).Info(
+			"Pending client is not ready yet",
 			"reason", err.Error(),
-			"address", pendingClient.Address,
 		)
 		return nil
 	}
+
+	logger.V(logging.DebugLevel).Info(
+		"Checked readiness of pending client",
+		"ok", client != nil,
+	)
 
 	return client
 }
@@ -118,47 +159,66 @@ func (c DefaultReadinessChecker) checkPendingClient(
 // checkAlreadyExistingClients checks if the already existing clients are still ready to be used and returns the ones
 // that are not.
 func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context, alreadyCreatedClients []AlreadyCreatedClient) (turnedPending []adminapi.DiscoveredAdminAPI) {
+	var (
+		wg          sync.WaitGroup
+		pendingChan = make(chan adminapi.DiscoveredAdminAPI)
+	)
+
 	for _, client := range alreadyCreatedClients {
-		// For ready clients we check readiness by calling the Status endpoint.
-		if ready := c.checkAlreadyCreatedClient(ctx, client); !ready {
-			podRef, ok := client.PodReference()
-			if !ok {
-				// This should never happen, but if it does, we want to log it.
-				c.logger.Error(
-					errors.New("missing pod reference"),
-					"Failed to get PodReference for client",
-					"address", client.BaseRootURL(),
-				)
-				continue
+		wg.Add(1)
+		go func(client AlreadyCreatedClient) {
+			defer wg.Done()
+
+			// For ready clients we check readiness by calling the Status endpoint.
+			if ready := c.checkAlreadyCreatedClient(ctx, client); !ready {
+				podRef, ok := client.PodReference()
+				if !ok {
+					// This should never happen, but if it does, we want to log it.
+					c.logger.Error(
+						errors.New("missing pod reference"),
+						"Failed to get PodReference for client",
+						"address", client.BaseRootURL(),
+					)
+					return
+				}
+				select {
+				case <-ctx.Done():
+				case pendingChan <- adminapi.DiscoveredAdminAPI{
+					Address: client.BaseRootURL(),
+					PodRef:  podRef,
+				}:
+				}
 			}
-			turnedPending = append(turnedPending, adminapi.DiscoveredAdminAPI{
-				Address: client.BaseRootURL(),
-				PodRef:  podRef,
-			})
-		}
+		}(client)
 	}
+
+	go func() {
+		wg.Wait()
+		close(pendingChan)
+	}()
+
+	for pendingClient := range pendingChan {
+		turnedPending = append(turnedPending, pendingClient)
+	}
+
 	return turnedPending
 }
 
 func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, client AlreadyCreatedClient) (ready bool) {
-	defer func() {
-		c.logger.V(util.DebugLevel).Info(
-			fmt.Sprintf("Checking readiness of already created client for %q", client.BaseRootURL()),
-			"ok", ready,
-		)
-	}()
+	logger := c.logger.WithValues("address", client.BaseRootURL())
 
-	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.readinessCheckTimeout)
 	defer cancel()
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.V(util.DebugLevel).Info(
+		logger.V(logging.DebugLevel).Info(
 			"Already created client is not ready, moving to pending",
-			"address", client.BaseRootURL(),
 			"reason", err.Error(),
 		)
 		return false
 	}
+
+	logger.V(logging.DebugLevel).Info("Already created client is ready")
 
 	return true
 }

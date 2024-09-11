@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
@@ -24,8 +26,11 @@ type Client struct {
 	pluginSchemaStore   *util.PluginSchemaStore
 	isKonnect           bool
 	konnectControlPlane string
-	lastConfigSHA       []byte
 
+	lastCacheStoresHash store.SnapshotHash
+
+	lastConfigSHALock sync.RWMutex
+	lastConfigSHA     []byte
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
 }
@@ -50,11 +55,12 @@ func NewTestClient(address string) (*Client, error) {
 
 type KonnectClient struct {
 	Client
-	backoffStrategy UpdateBackoffStrategy
+	consumersSyncDisabled bool
+	backoffStrategy       UpdateBackoffStrategy
 }
 
 // NewKonnectClient creates an Admin API client that is to be used with a Konnect Control Plane Admin API.
-func NewKonnectClient(c *kong.Client, controlPlane string) *KonnectClient {
+func NewKonnectClient(c *kong.Client, controlPlane string, consumersSyncDisabled bool) *KonnectClient {
 	return &KonnectClient{
 		Client: Client{
 			adminAPIClient:      c,
@@ -62,12 +68,17 @@ func NewKonnectClient(c *kong.Client, controlPlane string) *KonnectClient {
 			konnectControlPlane: controlPlane,
 			pluginSchemaStore:   util.NewPluginSchemaStore(c),
 		},
-		backoffStrategy: NewKonnectBackoffStrategy(clock.System{}),
+		backoffStrategy:       NewKonnectBackoffStrategy(clock.System{}),
+		consumersSyncDisabled: consumersSyncDisabled,
 	}
 }
 
 func (c *KonnectClient) BackoffStrategy() UpdateBackoffStrategy {
 	return c.backoffStrategy
+}
+
+func (c *KonnectClient) ConsumersSyncDisabled() bool {
+	return c.consumersSyncDisabled
 }
 
 // AdminAPIClient returns an underlying go-kong's Admin API client.
@@ -154,13 +165,27 @@ func (c *Client) KonnectControlPlane() string {
 	return c.konnectControlPlane
 }
 
+// SetLastCacheStoresHash overrides last cache stores hash.
+func (c *Client) SetLastCacheStoresHash(s store.SnapshotHash) {
+	c.lastCacheStoresHash = s
+}
+
+// LastCacheStoresHash returns a checksum of the last successful cache stores push.
+func (c *Client) LastCacheStoresHash() store.SnapshotHash {
+	return c.lastCacheStoresHash
+}
+
 // SetLastConfigSHA overrides last config SHA.
 func (c *Client) SetLastConfigSHA(s []byte) {
+	c.lastConfigSHALock.Lock()
+	defer c.lastConfigSHALock.Unlock()
 	c.lastConfigSHA = s
 }
 
 // LastConfigSHA returns a checksum of the last successful configuration push.
 func (c *Client) LastConfigSHA() []byte {
+	c.lastConfigSHALock.RLock()
+	defer c.lastConfigSHALock.RUnlock()
 	return c.lastConfigSHA
 }
 

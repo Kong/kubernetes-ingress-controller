@@ -19,9 +19,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -37,6 +37,8 @@ type KongState struct {
 	Consumers      []Consumer
 	ConsumerGroups []ConsumerGroup
 	Vaults         []Vault
+
+	CustomEntities map[string]*KongCustomEntityCollection
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -51,9 +53,7 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 			return
 		}(),
 		CACertificates: ks.CACertificates,
-		Plugins: lo.Map(ks.Plugins, func(p Plugin, _ int) Plugin {
-			return p.SanitizedCopy()
-		}),
+		Plugins:        ks.Plugins,
 		Consumers: func() (res []Consumer) {
 			for _, v := range ks.Consumers {
 				res = append(res, *v.SanitizedCopy(uuidGenerator))
@@ -68,6 +68,7 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 		}(),
 		ConsumerGroups: ks.ConsumerGroups,
 		Vaults:         ks.Vaults,
+		CustomEntities: ks.CustomEntities,
 	}
 }
 
@@ -350,33 +351,21 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 		RouteRelation         entityRelationType = iota
 		ServiceRelation       entityRelationType = iota
 	)
-	addRelation := func(referer client.Object, plugin annotations.NamespacedKongPlugin, identifier string, t entityRelationType) {
+	addRelation := func(referrer client.Object, plugin annotations.NamespacedKongPlugin, identifier string, t entityRelationType) {
 		// There are 2 types of KongPlugin references: local and remote.
-		// A local reference is one where the KongPlugin is in the same namespace as the referer.
+		// A local reference is one where the KongPlugin is in the same namespace as the referrer.
 		// A remote reference is one where the KongPlugin is in a different namespace.
 		// By default a KongPlugin is considered local.
 		// If the plugin has a namespace specified, it is considered remote.
 		//
-		// The referer is the entity that the KongPlugin is associated with.
+		// The referrer is the entity that the KongPlugin is associated with.
 		//
 		// Code in buildPlugins() will combine plugin associations into
 		// multi-entity plugins within the local namespace
-		namespace := referer.GetNamespace()
-		if plugin.Namespace != "" {
-			// remote KongPlugin, permitted if ReferenceGrant allows
-			if err := isRemotePluginReferenceAllowed(
-				cacheStore,
-				pluginReference{
-					Referer:   referer,
-					Namespace: plugin.Namespace,
-					Name:      plugin.Name,
-				},
-			); err != nil {
-				log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
-				return
-			}
-
-			namespace = plugin.Namespace
+		namespace, err := extractReferredPluginNamespace(log, cacheStore, referrer, plugin)
+		if err != nil {
+			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			return
 		}
 
 		pluginKey := namespace + ":" + plugin.Name
@@ -409,8 +398,11 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 			ingress := ks.Services[i].Routes[j].Ingress
 			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
 			for _, plugin := range pluginList {
-				// pretend we have a full Ingress struct for reference checks
+				// pretend we have a full Ingress struct for reference checks.
+				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ingress.Namespace,
 						Name:      ingress.Name,
@@ -439,38 +431,59 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 }
 
 type pluginReference struct {
-	Referer   client.Object
+	Referrer  client.Object
 	Namespace string
 	Name      string
 }
 
-func isRemotePluginReferenceAllowed(s store.Storer, r pluginReference) error {
+func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginReference) error {
 	// remote plugin. considered part of this namespace if a suitable ReferenceGrant exists
 	grants, err := s.ListReferenceGrants()
 	if err != nil {
 		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
 	}
-	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(gatewayapi.ReferenceGrantFrom{
-		Group:     gatewayapi.Group(r.Referer.GetObjectKind().GroupVersionKind().Group),
-		Kind:      gatewayapi.Kind(r.Referer.GetObjectKind().GroupVersionKind().Kind),
-		Namespace: gatewayapi.Namespace(r.Referer.GetNamespace()),
-	}, grants)
+	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
+		log,
+		gatewayapi.ReferenceGrantFrom{
+			Group:     gatewayapi.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
+			Kind:      gatewayapi.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
+			Namespace: gatewayapi.Namespace(r.Referrer.GetNamespace()),
+		},
+		grants,
+	)
+
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+	// Our reference checking code wasn't originally designed to handle multiple object types and relationships and
+	// wasn't designed with much guidance for future usage. It expects something akin to the BackendRef section of an
+	// HTTPRoute or similar, since that's what it was originally designed for. A future simplified model should probably
+	// work with source and target client.Object resources derived from the particular resources' reference specs, as
+	// those reference formats aren't necessarily consistent. We should possibly push for a standard upstream utility as
+	// part of https://github.com/kubernetes/enhancements/issues/3766 if it proceeds further, as this is can be difficult
+	// to wrap your head around when deep in the code that's checking an individual use case. A standard model for "these
+	// are the inputs and outputs for a reference grant check, derive them from your spec" should help avoid inconsistency
+	// in check implementation.
 
 	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
-	// name and namespace
-	virtualReference := gatewayapi.PluginLabelReference{
-		Namespace: lo.ToPtr(r.Referer.GetNamespace()),
+	// name and namespace.
+	pluginReference := gatewayapi.PluginLabelReference{
+		Namespace: &r.Namespace,
 		Name:      r.Name,
 	}
-	virtualPlugin := &kongv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name,
-		},
-	}
-	if !gatewayapi.NewRefCheckerForKongPlugin(virtualPlugin, virtualReference).IsRefAllowedByGrant(allowed) {
+
+	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
+	// we should put the referrer on the "target" and the plugin on the "backendRef".
+
+	log.V(logging.TraceLevel).Info("requested grant to plugins",
+		"from-namespace", r.Referrer.GetNamespace(),
+		"from-group", r.Referrer.GetObjectKind().GroupVersionKind().Group,
+		"from-kind", r.Referrer.GetObjectKind().GroupVersionKind().Kind,
+		"to-namespace", r.Namespace,
+		"to-name", r.Name,
+	)
+
+	if !gatewayapi.NewRefCheckerForKongPlugin(log, r.Referrer, pluginReference).IsRefAllowedByGrant(allowed) {
 		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
-			r.Referer.GetObjectKind().GroupVersionKind().Kind, r.Referer.GetNamespace(), r.Name, r.Namespace)
+			r.Referrer.GetObjectKind().GroupVersionKind().Kind, r.Referrer.GetNamespace(), r.Name, r.Namespace)
 	}
 	return nil
 }
@@ -597,11 +610,7 @@ func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, err
 	for _, plugin := range duplicates {
 		delete(res, plugin)
 	}
-	var plugins []Plugin
-	for _, p := range res {
-		plugins = append(plugins, p)
-	}
-	return plugins, nil
+	return lo.Values(res), nil
 }
 
 func (ks *KongState) FillPlugins(
@@ -689,4 +698,142 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 			)
 		}
 	}
+}
+
+// getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.
+// It fills the IDs of services directly referred, and IDs of services where referred routes attaches to.
+func getServiceIDFromPluginRels(log logr.Logger, rels RelatedEntitiesRef, routeAttachedService map[string]*Service, workspace string) []string {
+	// Return IDs of directly referred services.
+	if len(rels.Services) > 0 {
+		return lo.FilterMap(rels.Services, func(s *Service, _ int) (string, bool) {
+			if err := s.FillID(workspace); err != nil {
+				log.Error(err, "failed to fill ID for service")
+				return "", false
+			}
+			return *s.ID, true
+		},
+		)
+	}
+	// Returns IDs of services where the referred routes attaches.
+	if len(rels.Routes) > 0 {
+		serviceIDs := lo.FilterMap(
+			rels.Routes, func(r *Route, _ int) (string, bool) {
+				svc, ok := routeAttachedService[*r.Name]
+				if !ok {
+					return "", false
+				}
+				if err := svc.FillID(workspace); err != nil {
+					log.Error(err, "failed to fill ID for service")
+					return "", false
+				}
+				return *svc.ID, true
+			},
+		)
+		return lo.Uniq(serviceIDs)
+	}
+	return nil
+}
+
+// getPluginRelatedEntitiesRef gets services/routes/consumers referred by each plugin and returns the pointer to them.
+// It is for the custom entities to fill the IDs of the referred entities into their "foreign" fields.
+// It basically does the same thing as getPluginRelations but stores the pointers
+// because we need to call the FillID method of the entities to fetch the ID,
+// as Kong gateway requires IDs in the "foreign" fields (not other identifiers such as name.)
+//
+// TODO: refactor the building of plugin related entities and share the result between here and building plugins:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/6115
+func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log logr.Logger) PluginRelatedEntitiesRefs {
+	pluginRels := PluginRelatedEntitiesRefs{
+		RelatedEntities:      map[string]RelatedEntitiesRef{},
+		RouteAttachedService: map[string]*Service{},
+	}
+	addRelation := func(referrer client.Object, plugin annotations.NamespacedKongPlugin, entity any) {
+		namespace, err := extractReferredPluginNamespace(log, cacheStore, referrer, plugin)
+		if err != nil {
+			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			return
+		}
+		pluginKey := namespace + ":" + plugin.Name
+		relations, ok := pluginRels.RelatedEntities[pluginKey]
+		if !ok {
+			relations = RelatedEntitiesRef{}
+		}
+		switch e := entity.(type) {
+		case *Consumer:
+			relations.Consumers = append(relations.Consumers, e)
+		case *Route:
+			relations.Routes = append(relations.Routes, e)
+		case *Service:
+			relations.Services = append(relations.Services, e)
+		}
+		pluginRels.RelatedEntities[pluginKey] = relations
+	}
+
+	for i := range ks.Services {
+		for _, svc := range ks.Services[i].K8sServices {
+			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(svc.GetAnnotations())
+			for _, plugin := range pluginList {
+				addRelation(svc, plugin, &ks.Services[i])
+			}
+		}
+
+		for j, r := range ks.Services[i].Routes {
+			ingress := ks.Services[i].Routes[j].Ingress
+			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
+			for _, plugin := range pluginList {
+				// Pretend we have a full Ingress struct for reference checks.
+				virtualIngress := netv1.Ingress{
+					// Fill the actual type of the object for reference checks.
+					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ingress.Namespace,
+						Name:      ingress.Name,
+					},
+				}
+				addRelation(&virtualIngress, plugin, &ks.Services[i].Routes[j])
+				// For some entities, we need to find the referred service via route
+				// but the `Service` field of translated routes are empty because we do not want the field to appear in final declarative config.
+				// So we need to maintain a map from route name to service to find the service object.
+				pluginRels.RouteAttachedService[*r.Name] = &ks.Services[i]
+			}
+		}
+	}
+
+	for i, c := range ks.Consumers {
+		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
+		for _, plugin := range pluginList {
+			addRelation(&c.K8sKongConsumer, plugin, &ks.Consumers[i])
+		}
+	}
+	return pluginRels
+}
+
+func extractReferredPluginNamespace(
+	log logr.Logger, cacheStore store.Storer, referrer client.Object, plugin annotations.NamespacedKongPlugin,
+) (string, error) {
+	// There are 2 types of KongPlugin references: local and remote.
+	// A local reference is one where the KongPlugin is in the same namespace as the referrer.
+	// A remote reference is one where the KongPlugin is in a different namespace.
+	// By default a KongPlugin is considered local.
+	// If the plugin has a namespace specified, it is considered remote.
+	//
+	// The referrer is the entity that the KongPlugin is associated with.
+	if plugin.Namespace == "" {
+		return referrer.GetNamespace(), nil
+	}
+
+	// remote KongPlugin, permitted if ReferenceGrant allows.
+	err := isRemotePluginReferenceAllowed(
+		log,
+		cacheStore,
+		pluginReference{
+			Referrer:  referrer,
+			Namespace: plugin.Namespace,
+			Name:      plugin.Name,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+	return plugin.Namespace, nil
 }

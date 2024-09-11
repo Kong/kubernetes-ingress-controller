@@ -1,10 +1,12 @@
 package featuregates
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
@@ -23,11 +25,17 @@ func TestFeatureGates(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, fgs[GatewayAlphaFeature])
 
+	t.Log("Verifying feature gates setup will return error when settings has conflicts")
+	featureGates = map[string]bool{KongCustomEntity: true, FillIDsFeature: false}
+	_, err = New(setupLog, featureGates)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), fmt.Sprintf("%s is required if %s is enabled", FillIDsFeature, KongCustomEntity))
+
 	t.Log("Configuring several invalid feature gates options")
 	featureGates = map[string]bool{"invalidGateway": true}
 
 	t.Log("Verifying feature gates setup results when invalid feature gates options are present")
 	_, err = New(setupLog, featureGates)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalidGateway is not a valid feature")
 }

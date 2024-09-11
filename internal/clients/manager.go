@@ -11,13 +11,17 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
-// DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
-// It's the same as the default interval of a Kubernetes container's readiness probe.
-const DefaultReadinessReconciliationInterval = 10 * time.Second
+const (
+	// DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
+	// It's the same as the default interval of a Kubernetes container's readiness probe.
+	DefaultReadinessReconciliationInterval = 10 * time.Second
+	// MinReadinessReconciliationInterval is the minimum interval of readiness reconciliation loop.
+	MinReadinessReconciliationInterval = 3 * time.Second
+)
 
 // ClientFactory is responsible for creating Admin API clients.
 type ClientFactory interface {
@@ -63,6 +67,8 @@ type AdminAPIClientsManager struct {
 	// configured.
 	pendingGatewayClients map[string]adminapi.DiscoveredAdminAPI
 
+	readinessReconciliationInterval time.Duration
+
 	// readinessChecker is used to check readiness of the clients.
 	readinessChecker ReadinessChecker
 
@@ -90,7 +96,17 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 
 // WithDBMode allows to set the DBMode of the Kong gateway instances behind the admin API service.
 func (c *AdminAPIClientsManager) WithDBMode(dbMode dpconf.DBMode) *AdminAPIClientsManager {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.dbMode = dbMode
+	return c
+}
+
+// WithReconciliationInterval allows to set the Reconciliation interval to check readiness of clients.
+func (c *AdminAPIClientsManager) WithReconciliationInterval(d time.Duration) *AdminAPIClientsManager {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.readinessReconciliationInterval = d
 	return c
 }
 
@@ -109,14 +125,15 @@ func NewAdminAPIClientsManager(
 		return c.BaseRootURL(), c
 	})
 	c := &AdminAPIClientsManager{
-		readyGatewayClients:           readyClients,
-		pendingGatewayClients:         make(map[string]adminapi.DiscoveredAdminAPI),
-		readinessChecker:              readinessChecker,
-		readinessReconciliationTicker: clock.NewTicker(),
-		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
-		ctx:                           ctx,
-		runningChan:                   make(chan struct{}),
-		logger:                        logger,
+		readyGatewayClients:             readyClients,
+		pendingGatewayClients:           make(map[string]adminapi.DiscoveredAdminAPI),
+		readinessReconciliationInterval: DefaultReadinessReconciliationInterval,
+		readinessChecker:                readinessChecker,
+		readinessReconciliationTicker:   clock.NewTicker(),
+		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),
+		ctx:                             ctx,
+		runningChan:                     make(chan struct{}),
+		logger:                          logger,
 	}
 
 	for _, opt := range opts {
@@ -239,14 +256,14 @@ func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan stru
 // - discoveredAdminAPIsNotifyChan - triggered on every Notify() call.
 // - readinessReconciliationTicker - triggered on every readinessReconciliationTicker tick.
 func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
-	c.readinessReconciliationTicker.Reset(DefaultReadinessReconciliationInterval)
+	c.readinessReconciliationTicker.Reset(c.readinessReconciliationInterval)
 	defer c.readinessReconciliationTicker.Stop()
 
 	close(c.runningChan)
 	for {
 		select {
 		case <-c.ctx.Done():
-			c.logger.V(util.InfoLevel).Info("Closing AdminAPIClientsManager", "reason", c.ctx.Err())
+			c.logger.V(logging.InfoLevel).Info("Closing AdminAPIClientsManager", "reason", c.ctx.Err())
 			c.closeGatewayClientsSubscribers()
 			return
 		case discoveredAdminAPIs := <-c.discoveredAdminAPIsNotifyChan:
@@ -261,7 +278,7 @@ func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
 // It will adjust lists of gateway clients and notify subscribers about the change if readyGatewayClients list has
 // changed.
 func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
-	c.logger.V(util.DebugLevel).Info("Received notification about Admin API addresses change")
+	c.logger.V(logging.DebugLevel).Info("Received notification about Admin API addresses change")
 
 	clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs)
 	readinessChanged := c.reconcileGatewayClientsReadiness()
@@ -273,7 +290,7 @@ func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdm
 // onReadinessReconciliationTick is called on every readinessReconciliationTicker tick. It will reconcile readiness
 // of all gateway clients and notify subscribers about the change if readyGatewayClients list has changed.
 func (c *AdminAPIClientsManager) onReadinessReconciliationTick() {
-	c.logger.V(util.DebugLevel).Info("Reconciling readiness of gateway clients")
+	c.logger.V(logging.DebugLevel).Info("Reconciling readiness of gateway clients")
 
 	if changed := c.reconcileGatewayClientsReadiness(); changed {
 		c.notifyGatewayClientsSubscribers()
@@ -340,7 +357,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 	// Reset the ticker after each readiness reconciliation despite the trigger (whether it was a tick or a notification).
 	// It's to ensure that the readiness is not reconciled too often when we receive a lot of notifications.
-	defer c.readinessReconciliationTicker.Reset(DefaultReadinessReconciliationInterval)
+	defer c.readinessReconciliationTicker.Reset(c.readinessReconciliationInterval)
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -370,11 +387,11 @@ func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
 func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
-	c.logger.V(util.DebugLevel).Info("Notifying subscribers about gateway clients change")
+	c.logger.V(logging.DebugLevel).Info("Notifying subscribers about gateway clients change")
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		select {
 		case <-c.ctx.Done():
-			c.logger.V(util.InfoLevel).Info("Not sending notification to subscribers as the context is done")
+			c.logger.V(logging.InfoLevel).Info("Not sending notification to subscribers as the context is done")
 			return
 		case sub <- struct{}{}:
 		}

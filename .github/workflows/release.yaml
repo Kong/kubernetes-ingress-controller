@@ -81,6 +81,13 @@ jobs:
           echo "" >> $GITHUB_ENV
           echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
+      # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
+      - name: Setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+      - run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Cache Docker layers
@@ -105,7 +112,7 @@ jobs:
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: false
           file: Dockerfile
@@ -117,9 +124,11 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
+            GOPATH=${{ env.GOPATH}}
+            GOCACHE=${{ env.GOCACHE}}
       - name: Build and push distroless image to DockerHub
         id: docker_build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: true
           file: Dockerfile
@@ -131,6 +140,8 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
+            GOPATH=${{ env.GOPATH}}
+            GOCACHE=${{ env.GOCACHE}}
 
   test-e2e:
     needs: [verify-manifest-tag, build-push-images]

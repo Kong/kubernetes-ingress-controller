@@ -1,0 +1,64 @@
+# In this test case, we have two Services and two Ingresses. One of the Services is broken and the other is valid.
+# Because the broken Service is referenced in an Ingress, we expect the Ingress to be excluded.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-with-broken-service
+  namespace: foo-namespace
+  uid: "6faea5d6-ce95-439e-b223-421a0a142e3f"
+spec:
+  ingressClassName: kong
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: broken-svc
+                port:
+                  number: 80
+            path: /broken
+            pathType: Exact
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: valid-ingress
+  namespace: foo-namespace
+spec:
+  ingressClassName: kong
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: valid-svc
+                port:
+                  number: 80
+            path: /valid
+            pathType: Exact
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    test.konghq.com/broken: "true"
+  name: broken-svc
+  namespace: foo-namespace
+  uid: "6faea5d6-ce95-439e-b223-421a0a142e3f"
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valid-svc
+  namespace: foo-namespace
+spec:
+  ports:
+    - port: 80

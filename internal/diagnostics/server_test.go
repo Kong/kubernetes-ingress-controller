@@ -11,7 +11,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
@@ -47,9 +47,9 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 		failed := false
 		for i := 0; i < configDumpsToWrite; i++ {
 			failed = !failed // Toggle failed flag.
-			configsCh <- util.ConfigDump{
+			configsCh <- ConfigDump{
 				Config:          file.Content{},
-				Failed:          failed,
+				Meta:            DumpMeta{Failed: failed},
 				RawResponseBody: []byte("fake error body"),
 			}
 		}
@@ -85,4 +85,61 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 	t.Log("Started reading config dumps")
 
 	<-ctx.Done()
+}
+
+func TestServer_EventsHandling(t *testing.T) {
+	successfulDump := ConfigDump{
+		Meta: DumpMeta{
+			Failed:   false,
+			Fallback: false,
+			Hash:     "success-hash",
+		},
+		Config: file.Content{
+			FormatVersion: "success", // Just for the sake of distinguishing between success and failure.
+		},
+	}
+	failedDump := ConfigDump{
+		Config: file.Content{
+			FormatVersion: "failed", // Just for the sake of distinguishing between success and failure.
+		},
+		Meta: DumpMeta{
+			Failed:   true,
+			Fallback: false,
+		},
+		RawResponseBody: []byte("error body"),
+	}
+	fallbackMeta := fallback.GeneratedCacheMetadata{
+		BrokenObjects: []fallback.ObjectHash{
+			{
+				Name: "object",
+			},
+		},
+	}
+
+	s := NewServer(logr.Discard(), ServerConfig{
+		ConfigDumpsEnabled: true,
+	})
+
+	t.Run("on successful config dump", func(t *testing.T) {
+		s.onConfigDump(successfulDump)
+		require.Equal(t, successfulDump.Config, s.lastSuccessfulConfigDump)
+		require.Equal(t, successfulDump.Meta.Hash, s.lastSuccessHash)
+	})
+	t.Run("on failed config dump", func(t *testing.T) {
+		s.onConfigDump(failedDump)
+		require.Equal(t, failedDump.Config, s.lastFailedConfigDump)
+		require.Equal(t, failedDump.Meta.Hash, s.lastFailedHash)
+		require.Equal(t, failedDump.RawResponseBody, s.lastRawErrBody)
+	})
+	t.Run("on fallback cache metadata", func(t *testing.T) {
+		s.onFallbackCacheMetadata(fallbackMeta)
+		require.NotNilf(t, s.currentFallbackCacheMetadata, "expected fallback cache metadata to be set")
+		require.Equal(t, fallbackMeta, *s.currentFallbackCacheMetadata)
+	})
+	t.Run("on successful config dump after fallback", func(t *testing.T) {
+		s.onConfigDump(successfulDump)
+		require.Equal(t, successfulDump.Config, s.lastSuccessfulConfigDump)
+		require.Equal(t, successfulDump.Meta.Hash, s.lastSuccessHash)
+		require.Nil(t, s.currentFallbackCacheMetadata, "expected fallback cache metadata to be dropped as it's no more relevant")
+	})
 }

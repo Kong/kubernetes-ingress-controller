@@ -1296,7 +1296,8 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			valid: true,
+			requireEnterpriseLicense: true,
+			valid:                    true,
 		},
 		{
 			name: "invalid degraphql_route entity",
@@ -1312,7 +1313,8 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			valid: false,
+			requireEnterpriseLicense: true,
+			valid:                    false,
 		},
 		{
 			name: "KongCustomEntity not controlled by the current controller",

@@ -4,7 +4,7 @@ kind: Component
 images:
 - name: kong-placeholder
   newName: kong
-  newTag: '3.6'
+  newTag: '3.7' # renovate: datasource=docker versioning=docker depName=kong@regenerate packageName=kong
 - name: kic-placeholder
   newName: kong/kubernetes-ingress-controller
-  newTag: '3.1'
+  newTag: '3.3' # renovate: datasource=docker versioning=docker depName=kong/kubernetes-ingress-controller@regenerate packageName=kong/kubernetes-ingress-controller

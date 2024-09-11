@@ -7,15 +7,22 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong/custom"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
+// CustomEntitiesByType stores all custom entities by types.
+// The key is the type of the entity,
+// and the corresponding slice stores the sorted list of custom entities with that type.
+type CustomEntitiesByType map[string][]custom.Object
+
 // ContentWithHash encapsulates file.Content along with its precalculated hash.
 type ContentWithHash struct {
-	Content *file.Content
-	Hash    []byte
+	Content        *file.Content
+	CustomEntities CustomEntitiesByType
+	Hash           []byte
 }
 
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.

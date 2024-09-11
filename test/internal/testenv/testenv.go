@@ -251,3 +251,8 @@ func IsCI() bool {
 	// set the CI environment variable.
 	return os.Getenv("CI") == "true"
 }
+
+// KongLicenseData returns the Kong license data to use in tests.
+func KongLicenseData() string {
+	return os.Getenv("KONG_LICENSE_DATA")
+}

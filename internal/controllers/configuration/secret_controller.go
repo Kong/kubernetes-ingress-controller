@@ -20,7 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // -----------------------------------------------------------------------------
@@ -119,11 +119,11 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !secret.DeletionTimestamp.IsZero() && time.Now().After(secret.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(secret)
 		if err != nil {
 			return ctrl.Result{}, err

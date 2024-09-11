@@ -40,7 +40,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -73,6 +73,7 @@ type Storer interface {
 	GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error)
 	GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error)
 	GetKongVault(name string) (*kongv1alpha1.KongVault, error)
+	GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error)
 
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
@@ -93,6 +94,7 @@ type Storer interface {
 	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
 	ListCACerts() ([]*corev1.Secret, error)
 	ListKongVaults() []*kongv1alpha1.KongVault
+	ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -159,8 +161,11 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
 func (s Store) ListIngressesV1() []*netv1.Ingress {
 	// filter ingress rules
-	var ingresses []*netv1.Ingress
-	for _, item := range s.stores.IngressV1.List() {
+	var (
+		list      = s.stores.IngressV1.List()
+		ingresses = make([]*netv1.Ingress, 0, len(list))
+	)
+	for _, item := range list {
 		ing, ok := item.(*netv1.Ingress)
 		if !ok {
 			s.logger.Error(nil, "ListIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
@@ -178,7 +183,7 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 		default:
 			class, err := s.GetIngressClassV1(s.ingressClass)
 			if err != nil {
-				s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
+				s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 				continue
 			}
 			if !ctrlutils.IsDefaultIngressClass(class) {
@@ -199,8 +204,11 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 // ListIngressClassesV1 returns the list of Ingresses in the Ingress v1 store.
 func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 	// filter ingress rules
-	var classes []*netv1.IngressClass
-	for _, item := range s.stores.IngressClassV1.List() {
+	var (
+		list    = s.stores.IngressClassV1.List()
+		classes = make([]*netv1.IngressClass, 0, len(list))
+	)
+	for _, item := range list {
 		class, ok := item.(*netv1.IngressClass)
 		if !ok {
 			s.logger.Error(nil, "ListIngressClassesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
@@ -221,7 +229,7 @@ func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 
 // ListIngressClassParametersV1Alpha1 returns the list of IngressClassParameters in the Ingress v1alpha1 store.
 func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters {
-	var classParams []*kongv1alpha1.IngressClassParameters
+	var classParams []*kongv1alpha1.IngressClassParameters //nolint:prealloc
 	for _, item := range s.stores.IngressClassParametersV1alpha1.List() {
 		classParam, ok := item.(*kongv1alpha1.IngressClassParameters)
 		if !ok {
@@ -562,6 +570,18 @@ func (s Store) GetKongVault(name string) (*kongv1alpha1.KongVault, error) {
 	return p.(*kongv1alpha1.KongVault), nil
 }
 
+func (s Store) GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	e, exists, err := s.stores.KongCustomEntity.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongCustomEntity %s/%s not found", namespace, name)}
+	}
+	return e.(*kongv1alpha1.KongCustomEntity), nil
+}
+
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
 // annotation.
 func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
@@ -670,12 +690,27 @@ func (s Store) ListKongVaults() []*kongv1alpha1.KongVault {
 	return kongVaults
 }
 
+func (s Store) ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity {
+	var kongCustomEntities []*kongv1alpha1.KongCustomEntity
+	for _, obj := range s.stores.KongCustomEntity.List() {
+		kongCustomEntity, ok := obj.(*kongv1alpha1.KongCustomEntity)
+		if ok && s.isValidIngressClass(
+			&metav1.ObjectMeta{
+				Annotations: map[string]string{annotations.IngressClassKey: kongCustomEntity.Spec.ControllerName},
+			}, annotations.IngressClassKey, s.getIngressClassHandling(),
+		) {
+			kongCustomEntities = append(kongCustomEntities, kongCustomEntity)
+		}
+	}
+	return kongCustomEntities
+}
+
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or
 // annotations.ExactClassMatch if the IngressClass is not default or does not exist.
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	class, err := s.GetIngressClassV1(s.ingressClass)
 	if err != nil {
-		s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
+		s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 		return annotations.ExactClassMatch
 	}
 	if ctrlutils.IsDefaultIngressClass(class) {
@@ -760,6 +795,12 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1beta1.KongUpstreamPolicy{}, nil
 	case incubatorv1alpha1.SchemeGroupVersion.WithKind("KongServiceFacade"):
 		return &incubatorv1alpha1.KongServiceFacade{}, nil
+	case kongv1alpha1.GroupVersion.WithKind(kongv1alpha1.KongCustomEntityKind):
+		return &kongv1alpha1.KongCustomEntity{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongVault"):
+		return &kongv1alpha1.KongVault{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongCustomEntity"):
+		return &kongv1alpha1.KongCustomEntity{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

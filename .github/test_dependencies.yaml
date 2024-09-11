@@ -1,60 +1,63 @@
 e2e:
   kind:
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.30.0'
+    - 'v1.31.0'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.28.9'
+    - 'v1.30.4'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.27.13'
+    - 'v1.29.8'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.26.15'
+    - 'v1.28.13'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.25.16'
+    - 'v1.27.16'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.30.1'
+    - '1.31.0'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.30.0'
+      kind: 'v1.31.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
+      istio: '1.23.0'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.30.3'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
+      istio: '1.22.3'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.29.4'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
       istio: '1.21.2'
+    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
+      kind: 'v1.29.8'
+      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
+      istio: '1.20.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.28.9'
+      kind: 'v1.28.13'
       # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
       istio: '1.19.10'
-    - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.27.13'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
-      istio: '1.18.7'
-    - # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-      kind: 'v1.26.15'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch packageName=istio/istioctl versioning=docker
-      istio: '1.17.8'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.7.3'
+  kuma: '2.8.3'
 
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.38.0'
+    kong: '2.41.1'
   # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.30.0'
+  kind: 'v1.31.0'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.6.1'
+  kong-oss: '3.7.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.7.0.0'
+  kong-ee: '3.7.1.2'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.6.1'
+  kong-oss: '3.7.1'
+  # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
+  kong-ee: '3.7.1.2'
 
 envtests:
-  # Because of a bug that was introduced in Kong EE 3.5 (https://konghq.atlassian.net/browse/KAG-3699),
-  # we need to stick to 3.4 in order to make our KongVault validation tests stable.
-  # This version should be bumped to the current one once the bug is fixed.
-  # PLEASE DO NOT BUMP THIS VERSION BEFORE KAG-3699 IS FIXED. renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.4.3.4'
+  # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
+  kong-ee: '3.7.1.2'

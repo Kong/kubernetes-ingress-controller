@@ -38,6 +38,7 @@ linters:
   - nilerr
   - nolintlint
   - predeclared
+  - prealloc
   - revive
   - staticcheck
   - tenv
@@ -142,6 +143,8 @@ linters-settings:
     klog: true
     logr: true
     zap: false
+  prealloc:
+    for-loops: true
 issues:
   fix: true
   max-same-issues: 0
@@ -168,12 +171,22 @@ issues:
   - path: _test\.go
     linters:
       - gosec
-    text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"
+    text: "Potential hardcoded credentials"
+  # Ignore prealloc in tests
+  - path: _test\.go
+    linters:
+      - prealloc
+    text: "Consider pre-allocating"
+  # Ignore prealloc in hack/ directory
+  - path: hack/
+    linters:
+      - prealloc
+    text: "Consider pre-allocating"
   # It's fine to use variable urls in tests.
   - linters:
       - gosec
     text: "Potential HTTP request made with variable url"
-    path: test\.go
+    path: _test\.go
   # Allow using SchemeGroupVersion, GroupVersion, GroupName, AddToScheme, and Install from gatewayv1alpha2,
   # gatewayv1beta1 and gatewayv1 as their values are different between versions, and we can't alias them in internal/gatewayapi/aliases.go.
   - linters:
@@ -185,8 +198,12 @@ issues:
       - forbidigo
     text: "use of `(gatewayv1alpha2|gatewayv1beta1|gatewayv1)"
     path: (internal/gatewayapi/aliases.go|pkg/apis/.*/.*\.go)
-
+  # Allow explicit zero value declarations for integer types
   - linters:
       - revive
     text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
     path: \.go
+  # Ignore G115: integer overflow conversion
+  - linters:
+      - gosec
+    text: "G115: integer overflow conversion"

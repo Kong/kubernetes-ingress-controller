@@ -44,7 +44,7 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
@@ -113,11 +113,11 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the Service is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -209,11 +209,11 @@ func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req 
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -347,11 +347,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the Ingress is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -378,16 +378,16 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -407,20 +407,20 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(logging.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -428,7 +428,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -488,11 +488,11 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -570,11 +570,11 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -658,11 +658,11 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongPlugin is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -795,11 +795,11 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongClusterPlugin is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -826,16 +826,16 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -966,11 +966,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongConsumer is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -997,16 +997,16 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1016,8 +1016,8 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -1027,7 +1027,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 	// update reference relationship from the KongConsumer to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -1152,11 +1152,11 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongConsumerGroup", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongConsumerGroup", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongConsumerGroup is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -1183,16 +1183,16 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1202,8 +1202,8 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -1213,7 +1213,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 	// update reference relationship from the KongConsumerGroup to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -1340,11 +1340,11 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the TCPIngress is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -1371,16 +1371,16 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1400,20 +1400,20 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(logging.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -1421,7 +1421,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -1532,11 +1532,11 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -1558,16 +1558,16 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1577,20 +1577,20 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(logging.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -1598,7 +1598,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -1658,11 +1658,11 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "IngressClassParameters", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "IngressClassParameters", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -1788,11 +1788,11 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongServiceFacade", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongServiceFacade", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -1814,16 +1814,16 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1833,8 +1833,8 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -1845,7 +1845,7 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -1954,11 +1954,11 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongVault", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongVault", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
@@ -1980,16 +1980,16 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
@@ -1999,8 +1999,8 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
@@ -2010,7 +2010,172 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
+// KongV1Alpha1 KongCustomEntity - Reconciler
+// -----------------------------------------------------------------------------
+
+// KongV1Alpha1KongCustomEntityReconciler reconciles KongCustomEntity resources
+type KongV1Alpha1KongCustomEntityReconciler struct {
+	client.Client
+
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
+
+	IngressClassName           string
+	DisableIngressClassLookups bool
+}
+
+var _ controllers.Reconciler = &KongV1Alpha1KongCustomEntityReconciler{}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1Alpha1KongCustomEntityReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongV1Alpha1KongCustomEntity").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		})
+	// if configured, start the status updater controller
+	if r.StatusQueue != nil {
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1alpha1",
+					Kind:    "KongCustomEntity",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
+	}
+	if !r.DisableIngressClassLookups {
+		blder.Watches(&netv1.IngressClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listClassless),
+			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+		)
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
+	return blder.Watches(&kongv1alpha1.KongCustomEntity{},
+		&handler.EnqueueRequestForObject{},
+		builder.WithPredicates(preds),
+	).
+		Complete(r)
+}
+
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1Alpha1KongCustomEntityReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
+	resourceList := &kongv1alpha1.KongCustomEntityList{}
+	if err := r.Client.List(ctx, resourceList); err != nil {
+		r.Log.Error(err, "Failed to list classless kongcustomentities")
+		return nil
+	}
+	var recs []reconcile.Request
+	for i, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1Alpha1KongCustomEntityReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *KongV1Alpha1KongCustomEntityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1Alpha1KongCustomEntity", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(kongv1alpha1.KongCustomEntity)
+
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		}
+		return ctrl.Result{}, err
+	}
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongCustomEntity", "namespace", req.Namespace, "name", req.Name)
+
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	class := new(netv1.IngressClass)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
+	}
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	} else {
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+			"class", r.IngressClassName)
+	}
+
+	// update the kong Admin API with the changes
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+		)
+		obj.Status.Conditions = conditions
+		if updateNeeded {
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		}
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil

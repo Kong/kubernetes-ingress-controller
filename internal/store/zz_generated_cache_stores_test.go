@@ -139,6 +139,11 @@ func TestCacheStores(t *testing.T) {
 			name:          "KongVault",
 			objectToStore: &kongv1alpha1.KongVault{},
 		},
+
+		{
+			name:          "KongCustomEntity",
+			objectToStore: &kongv1alpha1.KongCustomEntity{},
+		},
 	}
 
 	for _, tc := range testCases {

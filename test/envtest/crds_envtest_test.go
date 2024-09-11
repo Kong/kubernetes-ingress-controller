@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -105,7 +105,7 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 
 	// Reducing the cache sync timeout to speed up the test.
 	cfg.CacheSyncTimeout = time.Millisecond * 500
-	err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
+	err := manager.Run(ctx, &cfg, diagnostics.ConfigDumpDiagnostic{}, logger)
 	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 

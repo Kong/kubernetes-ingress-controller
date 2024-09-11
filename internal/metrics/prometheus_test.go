@@ -33,8 +33,19 @@ func TestRecordPush(t *testing.T) {
 	})
 	t.Run("recording push failure works", func(t *testing.T) {
 		require.NotPanics(t, func() {
-			m.RecordPushFailure(ProtocolDBLess, time.Millisecond, "https://10.0.0.1:8080", 5,
-				fmt.Errorf("custom error"))
+			m.RecordPushFailure(ProtocolDBLess, time.Millisecond, "https://10.0.0.1:8080", 5, fmt.Errorf("custom error"))
+		})
+	})
+	// Verify that multiple call of NewCtrlFuncMetrics keeps all created metrics work.
+	m2 := NewCtrlFuncMetrics()
+	t.Run("recording push success works for old metrics", func(t *testing.T) {
+		require.NotPanics(t, func() {
+			m.RecordPushSuccess(ProtocolDBLess, time.Millisecond, "https://10.0.0.1:8080")
+		})
+	})
+	t.Run("recording push success works for new metrics", func(t *testing.T) {
+		require.NotPanics(t, func() {
+			m2.RecordPushSuccess(ProtocolDBLess, time.Millisecond, "https://10.0.0.2:8080")
 		})
 	})
 }
@@ -43,13 +54,13 @@ func TestRecordTranslation(t *testing.T) {
 	m := NewCtrlFuncMetrics()
 	t.Run("recording translation success works", func(t *testing.T) {
 		require.NotPanics(t, func() {
-			m.RecordTranslationSuccess()
+			m.RecordTranslationSuccess(10 * time.Millisecond)
 			m.RecordTranslationBrokenResources(0)
 		})
 	})
 	t.Run("recording translation failure works", func(t *testing.T) {
 		require.NotPanics(t, func() {
-			m.RecordTranslationFailure()
+			m.RecordTranslationFailure(10 * time.Millisecond)
 			m.RecordTranslationBrokenResources(9)
 		})
 	})

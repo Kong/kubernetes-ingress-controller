@@ -170,6 +170,15 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		}
 	}
 
+	for _, entity := range rawstate.CustomEntities {
+		entityType := entity.Type()
+		obj := entity.Object()
+		ksEntity := kongstate.CustomEntity{
+			Object: obj,
+		}
+		kongState.AddCustomEntity(string(entityType), kongstate.EntitySchema{}, ksEntity)
+	}
+
 	return kongState
 }
 

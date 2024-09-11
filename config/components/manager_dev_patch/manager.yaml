@@ -16,10 +16,13 @@ spec:
     spec:
       containers:
       - name: ingress-controller
-        args:
-          - --feature-gates=GatewayAlpha=true,KongServiceFacade=true
-          - --anonymous-reports=false
         env:
+        - name: CONTROLLER_DUMP_CONFIG
+          value: "true"
         - name: CONTROLLER_LOG_LEVEL
           value: debug
+        - name: CONTROLLER_FEATURE_GATES
+          value: GatewayAlpha=true,KongServiceFacade=true,FallbackConfiguration=true
+        - name: CONTROLLER_ANONYMOUS_REPORTS
+          value: "false"
         image: kic-placeholder:placeholder

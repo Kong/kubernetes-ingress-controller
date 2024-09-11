@@ -1,11 +1,15 @@
 package mocks
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"sync/atomic"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
@@ -53,6 +57,13 @@ type AdminAPIHandler struct {
 	// responding to a `POST /config` request.
 	configPostErrorBody []byte
 
+	// configPostErrorOnlyOnFirstRequest is a flag that indicates whether the error should be returned only on the first
+	// request to `POST /config`.
+	configPostErrorOnlyOnFirstRequest bool
+
+	// configPostCalled is a flag that indicates whether the `POST /config` endpoint was called.
+	configPostCalled bool
+
 	// rootResponse is the response body served by the admin API root "GET /" endpoint.
 	rootResponse []byte
 }
@@ -97,6 +108,12 @@ func WithConfigPostError(errorbody []byte) AdminAPIHandlerOpt {
 func WithRoot(response []byte) AdminAPIHandlerOpt {
 	return func(h *AdminAPIHandler) {
 		h.rootResponse = response
+	}
+}
+
+func WithConfigPostErrorOnlyOnFirstRequest() AdminAPIHandlerOpt {
+	return func(h *AdminAPIHandler) {
+		h.configPostErrorOnlyOnFirstRequest = true
 	}
 }
 
@@ -171,13 +188,14 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 		switch r.Method {
 		case http.MethodGet:
 			if h.config != nil {
-				_, _ = w.Write(h.config)
+				_, _ = w.Write(convertReceivedJSONConfigIntoGetConfigResponse(t, h.config))
 			} else {
 				_, _ = w.Write([]byte(fmt.Sprintf(`{"version": "%s"}`, h.version)))
 			}
 
 		case http.MethodPost:
-			if h.configPostErrorBody != nil {
+			firstRequestErrorAlreadyReturned := h.configPostErrorOnlyOnFirstRequest && h.configPostCalled
+			if h.configPostErrorBody != nil && !firstRequestErrorAlreadyReturned {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write(h.configPostErrorBody)
 			} else {
@@ -186,6 +204,7 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 				h.t.Logf("got config: %v", string(b))
 				h.config = b
 			}
+			h.configPostCalled = true
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 		}
@@ -425,3 +444,23 @@ const defaultDBLessStatusResponseWithoutConfigurationHash = `{
 	  "connections_active": 3
 	}
 }`
+
+// convertReceivedJSONConfigIntoGetConfigResponse converts the received JSON config into a response for a `GET /config` request.
+// That's the way Kong Gateway behaves and to satisfy kong.Client expectations we need to do the same in the mock server.
+func convertReceivedJSONConfigIntoGetConfigResponse(t *testing.T, jsonConfig []byte) []byte {
+	t.Helper()
+
+	cfg := map[string]any{}
+	err := json.Unmarshal(jsonConfig, &cfg)
+	require.NoError(t, err, "failed unmarshalling result")
+	resultB, err := yaml.Marshal(cfg)
+	require.NoError(t, err, "failed marshalling result")
+	body := struct {
+		Config string `json:"config"`
+	}{
+		Config: string(resultB),
+	}
+	respB, err := json.Marshal(body)
+	require.NoError(t, err)
+	return respB
+}

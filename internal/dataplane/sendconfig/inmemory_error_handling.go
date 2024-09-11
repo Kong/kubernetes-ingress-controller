@@ -6,13 +6,11 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored
@@ -89,7 +87,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		return nil, nil
 	}
 
-	var resourceErrors []ResourceError
+	var resourceErrors []ResourceError //nolint:prealloc
 	var configError ConfigError
 
 	err := json.Unmarshal(body, &configError)
@@ -197,39 +195,10 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 
 func gvkIsClusterScoped(gvk schema.GroupVersionKind) bool {
 	if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version {
-		return gvk.Kind == "KongClusterPlugin" || gvk.Kind == "KongLicense" || gvk.Kind == "KongVault"
+		return gvk.Kind == "KongClusterPlugin" || gvk.Kind == "KongLicense"
+	}
+	if gvk.Group == kongv1alpha1.GroupVersion.Group && gvk.Version == kongv1alpha1.GroupVersion.Version {
+		return gvk.Kind == "KongVault"
 	}
 	return false
-}
-
-// resourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.
-func resourceErrorsToResourceFailures(resourceErrors []ResourceError, logger logr.Logger) []failures.ResourceFailure {
-	var out []failures.ResourceFailure
-	for _, ee := range resourceErrors {
-		obj := metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       ee.Kind,
-				APIVersion: ee.APIVersion,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ee.Namespace,
-				Name:      ee.Name,
-				UID:       k8stypes.UID(ee.UID),
-			},
-		}
-		for problemSource, problem := range ee.Problems {
-			logger.V(util.DebugLevel).Info("Adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
-			resourceFailure, failureCreateErr := failures.NewResourceFailure(
-				fmt.Sprintf("invalid %s: %s", problemSource, problem),
-				&obj,
-			)
-			if failureCreateErr != nil {
-				logger.Error(failureCreateErr, "Could not create resource failure event")
-			} else {
-				out = append(out, resourceFailure)
-			}
-		}
-	}
-
-	return out
 }

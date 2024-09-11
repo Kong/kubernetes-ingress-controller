@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,13 +28,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -65,16 +68,20 @@ const (
 type KongConfigBuilder interface {
 	BuildKongConfig() translator.KongConfigBuildingResult
 	UpdateCache(store.CacheStores)
+	CustomEntityTypes() []string
 }
 
 // FallbackConfigGenerator generates a fallback configuration based on a cache snapshot and a set of broken objects.
 type FallbackConfigGenerator interface {
-	GenerateExcludingBrokenObjects(store.CacheStores, []fallback.ObjectHash) (store.CacheStores, error)
+	GenerateExcludingBrokenObjects(
+		store.CacheStores,
+		[]fallback.ObjectHash,
+	) (store.CacheStores, fallback.GeneratedCacheMetadata, error)
 	GenerateBackfillingBrokenObjects(
 		currentCache store.CacheStores,
-		lastValidCache store.CacheStores,
+		lastValidCache *store.CacheStores,
 		brokenObjects []fallback.ObjectHash,
-	) (store.CacheStores, error)
+	) (store.CacheStores, fallback.GeneratedCacheMetadata, error)
 }
 
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
@@ -102,7 +109,7 @@ type KongClient struct {
 
 	// diagnostic is the client and configuration for reporting diagnostic
 	// information during data-plane update runtime.
-	diagnostic util.ConfigDumpDiagnostic
+	diagnostic diagnostics.ConfigDumpDiagnostic
 
 	// prometheusMetrics is the client for shipping metrics information
 	// updates to the prometheus exporter.
@@ -158,9 +165,6 @@ type KongClient struct {
 	// It may be empty if the client is not running in a pod (e.g. in a unit test).
 	controllerPodReference mo.Option[k8stypes.NamespacedName]
 
-	// currentConfigStatus is the current status of the configuration synchronisation.
-	currentConfigStatus clients.ConfigStatus
-
 	// fallbackConfigGenerator is used to generate a fallback configuration in case of sync failures.
 	fallbackConfigGenerator FallbackConfigGenerator
 
@@ -174,7 +178,11 @@ type KongClient struct {
 	// lastValidCacheSnapshot and lastProcessedSnapshotHash do not always keep values related to the same cache snapshot.
 	// While lastProcessedSnapshotHash keeps track of the last processed cache snapshot (the one kept in KongClient.cache),
 	// lastValidCacheSnapshot can also represent the fallback cache snapshot that was successfully synced with gateways.
-	lastValidCacheSnapshot store.CacheStores
+	lastValidCacheSnapshot *store.CacheStores
+
+	// konnectConfigSynchronizer receives latest successfully applied Kong configuration from KongClient
+	// and uploads it to Konnect.
+	konnectConfigSynchronizer *konnect.ConfigSynchronizer
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -182,7 +190,7 @@ type KongClient struct {
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	diagnostic util.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode dpconf.DBMode,
@@ -191,7 +199,7 @@ func NewKongClient(
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	kongConfigFetcher configfetcher.LastValidConfigFetcher,
 	kongConfigBuilder KongConfigBuilder,
-	cacheStores store.CacheStores,
+	cacheStores *store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
 ) (*KongClient, error) {
 	c := &KongClient{
@@ -199,7 +207,7 @@ func NewKongClient(
 		requestTimeout:          timeout,
 		diagnostic:              diagnostic,
 		prometheusMetrics:       metrics.NewCtrlFuncMetrics(),
-		cache:                   &cacheStores,
+		cache:                   cacheStores,
 		kongConfig:              kongConfig,
 		eventRecorder:           eventRecorder,
 		dbmode:                  dbMode,
@@ -424,7 +432,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// configuration already stored in memory. This can happen when KIC restarts and there
 		// already is a Kong Proxy with a valid configuration loaded.
 		if _, found := c.kongConfigFetcher.LastValidConfig(); !found {
-			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients()); err != nil {
+			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients(), c.kongConfigBuilder.CustomEntityTypes()); err != nil {
 				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
 				c.logger.Error(err, "Failed to fetch last good configuration from gateways")
@@ -439,50 +447,65 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.kongConfig.FallbackConfiguration {
 		var newSnapshotHash store.SnapshotHash
 		var err error
+		// Empty snapshot hash means that the cache hasn't changed since the last snapshot was taken. That optimization can be used
+		// in main code path to avoid unnecessary processing. TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6095
 		cacheSnapshot, newSnapshotHash, err = c.cache.TakeSnapshotIfChanged(c.lastProcessedSnapshotHash)
 		if err != nil {
 			return fmt.Errorf("failed to take snapshot of cache: %w", err)
 		}
-		// Empty snapshot hash means that the cache hasn't changed since the last snapshot was taken. That optimization can be used
-		// in main code path to avoid unnecessary processing. TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6095
-		if newSnapshotHash == store.SnapshotHashEmpty {
-			c.logger.V(util.DebugLevel).Info("No configuration change; pushing config to gateway is not necessary, skipping")
+		hasNewSnapshotToBeProcessed := newSnapshotHash != store.SnapshotHashEmpty
+		if !hasNewSnapshotToBeProcessed {
+			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheHit()
+		} else {
+			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheMiss()
+		}
+		if hasNewSnapshotToBeProcessed {
+			c.logger.V(logging.DebugLevel).Info("New configuration snapshot detected", "hash", newSnapshotHash)
+			c.lastProcessedSnapshotHash = newSnapshotHash
+			c.kongConfigBuilder.UpdateCache(cacheSnapshot)
+		}
+
+		if allGatewaysAreInSync := lo.EveryBy(c.clientsProvider.GatewayClientsToConfigure(), func(cl *adminapi.Client) bool {
+			return cl.LastCacheStoresHash() == c.lastProcessedSnapshotHash
+		}); allGatewaysAreInSync {
+			c.logger.V(logging.DebugLevel).Info("All gateways are in sync; pushing config is not necessary, skipping")
 			return nil
 		}
-		c.lastProcessedSnapshotHash = newSnapshotHash
-		c.kongConfigBuilder.UpdateCache(cacheSnapshot)
 	}
 
-	c.logger.V(util.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
+	c.logger.V(logging.DebugLevel).Info("Parsing kubernetes objects into data-plane configuration")
+	translationStart := time.Now()
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
+	translationDuration := time.Since(translationStart)
+
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
-		c.prometheusMetrics.RecordTranslationFailure()
+		c.prometheusMetrics.RecordTranslationFailure(translationDuration)
 		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
-		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
+		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
 	} else {
-		c.prometheusMetrics.RecordTranslationSuccess()
+		c.prometheusMetrics.RecordTranslationSuccess(translationDuration)
 		c.prometheusMetrics.RecordTranslationBrokenResources(0)
-		c.logger.V(util.DebugLevel).Info("Successfully built data-plane configuration")
+		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
 	}
 
 	const isFallback = false
 	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig, isFallback)
-	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
 	// failures, calculate the config status and update it.
-	c.updateConfigStatus(ctx, clients.CalculateConfigStatus(
-		clients.CalculateConfigStatusInput{
-			GatewaysFailed:              gatewaysSyncErr != nil,
-			KonnectFailed:               konnectSyncErr != nil,
-			TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
-		},
-	))
+	c.configStatusNotifier.NotifyGatewayConfigStatus(ctx, clients.GatewayConfigApplyStatus{
+		TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
+		ApplyConfigFailed:           gatewaysSyncErr != nil,
+	})
 
 	// In case of a failure in syncing configuration with Gateways, propagate the error.
 	if gatewaysSyncErr != nil {
-		if recoveringErr := c.tryRecoveringFromGatewaysSyncError(ctx, cacheSnapshot, gatewaysSyncErr); recoveringErr != nil {
+		if recoveringErr := c.maybeTryRecoveringFromGatewaysSyncError(
+			ctx,
+			cacheSnapshot,
+			gatewaysSyncErr,
+		); recoveringErr != nil {
 			return fmt.Errorf("failed to recover from gateways sync error: %w", recoveringErr)
 		}
 		// Update result is positive only if gateways were successfully synced with the current config, so we still
@@ -490,6 +513,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 		return gatewaysSyncErr
 	}
 
+	// Send configuration to Konnect ONLY when successfully applied configuration to gateways.
+	c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
 	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)
 
@@ -498,11 +523,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// if the configuration SHAs that have just been pushed are different than
 		// what's been previously pushed.
 		if !slices.Equal(shas, c.SHAs) {
-			c.logger.V(util.DebugLevel).Info("Triggering report for configured Kubernetes objects", "count",
+			c.logger.V(logging.DebugLevel).Info("Triggering report for configured Kubernetes objects", "count",
 				len(parsingResult.ConfiguredKubernetesObjects))
 			c.triggerKubernetesObjectReport(parsingResult.ConfiguredKubernetesObjects, parsingResult.TranslationFailures)
 		} else {
-			c.logger.V(util.DebugLevel).Info("No configuration change; resource status update not necessary, skipping")
+			c.logger.V(logging.DebugLevel).Info("No configuration change; resource status update not necessary, skipping")
 		}
 	}
 	return nil
@@ -512,40 +537,57 @@ func (c *KongClient) Update(ctx context.Context) error {
 // feature gate is enabled and the `--enable-last-valid-config-fallback` flag is set.
 func (c *KongClient) maybePreserveTheLastValidConfigCache(lastValidCache store.CacheStores) {
 	if c.kongConfig.FallbackConfiguration && c.kongConfig.UseLastValidConfigForFallback {
-		c.logger.V(util.DebugLevel).Info("Preserving the last valid configuration cache")
-		c.lastValidCacheSnapshot = lastValidCache
+		c.logger.V(logging.DebugLevel).Info("Preserving the last valid configuration cache")
+		c.lastValidCacheSnapshot = &lastValidCache
 	}
 }
 
-// tryRecoveringFromGatewaysSyncError tries to recover from a configuration rejection by:
-// 1. Generating a fallback configuration and pushing it to the gateways if FallbackConfiguration feature is enabled.
-// 2. Applying the last valid configuration to the gateways if FallbackConfiguration is disabled or fallback
-// configuration generation fails.
-func (c *KongClient) tryRecoveringFromGatewaysSyncError(
+// maybeTryRecoveringFromGatewaysSyncError tries to recover from a configuration rejection if the error is of the expected
+// UpdateError type. Otherwise, we assume the error is non-recoverable by means of fallback configuration generation
+// or applying the last valid configuration, and we need to rely on the retry mechanism. It can happen in case of
+// transient network issues, internal server errors, etc.
+//
+// The recovery can be handled in two ways:
+// 1. Generating a fallback configuration and pushing it to the gateways if FallbackConfiguration feature is enabled and
+// the UpdateError contains at least 1 broken object.
+// 2. Applying the last valid configuration to the gateways if FallbackConfiguration is disabled, fallback
+// configuration generation fails, or the UpdateError does not contain any broken objects (it can happen if a gateway
+// returns 400 with no meaningful entities' errors).
+func (c *KongClient) maybeTryRecoveringFromGatewaysSyncError(
 	ctx context.Context,
 	cacheSnapshot store.CacheStores,
 	gatewaysSyncErr error,
 ) error {
-	// If configuration was rejected by the gateways and FallbackConfiguration is enabled,
-	// we should generate a fallback configuration and push it to the gateways.
-	if c.kongConfig.FallbackConfiguration {
-		recoveringErr := c.tryRecoveringWithFallbackConfiguration(ctx, cacheSnapshot, gatewaysSyncErr)
+	// If the error is not of the expected UpdateError type, we should log it and skip the recovery.
+	updateErr := sendconfig.UpdateError{}
+	if !errors.As(gatewaysSyncErr, &updateErr) {
+		c.logger.V(logging.DebugLevel).Info("Skipping recovery from gateways sync error - not enough details to recover",
+			"error", gatewaysSyncErr)
+		return nil
+	}
+
+	// If configuration was rejected by the gateways, we identified at least one broken object and FallbackConfiguration
+	// is enabled, we should generate a fallback configuration and push it to the gateways.
+	brokenObjects := extractBrokenObjectsFromUpdateError(updateErr)
+	if c.kongConfig.FallbackConfiguration && len(brokenObjects) > 0 {
+		recoveringErr := c.tryRecoveringWithFallbackConfiguration(ctx, cacheSnapshot, brokenObjects)
 		if recoveringErr == nil {
 			c.logger.Info("Successfully recovered from configuration rejection with fallback configuration")
 			return nil
 		}
-		// If we failed to recover using the fallback configuration, we should log the error and carry on.
+		// If we failed to recover using the fallback configuration, we should log the error and carry on with the last
+		// valid configuration.
 		c.logger.Error(recoveringErr, "Failed to recover from configuration rejection with fallback configuration")
 	}
 
-	// If FallbackConfiguration is disabled, or we failed to recover using the fallback configuration, we should
+	// If FallbackConfiguration is disabled, we skipped or failed to recover using the fallback configuration, we should
 	// apply the last valid configuration to the gateways.
 	if state, found := c.kongConfigFetcher.LastValidConfig(); found {
 		const isFallback = true
 		if _, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig, isFallback); fallbackSyncErr != nil {
 			return errors.Join(gatewaysSyncErr, fallbackSyncErr)
 		}
-		c.logger.V(util.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
+		c.logger.V(logging.DebugLevel).Info("Due to errors in the current config, the last valid config has been pushed to Gateways")
 	}
 	return nil
 }
@@ -555,42 +597,41 @@ func (c *KongClient) tryRecoveringFromGatewaysSyncError(
 func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	ctx context.Context,
 	currentCache store.CacheStores,
-	gatewaysSyncErr error,
+	brokenObjects []fallback.ObjectHash,
 ) error {
-	// Extract the broken objects from the update error and generate a fallback configuration excluding them.
-	brokenObjects, err := extractBrokenObjectsFromUpdateError(gatewaysSyncErr)
-	if err != nil {
-		return fmt.Errorf("failed to extract broken objects from update error: %w", err)
-	}
-
 	// Generate a fallback cache snapshot.
-	fallbackCache, err := c.generateFallbackCache(currentCache, brokenObjects)
+	fallbackCache, generatedCacheMetadata, err := c.generateFallbackCache(currentCache, brokenObjects)
 	if err != nil {
 		return fmt.Errorf("failed to generate fallback configuration: %w", err)
 	}
+	c.logFallbackCacheMetadata(generatedCacheMetadata)
+	if err := c.maybeSendFallbackConfigDiagnostics(ctx, generatedCacheMetadata); err != nil {
+		return fmt.Errorf("failed to send fallback configuration diagnostics: %w", err)
+	}
 
 	// Update the KongConfigBuilder with the fallback configuration and build the KongConfig.
+	translationStart := time.Now()
 	c.kongConfigBuilder.UpdateCache(fallbackCache)
 	fallbackParsingResult := c.kongConfigBuilder.BuildKongConfig()
+	translationDuration := time.Since(translationStart)
 
 	if failuresCount := len(fallbackParsingResult.TranslationFailures); failuresCount > 0 {
 		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
-		c.logger.V(util.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount)
+		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(failuresCount)
+		c.prometheusMetrics.RecordFallbackTranslationFailure(translationDuration)
+		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount, "duration", translationDuration.String())
+	} else {
+		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(0)
+		c.prometheusMetrics.RecordFallbackTranslationSuccess(translationDuration)
+		c.logger.V(logging.DebugLevel).Info("Successfully built fallback configuration from caches", "duration", translationDuration.String())
 	}
 
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6082
-	// Expose Prometheus metrics for fallback configuration parsing result.
-
 	const isFallback = true
-	_, gatewaysSyncErr = c.sendOutToGatewayClients(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
+	_, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
 	if gatewaysSyncErr != nil {
 		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", gatewaysSyncErr)
 	}
-	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
-	if konnectSyncErr != nil {
-		// If Konnect sync fails, we should log the error and carry on as it's not a critical error.
-		c.logger.Error(konnectSyncErr, "Failed to sync fallback configuration with Konnect")
-	}
+	c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
 
 	// Configuration was successfully recovered with the fallback configuration. Store the last valid configuration.
 	c.maybePreserveTheLastValidConfigCache(fallbackCache)
@@ -603,7 +644,11 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 func (c *KongClient) generateFallbackCache(
 	currentCache store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
-) (store.CacheStores, error) {
+) (s store.CacheStores, metadata fallback.GeneratedCacheMetadata, err error) {
+	start := time.Now()
+	defer func() {
+		c.prometheusMetrics.RecordFallbackCacheGenerationDuration(time.Since(start), err)
+	}()
 	if c.kongConfig.UseLastValidConfigForFallback {
 		return c.fallbackConfigGenerator.GenerateBackfillingBrokenObjects(
 			currentCache,
@@ -617,24 +662,15 @@ func (c *KongClient) generateFallbackCache(
 	)
 }
 
-// extractBrokenObjectsFromUpdateError.
-func extractBrokenObjectsFromUpdateError(err error) ([]fallback.ObjectHash, error) {
+// extractBrokenObjectsFromUpdateError extracts broken objects from the UpdateError.
+func extractBrokenObjectsFromUpdateError(err sendconfig.UpdateError) []fallback.ObjectHash {
 	var brokenObjects []client.Object
-
-	var updateErr sendconfig.UpdateError
-	if ok := errors.As(err, &updateErr); !ok {
-		return nil, fmt.Errorf("expected UpdateError, cannot extract broken objects from %T", err) //nolint:errorlint
-	}
-	for _, resourceFailure := range updateErr.ResourceFailures() {
+	for _, resourceFailure := range err.ResourceFailures() {
 		brokenObjects = append(brokenObjects, resourceFailure.CausingObjects()...)
 	}
-	if len(brokenObjects) == 0 {
-		return nil, fmt.Errorf("no broken objects found in UpdateError")
-	}
-
 	return lo.Map(brokenObjects, func(obj client.Object, _ int) fallback.ObjectHash {
 		return fallback.GetObjectHash(obj)
-	}), nil
+	})
 }
 
 // sendOutToGatewayClients will generate deck content (config) from the provided kong state
@@ -657,7 +693,7 @@ func (c *KongClient) sendOutToGatewayClients(
 
 	gatewayClientsToConfigure := c.clientsProvider.GatewayClientsToConfigure()
 	configureGatewayClientURLs := lo.Map(gatewayClientsToConfigure, func(cl *adminapi.Client, _ int) string { return cl.BaseRootURL() })
-	c.logger.V(util.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
+	c.logger.V(logging.DebugLevel).Info("Sending configuration to gateway clients", "urls", configureGatewayClientURLs)
 
 	shas, err := iter.MapErr(gatewayClientsToConfigure, func(client **adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, *client, s, config, isFallback)
@@ -674,6 +710,12 @@ func (c *KongClient) sendOutToGatewayClients(
 		len(gatewayClients) > 1 {
 		for _, client := range gatewayClients {
 			client.SetLastConfigSHA([]byte(shas[0]))
+
+			// If the last processed snapshot hash is not empty, we should set it to the clients as well.
+			// It can be empty when FallbackConfiguration feature gate is off.
+			if c.lastProcessedSnapshotHash != "" {
+				client.SetLastCacheStoresHash(c.lastProcessedSnapshotHash)
+			}
 		}
 	}
 
@@ -692,50 +734,28 @@ func (c *KongClient) maybeSendOutToKonnectClient(
 	ctx context.Context,
 	s *kongstate.KongState,
 	config sendconfig.Config,
-	isFallback bool,
-) error {
+	_ bool,
+) {
+	if c.konnectConfigSynchronizer == nil {
+		return
+	}
 	konnectClient := c.clientsProvider.KonnectClient()
-	// There's no KonnectClient configured, that's totally fine.
 	if konnectClient == nil {
-		return nil
+		return
 	}
 
-	if _, err := c.sendToClient(ctx, konnectClient, s, config, isFallback); err != nil {
-		// In case of an error, we only log it since we don't want the Konnect to affect the basic functionality
-		// of the controller.
-
-		if errors.As(err, &sendconfig.UpdateSkippedDueToBackoffStrategyError{}) {
-			c.logger.Info("Skipped pushing configuration to Konnect due to backoff strategy", "explanation", err.Error())
-		} else {
-			c.logger.Error(err, "Failed pushing configuration to Konnect")
-			logKonnectErrors(c.logger, err)
-		}
-		return err
+	if config.SanitizeKonnectConfigDumps {
+		s = s.SanitizedCopy(util.DefaultUUIDGenerator{})
 	}
 
-	return nil
-}
-
-// logKonnectErrors logs details of each error response returned from Konnect API.
-func logKonnectErrors(logger logr.Logger, err error) {
-	if crudActionErrors := deckerrors.ExtractCRUDActionErrors(err); len(crudActionErrors) > 0 {
-		for _, actionErr := range crudActionErrors {
-			apiErr := &kong.APIError{}
-			if errors.As(actionErr.Err, &apiErr) {
-				logger.Error(actionErr, "Failed to send request to Konnect",
-					"operation_type", actionErr.OperationType.String(),
-					"entity_kind", actionErr.Kind,
-					"entity_name", actionErr.Name,
-					"details", apiErr.Details())
-			} else {
-				logger.Error(actionErr, "Failed to send request to Konnect",
-					"operation_type", actionErr.OperationType.String(),
-					"entity_kind", actionErr.Kind,
-					"entity_name", actionErr.Name,
-				)
-			}
-		}
+	deckGenParams := deckgen.GenerateDeckContentParams{
+		SelectorTags:                    config.FilterTags,
+		ExpressionRoutes:                config.ExpressionRoutes,
+		PluginSchemas:                   konnectClient.PluginSchemaStore(),
+		AppendStubEntityWhenConfigEmpty: false,
 	}
+	targetContent := deckgen.ToDeckContent(ctx, c.logger, s, deckGenParams)
+	c.konnectConfigSynchronizer.SetTargetContent(targetContent)
 }
 
 func (c *KongClient) sendToClient(
@@ -759,7 +779,14 @@ func (c *KongClient) sendToClient(
 		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
+	customEntities := make(sendconfig.CustomEntitiesByType)
+	for entityType, collection := range s.CustomEntities {
+		for _, entity := range collection.Entities {
+			customEntities[entityType] = append(customEntities[entityType], entity.Object)
+		}
+	}
+
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, isFallback)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -770,9 +797,11 @@ func (c *KongClient) sendToClient(
 		client,
 		config,
 		targetContent,
+		customEntities,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,
+		isFallback,
 	)
 	// Only record events on applying configuration to Kong gateway here.
 	// Nil error is expected to be passed to indicate success.
@@ -795,17 +824,17 @@ func (c *KongClient) sendToClient(
 		if errors.As(err, &responseParsingErr) {
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
-		sendDiagnostic(true, rawResponseBody)
+		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {
 			logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
 	}
-	sendDiagnostic(false, nil) // No error occurred.
+	sendDiagnostic(diagnostics.DumpMeta{Failed: false, Hash: string(newConfigSHA)}, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
-
+	client.SetLastCacheStoresHash(c.lastProcessedSnapshotHash)
 	return string(newConfigSHA), nil
 }
 
@@ -818,25 +847,33 @@ func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 	c.configStatusNotifier = n
 }
 
+func (c *KongClient) SetKonnectConfigSynchronizer(s *konnect.ConfigSynchronizer) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.konnectConfigSynchronizer = s
+}
+
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
 
-type sendDiagnosticFn func(failed bool, raw []byte)
+type sendDiagnosticFn func(meta diagnostics.DumpMeta, raw []byte)
 
 // prepareSendDiagnosticFn generates sendDiagnosticFn.
 // Diagnostics are sent only when provided diagnostic config (--dump-config) is set.
 func prepareSendDiagnosticFn(
 	ctx context.Context,
 	logger logr.Logger,
-	diagnosticConfig util.ConfigDumpDiagnostic,
+	diagnosticConfig diagnostics.ConfigDumpDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
+	isFallback bool,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (util.ConfigDumpDiagnostic{}) {
+	if diagnosticConfig == (diagnostics.ConfigDumpDiagnostic{}) {
 		// noop, diagnostics won't be sent
-		return func(bool, []byte) {}
+		return func(diagnostics.DumpMeta, []byte) {}
 	}
 
 	var config *file.Content
@@ -851,7 +888,7 @@ func prepareSendDiagnosticFn(
 		config = redactedConfig
 	}
 
-	return func(failed bool, rawResponseBody []byte) {
+	return func(meta diagnostics.DumpMeta, rawResponseBody []byte) {
 		// Given that we can send multiple configs to this channel and
 		// the fact that the API that exposes that can only expose 1 config
 		// at a time it means that users utilizing the diagnostics API
@@ -859,8 +896,15 @@ func prepareSendDiagnosticFn(
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
 		select {
-		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config, RawResponseBody: rawResponseBody}:
-			logger.V(util.DebugLevel).Info("Shipping config to diagnostic server")
+		case diagnosticConfig.Configs <- diagnostics.ConfigDump{
+			Meta: diagnostics.DumpMeta{
+				Failed:   meta.Failed,
+				Fallback: isFallback,
+			},
+			Config:          *config,
+			RawResponseBody: rawResponseBody,
+		}:
+			logger.V(logging.DebugLevel).Info("Shipping config to diagnostic server")
 		default:
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")
 		}
@@ -976,16 +1020,52 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string, i
 	c.eventRecorder.Event(pod, eventType, reason, message)
 }
 
-// updateConfigStatus updates the current config status and notifies about the change. It is a no-op if the status
-// hasn't changed.
-func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus clients.ConfigStatus) {
-	if c.currentConfigStatus == configStatus {
-		// No change in config status, nothing to do.
-		c.logger.V(util.DebugLevel).Info("No change in config status, not notifying")
-		return
+func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMetadata) {
+	log := c.logger.WithName("fallback-cache-generator")
+
+	// Log excluded objects.
+	for _, excluded := range metadata.ExcludedObjects {
+		gvk := excluded.Object.GetObjectKind().GroupVersionKind()
+		obj := excluded.Object
+		causingObjects := lo.Map(excluded.CausingObjects, func(causing fallback.ObjectHash, _ int) string {
+			return causing.String()
+		})
+		log.V(logging.DebugLevel).Info("Excluded object from fallback cache",
+			"kind", gvk.Kind,
+			"group", gvk.Group,
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+			"causing_objects", strings.Join(causingObjects, ","),
+		)
 	}
 
-	c.logger.V(util.DebugLevel).Info("Config status changed, notifying", "configStatus", configStatus)
-	c.currentConfigStatus = configStatus
-	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
+	// Log backfilled objects.
+	for _, backfilled := range metadata.BackfilledObjects {
+		gvk := backfilled.Object.GetObjectKind().GroupVersionKind()
+		obj := backfilled.Object
+		causingObjects := lo.Map(backfilled.CausingObjects, func(causing fallback.ObjectHash, _ int) string {
+			return causing.String()
+		})
+		log.V(logging.DebugLevel).Info("Backfilled object in fallback cache",
+			"kind", gvk.Kind,
+			"group", gvk.Group,
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+			"causing_objects", strings.Join(causingObjects, ","),
+		)
+	}
+}
+
+func (c *KongClient) maybeSendFallbackConfigDiagnostics(ctx context.Context, generatedCacheMetadata fallback.GeneratedCacheMetadata) error {
+	if ch := c.diagnostic.FallbackCacheMetadata; ch != nil {
+		select {
+		case ch <- generatedCacheMetadata:
+			c.logger.V(logging.DebugLevel).Info("Shipping fallback cache metadata to diagnostics server")
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			c.logger.Error(nil, "Fallback cache metadata buffer full, dropping diagnostics")
+		}
+	}
+	return nil
 }

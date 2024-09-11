@@ -41,22 +41,24 @@ var ingressclassparametersesKind = v1alpha1.SchemeGroupVersion.WithKind("Ingress
 
 // Get takes name of the ingressClassParameters, and returns the corresponding ingressClassParameters object, and an error if there is any.
 func (c *FakeIngressClassParameterses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.IngressClassParameters, err error) {
+	emptyResult := &v1alpha1.IngressClassParameters{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(ingressclassparametersesResource, c.ns, name), &v1alpha1.IngressClassParameters{})
+		Invokes(testing.NewGetActionWithOptions(ingressclassparametersesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IngressClassParameters), err
 }
 
 // List takes label and field selectors, and returns the list of IngressClassParameterses that match those selectors.
 func (c *FakeIngressClassParameterses) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.IngressClassParametersList, err error) {
+	emptyResult := &v1alpha1.IngressClassParametersList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(ingressclassparametersesResource, ingressclassparametersesKind, c.ns, opts), &v1alpha1.IngressClassParametersList{})
+		Invokes(testing.NewListActionWithOptions(ingressclassparametersesResource, ingressclassparametersesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,28 +77,30 @@ func (c *FakeIngressClassParameterses) List(ctx context.Context, opts v1.ListOpt
 // Watch returns a watch.Interface that watches the requested ingressClassParameterses.
 func (c *FakeIngressClassParameterses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(ingressclassparametersesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(ingressclassparametersesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a ingressClassParameters and creates it.  Returns the server's representation of the ingressClassParameters, and an error, if there is any.
 func (c *FakeIngressClassParameterses) Create(ctx context.Context, ingressClassParameters *v1alpha1.IngressClassParameters, opts v1.CreateOptions) (result *v1alpha1.IngressClassParameters, err error) {
+	emptyResult := &v1alpha1.IngressClassParameters{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(ingressclassparametersesResource, c.ns, ingressClassParameters), &v1alpha1.IngressClassParameters{})
+		Invokes(testing.NewCreateActionWithOptions(ingressclassparametersesResource, c.ns, ingressClassParameters, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IngressClassParameters), err
 }
 
 // Update takes the representation of a ingressClassParameters and updates it. Returns the server's representation of the ingressClassParameters, and an error, if there is any.
 func (c *FakeIngressClassParameterses) Update(ctx context.Context, ingressClassParameters *v1alpha1.IngressClassParameters, opts v1.UpdateOptions) (result *v1alpha1.IngressClassParameters, err error) {
+	emptyResult := &v1alpha1.IngressClassParameters{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(ingressclassparametersesResource, c.ns, ingressClassParameters), &v1alpha1.IngressClassParameters{})
+		Invokes(testing.NewUpdateActionWithOptions(ingressclassparametersesResource, c.ns, ingressClassParameters, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IngressClassParameters), err
 }
@@ -111,7 +115,7 @@ func (c *FakeIngressClassParameterses) Delete(ctx context.Context, name string, 
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeIngressClassParameterses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(ingressclassparametersesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(ingressclassparametersesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.IngressClassParametersList{})
 	return err
@@ -119,11 +123,12 @@ func (c *FakeIngressClassParameterses) DeleteCollection(ctx context.Context, opt
 
 // Patch applies the patch and returns the patched ingressClassParameters.
 func (c *FakeIngressClassParameterses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IngressClassParameters, err error) {
+	emptyResult := &v1alpha1.IngressClassParameters{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(ingressclassparametersesResource, c.ns, name, pt, data, subresources...), &v1alpha1.IngressClassParameters{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(ingressclassparametersesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IngressClassParameters), err
 }

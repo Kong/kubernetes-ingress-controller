@@ -17,8 +17,8 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // UpdateStrategyDBMode implements the UpdateStrategy interface. It updates Kong's data-plane
@@ -40,8 +40,8 @@ func NewUpdateStrategyDBMode(
 	version semver.Version,
 	concurrency int,
 	logger logr.Logger,
-) UpdateStrategyDBMode {
-	return UpdateStrategyDBMode{
+) *UpdateStrategyDBMode {
+	return &UpdateStrategyDBMode{
 		client:            client,
 		dumpConfig:        dumpConfig,
 		version:           version,
@@ -58,13 +58,13 @@ func NewUpdateStrategyDBModeKonnect(
 	version semver.Version,
 	concurrency int,
 	logger logr.Logger,
-) UpdateStrategyDBMode {
+) *UpdateStrategyDBMode {
 	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, logger)
 	s.isKonnect = true
 	return s
 }
 
-func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) error {
+func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) error {
 	cs, err := s.currentState(ctx)
 	if err != nil {
 		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
@@ -89,7 +89,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	go s.HandleEvents(ctx, syncer.GetResultChan())
+	go s.handleEvents(ctx, syncer.GetResultChan())
 
 	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
@@ -115,15 +115,15 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 	return nil
 }
 
-// HandleEvents handles logging and error reporting for individual entity change events generated during a sync by
+// handleEvents handles logging and error reporting for individual entity change events generated during a sync by
 // looping over an event channel. It terminates when its context dies.
-func (s *UpdateStrategyDBMode) HandleEvents(ctx context.Context, events chan diff.EntityAction) {
+func (s *UpdateStrategyDBMode) handleEvents(ctx context.Context, events chan diff.EntityAction) {
 	s.resourceErrorLock.Lock()
 	for {
 		select {
 		case event := <-events:
 			if event.Error == nil {
-				s.logger.V(util.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
+				s.logger.V(logging.DebugLevel).Info("updated gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 			} else {
 				s.logger.Error(event.Error, "failed updating gateway entity", "action", event.Action, "kind", event.Entity.Kind, "name", event.Entity.Name)
 				parsed, err := resourceErrorFromEntityAction(event)
@@ -187,22 +187,22 @@ func resourceErrorFromEntityAction(event diff.EntityAction) (ResourceError, erro
 		// has "methods", but we'd need to do string parsing to extract it, and we may not catch all possible error types.
 		// This lazier approach just dumps the full error string as a single problem, which is probably good enough.
 		Problems: map[string]string{
-			"": fmt.Sprintf("%s", event.Error),
+			fmt.Sprintf("%s:%s", event.Entity.Kind, event.Entity.Name): fmt.Sprintf("%s", event.Error),
 		},
 	}
 
 	return parseRawResourceError(raw)
 }
 
-func (s UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {
+func (s *UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {
 	return metrics.ProtocolDeck
 }
 
-func (s UpdateStrategyDBMode) Type() string {
+func (s *UpdateStrategyDBMode) Type() string {
 	return "DBMode"
 }
 
-func (s UpdateStrategyDBMode) currentState(ctx context.Context) (*state.KongState, error) {
+func (s *UpdateStrategyDBMode) currentState(ctx context.Context) (*state.KongState, error) {
 	rawState, err := dump.Get(ctx, s.client, s.dumpConfig)
 	if err != nil {
 		return nil, fmt.Errorf("loading configuration from kong: %w", err)
@@ -211,7 +211,7 @@ func (s UpdateStrategyDBMode) currentState(ctx context.Context) (*state.KongStat
 	return state.Get(rawState)
 }
 
-func (s UpdateStrategyDBMode) targetState(
+func (s *UpdateStrategyDBMode) targetState(
 	ctx context.Context,
 	currentState *state.KongState,
 	targetContent *file.Content,

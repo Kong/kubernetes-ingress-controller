@@ -860,6 +860,17 @@ func TestServiceClientCertificate(t *testing.T) {
 												},
 											},
 										},
+										{
+											Path: "/bar",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "bar-svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -887,6 +898,17 @@ func TestServiceClientCertificate(t *testing.T) {
 					"tls.key": key,
 				},
 			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       k8stypes.UID("ffaabbcc-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret2",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"tls.crt": crt,
+					"tls.key": key,
+				},
+			},
 		}
 		services := []*corev1.Service{
 			{
@@ -895,6 +917,16 @@ func TestServiceClientCertificate(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "https",
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "secret2",
 						"konghq.com/protocol":    "https",
 					},
 				},
@@ -916,9 +948,11 @@ func TestServiceClientCertificate(t *testing.T) {
 		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Certificates[0].ID)
 
-		assert.Equal(1, len(state.Services))
+		assert.Equal(2, len(state.Services))
 		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[0].ClientCertificate.ID)
+		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+			*state.Services[1].ClientCertificate.ID)
 	})
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
@@ -5019,13 +5053,20 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 	}
 }
 
+type fakeSchemaServiceProvier struct{}
+
+func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
+	return UnavailableSchemaService{}
+}
+
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer, "", FeatureFlags{
 		// We'll assume these are true for all tests.
 		FillIDs:                           true,
 		ReportConfiguredKubernetesObjects: true,
 		KongServiceFacade:                 true,
-	})
+	}, fakeSchemaServiceProvier{},
+	)
 	require.NoError(t, err)
 	return p
 }

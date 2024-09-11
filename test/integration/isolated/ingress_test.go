@@ -4,6 +4,7 @@ package isolated
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"testing"
@@ -35,6 +36,12 @@ import (
 
 func TestIngressGRPC(t *testing.T) {
 	const testHostname = "grpcs-over-ingress.example"
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+		certificate.WithCommonName(testHostname),
+		certificate.WithDNSNames(testHostname),
+	)
+	certPool := x509.NewCertPool()
+	assert.True(t, certPool.AppendCertsFromPEM(tlsRouteExampleTLSCert))
 
 	f := features.
 		New("essentials").
@@ -50,8 +57,7 @@ func TestIngressGRPC(t *testing.T) {
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
 
-			t.Log("configuring secret")
-			tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(testHostname))
+			t.Log("configuring certificate secret")
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "secret-test",
@@ -72,23 +78,19 @@ func TestIngressGRPC(t *testing.T) {
 				gRPC  kongProtocolAnnotation = "grpc"
 				gRPCS kongProtocolAnnotation = "grpcs"
 			)
-			const (
-				gRPCBinPort  int32 = 9000
-				gRPCSBinPort int32 = 9001
-			)
 			t.Log("deploying a minimal gRPC container deployment to test Ingress routes")
 			container := generators.NewContainer("grpcbin", test.GRPCBinImage, 0)
 			// Overwrite ports to specify gRPC over HTTP (9000) and gRPC over HTTPS (9001).
-			container.Ports = []corev1.ContainerPort{{ContainerPort: gRPCBinPort, Name: string(gRPC)}, {ContainerPort: gRPCSBinPort, Name: string(gRPCS)}}
+			container.Ports = []corev1.ContainerPort{{ContainerPort: test.GRPCBinPort, Name: string(gRPC)}, {ContainerPort: test.GRPCSBinPort, Name: string(gRPCS)}}
 			deployment := generators.NewDeploymentForContainer(container)
 			deployment, err = cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(deployment)
 
 			exposeWithService := func(p kongProtocolAnnotation) *corev1.Service {
-				grpcBinPort := gRPCBinPort
+				grpcBinPort := test.GRPCBinPort
 				if p == gRPCS {
-					grpcBinPort = gRPCSBinPort
+					grpcBinPort = test.GRPCSBinPort
 				}
 				kongProtocol := string(p)
 				t.Logf("exposing deployment gRPC (%s) port %s via service", kongProtocol, deployment.Name)
@@ -122,7 +124,7 @@ func TestIngressGRPC(t *testing.T) {
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPCS.Name,
 											Port: netv1.ServiceBackendPort{
-												Number: gRPCSBinPort,
+												Number: test.GRPCSBinPort,
 											},
 										},
 									},
@@ -142,7 +144,7 @@ func TestIngressGRPC(t *testing.T) {
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPC.Name,
 											Port: netv1.ServiceBackendPort{
-												Number: gRPCBinPort,
+												Number: test.GRPCBinPort,
 											},
 										},
 									},
@@ -153,6 +155,12 @@ func TestIngressGRPC(t *testing.T) {
 				},
 			).Build()
 			ingress.Annotations[annotations.AnnotationPrefix+annotations.ProtocolsKey] = fmt.Sprintf("%s,%s", gRPC, gRPCS)
+			ingress.Spec.TLS = []netv1.IngressTLS{
+				{
+					Hosts:      []string{testHostname},
+					SecretName: secret.Name,
+				},
+			}
 			assert.NoError(t, clusters.DeployIngress(ctx, cluster, namespace, ingress))
 			cleaner.Add(ingress)
 			ctx = SetInCtxForT(ctx, t, ingress)
@@ -174,17 +182,18 @@ func TestIngressGRPC(t *testing.T) {
 			}, consts.StatusWait, consts.WaitTick)
 
 			verifyEchoResponds := func(hostname string) {
+				t.Helper()
 				// Kong Gateway uses different ports for HTTP and HTTPS traffic,
 				// but in typical setup both ports are exposed on the same IP address.
 				proxyPort := ktfkong.DefaultProxyTLSServicePort
-				tlsEnabled := true
+				certPoolToUse := certPool
 				if hostname == "" {
 					proxyPort = ktfkong.DefaultProxyHTTPPort
-					tlsEnabled = false
+					certPoolToUse = nil
 				}
 				assert.EventuallyWithT(t, func(c *assert.CollectT) {
 					err := grpcEchoResponds(
-						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", tlsEnabled,
+						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", certPoolToUse,
 					)
 					assert.NoError(c, err)
 				}, consts.IngressWait, consts.WaitTick)
@@ -358,6 +367,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 					proxyURL,
 					proxyURL.Host,
 					path,
+					nil,
 					http.StatusOK,
 					expectedMagicNumber,
 					nil,

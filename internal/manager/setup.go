@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/cprint"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -18,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -30,12 +32,14 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
@@ -45,7 +49,7 @@ import (
 
 // SetupLoggers sets up the loggers for the controller manager.
 func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
-	zapBase, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
+	zapBase, err := logging.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
 		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}
@@ -72,6 +76,13 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 
 	// configure the general manager options
 	managerOpts := ctrl.Options{
+		Controller: config.Controller{
+			// This is needed because controller-runtime keeps a global list of controller
+			// names and panics if there are duplicates.
+			// This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
+		},
 		GracefulShutdownTimeout: c.GracefulShutdownTimeout,
 		Scheme:                  scheme,
 		Metrics: metricsserver.Options{
@@ -473,4 +484,32 @@ func setupLicenseGetter(
 	}
 
 	return nil, nil
+}
+
+// setupKonnectConfigSynchronizer sets up Konnect config sychronizer and adds it to the manager runnables.
+func setupKonnectConfigSynchronizer(
+	ctx context.Context,
+	mgr manager.Manager,
+	configUploadPeriod time.Duration,
+	kongConfig sendconfig.Config,
+	clientsProvider clients.AdminAPIClientsProvider,
+	updateStrategyResolver sendconfig.UpdateStrategyResolver,
+	configStatusNotifier clients.ConfigStatusNotifier,
+) (*konnect.ConfigSynchronizer, error) {
+	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
+	s := konnect.NewConfigSynchronizer(
+		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
+		kongConfig,
+		configUploadPeriod,
+		clientsProvider,
+		updateStrategyResolver,
+		sendconfig.NewDefaultConfigurationChangeDetector(logger),
+		configStatusNotifier,
+	)
+	err := mgr.Add(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }

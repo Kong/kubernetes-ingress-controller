@@ -3,12 +3,14 @@ package fallback_test
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
@@ -283,6 +285,35 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 				testKongClusterPlugin(t, "3"),
 			),
 			expected: []client.Object{testKongClusterPlugin(t, "3")},
+		},
+		{
+			name: "KongConsumer -> Secret from credentials",
+			object: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongconsumer",
+					Namespace: testNamespace,
+				},
+				Credentials: []string{"1"},
+			},
+			cache: cacheStoresFromObjs(t,
+				testSecret(t, "1"),
+				testKongPlugin(t, "1"),
+			),
+			expected: []client.Object{testSecret(t, "1")},
+		},
+		{
+			name: "KongConsumer -> non existing Secret from credentials",
+			object: &kongv1.KongConsumer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-kongconsumer",
+					Namespace: testNamespace,
+				},
+				Credentials: []string{"non-existing"},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+			),
+			expected: []client.Object{},
 		},
 	}
 
@@ -699,6 +730,106 @@ func TestResolveDependencies_TCPIngress(t *testing.T) {
 				testService(t, "2"),
 			),
 			expected: []client.Object{testKongClusterPlugin(t, "3"), testService(t, "1"), testService(t, "2")},
+		},
+	}
+
+	for _, tc := range testCases {
+		runResolveDependenciesTest(t, tc)
+	}
+}
+
+func TestResolveDependencies_KongCustomEntity(t *testing.T) {
+	testCases := []resolveDependenciesTestCase{
+		{
+			name: "no dependencies - parent reference is nil",
+			object: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-custom-entity",
+					Namespace: testNamespace,
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "test-entity",
+					ParentRef:  nil,
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{},
+		},
+		{
+			name: "parent reference to KongPlugin",
+			object: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-custom-entity",
+					Namespace: testNamespace,
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "test-entity",
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Name:  "1",
+						Kind:  lo.ToPtr("KongPlugin"),
+						Group: lo.ToPtr(kongv1alpha1.GroupVersion.Group),
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{
+				testKongPlugin(t, "1"),
+			},
+		},
+		{
+			name: "parent reference to KongClusterPlugin",
+			object: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-custom-entity",
+					Namespace: testNamespace,
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "test-entity",
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Name:  "1",
+						Kind:  lo.ToPtr("KongClusterPlugin"),
+						Group: lo.ToPtr(kongv1alpha1.GroupVersion.Group),
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1"),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{
+				testKongClusterPlugin(t, "1"),
+			},
+		},
+		{
+			name: "parent reference to KongPlugin in a different namespace",
+			object: &kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-custom-entity",
+					Namespace: testNamespace,
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "test-entity",
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Name:      "1",
+						Namespace: lo.ToPtr("other-namespace"),
+						Kind:      lo.ToPtr("KongPlugin"),
+						Group:     lo.ToPtr(kongv1alpha1.GroupVersion.Group),
+					},
+				},
+			},
+			cache: cacheStoresFromObjs(t,
+				testKongPlugin(t, "1", func(p *kongv1.KongPlugin) {
+					p.Namespace = "other-namespace"
+				}),
+				testKongClusterPlugin(t, "1"),
+			),
+			expected: []client.Object{},
 		},
 	}
 

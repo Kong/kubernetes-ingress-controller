@@ -26,7 +26,17 @@ cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
 # Turn the linter back on
 echo "<!-- vale on -->" >> "${POST_PROCESSED_DOC}"
 
+SED=sed
+if [[ $(uname -s) == "Darwin" ]]; then
+  if gsed --version 2>&1 >/dev/null ; then
+    SED=gsed
+  else
+    echo "GNU sed is required on macOS. You can install it via Homebrew with 'brew install gnu-sed'."
+    exit 1
+  fi
+fi
+
 # Replace all description placeholders with proper include directives
-sed -i -r \
+${SED} -i \
   's/<!-- \(.*\) description placeholder -->/{% include md\/kic\/crd-ref\/\1_description.md kong_version=page.kong_version %}/' \
   "${POST_PROCESSED_DOC}"

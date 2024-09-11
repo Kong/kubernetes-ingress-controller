@@ -7,10 +7,9 @@ import (
 )
 
 func TestValidateProtocol(t *testing.T) {
-	assert := assert.New(t)
 	testTable := []struct {
-		input  string
-		result bool
+		input    string
+		expected bool
 	}{
 		{"", true},
 		{"http", true},
@@ -24,8 +23,19 @@ func TestValidateProtocol(t *testing.T) {
 		{"tls_passthrough", true},
 		{"grcpsfdsafdsfafdshttp", false},
 	}
-	for _, testcase := range testTable {
-		isMatch := ValidateProtocol(testcase.input)
-		assert.Equal(isMatch, testcase.result)
+	for _, tc := range testTable {
+		t.Run(tc.input, func(t *testing.T) {
+			isMatch := ValidateProtocol(tc.input)
+			assert.Equal(t, tc.expected, isMatch)
+		})
+	}
+}
+
+func BenchmarkValidateProtocol(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = ValidateProtocol("https")
+		_ = ValidateProtocol("tcp")
+		_ = ValidateProtocol("tls")
+		_ = ValidateProtocol("xxxxxxxxx")
 	}
 }

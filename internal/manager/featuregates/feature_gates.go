@@ -28,9 +28,14 @@ const (
 	// SanitizeKonnectConfigDumps is the name of the feature-gate that enables sanitization of Konnect config dumps.
 	SanitizeKonnectConfigDumps = "SanitizeKonnectConfigDumps"
 
-	// FallbackConfiguration is the name of the featuer-gate that enables generating fallback configuration in the case
+	// FallbackConfiguration is the name of the feature-gate that enables generating fallback configuration in the case
 	// of entity errors returned by the Kong Admin API.
 	FallbackConfiguration = "FallbackConfiguration"
+
+	// KongCustomEntity is the name of the feature-gate for enabling KongCustomEntity CR reconciliation
+	// for configuring custom Kong entities that KIC does not support yet.
+	// Requires feature gate `FillIDs` to be enabled.
+	KongCustomEntity = "KongCustomEntity"
 
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
@@ -53,6 +58,11 @@ func New(setupLog logr.Logger, featureGates map[string]bool) (FeatureGates, erro
 		ctrlMap[feature] = enabled
 	}
 
+	// KongCustomEntity requires FillIDs to be enabled, because custom entities requires stable IDs to fill in its "foreign" fields.
+	if ctrlMap.Enabled(KongCustomEntity) && !ctrlMap.Enabled(FillIDsFeature) {
+		return nil, fmt.Errorf("%s is required if %s is enabled", FillIDsFeature, KongCustomEntity)
+	}
+
 	return ctrlMap, nil
 }
 
@@ -73,5 +83,6 @@ func GetFeatureGatesDefaults() FeatureGates {
 		KongServiceFacade:          false,
 		SanitizeKonnectConfigDumps: true,
 		FallbackConfiguration:      false,
+		KongCustomEntity:           true,
 	}
 }

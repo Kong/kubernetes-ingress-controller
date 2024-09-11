@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -158,7 +159,7 @@ func (ir *ingressRules) generateKongServiceTags(
 	// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
 	// The translator should discard this invalid route later, but this adds a placeholder value in case it doesn't.
 	// If you encounter an actual config where a service has these tags, something strange has happened.
-	logger.V(util.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
+	logger.V(logging.DebugLevel).Info("Service has zero k8sServices backends, cannot generate tags for it properly",
 		"service", *service.Name)
 	return kong.StringSlice(
 		util.K8sNameTagPrefix+"UNKNOWN",

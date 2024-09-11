@@ -1,22 +1,22 @@
-# renovate: datasource=github-releases depName=kubernetes/code-generator
-kube-code-generator: "0.29.1"
+# renovate: datasource=github-tags depName=kubernetes/code-generator
+kube-code-generator: "0.31.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
-controller-tools: "0.15.0"
+controller-tools: "0.16.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.3.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "1.59.0"
+golangci-lint: "1.61.0"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.12.0"
+skaffold: "2.13.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.18.3"
+setup-envtest: "0.19.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
-crd-ref-docs: "0.0.12"
+crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=mikefarah/yq
-yq: "4.44.1"
+yq: "4.44.3"
 # renovate: datasource=github-releases depName=jstemmer/go-junit-report
 gojunit-report: "2.1.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
-gotestsum: "1.11.0"
+gotestsum: "1.12.0"
 # renovate: datasource=github-releases depName=dominikh/go-tools
-staticcheck: "0.4.7"
+staticcheck: "2024.1.1"

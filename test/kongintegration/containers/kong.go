@@ -35,6 +35,18 @@ func KongWithRouterFlavor(flavor string) KongOpt {
 	}
 }
 
+func KongWithDBMode(networkName string) KongOpt {
+	return func(req *testcontainers.ContainerRequest) {
+		req.Networks = []string{networkName}
+
+		req.Env["KONG_DATABASE"] = "postgres"
+		req.Env["KONG_PG_DATABASE"] = postgresDatabase
+		req.Env["KONG_PG_USER"] = postgresUser
+		req.Env["KONG_PG_PASSWORD"] = postgresPassword
+		req.Env["KONG_PG_HOST"] = postgresContainerNetworkAlias
+	}
+}
+
 // Kong represents a docker container running Kong.
 type Kong struct {
 	container testcontainers.Container
@@ -140,11 +152,14 @@ func (c Kong) Terminate(ctx context.Context) error {
 
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and
 // TEST_KONG_TAG are set, it will return the image and tag specified by them. Otherwise, it will return
-// the default image (kong:latest).
+// the default image (kong:latest or kong/kong-gateway if EE tests enabled).
 func kongImageUnderTest() string {
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		return fmt.Sprintf("%s:%s", testenv.KongImage(), testenv.KongTag())
 	}
 
+	if testenv.KongEnterpriseEnabled() {
+		return "kong/kong-gateway:latest"
+	}
 	return "kong:latest"
 }

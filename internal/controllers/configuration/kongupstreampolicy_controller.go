@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -21,8 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
@@ -41,6 +43,9 @@ type KongUpstreamPolicyReconciler struct {
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
+
+	IngressClassName           string
+	DisableIngressClassLookups bool
 
 	// KongServiceFacadeEnabled determines whether the controller should populate the KongUpstreamPolicy's ancestor
 	// status for KongServiceFacades.
@@ -67,6 +72,12 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(&corev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
 			builder.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+		).
+		Watches(&netv1.Ingress{},
+			// Watch for Ingress changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
+			// used as backend of the Ingress.
+			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForIngressServices),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.ingressMatchesIngressClass())),
 		)
 
 	if r.HTTPRouteEnabled {
@@ -94,7 +105,7 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 					Kind:    "Service",
 				}),
 				handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-				source.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+				source.WithPredicates[client.Object, reconcile.Request](predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
 			),
 		).
 			WatchesRawSource(
@@ -104,7 +115,7 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 					Kind:    incubatorv1alpha1.KongServiceFacadeKind,
 				}),
 					handler.EnqueueRequestsFromMapFunc(r.getUpstreamPolicyForObject),
-					source.WithPredicates(predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
+					source.WithPredicates[client.Object, reconcile.Request](predicate.NewPredicateFuncs(doesObjectReferUpstreamPolicy)),
 				),
 			)
 	}
@@ -123,6 +134,15 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to index services on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
 	}
 
+	if err := mgr.GetCache().IndexField(
+		context.Background(),
+		&netv1.Ingress{},
+		routeBackendRefServiceNameIndexKey,
+		indexIngressesOnBackendServiceName,
+	); err != nil {
+		return fmt.Errorf("failed to index Ingresses on backendServiceName: %w", err)
+	}
+
 	if r.HTTPRouteEnabled {
 		if err := mgr.GetCache().IndexField(
 			context.Background(),
@@ -130,7 +150,7 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 			routeBackendRefServiceNameIndexKey,
 			indexRoutesOnBackendRefServiceName,
 		); err != nil {
-			return fmt.Errorf("failed to index HTTPRoutes on backendReferences: %w", err)
+			return fmt.Errorf("failed to index HTTPRoutes on Services in backendReferences: %w", err)
 		}
 	}
 
@@ -143,6 +163,17 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		); err != nil {
 			return fmt.Errorf("failed to index KongServiceFacades on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
 		}
+
+		if r.HTTPRouteEnabled {
+			if err := mgr.GetCache().IndexField(
+				context.Background(),
+				&gatewayapi.HTTPRoute{},
+				routeBackendRefServiceFacadeIndexKey,
+				indexRoutesOnBackendRefServiceFacadeName,
+			); err != nil {
+				return fmt.Errorf("failed to index HTTPRoutes on ServiceFacades in backendReferences: %w", err)
+			}
+		}
 	}
 
 	return nil
@@ -153,8 +184,9 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 const (
-	upstreamPolicyIndexKey             = "upstreamPolicy"
-	routeBackendRefServiceNameIndexKey = "serviceRef"
+	upstreamPolicyIndexKey               = "upstreamPolicy"
+	routeBackendRefServiceNameIndexKey   = "serviceRef"
+	routeBackendRefServiceFacadeIndexKey = "serviceFacadeRef"
 )
 
 // indexServicesOnUpstreamPolicyAnnotation indexes the services on the annotation konghq.com/upstream-policy.
@@ -171,6 +203,26 @@ func indexServicesOnUpstreamPolicyAnnotation(o client.Object) []string {
 	return []string{}
 }
 
+// indexIngressesOnBackendServiceName indexes the Ingresses on the backends.
+func indexIngressesOnBackendServiceName(o client.Object) []string {
+	ingress, ok := o.(*netv1.Ingress)
+	if !ok {
+		return []string{}
+	}
+	var indexes []string
+	for _, rule := range ingress.Spec.Rules {
+		if rule.HTTP == nil {
+			continue
+		}
+		for _, path := range rule.HTTP.Paths {
+			if service := path.Backend.Service; service != nil {
+				indexes = append(indexes, string(buildServiceReference(ingress.Namespace, service.Name)))
+			}
+		}
+	}
+	return indexes
+}
+
 // indexRoutesOnBackendRefServiceName indexes the HTTPRoutes on the backendReferences.
 func indexRoutesOnBackendRefServiceName(o client.Object) []string {
 	httpRoute, ok := o.(*gatewayapi.HTTPRoute)
@@ -182,6 +234,26 @@ func indexRoutesOnBackendRefServiceName(o client.Object) []string {
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, br := range rule.BackendRefs {
 			serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
+			if serviceRef == "" {
+				continue
+			}
+			indexes = append(indexes, string(serviceRef))
+		}
+	}
+	return indexes
+}
+
+// indexRoutesOnBackendRefServiceFacadeName indexes the HTTPRoutes on the backendReferences using KongServiceFacades as backends.
+func indexRoutesOnBackendRefServiceFacadeName(o client.Object) []string {
+	httpRoute, ok := o.(*gatewayapi.HTTPRoute)
+	if !ok {
+		return []string{}
+	}
+
+	var indexes []string
+	for _, rule := range httpRoute.Spec.Rules {
+		for _, br := range rule.BackendRefs {
+			serviceRef := backendRefToServiceFacadeRef(httpRoute.Namespace, br.BackendRef)
 			if serviceRef == "" {
 				continue
 			}
@@ -243,6 +315,50 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPolicyForObject(ctx context.Co
 	}
 }
 
+// getUpstreamPoliciesForIngressServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
+// the Services of an Ingress.
+func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx context.Context, obj client.Object) []reconcile.Request {
+	ingress, ok := obj.(*netv1.Ingress)
+	if !ok {
+		return nil
+	}
+	var requests []reconcile.Request
+	for _, rule := range ingress.Spec.Rules {
+		for _, path := range rule.HTTP.Paths {
+			if path.Backend.Service == nil {
+				continue
+			}
+			service := &corev1.Service{}
+			if err := r.Client.Get(ctx, k8stypes.NamespacedName{
+				Namespace: ingress.Namespace,
+				Name:      path.Backend.Service.Name,
+			}, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					r.Log.Error(err, "Failed to retrieve Service in watch predicates",
+						"Service", fmt.Sprintf("%s/%s", ingress.Namespace, path.Backend.Service.Name),
+					)
+				}
+				continue
+			}
+
+			if service.Annotations == nil {
+				continue
+			}
+			upstreamPolicy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+			if !ok {
+				continue
+			}
+			requests = append(requests, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      upstreamPolicy,
+				},
+			})
+		}
+	}
+	return requests
+}
+
 // getUpstreamPoliciesForHTTPRouteServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
 // the Services of an HTTPRoute.
 func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -302,6 +418,28 @@ func doesObjectReferUpstreamPolicy(obj client.Object) bool {
 	return ok
 }
 
+// ingressMatchesIngressClass returns a function to judge whether an Ingress matches the ingress class.
+// Used in predicate to filter ingresses that should be reconciled by the current controller..
+func (r *KongUpstreamPolicyReconciler) ingressMatchesIngressClass() func(obj client.Object) bool {
+	return func(obj client.Object) bool {
+		ingress, ok := obj.(*netv1.Ingress)
+		if !ok {
+			return false
+		}
+		class := new(netv1.IngressClass)
+		if !r.DisableIngressClassLookups {
+			if err := r.Get(context.Background(), k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+				// we log this without taking action to support legacy configurations that only set ingressClassName or
+				// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+				// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+				// if none exists.
+				r.Log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			}
+		}
+		return ctrlutils.MatchesIngressClass(ingress, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class))
+	}
+}
+
 // -----------------------------------------------------------------------------
 // KongUpstreamPolicy Controller - Reconciliation
 // -----------------------------------------------------------------------------
@@ -328,11 +466,11 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !kongUpstreamPolicy.DeletionTimestamp.IsZero() && time.Now().After(kongUpstreamPolicy.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongUpstreamPolicy", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "KongUpstreamPolicy", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(kongUpstreamPolicy)
 		if err != nil {
@@ -344,6 +482,27 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
+		return ctrl.Result{}, nil
+	}
+
+	// Do not store the KongUpstreamPolicy into the cache if it is not used by some Service being the backend of Ingress/HTTPRoute
+	// that matches the ingress class/gateway class of the controller.
+	class := new(netv1.IngressClass)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
+	}
+	shouldStore, err := r.upstreamPolicyUsedByBackendsOfMatchingClass(ctx, req.NamespacedName, ctrlutils.IsDefaultIngressClass(class))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !shouldStore {
+		log.V(logging.DebugLevel).Info("KongUpstreamPolicy is not referenced by Services used as backend of Ingress or HTTPRoute with matching class, skipping reconciliation")
 		return ctrl.Result{}, nil
 	}
 

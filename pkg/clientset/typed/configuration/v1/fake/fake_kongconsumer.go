@@ -41,22 +41,24 @@ var kongconsumersKind = v1.SchemeGroupVersion.WithKind("KongConsumer")
 
 // Get takes name of the kongConsumer, and returns the corresponding kongConsumer object, and an error if there is any.
 func (c *FakeKongConsumers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.KongConsumer, err error) {
+	emptyResult := &v1.KongConsumer{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongconsumersResource, c.ns, name), &v1.KongConsumer{})
+		Invokes(testing.NewGetActionWithOptions(kongconsumersResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongConsumer), err
 }
 
 // List takes label and field selectors, and returns the list of KongConsumers that match those selectors.
 func (c *FakeKongConsumers) List(ctx context.Context, opts metav1.ListOptions) (result *v1.KongConsumerList, err error) {
+	emptyResult := &v1.KongConsumerList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongconsumersResource, kongconsumersKind, c.ns, opts), &v1.KongConsumerList{})
+		Invokes(testing.NewListActionWithOptions(kongconsumersResource, kongconsumersKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeKongConsumers) List(ctx context.Context, opts metav1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested kongConsumers.
 func (c *FakeKongConsumers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(kongconsumersResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(kongconsumersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongConsumer and creates it.  Returns the server's representation of the kongConsumer, and an error, if there is any.
 func (c *FakeKongConsumers) Create(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.CreateOptions) (result *v1.KongConsumer, err error) {
+	emptyResult := &v1.KongConsumer{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongconsumersResource, c.ns, kongConsumer), &v1.KongConsumer{})
+		Invokes(testing.NewCreateActionWithOptions(kongconsumersResource, c.ns, kongConsumer, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongConsumer), err
 }
 
 // Update takes the representation of a kongConsumer and updates it. Returns the server's representation of the kongConsumer, and an error, if there is any.
 func (c *FakeKongConsumers) Update(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (result *v1.KongConsumer, err error) {
+	emptyResult := &v1.KongConsumer{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongconsumersResource, c.ns, kongConsumer), &v1.KongConsumer{})
+		Invokes(testing.NewUpdateActionWithOptions(kongconsumersResource, c.ns, kongConsumer, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongConsumer), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKongConsumers) UpdateStatus(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (*v1.KongConsumer, error) {
+func (c *FakeKongConsumers) UpdateStatus(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (result *v1.KongConsumer, err error) {
+	emptyResult := &v1.KongConsumer{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(kongconsumersResource, "status", c.ns, kongConsumer), &v1.KongConsumer{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(kongconsumersResource, "status", c.ns, kongConsumer, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongConsumer), err
 }
@@ -123,7 +128,7 @@ func (c *FakeKongConsumers) Delete(ctx context.Context, name string, opts metav1
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongConsumers) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongconsumersResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(kongconsumersResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.KongConsumerList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeKongConsumers) DeleteCollection(ctx context.Context, opts metav1.De
 
 // Patch applies the patch and returns the patched kongConsumer.
 func (c *FakeKongConsumers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongConsumer, err error) {
+	emptyResult := &v1.KongConsumer{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongconsumersResource, c.ns, name, pt, data, subresources...), &v1.KongConsumer{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(kongconsumersResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongConsumer), err
 }

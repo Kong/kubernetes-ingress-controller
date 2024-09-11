@@ -7,8 +7,8 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type UpdateSkippedDueToBackoffStrategyError struct {
@@ -54,7 +54,7 @@ func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent Con
 
 	err = s.decorated.Update(ctx, targetContent)
 	if err != nil {
-		s.logger.V(util.DebugLevel).Info("Update failed, registering it for backoff strategy", "reason", err.Error())
+		s.logger.V(logging.DebugLevel).Info("Update failed, registering it for backoff strategy", "reason", err.Error())
 		s.backoffStrategy.RegisterUpdateFailure(err, targetContent.Hash)
 		return err
 	}

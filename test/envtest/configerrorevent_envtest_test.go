@@ -118,7 +118,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 				e.Message == "invalid service:httpbin.httpbin.80: failed conditional validation given value of field 'protocol'"
 		})
 		matches[3] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: failed posting new config to /config: got status code 400`, e.Message)
+			ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`, e.Message)
 			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Pod" &&
 				e.InvolvedObject.Name == podName &&
@@ -315,7 +315,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "KongConsumer" &&
 				e.InvolvedObject.Name == consumer.Name &&
-				e.Message == "invalid : HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")"
+				e.Message == fmt.Sprintf("invalid consumer:%s: HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")", consumer.Name)
 		})
 		if lo.Count(matches, true) != 1 {
 			t.Logf("not all events matched: %+v", matches)

@@ -11,7 +11,9 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -27,6 +29,7 @@ type AdminAPIClient interface {
 	AdminAPIClient() *kong.Client
 	LastConfigSHA() []byte
 	SetLastConfigSHA([]byte)
+	SetLastCacheStoresHash(store.SnapshotHash)
 	BaseRootURL() string
 	PluginSchemaStore() *util.PluginSchemaStore
 
@@ -41,12 +44,14 @@ func PerformUpdate(
 	client AdminAPIClient,
 	config Config,
 	targetContent *file.Content,
+	customEntities CustomEntitiesByType,
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
+	isFallback bool,
 ) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()
-	newSHA, err := deckgen.GenerateSHA(targetContent)
+	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
 		return oldSHA, fmt.Errorf("failed to generate SHA for target content: %w", err)
 	}
@@ -59,9 +64,9 @@ func PerformUpdate(
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
-				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Konnect")
+				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Konnect")
 			} else {
-				logger.V(util.DebugLevel).Info("No configuration change, skipping sync to Kong")
+				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
 			return oldSHA, nil
 		}
@@ -71,8 +76,9 @@ func PerformUpdate(
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
 	err = updateStrategy.Update(ctx, ContentWithHash{
-		Content: targetContent,
-		Hash:    newSHA,
+		Content:        targetContent,
+		CustomEntities: customEntities,
+		Hash:           newSHA,
 	})
 	duration := time.Since(timeStart)
 
@@ -81,7 +87,11 @@ func PerformUpdate(
 		// For UpdateError, record the failure and return the error.
 		var updateError UpdateError
 		if errors.As(err, &updateError) {
-			promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(updateError.ResourceFailures()), updateError.err)
+			if isFallback {
+				promMetrics.RecordFallbackPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(updateError.ResourceFailures()), updateError.err)
+			} else {
+				promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(updateError.ResourceFailures()), updateError.err)
+			}
 			return nil, updateError
 		}
 
@@ -89,17 +99,17 @@ func PerformUpdate(
 		return nil, fmt.Errorf("config update failed: %w", err)
 	}
 
-	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
+	if isFallback {
+		promMetrics.RecordFallbackPushSuccess(metricsProtocol, duration, client.BaseRootURL())
+	} else {
+		promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
+	}
 
 	if client.IsKonnect() {
-		logger.V(util.InfoLevel).Info("Successfully synced configuration to Konnect")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Konnect", "duration", duration.Truncate(time.Millisecond).String())
 	} else {
-		logger.V(util.InfoLevel).Info("Successfully synced configuration to Kong")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Kong", "duration", duration.Truncate(time.Millisecond).String())
 	}
 
 	return newSHA, nil
 }
-
-// -----------------------------------------------------------------------------
-// Sendconfig - Private Functions
-// -----------------------------------------------------------------------------

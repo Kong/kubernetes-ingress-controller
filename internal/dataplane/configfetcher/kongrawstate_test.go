@@ -6,6 +6,7 @@ import (
 
 	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
+
+func buildCustomEntityWithObject(entityType custom.Type, obj custom.Object) custom.Entity {
+	e := custom.NewEntityObject(entityType)
+	e.SetObject(obj)
+	return e
+}
 
 func TestKongRawStateToKongState(t *testing.T) {
 	// This is to gather all the fields in KongRawState that are tested in this suite.
@@ -170,6 +177,16 @@ func TestKongRawStateToKongState(t *testing.T) {
 						SubjectName: kong.String("subjectName"),
 					},
 				},
+				CustomEntities: []custom.Entity{
+					buildCustomEntityWithObject("degraphql_routes", custom.Object{
+						"id":    "degraphql-route-1",
+						"uri":   "/graphql",
+						"query": "query{name}",
+						"service": map[string]any{
+							"id": "service",
+						},
+					}),
+				},
 			},
 			expectedKongState: &kongstate.KongState{
 				Services: []kongstate.Service{
@@ -287,6 +304,22 @@ func TestKongRawStateToKongState(t *testing.T) {
 							{
 								MTLSAuth: kong.MTLSAuth{
 									SubjectName: kong.String("subjectName"),
+								},
+							},
+						},
+					},
+				},
+				CustomEntities: map[string]*kongstate.KongCustomEntityCollection{
+					"degraphql_routes": {
+						Entities: []kongstate.CustomEntity{
+							{
+								Object: custom.Object{
+									"id":    "degraphql-route-1",
+									"uri":   "/graphql",
+									"query": "query{name}",
+									"service": map[string]any{
+										"id": "service",
+									},
 								},
 							},
 						},

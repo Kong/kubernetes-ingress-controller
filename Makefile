@@ -71,11 +71,11 @@ export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 .PHONY: mise-plugin-install
 mise-plugin-install: mise
-	$(MISE) plugin install --yes -q $(DEP) $(URL)
+	@$(MISE) plugin install --yes -q $(DEP) $(URL)
 
 .PHONY: mise-install
 mise-install: mise
-	$(MISE) install -q $(DEP_VER)
+	@$(MISE) install -q $(DEP_VER)
 
 CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
@@ -149,8 +149,7 @@ STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FIL
 STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
-# TODO: Use staticcheck plugin without alias aftrer https://github.com/pbr0ck3r/asdf-staticcheck/pull/6 is merged.
-	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pmalek/asdf-staticcheck.git
+	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pbr0ck3r/asdf-staticcheck.git
 	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
@@ -268,9 +267,11 @@ manifests.rbac: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
+# NOTE: We don't store the produced webhook manifest in the repository, as the source
+# of truth is the config/webhook kustomization dir.
 .PHONY: manifests.webhook
-manifests.webhook: controller-gen ## Generate ValidatingWebhookConfiguration.
-	$(CONTROLLER_GEN) webhook paths="./internal/admission/..." output:webhook:artifacts:config=config/webhook
+manifests.webhook: controller-gen kustomize ## Generate ValidatingWebhookConfiguration.
+	$(CONTROLLER_GEN) webhook paths="./internal/admission/..." output:webhook:artifacts:config=config/webhook/base/
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks
@@ -304,10 +305,8 @@ generate.clientsets: client-gen
 		--clientset-name clientset \
 		--input-base $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/apis/ \
 		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1,incubator/v1alpha1 \
-		--input-dirs $(REPO_URL)/pkg/apis/configuration/v1alpha1/,$(REPO_URL)/pkg/apis/configuration/v1beta1/,$(REPO_URL)/pkg/apis/configuration/v1/,$(REPO_URL)/pkg/apis/incubator/v1alpha1 \
-		--output-base pkg/ \
-		--output-package $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/ \
-		--trim-path-prefix pkg/$(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/
+		--output-dir pkg/ \
+		--output-pkg $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/
 
 .PHONY: generate.docs
 generate.docs: generate.apidocs generate.cli-arguments-docs
@@ -423,14 +422,14 @@ test.unit.pretty:
 
 .PHONY: test.golden.update
 test.golden.update:
-	@go test -v -run TestTranslator_GoldenTests ./internal/dataplane/translator -update
+	@go test -v -run TestKongClient_GoldenTests ./internal/dataplane -update
 
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
 
-ENVTEST_TIMEOUT ?= 5m
+ENVTEST_TIMEOUT ?= 8m
 
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
@@ -483,6 +482,7 @@ _test.integration: _check.container.environment go-junit-report
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
@@ -501,6 +501,7 @@ _test.integration.isolated: _check.container.environment go-junit-report
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
@@ -585,11 +586,11 @@ test.istio: gotestsum
 
 .PHONY: test.kongintegration
 test.kongintegration:
-	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
+	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
 
 .PHONY: test.kongintegration.pretty
 test.kongintegration.pretty:
-	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
+	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
 
 .PHONY: _test.kongintegration
 _test.kongintegration: gotestsum go-junit-report
@@ -599,6 +600,7 @@ _test.kongintegration: gotestsum go-junit-report
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
 		-parallel $(NCPU) \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.kongintegration.out \
@@ -686,7 +688,7 @@ debug.skaffold:
 # To make it work with Konnect, you must provide following files under ./config/variants/konnect/debug:
 #   * `konnect.env` with CONTROLLER_KONNECT_CONTROL_PLANE_ID env variable set
 #     to the UUID of a Control Plane you have created in Konnect.
-#   * `tls.crt` and `tls.key` with TLS client cerificate and its key (generated by Konnect).
+#   * `tls.crt` and `tls.key` with TLS client certificate and its key (generated by Konnect).
 .PHONY: debug.skaffold.konnect
 debug.skaffold.konnect:
 	SKAFFOLD_DEBUG_PROFILE=debug-konnect \

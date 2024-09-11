@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
@@ -620,19 +621,63 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		return err == nil
 	}, ingressWait, waitTick)
 
+	const (
+		// negativeCheckWait is the duration used in `Never` for verifying that the plugin is not configured
+		// without reference grant or with incorrect reference grant.
+		// Set it to 1 minute since we have to wait until the end in each `Never` if the test is OK.
+		negativeCheckWait = time.Minute
+	)
+
 	t.Logf("validating that plugin %s is not configured without a grant", kongplugin.Name)
 	assert.Never(t, func() bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			return false
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusTeapot
-	}, ingressWait, waitTick)
+	}, negativeCheckWait, waitTick)
+
+	t.Logf("creating a ReferenceGrant that does not permit kongconsumer access to kongplugins")
+	grant := &gatewayapi.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayapi.ReferenceGrantSpec{
+			From: []gatewayapi.ReferenceGrantFrom{
+				{
+					Group:     gatewayapi.Group("configuration.konghq.com"),
+					Kind:      gatewayapi.Kind("KongConsumer"),
+					Namespace: gatewayapi.Namespace(remote.Name),
+				},
+			},
+			To: []gatewayapi.ReferenceGrantTo{
+				{
+					Group: gatewayapi.Group("configuration.konghq.com"),
+					Kind:  gatewayapi.Kind("KongPlugin"),
+				},
+			},
+		},
+	}
+	// Not the namespace as the plugin.
+	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(remote.Name).Create(ctx, grant, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(grant)
+
+	t.Logf("validating that plugin %s is not configured with an incorrectly configured referencegrant", kongplugin.Name)
+	assert.Never(t, func() bool {
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusTeapot
+	}, negativeCheckWait, waitTick)
 
 	t.Logf("creating a ReferenceGrant that permits kongconsumer access from %s to kongplugins in %s", remote.Name, ns.Name)
-	grant := &gatewayapi.ReferenceGrant{
+	grant = &gatewayapi.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
@@ -654,11 +699,12 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	}
 	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(ns.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(grant)
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPURL.String(), "/test_plugin_reference?apikey=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?apikey=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}

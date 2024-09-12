@@ -6,6 +6,17 @@ updates:
     interval: daily
   labels:
   - dependencies
+  groups:
+     # Specify a name for the group, which will be used in pull request titles and branch names
+     k8s.io:
+        # Define patterns to include dependencies in the group (based on dependency name)
+        applies-to: version-updates # Applies the group rule to version updates
+        patterns:
+          - "k8s.io/*"
+        exclude-patterns:
+        - k8s.io/klog/*
+        - k8s.io/utils
+        - k8s.io/kube-openapi
 - package-ecosystem: gomod
   directory: /third_party/
   schedule:

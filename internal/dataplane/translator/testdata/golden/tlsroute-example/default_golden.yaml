@@ -1,0 +1,46 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: tlsroute..echo-tls.0
+  id: 962095d7-79b7-5913-9dc3-c6f04414df0c
+  name: tlsroute..echo-tls.0
+  plugins:
+  - config:
+      message: no existing backendRef provided
+      status_code: 500
+    name: request-termination
+  protocol: tcp
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 2450c137-173c-507d-91ec-a446e0c5e16c
+    name: tlsroute..echo-tls.0.0
+    path_handling: v0
+    protocols:
+    - tls
+    snis:
+    - tls9443.kong.example
+    tags:
+    - k8s-name:echo-tls
+    - k8s-kind:TLSRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1alpha2
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: tlsroute..echo-tls.0
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1

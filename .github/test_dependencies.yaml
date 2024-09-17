@@ -48,13 +48,13 @@ integration:
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.31.0'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.7.1'
+  kong-oss: '3.8.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.8.0.0'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.7.1'
+  kong-oss: '3.8.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.8.0.0'
 

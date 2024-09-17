@@ -156,8 +156,7 @@ GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIO
 GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report
 .PHONY: go-junit-report
 go-junit-report: ## Download go-junit-report locally if necessary.
-# TODO: Go back to using https://github.com/jwillker/asdf-go-junit-report when https://github.com/jwillker/asdf-go-junit-report/pull/4 merges.
-	@$(MAKE) mise-plugin-install DEP=go-junit-report URL=https://github.com/pmalek/asdf-go-junit-report.git
+	@$(MAKE) mise-plugin-install DEP=go-junit-report
 	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
 # ------------------------------------------------------------------------------

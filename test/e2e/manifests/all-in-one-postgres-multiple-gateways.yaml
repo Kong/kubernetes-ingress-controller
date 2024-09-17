@@ -3585,7 +3585,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:3.7
+        image: kong:3.8
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -3658,7 +3658,7 @@ spec:
           value: /dev/stderr
         - name: KONG_ROUTER_FLAVOR
           value: traditional
-        image: kong:3.7
+        image: kong:3.8
         lifecycle:
           preStop:
             exec:
@@ -3784,7 +3784,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:3.7
+        image: kong:3.8
         name: kong-migrations
       initContainers:
       - command:
@@ -3797,7 +3797,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:3.7
+        image: kong:3.8
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

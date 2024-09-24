@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller/tools
 go 1.22
 
 require (
-	github.com/go-delve/delve v1.23.0
+	github.com/go-delve/delve v1.23.1
 	github.com/kyoh86/looppointer v0.2.1
 
 )

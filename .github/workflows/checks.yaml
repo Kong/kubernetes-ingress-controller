@@ -39,7 +39,7 @@ jobs:
       - name: Check if PR is up to date, if it is skip workflows for this ref
         id: 'up-to-date'
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.5.1
+        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.7.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 

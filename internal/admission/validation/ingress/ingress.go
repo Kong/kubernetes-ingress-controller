@@ -10,6 +10,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
@@ -36,6 +37,9 @@ func ValidateIngress(
 
 	if err := validation.ValidateRouteSourceAnnotations(ingress); err != nil {
 		return false, fmt.Sprintf("Ingress has invalid Kong annotations: %s", err), nil
+	}
+	if err := ValidatePathSegmentMatchPrefix(ingress, translatorFeatures); err != nil {
+		return false, fmt.Sprintf("Ingress has invalid specification of path segment matches: %s", err), nil
 	}
 
 	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, storer) {
@@ -86,4 +90,18 @@ func ingressToKongRoutesForValidation(
 		}
 	}
 	return kongRoutes
+}
+
+func ValidatePathSegmentMatchPrefix(ingress *netv1.Ingress, translatorFeatures translator.FeatureFlags) error {
+	segmentPrefix := annotations.ExtractSegmentPrefix(ingress.Annotations)
+	if segmentPrefix == "" {
+		return nil
+	}
+	if !strings.HasPrefix(segmentPrefix, "/") || len(segmentPrefix) < 2 {
+		return fmt.Errorf("invalid segment match prefix %s: must be started with '/' and has at least 2 characters", segmentPrefix)
+	}
+	if !translatorFeatures.ExpressionRoutes {
+		return fmt.Errorf("path segment match is only supported when expression routes enabled")
+	}
+	return nil
 }

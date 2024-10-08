@@ -230,7 +230,11 @@ func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 		}
 
 		if i.featureFlags.ExpressionRoutes {
-			route := meta.translateIntoKongExpressionRoute()
+			route, err := meta.translateIntoKongExpressionRoute()
+			if err != nil {
+				i.failuresCollector.PushResourceFailure(fmt.Sprintf("failed to translate to expression based route: %s", err), meta.parentIngress)
+				continue
+			}
 			kongStateService.Routes = append(kongStateService.Routes, *route)
 		} else {
 			route := meta.translateIntoKongRoute()

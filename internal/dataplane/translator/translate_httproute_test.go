@@ -239,7 +239,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -312,7 +312,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -391,7 +391,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -469,7 +469,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -549,7 +549,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -639,7 +639,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -733,7 +733,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -773,7 +773,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -893,7 +893,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -936,7 +936,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -1050,7 +1050,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
 											Name: kong.String("request-transformer"),
@@ -1083,7 +1083,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
 											Name: kong.String("request-transformer"),
@@ -1205,7 +1205,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Second two matches consolidated into a single route
 								{
@@ -1232,7 +1232,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Third two matches consolidated into a single route
 								{
@@ -1262,7 +1262,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -1406,7 +1406,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Second two matches consolidated into a single route
 								{
@@ -1433,7 +1433,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 
 								// Matches from rule 3, that has different filter, are not consolidated
@@ -1460,7 +1460,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
 											Name: kong.String("request-transformer"),
@@ -1556,7 +1556,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -1725,7 +1725,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -2534,21 +2534,6 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			require.Len(t, kongService.Routes, 1)
 			require.Equal(t, tc.expectedKongRoute, kongService.Routes[0])
 		})
-	}
-}
-
-func k8sObjectInfoOfHTTPRoute(route *gatewayapi.HTTPRoute) util.K8sObjectInfo {
-	anotations := route.Annotations
-
-	return util.K8sObjectInfo{
-		Name:        route.Name,
-		Namespace:   route.Namespace,
-		Annotations: anotations,
-		GroupVersionKind: schema.GroupVersionKind{
-			Group:   "gateway.networking.k8s.io",
-			Version: "v1beta1",
-			Kind:    "HTTPRoute",
-		},
 	}
 }
 

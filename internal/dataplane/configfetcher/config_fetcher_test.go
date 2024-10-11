@@ -82,7 +82,7 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 			require.Nil(t, state)
 
 			ctx := context.Background()
-			err := fetcher.TryFetchingValidConfigFromGateways(ctx, zapr.NewLogger(zap.NewNop()), tc.adminAPIClients(t, ctx))
+			err := fetcher.TryFetchingValidConfigFromGateways(ctx, zapr.NewLogger(zap.NewNop()), tc.adminAPIClients(t, ctx), nil)
 			if tc.expectError {
 				require.Error(t, err)
 				assert.False(t, ok)

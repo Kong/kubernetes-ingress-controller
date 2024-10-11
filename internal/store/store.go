@@ -40,7 +40,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
@@ -183,7 +183,7 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 		default:
 			class, err := s.GetIngressClassV1(s.ingressClass)
 			if err != nil {
-				s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
+				s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 				continue
 			}
 			if !ctrlutils.IsDefaultIngressClass(class) {
@@ -710,7 +710,7 @@ func (s Store) ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity {
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	class, err := s.GetIngressClassV1(s.ingressClass)
 	if err != nil {
-		s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
+		s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 		return annotations.ExactClassMatch
 	}
 	if ctrlutils.IsDefaultIngressClass(class) {
@@ -799,6 +799,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1alpha1.KongCustomEntity{}, nil
 	case kongv1alpha1.GroupVersion.WithKind("KongVault"):
 		return &kongv1alpha1.KongVault{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongCustomEntity"):
+		return &kongv1alpha1.KongCustomEntity{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

@@ -22,7 +22,7 @@ on:
 
 jobs:
   prepare-tags:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
       tags: ${{ steps.merge-tags.outputs.tags }}
@@ -71,7 +71,7 @@ jobs:
           echo "tags: ${{ steps.merge-tags.outputs.tags }}"
 
   build:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
     needs: prepare-tags
     outputs:

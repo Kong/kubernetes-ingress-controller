@@ -1,0 +1,54 @@
+_format_version: "3.0"
+degraphql_routes:
+- query: query{ contacts { name } }
+  service:
+    id: 9e262d22-26f2-5bcb-8d57-c5229fb8c5a2
+  uri: /contacts
+services:
+- connect_timeout: 60000
+  host: s1.default.80.svc
+  id: 9e262d22-26f2-5bcb-8d57-c5229fb8c5a2
+  name: default.s1.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 226e9894-47fd-5dd2-9af0-4b49a2b45c5e
+    name: default.i1.s1..80
+    path_handling: v0
+    paths:
+    - /
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: true
+    tags:
+    - k8s-name:i1
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-uid:39ec2b6a-f919-4308-ad2f-07511ab424dd
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:s1
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-uid:ddc15c38-7f1b-41cb-8b57-46465a7f4427
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: s1.default.80.svc
+  tags:
+  - k8s-name:s1
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-uid:ddc15c38-7f1b-41cb-8b57-46465a7f4427
+  - k8s-version:v1

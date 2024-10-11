@@ -41,22 +41,24 @@ var kongingressesKind = v1.SchemeGroupVersion.WithKind("KongIngress")
 
 // Get takes name of the kongIngress, and returns the corresponding kongIngress object, and an error if there is any.
 func (c *FakeKongIngresses) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.KongIngress, err error) {
+	emptyResult := &v1.KongIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongingressesResource, c.ns, name), &v1.KongIngress{})
+		Invokes(testing.NewGetActionWithOptions(kongingressesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongIngress), err
 }
 
 // List takes label and field selectors, and returns the list of KongIngresses that match those selectors.
 func (c *FakeKongIngresses) List(ctx context.Context, opts metav1.ListOptions) (result *v1.KongIngressList, err error) {
+	emptyResult := &v1.KongIngressList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongingressesResource, kongingressesKind, c.ns, opts), &v1.KongIngressList{})
+		Invokes(testing.NewListActionWithOptions(kongingressesResource, kongingressesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,28 +77,30 @@ func (c *FakeKongIngresses) List(ctx context.Context, opts metav1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested kongIngresses.
 func (c *FakeKongIngresses) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(kongingressesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(kongingressesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongIngress and creates it.  Returns the server's representation of the kongIngress, and an error, if there is any.
 func (c *FakeKongIngresses) Create(ctx context.Context, kongIngress *v1.KongIngress, opts metav1.CreateOptions) (result *v1.KongIngress, err error) {
+	emptyResult := &v1.KongIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongingressesResource, c.ns, kongIngress), &v1.KongIngress{})
+		Invokes(testing.NewCreateActionWithOptions(kongingressesResource, c.ns, kongIngress, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongIngress), err
 }
 
 // Update takes the representation of a kongIngress and updates it. Returns the server's representation of the kongIngress, and an error, if there is any.
 func (c *FakeKongIngresses) Update(ctx context.Context, kongIngress *v1.KongIngress, opts metav1.UpdateOptions) (result *v1.KongIngress, err error) {
+	emptyResult := &v1.KongIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongingressesResource, c.ns, kongIngress), &v1.KongIngress{})
+		Invokes(testing.NewUpdateActionWithOptions(kongingressesResource, c.ns, kongIngress, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongIngress), err
 }
@@ -111,7 +115,7 @@ func (c *FakeKongIngresses) Delete(ctx context.Context, name string, opts metav1
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongIngresses) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongingressesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(kongingressesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.KongIngressList{})
 	return err
@@ -119,11 +123,12 @@ func (c *FakeKongIngresses) DeleteCollection(ctx context.Context, opts metav1.De
 
 // Patch applies the patch and returns the patched kongIngress.
 func (c *FakeKongIngresses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongIngress, err error) {
+	emptyResult := &v1.KongIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongingressesResource, c.ns, name, pt, data, subresources...), &v1.KongIngress{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(kongingressesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.KongIngress), err
 }

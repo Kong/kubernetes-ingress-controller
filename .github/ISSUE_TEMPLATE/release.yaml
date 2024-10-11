@@ -88,3 +88,9 @@ body:
   attributes:
     label: Release Troubleshooting
     value: The [Release Troubleshooting guide](https://github.com/Kong/kubernetes-ingress-controller/blob/main/RELEASE.md#release-troubleshooting) covers strategies for dealing with a release that has failed.
+- type: checkboxes
+  id: post_release
+  attributes:
+    label: "**For major/minor releases only** Do post release steps"
+    options:
+      - label: Schedule a retro meeting and invite the team. Link the invite in the [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys)

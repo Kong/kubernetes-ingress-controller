@@ -131,7 +131,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected to match")
 			for _, path := range tc.matchPaths {
-				helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+				helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, path, nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
@@ -230,6 +230,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 					proxyHTTPURL,
 					proxyHTTPURL.Host,
 					"/",
+					nil,
 					http.StatusOK,
 					"<title>httpbin.org</title>",
 					map[string]string{matchHeaderKey: header},

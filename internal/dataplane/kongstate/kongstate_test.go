@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -1528,285 +1528,119 @@ func (s *fakeSchemaGetter) Get(_ context.Context, entityType string) (kong.Schem
 	return schema, nil
 }
 
-func TestKongState_FillCustomEntities(t *testing.T) {
-	customEntityTypeMeta := metav1.TypeMeta{
-		APIVersion: kongv1alpha1.GroupVersion.Group + "/" + kongv1alpha1.GroupVersion.Version,
-		Kind:       "KongCustomEntity",
-	}
-	kongService1 := kong.Service{
-		Name: kong.String("service1"),
-	}
-	getKongServiceID := func(s *kong.Service) string {
-		err := s.FillID("")
-		require.NoError(t, err)
-		return *s.ID
+func TestIsRemotePluginReferenceAllowed(t *testing.T) {
+	serviceTypeMeta := metav1.TypeMeta{
+		Kind: "Service",
 	}
 
 	testCases := []struct {
-		name                        string
-		initialState                *KongState
-		customEntities              []*kongv1alpha1.KongCustomEntity
-		plugins                     []*kongv1.KongPlugin
-		schemas                     map[string]kong.Schema
-		expectedCustomEntities      map[string][]custom.Object
-		expectedTranslationFailures map[k8stypes.NamespacedName]string
+		name            string
+		referrer        client.Object
+		pluginNamespace string
+		pluginName      string
+		referenceGrants []*gatewayapi.ReferenceGrant
+		shouldAllow     bool
 	}{
 		{
-			name:         "single custom entity",
-			initialState: &KongState{},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
-				{
-					TypeMeta: customEntityTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "session-foo",
-					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						EntityType:     "sessions",
-						ControllerName: annotations.DefaultIngressClass,
-						Fields: apiextensionsv1.JSON{
-							Raw: []byte(`{"name":"session1"}`),
-						},
-					},
+			name: "no reference grant",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
 				},
 			},
-			schemas: map[string]kong.Schema{
-				"sessions": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"name": map[string]interface{}{
-								"type":     "string",
-								"required": true,
-							},
-						},
-					},
-				},
-			},
-			expectedCustomEntities: map[string][]custom.Object{
-				"sessions": {
-					{
-						"name": "session1",
-					},
-				},
-			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			shouldAllow:     false,
 		},
 		{
-			name:         "custom entity with unknown type",
-			initialState: &KongState{},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			name: "have reference grant",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
+				},
+			},
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "session-foo",
+						Namespace: "bar", // same namespace as plugin
+						Name:      "grant-1",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						EntityType:     "sessions",
-						ControllerName: annotations.DefaultIngressClass,
-						Fields: apiextensionsv1.JSON{
-							Raw: []byte(`{"name":"session1"}`),
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Kind:      gatewayapi.Kind("Service"),
+								Namespace: "foo",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
 						},
 					},
 				},
 			},
-			expectedTranslationFailures: map[k8stypes.NamespacedName]string{
-				{
-					Namespace: "default",
-					Name:      "session-foo",
-				}: "failed to fetch entity schema for entity type sessions: schema not found",
-			},
+			shouldAllow: true,
 		},
 		{
-			name:         "multiple custom entities with same type",
-			initialState: &KongState{},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
-				{
-					TypeMeta: customEntityTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "session-foo",
-					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						EntityType:     "sessions",
-						ControllerName: annotations.DefaultIngressClass,
-						Fields: apiextensionsv1.JSON{
-							Raw: []byte(`{"name":"session-foo"}`),
-						},
-					},
-				},
-				{
-					TypeMeta: customEntityTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "session-bar",
-					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						EntityType:     "sessions",
-						ControllerName: annotations.DefaultIngressClass,
-						Fields: apiextensionsv1.JSON{
-							Raw: []byte(`{"name":"session-bar"}`),
-						},
-					},
-				},
-				{
-					TypeMeta: customEntityTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default-1",
-						Name:      "session-foo",
-					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						EntityType:     "sessions",
-						ControllerName: annotations.DefaultIngressClass,
-						Fields: apiextensionsv1.JSON{
-							Raw: []byte(`{"name":"session-foo-1"}`),
-						},
-					},
+			name: "reference grant created but in different namespace",
+			referrer: &corev1.Service{
+				TypeMeta: serviceTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "foo",
+					Name:      "service-foo",
 				},
 			},
-			schemas: map[string]kong.Schema{
-				"sessions": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"name": map[string]interface{}{
-								"type":     "string",
-								"required": true,
+			pluginNamespace: "bar",
+			pluginName:      "plugin-bar",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "foo", // Not same namespace as plugin
+						Name:      "grant-1",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Kind:      gatewayapi.Kind("Service"),
+								Namespace: "foo",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
 							},
 						},
 					},
 				},
 			},
-			expectedCustomEntities: map[string][]custom.Object{
-				// Should be sorted by original KCE namespace/name.
-				"sessions": {
-					{
-						// from default/bar
-						"name": "session-bar",
-					},
-					{
-						// from default/foo
-						"name": "session-foo",
-					},
-					{
-						// from default-1/foo
-						"name": "session-foo-1",
-					},
-				},
-			},
-		},
-		{
-			name: "custom entities with reference to other entities (services)",
-			initialState: &KongState{
-				Services: []Service{
-					{
-						Service: kongService1,
-						K8sServices: map[string]*corev1.Service{
-							"default/service1": {
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "default",
-									Name:      "service1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "degraphql-1",
-									},
-								},
-							},
-						},
-					}, // Service: service1
-				}, // Services
-			},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
-				{
-					TypeMeta: customEntityTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "degraphql-1",
-					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						EntityType:     "degraphql_routes",
-						ControllerName: annotations.DefaultIngressClass,
-						Fields: apiextensionsv1.JSON{
-							Raw: []byte(`{"uri":"/api/me"}`),
-						},
-						ParentRef: &kongv1alpha1.ObjectReference{
-							Group: kong.String(kongv1.GroupVersion.Group),
-							Kind:  kong.String("KongPlugin"),
-							Name:  "degraphql-1",
-						},
-					},
-				},
-			},
-			plugins: []*kongv1.KongPlugin{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "degraphql-1",
-					},
-					PluginName: "degraphql",
-				},
-			},
-			schemas: map[string]kong.Schema{
-				"degraphql_routes": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"uri": map[string]interface{}{
-								"type":     "string",
-								"required": true,
-							},
-						},
-						map[string]interface{}{
-							"service": map[string]interface{}{
-								"type":      "foreign",
-								"reference": "services",
-							},
-						},
-					},
-				},
-			},
-			expectedCustomEntities: map[string][]custom.Object{
-				"degraphql_routes": {
-					{
-						"uri": "/api/me",
-						"service": map[string]interface{}{
-							// ID generated from Kong service "service1" in workspace "".
-							"id": getKongServiceID(&kongService1),
-						},
-					},
-				},
-			},
+			shouldAllow: false,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s, err := store.NewFakeStore(store.FakeObjects{
-				KongCustomEntities: tc.customEntities,
-				KongPlugins:        tc.plugins,
+				ReferenceGrants: tc.referenceGrants,
 			})
 			require.NoError(t, err)
-			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
-
-			ks := tc.initialState
-			ks.FillCustomEntities(
-				logr.Discard(), s,
-				failuresCollector,
-				&fakeSchemaGetter{schemas: tc.schemas}, "",
-			)
-			for entityType, expectedObjectList := range tc.expectedCustomEntities {
-				require.NotNil(t, ks.CustomEntities[entityType])
-				objectList := lo.Map(ks.CustomEntities[entityType].Entities, func(e CustomEntity, _ int) custom.Object {
-					return e.Object
-				})
-				require.Equal(t, expectedObjectList, objectList)
-			}
-
-			translationFailures := failuresCollector.PopResourceFailures()
-			for nsName, message := range tc.expectedTranslationFailures {
-				hasError := lo.ContainsBy(translationFailures, func(f failures.ResourceFailure) bool {
-					fmt.Println(f.Message())
-					return f.Message() == message && lo.ContainsBy(f.CausingObjects(), func(o client.Object) bool {
-						return o.GetNamespace() == nsName.Namespace && o.GetName() == nsName.Name
-					})
-				})
-				require.Truef(t, hasError, "translation error for KongCustomEntity %s not found", nsName)
+			err = isRemotePluginReferenceAllowed(logr.Discard(), s, pluginReference{
+				Referrer:  tc.referrer,
+				Namespace: tc.pluginNamespace,
+				Name:      tc.pluginName,
+			})
+			if tc.shouldAllow {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
 			}
 		})
 	}

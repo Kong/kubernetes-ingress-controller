@@ -7,6 +7,12 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.3.1](#331)
+ - [3.3.0](#330)
+ - [3.2.4](#324)
+ - [3.2.3](#323)
+ - [3.2.2](#322)
+ - [3.2.1](#321)
  - [3.2.0](#320)
  - [3.1.6](#316)
  - [3.1.5](#315)
@@ -18,6 +24,7 @@ Adding a new version? You'll need three changes:
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.6](#2126)
  - [2.12.5](#2125)
  - [2.12.4](#2124)
  - [2.12.3](#2123)
@@ -91,13 +98,145 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.3.1]
+
+> Release date: 2024-08-28
+
+### Fixed
+
+- Fixed `KongUpstreamPolicy` reconciler to not index `HTTPRoute` when Gateway API
+  CRDs are not installed.
+  [#6454](https://github.com/Kong/kubernetes-ingress-controller/pull/6454)
+
+## [3.3.0]
+
+> Release date: 2024-08-26
+
+### Highlights
+
+- 📊 **Observability of Konnect Requests**: Instrumented tracing headers for B3
+  propogation and datadog in requests sent to Konnect APIs. When error happens in
+  requests to Konnect APIs, logs with error level are printed with status code
+  and returned tracing data from Konnnect side.
+- 🏗️ **KongCustomEntitty Promoted to Beta**: With multiple improvements of using
+  custom entities in KIC: supporting custom entities in last valid configurations,
+  generating one entity per each referenced foreign entity of `KongCustomEntity`,
+  and allowing `KongCustomEntity` to be referenced in `KongPlugin`s in other
+  namespaces, `KongCustomEntity` feature gate is promoted to beta and enabled by
+  default. This makes using custom entities easier.
+
+### Added
+
+- `KongCustomEntity` is now supported by the `FallbackConfiguration` feature.
+  [#6286](https://github.com/Kong/kubernetes-ingress-controller/pull/6286)
+- It is now possible to disable synchronization of consumers to Konnect through the
+  flag `--konnect-disable-consumers-sync`.
+  [#6313](https://github.com/Kong/kubernetes-ingress-controller/pull/6313)
+- Allow `KongCustomEntity` to refer to plugins in another namespace via 
+  `spec.parentRef.namespace`. The reference is allowed only when there is a
+  `ReferenceGrant` in the namespace of the `KongPlugin` to grant permissions
+  to `KongCustomEntity` of referring to `KongPlugin`.
+  [#6289](https://github.com/Kong/kubernetes-ingress-controller/pull/6289)
+- Konnect configuration updates are now handled separately from gateway
+  updates. This allows the controller to handle sync errors for the gateway and
+  Konnect speparately, and avoids one blocking the other.
+  The period of uploading configuration to Konnect changed to 30 seconds by
+  default. The period can be set by the added flag
+  `--konnect-upload-config-period`, with a minimum period of 10 seconds.
+  [#6341](https://github.com/Kong/kubernetes-ingress-controller/pull/6341)
+  [#6349](https://github.com/Kong/kubernetes-ingress-controller/pull/6349)
+  [#6352](https://github.com/Kong/kubernetes-ingress-controller/pull/6352)
+- Added `duration` field in logs after successfully sent configuration to Kong
+  gateway or Konnect.
+  [#6360](https://github.com/Kong/kubernetes-ingress-controller/pull/6360)
+- `KongCustomEntity` is now included in last valid configuration retrieved from
+  Kong gateways.
+  [#6305](https://github.com/Kong/kubernetes-ingress-controller/pull/6305)
+- Added Prometheus metrics `ingress_controller_translation_duration_milliseconds`
+  and `ingress_controller_fallback_translation_duration_milliseconds` to
+  record duration of translating Kubernetes resources to Kong state in normal
+  state and fallback mode.
+  [#6366](https://github.com/Kong/kubernetes-ingress-controller/pull/6366)
+- Instrumented Konnect APIs clients (license, nodes, CP admin) with trace logging.
+  On responses with error status codes, downstream tracing headers are logged with
+  Error level to enable correlating Konnect-side logs and traces with customer-side
+  KIC logs. Successful responses are logged with Trace level.
+  [#6420](https://github.com/Kong/kubernetes-ingress-controller/pull/6420)
+- Added flags `--gateway-discovery-readiness-check-interval` and
+  `--gateway-discovery-readiness-check-timeout` to configure interval of
+  reconciliation to check readiness of gateways and timeouts of readiness
+  checks of a gateway instance.
+  Their default values are `10s` and `5s` and the readiness check timeout must
+  be less than the reconciliation interval.
+  [#6434](https://github.com/Kong/kubernetes-ingress-controller/pull/6434)
 
 ### Fixed
 
 - Services using `Secret`s containing the same certificate as client certificates
   by annotation `konghq.com/client-cert` can be correctly translated.
   [#6228](https://github.com/Kong/kubernetes-ingress-controller/pull/6228)
+- Generate one entity for each attached foreign entity if a `KongCustomEntity`
+  resource is attached to multiple foreign Kong entities.
+  [#6280](https://github.com/Kong/kubernetes-ingress-controller/pull/6280)
+- Only reconcile `KongUpstreamPolicy` referenced by `Services` or
+  `KongServiceFacades`(If `KongServiceFacade` features gate enabled) that are
+  used as backends of any `Ingress` or `HTTPRoute` reconciled by current
+  controller.
+  [#6421](https://github.com/Kong/kubernetes-ingress-controller/pull/6421)
+
+### Changed
+
+- Promote `KongCustomEntity` feature gate to beta thus it is enabled by default.
+  [#6387](https://github.com/Kong/kubernetes-ingress-controller/pull/6387)
+
+## [3.2.4]
+
+> Release date: 2024-08-20
+
+### Changed
+
+- Check Kong Gateway readiness concurrently. This greatly reduces the time which
+  is required to check all Gateway instances readiness, especially when there's many
+  of them. Increased individual readiness check timeout from 1s to 5s.
+  [#6347](https://github.com/Kong/kubernetes-ingress-controller/pull/6347)
+  [#6357](https://github.com/Kong/kubernetes-ingress-controller/pull/6357)
+
+### Fixed
+
+- Do not update `Programmed` condition in status of resources to `Unknown` when
+  there are existing `Programmed` condition.
+  [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
+
+## 3.2.3
+
+> Release date: 2024-07-23
+
+### Fixed
+
+- Fixed the reference checker in checking permission of remote plugins to use
+  the correct namespace of `ReferenceGrant` required. Add trace logging to
+  `ReferenceGrant` check functions.
+  [#6295](https://github.com/Kong/kubernetes-ingress-controller/pull/6295)
+  [#6302](https://github.com/Kong/kubernetes-ingress-controller/pull/6302)
+
+## 3.2.2
+
+> Release date: 2024-07-01
+
+### Fixed
+
+- Fixed an issue where new gateways were not being populated with the current configuration when
+  `FallbackConfiguration` feature gate was turned on. Previously, configuration updates were skipped
+  if the Kubernetes config cache did not change, leading to inconsistencies. Now, the system ensures
+  that all gateways are populated with the latest configuration regardless of cache changes.
+  [#6271](https://github.com/Kong/kubernetes-ingress-controller/pull/6271)
+
+## 3.2.1
+
+> Release date: 2024-06-28
+
+### Fixed
+
 - Do not try recovering from gateways synchronization errors with fallback configuration
   (either generated or the last valid one) when an unexpected error (e.g. 5xx or network issue) occurs.
   [#6237](https://github.com/Kong/kubernetes-ingress-controller/pull/6237)
@@ -785,6 +924,19 @@ Adding a new version? You'll need three changes:
 [KIC CRDs reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/custom-resources/
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
+
+## [2.12.6]
+
+> Release date: 2024-08-20
+
+### Fixed
+
+- Do not update `Programmed` condition in status of resources to `Unknown` when
+  there are existing `Programmed` condition.
+  [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
+- Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
+  used as Kong credentials.	  used as Kong credentials.
+  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)	  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
 
 ## [2.12.5]
 
@@ -3585,6 +3737,12 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.3.0...v3.3.1
+[3.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.4...v3.3.0
+[3.2.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.3...v3.2.4
+[3.2.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.2...v3.2.3
+[3.2.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.1...v3.2.2
+[3.2.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.6...v3.2.0
 [3.1.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.5...v3.1.6
 [3.1.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.1.4...v3.1.5
@@ -3596,6 +3754,7 @@ Please read the changelog and test in your environment.
 [3.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.6
 [2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4...v2.12.5
 [2.12.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.3...v2.12.4
 [2.12.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.2...v2.12.3

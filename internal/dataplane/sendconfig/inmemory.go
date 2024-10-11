@@ -13,8 +13,8 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type ConfigService interface {
@@ -66,7 +66,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		}
 		for entityType, entities := range targetState.CustomEntities {
 			unmarshaledConfig[entityType] = entities
-			s.logger.V(util.DebugLevel).Info("Filled custom entities", "entity_type", entityType)
+			s.logger.V(logging.DebugLevel).Info("Filled custom entities", "entity_type", entityType)
 		}
 		config, err = json.Marshal(unmarshaledConfig)
 		if err != nil {

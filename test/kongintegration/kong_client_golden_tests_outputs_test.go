@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
@@ -38,11 +39,17 @@ func TestKongClientGoldenTestsOutputs(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	// TODO: Test EE features as well (requires kong/kong-gateway + license).
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4815
+	// By default, run only non-EE tests.
 	goldenTestsOutputsPaths := lo.Filter(allGoldenTestsOutputsPaths(t), func(path string, _ int) bool {
 		return !strings.Contains(path, "-ee/") // Skip Enterprise tests.
 	})
+	// If the Kong Enterprise is enabled, run all tests.
+	if testenv.KongEnterpriseEnabled() {
+		if testenv.KongLicenseData() == "" {
+			t.Skip("Kong Enterprise enabled, but no license data provided")
+		}
+		goldenTestsOutputsPaths = allGoldenTestsOutputsPaths(t)
+	}
 
 	expressionRoutesOutputsPaths := lo.Filter(goldenTestsOutputsPaths, func(path string, _ int) bool {
 		return strings.Contains(path, "expression-routes-on_")

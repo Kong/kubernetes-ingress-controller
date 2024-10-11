@@ -71,7 +71,8 @@ Features that reach GA and over time become stable will be removed from this tab
 | KongServiceFacade          | `false` | Alpha | 3.1.0  | TBD   |
 | SanitizeKonnectConfigDumps | `true`  | Beta  | 3.1.0  | TBD   |
 | FallbackConfiguration      | `false` | Alpha | 3.2.0  | TBD   |
-| KongCustomEntity           | `false` | Alpha | 3.2.0  | TBD   |
+| KongCustomEntity           | `false` | Alpha | 3.2.0  | 3.3.0 |
+| KongCustomEntity           | `true`  | Beta  | 3.3.0  | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

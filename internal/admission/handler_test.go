@@ -21,7 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -414,7 +414,7 @@ func TestHandleSecret(t *testing.T) {
 				Operation: admissionv1.Update,
 			}
 
-			logger := testr.NewWithOptions(t, testr.Options{Verbosity: util.DebugLevel})
+			logger := testr.NewWithOptions(t, testr.Options{Verbosity: logging.DebugLevel})
 			referenceIndexer := ctrlref.NewCacheIndexers(logger)
 
 			handler := RequestHandler{

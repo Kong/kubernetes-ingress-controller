@@ -3,6 +3,7 @@ package translator
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,7 +112,7 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			rc := gatewayapi.NewRefCheckerForRoute(tc.route, tc.backendRef)
+			rc := gatewayapi.NewRefCheckerForRoute(logr.Discard(), tc.route, tc.backendRef)
 			result := rc.IsRefAllowedByGrant(tc.allowedRefs)
 			require.Equal(t, tc.expected, result)
 		})

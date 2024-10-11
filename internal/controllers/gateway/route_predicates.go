@@ -14,7 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
-func isRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
+func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,
 ) bool {
 	route, ok := obj.(routeT)
@@ -103,6 +103,6 @@ func isOrWasRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, e event.UpdateEvent,
 ) bool {
 	oldObj, newObj := e.ObjectOld, e.ObjectNew
-	return isRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, oldObj) ||
-		isRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, newObj)
+	return IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, oldObj) ||
+		IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, newObj)
 }

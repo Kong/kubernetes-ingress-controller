@@ -107,13 +107,13 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return false // We don't need to enqueue from generic.
 				},
 				CreateFunc: func(e event.CreateEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+					return IsRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
 				},
 				UpdateFunc: func(e event.UpdateEvent) bool {
 					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
 				},
 				DeleteFunc: func(e event.DeleteEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+					return IsRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
 				},
 			}),
 		).

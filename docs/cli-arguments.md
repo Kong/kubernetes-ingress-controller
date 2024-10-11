@@ -42,6 +42,8 @@
 | `--feature-gates` | `list of string=bool` | A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. See the Feature Gates documentation for information and available options: https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md. |  |
 | `--gateway-api-controller-name` | `string` | The controller name to match on Gateway API resources. | `konghq.com/kic-gateway-controller` |
 | `--gateway-discovery-dns-strategy` | `dns-strategy` | DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod. | `"ip"` |
+| `--gateway-discovery-readiness-check-interval` | `duration` | Interval of readiness checks on gateway admin API clients for discovery. | `10s` |
+| `--gateway-discovery-readiness-check-timeout` | `duration` | Timeout of readiness checks on gateway admin clients. | `5s` |
 | `--gateway-to-reconcile` | `namespaced-name` | Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway. |  |
 | `--health-probe-bind-address` | `string` | The address the probe endpoint binds to. | `:10254` |
 | `--ingress-class` | `string` | Name of the ingress class to route through this controller. | `kong` |
@@ -67,6 +69,7 @@
 | `--kong-workspace` | `string` | Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces. |  |
 | `--konnect-address` | `string` | Base address of Konnect API. | `https://us.kic.api.konghq.com` |
 | `--konnect-control-plane-id` | `string` | An ID of a control plane that is to be synchronized with data plane configuration. |  |
+| `--konnect-disable-consumers-sync` | `bool` | Disable synchronization of consumers with Konnect. | `false` |
 | `--konnect-initial-license-polling-period` | `duration` | Polling period to be used before the first license is retrieved. | `1m0s` |
 | `--konnect-license-polling-period` | `duration` | Polling period to be used after the first license is retrieved. | `12h0m0s` |
 | `--konnect-licensing-enabled` | `bool` | Retrieve licenses from Konnect if available. Overrides licenses provided via the environment. | `false` |
@@ -76,6 +79,7 @@
 | `--konnect-tls-client-cert-file` | `string` | Konnect TLS client certificate file path. |  |
 | `--konnect-tls-client-key` | `string` | Konnect TLS client key. |  |
 | `--konnect-tls-client-key-file` | `string` | Konnect TLS client key file path. |  |
+| `--konnect-upload-config-period` | `duration` | Period of uploading Kong configuration. | `30s` |
 | `--kubeconfig` | `string` | Path to the kubeconfig file. |  |
 | `--log-format` | `string` | Format of logs of the controller. Allowed values are text and json. | `text` |
 | `--log-level` | `string` | Level of logging for the controller. Allowed values are trace, debug, info, and error. | `info` |

@@ -88,6 +88,7 @@ type Translator struct {
 
 	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
 	schemaServiceProvider SchemaServiceProvider
+	customEntityTypes     []string
 
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
@@ -215,6 +216,10 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 				t.registerSuccessfullyTranslatedObject(collection.Entities[i].K8sKongCustomEntity)
 			}
 		}
+		// Update types of translated custom entities in the round of translation
+		// for dumping them from Kong gateway in config fetcher,
+		// because running full build of Kong configuration to get KongState is a heavy operation.
+		t.customEntityTypes = result.CustomEntityTypes()
 	}
 
 	// generate Certificates and SNIs
@@ -264,6 +269,13 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 // InjectLicenseGetter sets a license getter to be used by the translator.
 func (t *Translator) InjectLicenseGetter(licenseGetter license.Getter) {
 	t.licenseGetter = licenseGetter
+}
+
+func (t *Translator) CustomEntityTypes() []string {
+	if t.featureFlags.KongCustomEntity {
+		return t.customEntityTypes
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------

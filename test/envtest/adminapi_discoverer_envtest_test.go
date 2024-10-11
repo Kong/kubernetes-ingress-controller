@@ -96,7 +96,7 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 	}
 }
 
-func testPodReference(name, ns string) *corev1.ObjectReference { //nolint:unparam
+func testPodReference(name, ns string) *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		Kind:      "Pod",
 		Namespace: ns,

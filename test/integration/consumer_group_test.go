@@ -149,7 +149,7 @@ func TestConsumerGroup(t *testing.T) {
 			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 				"apikey": consumer.Name,
 			})
-			resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+			resp, err := helpers.DefaultHTTPClient().Do(req)
 			if err != nil {
 				t.Logf("WARNING: consumer %q failed to make a request: %v", consumer.Name, err)
 				return false
@@ -194,7 +194,7 @@ func TestConsumerGroup(t *testing.T) {
 		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
 			"apikey": four.Name,
 		})
-		resp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -208,10 +208,10 @@ func TestConsumerGroup(t *testing.T) {
 		}
 
 		// this should not see the header, it uses a consumer in the group on another route
-		clear := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+		clearReq := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 			"apikey": four.Name,
 		})
-		clearResp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(clear)
+		clearResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(clearReq)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -228,7 +228,7 @@ func TestConsumerGroup(t *testing.T) {
 		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
 			"apikey": "test-consumer-3",
 		})
-		emptyResp, err := helpers.DefaultHTTPClientWithProxy(proxyHTTPURL).Do(empty)
+		emptyResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(empty)
 		if !assert.NoError(c, err) {
 			return
 		}

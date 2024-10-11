@@ -66,13 +66,17 @@ func testKongServiceFacade(t *testing.T, name string) *incubatorv1alpha1.KongSer
 	})
 }
 
-func testKongPlugin(t *testing.T, name string) *kongv1.KongPlugin {
-	return helpers.WithTypeMeta(t, &kongv1.KongPlugin{
+func testKongPlugin(t *testing.T, name string, modifiers ...func(p *kongv1.KongPlugin)) *kongv1.KongPlugin {
+	p := helpers.WithTypeMeta(t, &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: testNamespace,
 		},
 	})
+	for _, mod := range modifiers {
+		mod(p)
+	}
+	return p
 }
 
 func testKongClusterPlugin(t *testing.T, name string) *kongv1.KongClusterPlugin {

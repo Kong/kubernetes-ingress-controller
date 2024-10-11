@@ -14,9 +14,15 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sclient "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
@@ -75,7 +81,7 @@ func TestCustomEntityExample(t *testing.T) {
 		Assess("degraphql plugin works as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			t.Log("Waiting for graphQL service to be available")
-			helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", nil, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
 
 			t.Log("injecting data for graphQL service")
 			injectDataURL := proxyURL.String() + "/v2/query"
@@ -128,7 +134,117 @@ func TestCustomEntityExample(t *testing.T) {
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+
+			return ctx
+		}).
+		Assess("another ingress using the same degraphql plugin should also work", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			const (
+				ingressNamespace = "default"
+				serviceName      = "hasura"
+				ingressName      = "hasura-ingress-graphql"
+				alterServiceName = "hasura-alter"
+				alterIngressName = "hasura-ingress-graphql-alter"
+			)
+			r := conf.Client().Resources()
+
+			t.Log("creating alternative service")
+			svc := corev1.Service{}
+			require.NoError(t, r.Get(ctx, serviceName, ingressNamespace, &svc))
+			alterService := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        alterServiceName,
+					Namespace:   ingressNamespace,
+					Labels:      svc.Labels,
+					Annotations: svc.Annotations,
+				},
+			}
+			alterService.Spec = *svc.Spec.DeepCopy()
+			alterService.Spec.ClusterIP = ""
+			alterService.Spec.ClusterIPs = []string{}
+			require.NoError(t, r.Create(ctx, alterService))
+
+			t.Log("creating alternative ingress with the same degraphql plugin attached")
+			ingress := netv1.Ingress{}
+			require.NoError(t, r.Get(ctx, ingressName, ingressNamespace, &ingress))
+			alterIngress := &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        alterIngressName,
+					Namespace:   ingressNamespace,
+					Labels:      ingress.Labels,
+					Annotations: ingress.Annotations,
+				},
+			}
+			alterIngress.Spec = *ingress.Spec.DeepCopy()
+			for i := range alterIngress.Spec.Rules {
+				alterIngress.Spec.Rules[i].Host = "alter-graphql.service.example"
+				for j := range alterIngress.Spec.Rules[i].HTTP.Paths {
+					alterIngress.Spec.Rules[i].HTTP.Paths[j].Backend = netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: alterServiceName,
+							Port: netv1.ServiceBackendPort{
+								Number: int32(80),
+							},
+						},
+					}
+				}
+			}
+			require.NoError(t, r.Create(ctx, alterIngress))
+
+			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
+			proxyURL := GetHTTPURLFromCtx(ctx)
+			helpers.EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+
+			return ctx
+		}).
+		Assess("should apply last valid configuration with custom entities", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			c, err := clientset.NewForConfig(conf.Client().RESTConfig())
+			require.NoError(t, err)
+			kceClient := c.ConfigurationV1alpha1().KongCustomEntities("default")
+			customEntity, err := kceClient.Get(ctx, "degraphql-route-example", metav1.GetOptions{})
+			require.NoError(t, err)
+			t.Logf("update the custom entity to build invalid Kong configuration")
+			customEntity.Spec.Fields = apiextensionsv1.JSON{
+				Raw: []byte(`{"uri":"/contacts","query":"aaaa","foo":"bar"}`),
+			}
+			_, err = kceClient.Update(ctx, customEntity, metav1.UpdateOptions{})
+			require.NoError(t, err)
+
+			t.Log("Deleting existing pod and wait for pod re-create and check if last valid config is applied")
+			kongNamespace := GetNamespaceForT(ctx, t)
+			k8sClient, err := k8sclient.NewForConfig(conf.Client().RESTConfig())
+			require.NoError(t, err)
+			podList, err := k8sClient.CoreV1().Pods(kongNamespace).List(ctx, metav1.ListOptions{
+				LabelSelector: "app.kubernetes.io/name=kong",
+			})
+			require.NoError(t, err)
+			require.Len(t, podList.Items, 1)
+			existingPod := podList.Items[0]
+			t.Logf("Deleting existing Kong gateway pod %s/%s", kongNamespace, existingPod.Name)
+			require.NoError(t,
+				k8sClient.CoreV1().Pods(kongNamespace).Delete(ctx, existingPod.Name, metav1.DeleteOptions{}),
+			)
+			t.Logf("Waiting for new Kong gateway pod to be re-created")
+			require.Eventually(t, func() bool {
+				podList, err := k8sClient.CoreV1().Pods(kongNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: "app.kubernetes.io/name=kong",
+				})
+				require.NoError(t, err)
+				if len(podList.Items) != 1 {
+					return false
+				}
+				newPod := podList.Items[0]
+				if newPod.Name != existingPod.Name && newPod.Status.Phase == corev1.PodRunning {
+					t.Logf("Recreated new pod %s/%s", kongNamespace, newPod.Name)
+					return true
+				}
+				return false
+			}, consts.StatusWait, consts.WaitTick)
+
+			t.Log("verifying degraphQL plugin and degraphql_routes entity still works with last valid config")
+			proxyURL := GetHTTPURLFromCtx(ctx)
+			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
+			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).

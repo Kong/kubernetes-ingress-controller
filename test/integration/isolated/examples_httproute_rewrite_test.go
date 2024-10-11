@@ -41,7 +41,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, string(manifest)))
 				cleaner.AddManifest(string(manifest))
 
-				t.Logf("verifying that the UDPIngress routes traffic properly")
+				t.Logf("verifying that the HTTPRoute routes traffic properly")
 
 				t.Logf("asserting /full-path-prefix path is redirected to /echo?msg=hello from the manifest")
 				helpers.EventuallyGETPath(
@@ -49,6 +49,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 					proxyURL,
 					proxyURL.Host,
 					"/full-path-prefix",
+					nil,
 					http.StatusOK,
 					"hello",
 					nil,
@@ -62,6 +63,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 					proxyURL,
 					proxyURL.Host,
 					"/old-prefix?msg=hello",
+					nil,
 					http.StatusOK,
 					"hello",
 					nil,

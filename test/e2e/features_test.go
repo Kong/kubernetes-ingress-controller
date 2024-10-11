@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -118,10 +120,13 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("deploying kong components")
 	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
-	const firstCertificateCommonName = "first.example"
+	certPool := x509.NewCertPool()
+	const firstCertificateHostName = "first.example"
 	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
-		certificate.WithCommonName(firstCertificateCommonName),
+		certificate.WithCommonName(firstCertificateHostName),
+		certificate.WithDNSNames(firstCertificateHostName),
 	)
+	require.True(t, certPool.AppendCertsFromPEM(firstCertificateCrt))
 	firstCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "admission-cert",
@@ -133,10 +138,12 @@ func TestWebhookUpdate(t *testing.T) {
 		},
 	}
 
-	const secondCertificateCommonName = "second.example"
+	const secondCertificateHostName = "second.example"
 	secondCertificateCrt, secondCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
-		certificate.WithCommonName(secondCertificateCommonName),
+		certificate.WithCommonName(secondCertificateHostName),
+		certificate.WithDNSNames(secondCertificateHostName),
 	)
+	require.True(t, certPool.AppendCertsFromPEM(secondCertificateCrt))
 	secondCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "admission-cert",
@@ -201,35 +208,26 @@ func TestWebhookUpdate(t *testing.T) {
 		deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
+	checkCertificate := func(hostname string) {
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			_, err := tls.Dial("tcp", admissionAddress+":443", &tls.Config{
+				MinVersion: tls.VersionTLS12,
+				RootCAs:    certPool,
+				ServerName: hostname,
+			})
+			assert.NoError(c, err)
+		}, 1*time.Minute, time.Second)
+	}
+
 	t.Log("checking initial certificate")
-	require.Eventually(t, func() bool {
-		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
-		if err != nil {
-			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
-			return false
-		}
-		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
-		t.Logf("subject common name of certificate: %s", certCommonName)
-		return certCommonName == firstCertificateCommonName
-	}, time.Minute*2, time.Second)
+	checkCertificate(firstCertificateHostName)
 
 	t.Log("changing certificate")
 	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Update(ctx, secondCertificate, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("checking second certificate")
-	require.Eventually(t, func() bool {
-		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
-		if err != nil {
-			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
-			return false
-		}
-		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
-		t.Logf("subject common name of certificate: %s", certCommonName)
-		return certCommonName == secondCertificateCommonName
-	}, time.Minute*10, time.Second)
+	checkCertificate(secondCertificateHostName)
 }
 
 // TestDeployAllInOneDBLESSGateway tests the Gateway feature flag and the admission controller with no user-provided

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
@@ -334,20 +335,21 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 	require.NoError(t, err)
 
 	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
+	client := cleanhttp.DefaultClient()
+	tr := cleanhttp.DefaultTransport()
+	// Anything related to TLS can be ignored, because only availability is being tested here.
+	// Testing communicating over TLS is done as part of actual E2E test.
+	tr.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true, //nolint:gosec
+	}
+	client.Transport = tr
+
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
 		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			client := &http.Client{
-				Timeout: time.Second * 30,
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true,
-					},
-				},
-			}
 
 			forwardCtx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -361,6 +363,5 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 		}()
 	}
-
 	wg.Wait()
 }

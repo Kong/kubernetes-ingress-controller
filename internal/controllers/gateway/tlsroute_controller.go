@@ -103,13 +103,13 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return false // we don't need to enqueue from generic
 				},
 				CreateFunc: func(e event.CreateEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.TLSRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+					return IsRouteAttachedToReconciledGateway[*gatewayapi.TLSRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
 				},
 				UpdateFunc: func(e event.UpdateEvent) bool {
 					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.TLSRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
 				},
 				DeleteFunc: func(e event.DeleteEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.TLSRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
+					return IsRouteAttachedToReconciledGateway[*gatewayapi.TLSRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
 				},
 			}),
 		).

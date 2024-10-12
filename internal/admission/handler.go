@@ -64,7 +64,7 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if response.Allowed != true {
+	if !response.Allowed {
 		h.Logger.Info(
 			"Object admission request not allowed",
 			"name", review.Request.Name,

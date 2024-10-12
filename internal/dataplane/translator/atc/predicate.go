@@ -105,6 +105,8 @@ type Predicate struct {
 	value Literal
 }
 
+var _ Matcher = Predicate{}
+
 // Expression returns a string representation of a Predicate.
 func (p Predicate) Expression() string {
 	lhs := p.field.String()

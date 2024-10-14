@@ -63,6 +63,17 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	if !response.Allowed {
+		h.Logger.Info(
+			"Object admission request not allowed",
+			"name", review.Request.Name,
+			"kind", review.Request.Kind.Kind,
+			"namespace", review.Request.Namespace,
+			"message", response.Result.Message,
+		)
+	}
+
 	review.Response = response
 
 	if err := json.NewEncoder(w).Encode(&review); err != nil {

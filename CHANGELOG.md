@@ -244,6 +244,10 @@ Adding a new version? You'll need three changes:
   Service, KongConsumer, KongConsumerGroup object to allow plugins to be associated with combinations
   of those objects.
   [#6252](https://github.com/Kong/kubernetes-ingress-controller/pull/6252)
+  
+### Added
+- Add `INFO` log when admission result is not allowed
+  [#6084](https://github.com/Kong/kubernetes-ingress-controller/issues/6084)
 
 ## 3.2.0
 

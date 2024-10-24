@@ -1,3 +1,5 @@
 [env]
-
 MISE_DATA_DIR='bin/'
+
+[settings]
+experimental = true # To enable installation of Go tools from source with mise.

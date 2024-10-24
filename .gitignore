@@ -70,7 +70,7 @@ railgun
 *~
 
 # Delve Debugger Output
-__debug_bin
+__debug_bin*
 
 # tmp files
 client-gen-tmp/*

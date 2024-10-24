@@ -49,17 +49,12 @@ LDFLAGS_METADATA ?= \
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: _download_tool
-_download_tool:
-	(cd third_party && go mod tidy && \
-		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
-
 TOOLS_VERSIONS_FILE = .tools_versions.yaml
 
 MISE := $(shell which mise)
 .PHONY: mise
 mise:
-	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
+	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it and run after installation 'mise settings set experimental true'" && exit 1)
 
 .PHONY: tools
 tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-ref-docs skaffold staticcheck.download
@@ -133,10 +128,11 @@ yq: mise # Download yq locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=yq
 	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
 
-DLV = $(PROJECT_DIR)/bin/dlv
+DELVE_VERSION = $(shell yq -ojson -r '.delve' < $(TOOLS_VERSIONS_FILE))
+DLV = $(PROJECT_DIR)/bin/installs/go-github-com-go-delve-delve-cmd-dlv/$(DELVE_VERSION)/bin/dlv
 .PHONY: dlv
 dlv: ## Download dlv locally if necessary.
-	@$(MAKE) _download_tool TOOL=dlv
+	mise install go:github.com/go-delve/delve/cmd/dlv@$(DELVE_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
@@ -209,7 +205,7 @@ fmt:
 	go fmt ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck 
+lint: verify.tidy golangci-lint staticcheck
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download
@@ -647,7 +643,7 @@ _ensure-namespace:
 	@kubectl create ns $(KONG_NAMESPACE) 2>/dev/null || true
 
 .PHONY: debug
-debug: install _ensure-namespace
+debug: dlv install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
@@ -667,7 +663,7 @@ debug: install _ensure-namespace
 # specific substitution paths can be isolated to this project only and not shared
 # across projects under $HOME or common XDG_CONFIG_HOME.
 .PHONY: debug.connect
-debug.connect:
+debug.connect: dlv
 	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
 
 SKAFFOLD_DEBUG_PROFILE ?= debug_multi_gw

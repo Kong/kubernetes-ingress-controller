@@ -52,7 +52,6 @@ func TestExtractAPIErrors(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			out := deckerrors.ExtractAPIErrors(tc.input)
 			require.Equal(t, tc.expected, out)
@@ -104,7 +103,6 @@ func TestExtractCRUDActionErrors(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			out := deckerrors.ExtractCRUDActionErrors(tc.input)
 			require.Equal(t, tc.expected, out)

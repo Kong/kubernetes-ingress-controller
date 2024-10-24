@@ -127,7 +127,6 @@ func TestGetIngressClassParameters(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ingressClass := &netv1.IngressClass{
 				ObjectMeta: metav1.ObjectMeta{

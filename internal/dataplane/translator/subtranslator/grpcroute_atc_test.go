@@ -218,7 +218,6 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule}, nil)
 			routes := GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, 0)
@@ -269,7 +268,6 @@ func TestMethodMatcherFromGRPCMethodMatch(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expression, methodMatcherFromGRPCMethodMatch(&tc.match).Expression())
 		})
@@ -505,9 +503,7 @@ func TestSplitGRPCRoute(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		tc := tc
-		indexStr := strconv.Itoa(i)
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			splitMatches := SplitGRPCRoute(tc.grpcRoute)
 			require.Len(t, splitMatches, len(tc.expectedSplitMatches), "should have same number of split matches with expected")
 			for i, splitGRPCRoute := range tc.expectedSplitMatches {
@@ -591,9 +587,7 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		tc := tc
-		indexStr := strconv.Itoa(i)
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			traits := CalculateGRCPRouteMatchPriorityTraits(tc.match)
 			require.Equal(t, tc.expectedTraits, traits)
 		})
@@ -629,9 +623,7 @@ func TestGRPCRouteTraitsEncodeToPriority(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		tc := tc
-		indexStr := strconv.Itoa(i)
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			priority := tc.traits.EncodeToPriority()
 			require.Equal(t, tc.exprectedPriority, priority)
 		})
@@ -1058,9 +1050,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			splitMatchesWithPriorities := AssignRoutePriorityToSplitGRPCRouteMatches(logr.Discard(), tc.splitGRPCRouteMatches)
 			require.Lenf(t, splitMatchesWithPriorities, len(tc.priorities),
 				"should have expeceted number of results")
@@ -1259,9 +1249,7 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			r := KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(tc.splitGRPCMatchWithPriority)
 			grpcRoute := tc.splitGRPCMatchWithPriority.Match.Source
 			tc.expectedRoute.Route.Tags = util.GenerateTagsForObject(grpcRoute)

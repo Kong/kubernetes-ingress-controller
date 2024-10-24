@@ -245,7 +245,6 @@ func (m *httpRouteRuleMeta) matches() httpRouteMatchMetaList {
 	matches := make([]httpRouteMatchMeta, 0, len(m.Rule.Matches))
 
 	for matchNumber, match := range m.Rule.Matches {
-		match := match
 		matches = append(matches, httpRouteMatchMeta{
 			Match:       &match,
 			RuleNumber:  m.RuleNumber,
@@ -482,7 +481,6 @@ func mergePluginsOfTheSameType(plugins []transformerPlugin) ([]transformerPlugin
 		return p.Type // Name is effectively a plugin type.
 	})
 	for pluginName, plugins := range pluginsByName {
-		plugins := plugins
 		// If we produced multiple plugins of the same type, we need to merge their configurations now.
 		if len(plugins) > 1 {
 			mergedPlugin := transformerPlugin{}

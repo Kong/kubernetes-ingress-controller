@@ -323,7 +323,6 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	// SetLastConfigSHA() method. It's not ideal but it should do for now.
 	c.lock.RLock()
 	for _, cl := range c.clientsProvider.GatewayClients() {
-		cl := cl
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {

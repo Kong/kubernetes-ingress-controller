@@ -43,7 +43,6 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(fmt.Sprintf("%dx%d", tc.subnetC, tc.subnetD), func(t *testing.T) {
 			t.Parallel()
 

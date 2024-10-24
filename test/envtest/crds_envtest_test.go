@@ -185,7 +185,6 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				for i, invalidHashOn := range generateInvalidHashOns() {
-					invalidHashOn := invalidHashOn
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 							HashOn: &invalidHashOn,
@@ -203,7 +202,6 @@ func TestCRDValidations(t *testing.T) {
 					return hashOn.Cookie != nil
 				})
 				for i, invalidHashOn := range invalidHashOns {
-					invalidHashOn := invalidHashOn
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 							HashOnFallback: &invalidHashOn,
@@ -823,7 +821,6 @@ func TestCRDValidations(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ns := CreateNamespace(ctx, t, ctrlClient)
 			tc.scenario(ctx, t, ns.Name)

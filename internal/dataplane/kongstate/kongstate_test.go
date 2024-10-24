@@ -785,9 +785,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			store, _ := store.NewFakeStore(store.FakeObjects{
 				Secrets:       secrets,
 				KongConsumers: tc.k8sConsumers,
@@ -1382,7 +1380,6 @@ func TestFillVaults(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			s, err := store.NewFakeStore(store.FakeObjects{
 				KongVaults: tc.kongVaults,

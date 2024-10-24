@@ -422,9 +422,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
@@ -463,6 +461,5 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			translationFailures := failureCollector.PopResourceFailures()
 			require.Empty(t, translationFailures)
 		})
-
 	}
 }

@@ -136,7 +136,6 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 		}
 
 		for _, httpIngressPath := range ingressRule.HTTP.Paths {
-			httpIngressPath := httpIngressPath
 			httpIngressPath.Path = flattenMultipleSlashes(httpIngressPath.Path)
 
 			if httpIngressPath.Path == "" {

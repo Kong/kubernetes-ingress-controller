@@ -28,7 +28,6 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 
 	routerFlavors := []string{"expressions", "traditional_compatible", "traditional"}
 	for _, rf := range routerFlavors {
-		rf := rf
 		t.Run(rf, func(t *testing.T) {
 			deploy := ManifestDeploy{
 				Path: dblessPath,
@@ -96,7 +95,6 @@ func ensureGatewayDeployedWithRouterFlavor(
 
 		allPodsMatch := true
 		for _, pod := range podList.Items {
-			pod := pod
 			proxyContainer := getContainerInPodSpec(&pod.Spec, proxyContainerName)
 			if proxyContainer == nil {
 				t.Logf("proxy container not found for Pod %s", pod.Name)

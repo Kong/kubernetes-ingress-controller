@@ -12,13 +12,13 @@ linters:
   - asciicheck
   - bodyclose
   - contextcheck
+  - copyloopvar
   - dogsled
   - durationcheck
   - errcheck
   - errname
   - errorlint
   - exhaustive
-  - exportloopref
   - forbidigo
   - gci
   - gocritic

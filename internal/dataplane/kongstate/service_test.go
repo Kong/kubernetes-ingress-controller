@@ -171,8 +171,6 @@ func TestOverrideService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			service := tc.inService
 			for _, k8sSvc := range service.K8sServices {

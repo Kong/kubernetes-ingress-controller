@@ -105,7 +105,6 @@ func TestMetricsAreServed(t *testing.T) {
 			t.Logf("waiting for metrics to be available at %q", metricsURL)
 
 			for _, metric := range wantMetrics {
-				metric := metric
 				t.Run(metric, func(t *testing.T) {
 					require.NoError(t,
 						retry.Do(func() error {

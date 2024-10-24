@@ -93,7 +93,6 @@ func TestSetGatewayClassCondtion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			setGatewayClassCondition(tc.gwc, tc.condition)
 			t.Logf("checking conditions of gateway after setting")

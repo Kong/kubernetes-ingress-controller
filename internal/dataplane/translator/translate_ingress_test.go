@@ -344,7 +344,6 @@ func TestGetDefaultBackendService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())

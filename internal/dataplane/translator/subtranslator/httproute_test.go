@@ -270,7 +270,6 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false)
 			require.Equal(t, tc.expectedErr, err)

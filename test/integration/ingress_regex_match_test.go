@@ -86,14 +86,12 @@ func TestIngressRegexMatchPath(t *testing.T) {
 	cleaner.Add(service)
 
 	for i, tc := range testCases {
-		index := i
-		tc := tc
-		t.Run(fmt.Sprintf("case-%d: %s", index, tc.pathRegex), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case-%d: %s", i, tc.pathRegex), func(t *testing.T) {
 			t.Log("create an ingress")
 			ingress := &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns.Name,
-					Name:      "ingress-regex-path-" + strconv.Itoa(index),
+					Name:      "ingress-regex-path-" + strconv.Itoa(i),
 					Annotations: map[string]string{
 						"konghq.com/strip-path": "true",
 					},
@@ -179,14 +177,12 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 	cleaner.Add(service)
 
 	for i, tc := range testCases {
-		index := i
-		tc := tc
-		t.Run(fmt.Sprintf("case-%d: %s", index, tc.headerRegex), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case-%d: %s", i, tc.headerRegex), func(t *testing.T) {
 			t.Log("create an ingress")
 			ingress := &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns.Name,
-					Name:      "ingress-regex-header-" + strconv.Itoa(index),
+					Name:      "ingress-regex-header-" + strconv.Itoa(i),
 					Annotations: map[string]string{
 						"konghq.com/strip-path":                                 "true",
 						"konghq.com/headers." + strings.ToLower(matchHeaderKey): headerRegexPrefix + tc.headerRegex,

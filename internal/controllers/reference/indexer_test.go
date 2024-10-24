@@ -83,7 +83,6 @@ func TestSetObjectReference(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewCacheIndexers(logr.Discard())
 			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
@@ -128,7 +127,6 @@ func TestDeleteObjectReference(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewCacheIndexers(logr.Discard())
 			err := c.SetObjectReference(testRefService1, testRefSecret1)
@@ -170,7 +168,6 @@ func TestObjectReferred(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewCacheIndexers(logr.Discard())
 			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
@@ -208,7 +205,6 @@ func TestListReferredObjects(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewCacheIndexers(logr.Discard())
 			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
@@ -246,7 +242,6 @@ func TestDeleteReferencesByReferrer(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewCacheIndexers(logr.Discard())
 			err := c.SetObjectReference(testRefService1, testRefSecret1)
@@ -288,7 +283,6 @@ func TestListReferrerObjectsByReferent(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewCacheIndexers(logr.Discard())
 			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)

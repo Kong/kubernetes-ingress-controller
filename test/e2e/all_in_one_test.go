@@ -346,7 +346,6 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

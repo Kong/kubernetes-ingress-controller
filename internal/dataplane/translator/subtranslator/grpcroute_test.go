@@ -344,7 +344,6 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule}, tc.parentRef)
 			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, tc.storer)

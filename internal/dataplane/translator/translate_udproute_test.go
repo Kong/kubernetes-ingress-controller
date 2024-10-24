@@ -485,7 +485,6 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
 				Gateways:  tc.gateways,
@@ -990,7 +989,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
 				Gateways:  tc.gateways,

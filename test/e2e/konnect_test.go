@@ -324,7 +324,6 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	t.Logf("ensuring all %d proxy replicas have consistent IDs assigned in Node API", len(pods))
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

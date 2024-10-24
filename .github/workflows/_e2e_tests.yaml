@@ -106,7 +106,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: kic-image
           path: /tmp
@@ -312,7 +312,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: kic-image
           path: /tmp

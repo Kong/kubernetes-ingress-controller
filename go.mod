@@ -57,7 +57,7 @@ require (
 	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.31.2
 	k8s.io/component-base v0.31.2
-	sigs.k8s.io/controller-runtime v0.19.0
+	sigs.k8s.io/controller-runtime v0.19.1
 	sigs.k8s.io/e2e-framework v0.4.0
 	sigs.k8s.io/gateway-api v1.1.0
 	sigs.k8s.io/kustomize/api v0.17.3

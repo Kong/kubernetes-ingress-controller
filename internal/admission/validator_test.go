@@ -993,7 +993,6 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, testk8sclient.AddToScheme(scheme))
@@ -1389,7 +1388,6 @@ func TestValidator_ValidateVault(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{

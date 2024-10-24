@@ -39,7 +39,6 @@ func ValidateIngress(
 	}
 
 	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, storer) {
-		kg := kg
 		// Validate by using feature of Kong Gateway.
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {

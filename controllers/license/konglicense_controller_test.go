@@ -53,7 +53,6 @@ func TestCompareLicense(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expectedResult,
 				compareKongLicense(tc.license1, tc.license2),
@@ -103,7 +102,6 @@ func TestKongLicenseController_pickLicense(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r := &KongV1Alpha1KongLicenseReconciler{
 				LicenseCache: NewLicenseCache(),

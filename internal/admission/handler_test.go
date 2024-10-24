@@ -397,7 +397,6 @@ func TestHandleSecret(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			validator := KongFakeValidator{
 				Result:  tc.validatorOK,

@@ -415,7 +415,6 @@ func TestTranslateIngressATC(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 			storer := lo.Must(store.NewFakeStore(store.FakeObjects{
@@ -557,7 +556,6 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			traits := calculateIngressRoutePriorityTraits(
 				tc.paths, tc.regexPathPrefix, tc.ingressHost, tc.ingressAnnotations,
@@ -617,7 +615,6 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			priority := tc.traits.EncodeToPriority()
 			require.Equal(t, tc.expectedPriority, priority)
@@ -699,7 +696,6 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			regexPrefix := tc.regexPrefix
 			if regexPrefix == "" {
@@ -758,7 +754,6 @@ func TestHeaderMatcherFromHeaders(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			matcher := headerMatcherFromHeaders(tc.headers)
 			require.Equal(t, tc.expression, matcher.Expression())
@@ -790,7 +785,6 @@ func TestMethodMatcherFromMethods(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		matcher := methodMatcherFromMethods(tc.methods)
 		require.Equal(t, tc.expression, matcher.Expression())
 	}
@@ -825,7 +819,6 @@ func TestSNIMatcherFromSNIs(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		matcher := sniMatcherFromSNIs(tc.snis)
 		require.Equal(t, tc.expression, matcher.Expression())
 	}

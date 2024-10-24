@@ -209,7 +209,6 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
 				TLSRoutes: tc.tcpRoutes,

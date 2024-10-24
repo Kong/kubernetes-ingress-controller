@@ -212,7 +212,6 @@ func validateWithKongGateway(
 	}
 	// Validate by using feature of Kong Gateway.
 	for _, kg := range kongRoutes {
-		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
 			return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())

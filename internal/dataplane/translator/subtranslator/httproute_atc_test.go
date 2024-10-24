@@ -249,7 +249,6 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			routes, err := GenerateKongExpressionRoutesFromHTTPRouteMatches(
 				KongRouteTranslation{
@@ -326,7 +325,6 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expression, generateMatcherFromHTTPRouteMatch(tc.match).Expression())
 		})
@@ -461,7 +459,6 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			traits := CalculateHTTPRouteMatchPriorityTraits(tc.match)
 			require.Equal(t, tc.expectedTraits, traits)
@@ -517,7 +514,6 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expectedPriority, tc.traits.EncodeToPriority())
 		})
@@ -707,9 +703,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			splitHTTPRouteMatches := SplitHTTPRoute(tc.httpRoute)
 			require.Len(t, splitHTTPRouteMatches, len(tc.expectedSplitMatches), "should have same number of split matched with expected")
 			for i, expectedMatch := range tc.expectedSplitMatches {
@@ -720,7 +714,6 @@ func TestSplitHTTPRoutes(t *testing.T) {
 				assert.Equal(t, expectedMatch.MatchIndex, splitHTTPRouteMatches[i].MatchIndex)
 			}
 		})
-
 	}
 }
 
@@ -1046,7 +1039,6 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			splitHTTPRoutesWithPriorities := AssignRoutePriorityToSplitHTTPRouteMatches(logr.Discard(), tc.matches)
 			require.Equal(t, len(tc.priorities), len(splitHTTPRoutesWithPriorities), "should have required number of results")

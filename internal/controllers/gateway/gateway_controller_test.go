@@ -143,7 +143,6 @@ func TestSetGatewayCondtion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			setGatewayCondition(tc.gw, tc.condition)
 			t.Logf("checking conditions of gateway after setting")
@@ -342,7 +341,6 @@ func TestIsGatewayControlled(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tc.expectedResult, isGatewayClassControlled(tc.GatewayClass))
@@ -371,7 +369,6 @@ func TestIsGatewayUnmanaged(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tc.expectedResult, isGatewayClassUnmanaged(tc.GatewayClassAnnotations))

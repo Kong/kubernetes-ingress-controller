@@ -109,7 +109,6 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got, reason := getListenerSupportedRouteKinds(tc.listener)
 			require.Equal(t, tc.expectedSupportedKinds, got)
@@ -256,7 +255,6 @@ func TestGetListenerStatus(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			statuses, err := getListenerStatus(ctx, tc.gateway, tc.kongListens, nil, client)
 			require.NoError(t, err)

@@ -1559,7 +1559,6 @@ func TestTranslateIngress(t *testing.T) {
 	}
 
 	for _, tt := range tts {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			checkOnlyIngressMeta := cmp.Transformer("checkOnlyIngressMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.
@@ -2084,7 +2083,6 @@ func TestMaybeRewriteURI(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := MaybeRewriteURI(&tc.service, true)
 			require.Equal(t, tc.expectedError, err)

@@ -96,7 +96,6 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 		dpconf.DBModeOff,
 		dpconf.DBModePostgres,
 	} {
-		dbMode := dbMode
 		t.Run(fmt.Sprintf("dbmode=%s", dbMode), func(t *testing.T) {
 			c := &fakeDataplaneClient{dbmode: dbMode, t: t}
 			l, err := zap.NewDevelopment()

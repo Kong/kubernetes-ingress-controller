@@ -141,7 +141,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			featureFlags := FeatureFlags{
 				ExpressionRoutes: tc.expressionRoutes,
@@ -2133,7 +2132,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(tc.fakeObjects)
 			require.NoError(t, err)
@@ -2510,7 +2508,6 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(tc.storeObjects)
 			require.NoError(t, err)

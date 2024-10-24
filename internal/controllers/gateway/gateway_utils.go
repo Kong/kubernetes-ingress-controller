@@ -701,7 +701,6 @@ func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gatew
 
 	var attachedRoutes int32
 	for _, route := range httpRouteList.Items {
-		route := route
 		acceptedByGateway := lo.ContainsBy(route.Status.Parents, func(parentStatus gatewayapi.RouteParentStatus) bool {
 			parentRef := parentStatus.ParentRef
 			if parentRef.Group != nil && *parentRef.Group != gatewayapi.V1Group {

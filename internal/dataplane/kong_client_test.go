@@ -122,7 +122,6 @@ func TestUniqueObjects(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			translationFailures := []failures.ResourceFailure{}
 			for _, failedObjs := range tc.failedObjs {
@@ -421,7 +420,6 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			clientsProvider := &mockGatewayClientsProvider{
 				gatewayClients: tc.gatewayClients,

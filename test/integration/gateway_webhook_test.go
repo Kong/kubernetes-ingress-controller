@@ -84,7 +84,6 @@ func TestGatewayValidationWebhook(t *testing.T) {
 			wantCreateErr: false,
 		},
 	} {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			_, gotCreateErr := gatewayClient.GatewayV1().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
 			if tt.wantCreateErr {

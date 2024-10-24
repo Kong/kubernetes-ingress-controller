@@ -458,7 +458,6 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false
 	for _, gateway := range gateways {
-		gateway := gateway
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayapi.RouteParentStatus{
 			ParentRef: gatewayapi.ParentReference{

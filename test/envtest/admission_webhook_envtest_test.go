@@ -656,7 +656,6 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
 			t.Cleanup(func() {
@@ -990,7 +989,6 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			for _, credential := range tc.credentials {
 				require.NoError(t, ctrlClient.Create(ctx, credential))
@@ -1359,7 +1357,6 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 
 	errg := errgroup.Group{}
 	for i := 0; i < count; i++ {
-		i := i
 		errg.Go(func() error {
 			consumerName := fmt.Sprintf("background-noise-consumer-%d", i)
 

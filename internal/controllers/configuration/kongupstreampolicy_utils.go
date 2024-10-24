@@ -278,7 +278,6 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 	// Build the status for each ancestor (Services and KongServiceFacades).
 	ancestorsStatus := make([]ancestorStatus, 0, len(services)+len(serviceFacades))
 	for _, service := range services {
-		service := service
 		acceptedCondition := acceptedCondition
 		programmedCondition := programmedCondition
 
@@ -307,7 +306,6 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 		})
 	}
 	for _, serviceFacade := range serviceFacades {
-		serviceFacade := serviceFacade
 		programmedCondition := programmedCondition
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(&serviceFacade) {
 			// If the KongServiceFacade is not configured, we change it to False.

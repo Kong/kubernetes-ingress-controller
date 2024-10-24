@@ -57,7 +57,6 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			secretNames := listCoreV1ServiceReferredSecrets(tc.service)
 			require.Len(t, secretNames, tc.secretNum)
@@ -119,7 +118,6 @@ func TestListIngressReferredSecrets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			secretNames := listNetV1IngressReferredSecrets(tc.ingress)
 			require.Len(t, secretNames, tc.secretNum)

@@ -17,12 +17,6 @@ updates:
         - k8s.io/klog/*
         - k8s.io/utils
         - k8s.io/kube-openapi
-- package-ecosystem: gomod
-  directory: /third_party/
-  schedule:
-    interval: daily
-  labels:
-  - dependencies
 - package-ecosystem: github-actions
   directory: /
   schedule:

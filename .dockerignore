@@ -14,5 +14,4 @@ generators/
 Dockerfile*
 test/
 keps/
-third_party/
 *.md

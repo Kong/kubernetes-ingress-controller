@@ -24,15 +24,6 @@ endif
 # Configuration - Golang
 # ------------------------------------------------------------------------------
 
-export GO111MODULE=on
-
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
-
 ifeq (Darwin,$(shell uname -s))
 LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
@@ -48,11 +39,6 @@ LDFLAGS_METADATA ?= \
 # ------------------------------------------------------------------------------
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-
-.PHONY: _download_tool
-_download_tool:
-	(cd third_party && go mod tidy && \
-		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 TOOLS_VERSIONS_FILE = .tools_versions.yaml
 
@@ -109,15 +95,14 @@ GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=gotestsum URL=https://github.com/pmalek/mise-gotestsum.git
-	@$(MAKE) mise-install DEP_VER=gotestsum
+	@$(MAKE) mise-plugin-install DEP=gotestsum
+	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
-CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github-com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
-	GOBIN=$(PROJECT_DIR)/bin go install -v \
-		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
+	$(MAKE) mise-install DEP_VER=go:github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
@@ -133,23 +118,24 @@ yq: mise # Download yq locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=yq
 	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
 
-DLV = $(PROJECT_DIR)/bin/dlv
+DELVE_VERSION = $(shell yq -ojson -r '.delve' < $(TOOLS_VERSIONS_FILE))
+DLV = $(PROJECT_DIR)/bin/installs/go-github-com-go-delve-delve-cmd-dlv/$(DELVE_VERSION)/bin/dlv
 .PHONY: dlv
 dlv: ## Download dlv locally if necessary.
-	@$(MAKE) _download_tool TOOL=dlv
+	$(MAKE) mise-install DEP_VER=go:github.com/go-delve/delve/cmd/dlv@$(DELVE_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
 setup-envtest: mise ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
-	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
+	@$(MAKE) mise-plugin-install DEP=setup-envtest
+	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
 STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pbr0ck3r/asdf-staticcheck.git
+	@$(MAKE) mise-plugin-install DEP=staticcheck
 	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
@@ -209,7 +195,7 @@ fmt:
 	go fmt ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck 
+lint: verify.tidy golangci-lint staticcheck
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download
@@ -647,7 +633,7 @@ _ensure-namespace:
 	@kubectl create ns $(KONG_NAMESPACE) 2>/dev/null || true
 
 .PHONY: debug
-debug: install _ensure-namespace
+debug: dlv install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
@@ -667,7 +653,7 @@ debug: install _ensure-namespace
 # specific substitution paths can be isolated to this project only and not shared
 # across projects under $HOME or common XDG_CONFIG_HOME.
 .PHONY: debug.connect
-debug.connect:
+debug.connect: dlv
 	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
 
 SKAFFOLD_DEBUG_PROFILE ?= debug_multi_gw

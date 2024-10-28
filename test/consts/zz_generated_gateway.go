@@ -4,9 +4,9 @@
 package consts
 
 const (
-	GatewayAPIVersion                   = "v1.1.0"
-	GatewayAPIPackageVersion            = "v1.1.0"
-	GatewayStandardCRDsKustomizeURL     = "github.com/kubernetes-sigs/gateway-api/config/crd/?ref=v1.1.0"
-	GatewayExperimentalCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=v1.1.0"
-	GatewayRawRepoURL                   = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.1.0"
+	GatewayAPIVersion                   = "v1.2.0"
+	GatewayAPIPackageVersion            = "v1.2.0"
+	GatewayStandardCRDsKustomizeURL     = "github.com/kubernetes-sigs/gateway-api/config/crd/?ref=v1.2.0"
+	GatewayExperimentalCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=v1.2.0"
+	GatewayRawRepoURL                   = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.2.0"
 )

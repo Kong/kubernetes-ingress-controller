@@ -565,12 +565,12 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 				Match: gatewayapi.GRPCRouteMatch{
 					Headers: []gatewayapi.GRPCHeaderMatch{
 						{
-							Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+							Type:  lo.ToPtr(gatewayapi.GRPCHeaderMatchExact),
 							Name:  gatewayapi.GRPCHeaderName("key1"),
 							Value: "value1",
 						},
 						{
-							Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+							Type:  lo.ToPtr(gatewayapi.GRPCHeaderMatchExact),
 							Name:  gatewayapi.GRPCHeaderName("key2"),
 							Value: "value2",
 						},

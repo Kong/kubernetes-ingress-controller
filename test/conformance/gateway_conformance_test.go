@@ -41,7 +41,7 @@ var skippedTestsForExpressionRoutes = []string{
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
-var traditionalRoutesSupportedFeatures = []features.SupportedFeature{
+var traditionalRoutesSupportedFeatures = []features.FeatureName{
 	// core features
 	features.SupportGateway,
 	features.SupportHTTPRoute,
@@ -55,7 +55,7 @@ var traditionalRoutesSupportedFeatures = []features.SupportedFeature{
 	// suite.SupportHTTPRouteBackendTimeout,
 }
 
-var expressionRoutesSupportedFeatures = []features.SupportedFeature{
+var expressionRoutesSupportedFeatures = []features.FeatureName{
 	// core features
 	features.SupportGateway,
 	features.SupportHTTPRoute,
@@ -78,7 +78,7 @@ func TestGatewayConformance(t *testing.T) {
 	// traditional_compatible and expressions.
 	var (
 		skippedTests      []string
-		supportedFeatures []features.SupportedFeature
+		supportedFeatures []features.FeatureName
 		mode              string
 	)
 	switch rf := testenv.KongRouterFlavor(); rf {

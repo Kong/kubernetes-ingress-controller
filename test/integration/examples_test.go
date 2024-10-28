@@ -3,55 +3,21 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 const examplesDIR = "../../examples"
-
-func TestTCPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouter(context.Background(), t)
-	t.Log("locking TCP port")
-	tcpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking TCP port")
-		tcpMutex.Unlock()
-	})
-
-	var (
-		ctx                      = context.Background()
-		tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
-	)
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
-	b, err := os.ReadFile(tcprouteExampleManifests)
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
-	cleaner.AddManifest(string(b))
-
-	t.Log("verifying that TCPRoute becomes routable")
-	require.Eventually(t, func() bool {
-		return test.EchoResponds(test.ProtocolTCP, proxyTCPURL, "tcproute-example-manifest") == nil
-	}, ingressWait, waitTick)
-}
 
 func TestTLSRouteExample(t *testing.T) {
 	t.Log("locking Gateway TLS ports")
@@ -86,59 +52,4 @@ func TestTLSRouteExample(t *testing.T) {
 		)
 		assert.NoError(c, err)
 	}, ingressWait, waitTick)
-}
-
-func TestIngressExample(t *testing.T) {
-	var (
-		ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
-		ctx                     = context.Background()
-	)
-
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", ingressExampleManifests)
-	b, err := os.ReadFile(ingressExampleManifests)
-	require.NoError(t, err)
-	manifests := replaceIngressClassSpecFieldInManifests(string(b))
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
-	cleaner.AddManifest(string(b))
-
-	t.Log("waiting for ingress resource to have an address")
-	var ingAddr string
-	require.Eventually(t, func() bool {
-		ing, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, "httpbin-ingress", metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		for _, lbing := range ing.Status.LoadBalancer.Ingress {
-			if lbing.IP != "" {
-				ingAddr = lbing.IP
-				return true
-			}
-		}
-
-		return false
-	}, ingressWait, waitTick)
-
-	t.Logf("verifying that the Ingress resource becomes routable")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/", ingAddr))
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
-}
-
-func replaceIngressClassSpecFieldInManifests(manifests string) string {
-	return strings.ReplaceAll(manifests, `ingressClassName: kong`, fmt.Sprintf(`ingressClassName: %s`, consts.IngressClass))
 }

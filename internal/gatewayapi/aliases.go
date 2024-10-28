@@ -33,6 +33,7 @@ type (
 	GatewayStatusAddress      = gatewayv1.GatewayStatusAddress
 	GatewayTLSConfig          = gatewayv1.GatewayTLSConfig
 	Group                     = gatewayv1.Group
+	HeaderMatchType           = gatewayv1.HeaderMatchType
 	HTTPBackendRef            = gatewayv1.HTTPBackendRef
 	HTTPHeader                = gatewayv1.HTTPHeader
 	HTTPHeaderFilter          = gatewayv1.HTTPHeaderFilter
@@ -82,6 +83,7 @@ type (
 	GRPCBackendRef            = gatewayv1.GRPCBackendRef
 	GRPCHeaderMatch           = gatewayv1.GRPCHeaderMatch
 	GRPCHeaderName            = gatewayv1.GRPCHeaderName
+	GRPCHeaderMatchType       = gatewayv1.GRPCHeaderMatchType
 	GRPCMethodMatch           = gatewayv1.GRPCMethodMatch
 	GRPCMethodMatchType       = gatewayv1.GRPCMethodMatchType
 	GRPCRoute                 = gatewayv1.GRPCRoute
@@ -132,6 +134,9 @@ const (
 	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
 	HeaderMatchExact                      = gatewayv1.HeaderMatchExact
 	HeaderMatchRegularExpression          = gatewayv1.HeaderMatchRegularExpression
+	GRPCHeaderMatchExact                  = gatewayv1.GRPCHeaderMatchExact
+	GRPCMethodMatchExact                  = gatewayv1.GRPCMethodMatchExact
+	GRPCMethodMatchRegularExpression      = gatewayv1.GRPCMethodMatchRegularExpression
 	HostnameAddressType                   = gatewayv1.HostnameAddressType
 	IPAddressType                         = gatewayv1.IPAddressType
 	ListenerConditionAccepted             = gatewayv1.ListenerConditionAccepted
@@ -173,9 +178,6 @@ const (
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
 	TLSProtocolType                       = gatewayv1.TLSProtocolType
 	UDPProtocolType                       = gatewayv1.UDPProtocolType
-
-	GRPCMethodMatchExact             = gatewayv1.GRPCMethodMatchExact
-	GRPCMethodMatchRegularExpression = gatewayv1.GRPCMethodMatchRegularExpression
 
 	PolicyConditionAccepted = gatewayv1alpha2.PolicyConditionAccepted
 	PolicyReasonAccepted    = gatewayv1alpha2.PolicyReasonAccepted

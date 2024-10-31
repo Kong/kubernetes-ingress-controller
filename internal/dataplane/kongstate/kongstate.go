@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -86,6 +87,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
 	consumerIndex := make(map[string]Consumer)
+	credentialCollection := &CredentialCollection{}
 
 	// build consumer index
 	for _, consumer := range s.ListKongConsumers() {
@@ -177,16 +179,94 @@ func (ks *KongState) FillConsumersAndCredentials(
 				}
 				credConfig[k] = string(v)
 			}
-			credTags := util.GenerateTagsForObject(secret)
-			if err := c.SetCredential(credType, credConfig, credTags); err != nil {
+			tags := util.GenerateTagsForObject(secret)
+			cred, err := c.SetCredential(credType, credConfig, tags)
+			if err != nil {
 				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: %v", err),
 				)
 				continue
 			}
+			credentialCollection.collectCredential(cred, secret, consumer)
 		}
 
 		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
+	}
+
+	// remove consumers with conflicting credentials in generated Kong state.
+	purgeConsumerWithConflictingCredential := func(
+		kc *kongv1.KongConsumer,
+		msg string,
+	) {
+		if kc == nil {
+			return
+		}
+		consumerKey := kc.Namespace + "/" + kc.Name
+		_, ok := consumerIndex[consumerKey]
+		if !ok {
+			return
+		}
+		failuresCollector.PushResourceFailure(
+			fmt.Sprintf("Consumer has conflicting credentials: %s", msg),
+			kc,
+		)
+		delete(consumerIndex, consumerKey)
+	}
+
+	conflictingKeyAuths := getKeyAuthsConflictingOnKey(credentialCollection.KeyAuths)
+	for _, keyAuth := range conflictingKeyAuths {
+		purgeConsumerWithConflictingCredential(
+			keyAuth.ParentConsumer,
+			fmt.Sprintf("key-auth credential from %s %s/%s has duplicate key: '%s'",
+				keyAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
+				keyAuth.ParentCred.GetNamespace(), keyAuth.ParentCred.GetName(),
+				*keyAuth.Key,
+			),
+		)
+	}
+	conflictingBasicAuths := getBasicAuthsConflictingOnUsername(credentialCollection.BasicAuths)
+	for _, basicAuth := range conflictingBasicAuths {
+		purgeConsumerWithConflictingCredential(
+			basicAuth.ParentConsumer,
+			fmt.Sprintf("basic-auth credential from %s %s/%s has duplicate username: '%s'",
+				basicAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
+				basicAuth.ParentCred.GetNamespace(), basicAuth.ParentCred.GetName(),
+				*basicAuth.Username,
+			),
+		)
+	}
+	conflictingHMACAuths := getHMACAuthsConflictingOnUsername(credentialCollection.HMACAuths)
+	for _, hmacAuth := range conflictingHMACAuths {
+		purgeConsumerWithConflictingCredential(
+			hmacAuth.ParentConsumer,
+			fmt.Sprintf("hmac-auth credential from %s %s/%s has duplicate username: '%s'",
+				hmacAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
+				hmacAuth.ParentCred.GetNamespace(), hmacAuth.ParentCred.GetName(),
+				*hmacAuth.Username,
+			),
+		)
+	}
+	conflictingJWTAuths := getJWTAuthsConflictingOnKey(credentialCollection.JWTAuths)
+	for _, jwtAuth := range conflictingJWTAuths {
+		purgeConsumerWithConflictingCredential(
+			jwtAuth.ParentConsumer,
+			fmt.Sprintf("jwt credential from %s %s/%s has duplicate key: '%s'",
+				jwtAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
+				jwtAuth.ParentCred.GetNamespace(), jwtAuth.ParentCred.GetName(),
+				*jwtAuth.Key,
+			),
+		)
+	}
+	conflictingOauth2Creds := getOAuth2CredentialsConflictingOnClientID(credentialCollection.Oauth2Credentials)
+	for _, oauth2Cred := range conflictingOauth2Creds {
+		purgeConsumerWithConflictingCredential(
+			oauth2Cred.ParentConsumer,
+			fmt.Sprintf("oauth2 credential from %s %s/%s has duplicate client_id: '%s'",
+				oauth2Cred.ParentCred.GetObjectKind().GroupVersionKind().Kind,
+				oauth2Cred.ParentCred.GetNamespace(), oauth2Cred.ParentCred.GetName(),
+				*oauth2Cred.ClientID,
+			),
+		)
 	}
 
 	// populate the consumer in the state

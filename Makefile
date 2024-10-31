@@ -128,7 +128,7 @@ SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
 setup-envtest: mise ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest
+	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest
 	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
@@ -201,11 +201,19 @@ lint: verify.tidy golangci-lint staticcheck
 golangci-lint: golangci-lint.download
 	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml $(GOLANGCI_LINT_FLAGS)
 
+# Prepare a list of packages to exclude from staticcheck.
+# This is generated code we don't want to lint.
+STATICCHECK_EXCLUDED_PACKAGES += internal/konnect/controlplanes
+# This is deprecated and staticcheck complains about it. We have depguard linter that prevents other packages from importing it.
+STATICCHECK_EXCLUDED_PACKAGES += pkg/clientset
+# This is deprecated and staticcheck complains about it. We have depguard linter that prevents other packages from importing it.
+STATICCHECK_EXCLUDED_PACKAGES += pkg/apis
+
 .PHONY: staticcheck
 staticcheck: staticcheck.download
 	# Workaround for staticcheck not supporting nolint directives, see: https://github.com/dominikh/go-tools/issues/822.
 	go list ./... | \
-		grep -F -e internal/konnect/controlplanes -v | \
+		grep -F $(foreach pkg,$(STATICCHECK_EXCLUDED_PACKAGES),-e $(pkg)) -v | \
 		xargs $(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests -f stylish
 
 .PHONY: verify.tidy
@@ -234,17 +242,10 @@ verify.generators: verify.repo generate verify.diff
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
-CRD_GEN_PATHS ?= ./pkg/apis/configuration/...
-CRD_INCUBATOR_GEN_PATHS ?= ./pkg/apis/incubator/...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
-manifests: manifests.crds manifests.rbac manifests.webhook manifests.single
-
-.PHONY: manifests.crds
-manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_INCUBATOR_GEN_PATHS)" output:crd:artifacts:config=config/crd/incubator
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_GEN_PATHS)" output:crd:artifacts:config=config/crd/bases
+manifests: manifests.rbac manifests.webhook manifests.single
 
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
@@ -267,11 +268,10 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-consts generate.docs generate.go fmt
+generate: generate.controllers generate.gateway-api-consts generate.docs generate.go fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="$(CRD_GEN_PATHS)"
 	go generate $(PROJECT_DIR)/internal/cmd
 # TODO: Previously this didn't have build tags assigned so technically nothing really
 # happened upon go generate invocation for fips binary.
@@ -280,18 +280,6 @@ generate.controllers: controller-gen
 # relies on a relative path to boilerplate.go.txt which breaks if accessed from internal/cmd/fips.
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/2853
 # go generate --tags fips $(PROJECT_DIR)/internal/cmd/fips
-
-# this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
-.PHONY: generate.clientsets
-generate.clientsets: client-gen
-	$(CLIENT_GEN) \
-		--go-header-file ./hack/boilerplate.go.txt \
-		--logtostderr \
-		--clientset-name clientset \
-		--input-base $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/apis/ \
-		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1,incubator/v1alpha1 \
-		--output-dir pkg/ \
-		--output-pkg $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/
 
 .PHONY: generate.docs
 generate.docs: generate.apidocs generate.cli-arguments-docs

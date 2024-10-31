@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {

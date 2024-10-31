@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,7 +31,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------

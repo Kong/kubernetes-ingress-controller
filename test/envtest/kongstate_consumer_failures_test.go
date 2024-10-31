@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {

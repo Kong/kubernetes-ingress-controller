@@ -18,5 +18,7 @@ generate() {
       --max-depth=10
 }
 
-generate "/pkg/apis/configuration" "/docs/api-reference.md"
-generate "/pkg/apis/incubator" "/docs/incubator-api-reference.md"
+# TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/6618
+# Bring the generator back, relying on kong/kubernetes-configuration
+# generate "/configuration" "/docs/api-reference.md"
+# generate "/incubator" "/docs/incubator-api-reference.md"

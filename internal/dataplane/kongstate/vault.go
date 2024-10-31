@@ -2,8 +2,7 @@ package kongstate
 
 import (
 	"github.com/kong/go-kong/kong"
-
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 type Vault struct {

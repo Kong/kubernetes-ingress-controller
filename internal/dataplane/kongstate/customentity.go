@@ -10,8 +10,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/lo"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -302,13 +302,14 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 	}
 
 	// Extract the plugin key to get the plugin relations.
-	paretRefNamespace := lo.FromPtrOr(parentRef.Namespace, "")
+	parentRefNamespace := lo.FromPtrOr(parentRef.Namespace, "")
 	// if the namespace in parentRef is not same as the namespace of KCE itself, check if the reference is allowed by ReferenceGrant.
-	if paretRefNamespace != "" && paretRefNamespace != k8sEntity.Namespace {
-		paretRefNamespace, err := extractReferredPluginNamespace(logger, cacheStore, k8sEntity, annotations.NamespacedKongPlugin{
-			Namespace: paretRefNamespace,
+	if parentRefNamespace != "" && parentRefNamespace != k8sEntity.Namespace {
+		nn := k8stypes.NamespacedName{
+			Namespace: parentRefNamespace,
 			Name:      parentRef.Name,
-		})
+		}
+		paretRefNamespace, err := extractReferredPluginNamespace(logger, cacheStore, k8sEntity, nn)
 		if err != nil {
 			return "", false, err
 		}

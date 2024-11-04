@@ -1,8 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.23
-
-toolchain go1.23.2
+go 1.23.2
 
 // TODO: this is disabled by FOSSA action doesn't support go 1.21's toolchain clause:
 //
@@ -67,6 +65,8 @@ require (
 )
 
 require github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
+
+require github.com/kong/kubernetes-configuration v0.0.42
 
 require (
 	cloud.google.com/go/auth v0.10.1 // indirect

@@ -23,7 +23,6 @@ import (
 	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -132,56 +131,6 @@ func IngressClassValidatorFuncFromV1Ingress(
 		}
 		return validIngress(className, ingressClass, handling)
 	}
-}
-
-func pluginsFromAnnotations(anns map[string]string) string {
-	return anns[AnnotationPrefix+PluginsKey]
-}
-
-// ExtractKongPluginsFromAnnotations extracts information about Kong
-// Plugins configured using konghq.com/plugins annotation.
-// This returns a list of KongPlugin resource names that should be applied.
-func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
-	var kongPluginCRs []string
-	v := pluginsFromAnnotations(anns)
-	if v == "" {
-		return kongPluginCRs
-	}
-	for _, kongPlugin := range strings.Split(v, ",") {
-		s := strings.TrimSpace(kongPlugin)
-		if s != "" {
-			kongPluginCRs = append(kongPluginCRs, s)
-		}
-	}
-	return kongPluginCRs
-}
-
-type NamespacedKongPlugin k8stypes.NamespacedName
-
-// ExtractNamespacedKongPluginsFromAnnotations extracts a KongPlugin name and optional namespace from an annotation
-// value. Plugins are delimited by ",". Values are either colon-delimited "namespace:name" strings or name-only
-// strings.
-func ExtractNamespacedKongPluginsFromAnnotations(anns map[string]string) []NamespacedKongPlugin {
-	v := pluginsFromAnnotations(anns)
-	if v == "" {
-		return nil
-	}
-	split := strings.Split(v, ",")
-	plugins := make([]NamespacedKongPlugin, 0, len(split))
-	for _, s := range split {
-		if s != "" {
-			plugin := NamespacedKongPlugin{}
-			if strings.Contains(s, ":") {
-				split := strings.Split(s, ":")
-				plugin.Namespace = strings.TrimSpace(split[0])
-				plugin.Name = strings.TrimSpace(split[1])
-			} else {
-				plugin.Name = strings.TrimSpace(s)
-			}
-			plugins = append(plugins, plugin)
-		}
-	}
-	return plugins
 }
 
 // ExtractConfigurationName extracts the name of the KongIngress object that holds

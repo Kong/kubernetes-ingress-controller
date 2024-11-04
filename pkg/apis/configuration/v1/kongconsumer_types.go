@@ -57,6 +57,14 @@ type KongConsumer struct {
 	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
+func (c KongConsumer) GetAnnotations() map[string]string {
+	return c.Annotations
+}
+
+func (c KongConsumer) GetNamespace() string {
+	return c.Namespace
+}
+
 // +kubebuilder:object:root=true
 
 // KongConsumerList contains a list of KongConsumer.

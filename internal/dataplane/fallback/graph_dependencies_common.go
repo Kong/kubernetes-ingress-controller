@@ -3,6 +3,7 @@ package fallback
 import (
 	"fmt"
 
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -14,7 +15,7 @@ import (
 // that refers them in its annotations.
 func resolveObjectDependenciesPlugin(cache store.CacheStores, obj client.Object) []client.Object {
 	var dependencies []client.Object
-	for _, pluginName := range annotations.ExtractKongPluginsFromAnnotations(obj.GetAnnotations()) {
+	for _, pluginName := range metadata.ExtractPlugins(obj) {
 		// KongPlugin is tied to a namespace.
 		if plugin, exists, err := cache.Plugin.GetByKey(
 			fmt.Sprintf("%s/%s", obj.GetNamespace(), pluginName),

@@ -132,7 +132,7 @@ setup-envtest: mise ## Download setup-envtest locally if necessary.
 	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
-STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
+STATICCHECK ?= $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=staticcheck

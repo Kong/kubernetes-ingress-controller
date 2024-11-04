@@ -10,8 +10,8 @@ type License struct {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
-func (l License) SanitizedCopy() *License {
-	return &License{
+func (l License) SanitizedCopy() License {
+	return License{
 		License: kong.License{
 			ID:        l.ID,
 			Payload:   redactedString,

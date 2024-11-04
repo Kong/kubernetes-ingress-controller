@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
@@ -28,39 +29,49 @@ type Consumer struct {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
-func (c *Consumer) SanitizedCopy(uuidGenerator util.UUIDGenerator) *Consumer {
-	return &Consumer{
+func (c *Consumer) SanitizedCopy(uuidGenerator util.UUIDGenerator) Consumer {
+	return Consumer{
 		Consumer: c.Consumer,
 		Plugins:  c.Plugins,
-		KeyAuths: func() (res []*KeyAuth) {
-			for _, v := range c.KeyAuths {
-				res = append(res, v.SanitizedCopy(uuidGenerator))
+		KeyAuths: func() []*KeyAuth {
+			if c.KeyAuths == nil {
+				return nil
 			}
-			return
+			return lo.Map(c.KeyAuths, func(c *KeyAuth, _ int) *KeyAuth {
+				return c.SanitizedCopy(uuidGenerator)
+			})
 		}(),
-		HMACAuths: func() (res []*HMACAuth) {
-			for _, v := range c.HMACAuths {
-				res = append(res, v.SanitizedCopy())
+		HMACAuths: func() []*HMACAuth {
+			if c.HMACAuths == nil {
+				return nil
 			}
-			return
+			return lo.Map(c.HMACAuths, func(c *HMACAuth, _ int) *HMACAuth {
+				return c.SanitizedCopy()
+			})
 		}(),
-		JWTAuths: func() (res []*JWTAuth) {
-			for _, v := range c.JWTAuths {
-				res = append(res, v.SanitizedCopy())
+		JWTAuths: func() []*JWTAuth {
+			if c.JWTAuths == nil {
+				return nil
 			}
-			return
+			return lo.Map(c.JWTAuths, func(c *JWTAuth, _ int) *JWTAuth {
+				return c.SanitizedCopy()
+			})
 		}(),
-		BasicAuths: func() (res []*BasicAuth) {
-			for _, v := range c.BasicAuths {
-				res = append(res, v.SanitizedCopy())
+		BasicAuths: func() []*BasicAuth {
+			if c.BasicAuths == nil {
+				return nil
 			}
-			return
+			return lo.Map(c.BasicAuths, func(c *BasicAuth, _ int) *BasicAuth {
+				return c.SanitizedCopy()
+			})
 		}(),
-		Oauth2Creds: func() (res []*Oauth2Credential) {
-			for _, v := range c.Oauth2Creds {
-				res = append(res, v.SanitizedCopy())
+		Oauth2Creds: func() []*Oauth2Credential {
+			if c.Oauth2Creds == nil {
+				return nil
 			}
-			return
+			return lo.Map(c.Oauth2Creds, func(c *Oauth2Credential, _ int) *Oauth2Credential {
+				return c.SanitizedCopy()
+			})
 		}(),
 		ACLGroups:       c.ACLGroups,
 		MTLSAuths:       c.MTLSAuths,

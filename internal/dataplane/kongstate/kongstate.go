@@ -46,25 +46,33 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 	return &KongState{
 		Services:  ks.Services,
 		Upstreams: ks.Upstreams,
-		Certificates: func() (res []Certificate) {
-			for _, v := range ks.Certificates {
-				res = append(res, *v.SanitizedCopy())
+		Certificates: func() []Certificate {
+			if ks.Certificates == nil {
+				return nil
 			}
-			return
+
+			return lo.Map(ks.Certificates, func(c Certificate, _ int) Certificate {
+				return c.SanitizedCopy()
+			})
 		}(),
 		CACertificates: ks.CACertificates,
 		Plugins:        ks.Plugins,
-		Consumers: func() (res []Consumer) {
-			for _, v := range ks.Consumers {
-				res = append(res, *v.SanitizedCopy(uuidGenerator))
+		Consumers: func() []Consumer {
+			if ks.Consumers == nil {
+				return nil
 			}
-			return
+
+			return lo.Map(ks.Consumers, func(c Consumer, _ int) Consumer {
+				return c.SanitizedCopy(uuidGenerator)
+			})
 		}(),
-		Licenses: func() (res []License) {
-			for _, v := range ks.Licenses {
-				res = append(res, *v.SanitizedCopy())
+		Licenses: func() []License {
+			if ks.Licenses == nil {
+				return nil
 			}
-			return
+			return lo.Map(ks.Licenses, func(l License, _ int) License {
+				return l.SanitizedCopy()
+			})
 		}(),
 		ConsumerGroups: ks.ConsumerGroups,
 		Vaults:         ks.Vaults,

@@ -54,8 +54,8 @@ type Certificate struct {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
-func (c *Certificate) SanitizedCopy() *Certificate {
-	return &Certificate{
+func (c *Certificate) SanitizedCopy() Certificate {
+	return Certificate{
 		kong.Certificate{
 			ID:        c.ID,
 			Cert:      c.Cert,

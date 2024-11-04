@@ -147,6 +147,46 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 	ensureAllKongStateFieldsAreCoveredInTest(t, testedFields.UnsortedList())
 }
 
+func BenchmarkSanitizedCopy(b *testing.B) {
+	const count = 1000
+	ks := KongState{
+		Certificates: func() []Certificate {
+			certificates := make([]Certificate, 0, count)
+			for i := 0; i < count; i++ {
+				certificates = append(certificates,
+					Certificate{kong.Certificate{ID: kong.String(strconv.Itoa(i)), Key: kong.String("secret")}},
+				)
+			}
+			return certificates
+		}(),
+		Consumers: func() []Consumer {
+			consumers := make([]Consumer, 0, count)
+			for i := 0; i < count; i++ {
+				consumers = append(consumers,
+					Consumer{
+						Consumer: kong.Consumer{ID: kong.String(strconv.Itoa(i))},
+					},
+				)
+			}
+			return consumers
+		}(),
+		Licenses: func() []License {
+			licenses := make([]License, 0, count)
+			for i := 0; i < count; i++ {
+				licenses = append(licenses,
+					License{kong.License{ID: kong.String(strconv.Itoa(i)), Payload: kong.String("secret")}},
+				)
+			}
+			return licenses
+		}(),
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ret := ks.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+		_ = ret
+	}
+}
+
 // extractNotEmptyFieldNames returns the names of all non-empty fields in the given KongState.
 // This is to programmatically find out what fields are used in a test case.
 func extractNotEmptyFieldNames(s KongState) []string {

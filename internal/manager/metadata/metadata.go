@@ -3,7 +3,15 @@ package metadata
 
 import (
 	"strings"
+
+	"github.com/Kong/sdk-konnect-go/pkg/metadata"
 )
+
+func init() {
+	// NOTE: We do it this way because speakeasy does not provide a way to set the
+	// user-agent for the SDK instance.
+	metadata.SetUserAgent(UserAgent())
+}
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Versioning Information

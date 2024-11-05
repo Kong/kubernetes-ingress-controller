@@ -6,10 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 )
 
@@ -23,22 +25,32 @@ func newMockControlPlanesServer(t *testing.T) *mockControlPlanesServer {
 	}
 }
 
-func (m *mockControlPlanesServer) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
-	require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+func (m *mockControlPlanesServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+		w.WriteHeader(http.StatusCreated)
+
+	case http.MethodDelete:
+		require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+
+	}
 }
 
 func TestControlPlanesClientUserAgent(t *testing.T) {
 	ts := httptest.NewServer(newMockControlPlanesServer(t))
 	t.Cleanup(ts.Close)
 
-	c, err := controlplanes.NewClient(ts.URL)
-	require.NoError(t, err)
+	ctx := context.Background()
+	sdk := sdk.SDK("kpat_xxx", sdkkonnectgo.WithServerURL(ts.URL))
 
-	r, err := c.GetControlPlane(context.Background(), uuid.New())
-	require.NoError(t, err)
-	r.Body.Close()
+	_, err := sdk.ControlPlanes.CreateControlPlane(ctx, sdkkonnectcomp.CreateControlPlaneRequest{
+		Name: "test",
+	})
+	// NOTE: just check the user agent and do not attempt to mock out the entire response.
+	require.ErrorContains(t, err, "unknown content-type received: : Status 201")
 
-	r, err = c.DeleteControlPlane(context.Background(), uuid.New())
-	require.NoError(t, err)
-	r.Body.Close()
+	_, err = sdk.ControlPlanes.DeleteControlPlane(ctx, "id")
+	// NOTE: just check the user agent and do not attempt to mock out the entire response.
+	require.ErrorContains(t, err, "unknown status code returned: Status 200")
 }

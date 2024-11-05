@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -14,9 +15,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	cp "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -25,41 +28,47 @@ import (
 // It also sets up a cleanup function for it to be deleted.
 func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
-	rgClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
-		func(_ context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+accessToken())
-			return nil
-		}),
-	)
-	require.NoError(t, err)
+
+	sdk := sdk.SDK(accessToken(), serverURLOpt())
+
 	rolesClient := roles.NewClient(
 		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
-		konnectRolesBaseURL,
+		konnectRolesBaseURL(),
 		accessToken(),
 	)
 
-	var rgID uuid.UUID
+	var rgID string
 	createRgErr := retry.Do(func() error {
-		rgName := uuid.NewString()
-		createRgResp, err := rgClient.CreateControlPlaneWithResponse(ctx, cp.CreateControlPlaneRequest{
-			Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
-			Labels: &cp.Labels{
-				"created_in_tests": "true",
+		createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
+			sdkkonnectcomp.CreateControlPlaneRequest{
+				Name:        uuid.NewString(),
+				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
+				Labels: map[string]string{
+					"created_in_tests": "true",
+				},
+				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 			},
-			Name:        rgName,
-			ClusterType: cp.ClusterTypeKubernetesIngressController,
-		})
+		)
 		if err != nil {
 			return fmt.Errorf("failed to create control plane: %w", err)
 		}
-		if createRgResp.StatusCode() != http.StatusCreated {
-			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
+		if createResp == nil || createResp.ControlPlane == nil {
+			return fmt.Errorf("failed to create control plane: response is nil, status code %d, response: %v",
+				createResp.GetStatusCode(), createResp)
 		}
-		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
+
+		if createResp.GetStatusCode() != http.StatusCreated {
+			body, err := io.ReadAll(createResp.RawResponse.Body)
+			if err != nil {
+				body = []byte(err.Error())
+			}
+			return fmt.Errorf("failed to create RG: code %d, message %s", createResp.GetStatusCode(), body)
+		}
+		if createResp.ControlPlane == nil || createResp.ControlPlane.ID == "" {
 			return errors.New("No control plane ID in response")
 		}
 
-		rgID = *createRgResp.JSON201.Id
+		rgID = createResp.ControlPlane.ID
 		return nil
 	}, retry.Attempts(5), retry.Delay(time.Second))
 	require.NoError(t, createRgErr)
@@ -68,7 +77,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		t.Logf("deleting test Konnect Control Plane: %q", rgID)
 		err := retry.Do(
 			func() error {
-				_, err := rgClient.DeleteControlPlaneWithResponse(ctx, rgID)
+				_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, rgID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
@@ -85,7 +94,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
 		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
 		for _, role := range rgRoles {
-			if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
+			if role.EntityID == rgID { // Delete only roles created for the control plane.
 				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
 				err := rolesClient.DeleteRole(ctx, role.ID)
 				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
@@ -93,8 +102,8 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		}
 	})
 
-	t.Logf("created test Konnect Control Plane: %q", rgID.String())
-	return rgID.String()
+	t.Logf("created test Konnect Control Plane: %q", rgID)
+	return rgID
 }
 
 func generateTestKonnectControlPlaneDescription(t *testing.T) string {
@@ -116,7 +125,7 @@ func CreateKonnectAdminAPIClient(t *testing.T, cpID, cert, key string) *adminapi
 
 	c, err := adminapi.NewKongClientForKonnectControlPlane(adminapi.KonnectConfig{
 		ControlPlaneID: cpID,
-		Address:        konnectControlPlaneAdminAPIBaseURL,
+		Address:        konnectControlPlaneAdminAPIBaseURL(),
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,
 			Key:  key,

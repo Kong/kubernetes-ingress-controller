@@ -35,3 +35,8 @@ const (
 	// RequestTimeout is the amount of time that will be given to any request to complete.
 	RequestTimeout = 10 * time.Second
 )
+
+const (
+	// konnectDefaultDevServerURL is the default Konnect API server URL used for development.
+	konnectDefaultDevServerURL = "https://us.api.konghq.tech"
+)

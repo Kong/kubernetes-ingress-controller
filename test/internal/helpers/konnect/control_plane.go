@@ -16,11 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -30,12 +30,6 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
 
 	sdk := sdk.New(accessToken(), serverURLOpt())
-
-	rolesClient := roles.NewClient(
-		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
-		konnectRolesBaseURL(),
-		accessToken(),
-	)
 
 	var rgID string
 	createRgErr := retry.Do(func() error {
@@ -84,6 +78,15 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		)
 		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", rgID)
 
+		me, err := sdk.Me.GetUsersMe(ctx,
+			// NOTE: Otherwise we use prod server by default.
+			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
+
 		// We have to manually delete roles created for the control plane because Konnect doesn't do it automatically.
 		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
 		// because of a performance issue when there's too many roles for the account
@@ -91,13 +94,24 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		//
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
-		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
+		resp, err := sdk.Roles.ListUserRoles(ctx, *me.User.ID,
+			&sdkkonnectops.ListUserRolesQueryParamFilter{},
+			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+		)
 		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
-		for _, role := range rgRoles {
-			if role.EntityID == rgID { // Delete only roles created for the control plane.
-				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
-				err := rolesClient.DeleteRole(ctx, role.ID)
-				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
+
+		for _, role := range resp.AssignedRoleCollection.Data {
+			if role.EntityID == nil || role.ID == nil {
+				continue
+			}
+			if *role.EntityID == rgID { // Delete only roles created for the control plane.
+				t.Logf("deleting test Konnect Control Plane role: %q", *role.ID)
+				_, err := sdk.Roles.UsersRemoveRole(ctx, *me.User.ID, *role.ID,
+					// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+					sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+				)
+				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", *role.ID)
 			}
 		}
 	})

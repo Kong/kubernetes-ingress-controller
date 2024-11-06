@@ -53,6 +53,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 
 	t.Run("configured specific gateway gets its listener status filled", func(t *testing.T) {
 		require.Eventually(t, func() bool {
+			var gw gatewayapi.Gateway
 			if err := ctrlClient.Get(ctx, nn, &gw); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nn, err)
 				return false
@@ -93,6 +94,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	t.Run("not configured gateway does not gets its listener status filled and HTTPRoute attached to it doesn't get its status parent filled", func(t *testing.T) {
 		require.Never(t, func() bool {
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
+			var gwIgnored gatewayapi.Gateway
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
 				return true
@@ -134,6 +136,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return true
 			}
 
+			var gwIgnored gatewayapi.Gateway
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
@@ -164,6 +167,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return true
 			}
 
+			var gwIgnored gatewayapi.Gateway
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", gwIgnored.Name)
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
@@ -187,14 +191,14 @@ func TestSpecificGatewayNN(t *testing.T) {
 		refGrant := gatewayapi.ReferenceGrant{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "refgrant-1",
-				Namespace: gwIgnored.Namespace,
+				Namespace: nnIgnored.Namespace,
 			},
 			Spec: gatewayapi.ReferenceGrantSpec{
 				From: []gatewayapi.ReferenceGrantFrom{
 					{
 						Group:     gatewayapi.V1Group,
 						Kind:      "Gateway",
-						Namespace: gatewayapi.Namespace(gwIgnored.Namespace),
+						Namespace: gatewayapi.Namespace(nnIgnored.Namespace),
 					},
 				},
 				To: []gatewayapi.ReferenceGrantTo{
@@ -215,6 +219,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return true
 			}
 
+			var gwIgnored gatewayapi.Gateway
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)

@@ -341,13 +341,17 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 
 	t.Logf("verifying that the Service as backend of HTTPRoute is added to ancestor status of KongUpstreamPolicy")
 	require.Eventually(t, func() bool {
-		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-			Namespace: ns.Name,
-			Name:      KongUpstreamPolicyName,
-		}, kup)
-		require.NoError(t, err)
+		var (
+			kup kongv1beta1.KongUpstreamPolicy
+			nn  = k8stypes.NamespacedName{
+				Namespace: ns.Name,
+				Name:      KongUpstreamPolicyName,
+			}
+		)
+		require.NoError(t, ctrlClient.Get(ctx, nn, &kup))
 		return lo.ContainsBy(kup.Status.Ancestors, func(ancestorStatus gatewayapi.PolicyAncestorStatus) bool {
-			return ancestorStatus.AncestorRef.Kind != nil && string(*ancestorStatus.AncestorRef.Kind) == "Service" &&
+			return ancestorStatus.AncestorRef.Kind != nil &&
+				string(*ancestorStatus.AncestorRef.Kind) == "Service" &&
 				string(ancestorStatus.AncestorRef.Name) == service.Name
 		})
 	}, waitTime, tickTime)
@@ -441,11 +445,14 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 
 	t.Logf("verify that ancestor status of KongUpstreamPolicy is not updated when it is not referenced by reconciled Ingress")
 	require.Never(t, func() bool {
-		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-			Namespace: ns.Name,
-			Name:      KongUpstreamPolicyName,
-		}, kup)
-		require.NoError(t, err)
+		var (
+			kup kongv1beta1.KongUpstreamPolicy
+			nn  = k8stypes.NamespacedName{
+				Namespace: ns.Name,
+				Name:      KongUpstreamPolicyName,
+			}
+		)
+		require.NoError(t, ctrlClient.Get(ctx, nn, &kup))
 		return len(kup.Status.Ancestors) != 0
 	}, waitTime, tickTime)
 
@@ -486,15 +493,20 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 
 	t.Logf("verifying that ancestor status of KongUpstreamPolicy is updated when it is references by reconciled Ingress")
 	require.Eventually(t, func() bool {
-		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-			Namespace: ns.Name,
-			Name:      KongUpstreamPolicyName,
-		}, kup)
-		require.NoError(t, err)
+		var (
+			kup kongv1beta1.KongUpstreamPolicy
+			nn  = k8stypes.NamespacedName{
+				Namespace: ns.Name,
+				Name:      KongUpstreamPolicyName,
+			}
+		)
+		require.NoError(t, ctrlClient.Get(ctx, nn, &kup))
 		if len(kup.Status.Ancestors) != 1 {
 			return false
 		}
 		ancestorRef := kup.Status.Ancestors[0].AncestorRef
-		return string(*ancestorRef.Kind) == "Service" && string(*ancestorRef.Namespace) == ns.Name && string(ancestorRef.Name) == service.Name
+		return string(*ancestorRef.Kind) == "Service" &&
+			string(*ancestorRef.Namespace) == ns.Name &&
+			string(ancestorRef.Name) == service.Name
 	}, waitTime, tickTime)
 }

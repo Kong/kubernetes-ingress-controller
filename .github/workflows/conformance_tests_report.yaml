@@ -60,7 +60,7 @@ jobs:
       # in future when experimental becomes stable autamate creating PR (add to release workflow).
       # See: https://github.com/Kong/kubernetes-ingress-controller/issues/4654
       - name: Collect conformance tests report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: kong-kubernetes-ingress-controller.yaml
           path: kong-kubernetes-ingress-controller.yaml

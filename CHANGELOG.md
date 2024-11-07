@@ -100,8 +100,17 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Changed
+
 - Bump version of Gateway API to `1.2.0`.
   [#6571](https://github.com/Kong/kubernetes-ingress-controller/pull/6571)
+
+### Fixed
+
+- Fixed annotation `konghq.com/rewrite` that was not being applied sometimes
+  when `Ingress` without annotation and a different `Ingress` with annotation
+  pointed to the same `Service`.
+  [#6569](https://github.com/Kong/kubernetes-ingress-controller/pull/6626)
 
 ## [3.3.1]
 

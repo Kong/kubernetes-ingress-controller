@@ -632,12 +632,11 @@ func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 
 		rewriteURI, exists := annotations.ExtractRewriteURI(route.Ingress.Annotations)
 		if !exists {
-			return nil
+			continue
 		}
 		if !rewriteURIEnable {
 			return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
 		}
-
 		if rewriteURI == "" {
 			rewriteURI = "/"
 		}

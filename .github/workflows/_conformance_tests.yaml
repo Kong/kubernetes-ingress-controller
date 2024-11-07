@@ -76,7 +76,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: tests-report-conformance-${{ matrix.name }}
+          name: test-report-conformance-${{ matrix.name }}
           path: ${{ env.JUNIT_REPORT }}
 
   merge-junit-test-reports:

@@ -99,7 +99,7 @@ gotestsum: ## Download gotestsum locally if necessary.
 	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
-CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github-com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github.com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)

@@ -1092,9 +1092,7 @@ func TestIngressRewriteURI(t *testing.T) {
 
 	t.Logf("creating an Ingress for service %s without rewrite annotation", service.Name)
 	const serviceDomainDirect = "direct.example"
-	ingressDirect := generators.NewIngressForService("/", map[string]string{
-		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-	}, service)
+	ingressDirect := generators.NewIngressForService("/", nil, service)
 	ingressDirect.Name += "-direct"
 	ingressDirect.Spec.IngressClassName = kong.String(consts.IngressClass)
 	for i := range ingressDirect.Spec.Rules {
@@ -1165,7 +1163,6 @@ func TestIngressRewriteURI(t *testing.T) {
 	t.Logf("creating an Ingress for service %s with rewrite annotation", service.Name)
 	const serviceDomainRewrite = "rewrite.example"
 	ingressRewrite := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
-		annotations.AnnotationPrefix + annotations.StripPathKey:  "true",
 		annotations.AnnotationPrefix + annotations.RewriteURIKey: "/image/$1",
 	}, service)
 	ingressRewrite.Name += "-rewrite"
@@ -1177,8 +1174,6 @@ func TestIngressRewriteURI(t *testing.T) {
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressRewrite, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(ingressRewrite)
-
-	t.Log("rewrite uri feature is enabled")
 
 	t.Log("try to access the ingress with valid capture group")
 	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)

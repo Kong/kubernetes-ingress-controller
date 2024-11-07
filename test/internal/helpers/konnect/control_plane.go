@@ -29,7 +29,7 @@ import (
 func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
 
-	sdk := sdk.SDK(accessToken(), serverURLOpt())
+	sdk := sdk.New(accessToken(), serverURLOpt())
 
 	rolesClient := roles.NewClient(
 		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),

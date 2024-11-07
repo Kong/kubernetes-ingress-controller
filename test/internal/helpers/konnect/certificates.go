@@ -22,7 +22,7 @@ import (
 func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string) (certPEM string, keyPEM string) {
 	t.Helper()
 
-	sdk := sdk.SDK(accessToken(), serverURLOpt(),
+	sdk := sdk.New(accessToken(), serverURLOpt(),
 		sdkkonnectgo.WithRetryConfig(retry.Config{
 			Backoff: &retry.BackoffStrategy{
 				InitialInterval: 100,

@@ -28,7 +28,7 @@ const (
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
 func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
-	sdk := sdk.SDK(konnectAccessToken, sdkkonnectgo.WithServerURL(konnectControlPlanesBaseURL))
+	sdk := sdk.New(konnectAccessToken, sdkkonnectgo.WithServerURL(konnectControlPlanesBaseURL))
 
 	orphanedCPs, err := findOrphanedControlPlanes(ctx, log, sdk.ControlPlanes)
 	if err != nil {

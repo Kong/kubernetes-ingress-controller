@@ -42,7 +42,7 @@ func TestControlPlanesClientUserAgent(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := context.Background()
-	sdk := sdk.SDK("kpat_xxx", sdkkonnectgo.WithServerURL(ts.URL))
+	sdk := sdk.New("kpat_xxx", sdkkonnectgo.WithServerURL(ts.URL))
 
 	_, err := sdk.ControlPlanes.CreateControlPlane(ctx, sdkkonnectcomp.CreateControlPlaneRequest{
 		Name: "test",

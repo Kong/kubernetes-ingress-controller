@@ -54,6 +54,7 @@ linters-settings:
     sections:
     - standard
     - default
+    - prefix(github.com/Kong/sdk-konnect-go)
     - prefix(github.com/kong/kubernetes-ingress-controller/v3)
   importas:
     no-unaliased: true
@@ -91,6 +92,15 @@ linters-settings:
       alias: dpconf
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
       alias: ctrllicense
+
+    - pkg: github.com/Kong/sdk-konnect-go/models/components
+      alias: sdkkonnectcomp
+    - pkg: github.com/Kong/sdk-konnect-go/models/operations
+      alias: sdkkonnectops
+    - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
+      alias: sdkkonnecterrs
+    - pkg: github.com/Kong/sdk-konnect-go/pkg/metadata
+      alias: sdkkonnectmetadata
   forbidigo:
     exclude-godoc-examples: false
     forbid:

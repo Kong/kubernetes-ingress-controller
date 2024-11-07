@@ -99,6 +99,8 @@ linters-settings:
       alias: sdkkonnectops
     - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
       alias: sdkkonnecterrs
+    - pkg: github.com/Kong/sdk-konnect-go/pkg/metadata
+      alias: sdkkonnectmetadata
   forbidigo:
     exclude-godoc-examples: false
     forbid:

@@ -57,7 +57,7 @@ jobs:
         env:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
-          JUNIT_REPORT: conformance-tests.xml
+          JUNIT_REPORT: conformance-tests-${{ matrix.name }}.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
 
@@ -74,5 +74,5 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: tests-report-conformance-${{ matrix.name }}
-          path: conformance-tests.xml
+          name: tests-report-conformance
+          path: conformance-tests-${{ matrix.name }}.xml

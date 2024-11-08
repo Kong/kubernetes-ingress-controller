@@ -3,6 +3,7 @@ package subtranslator
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -235,7 +236,9 @@ func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 			route := meta.translateIntoKongRoute()
 			kongStateService.Routes = append(kongStateService.Routes, *route)
 		}
-
+		sort.SliceStable(kongStateService.Routes, func(i, j int) bool {
+			return *kongStateService.Routes[i].Name < *kongStateService.Routes[j].Name
+		})
 		kongStateServiceCache[kongServiceName] = kongStateService
 	}
 
@@ -629,12 +632,11 @@ func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 
 		rewriteURI, exists := annotations.ExtractRewriteURI(route.Ingress.Annotations)
 		if !exists {
-			return nil
+			continue
 		}
 		if !rewriteURIEnable {
 			return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
 		}
-
 		if rewriteURI == "" {
 			rewriteURI = "/"
 		}
@@ -651,7 +653,6 @@ func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 				},
 			},
 		})
-
 	}
 	return nil
 }

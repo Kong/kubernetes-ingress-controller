@@ -110,7 +110,9 @@ Adding a new version? You'll need three changes:
 - Fixed annotation `konghq.com/rewrite` that was not being applied sometimes
   when `Ingress` without annotation and a different `Ingress` with annotation
   pointed to the same `Service`.
-  [#6569](https://github.com/Kong/kubernetes-ingress-controller/pull/6626)
+  [#6626](https://github.com/Kong/kubernetes-ingress-controller/pull/6626)
+- Fix panic in `KongUpstreamPolicyReconciler` when using with Ingress having a nil HTTP rule
+  [#6651](https://github.com/Kong/kubernetes-ingress-controller/pull/6651)
 
 ## [3.3.1]
 

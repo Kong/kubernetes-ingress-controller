@@ -324,18 +324,25 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx
 	}
 	var requests []reconcile.Request
 	for _, rule := range ingress.Spec.Rules {
+		if rule.HTTP == nil {
+			continue
+		}
+
 		for _, path := range rule.HTTP.Paths {
 			if path.Backend.Service == nil {
 				continue
 			}
-			service := &corev1.Service{}
-			if err := r.Client.Get(ctx, k8stypes.NamespacedName{
-				Namespace: ingress.Namespace,
-				Name:      path.Backend.Service.Name,
-			}, service); err != nil {
+			var (
+				nn = k8stypes.NamespacedName{
+					Namespace: ingress.Namespace,
+					Name:      path.Backend.Service.Name,
+				}
+				service corev1.Service
+			)
+			if err := r.Client.Get(ctx, nn, &service); err != nil {
 				if !apierrors.IsNotFound(err) {
 					r.Log.Error(err, "Failed to retrieve Service in watch predicates",
-						"Service", fmt.Sprintf("%s/%s", ingress.Namespace, path.Backend.Service.Name),
+						"Service", nn,
 					)
 				}
 				continue

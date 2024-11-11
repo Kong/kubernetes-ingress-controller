@@ -1,16 +1,23 @@
 package configuration
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 func TestIndexIngressesOnBackendServiceName(t *testing.T) {
@@ -179,6 +186,237 @@ func TestIndexRoutesOnBackendRefServiceFacadeName(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			indexes := indexRoutesOnBackendRefServiceFacadeName(tc.object)
 			require.ElementsMatch(t, tc.expectedIndexes, indexes, "Should return expected indexes")
+		})
+	}
+}
+
+func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
+	tests := []struct {
+		name             string
+		services         []client.Object
+		ingress          netv1.Ingress
+		expectedRequests []ctrl.Request
+	}{
+		{
+			name: "Multiple services with annotations",
+			services: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service1",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
+						},
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service2",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy2",
+						},
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service3",
+						Namespace: "default",
+					},
+				},
+			},
+			ingress: netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service1",
+												},
+											},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service2",
+												},
+											},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service3",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []ctrl.Request{
+				{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: "default", Name: "policy1",
+					},
+				},
+				{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: "default", Name: "policy2",
+					},
+				},
+			},
+		},
+		{
+			name: "No services with annotations",
+			services: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service1",
+						Namespace: "default",
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service2",
+						Namespace: "default",
+					},
+				},
+			},
+			ingress: netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service1",
+												},
+											},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service2",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []ctrl.Request{},
+		},
+		{
+			name: "Service in different namespace cannot be used",
+			services: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service1",
+						Namespace: "other",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
+						},
+					},
+				},
+			},
+			ingress: netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service1",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []ctrl.Request{},
+		},
+		{
+			name: "Ingress without HTTP rules does not panic",
+			services: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service1",
+						Namespace: "default",
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
+						},
+					},
+				},
+			},
+			ingress: netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: "default",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: nil,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []ctrl.Request{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a fake client
+			fakeClient := fake.NewClientBuilder().
+				WithObjects(tt.services...).
+				Build()
+
+			// Create a KongUpstreamPolicyReconciler
+			reconciler := &KongUpstreamPolicyReconciler{
+				Client: fakeClient,
+				Log:    logr.Discard(),
+			}
+
+			// Call the function
+			requests := reconciler.getUpstreamPoliciesForIngressServices(context.Background(), &tt.ingress)
+
+			// Assert the results
+			assert.ElementsMatch(t, tt.expectedRequests, requests)
 		})
 	}
 }

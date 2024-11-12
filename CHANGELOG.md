@@ -104,6 +104,8 @@ Adding a new version? You'll need three changes:
 
 - Bump version of Gateway API to `1.2.0`.
   [#6571](https://github.com/Kong/kubernetes-ingress-controller/pull/6571)
+- Set SNI's certificate ID ref in generated config
+  [#6660](https://github.com/Kong/kubernetes-ingress-controller/pull/6660)
 
 ### Fixed
 

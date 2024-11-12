@@ -80,6 +80,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		true,
 		true,
 	); reloadConfigErr != nil {
+
 		// If the returned error is an APIError with a 400 status code, we can try to parse the response body to get the
 		// resource errors and produce an UpdateError with them.
 		var apiError *kong.APIError
@@ -88,6 +89,11 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 			if parseErr != nil {
 				return fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
 			}
+
+			for _, resourceError := range resourceErrors {
+				s.logger.V(logging.DebugLevel).Info("Resource error", "resource_error", resourceError)
+			}
+
 			return NewUpdateErrorWithResponseBody(
 				apiError.Raw(),
 				resourceErrorsToResourceFailures(resourceErrors, s.logger),

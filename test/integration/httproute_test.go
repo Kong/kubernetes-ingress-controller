@@ -328,14 +328,15 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
+	httpRrouteName := httpRoute.Name
+
 	// Set the Port in ParentRef which does not have a matching listener in Gateway.
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRrouteName, metav1.GetOptions{})
 		if !assert.NoError(c, err) {
 			return
 		}
-		port81 := gatewayapi.PortNumber(81)
-		httpRoute.Spec.ParentRefs[0].Port = &port81
+		httpRoute.Spec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(81))
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		assert.NoError(c, err)
 	}, time.Minute, time.Second)

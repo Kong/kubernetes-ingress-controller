@@ -22,7 +22,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
@@ -87,7 +86,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
 	consumerIndex := make(map[string]Consumer)
-	credentialCollection := &CredentialCollection{}
+	credentialsConflictDetector := NewCredentialConflictsDetector()
 
 	// build consumer index
 	for _, consumer := range s.ListKongConsumers() {
@@ -187,81 +186,33 @@ func (ks *KongState) FillConsumersAndCredentials(
 				)
 				continue
 			}
-			credentialCollection.collectCredential(cred, secret, consumer)
+			credentialsConflictDetector.RegisterForConflictDetection(cred, secret, consumer)
 		}
 
 		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
 	}
 
-	// remove consumers with conflicting credentials in generated Kong state.
-	purgeConsumerWithConflictingCredential := func(
-		kc *kongv1.KongConsumer,
-		msg string,
-	) {
-		if kc == nil {
-			return
-		}
-		consumerKey := kc.Namespace + "/" + kc.Name
+	// Detect credential conflicts, push failures for them, and remove the consumers that have conflicts.
+	for _, conflict := range credentialsConflictDetector.DetectConflicts() {
+		// Push the failure for the credential Secret first.
+		failuresCollector.PushResourceFailure(
+			fmt.Sprintf("Secret has conflicting credential: %s", conflict.Message),
+			conflict.Credential.CredentialSecret,
+		)
+
+		// Check if the consumer is still in the index...
+		consumerKey := client.ObjectKeyFromObject(conflict.Credential.Consumer).String()
 		_, ok := consumerIndex[consumerKey]
 		if !ok {
-			return
+			// If it's not, it's already been removed, and we can skip this step.
+			continue
 		}
+		// ...if it is, push the failure for the KongConsumer and remove it from the index.
 		failuresCollector.PushResourceFailure(
-			fmt.Sprintf("Consumer has conflicting credentials: %s", msg),
-			kc,
+			fmt.Sprintf("Consumer has conflicting credentials: %s", conflict.Message),
+			conflict.Credential.Consumer,
 		)
 		delete(consumerIndex, consumerKey)
-	}
-
-	conflictingKeyAuths := getKeyAuthsConflictingOnKey(credentialCollection.KeyAuths)
-	for _, keyAuth := range conflictingKeyAuths {
-		purgeConsumerWithConflictingCredential(
-			keyAuth.ParentConsumer,
-			fmt.Sprintf("key-auth credential from %s %s/%s has duplicate key",
-				keyAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
-				keyAuth.ParentCred.GetNamespace(), keyAuth.ParentCred.GetName(),
-			),
-		)
-	}
-	conflictingBasicAuths := getBasicAuthsConflictingOnUsername(credentialCollection.BasicAuths)
-	for _, basicAuth := range conflictingBasicAuths {
-		purgeConsumerWithConflictingCredential(
-			basicAuth.ParentConsumer,
-			fmt.Sprintf("basic-auth credential from %s %s/%s has duplicate username",
-				basicAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
-				basicAuth.ParentCred.GetNamespace(), basicAuth.ParentCred.GetName(),
-			),
-		)
-	}
-	conflictingHMACAuths := getHMACAuthsConflictingOnUsername(credentialCollection.HMACAuths)
-	for _, hmacAuth := range conflictingHMACAuths {
-		purgeConsumerWithConflictingCredential(
-			hmacAuth.ParentConsumer,
-			fmt.Sprintf("hmac-auth credential from %s %s/%s has duplicate username",
-				hmacAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
-				hmacAuth.ParentCred.GetNamespace(), hmacAuth.ParentCred.GetName(),
-			),
-		)
-	}
-	conflictingJWTAuths := getJWTAuthsConflictingOnKey(credentialCollection.JWTAuths)
-	for _, jwtAuth := range conflictingJWTAuths {
-		purgeConsumerWithConflictingCredential(
-			jwtAuth.ParentConsumer,
-			fmt.Sprintf("jwt credential from %s %s/%s has duplicate key",
-				jwtAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
-				jwtAuth.ParentCred.GetNamespace(), jwtAuth.ParentCred.GetName(),
-			),
-		)
-	}
-	conflictingOauth2Creds := getOAuth2CredentialsConflictingOnClientID(credentialCollection.Oauth2Credentials)
-	for _, oauth2Cred := range conflictingOauth2Creds {
-		purgeConsumerWithConflictingCredential(
-			oauth2Cred.ParentConsumer,
-			fmt.Sprintf("oauth2 credential from %s %s/%s has duplicate client_id",
-				oauth2Cred.ParentCred.GetObjectKind().GroupVersionKind().Kind,
-				oauth2Cred.ParentCred.GetNamespace(), oauth2Cred.ParentCred.GetName(),
-			),
-		)
 	}
 
 	// populate the consumer in the state

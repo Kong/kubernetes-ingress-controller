@@ -30,6 +30,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
@@ -46,7 +48,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )

@@ -6,7 +6,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 

@@ -5,7 +5,7 @@
 # To verify the example:
 #
 # 1. Install the KongServiceFacade CRD:
-#    $ kubectl apply -k "github.com/Kong/kubernetes-ingress-controller/config/crd/incubator?ref=main"
+#    $ kubectl apply -k "github.com/Kong/kubernetes-configuration/config/crd/ingress-controller-incubator?ref=main"
 #
 # 2. Install the Kong Ingress Controller with KongServiceFacade feature gate enabled:
 #    $ helm upgrade --install kong -n kong --create-namespace --repo https://charts.konghq.com ingress \

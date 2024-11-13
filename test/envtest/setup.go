@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"syscall"
 	"testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
@@ -139,14 +139,13 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
 
-	// extract project root path.
-	_, thisFilePath, _, _ := runtime.Caller(0) //nolint:dogsled
-	projectRoot := filepath.Join(filepath.Dir(thisFilePath), "..", "..")
-	// install Kong CRDs from config/crd/bases.
-	kongCRDPath := filepath.Join(projectRoot, "config", "crd", "bases")
-	kongIncubatorCRDPath := filepath.Join(projectRoot, "config", "crd", "incubator")
-	t.Logf("install Kong CRDs from manifests in %s", kongCRDPath)
-	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
+	kconfVersion, err := testutils.DependencyModuleVersion("github.com/kong/kubernetes-configuration")
+	require.NoError(t, err)
+	kconfBasePath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration@"+kconfVersion)
+	kongCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller")
+	kongIncubatorCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller-incubator")
+
+	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
 		Paths:              []string{kongCRDPath, kongIncubatorCRDPath},
 		ErrorIfPathMissing: true,

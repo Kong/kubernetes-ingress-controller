@@ -23,10 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"

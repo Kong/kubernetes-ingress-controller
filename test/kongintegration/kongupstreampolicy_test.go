@@ -13,10 +13,11 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 

@@ -100,6 +100,15 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Deprecated
+
+- CRD type bindings under `/pkg` and clientsets under `/pkg/clientset` are deprecated
+  and will be removed in the next major release. Until then, they won't be updated.
+  They were migrated to a new dedicated [repository][kconf]. If you depend on them,
+  please update your dependencies to use the new repository.
+
+[kconf]: https://github.com/kong/kubernetes-configuration
+
 ### Changed
 
 - Bump version of Gateway API to `1.2.0`.

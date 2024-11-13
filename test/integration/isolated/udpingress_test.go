@@ -18,9 +18,10 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"

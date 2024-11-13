@@ -19,10 +19,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"

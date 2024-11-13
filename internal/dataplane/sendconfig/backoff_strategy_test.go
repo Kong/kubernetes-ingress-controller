@@ -24,14 +24,16 @@ func newMockUpdateStrategy(shouldSucceed bool) *mockUpdateStrategy {
 	return &mockUpdateStrategy{shouldSucceed: shouldSucceed}
 }
 
-func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (err error) {
+const mockUpdateReturnedConfigSize = 22
+
+func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (n int, err error) {
 	m.wasUpdateCalled = true
 
 	if !m.shouldSucceed {
-		return errors.New("update failure occurred")
+		return 0, errors.New("update failure occurred")
 	}
 
-	return nil
+	return mockUpdateReturnedConfigSize, nil
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
@@ -115,11 +117,12 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			backoffStrategy := newMockBackoffStrategy(tc.updateShouldBeAllowed)
 
 			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, logger)
-			err := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
+			size, err := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
 			if tc.expectError != nil {
 				require.Equal(t, tc.expectError, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, mockUpdateReturnedConfigSize, size)
 			}
 
 			assert.Equal(t, tc.expectUpdateCalled, updateStrategy.wasUpdateCalled)

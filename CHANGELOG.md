@@ -122,13 +122,20 @@ Adding a new version? You'll need three changes:
   when `Ingress` without annotation and a different `Ingress` with annotation
   pointed to the same `Service`.
   [#6626](https://github.com/Kong/kubernetes-ingress-controller/pull/6626)
-- Fix panic in `KongUpstreamPolicyReconciler` when using with Ingress having a nil HTTP rule
+- Fix panic in `KongUpstreamPolicyReconciler` when using with Ingress having a nil HTTP rule.
   [#6651](https://github.com/Kong/kubernetes-ingress-controller/pull/6651)
 - `KongConsumer`s with conflicting credentials will not be translated in Kong
   configuration to prevent invalid Kong configuration generated. A warning
   kubernetes event with `KongConfigurationTranslationFailed` will be reported
   for each involved `KongConsumer`.
   [#6585](https://github.com/Kong/kubernetes-ingress-controller/pull/6585)
+
+### Added
+
+- Added Prometheus metrics `ingress_controller_configuration_push_size`
+  and `ingress_controller_fallback_configuration_push_size` to record size of
+  the config send to Kong DataPlane by the controller in DB-less mode.
+  [#6664](https://github.com/Kong/kubernetes-ingress-controller/pull/6664)
 
 ## [3.3.1]
 

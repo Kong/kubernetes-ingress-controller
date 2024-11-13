@@ -64,15 +64,15 @@ func NewUpdateStrategyDBModeKonnect(
 	return s
 }
 
-func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) error {
+func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (int, error) {
 	cs, err := s.currentState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
+		return 0, fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
 	}
 
 	ts, err := s.targetState(ctx, cs, targetContent.Content)
 	if err != nil {
-		return deckerrors.ConfigConflictError{Err: err}
+		return 0, deckerrors.ConfigConflictError{Err: err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -85,7 +85,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 		EnableEntityActions: true,
 	})
 	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err)
+		return 0, fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -97,7 +97,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	defer s.resourceErrorLock.Unlock()
 	resourceFailures := resourceErrorsToResourceFailures(s.resourceErrors, s.logger)
 	if errs != nil {
-		return NewUpdateError(
+		return 0, NewUpdateErrorWithoutResponseBody(
 			resourceFailures,
 			deckutils.ErrArray{Errors: errs},
 		)
@@ -106,13 +106,13 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	// as of GDR 1.8 we should always get a plain error set in addition to resourceErrors, so returning resourceErrors
 	// here should not be necessary. Return it anyway as a future-proof because why not.
 	if len(resourceFailures) > 0 {
-		return NewUpdateError(
+		return 0, NewUpdateErrorWithoutResponseBody(
 			resourceFailures,
 			errors.New("go-database-reconciler found resource errors"),
 		)
 	}
 
-	return nil
+	return ConfigSizeNotApplicable, nil
 }
 
 // handleEvents handles logging and error reporting for individual entity change events generated during a sync by

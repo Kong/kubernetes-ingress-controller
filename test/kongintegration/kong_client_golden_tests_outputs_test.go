@@ -116,8 +116,11 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			require.NoError(t, err)
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
-				assert.NoError(t, err)
+				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
+				if !assert.NoError(t, err) {
+					return
+				}
+				assert.Equal(t, sendconfig.ConfigSizeNotApplicable, configSize)
 			}, timeout, tick)
 		})
 	}

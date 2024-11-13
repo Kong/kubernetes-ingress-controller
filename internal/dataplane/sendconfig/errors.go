@@ -5,20 +5,25 @@ import "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fail
 // UpdateError wraps several pieces of error information relevant to a failed Kong update attempt.
 type UpdateError struct {
 	rawResponseBody  []byte
+	configSize       int
 	resourceFailures []failures.ResourceFailure
 	err              error
 }
 
-func NewUpdateError(resourceFailures []failures.ResourceFailure, err error) UpdateError {
+func NewUpdateErrorWithoutResponseBody(resourceFailures []failures.ResourceFailure, err error) UpdateError {
 	return UpdateError{
+		configSize:       ConfigSizeNotApplicable,
 		resourceFailures: resourceFailures,
 		err:              err,
 	}
 }
 
-func NewUpdateErrorWithResponseBody(rawResponseBody []byte, resourceFailures []failures.ResourceFailure, err error) UpdateError {
+func NewUpdateErrorWithResponseBody(
+	rawResponseBody []byte, configSize int, resourceFailures []failures.ResourceFailure, err error,
+) UpdateError {
 	return UpdateError{
 		rawResponseBody:  rawResponseBody,
+		configSize:       configSize,
 		resourceFailures: resourceFailures,
 		err:              err,
 	}
@@ -37,6 +42,12 @@ func (e UpdateError) RawResponseBody() []byte {
 // ResourceFailures returns per-resource failures from a Kong configuration update attempt.
 func (e UpdateError) ResourceFailures() []failures.ResourceFailure {
 	return e.resourceFailures
+}
+
+// ConfigSize returns the size of the configuration that was attempted to be sent to Kong.
+// When it's not applicable, it returns  -1 (ConfigSizeNotApplicable).
+func (e UpdateError) ConfigSize() int {
+	return e.configSize
 }
 
 func (e UpdateError) Unwrap() error {

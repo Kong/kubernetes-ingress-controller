@@ -47,20 +47,21 @@ func NewUpdateStrategyWithBackoff(
 // In case it's not, it will return a predefined ErrUpdateSkippedDueToBackoffStrategy.
 // In case it is, apart from calling UpdateStrategy.Update, it will also register a success or a failure of an update
 // attempt so that the UpdateBackoffStrategy can keep track of it.
-func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent ContentWithHash) (err error) {
+// When the update is successful, it returns the number of bytes sent to the DataPlane or ConfigSizeNotApplicable (-1)
+// when it's impossible to determine the number of bytes sent e.g. for dbmode (deck) strategy.
+func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent ContentWithHash) (n int, err error) {
 	if canUpdate, whyNot := s.backoffStrategy.CanUpdate(targetContent.Hash); !canUpdate {
-		return NewUpdateSkippedDueToBackoffStrategyError(whyNot)
+		return 0, NewUpdateSkippedDueToBackoffStrategyError(whyNot)
 	}
-
-	err = s.decorated.Update(ctx, targetContent)
+	n, err = s.decorated.Update(ctx, targetContent)
 	if err != nil {
 		s.logger.V(logging.DebugLevel).Info("Update failed, registering it for backoff strategy", "reason", err.Error())
 		s.backoffStrategy.RegisterUpdateFailure(err, targetContent.Hash)
-		return err
+		return 0, err
 	}
 
 	s.backoffStrategy.RegisterUpdateSuccess()
-	return nil
+	return n, nil
 }
 
 func (s UpdateStrategyWithBackoff) MetricsProtocol() metrics.Protocol {

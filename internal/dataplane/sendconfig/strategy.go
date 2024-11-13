@@ -25,10 +25,16 @@ type ContentWithHash struct {
 	Hash           []byte
 }
 
+// ConfigSizeNotApplicable is a constant that represents a situation when it's not
+// possible to determine the number of bytes sent to the DataPlane during the update.
+const ConfigSizeNotApplicable = -1
+
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.
 type UpdateStrategy interface {
-	// Update applies targetConfig to the data-plane.
-	Update(ctx context.Context, targetContent ContentWithHash) error
+	// Update applies targetConfig to the DataPlane. When the update is successful, it returns the number of
+	// bytes sent to the DataPlane or ConfigSizeNotApplicable (-1) when it's impossible to determine the
+	// number of bytes sent e.g. for dbmode (deck) strategy.
+	Update(ctx context.Context, targetContent ContentWithHash) (int, error)
 
 	// MetricsProtocol returns a string describing the update strategy type to be used in metrics.
 	MetricsProtocol() metrics.Protocol

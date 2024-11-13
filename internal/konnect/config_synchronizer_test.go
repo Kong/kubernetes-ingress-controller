@@ -103,16 +103,18 @@ func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateCl
 	return &mockUpdateStrategy{onUpdate: f.updateCalledForURLCallback(url)}
 }
 
+const mockUpdateReturnedConfigSize = 22
+
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
 // That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) error {
-	return func(content sendconfig.ContentWithHash) error {
+func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) (int, error) {
+	return func(content sendconfig.ContentWithHash) (int, error) {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
 		f.updateCalledForURLs = append(f.updateCalledForURLs, url)
 		f.lastUpdatedContentForURLs[url] = content
-		return nil
+		return mockUpdateReturnedConfigSize, nil
 	}
 }
 
@@ -135,10 +137,10 @@ func (f *mockUpdateStrategyResolver) lastUpdatedContentForURL(url string) (sendc
 
 // mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
 type mockUpdateStrategy struct {
-	onUpdate func(content sendconfig.ContentWithHash) error
+	onUpdate func(content sendconfig.ContentWithHash) (int, error)
 }
 
-func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (err error) {
+func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (n int, err error) {
 	return m.onUpdate(targetContent)
 }
 

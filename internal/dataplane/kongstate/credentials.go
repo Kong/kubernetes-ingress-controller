@@ -24,7 +24,6 @@ func randRedactedString(uuidGenerator util.UUIDGenerator) *string {
 // KeyAuth represents a key-auth credential.
 type KeyAuth struct {
 	kong.KeyAuth
-	// ParentCred is the credential that translated to the KeyAuth.
 }
 
 // HMACAuth represents a HMAC credential.

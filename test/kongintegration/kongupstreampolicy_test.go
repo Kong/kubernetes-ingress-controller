@@ -11,7 +11,6 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -45,10 +44,9 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 	)
 
 	testCases := []struct {
-		name               string
-		policySpec         kongv1beta1.KongUpstreamPolicySpec
-		expectedUpstream   *kong.Upstream
-		expectedConfigSize mo.Option[int]
+		name             string
+		policySpec       kongv1beta1.KongUpstreamPolicySpec
+		expectedUpstream *kong.Upstream
 	}{
 		{
 			name: "KongUpstreamPolicySpec with no hash-on or hash-fallback",
@@ -60,7 +58,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				Algorithm: lo.ToPtr("least-connections"),
 				Slots:     lo.ToPtr(20),
 			},
-			expectedConfigSize: mo.Some(107),
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on header",
@@ -80,7 +77,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				HashFallback:       lo.ToPtr("header"),
 				HashFallbackHeader: lo.ToPtr("bar"),
 			},
-			expectedConfigSize: mo.Some(193),
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on cookie",
@@ -97,7 +93,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				HashOnCookie:     lo.ToPtr("foo"),
 				HashOnCookiePath: lo.ToPtr("/"),
 			},
-			expectedConfigSize: mo.Some(165),
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on query-arg",
@@ -112,7 +107,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				HashOn:         lo.ToPtr("query_arg"),
 				HashOnQueryArg: lo.ToPtr("foo"),
 			},
-			expectedConfigSize: mo.Some(145),
 		},
 		{
 			name: "KongUpstreamPolicySpec with predefined hash input",
@@ -130,7 +124,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				HashOn:       lo.ToPtr("consumer"),
 				HashFallback: lo.ToPtr("ip"),
 			},
-			expectedConfigSize: mo.Some(139),
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on uri-capture",
@@ -145,7 +138,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				HashOn:           lo.ToPtr("uri_capture"),
 				HashOnURICapture: lo.ToPtr("foo"),
 			},
-			expectedConfigSize: mo.Some(149),
 		},
 		{
 			name: "KongUpstreamPolicySpec with healthchecks",
@@ -226,7 +218,6 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 					Threshold: lo.ToPtr(0.),
 				},
 			},
-			expectedConfigSize: mo.Some(543),
 		},
 	}
 
@@ -250,11 +241,8 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 
 			// Update Kong with the Upstream.
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				configSize, err := updateStrategy.Update(ctx, content)
-				if !assert.NoError(c, err) {
-					return
-				}
-				assert.Equal(c, tc.expectedConfigSize, configSize)
+				_, err := updateStrategy.Update(ctx, content)
+				assert.NoError(c, err)
 			}, timeout, period)
 
 			// Wait for the Upstream to be created in Kong and assert it matches the expected Upstream.

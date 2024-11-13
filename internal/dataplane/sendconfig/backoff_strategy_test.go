@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -24,14 +25,16 @@ func newMockUpdateStrategy(shouldSucceed bool) *mockUpdateStrategy {
 	return &mockUpdateStrategy{shouldSucceed: shouldSucceed}
 }
 
-func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (err error) {
+var mockUpdateReturnedConfigSize = mo.Some(22)
+
+func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (n mo.Option[int], err error) {
 	m.wasUpdateCalled = true
 
 	if !m.shouldSucceed {
-		return errors.New("update failure occurred")
+		return mo.None[int](), errors.New("update failure occurred")
 	}
 
-	return nil
+	return mockUpdateReturnedConfigSize, nil
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
@@ -115,11 +118,12 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			backoffStrategy := newMockBackoffStrategy(tc.updateShouldBeAllowed)
 
 			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, logger)
-			err := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
+			size, err := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
 			if tc.expectError != nil {
 				require.Equal(t, tc.expectError, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, mockUpdateReturnedConfigSize, size)
 			}
 
 			assert.Equal(t, tc.expectUpdateCalled, updateStrategy.wasUpdateCalled)

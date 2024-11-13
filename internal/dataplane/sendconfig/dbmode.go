@@ -15,6 +15,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/state"
 	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
@@ -64,15 +65,15 @@ func NewUpdateStrategyDBModeKonnect(
 	return s
 }
 
-func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) error {
+func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (mo.Option[int], error) {
 	cs, err := s.currentState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
+		return mo.None[int](), fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
 	}
 
 	ts, err := s.targetState(ctx, cs, targetContent.Content)
 	if err != nil {
-		return deckerrors.ConfigConflictError{Err: err}
+		return mo.None[int](), deckerrors.ConfigConflictError{Err: err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -85,7 +86,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 		EnableEntityActions: true,
 	})
 	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err)
+		return mo.None[int](), fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -97,7 +98,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	defer s.resourceErrorLock.Unlock()
 	resourceFailures := resourceErrorsToResourceFailures(s.resourceErrors, s.logger)
 	if errs != nil {
-		return NewUpdateError(
+		return mo.None[int](), NewUpdateErrorWithoutResponseBody(
 			resourceFailures,
 			deckutils.ErrArray{Errors: errs},
 		)
@@ -106,13 +107,13 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	// as of GDR 1.8 we should always get a plain error set in addition to resourceErrors, so returning resourceErrors
 	// here should not be necessary. Return it anyway as a future-proof because why not.
 	if len(resourceFailures) > 0 {
-		return NewUpdateError(
+		return mo.None[int](), NewUpdateErrorWithoutResponseBody(
 			resourceFailures,
 			errors.New("go-database-reconciler found resource errors"),
 		)
 	}
-
-	return nil
+	// For DB-mode there is no size to return, so we return None in case of success too.
+	return mo.None[int](), nil
 }
 
 // handleEvents handles logging and error reporting for individual entity change events generated during a sync by

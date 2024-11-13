@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/samber/mo"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
@@ -23,6 +24,7 @@ type CtrlFuncMetrics struct {
 	TranslationBrokenResources prometheus.Gauge
 	TranslationDuration        *prometheus.HistogramVec
 	ConfigPushDuration         *prometheus.HistogramVec
+	ConfigPushSize             *prometheus.GaugeVec
 	ConfigPushSuccessTime      *prometheus.GaugeVec
 
 	// Fallback config push metrics.
@@ -31,6 +33,7 @@ type CtrlFuncMetrics struct {
 	FallbackTranslationDuration        *prometheus.HistogramVec
 	FallbackConfigPushCount            *prometheus.CounterVec
 	FallbackConfigPushSuccessTime      *prometheus.GaugeVec
+	FallbackConfigPushSize             *prometheus.GaugeVec
 	FallbackConfigPushBrokenResources  *prometheus.GaugeVec
 	FallbackConfigPushDuration         *prometheus.HistogramVec
 	FallbackCacheGeneratingDuration    *prometheus.HistogramVec
@@ -84,6 +87,7 @@ const (
 	MetricNameConfigPushCount            = "ingress_controller_configuration_push_count"
 	MetricNameConfigPushBrokenResources  = "ingress_controller_configuration_push_broken_resource_count"
 	MetricNameConfigPushSuccessTime      = "ingress_controller_configuration_push_last_successful"
+	MetricNameConfigPushSize             = "ingress_controller_configuration_push_size"
 	MetricNameTranslationCount           = "ingress_controller_translation_count"
 	MetricNameTranslationBrokenResources = "ingress_controller_translation_broken_resource_count"
 	MetricNameTranslationDuration        = "ingress_controller_translation_duration_milliseconds"
@@ -95,6 +99,7 @@ const (
 	MetricNameFallbackTranslationCount           = "ingress_controller_fallback_translation_count"
 	MetricNameFallbackTranslationBrokenResources = "ingress_controller_fallback_translation_broken_resource_count"
 	MetricNameFallbackTranslationDuration        = "ingress_controller_fallback_translation_duration_milliseconds"
+	MetricNameFallbackConfigPushSize             = "ingress_controller_fallback_configuration_push_size"
 	MetricNameFallbackConfigPushCount            = "ingress_controller_fallback_configuration_push_count"
 	MetricNameFallbackConfigPushSuccessTime      = "ingress_controller_fallback_configuration_push_last"
 	MetricNameFallbackConfigPushDuration         = "ingress_controller_fallback_configuration_push_duration_milliseconds"
@@ -196,6 +201,22 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{SuccessKey, ProtocolKey, DataplaneKey},
 	)
 
+	controllerMetrics.ConfigPushSize = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: MetricNameConfigPushSize,
+			Help: fmt.Sprintf(
+				"The size of the configuration pushed to Kong, in bytes. "+
+					"`%s` describes the dataplane that was the target of the configuration push. "+
+					"`%s` describes the configuration protocol (metric is presented for `%s`, for `%s` it doesn't exist) in use. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`).",
+				DataplaneKey,
+				ProtocolKey, ProtocolDBLess, ProtocolDeck,
+				SuccessKey, SuccessFalse, SuccessTrue,
+			),
+		},
+		[]string{DataplaneKey, ProtocolKey, SuccessKey},
+	)
+
 	controllerMetrics.ConfigPushSuccessTime = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: MetricNameConfigPushSuccessTime,
@@ -227,6 +248,23 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 			),
 		},
 	)
+
+	controllerMetrics.FallbackConfigPushSize = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: MetricNameFallbackConfigPushSize,
+			Help: fmt.Sprintf(
+				"The size of the configuration pushed to Kong in fallback mode, in bytes. "+
+					"`%s` describes the dataplane that was the target of the configuration push. "+
+					"`%s` describes the configuration protocol (metric is presented for `%s`, for `%s` it doesn't exist) in use. "+
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`).",
+				DataplaneKey,
+				ProtocolKey, ProtocolDBLess, ProtocolDeck,
+				SuccessKey, SuccessFalse, SuccessTrue,
+			),
+		},
+		[]string{DataplaneKey, ProtocolKey, SuccessKey},
+	)
+
 	controllerMetrics.FallbackTranslationDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: MetricNameFallbackTranslationDuration,
@@ -333,6 +371,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		controllerMetrics.TranslationDuration,
 		controllerMetrics.TranslationBrokenResources,
 		controllerMetrics.ConfigPushDuration,
+		controllerMetrics.ConfigPushSize,
 		controllerMetrics.ConfigPushSuccessTime,
 		controllerMetrics.FallbackTranslationBrokenResources,
 		controllerMetrics.FallbackTranslationDuration,
@@ -340,6 +379,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		controllerMetrics.FallbackConfigPushCount,
 		controllerMetrics.FallbackConfigPushSuccessTime,
 		controllerMetrics.FallbackConfigPushDuration,
+		controllerMetrics.FallbackConfigPushSize,
 		controllerMetrics.FallbackConfigPushBrokenResources,
 		controllerMetrics.FallbackCacheGeneratingDuration,
 		controllerMetrics.ProcessedConfigSnapshotCacheHit,
@@ -354,20 +394,22 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 }
 
 // RecordPushSuccess records a successful configuration push.
-func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, dataplane string) {
+func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, size mo.Option[int], dataplane string) {
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt)
 	c.recordPushDuration(p, d, dpOpt)
 	c.recordPushSuccessTime(dpOpt)
 	c.recordPushBrokenResources(0, dpOpt)
+	c.recordConfigPushSize(p, size, dpOpt)
 }
 
 // RecordPushFailure records a failed configuration push.
-func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, dataplane string, count int, err error) {
+func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, size mo.Option[int], dataplane string, count int, err error) {
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt, withError(err))
 	c.recordPushDuration(p, d, dpOpt, withFailure())
 	c.recordPushBrokenResources(count, dpOpt)
+	c.recordConfigPushSize(p, size, dpOpt, withFailure())
 }
 
 // RecordTranslationSuccess records a successful configuration translation.
@@ -431,20 +473,26 @@ func (c *CtrlFuncMetrics) RecordFallbackTranslationBrokenResources(count int) {
 }
 
 // RecordFallbackPushSuccess records a successful fallback configuration push.
-func (c *CtrlFuncMetrics) RecordFallbackPushSuccess(p Protocol, duration time.Duration, dataplane string) {
+func (c *CtrlFuncMetrics) RecordFallbackPushSuccess(
+	p Protocol, duration time.Duration, size mo.Option[int], dataplane string,
+) {
 	dpOpt := withDataplane(dataplane)
 	c.recordFallbackPushCount(p, dpOpt)
 	c.recordFallbackPushDuration(p, duration, dpOpt)
 	c.recordFallbackPushSuccessTime(dpOpt)
 	c.recordFallbackPushBrokenResources(0, dpOpt)
+	c.recordFallbackConfigPushSize(p, size, dpOpt)
 }
 
 // RecordFallbackPushFailure records a failed fallback configuration push.
-func (c *CtrlFuncMetrics) RecordFallbackPushFailure(p Protocol, duration time.Duration, dataplane string, brokenResourcesCount int, err error) {
+func (c *CtrlFuncMetrics) RecordFallbackPushFailure(
+	p Protocol, duration time.Duration, size mo.Option[int], dataplane string, brokenResourcesCount int, err error,
+) {
 	dpOpt := withDataplane(dataplane)
 	c.recordFallbackPushDuration(p, duration, dpOpt, withFailure())
 	c.recordFallbackPushCount(p, dpOpt, withError(err))
 	c.recordFallbackPushBrokenResources(brokenResourcesCount, dpOpt)
+	c.recordFallbackConfigPushSize(p, size, dpOpt, withFailure())
 }
 
 // RecordFallbackCacheGenerationDuration records the duration of a fallback cache generation.
@@ -544,6 +592,44 @@ func (c *CtrlFuncMetrics) recordFallbackPushCount(p Protocol, opts ...recordOpti
 	}
 
 	c.FallbackConfigPushCount.With(labels).Inc()
+}
+
+func (c *CtrlFuncMetrics) recordFallbackConfigPushSize(p Protocol, size mo.Option[int], opts ...recordOption) {
+	// When size is missing do not report this metric at all.
+	value, ok := size.Get()
+	if !ok {
+		return
+	}
+	// Although this is hardcoded to true here, the withError or withFailure opt function will flip it to false.
+	labels := prometheus.Labels{
+		SuccessKey:  SuccessTrue,
+		ProtocolKey: string(p),
+	}
+
+	for _, opt := range opts {
+		labels = opt(labels)
+	}
+
+	c.FallbackConfigPushSize.With(labels).Set(float64(value))
+}
+
+func (c *CtrlFuncMetrics) recordConfigPushSize(p Protocol, size mo.Option[int], opts ...recordOption) {
+	// When size is missing do not report this metric at all.
+	value, ok := size.Get()
+	if !ok {
+		return
+	}
+	// Although this is hardcoded to true here, the withError or withFailure opt function will flip it to false.
+	labels := prometheus.Labels{
+		SuccessKey:  SuccessTrue,
+		ProtocolKey: string(p),
+	}
+
+	for _, opt := range opts {
+		labels = opt(labels)
+	}
+
+	c.ConfigPushSize.With(labels).Set(float64(value))
 }
 
 func (c *CtrlFuncMetrics) recordFallbackPushSuccessTime(opts ...recordOption) {

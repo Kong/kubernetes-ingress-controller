@@ -79,6 +79,8 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
       - name: Setup golang

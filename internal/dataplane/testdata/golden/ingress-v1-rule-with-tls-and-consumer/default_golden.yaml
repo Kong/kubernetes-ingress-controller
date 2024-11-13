@@ -2,43 +2,6 @@ _format_version: "3.0"
 certificates:
 - cert: |-
     -----BEGIN CERTIFICATE-----
-    MIIBoTCCAQoCCQCjZq2l6IGAATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDDApr
-    b25naHEuY29tMB4XDTIzMDYwMTE3NTMyMVoXDTI0MDUzMTE3NTMyMVowFTETMBEG
-    A1UEAwwKa29uZ2hxLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAuDsJ
-    xkC+QWHD8UfPBjrUXnM69iq8VRzzKVlxUom7/mXT4WbT7vLIb6pWuWGJXwP7IUec
-    LSAFTwMH9xqeB+IcIwOVRyRwTs8vBrx+rNXBS7gLyAtaeGbWnKl+A95KL5jnaEG+
-    TrxMGpZlRSojOWsc/sE/Yt+WqHJ9QqKKvgKEUtECAwEAATANBgkqhkiG9w0BAQsF
-    AAOBgQCeeXGqFiOpPe4EuFE4O/ydvOMmun8ap3e0VNGwWu7ylN2bxggK3IvZ5rNf
-    03Uc8e1eoKWa30gkw1tyQQ0uo33VbxzJVrbMWQG7syYMocgt/8Czg8rX4ezCOstJ
-    PXXJPGS/3O7JOCUbBUZ2aJ7eVHzMNyn7CiZiqI9kJqEGlU/I8w==
-    -----END CERTIFICATE-----
-  id: 8aade13c-1470-46bd-9849-9a74e349214f
-  key: |-
-    -----BEGIN PRIVATE KEY-----
-    MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBALg7CcZAvkFhw/FH
-    zwY61F5zOvYqvFUc8ylZcVKJu/5l0+Fm0+7yyG+qVrlhiV8D+yFHnC0gBU8DB/ca
-    ngfiHCMDlUckcE7PLwa8fqzVwUu4C8gLWnhm1pypfgPeSi+Y52hBvk68TBqWZUUq
-    IzlrHP7BP2LflqhyfUKiir4ChFLRAgMBAAECgYBBJadsMuLUbgUDIniD5HPKvobA
-    HBajJmyaV6WqIUiYSlvlnh4dpj7Yteya+3G/ZsH8X71Le8JE0XaUnBX8Baoa4gWi
-    Ws6CTX5yHVMihJ3Ixh5dGt6pdKPTCbBgNf+0ySVavbCDhfLisWTMNuN6KxHmx0GW
-    PY85RuzRLl68+h7VEQJBANrPJE2MAxTpZ+Qw2r2jPF5yf1njwuyiIkZNlqz7Vmvy
-    ZCXBZfahUXPcR5ka4xKOLgc7oCah+43gNDmq0vDtEP0CQQDXi09XJyLjnD1RpVIi
-    t/cG5JiDBvtuSGjI7s/mI2Ts0fpo/U35WUGajHagma9c2qlYMeVZ7fupxLNaLD6z
-    1MtlAkEA1h/7wL+RjHdVKeP9S7NgsnSN1+Ohr3yC2hW3rBRR4FVWV/RI2e/IC/+3
-    OUcsi84DkSRydxvxVkfgE8btosP76QJABjMWlB4nDb7nsJp9s0vxSfx3OoWP48sn
-    YGgmCKuJ8pnThwOKI5rinSxfGR1ygswzRLsiqqSCsY5bzkMphoifVQJBAIUmrXPj
-    51od3k5VpWo1S+Mg9IiufrnqtpFu/kEEXluxCqrskb1C7mWMkGqy0bHpA014Squ2
-    7InkkRoDnTrU3Ro=
-    -----END PRIVATE KEY-----
-  snis:
-  - certificate:
-      id: 8aade13c-1470-46bd-9849-9a74e349214f
-    name: 3.example.com
-  - certificate:
-      id: 8aade13c-1470-46bd-9849-9a74e349214f
-    name: 4.example.com
-- cert: |-
-    -----BEGIN CERTIFICATE-----
     MIIBoTCCAQoCCQC/V5OfTXu7xDANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDDApr
     b25naHEuY29tMB4XDTIzMDYwMTE3NTAwOFoXDTI0MDUzMTE3NTAwOFowFTETMBEG
     A1UEAwwKa29uZ2hxLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAuyL5
@@ -74,6 +37,23 @@ certificates:
   - certificate:
       id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
     name: 2.example.com
+consumers:
+- basicauth_credentials:
+  - password: consumer-1-password
+    tags:
+    - k8s-name:consumer-basic-auth
+    - k8s-namespace:default
+    - k8s-kind:Secret
+    - k8s-version:v1
+    username: consumer-1
+  id: 7deb6e70-60be-5dd2-b374-06551479ea5e
+  tags:
+  - k8s-name:consumer
+  - k8s-namespace:default
+  - k8s-kind:KongConsumer
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+  username: consumer
 services:
 - connect_timeout: 60000
   host: foo-svc.bar-namespace.80.svc
@@ -85,12 +65,19 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.host == "example.com") && (http.path == "/")
+  - hosts:
+    - example.com
     https_redirect_status_code: 426
     id: fc9a8135-0253-5631-b1e0-8712f796a4e2
     name: bar-namespace.ing-with-tls.foo-svc.example.com.80
+    path_handling: v0
+    paths:
+    - ~/$
     preserve_host: true
-    priority: 57178899677185
+    protocols:
+    - http
+    - https
+    regex_priority: 0
     request_buffering: true
     response_buffering: true
     strip_path: false

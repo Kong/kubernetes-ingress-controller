@@ -15,8 +15,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	kongaddon "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -25,6 +23,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"

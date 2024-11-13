@@ -57,6 +57,7 @@ linters-settings:
     - default
     - prefix(github.com/Kong/sdk-konnect-go)
     - prefix(github.com/kong/kubernetes-ingress-controller/v3)
+    - prefix(github.com/kong/kubernetes-configuration)
   importas:
     no-unaliased: true
     alias:

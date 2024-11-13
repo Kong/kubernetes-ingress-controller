@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/samber/lo"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )

@@ -2,10 +2,11 @@ package kongstate
 
 import (
 	"github.com/kong/go-kong/kong"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )

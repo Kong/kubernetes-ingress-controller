@@ -11,8 +11,6 @@ import (
 	"os"
 	"testing"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -23,6 +21,9 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"

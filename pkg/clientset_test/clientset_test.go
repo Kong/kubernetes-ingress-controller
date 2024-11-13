@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongfake "github.com/kong/kubernetes-configuration/pkg/clientset/fake"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongfake "github.com/kong/kubernetes-configuration/pkg/clientset/fake"
 )
 
 func TestClientset(t *testing.T) {

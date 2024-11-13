@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"reflect"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 // UpdateLoadBalancerIngress updates any supported Ingress object with new []netv1.IngressLoadBalancerIngress

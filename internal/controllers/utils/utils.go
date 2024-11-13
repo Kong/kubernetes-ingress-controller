@@ -1,13 +1,14 @@
 package utils
 
 import (
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )

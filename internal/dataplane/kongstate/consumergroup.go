@@ -2,6 +2,7 @@ package kongstate
 
 import (
 	"github.com/kong/go-kong/kong"
+
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 

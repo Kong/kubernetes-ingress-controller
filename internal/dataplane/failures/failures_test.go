@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -12,6 +11,8 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 const someValidResourceFailureReason = "some valid message"

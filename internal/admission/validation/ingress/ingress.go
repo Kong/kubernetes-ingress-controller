@@ -7,8 +7,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	netv1 "k8s.io/api/networking/v1"
+
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"

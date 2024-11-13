@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )

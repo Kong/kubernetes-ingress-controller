@@ -8,8 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"

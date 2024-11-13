@@ -84,8 +84,12 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 
 	const expectedMessage = `invalid service:test-service: HTTP status 400 (message: "2 schema violations (failed conditional validation given value of field 'protocol'; path: value must be null)")`
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := sut.Update(ctx, faultyConfig)
+		configSize, err := sut.Update(ctx, faultyConfig)
 		if !assert.Error(t, err) {
+			return
+		}
+		// Default value 0 to discard, since error has been returned.
+		if !assert.Zero(t, configSize) {
 			return
 		}
 		var updateError sendconfig.UpdateError

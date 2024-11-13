@@ -100,10 +100,21 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Deprecated
+
+- CRD type bindings under `/pkg` and clientsets under `/pkg/clientset` are deprecated
+  and will be removed in the next major release. Until then, they won't be updated.
+  They were migrated to a new dedicated [repository][kconf]. If you depend on them,
+  please update your dependencies to use the new repository.
+
+[kconf]: https://github.com/kong/kubernetes-configuration
+
 ### Changed
 
 - Bump version of Gateway API to `1.2.0`.
   [#6571](https://github.com/Kong/kubernetes-ingress-controller/pull/6571)
+- Set SNI's certificate ID ref in the generated config.
+  [#6660](https://github.com/Kong/kubernetes-ingress-controller/pull/6660)
 
 ### Fixed
 
@@ -111,8 +122,20 @@ Adding a new version? You'll need three changes:
   when `Ingress` without annotation and a different `Ingress` with annotation
   pointed to the same `Service`.
   [#6626](https://github.com/Kong/kubernetes-ingress-controller/pull/6626)
-- Fix panic in `KongUpstreamPolicyReconciler` when using with Ingress having a nil HTTP rule
+- Fix panic in `KongUpstreamPolicyReconciler` when using with Ingress having a nil HTTP rule.
   [#6651](https://github.com/Kong/kubernetes-ingress-controller/pull/6651)
+- `KongConsumer`s with conflicting credentials will not be translated in Kong
+  configuration to prevent invalid Kong configuration generated. A warning
+  kubernetes event with `KongConfigurationTranslationFailed` will be reported
+  for each involved `KongConsumer`.
+  [#6585](https://github.com/Kong/kubernetes-ingress-controller/pull/6585)
+
+### Added
+
+- Added Prometheus metrics `ingress_controller_configuration_push_size`
+  and `ingress_controller_fallback_configuration_push_size` to record size of
+  the config sent to a Kong DataPlane by the controller in DB-less mode.
+  [#6664](https://github.com/Kong/kubernetes-ingress-controller/pull/6664)
 
 ## [3.3.1]
 

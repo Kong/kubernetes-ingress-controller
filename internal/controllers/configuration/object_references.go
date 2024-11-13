@@ -9,11 +9,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // updateReferredObjects updates reference records where the referrer is the object in parameter obj.

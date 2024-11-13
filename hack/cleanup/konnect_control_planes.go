@@ -196,7 +196,12 @@ func deleteRoles(
 	var errs []error
 	for _, roleID := range rolesIDsToDelete {
 		log.Info("Deleting role", "id", roleID)
-		if _, err := sdk.UsersRemoveRole(ctx, userID, roleID); err != nil {
+		_, err := sdk.UsersRemoveRole(ctx, userID, roleID,
+			// NOTE: Otherwise we use prod server by default.
+			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+		)
+		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete role %s: %w", roleID, err))
 		}
 	}

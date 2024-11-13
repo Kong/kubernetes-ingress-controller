@@ -18,6 +18,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -29,6 +30,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -46,7 +49,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -213,10 +215,12 @@ func (f *mockUpdateStrategyResolver) returnSpecificErrorOnUpdate(url string, err
 	f.errorsToReturnOnUpdate[url] = append(f.errorsToReturnOnUpdate[url], err)
 }
 
+const mockUpdateReturnedConfigSize = 22
+
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
 // That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) error {
-	return func(content sendconfig.ContentWithHash) error {
+func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) (mo.Option[int], error) {
+	return func(content sendconfig.ContentWithHash) (mo.Option[int], error) {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
@@ -226,12 +230,11 @@ func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func
 			if len(errsToReturn) > 0 {
 				err := errsToReturn[0]
 				f.errorsToReturnOnUpdate[url] = errsToReturn[1:]
-				return err
+				return mo.None[int](), err
 			}
-			return nil
+			return mo.Some(mockUpdateReturnedConfigSize), nil
 		}
-
-		return nil
+		return mo.Some(mockUpdateReturnedConfigSize), nil
 	}
 }
 
@@ -301,10 +304,10 @@ func (f *mockUpdateStrategyResolver) eventuallyGetLastUpdatedContentForURL(
 
 // mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
 type mockUpdateStrategy struct {
-	onUpdate func(content sendconfig.ContentWithHash) error
+	onUpdate func(content sendconfig.ContentWithHash) (mo.Option[int], error)
 }
 
-func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (err error) {
+func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (n mo.Option[int], err error) {
 	return m.onUpdate(targetContent)
 }
 
@@ -899,7 +902,7 @@ func TestKongClient_KubernetesEvents(t *testing.T) {
 			}
 			if tc.updateError {
 				if tc.entityErrors {
-					updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateError(
+					updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateErrorWithoutResponseBody(
 						[]failures.ResourceFailure{
 							lo.Must(failures.NewResourceFailure("violated constraint", testIngress)),
 							lo.Must(failures.NewResourceFailure("violated constraint", testService)),
@@ -911,7 +914,7 @@ func TestKongClient_KubernetesEvents(t *testing.T) {
 				}
 			}
 			if tc.updateError && tc.fallbackConfigurationUpdateError {
-				updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateError(
+				updateStrategyResolver.returnSpecificErrorOnUpdate(testGatewayClient.BaseRootURL(), sendconfig.NewUpdateErrorWithoutResponseBody(
 					[]failures.ResourceFailure{
 						lo.Must(failures.NewResourceFailure("violated constraint", testIngress)),
 					}, errors.New("error on update"),
@@ -1169,7 +1172,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 			},
 		}
 		configBuilder = newMockKongConfigBuilder()
-		updateErr     = sendconfig.NewUpdateError(nil, errors.New("invalid request"))
+		updateErr     = sendconfig.NewUpdateErrorWithoutResponseBody(nil, errors.New("invalid request"))
 	)
 	configBuilder.kongState = newKongState
 
@@ -1360,7 +1363,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			kongClient.lastValidCacheSnapshot = &lastValidCache
 
 			t.Log("Setting update strategy to return an error on the first call to trigger fallback configuration generation")
-			updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
+			updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateErrorWithoutResponseBody(
 				[]failures.ResourceFailure{
 					lo.Must(failures.NewResourceFailure("violated constraint", brokenConsumer)),
 				},
@@ -1538,7 +1541,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		require.NoError(t, originalCache.Add(someConsumer(t, "broken"))) // Add a consumer to cache to change the cache hash.
 
 		t.Log("Setting update strategy to return an error on the first call to trigger fallback configuration generation")
-		updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
+		updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateErrorWithoutResponseBody(
 			[]failures.ResourceFailure{
 				lo.Must(failures.NewResourceFailure("violated constraint", someConsumer(t, "invalid"))),
 			},
@@ -1561,7 +1564,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 	t.Run("when fallback was used before and config is still broken, after discovering a new client, all clients are updated", func(t *testing.T) {
 		t.Log("Adding a new client to the provider")
 		clientsProvider.gatewayClients = append(clientsProvider.gatewayClients, anotherNewGwClient)
-		updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
+		updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateErrorWithoutResponseBody(
 			[]failures.ResourceFailure{
 				lo.Must(failures.NewResourceFailure("violated constraint", someConsumer(t, "invalid"))),
 			},
@@ -1638,7 +1641,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("Setting update strategy to return an error on the first call to trigger fallback configuration generation")
-	updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateError(
+	updateStrategyResolver.returnSpecificErrorOnUpdate(gwClient.BaseRootURL(), sendconfig.NewUpdateErrorWithoutResponseBody(
 		[]failures.ResourceFailure{
 			lo.Must(failures.NewResourceFailure("violated constraint", brokenConsumer)),
 		},
@@ -1854,7 +1857,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 		{
 			name: "one of gateways returns UpdateError with entities",
 			errorsFromGateways: []error{
-				sendconfig.NewUpdateError(
+				sendconfig.NewUpdateErrorWithoutResponseBody(
 					[]failures.ResourceFailure{
 						lo.Must(failures.NewResourceFailure("violated constraint", someConsumer(t, "broken"))),
 					},
@@ -1867,7 +1870,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 		{
 			name: "one of gateways returns UpdateError without entities, has last valid config",
 			errorsFromGateways: []error{
-				sendconfig.NewUpdateError(nil, errors.New("error on update")),
+				sendconfig.NewUpdateErrorWithoutResponseBody(nil, errors.New("error on update")),
 				nil,
 			},
 			hasLastValidConfig:                      true,
@@ -1876,7 +1879,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 		{
 			name: "one of gateways returns UpdateError without entities, no last valid config",
 			errorsFromGateways: []error{
-				sendconfig.NewUpdateError(nil, errors.New("error on update")),
+				sendconfig.NewUpdateErrorWithoutResponseBody(nil, errors.New("error on update")),
 				nil,
 			},
 			hasLastValidConfig:                       false,
@@ -1896,7 +1899,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 		{
 			name: "one gateway returns UpdateError, another one an unexpected error",
 			errorsFromGateways: []error{
-				sendconfig.NewUpdateError(
+				sendconfig.NewUpdateErrorWithoutResponseBody(
 					[]failures.ResourceFailure{
 						lo.Must(failures.NewResourceFailure("violated constraint", someConsumer(t, "broken"))),
 					},

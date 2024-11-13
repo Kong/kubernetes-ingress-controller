@@ -43,16 +43,23 @@ func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	if kongCert.Cert != nil {
 		res.Cert = kong.String(*kongCert.Cert)
 	}
-	res.SNIs = getSNIs(kongCert.SNIs)
+	res.SNIs = getCertsSNIs(kongCert)
 	return res
 }
 
-func getSNIs(names []*string) []kong.SNI {
-	snis := make([]kong.SNI, 0, len(names))
-	for _, name := range names {
-		snis = append(snis, kong.SNI{
-			Name: kong.String(*name),
-		})
+func getCertsSNIs(kongCert kong.Certificate) []kong.SNI {
+	snis := make([]kong.SNI, 0, len(kongCert.SNIs))
+	for _, sni := range kongCert.SNIs {
+		kongSNI := kong.SNI{
+			Name: sni,
+			Certificate: &kong.Certificate{
+				ID: kongCert.ID,
+			},
+		}
+		if kongCert.ID != nil {
+			kongSNI.Certificate.ID = kongCert.ID
+		}
+		snis = append(snis, kongSNI)
 	}
 	return snis
 }

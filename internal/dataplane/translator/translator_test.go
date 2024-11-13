@@ -23,6 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -31,9 +35,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 

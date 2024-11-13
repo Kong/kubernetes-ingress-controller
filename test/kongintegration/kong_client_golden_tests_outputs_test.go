@@ -17,6 +17,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
@@ -116,8 +117,11 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			require.NoError(t, err)
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
-				assert.NoError(t, err)
+				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
+				if !assert.NoError(t, err) {
+					return
+				}
+				assert.Equal(t, mo.None[int](), configSize)
 			}, timeout, tick)
 		})
 	}

@@ -163,7 +163,7 @@ func NewMTLSAuth(config interface{}) (*MTLSAuth, error) {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *KeyAuth) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KeyAuth {
 	return &KeyAuth{
-		kong.KeyAuth{
+		KeyAuth: kong.KeyAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
@@ -176,7 +176,7 @@ func (c *KeyAuth) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KeyAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *HMACAuth) SanitizedCopy() *HMACAuth {
 	return &HMACAuth{
-		kong.HMACAuth{
+		HMACAuth: kong.HMACAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
@@ -190,7 +190,7 @@ func (c *HMACAuth) SanitizedCopy() *HMACAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *JWTAuth) SanitizedCopy() *JWTAuth {
 	return &JWTAuth{
-		kong.JWTAuth{
+		JWTAuth: kong.JWTAuth{
 			// Consumer field omitted
 			CreatedAt:    c.CreatedAt,
 			ID:           c.ID,
@@ -206,7 +206,7 @@ func (c *JWTAuth) SanitizedCopy() *JWTAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *BasicAuth) SanitizedCopy() *BasicAuth {
 	return &BasicAuth{
-		kong.BasicAuth{
+		BasicAuth: kong.BasicAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
@@ -220,7 +220,7 @@ func (c *BasicAuth) SanitizedCopy() *BasicAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 	return &Oauth2Credential{
-		kong.Oauth2Credential{
+		Oauth2Credential: kong.Oauth2Credential{
 			// Consumer field omitted
 			CreatedAt:    c.CreatedAt,
 			ID:           c.ID,

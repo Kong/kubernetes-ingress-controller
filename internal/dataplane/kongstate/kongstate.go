@@ -17,6 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -24,8 +27,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -88,6 +89,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
 	consumerIndex := make(map[string]Consumer)
+	credentialsConflictDetector := NewCredentialConflictsDetector()
 
 	// build consumer index
 	for _, consumer := range s.ListKongConsumers() {
@@ -179,16 +181,41 @@ func (ks *KongState) FillConsumersAndCredentials(
 				}
 				credConfig[k] = string(v)
 			}
-			credTags := util.GenerateTagsForObject(secret)
-			if err := c.SetCredential(credType, credConfig, credTags); err != nil {
+			tags := util.GenerateTagsForObject(secret)
+			cred, err := c.SetCredential(credType, credConfig, tags)
+			if err != nil {
 				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: %v", err),
 				)
 				continue
 			}
+			credentialsConflictDetector.RegisterForConflictDetection(cred, secret, consumer)
 		}
 
 		consumerIndex[consumer.Namespace+"/"+consumer.Name] = c
+	}
+
+	// Detect credential conflicts, push failures for them, and remove the consumers that have conflicts.
+	for _, conflict := range credentialsConflictDetector.DetectConflicts() {
+		// Push the failure for the credential Secret first.
+		failuresCollector.PushResourceFailure(
+			fmt.Sprintf("Secret has conflicting credential: %s", conflict.Message),
+			conflict.Credential.CredentialSecret,
+		)
+
+		// Check if the consumer is still in the index...
+		consumerKey := client.ObjectKeyFromObject(conflict.Credential.Consumer).String()
+		_, ok := consumerIndex[consumerKey]
+		if !ok {
+			// If it's not, it's already been removed, and we can skip this step.
+			continue
+		}
+		// ...if it is, push the failure for the KongConsumer and remove it from the index.
+		failuresCollector.PushResourceFailure(
+			fmt.Sprintf("Consumer has conflicting credentials: %s", conflict.Message),
+			conflict.Credential.Consumer,
+		)
+		delete(consumerIndex, consumerKey)
 	}
 
 	// populate the consumer in the state

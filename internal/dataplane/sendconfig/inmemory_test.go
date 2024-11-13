@@ -10,6 +10,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -90,6 +91,9 @@ func (m *mockConfigConverter) Convert(*file.Content) sendconfig.DBLessConfig {
 }
 
 func TestUpdateStrategyInMemory(t *testing.T) {
+	emptyCfg := sendconfig.ContentWithHash{}
+	sizeOfEmptyCfg := mo.Some(2) // Size of the above emptyCfg marshaled to JSON in bytes.
+
 	testCases := []struct {
 		name                      string
 		configServiceError        error
@@ -114,13 +118,19 @@ func TestUpdateStrategyInMemory(t *testing.T) {
 		{
 			name:               "APIError 400 with no resource failures returned from config service",
 			configServiceError: kong.NewAPIError(400, "bad request"),
-			expectedError:      sendconfig.NewUpdateError(nil, kong.NewAPIError(400, "bad request")),
+			expectedError: sendconfig.NewUpdateErrorWithResponseBody(
+				nil,
+				sizeOfEmptyCfg,
+				nil,
+				kong.NewAPIErrorWithRaw(400, "bad request", nil),
+			),
 		},
 		{
 			name:               "APIError 400 with resource failures returned from config service",
 			configServiceError: kong.NewAPIErrorWithRaw(400, "bad request", []byte(validFlattenedErrorsResponse)),
 			expectedError: sendconfig.NewUpdateErrorWithResponseBody(
 				[]byte(validFlattenedErrorsResponse),
+				sizeOfEmptyCfg,
 				[]failures.ResourceFailure{
 					lo.Must(failures.NewResourceFailure("invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'", &metav1.PartialObjectMetadata{
 						TypeMeta: metav1.TypeMeta{
@@ -144,8 +154,14 @@ func TestUpdateStrategyInMemory(t *testing.T) {
 			configService := &mockConfigService{err: tc.configServiceError}
 			configConverter := &mockConfigConverter{}
 			s := sendconfig.NewUpdateStrategyInMemory(configService, configConverter, logr.Discard())
-			err := s.Update(context.Background(), sendconfig.ContentWithHash{})
+			n, err := s.Update(context.Background(), emptyCfg)
 			require.Equal(t, tc.expectedError, err)
+			if tc.expectedError != nil {
+				// Default value 0 to discard, since error has been returned.
+				require.Zero(t, n)
+			} else {
+				require.Equal(t, sizeOfEmptyCfg, n)
+			}
 			require.True(t, configConverter.called)
 		})
 	}

@@ -8,9 +8,10 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored

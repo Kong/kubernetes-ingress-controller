@@ -16,8 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 func TestIndexIngressesOnBackendServiceName(t *testing.T) {

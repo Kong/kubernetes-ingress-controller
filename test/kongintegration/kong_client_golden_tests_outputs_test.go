@@ -17,6 +17,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
@@ -120,7 +121,7 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 				if !assert.NoError(t, err) {
 					return
 				}
-				assert.Equal(t, sendconfig.ConfigSizeNotApplicable, configSize)
+				assert.Equal(t, mo.None[int](), configSize)
 			}, timeout, tick)
 		})
 	}

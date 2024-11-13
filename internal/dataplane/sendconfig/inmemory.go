@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
@@ -52,17 +53,17 @@ func NewUpdateStrategyInMemory(
 	}
 }
 
-func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentWithHash) (int, error) {
+func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentWithHash) (mo.Option[int], error) {
 	dblessConfig := s.configConverter.Convert(targetState.Content)
 	config, err := json.Marshal(dblessConfig)
 	if err != nil {
-		return 0, fmt.Errorf("constructing kong configuration: %w", err)
+		return mo.None[int](), fmt.Errorf("constructing kong configuration: %w", err)
 	}
 
 	if len(targetState.CustomEntities) > 0 {
 		unmarshaledConfig := map[string]any{}
 		if err := json.Unmarshal(config, &unmarshaledConfig); err != nil {
-			return 0, fmt.Errorf("unmarshaling config for adding custom entities: %w", err)
+			return mo.None[int](), fmt.Errorf("unmarshaling config for adding custom entities: %w", err)
 		}
 		for entityType, entities := range targetState.CustomEntities {
 			unmarshaledConfig[entityType] = entities
@@ -70,11 +71,11 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		}
 		config, err = json.Marshal(unmarshaledConfig)
 		if err != nil {
-			return 0, fmt.Errorf("constructing kong configuration again with custom entities: %w", err)
+			return mo.None[int](), fmt.Errorf("constructing kong configuration again with custom entities: %w", err)
 		}
 	}
 
-	configSize := len(config)
+	configSize := mo.Some[int](len(config))
 	if reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
 		ctx,
 		bytes.NewReader(config),
@@ -88,14 +89,13 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		if errors.As(reloadConfigErr, &apiError) && apiError.Code() == http.StatusBadRequest {
 			resourceErrors, parseErr := parseFlatEntityErrors(apiError.Raw(), s.logger)
 			if parseErr != nil {
-				return 0, fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
+				return mo.None[int](), fmt.Errorf("failed to parse flat entity errors from error response: %w", parseErr)
 			}
-
 			for _, resourceError := range resourceErrors {
 				s.logger.V(logging.DebugLevel).Info("Resource error", "resource_error", resourceError)
 			}
 
-			return 0, NewUpdateErrorWithResponseBody(
+			return mo.None[int](), NewUpdateErrorWithResponseBody(
 				apiError.Raw(),
 				configSize,
 				resourceErrorsToResourceFailures(resourceErrors, s.logger),
@@ -103,7 +103,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 			)
 		}
 		// ...otherwise, we return the original one.
-		return 0, fmt.Errorf("failed to reload declarative configuration: %w", reloadConfigErr)
+		return mo.None[int](), fmt.Errorf("failed to reload declarative configuration: %w", reloadConfigErr)
 	}
 	return configSize, nil
 }

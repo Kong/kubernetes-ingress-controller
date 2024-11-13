@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -24,13 +25,13 @@ func newMockUpdateStrategy(shouldSucceed bool) *mockUpdateStrategy {
 	return &mockUpdateStrategy{shouldSucceed: shouldSucceed}
 }
 
-const mockUpdateReturnedConfigSize = 22
+var mockUpdateReturnedConfigSize = mo.Some(22)
 
-func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (n int, err error) {
+func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (n mo.Option[int], err error) {
 	m.wasUpdateCalled = true
 
 	if !m.shouldSucceed {
-		return 0, errors.New("update failure occurred")
+		return mo.None[int](), errors.New("update failure occurred")
 	}
 
 	return mockUpdateReturnedConfigSize, nil

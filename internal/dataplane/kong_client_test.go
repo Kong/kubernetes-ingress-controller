@@ -18,6 +18,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -218,8 +219,8 @@ const mockUpdateReturnedConfigSize = 22
 
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
 // That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) (int, error) {
-	return func(content sendconfig.ContentWithHash) (int, error) {
+func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) (mo.Option[int], error) {
+	return func(content sendconfig.ContentWithHash) (mo.Option[int], error) {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
@@ -229,11 +230,11 @@ func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func
 			if len(errsToReturn) > 0 {
 				err := errsToReturn[0]
 				f.errorsToReturnOnUpdate[url] = errsToReturn[1:]
-				return 0, err
+				return mo.None[int](), err
 			}
-			return mockUpdateReturnedConfigSize, nil
+			return mo.Some(mockUpdateReturnedConfigSize), nil
 		}
-		return mockUpdateReturnedConfigSize, nil
+		return mo.Some(mockUpdateReturnedConfigSize), nil
 	}
 }
 
@@ -303,10 +304,10 @@ func (f *mockUpdateStrategyResolver) eventuallyGetLastUpdatedContentForURL(
 
 // mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
 type mockUpdateStrategy struct {
-	onUpdate func(content sendconfig.ContentWithHash) (int, error)
+	onUpdate func(content sendconfig.ContentWithHash) (mo.Option[int], error)
 }
 
-func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (n int, err error) {
+func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (n mo.Option[int], err error) {
 	return m.onUpdate(targetContent)
 }
 

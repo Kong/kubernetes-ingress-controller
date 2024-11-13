@@ -10,6 +10,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -91,7 +92,7 @@ func (m *mockConfigConverter) Convert(*file.Content) sendconfig.DBLessConfig {
 
 func TestUpdateStrategyInMemory(t *testing.T) {
 	emptyCfg := sendconfig.ContentWithHash{}
-	const sizeOfEmptyCfg = 2 // Size of the above emptyCfg marshaled to JSON in bytes.
+	sizeOfEmptyCfg := mo.Some(2) // Size of the above emptyCfg marshaled to JSON in bytes.
 
 	testCases := []struct {
 		name                      string

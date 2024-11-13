@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/samber/mo"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
@@ -393,7 +394,7 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 }
 
 // RecordPushSuccess records a successful configuration push.
-func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, size int, dataplane string) {
+func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, size mo.Option[int], dataplane string) {
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt)
 	c.recordPushDuration(p, d, dpOpt)
@@ -403,7 +404,7 @@ func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, size in
 }
 
 // RecordPushFailure records a failed configuration push.
-func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, size int, dataplane string, count int, err error) {
+func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, size mo.Option[int], dataplane string, count int, err error) {
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt, withError(err))
 	c.recordPushDuration(p, d, dpOpt, withFailure())
@@ -472,7 +473,9 @@ func (c *CtrlFuncMetrics) RecordFallbackTranslationBrokenResources(count int) {
 }
 
 // RecordFallbackPushSuccess records a successful fallback configuration push.
-func (c *CtrlFuncMetrics) RecordFallbackPushSuccess(p Protocol, duration time.Duration, size int, dataplane string) {
+func (c *CtrlFuncMetrics) RecordFallbackPushSuccess(
+	p Protocol, duration time.Duration, size mo.Option[int], dataplane string,
+) {
 	dpOpt := withDataplane(dataplane)
 	c.recordFallbackPushCount(p, dpOpt)
 	c.recordFallbackPushDuration(p, duration, dpOpt)
@@ -482,7 +485,9 @@ func (c *CtrlFuncMetrics) RecordFallbackPushSuccess(p Protocol, duration time.Du
 }
 
 // RecordFallbackPushFailure records a failed fallback configuration push.
-func (c *CtrlFuncMetrics) RecordFallbackPushFailure(p Protocol, duration time.Duration, size int, dataplane string, brokenResourcesCount int, err error) {
+func (c *CtrlFuncMetrics) RecordFallbackPushFailure(
+	p Protocol, duration time.Duration, size mo.Option[int], dataplane string, brokenResourcesCount int, err error,
+) {
 	dpOpt := withDataplane(dataplane)
 	c.recordFallbackPushDuration(p, duration, dpOpt, withFailure())
 	c.recordFallbackPushCount(p, dpOpt, withError(err))
@@ -589,9 +594,10 @@ func (c *CtrlFuncMetrics) recordFallbackPushCount(p Protocol, opts ...recordOpti
 	c.FallbackConfigPushCount.With(labels).Inc()
 }
 
-func (c *CtrlFuncMetrics) recordFallbackConfigPushSize(p Protocol, size int, opts ...recordOption) {
-	// -1 is sendconfig.ConfigSizeNotApplicable (not imported due to circular dependency).
-	if size == -1 {
+func (c *CtrlFuncMetrics) recordFallbackConfigPushSize(p Protocol, size mo.Option[int], opts ...recordOption) {
+	// When size is missing do not report this metric at all.
+	value, ok := size.Get()
+	if !ok {
 		return
 	}
 	// Although this is hardcoded to true here, the withError or withFailure opt function will flip it to false.
@@ -604,12 +610,13 @@ func (c *CtrlFuncMetrics) recordFallbackConfigPushSize(p Protocol, size int, opt
 		labels = opt(labels)
 	}
 
-	c.FallbackConfigPushSize.With(labels).Set(float64(size))
+	c.FallbackConfigPushSize.With(labels).Set(float64(value))
 }
 
-func (c *CtrlFuncMetrics) recordConfigPushSize(p Protocol, size int, opts ...recordOption) {
-	// -1 is sendconfig.ConfigSizeNotApplicable (not imported due to circular dependency).
-	if size == -1 {
+func (c *CtrlFuncMetrics) recordConfigPushSize(p Protocol, size mo.Option[int], opts ...recordOption) {
+	// When size is missing do not report this metric at all.
+	value, ok := size.Get()
+	if !ok {
 		return
 	}
 	// Although this is hardcoded to true here, the withError or withFailure opt function will flip it to false.
@@ -622,7 +629,7 @@ func (c *CtrlFuncMetrics) recordConfigPushSize(p Protocol, size int, opts ...rec
 		labels = opt(labels)
 	}
 
-	c.ConfigPushSize.With(labels).Set(float64(size))
+	c.ConfigPushSize.With(labels).Set(float64(value))
 }
 
 func (c *CtrlFuncMetrics) recordFallbackPushSuccessTime(opts ...recordOption) {

@@ -10,6 +10,7 @@ import (
 
 	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
@@ -25,7 +26,7 @@ func TestNewCtrlFuncMetricsDoesNotPanicWhenCalledTwice(t *testing.T) {
 }
 
 func TestRecordPush(t *testing.T) {
-	const mockSizeOfCfg = 22
+	mockSizeOfCfg := mo.Some(22)
 	m := NewCtrlFuncMetrics()
 
 	t.Run("recording push success works", func(t *testing.T) {

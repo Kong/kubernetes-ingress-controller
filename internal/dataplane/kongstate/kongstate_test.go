@@ -923,8 +923,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
-				{Namespace: "default", Name: "foo"}: "key-auth credential from Secret default/labeledSecret has duplicate key",
-				{Namespace: "default", Name: "bar"}: "key-auth credential from Secret default/conflictingSecret has duplicate key",
+				{Namespace: "default", Name: "foo"}: fmt.Sprintf("conflict detected in %q index", "key-auth on 'key'"),
+				{Namespace: "default", Name: "bar"}: fmt.Sprintf("conflict detected in %q index", "key-auth on 'key'"),
 			},
 		},
 	}

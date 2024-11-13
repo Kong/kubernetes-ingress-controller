@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // redactedString is used to redact sensitive values in the KongState.

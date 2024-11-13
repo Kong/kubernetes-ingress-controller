@@ -4,19 +4,19 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
-// TODO: Implement this test for all cred types
 func TestCredentialsConflictsDetector(t *testing.T) {
 	someSecret := func(name string) *corev1.Secret {
 		return &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "secret",
+				Name:      name,
 				Namespace: "default",
 			},
 		}
@@ -74,7 +74,7 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			expectedConflicts: nil,
 		},
 		{
-			name: "2 conflict and 1 no conflict",
+			name: "key auth - 2 conflict and 1 no conflict",
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.KeyAuth{
@@ -107,6 +107,246 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 				expectedConflict(`conflict detected in "key-auth on 'key'" index`, someSecret("key1"), someConsumer("consumer2")),
 			},
 		},
+		{
+			name: "basic auth - no conflicts",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.BasicAuth{
+						BasicAuth: kong.BasicAuth{
+							Username: kong.String("user1"),
+						},
+					},
+					secret:   someSecret("basic1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.BasicAuth{
+						BasicAuth: kong.BasicAuth{
+							Username: kong.String("user2"),
+						},
+					},
+					secret:   someSecret("basic2"),
+					consumer: someConsumer("consumer2"),
+				},
+			},
+			expectedConflicts: nil,
+		},
+		{
+			name: "basic auth - 2 conflict and 1 no conflict",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.BasicAuth{
+						BasicAuth: kong.BasicAuth{
+							Username: kong.String("user1"),
+						},
+					},
+					secret:   someSecret("basic1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.BasicAuth{
+						BasicAuth: kong.BasicAuth{
+							Username: kong.String("user1"),
+						},
+					},
+					secret:   someSecret("basic1"),
+					consumer: someConsumer("consumer2"),
+				},
+				{
+					credential: &kongstate.BasicAuth{
+						BasicAuth: kong.BasicAuth{
+							Username: kong.String("user2"),
+						},
+					},
+					secret:   someSecret("basic2"),
+					consumer: someConsumer("consumer3"),
+				},
+			},
+			expectedConflicts: []kongstate.CredentialConflict{
+				expectedConflict(`conflict detected in "basic-auth on 'username'" index`, someSecret("basic1"), someConsumer("consumer1")),
+				expectedConflict(`conflict detected in "basic-auth on 'username'" index`, someSecret("basic1"), someConsumer("consumer2")),
+			},
+		},
+		{
+			name: "jwt auth - no conflicts",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.JWTAuth{
+						JWTAuth: kong.JWTAuth{
+							Key: kong.String("key1"),
+						},
+					},
+					secret:   someSecret("jwt1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.JWTAuth{
+						JWTAuth: kong.JWTAuth{
+							Key: kong.String("key2"),
+						},
+					},
+					secret:   someSecret("jwt2"),
+					consumer: someConsumer("consumer2"),
+				},
+			},
+			expectedConflicts: nil,
+		},
+		{
+			name: "jwt auth - 2 conflict and 1 no conflict",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.JWTAuth{
+						JWTAuth: kong.JWTAuth{
+							Key: kong.String("key1"),
+						},
+					},
+					secret:   someSecret("jwt1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.JWTAuth{
+						JWTAuth: kong.JWTAuth{
+							Key: kong.String("key1"),
+						},
+					},
+					secret:   someSecret("jwt1"),
+					consumer: someConsumer("consumer2"),
+				},
+				{
+					credential: &kongstate.JWTAuth{
+						JWTAuth: kong.JWTAuth{
+							Key: kong.String("key2"),
+						},
+					},
+					secret:   someSecret("jwt2"),
+					consumer: someConsumer("consumer3"),
+				},
+			},
+			expectedConflicts: []kongstate.CredentialConflict{
+				expectedConflict(`conflict detected in "jwt-auth on 'key'" index`, someSecret("jwt1"), someConsumer("consumer1")),
+				expectedConflict(`conflict detected in "jwt-auth on 'key'" index`, someSecret("jwt1"), someConsumer("consumer2")),
+			},
+		},
+		{
+			name: "hmac auth - no conflicts",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.HMACAuth{
+						HMACAuth: kong.HMACAuth{
+							Username: kong.String("user1"),
+						},
+					},
+					secret:   someSecret("hmac1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.HMACAuth{
+						HMACAuth: kong.HMACAuth{
+							Username: kong.String("user2"),
+						},
+					},
+					secret:   someSecret("hmac2"),
+					consumer: someConsumer("consumer2"),
+				},
+			},
+			expectedConflicts: nil,
+		},
+		{
+			name: "hmac auth - 2 conflict and 1 no conflict",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.HMACAuth{
+						HMACAuth: kong.HMACAuth{
+							Username: kong.String("user1"),
+						},
+					},
+					secret:   someSecret("hmac1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.HMACAuth{
+						HMACAuth: kong.HMACAuth{
+							Username: kong.String("user1"),
+						},
+					},
+					secret:   someSecret("hmac1"),
+					consumer: someConsumer("consumer2"),
+				},
+				{
+					credential: kongstate.HMACAuth{
+						HMACAuth: kong.HMACAuth{
+							Username: kong.String("user2"),
+						},
+					},
+					secret:   someSecret("hmac2"),
+					consumer: someConsumer("consumer3"),
+				},
+			},
+			expectedConflicts: []kongstate.CredentialConflict{
+				expectedConflict(`conflict detected in "hmac-auth on 'username'" index`, someSecret("hmac1"), someConsumer("consumer1")),
+				expectedConflict(`conflict detected in "hmac-auth on 'username'" index`, someSecret("hmac1"), someConsumer("consumer2")),
+			},
+		},
+		{
+			name: "oauth2 credential - no conflicts",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.Oauth2Credential{
+						Oauth2Credential: kong.Oauth2Credential{
+							ClientID: kong.String("client1"),
+						},
+					},
+					secret:   someSecret("oauth2-1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.Oauth2Credential{
+						Oauth2Credential: kong.Oauth2Credential{
+							ClientID: kong.String("client2"),
+						},
+					},
+					secret:   someSecret("oauth2-2"),
+					consumer: someConsumer("consumer2"),
+				},
+			},
+			expectedConflicts: nil,
+		},
+		{
+			name: "oauth2 credential - 2 conflict and 1 no conflict",
+			credentials: []testCredentialDetails{
+				{
+					credential: &kongstate.Oauth2Credential{
+						Oauth2Credential: kong.Oauth2Credential{
+							ClientID: kong.String("client1"),
+						},
+					},
+					secret:   someSecret("oauth2-1"),
+					consumer: someConsumer("consumer1"),
+				},
+				{
+					credential: &kongstate.Oauth2Credential{
+						Oauth2Credential: kong.Oauth2Credential{
+							ClientID: kong.String("client1"),
+						},
+					},
+					secret:   someSecret("oauth2-1"),
+					consumer: someConsumer("consumer2"),
+				},
+				{
+					credential: kongstate.Oauth2Credential{
+						Oauth2Credential: kong.Oauth2Credential{
+							ClientID: kong.String("client2"),
+						},
+					},
+					secret:   someSecret("oauth2-2"),
+					consumer: someConsumer("consumer3"),
+				},
+			},
+			expectedConflicts: []kongstate.CredentialConflict{
+				expectedConflict(`conflict detected in "oauth2-credentials on 'client_id'" index`, someSecret("oauth2-1"), someConsumer("consumer1")),
+				expectedConflict(`conflict detected in "oauth2-credentials on 'client_id'" index`, someSecret("oauth2-1"), someConsumer("consumer2")),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -119,5 +359,4 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			require.Equal(t, tc.expectedConflicts, conflicts)
 		})
 	}
-
 }

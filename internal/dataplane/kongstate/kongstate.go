@@ -422,13 +422,13 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 	}
 
 	for _, c := range ks.Consumers {
-		for _, plugin := range metadata.ExtractPluginsNamespacedNames(c.K8sKongConsumer) {
+		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&c.K8sKongConsumer) {
 			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation)
 		}
 	}
 
 	for _, cg := range ks.ConsumerGroups {
-		for _, plugin := range metadata.ExtractPluginsNamespacedNames(cg.K8sKongConsumerGroup) {
+		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&cg.K8sKongConsumerGroup) {
 			addRelation(&cg.K8sKongConsumerGroup, plugin, *cg.Name, ConsumerGroupRelation)
 		}
 	}
@@ -804,7 +804,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 	}
 
 	for i, c := range ks.Consumers {
-		for _, plugin := range metadata.ExtractPluginsNamespacedNames(c.K8sKongConsumer) {
+		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&c.K8sKongConsumer) {
 			addRelation(&c.K8sKongConsumer, plugin, &ks.Consumers[i])
 		}
 	}

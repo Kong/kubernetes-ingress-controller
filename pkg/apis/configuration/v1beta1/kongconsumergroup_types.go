@@ -38,14 +38,6 @@ type KongConsumerGroup struct {
 	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 
-func (cg KongConsumerGroup) GetAnnotations() map[string]string {
-	return cg.Annotations
-}
-
-func (cg KongConsumerGroup) GetNamespace() string {
-	return cg.Namespace
-}
-
 // +kubebuilder:object:root=true
 
 // KongConsumerGroupList contains a list of KongConsumerGroups.

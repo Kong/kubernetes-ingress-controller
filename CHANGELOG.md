@@ -122,6 +122,11 @@ Adding a new version? You'll need three changes:
   [#6626](https://github.com/Kong/kubernetes-ingress-controller/pull/6626)
 - Fix panic in `KongUpstreamPolicyReconciler` when using with Ingress having a nil HTTP rule
   [#6651](https://github.com/Kong/kubernetes-ingress-controller/pull/6651)
+- `KongConsumer`s with conflicting credentials will not be translated in Kong
+  configuration to prevent invalid Kong configuration generated. A warning
+  kubernetes event with `KongConfigurationTranslationFailed` will be reported
+  for each involved `KongConsumer`.
+  [#6585](https://github.com/Kong/kubernetes-ingress-controller/pull/6585)
 
 ## [3.3.1]
 

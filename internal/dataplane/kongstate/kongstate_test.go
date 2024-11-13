@@ -63,7 +63,11 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
 				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}},
 				Consumers: []Consumer{{
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
+					KeyAuths: []*KeyAuth{
+						{
+							KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")},
+						},
+					},
 				}},
 				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: kong.String("secret")}}},
 				ConsumerGroups: []ConsumerGroup{{
@@ -102,9 +106,15 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
 				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}}, // We don't redact plugins' config.
-				Consumers: []Consumer{{
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")}}},
-				}},
+				Consumers: []Consumer{
+					{
+						KeyAuths: []*KeyAuth{
+							{
+								KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
+							},
+						},
+					},
+				},
 				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: redactedString}}},
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
@@ -546,8 +556,13 @@ func TestGetPluginRelations(t *testing.T) {
 }
 
 func TestFillConsumersAndCredentials(t *testing.T) {
+	secretTypeMeta := metav1.TypeMeta{
+		APIVersion: "v1",
+		Kind:       "Secret",
+	}
 	secrets := []*corev1.Secret{
 		{
+			TypeMeta: secretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fooCredSecret",
 				Namespace: "default",
@@ -561,6 +576,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 		},
 		{
+			TypeMeta: secretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "barCredSecret",
 				Namespace: "default",
@@ -577,6 +593,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 		},
 		{
+			TypeMeta: secretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "emptyCredSecret",
 				Namespace: "default",
@@ -587,6 +604,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			Data: map[string][]byte{},
 		},
 		{
+			TypeMeta: secretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "unsupportedCredSecret",
 				Namespace: "default",
@@ -599,6 +617,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 		},
 		{
+			TypeMeta: secretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "labeledSecret",
 				Namespace: "default",
@@ -611,6 +630,20 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 		},
 		{
+			TypeMeta: secretTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "conflictingSecret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
+			},
+			Data: map[string][]byte{
+				"key": []byte("little-rabbits-be-good"),
+			},
+		},
+		{
+			TypeMeta: secretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "badTypeLabeledSecret",
 				Namespace: "default",
@@ -656,22 +689,28 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 						Username: kong.String("foo"),
 						CustomID: kong.String("foo"),
 					},
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{
-						Key: kong.String("whatever"),
-						TTL: kong.Int(1024),
-						Tags: util.GenerateTagsForObject(&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "fooCredSecret"},
-						}),
-					}}},
+					KeyAuths: []*KeyAuth{
+						{
+							KeyAuth: kong.KeyAuth{
+								Key: kong.String("whatever"),
+								TTL: kong.Int(1024),
+								Tags: util.GenerateTagsForObject(&corev1.Secret{
+									TypeMeta:   secretTypeMeta,
+									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "fooCredSecret"},
+								}),
+							},
+						},
+					},
 					Oauth2Creds: []*Oauth2Credential{
 						{
-							kong.Oauth2Credential{
+							Oauth2Credential: kong.Oauth2Credential{
 								Name:         kong.String("whatever"),
 								ClientID:     kong.String("whatever"),
 								ClientSecret: kong.String("whatever"),
 								HashSecret:   kong.Bool(true),
 								RedirectURIs: []*string{kong.String("http://example.com")},
 								Tags: util.GenerateTagsForObject(&corev1.Secret{
+									TypeMeta:   secretTypeMeta,
 									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "barCredSecret"},
 								}),
 							},
@@ -814,13 +853,79 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 						Username: kong.String("foo"),
 						CustomID: kong.String("foo"),
 					},
-					KeyAuths: []*KeyAuth{{kong.KeyAuth{
-						Key: kong.String("little-rabbits-be-good"),
-						Tags: util.GenerateTagsForObject(&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "labeledSecret"},
-						}),
-					}}},
+					KeyAuths: []*KeyAuth{
+						{
+							KeyAuth: kong.KeyAuth{
+								Key: kong.String("little-rabbits-be-good"),
+								Tags: util.GenerateTagsForObject(&corev1.Secret{
+									TypeMeta: secretTypeMeta,
+									ObjectMeta: metav1.ObjectMeta{
+										Namespace: "default", Name: "labeledSecret",
+									},
+								}),
+							},
+						},
+					},
 				},
+			},
+		},
+		{
+			name: "KongConusmers with conflicting key-auths",
+			k8sConsumers: []*kongv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					CustomID: "foo",
+					Credentials: []string{
+						"labeledSecret",
+					},
+				},
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "bar",
+					CustomID: "bar",
+					Credentials: []string{
+						"conflictingSecret",
+					},
+				},
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "baz",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "baz",
+					CustomID: "baz",
+				},
+			},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("baz"),
+						CustomID: kong.String("baz"),
+					},
+				},
+			},
+			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "foo"}: fmt.Sprintf("conflict detected in %q index", "key-auth on 'key'"),
+				{Namespace: "default", Name: "bar"}: fmt.Sprintf("conflict detected in %q index", "key-auth on 'key'"),
 			},
 		},
 	}
@@ -831,21 +936,29 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				Secrets:       secrets,
 				KongConsumers: tc.k8sConsumers,
 			})
-			logger := zapr.NewLogger(zap.NewNop())
+			logger := testr.New(t)
 			failuresCollector := failures.NewResourceFailuresCollector(logger)
 
 			state := KongState{}
 			state.FillConsumersAndCredentials(logger, store, failuresCollector)
 			// compare translated consumers.
 			require.Len(t, state.Consumers, len(tc.expectedKongStateConsumers))
-			// compare fields. Since we only test for translating a single consumer, we only compare the first one if exists.
+			// compare fields.
+			// In the tests, at most one single consumer is expected in the translated state, we only compare the first one if exists.
 			if len(state.Consumers) > 0 && len(tc.expectedKongStateConsumers) > 0 {
 				expectedConsumer := tc.expectedKongStateConsumers[0]
 				kongStateConsumer := state.Consumers[0]
 				assert.Equal(t, expectedConsumer.Consumer.Username, kongStateConsumer.Consumer.Username, "should have expected username")
 				// compare credentials.
-				assert.Equal(t, expectedConsumer.KeyAuths, kongStateConsumer.KeyAuths)
-				assert.Equal(t, expectedConsumer.Oauth2Creds, kongStateConsumer.Oauth2Creds)
+				// Since the credentials include references of parent objects (secrets and consumers), we only compare their fields.
+				assert.Len(t, kongStateConsumer.KeyAuths, len(expectedConsumer.KeyAuths))
+				for i := range expectedConsumer.KeyAuths {
+					assert.Equal(t, expectedConsumer.KeyAuths[i].KeyAuth, kongStateConsumer.KeyAuths[i].KeyAuth)
+				}
+				assert.Len(t, kongStateConsumer.Oauth2Creds, len(expectedConsumer.Oauth2Creds))
+				for i := range expectedConsumer.Oauth2Creds {
+					assert.Equal(t, expectedConsumer.Oauth2Creds[i].Oauth2Credential, kongStateConsumer.Oauth2Creds[i].Oauth2Credential)
+				}
 			}
 			// check for expected translation failures.
 			if len(tc.expectedTranslationFailureMessages) > 0 {
@@ -859,11 +972,10 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 						}
 						return false
 					})
-
 					assert.Truef(t, lo.ContainsBy(relatedFailures, func(f failures.ResourceFailure) bool {
 						return strings.Contains(f.Message(), expectedMessage)
-					}), "should find expected translation failure caused by KongConsumer %s: should contain '%s'",
-						nsName.String(), expectedMessage)
+					}), "should find expected translation failure caused by KongConsumer %s: %s should contain '%s'",
+						nsName.String(), relatedFailures, expectedMessage)
 				}
 			}
 		})

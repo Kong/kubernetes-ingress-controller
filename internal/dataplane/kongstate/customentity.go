@@ -12,6 +12,8 @@ import (
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"

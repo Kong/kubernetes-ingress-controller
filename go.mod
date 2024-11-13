@@ -67,8 +67,6 @@ require (
 
 require github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
 
-require github.com/kong/kubernetes-configuration v0.0.42
-
 require (
 	cloud.google.com/go/auth v0.10.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.5 // indirect

@@ -3,9 +3,10 @@ package fallback
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"

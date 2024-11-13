@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -19,6 +18,7 @@ import (
 
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"

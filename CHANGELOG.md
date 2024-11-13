@@ -134,7 +134,7 @@ Adding a new version? You'll need three changes:
 
 - Added Prometheus metrics `ingress_controller_configuration_push_size`
   and `ingress_controller_fallback_configuration_push_size` to record size of
-  the config send to Kong DataPlane by the controller in DB-less mode.
+  the config sent to a Kong DataPlane by the controller in DB-less mode.
   [#6664](https://github.com/Kong/kubernetes-ingress-controller/pull/6664)
 
 ## [3.3.1]

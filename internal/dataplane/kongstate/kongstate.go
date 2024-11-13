@@ -217,10 +217,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, keyAuth := range conflictingKeyAuths {
 		purgeConsumerWithConflictingCredential(
 			keyAuth.ParentConsumer,
-			fmt.Sprintf("key-auth credential from %s %s/%s has duplicate key: '%s'",
+			fmt.Sprintf("key-auth credential from %s %s/%s has duplicate key",
 				keyAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
 				keyAuth.ParentCred.GetNamespace(), keyAuth.ParentCred.GetName(),
-				*keyAuth.Key,
 			),
 		)
 	}
@@ -228,10 +227,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, basicAuth := range conflictingBasicAuths {
 		purgeConsumerWithConflictingCredential(
 			basicAuth.ParentConsumer,
-			fmt.Sprintf("basic-auth credential from %s %s/%s has duplicate username: '%s'",
+			fmt.Sprintf("basic-auth credential from %s %s/%s has duplicate username",
 				basicAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
 				basicAuth.ParentCred.GetNamespace(), basicAuth.ParentCred.GetName(),
-				*basicAuth.Username,
 			),
 		)
 	}
@@ -239,10 +237,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, hmacAuth := range conflictingHMACAuths {
 		purgeConsumerWithConflictingCredential(
 			hmacAuth.ParentConsumer,
-			fmt.Sprintf("hmac-auth credential from %s %s/%s has duplicate username: '%s'",
+			fmt.Sprintf("hmac-auth credential from %s %s/%s has duplicate username",
 				hmacAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
 				hmacAuth.ParentCred.GetNamespace(), hmacAuth.ParentCred.GetName(),
-				*hmacAuth.Username,
 			),
 		)
 	}
@@ -250,10 +247,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, jwtAuth := range conflictingJWTAuths {
 		purgeConsumerWithConflictingCredential(
 			jwtAuth.ParentConsumer,
-			fmt.Sprintf("jwt credential from %s %s/%s has duplicate key: '%s'",
+			fmt.Sprintf("jwt credential from %s %s/%s has duplicate key",
 				jwtAuth.ParentCred.GetObjectKind().GroupVersionKind().Kind,
 				jwtAuth.ParentCred.GetNamespace(), jwtAuth.ParentCred.GetName(),
-				*jwtAuth.Key,
 			),
 		)
 	}
@@ -261,10 +257,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, oauth2Cred := range conflictingOauth2Creds {
 		purgeConsumerWithConflictingCredential(
 			oauth2Cred.ParentConsumer,
-			fmt.Sprintf("oauth2 credential from %s %s/%s has duplicate client_id: '%s'",
+			fmt.Sprintf("oauth2 credential from %s %s/%s has duplicate client_id",
 				oauth2Cred.ParentCred.GetObjectKind().GroupVersionKind().Kind,
 				oauth2Cred.ParentCred.GetNamespace(), oauth2Cred.ParentCred.GetName(),
-				*oauth2Cred.ClientID,
 			),
 		)
 	}

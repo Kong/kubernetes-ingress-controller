@@ -273,7 +273,7 @@ Adding a new version? You'll need three changes:
 ## 3.2.0
 
 > Release date: 2024-06-12
-s
+
 ### Highlights
 
 - 🚀 **Fallback Configuration**: New `FallbackConfiguration` feature enables isolating configuration failure domains so

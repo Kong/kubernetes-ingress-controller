@@ -1,0 +1,9 @@
+_format_version: "3.0"
+consumers:
+- custom_id: 1234-1234
+  tags:
+  - k8s-name:consumer
+  - k8s-namespace:consumer-namespace
+  - k8s-kind:KongConsumer
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1

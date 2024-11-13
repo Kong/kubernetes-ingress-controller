@@ -129,6 +129,8 @@ Adding a new version? You'll need three changes:
   kubernetes event with `KongConfigurationTranslationFailed` will be reported
   for each involved `KongConsumer`.
   [#6585](https://github.com/Kong/kubernetes-ingress-controller/pull/6585)
+- Fix panic when handling `KongConsumer` without `username` specified
+  [#6665](https://github.com/Kong/kubernetes-ingress-controller/pull/6665)
 
 ### Added
 

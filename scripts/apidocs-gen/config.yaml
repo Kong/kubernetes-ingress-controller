@@ -2,7 +2,6 @@ processor:
   # RE2 regular expressions describing types that should be excluded from the generated documentation.
   ignoreTypes:
     - "List$"
-    # TODO: ignore the types not used in KIC like `KongService`, `KongRoute`.
   # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
   ignoreFields:
     - "status$"
@@ -13,5 +12,5 @@ processor:
 
 render:
   # Version of Kubernetes to use when generating links to Kubernetes API documentation.
-  # NOTE: The type of value here is `number`, so using versions ending with `0` like `1.30` will result in unexpected URL of kubernetes object meta in generated docs.
-  kubernetesVersion: 1.28
+  # NOTE: Quotes are required, otherwise the value will be intepreted as a number so versions ending with `0` like 1.30 would be covreted to "1.3" in results.
+  kubernetesVersion: "1.30"

@@ -116,7 +116,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		raw := flattenedErrorIntoRaw(ee, logger)
 		parsed, err := parseRawResourceError(raw)
 		if err != nil {
-			logger.Error(err, "Entity tags returned in error API error from gateway is missing fields, Kubernetes Event cannot be created without them",
+			logger.Error(err, "API error returned from the gateway for an entity is missing Kubernetes metadata in tags, Kubernetes Event won't be created",
 				"name", ee.Name,
 				"id", ee.ID,
 				"tags", ee.Tags,

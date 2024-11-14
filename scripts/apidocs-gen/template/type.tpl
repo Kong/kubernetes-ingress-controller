@@ -2,7 +2,6 @@
 {{- $type := $.type -}}
 {{- $isKind := $.isKind -}}
 {{- if markdownShouldRenderType $type -}}
-{{- if not (index $type.Markers "apireference:kic:exclude") -}}
 
 {{- if $isKind -}}
 ### {{ $type.Name }}
@@ -27,7 +26,9 @@
 {{ end -}}
 
 {{ range $type.Members -}}
+{{- if not (index .Markers "apireference:kic:exclude") -}}
 | `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+{{ end -}}
 {{ end -}}
 
 {{ end }}
@@ -39,6 +40,5 @@ _Appears in:_
 {{- end }}
 {{- end }}
 
-{{- end -}}
 {{- end -}}
 {{- end -}}

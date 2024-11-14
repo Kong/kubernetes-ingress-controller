@@ -52,12 +52,11 @@ func getCertsSNIs(kongCert kong.Certificate) []kong.SNI {
 	for _, sni := range kongCert.SNIs {
 		kongSNI := kong.SNI{
 			Name: sni,
-			Certificate: &kong.Certificate{
-				ID: kongCert.ID,
-			},
 		}
 		if kongCert.ID != nil {
-			kongSNI.Certificate.ID = kongCert.ID
+			kongSNI.Certificate = &kong.Certificate{
+				ID: kongCert.ID,
+			}
 		}
 		snis = append(snis, kongSNI)
 	}

@@ -2,6 +2,7 @@
 {{- $type := $.type -}}
 {{- $isKind := $.isKind -}}
 {{- if markdownShouldRenderType $type -}}
+{{- if not (index $type.Markers "apireference:kic:exclude") -}}
 
 {{- if $isKind -}}
 ### {{ $type.Name }}
@@ -38,5 +39,6 @@ _Appears in:_
 {{- end }}
 {{- end }}
 
+{{- end -}}
 {{- end -}}
 {{- end -}}

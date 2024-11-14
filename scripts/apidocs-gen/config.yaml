@@ -9,6 +9,8 @@ processor:
   customMarkers:
     - name: "apireference:kic:include"
       target: type
+    - name: "apireference:kic:exclude"
+      target: "type"
 
 render:
   # Version of Kubernetes to use when generating links to Kubernetes API documentation.

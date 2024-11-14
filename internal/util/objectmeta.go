@@ -14,6 +14,14 @@ type K8sObjectInfo struct {
 	GroupVersionKind schema.GroupVersionKind
 }
 
+func (k K8sObjectInfo) GetAnnotations() map[string]string {
+	return k.Annotations
+}
+
+func (k K8sObjectInfo) GetNamespace() string {
+	return k.Namespace
+}
+
 // FromK8sObject extracts information from a Kubernetes object.
 // It performs a shallow copy of object annotations so any modifications after
 // calling FromK8sObject will have an effect on the original object.

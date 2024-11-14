@@ -555,6 +555,145 @@ func TestGetPluginRelations(t *testing.T) {
 	}
 }
 
+func BenchmarkGetPluginRelations(b *testing.B) {
+	ks := KongState{
+		Consumers: []Consumer{
+			{
+				Consumer: kong.Consumer{
+					Username: kong.String("foo-consumer"),
+				},
+				K8sKongConsumer: kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				},
+			},
+			{
+				Consumer: kong.Consumer{
+					Username: kong.String("foo-consumer"),
+				},
+				K8sKongConsumer: kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns2",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				},
+			},
+			{
+				Consumer: kong.Consumer{
+					Username: kong.String("bar-consumer"),
+				},
+				K8sKongConsumer: kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
+						},
+					},
+				},
+			},
+		},
+		ConsumerGroups: []ConsumerGroup{
+			{
+				ConsumerGroup: kong.ConsumerGroup{
+					Name: kong.String("foo-consumer-group"),
+				},
+				K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				},
+			},
+			{
+				ConsumerGroup: kong.ConsumerGroup{
+					Name: kong.String("foo-consumer-group"),
+				},
+				K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns2",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				},
+			},
+			{
+				ConsumerGroup: kong.ConsumerGroup{
+					Name: kong.String("bar-consumer-group"),
+				},
+				K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns2",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
+						},
+					},
+				},
+			},
+		},
+		Services: []Service{
+			{
+				Service: kong.Service{
+					Name: kong.String("foo-service"),
+				},
+				K8sServices: map[string]*corev1.Service{
+					"foo-service": {
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "ns1",
+							Annotations: map[string]string{
+								annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+							},
+						},
+					},
+				},
+				Routes: []Route{
+					{
+						Route: kong.Route{
+							Name: kong.String("foo-route"),
+						},
+						Ingress: util.K8sObjectInfo{
+							Name:      "some-ingress",
+							Namespace: "ns2",
+							Annotations: map[string]string{
+								annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+							},
+						},
+					},
+					{
+						Route: kong.Route{
+							Name: kong.String("bar-route"),
+						},
+						Ingress: util.K8sObjectInfo{
+							Name:      "some-ingress",
+							Namespace: "ns2",
+							Annotations: map[string]string{
+								annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	store, err := store.NewFakeStore(store.FakeObjects{})
+	require.NoError(b, err)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		fr := ks.getPluginRelations(store, logr.Discard())
+		_ = fr
+	}
+}
+
 func TestFillConsumersAndCredentials(t *testing.T) {
 	secretTypeMeta := metav1.TypeMeta{
 		APIVersion: "v1",

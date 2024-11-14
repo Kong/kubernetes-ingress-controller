@@ -12,11 +12,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -386,7 +388,7 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 		RouteRelation         entityRelationType = iota
 		ServiceRelation       entityRelationType = iota
 	)
-	addRelation := func(referrer client.Object, plugin annotations.NamespacedKongPlugin, identifier string, t entityRelationType) {
+	addRelation := func(referrer client.Object, plugin k8stypes.NamespacedName, identifier string, t entityRelationType) {
 		// There are 2 types of KongPlugin references: local and remote.
 		// A local reference is one where the KongPlugin is in the same namespace as the referrer.
 		// A remote reference is one where the KongPlugin is in a different namespace.
@@ -423,16 +425,14 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 
 	for i := range ks.Services {
 		for _, svc := range ks.Services[i].K8sServices {
-			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(svc.GetAnnotations())
-			for _, plugin := range pluginList {
+			for _, plugin := range metadata.ExtractPluginsNamespacedNames(svc) {
 				addRelation(svc, plugin, *ks.Services[i].Name, ServiceRelation)
 			}
 		}
 
 		for j := range ks.Services[i].Routes {
 			ingress := ks.Services[i].Routes[j].Ingress
-			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
-			for _, plugin := range pluginList {
+			for _, plugin := range metadata.ExtractPluginsNamespacedNames(ingress) {
 				// pretend we have a full Ingress struct for reference checks.
 				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
@@ -449,15 +449,13 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 	}
 
 	for _, c := range ks.Consumers {
-		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
-		for _, plugin := range pluginList {
+		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&c.K8sKongConsumer) {
 			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation)
 		}
 	}
 
 	for _, cg := range ks.ConsumerGroups {
-		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(cg.K8sKongConsumerGroup.GetAnnotations())
-		for _, plugin := range pluginList {
+		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&cg.K8sKongConsumerGroup) {
 			addRelation(&cg.K8sKongConsumerGroup, plugin, *cg.Name, ConsumerGroupRelation)
 		}
 	}
@@ -782,7 +780,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 		RelatedEntities:      map[string]RelatedEntitiesRef{},
 		RouteAttachedService: map[string]*Service{},
 	}
-	addRelation := func(referrer client.Object, plugin annotations.NamespacedKongPlugin, entity any) {
+	addRelation := func(referrer client.Object, plugin k8stypes.NamespacedName, entity any) {
 		namespace, err := extractReferredPluginNamespace(log, cacheStore, referrer, plugin)
 		if err != nil {
 			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
@@ -806,16 +804,14 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 
 	for i := range ks.Services {
 		for _, svc := range ks.Services[i].K8sServices {
-			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(svc.GetAnnotations())
-			for _, plugin := range pluginList {
+			for _, plugin := range metadata.ExtractPluginsNamespacedNames(svc) {
 				addRelation(svc, plugin, &ks.Services[i])
 			}
 		}
 
 		for j, r := range ks.Services[i].Routes {
 			ingress := ks.Services[i].Routes[j].Ingress
-			pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(ingress.Annotations)
-			for _, plugin := range pluginList {
+			for _, plugin := range metadata.ExtractPluginsNamespacedNames(ingress) {
 				// Pretend we have a full Ingress struct for reference checks.
 				virtualIngress := netv1.Ingress{
 					// Fill the actual type of the object for reference checks.
@@ -835,8 +831,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 	}
 
 	for i, c := range ks.Consumers {
-		pluginList := annotations.ExtractNamespacedKongPluginsFromAnnotations(c.K8sKongConsumer.GetAnnotations())
-		for _, plugin := range pluginList {
+		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&c.K8sKongConsumer) {
 			addRelation(&c.K8sKongConsumer, plugin, &ks.Consumers[i])
 		}
 	}
@@ -844,7 +839,7 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 }
 
 func extractReferredPluginNamespace(
-	log logr.Logger, cacheStore store.Storer, referrer client.Object, plugin annotations.NamespacedKongPlugin,
+	log logr.Logger, cacheStore store.Storer, referrer client.Object, plugin k8stypes.NamespacedName,
 ) (string, error) {
 	// There are 2 types of KongPlugin references: local and remote.
 	// A local reference is one where the KongPlugin is in the same namespace as the referrer.

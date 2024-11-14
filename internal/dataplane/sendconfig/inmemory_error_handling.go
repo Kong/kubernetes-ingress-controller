@@ -171,30 +171,19 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 
 	var gvk schema.GroupVersionKind
 	for _, tag := range raw.Tags {
-		if strings.HasPrefix(tag, util.K8sNameTagPrefix) {
+		switch {
+		case strings.HasPrefix(tag, util.K8sNameTagPrefix):
 			re.Name = strings.TrimPrefix(tag, util.K8sNameTagPrefix)
-			continue
-		}
-		if strings.HasPrefix(tag, util.K8sNamespaceTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sNamespaceTagPrefix):
 			re.Namespace = strings.TrimPrefix(tag, util.K8sNamespaceTagPrefix)
-			continue
-		}
-		if strings.HasPrefix(tag, util.K8sKindTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sKindTagPrefix):
 			gvk.Kind = strings.TrimPrefix(tag, util.K8sKindTagPrefix)
-			continue
-		}
-		if strings.HasPrefix(tag, util.K8sVersionTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sVersionTagPrefix):
 			gvk.Version = strings.TrimPrefix(tag, util.K8sVersionTagPrefix)
-			continue
-		}
-		// this will not set anything for core resources
-		if strings.HasPrefix(tag, util.K8sGroupTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sGroupTagPrefix):
 			gvk.Group = strings.TrimPrefix(tag, util.K8sGroupTagPrefix)
-			continue
-		}
-		if strings.HasPrefix(tag, util.K8sUIDTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sUIDTagPrefix):
 			re.UID = strings.TrimPrefix(tag, util.K8sUIDTagPrefix)
-			continue
 		}
 	}
 

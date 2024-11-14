@@ -28,7 +28,7 @@ func (f fConsumerByUsernameAndCustomID) Less(i, j int) bool {
 		}
 	}
 
-	// Both usernames are equal, compare custom_id.
+	// Both usernames are empty or equal, compare custom_id.
 	if f[i].CustomID == nil && f[j].CustomID != nil {
 		return true
 	}

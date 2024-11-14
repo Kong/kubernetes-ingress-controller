@@ -71,24 +71,6 @@ func ValidateCredentials(secret *corev1.Secret) error {
 	return nil
 }
 
-// IsKeyUniqueConstrained indicates whether or not a given key and its type there
-// are unique constraints in place.
-func IsKeyUniqueConstrained(keyType, key string) (constrained bool) {
-	constrainedKeys, credTypeHasConstraints := uniqueKeyConstraints[keyType]
-	if !credTypeHasConstraints {
-		return
-	}
-
-	for _, constrainedKey := range constrainedKeys {
-		if key == constrainedKey {
-			constrained = true
-			return
-		}
-	}
-
-	return
-}
-
 // -----------------------------------------------------------------------------
 //  Validation - Credentials
 // -----------------------------------------------------------------------------

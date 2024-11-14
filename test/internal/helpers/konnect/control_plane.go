@@ -17,6 +17,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
@@ -31,14 +32,14 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 
 	sdk := sdk.New(accessToken(), serverURLOpt())
 
-	var rgID string
+	var cpID string
 	createRgErr := retry.Do(func() error {
 		createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
 			sdkkonnectcomp.CreateControlPlaneRequest{
 				Name:        uuid.NewString(),
 				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
 				Labels: map[string]string{
-					"created_in_tests": "true",
+					test.KonnectControlPlaneLabelCreatedInTests: "true",
 				},
 				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 			},
@@ -62,21 +63,21 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 			return errors.New("No control plane ID in response")
 		}
 
-		rgID = createResp.ControlPlane.ID
+		cpID = createResp.ControlPlane.ID
 		return nil
 	}, retry.Attempts(5), retry.Delay(time.Second))
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		t.Logf("deleting test Konnect Control Plane: %q", rgID)
+		t.Logf("deleting test Konnect Control Plane: %q", cpID)
 		err := retry.Do(
 			func() error {
-				_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, rgID)
+				_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, cpID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", rgID)
+		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", cpID)
 
 		me, err := sdk.Me.GetUsersMe(ctx,
 			// NOTE: Otherwise we use prod server by default.
@@ -99,25 +100,31 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
 			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
 		)
-		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
+		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", cpID)
 
 		for _, role := range resp.AssignedRoleCollection.Data {
 			if role.EntityID == nil || role.ID == nil {
 				continue
 			}
-			if *role.EntityID == rgID { // Delete only roles created for the control plane.
-				t.Logf("deleting test Konnect Control Plane role: %q", *role.ID)
-				_, err := sdk.Roles.UsersRemoveRole(ctx, *me.User.ID, *role.ID,
-					// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
-					sdkkonnectops.WithServerURL(test.KonnectServerURL()),
-				)
+			if *role.EntityID != cpID {
+				continue
+			}
+
+			// Delete only roles created for the control plane.
+			t.Logf("deleting test Konnect Control Plane role: %q", *role.ID)
+			_, err := sdk.Roles.UsersRemoveRole(ctx, *me.User.ID, *role.ID,
+				// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+				sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+			)
+			notFoundErr := &sdkkonnecterrs.NotFoundError{}
+			if !errors.As(err, &notFoundErr) {
 				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", *role.ID)
 			}
 		}
 	})
 
-	t.Logf("created test Konnect Control Plane: %q", rgID)
-	return rgID
+	t.Logf("created test Konnect Control Plane: %q", cpID)
+	return cpID
 }
 
 func generateTestKonnectControlPlaneDescription(t *testing.T) string {

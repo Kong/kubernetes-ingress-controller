@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	konnectControlPlanesLimit       = int64(100)
-	createdInTestsControlPlaneLabel = "created_in_tests"
-	timeUntilControlPlaneOrphaned   = time.Hour
+	konnectControlPlanesLimit     = int64(100)
+	timeUntilControlPlaneOrphaned = time.Hour
 )
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
@@ -91,7 +90,7 @@ func findOrphanedControlPlanes(
 
 	var orphanedControlPlanes []string
 	for _, ControlPlane := range response.ListControlPlanesResponse.Data {
-		if ControlPlane.Labels[createdInTestsControlPlaneLabel] != "true" {
+		if ControlPlane.Labels[test.KonnectControlPlaneLabelCreatedInTests] != "true" {
 			log.Info("Control plane was not created by the tests, skipping", "name", ControlPlane.Name)
 			continue
 		}

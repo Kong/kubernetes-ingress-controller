@@ -24,22 +24,36 @@ jobs:
     uses: ./.github/workflows/_permission_check.yaml
     secrets: inherit
 
+  # NOTE: this job checks if we're up to date with base branch. This is useful
+  # because merging a PR which branch was up to date with the base branch does
+  # not require running tests again as the commit is the same.
   up-to-date:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     needs: check-permission
     outputs:
       status: ${{ steps.up-to-date.outputs.status }}
+    # NOTE: we only want to check if the head is up to date with the base branch
+    # when pushing to main or a release branch. In PRs we don't want to do that
+    # as there's no point in doing so.
+    # The pattern matching that's used here is almost the same as in the branch
+    # pattern matching above but due to limited functionality in the 'if' syntax
+    # we have to use the 'startsWith' function. This is 'good enough'.
+    # Setting the condition below on the job level would not work as it would
+    # cause the subsequent jobs to not run.
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        if: github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Check if PR is up to date, if it is skip workflows for this ref
         id: 'up-to-date'
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.7.3
+        if: github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 

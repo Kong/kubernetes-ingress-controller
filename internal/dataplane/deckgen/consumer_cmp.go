@@ -46,5 +46,10 @@ func (f fConsumerByUsernameAndCustomID) Less(i, j int) bool {
 		}
 	}
 
+	// NOTE: Here both username and custom_id are empty which is not expected to happen
+	// as we enforce either of those field being present in CRD CEL validation rules.
+	// Since this function is only concerned with sorting, we can return false here
+	// as there are no means to propagate the error otherwise (which should be handled
+	// elsewhere prior to this point).
 	return false
 }

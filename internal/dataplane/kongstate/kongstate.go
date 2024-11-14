@@ -449,8 +449,23 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 	}
 
 	for _, c := range ks.Consumers {
+		if c.Username == nil && c.CustomID == nil {
+			// Either Custom ID or username has to be filled so this shouldn't
+			// happen but let's log here just in case.
+			log.Error(nil, "no username or custom_id specified", "consumer", c.K8sKongConsumer.Name)
+			break
+		}
+
+		var identifier string
+		switch {
+		case c.Username != nil:
+			identifier = *c.Username
+		case c.CustomID != nil:
+			identifier = *c.CustomID
+		}
+
 		for _, plugin := range metadata.ExtractPluginsNamespacedNames(&c.K8sKongConsumer) {
-			addRelation(&c.K8sKongConsumer, plugin, *c.Username, ConsumerRelation)
+			addRelation(&c.K8sKongConsumer, plugin, identifier, ConsumerRelation)
 		}
 	}
 

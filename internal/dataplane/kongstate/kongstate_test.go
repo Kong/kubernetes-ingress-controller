@@ -544,10 +544,62 @@ func TestGetPluginRelations(t *testing.T) {
 				"ns2:baz": {Route: []string{"bar-route"}, ConsumerGroup: []string{"bar-consumer-group"}},
 			},
 		},
+		{
+			name: "consumer with custom_id and a plugin attached",
+			args: args{
+				state: KongState{
+					Consumers: []Consumer{
+						{
+							Consumer: kong.Consumer{
+								CustomID: kong.String("1234-1234"),
+							},
+							K8sKongConsumer: kongv1.KongConsumer{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "default",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "rate-limiting-1",
+									},
+								},
+							},
+						},
+					},
+					Plugins: []Plugin{
+						{
+							Plugin: kong.Plugin{
+								Name: kong.String("rate-limiting"),
+							},
+							K8sParent: &kongv1.KongPlugin{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "default",
+									Name:      "rate-limiting-1",
+								},
+								PluginName: "rate-limiting",
+							},
+						},
+						{
+							Plugin: kong.Plugin{
+								Name: kong.String("basic-auth"),
+							},
+							K8sParent: &kongv1.KongPlugin{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "default",
+									Name:      "basic-auth-1",
+								},
+								PluginName: "basic-auth",
+							},
+						},
+					},
+				},
+			},
+			want: map[string]util.ForeignRelations{
+				"default:rate-limiting-1": {Consumer: []string{"1234-1234"}},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store, _ := store.NewFakeStore(store.FakeObjects{})
+			store, err := store.NewFakeStore(store.FakeObjects{})
+			require.NoError(t, err)
 			if got := tt.args.state.getPluginRelations(store, logr.Discard()); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getPluginRelations() = %v, want %v", got, tt.want)
 			}

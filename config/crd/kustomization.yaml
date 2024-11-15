@@ -2,4 +2,4 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # TODO: make Renovate update this: https://github.com/Kong/kubernetes-ingress-controller/issues/6663
-  - https://github.com/kong/kubernetes-configuration/config/crd/ingress-controller?ref=v0.0.43
+  - https://github.com/kong/kubernetes-configuration/config/crd/ingress-controller?ref=v0.0.45

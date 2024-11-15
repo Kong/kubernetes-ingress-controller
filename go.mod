@@ -19,7 +19,7 @@ go 1.23.2
 // toolchain go1.21.0
 
 require (
-	cloud.google.com/go/container v1.41.0
+	cloud.google.com/go/container v1.42.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/blang/semver/v4 v4.0.0

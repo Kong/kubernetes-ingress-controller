@@ -58,6 +58,11 @@ linters-settings:
     - prefix(github.com/Kong/sdk-konnect-go)
     - prefix(github.com/kong/kubernetes-ingress-controller/v3)
     - prefix(github.com/kong/kubernetes-configuration)
+  govet:
+    enable-all: true # To have checks like e.g. unusedwrite.
+    disable:
+      - fieldalignment
+      - shadow
   importas:
     no-unaliased: true
     alias:

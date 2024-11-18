@@ -524,9 +524,8 @@ func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatew
 			switch any(route).(type) {
 			case *gatewayapi.HTTPRoute:
 				gvk = schema.GroupVersionKind{
-					Group:   gatewayv1.GroupVersion.Group,
-					Version: gatewayv1.GroupVersion.Version,
-					Kind:    "HTTPRoute",
+					Group: gatewayv1.GroupVersion.Group,
+					Kind:  "HTTPRoute",
 				}
 			default:
 				gvk = route.GetObjectKind().GroupVersionKind()

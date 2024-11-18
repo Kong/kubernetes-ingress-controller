@@ -21,6 +21,12 @@ services:
         replace:
           uri: /new-prefix$(uri_captures[1])
       name: request-transformer
+      tags:
+      - k8s-name:httproute-testing
+      - k8s-namespace:default
+      - k8s-kind:HTTPRoute
+      - k8s-group:gateway.networking.k8s.io
+      - k8s-version:v1
     preserve_host: true
     protocols:
     - http

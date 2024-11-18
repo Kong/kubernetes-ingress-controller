@@ -459,10 +459,10 @@ func generatePluginsFromHTTPRouteFilters(
 	}
 	kongPlugins = append(kongPlugins, transformerPluginsToKongPlugins(transformerPlugins)...)
 
-	for _, p := range kongPlugins {
+	for i := range kongPlugins {
 		// This plugin is derived from an HTTPRoute filter, not a KongPlugin, so we apply tags indicating that
 		// HTTPRoute as the parent Kubernetes resource for these generated transformerPlugins.
-		p.Tags = tags
+		kongPlugins[i].Tags = tags
 	}
 
 	if len(pluginNamesFromExtensionRef) > 0 {

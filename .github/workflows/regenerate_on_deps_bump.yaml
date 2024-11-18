@@ -1,5 +1,6 @@
-# This workflow will regenerate the manifests, commit&push them on a PR labeled with `renovate/auto-regenerate`.
-# It's to make sure that Renovate-created PRs that update kustomize dependencies also update the manifests.
+# This workflow will regenerate code and manifests, commit&push them on a PR labeled with `renovate/auto-regenerate`.
+# It's to make sure that Renovate-created PRs that update dependencies that might affect generated code/manifests,
+# will have them regenerated automatically.
 name: Regenerate on deps bump
 
 on:
@@ -27,7 +28,7 @@ jobs:
           install: false
 
       - name: regenerate
-        run: make manifests
+        run: make generate manifests
 
       - name: Set github url and credentials
         run: |
@@ -39,8 +40,8 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@users.noreply.github.com"
-          git add ./test/e2e/manifests
+          git add ./test/e2e/manifests ./config/crd
           git status
           git diff-index --quiet HEAD || \
-          git commit -m "chore: regenerate manifests" && \
+          git commit -m "chore: regenerate" && \
           git push origin ${{ github.event.pull_request.head.ref }}

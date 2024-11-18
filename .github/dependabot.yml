@@ -1,6 +1,9 @@
 version: 2
 updates:
 - package-ecosystem: gomod
+  ignore:
+    # Ignore updates for `kong/kubernetes-configuration` as it is handled by Renovate.
+    - dependency-name: github.com/kong/kubernetes-configuration
   directory: /
   schedule:
     interval: daily

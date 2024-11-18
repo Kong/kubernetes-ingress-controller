@@ -5,7 +5,6 @@ namespace: kong
 
 resources:
 - ../base/
-- ../../../crd/incubator
 
 patchesStrategicMerge:
 - manager_debug.yaml

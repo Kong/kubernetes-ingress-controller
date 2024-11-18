@@ -135,6 +135,9 @@ Adding a new version? You'll need three changes:
   `HTTPRoute` with `RequestRedirect` or when `request-termination` Kong Plugin
   is used.
   [#6687](https://github.com/Kong/kubernetes-ingress-controller/pull/6686).
+- Fixed Kong client status check causing unnecessary `config update failed` errors
+  and `KongConfigurationApplyFailed` events being generated.
+  [#6689](https://github.com/Kong/kubernetes-ingress-controller/pull/6689)
 
 ### Added
 

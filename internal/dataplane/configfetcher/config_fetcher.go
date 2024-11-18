@@ -152,6 +152,9 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		}
 		cf.lastValidState = goodKongState
 		logger.V(logging.DebugLevel).Info("Last good configuration fetched from Kong node", "url", clientUsed.BaseRootURL())
+		// If we've found at least one good configuration, we can return early without an error.
+		// We got what we wanted, which is the last good configuration.
+		return nil
 	}
 	return errs
 }

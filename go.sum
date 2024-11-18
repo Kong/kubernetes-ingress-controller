@@ -239,8 +239,8 @@ github.com/kong/go-database-reconciler v1.15.0 h1:5F5Zzp2H14aiDmqWUCaU4+LGR/lGnv
 github.com/kong/go-database-reconciler v1.15.0/go.mod h1:T5BkBw13PZWub3y2jKAoM7fYD+UmXp2iNqj1YqD0L90=
 github.com/kong/go-kong v0.59.1 h1:AJZtyCD+Zyqe/mF/m+x3/qN/GPVxAH7jq9zGJTHRfjc=
 github.com/kong/go-kong v0.59.1/go.mod h1:8Vt6HmtgLNgL/7bSwAlz3DIWqBtzG7qEt9+OnMiQOa0=
-github.com/kong/kubernetes-configuration v0.0.44 h1:85q8PugPeWQ7AKvEeGXxDoa+XCzTdNMj1qFcHyxHHds=
-github.com/kong/kubernetes-configuration v0.0.44/go.mod h1:ym++Oygj/wZjaCanK8a+mjZ1jttPF7gPP1OBV0aqI00=
+github.com/kong/kubernetes-configuration v0.0.46 h1:dIxVu9dOtGi9aY2prTlQ1CkiSu8Fk/0oal9m9iiUdSk=
+github.com/kong/kubernetes-configuration v0.0.46/go.mod h1:Bk0H032d+aPgVYakc7C9Zo5nLwiXXm9thKUWF8vvisA=
 github.com/kong/kubernetes-telemetry v0.1.7 h1:R4NUpvbF5uZ+5kgSQsIcf/oulRBGQCHsffFRDE4wxV4=
 github.com/kong/kubernetes-telemetry v0.1.7/go.mod h1:USy5pcD1+Mm9NtKuz3Pb/rSx71VN76gHCFhdbAB4/lg=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
@@ -539,8 +539,8 @@ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtn
 golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 golang.org/x/tools v0.0.0-20201224043029-2b0845dc783e/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
 golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
-golang.org/x/tools v0.24.0 h1:J1shsA93PJUEVaUSaay7UXAyE8aimq3GW0pjlolpa24=
-golang.org/x/tools v0.24.0/go.mod h1:YhNqVBIfWHdzvTLs0d8LCuMhkKUgSUKldakyV7W/WDQ=
+golang.org/x/tools v0.26.0 h1:v/60pFQmzmT9ExmjDv2gGIfi3OqfKoEP6I5+umXlbnQ=
+golang.org/x/tools v0.26.0/go.mod h1:TPVVj70c7JJ3WCazhD8OdXcZg/og+b9+tH/KxylGwH0=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=

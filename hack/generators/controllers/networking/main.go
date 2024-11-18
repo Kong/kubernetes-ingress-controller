@@ -162,6 +162,7 @@ var inputControllersNeeded = &typesNeeded{
 		ProgrammedCondition: ProgrammedConditionConfiguration{
 			UpdatesEnabled: true,
 		},
+		HasControlPlaneReference: true,
 	},
 	typeNeeded{
 		Group:                            "configuration.konghq.com",
@@ -181,6 +182,7 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
+		HasControlPlaneReference:          true,
 	},
 	typeNeeded{
 		Group:                             "configuration.konghq.com",
@@ -263,6 +265,7 @@ var inputControllersNeeded = &typesNeeded{
 		},
 		AcceptsIngressClassNameAnnotation: true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
+		HasControlPlaneReference:          true,
 	},
 	typeNeeded{
 		Group:                            "configuration.konghq.com",
@@ -414,6 +417,11 @@ type typeNeeded struct {
 	// NeedUpdateReferences is true if we need to update the reference relationships
 	// between reconciled object and other objects.
 	NeedsUpdateReferences bool
+
+	// HasControlPlaneReference is true if the object's spec has a control plane reference.
+	// If true, the controller will only reconcile the object if the control plane reference is set to 'kic' or
+	// is left empty.
+	HasControlPlaneReference bool
 }
 
 type ProgrammedConditionConfiguration struct {
@@ -560,16 +568,29 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 	}
 {{- end}}
 {{- if .AcceptsIngressClassNameAnnotation}}
+	{{- if .HasControlPlaneReference }}
+	cpRefPredicate := ctrlutils.GenerateCPReferenceMatchesPredicate[*{{.PackageImportAlias}}.{{.Kind}}]()
+	{{- end}}
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+				{{- if .HasControlPlaneReference }}
+				cpRefPredicate,
+				{{- end}}
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
     return blder.Watches(&{{.PackageImportAlias}}.{{.Kind}}{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+			{{- if .HasControlPlaneReference }}
+			cpRefPredicate,
+			{{- end}}
+		),
 	).
 		Complete(r)
 {{- else}}

@@ -1058,6 +1058,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 													Headers: []string{"X-Test-Header-1:test-value-1"},
 												},
 											},
+											Tags: []*string{
+												kong.String("k8s-name:basic-httproute"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1beta1"),
+											},
 										},
 									},
 								},
@@ -1090,6 +1097,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []string{"X-Test-Header-2:test-value-2"},
 												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:basic-httproute"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -1467,6 +1481,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []string{"X-Test-Header-1:test-value-1"},
 												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:basic-httproute"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -2307,6 +2328,13 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 						Config: kong.Configuration{
 							"status_code": kong.Int(301),
 						},
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1beta1"),
+						},
 					},
 					{
 						Name: kong.String("response-transformer"),
@@ -2314,6 +2342,13 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 							"add": subtranslator.TransformerPluginConfig{
 								Headers: []string{"Location: http://bar.com:80/v1/foo"},
 							},
+						},
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1beta1"),
 						},
 					},
 				},

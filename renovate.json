@@ -14,6 +14,9 @@
   "registryAliases": {
     "kong": "https://charts.konghq.com"
   },
+  "ignorePaths": [
+    "config/crd"
+  ],
   "customManagers": [
     {
       "description": "Match dependencies in .github/test_dependencies.yaml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [registryUrl={}] versioning={}.`",

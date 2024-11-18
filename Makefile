@@ -268,7 +268,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.gateway-api-consts generate.docs generate.go fmt
+generate: generate.controllers generate.gateway-api-consts generate.crd-kustomize generate.docs generate.go fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -296,6 +296,9 @@ generate.cli-arguments-docs:
 generate.go:
 	go generate ./...
 
+.PHONY: generate.crd-kustomize
+generate.crd-kustomize:
+	./scripts/generate-crd-kustomize.sh
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

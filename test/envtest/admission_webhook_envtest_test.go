@@ -673,7 +673,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			// admission webhook "kongclusterplugins.validation.ingress-controller.konghq.com" denied
 			// the request: could not parse plugin configuration: Secret "cluster-conf-secret-valid-patch" not found
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				require.NoError(t, ctrlClientGlobal.Create(ctx, tc.kongClusterPlugin))
+				assert.NoError(t, ctrlClientGlobal.Create(ctx, tc.kongClusterPlugin))
 			}, waitTime, tickTime,
 			)
 			t.Cleanup(func() {

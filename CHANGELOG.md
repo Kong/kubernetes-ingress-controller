@@ -142,6 +142,12 @@ Adding a new version? You'll need three changes:
   and `ingress_controller_fallback_configuration_push_size` to record size of
   the config sent to a Kong DataPlane by the controller in DB-less mode.
   [#6664](https://github.com/Kong/kubernetes-ingress-controller/pull/6664)
+- Added support for `ControlPlaneRef` in `KongConsumer`, `KongConsumerGroup`,
+  and `KongVault` reconcilers. From now, objects that have `ControlPlaneRef`
+  of type other than `kic` will be ignored by the reconcilers. KIC will still
+  reconcile objects with `ControlPlaneRef` of type `kic` or without an explicit
+  `ControlPlaneRef`.
+  [#6690](https://github.com/Kong/kubernetes-ingress-controller/pull/6690)
 
 ## [3.3.1]
 

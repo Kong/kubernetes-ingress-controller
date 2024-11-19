@@ -18,11 +18,6 @@ import (
 	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 )
 
-const (
-	waitTime = 3 * time.Second
-	tickTime = 100 * time.Millisecond
-)
-
 func TestKongLicenseController(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	cfg := Setup(t, scheme)

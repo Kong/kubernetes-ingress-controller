@@ -286,13 +286,17 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&netv1.Ingress{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+		),
 	).
 		Complete(r)
 }
@@ -734,13 +738,17 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1.KongClusterPlugin{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+		),
 	).
 		Complete(r)
 }
@@ -902,16 +910,23 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			),
 		)
 	}
+	cpRefPredicate := ctrlutils.GenerateCPReferenceMatchesPredicate[*kongv1.KongConsumer]()
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+				cpRefPredicate,
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1.KongConsumer{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+			cpRefPredicate,
+		),
 	).
 		Complete(r)
 }
@@ -1088,16 +1103,23 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manag
 			),
 		)
 	}
+	cpRefPredicate := ctrlutils.GenerateCPReferenceMatchesPredicate[*kongv1beta1.KongConsumerGroup]()
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+				cpRefPredicate,
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1beta1.KongConsumerGroup{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+			cpRefPredicate,
+		),
 	).
 		Complete(r)
 }
@@ -1279,13 +1301,17 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1beta1.TCPIngress{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+		),
 	).
 		Complete(r)
 }
@@ -1476,13 +1502,17 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1beta1.UDPIngress{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+		),
 	).
 		Complete(r)
 }
@@ -1732,13 +1762,17 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetupWithManager(mgr ctrl
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&incubatorv1alpha1.KongServiceFacade{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+		),
 	).
 		Complete(r)
 }
@@ -1895,16 +1929,23 @@ func (r *KongV1Alpha1KongVaultReconciler) SetupWithManager(mgr ctrl.Manager) err
 			),
 		)
 	}
+	cpRefPredicate := ctrlutils.GenerateCPReferenceMatchesPredicate[*kongv1alpha1.KongVault]()
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+				cpRefPredicate,
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1alpha1.KongVault{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+			cpRefPredicate,
+		),
 	).
 		Complete(r)
 }
@@ -2063,13 +2104,17 @@ func (r *KongV1Alpha1KongCustomEntityReconciler) SetupWithManager(mgr ctrl.Manag
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return blder.Watches(&kongv1alpha1.KongCustomEntity{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+		),
 	).
 		Complete(r)
 }

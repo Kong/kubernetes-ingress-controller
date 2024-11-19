@@ -94,7 +94,8 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 				},
 				Spec: kongv1alpha1.KongVaultSpec{
 					Backend: "env",
-					Prefix:  "env",
+					// Prefix has to be unique for each Vault object as it's validated by KIC in translation.
+					Prefix: "prefix-" + lo.RandomString(8, lo.LowerCaseLettersCharset),
 				},
 			}
 		}
@@ -175,7 +176,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 					if !assert.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)) {
 						return
 					}
-					assert.Equal(t, tc.expectToBeProgrammed, conditions.Contain(
+					assert.True(t, conditions.Contain(
 						tc.object.GetConditions(),
 						conditions.WithType(string(kongv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),

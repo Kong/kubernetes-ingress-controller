@@ -132,20 +132,9 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
 	return blder.
 		For(&gatewayapi.HTTPRoute{},
-			builder.WithPredicates(predicate.Funcs{
-				GenericFunc: func(_ event.GenericEvent) bool {
-					return false // we don't need to enqueue from generic
-				},
-				CreateFunc: func(e event.CreateEvent) bool {
-					return IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
-				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
-					return IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-			}),
+			builder.WithPredicates(
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+			),
 		).
 		Complete(r)
 }

@@ -9,10 +9,32 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
+
+func IsRouteAttachedToReconciledGatewayPredicate[routeT gatewayapi.RouteT](
+	cl client.Client,
+	logger logr.Logger,
+	gatewayNN controllers.OptionalNamespacedName,
+) predicate.Predicate {
+	return predicate.Funcs{
+		GenericFunc: func(_ event.GenericEvent) bool {
+			return false // we don't need to enqueue from generic
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			return IsRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isOrWasRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, e)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return IsRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, e.Object)
+		},
+	}
+}
 
 func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,

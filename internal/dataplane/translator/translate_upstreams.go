@@ -85,17 +85,17 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 						"namespace", k8sService.Namespace, "name", k8sService.Name, "kong_service", *service.Name)
 				}
 
-				// if weights were set for the backend then that weight needs to be
+				// If weights were set for the backend then that weight needs to be
 				// distributed equally among all the targets.
 				if weight, weightPresent := backend.Weight().Get(); weightPresent && len(newTargets) != 0 {
-					// initialize the weight of the target based on the weight of the backend
+					// Initialize the weight of the target based on the weight of the backend
 					// which governs that target (and potentially more). If the weight of the
 					// backend is 0 then this indicates an intention to drop all targets from
 					// this backend from the load-balancer and is a special situation where
 					// all derived targets will receive a weight of 0.
 					targetWeight := weight
 
-					// if the backend governing this target is not set to a weight of 0,
+					// If the backend governing this target is not set to a weight of 0,
 					// all targets derived from the backend split the weight, therefore
 					// equally splitting the traffic load.
 					if weight != 0 {
@@ -117,17 +117,21 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 			}
 
 			targets := lo.Values(targetMap)
-			// warn if an upstream was created with 0 targets
-			if len(targets) == 0 {
+			// Warn if an upstream was created with 0 targets and no request-termination plugin is present.
+			// When the plugin is present there (may be a result of RequestRedirect filter) there may not be
+			// a target service (it may point to an arbitrary URL), hence do not log a warn.
+			if len(targets) == 0 && !lo.ContainsBy(service.Plugins, func(p kong.Plugin) bool {
+				return p.Name != nil && *p.Name == "request-termination"
+			}) {
 				t.logger.V(logging.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
 			}
 
-			// define the upstream including all the newly populated targets
+			// Define the upstream including all the newly populated targets
 			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String(name),
-					Tags: service.Tags, // populated by populateServices already
+					Tags: service.Tags, // Populated by populateServices already.
 				},
 				Service: service,
 				Targets: targets,

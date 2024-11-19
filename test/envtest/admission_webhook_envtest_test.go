@@ -656,6 +656,11 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			errorContains: "Change on secret will generate invalid configuration for KongClusterPlugin",
 		},
 	}
+
+	const (
+		waitTime = 30 * time.Second
+		tickTime = 100 * time.Millisecond
+	)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
@@ -663,7 +668,14 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				require.NoError(t, ctrlClient.Delete(ctx, tc.secretBefore))
 			})
 
-			require.NoError(t, ctrlClientGlobal.Create(ctx, tc.kongClusterPlugin))
+			// NOTE: We create the KongClusterPlugin with 'eventually' to avoid
+			// flaky errors like:
+			// admission webhook "kongclusterplugins.validation.ingress-controller.konghq.com" denied
+			// the request: could not parse plugin configuration: Secret "cluster-conf-secret-valid-patch" not found
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				assert.NoError(t, ctrlClientGlobal.Create(ctx, tc.kongClusterPlugin))
+			}, waitTime, tickTime,
+			)
 			t.Cleanup(func() {
 				require.NoError(t, ctrlClientGlobal.Delete(ctx, tc.kongClusterPlugin))
 			})
@@ -678,7 +690,8 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				} else if !assert.NoError(c, err) {
 					t.Logf("Error: %v", err)
 				}
-			}, 30*time.Second, 100*time.Millisecond)
+			}, waitTime, tickTime,
+			)
 		})
 	}
 }

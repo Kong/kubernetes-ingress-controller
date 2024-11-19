@@ -447,39 +447,46 @@ spec:
                     - name
                     type: object
                   type:
+                    default: kic
                     description: |-
-                      Type can be one of:
+                      Type indicates the type of the control plane being referenced. Allowed values:
                       - konnectID
                       - konnectNamespacedRef
                       - kic
+
+                      The default is kic, which implies that the Control Plane is KIC.
                     enum:
                     - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
-                required:
-                - type
                 type: object
                 x-kubernetes-validations:
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef
                     must be set
-                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
-                    : true'
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? has(self.konnectNamespacedRef) : true'
                 - message: when type is konnectNamespacedRef, konnectID must not be
                     set
-                  rule: 'self.type == ''konnectNamespacedRef'' ? !has(self.konnectID)
-                    : true'
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? !has(self.konnectID) : true'
                 - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID)
+                    : true'
                 - message: when type is konnectID, konnectNamespacedRef must not be
                     set
-                  rule: 'self.type == ''konnectID'' ? !has(self.konnectNamespacedRef)
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef)
                     : true'
                 - message: when type is kic, konnectID must not be set
-                  rule: 'self.type == ''kic'' ? !has(self.konnectID) : true'
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID)
+                    : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
-                  rule: 'self.type == ''kic'' ? !has(self.konnectNamespacedRef) :
-                    true'
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef)
+                    : true'
+                - message: when type is unset, konnectID must not be set
+                  rule: '!has(self.type) ? !has(self.konnectID) : true'
+                - message: when type is unset, konnectNamespacedRef must not be set
+                  rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               name:
                 description: Name is the name of the ConsumerGroup in Kong.
                 type: string
@@ -712,39 +719,46 @@ spec:
                     - name
                     type: object
                   type:
+                    default: kic
                     description: |-
-                      Type can be one of:
+                      Type indicates the type of the control plane being referenced. Allowed values:
                       - konnectID
                       - konnectNamespacedRef
                       - kic
+
+                      The default is kic, which implies that the Control Plane is KIC.
                     enum:
                     - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
-                required:
-                - type
                 type: object
                 x-kubernetes-validations:
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef
                     must be set
-                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
-                    : true'
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? has(self.konnectNamespacedRef) : true'
                 - message: when type is konnectNamespacedRef, konnectID must not be
                     set
-                  rule: 'self.type == ''konnectNamespacedRef'' ? !has(self.konnectID)
-                    : true'
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? !has(self.konnectID) : true'
                 - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID)
+                    : true'
                 - message: when type is konnectID, konnectNamespacedRef must not be
                     set
-                  rule: 'self.type == ''konnectID'' ? !has(self.konnectNamespacedRef)
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef)
                     : true'
                 - message: when type is kic, konnectID must not be set
-                  rule: 'self.type == ''kic'' ? !has(self.konnectID) : true'
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID)
+                    : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
-                  rule: 'self.type == ''kic'' ? !has(self.konnectNamespacedRef) :
-                    true'
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef)
+                    : true'
+                - message: when type is unset, konnectID must not be set
+                  rule: '!has(self.type) ? !has(self.konnectID) : true'
+                - message: when type is unset, konnectNamespacedRef must not be set
+                  rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               tags:
                 description: Tags is an optional set of tags applied to the consumer.
                 items:
@@ -2892,39 +2906,46 @@ spec:
                     - name
                     type: object
                   type:
+                    default: kic
                     description: |-
-                      Type can be one of:
+                      Type indicates the type of the control plane being referenced. Allowed values:
                       - konnectID
                       - konnectNamespacedRef
                       - kic
+
+                      The default is kic, which implies that the Control Plane is KIC.
                     enum:
                     - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
-                required:
-                - type
                 type: object
                 x-kubernetes-validations:
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef
                     must be set
-                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
-                    : true'
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? has(self.konnectNamespacedRef) : true'
                 - message: when type is konnectNamespacedRef, konnectID must not be
                     set
-                  rule: 'self.type == ''konnectNamespacedRef'' ? !has(self.konnectID)
-                    : true'
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? !has(self.konnectID) : true'
                 - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID)
+                    : true'
                 - message: when type is konnectID, konnectNamespacedRef must not be
                     set
-                  rule: 'self.type == ''konnectID'' ? !has(self.konnectNamespacedRef)
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef)
                     : true'
                 - message: when type is kic, konnectID must not be set
-                  rule: 'self.type == ''kic'' ? !has(self.konnectID) : true'
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID)
+                    : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
-                  rule: 'self.type == ''kic'' ? !has(self.konnectNamespacedRef) :
-                    true'
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef)
+                    : true'
+                - message: when type is unset, konnectID must not be set
+                  rule: '!has(self.type) ? !has(self.konnectID) : true'
+                - message: when type is unset, konnectNamespacedRef must not be set
+                  rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               description:
                 description: Description is the additional information about the vault.
                 type: string

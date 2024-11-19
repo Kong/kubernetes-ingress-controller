@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -29,12 +30,6 @@ jobs:
 
       - name: regenerate
         run: make generate manifests
-
-      - name: Set github url and credentials
-        run: |
-          /usr/bin/git config --global --add url."https://${{ secrets.K8S_TEAM_BOT_GH_PAT }}:x-oauth-basic@github".insteadOf ssh://git@github
-          /usr/bin/git config --global --add url."https://${{ secrets.K8S_TEAM_BOT_GH_PAT }}:x-oauth-basic@github".insteadOf https://github
-          /usr/bin/git config --global --add url."https://${{ secrets.K8S_TEAM_BOT_GH_PAT }}:x-oauth-basic@github".insteadOf git@github
 
       - name: commit and push (if changes detected)
         run: |

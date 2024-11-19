@@ -182,14 +182,23 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 					))
 				}, waitTime, tickDuration, "expected object to be programmed")
 			} else {
+				// We'll wait for `waitTime` to ensure the object does not get programmed. We need a following boolean
+				// to make sure the object was fetched successfully at least once.
+				var wasObjectSuccessfullyFetched bool
 				require.Never(t, func() bool {
 					err := ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)
-					return err == nil && conditions.Contain(
+					if err != nil {
+						t.Logf("Error fetching object: %v", err)
+						return false // Most likely that would is NotFound error. We want to keep waiting in any case.
+					}
+					wasObjectSuccessfullyFetched = true
+					return conditions.Contain(
 						tc.object.GetConditions(),
 						conditions.WithType(string(kongv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),
 					)
 				}, waitTime, tickDuration, "expected object not to be programmed")
+				assert.True(t, wasObjectSuccessfullyFetched, "expected object to be fetched at least once")
 			}
 		})
 	}

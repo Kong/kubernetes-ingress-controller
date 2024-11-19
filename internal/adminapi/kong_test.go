@@ -105,56 +105,100 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 }
 
 func TestNewKongClientForWorkspace(t *testing.T) {
-	const testWorkspace = "workspace"
+	const workspace = "workspace"
 
 	testCases := []struct {
 		name            string
 		adminAPIReady   bool
 		adminAPIVersion string
+		workspace       string
 		workspaceExists bool
 		expectError     error
 	}{
 		{
+			name:          "admin api is ready for default workspace",
+			adminAPIReady: true,
+			workspace:     "",
+		},
+		{
 			name:            "admin api is ready and workspace exists",
 			adminAPIReady:   true,
+			workspace:       workspace,
 			workspaceExists: true,
 		},
 		{
 			name:            "admin api is ready and workspace doesn't exist",
 			adminAPIReady:   true,
+			workspace:       workspace,
 			workspaceExists: false,
 		},
 		{
 			name:          "admin api is not ready",
 			adminAPIReady: false,
+			workspace:     "",
 			expectError:   adminapi.KongClientNotReadyError{},
+		},
+		{
+			name:            "admin api is not ready for an existing workspace",
+			adminAPIReady:   false,
+			workspace:       workspace,
+			workspaceExists: true,
+			expectError:     adminapi.KongClientNotReadyError{},
 		},
 		{
 			name:            "admin api is in too old version",
 			adminAPIReady:   true,
 			adminAPIVersion: "3.4.0",
+			workspace:       "",
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
 		},
 		{
 			name:            "admin api is in supported OSS version",
 			adminAPIReady:   true,
+			workspace:       "",
 			adminAPIVersion: versions.KICv3VersionCutoff.String(),
 		},
 		{
 			name:            "admin api has malformed version",
 			adminAPIReady:   true,
 			adminAPIVersion: "3-malformed-version",
+			workspace:       "",
+			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
+		},
+		{
+			name:            "admin api has malformed version for workspace",
+			adminAPIReady:   true,
+			adminAPIVersion: "3-malformed-version",
+			workspace:       workspace,
+			workspaceExists: true,
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
 		},
 		{
 			name:            "admin api has enterprise version",
 			adminAPIReady:   true,
+			workspace:       "",
+			adminAPIVersion: "3.4.1.2",
+		},
+		{
+			name:            "admin api has enterprise version for workspace",
+			adminAPIReady:   true,
+			workspace:       workspace,
+			workspaceExists: true,
 			adminAPIVersion: "3.4.1.2",
 		},
 		{
 			name:            "admin api has too old enterprise version",
 			adminAPIReady:   true,
 			adminAPIVersion: "3.4.0.2",
+			workspace:       "",
+			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
+		},
+		{
+			name:            "admin api has too old enterprise version for workspace",
+			adminAPIReady:   true,
+			adminAPIVersion: "3.4.0.2",
+			workspace:       workspace,
+			workspaceExists: true,
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
 		},
 	}
@@ -173,7 +217,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			client, err := adminapi.NewKongClientForWorkspace(
 				context.Background(),
 				adminAPIServer.URL,
-				testWorkspace,
+				tc.workspace,
 				adminAPIServer.Client(),
 			)
 
@@ -184,11 +228,11 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, client)
 
-			if !tc.workspaceExists {
+			if tc.workspace != "" && !tc.workspaceExists {
 				require.True(t, adminAPIHandler.WasWorkspaceCreated(), "expected workspace to be created")
 			}
 
-			require.Equal(t, client.AdminAPIClient().Workspace(), testWorkspace)
+			require.Equal(t, client.AdminAPIClient().Workspace(), tc.workspace)
 			_, ok := client.PodReference()
 			require.False(t, ok, "expected no pod reference to be attached to the client")
 		})

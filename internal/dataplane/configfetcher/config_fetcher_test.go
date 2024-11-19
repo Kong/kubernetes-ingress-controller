@@ -20,53 +20,73 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 		configHash     = "8f1dd2f83bc2627cc6b71c76d1476592"
 	)
 
-	startAdminAPI := func(t *testing.T, ctx context.Context, opts ...mocks.AdminAPIHandlerOpt) *adminapi.Client {
+	startAdminAPI := func(t *testing.T, opts ...mocks.AdminAPIHandlerOpt) *adminapi.Client {
 		adminAPIHandler := mocks.NewAdminAPIHandler(t, opts...)
 		adminAPIServer := httptest.NewServer(adminAPIHandler)
 		t.Cleanup(func() { adminAPIServer.Close() })
 
-		client, err := adminapi.NewKongClientForWorkspace(
-			ctx,
+		// NOTE: We use here adminapi.NewKongAPIClient() as that doesn't check
+		// the status of the Kong Gateway but just returns the client.
+		client, err := adminapi.NewKongAPIClient(
 			adminAPIServer.URL,
-			"", // no workspace
 			adminAPIServer.Client(),
 		)
 		require.NoError(t, err)
 		require.NotNil(t, client)
-		return client
+		return adminapi.NewClient(client)
 	}
 
 	testCases := []struct {
 		name                    string
 		expectError             bool
 		expectedLastValidStatus bool
-		adminAPIClients         func(t *testing.T, ctx context.Context) []*adminapi.Client
+		adminAPIClients         func(t *testing.T) []*adminapi.Client
 	}{
 		{
 			name: "correct configuration hash",
-			adminAPIClients: func(t *testing.T, ctx context.Context) []*adminapi.Client {
+			adminAPIClients: func(t *testing.T) []*adminapi.Client {
 				return []*adminapi.Client{
-					startAdminAPI(t, ctx, mocks.WithReady(true), mocks.WithConfigurationHash(configHash)),
-					startAdminAPI(t, ctx, mocks.WithReady(true), mocks.WithConfigurationHash(configHash)),
+					startAdminAPI(t, mocks.WithReady(true), mocks.WithConfigurationHash(configHash)),
+					startAdminAPI(t, mocks.WithReady(true), mocks.WithConfigurationHash(configHash)),
 				}
 			},
 			expectedLastValidStatus: true,
 		},
 		{
 			name: "zero configuration hash",
-			adminAPIClients: func(t *testing.T, ctx context.Context) []*adminapi.Client {
+			adminAPIClients: func(t *testing.T) []*adminapi.Client {
 				return []*adminapi.Client{
-					startAdminAPI(t, ctx, mocks.WithReady(true), mocks.WithConfigurationHash(zeroConfigHash)),
-					startAdminAPI(t, ctx, mocks.WithReady(true), mocks.WithConfigurationHash(zeroConfigHash)),
+					startAdminAPI(t, mocks.WithReady(true), mocks.WithConfigurationHash(zeroConfigHash)),
+					startAdminAPI(t, mocks.WithReady(true), mocks.WithConfigurationHash(zeroConfigHash)),
 				}
 			},
 		},
 		{
 			name: "none are ready",
-			adminAPIClients: func(t *testing.T, ctx context.Context) []*adminapi.Client {
+			adminAPIClients: func(t *testing.T) []*adminapi.Client {
 				return []*adminapi.Client{
-					startAdminAPI(t, ctx, mocks.WithReady(false)),
-					startAdminAPI(t, ctx, mocks.WithReady(false)),
+					startAdminAPI(t, mocks.WithReady(false)),
+					startAdminAPI(t, mocks.WithReady(false)),
+				}
+			},
+			expectError: true,
+		},
+		{
+			name: "one out of 2 is ready",
+			adminAPIClients: func(t *testing.T) []*adminapi.Client {
+				return []*adminapi.Client{
+					startAdminAPI(t, mocks.WithReady(true), mocks.WithConfigurationHash(configHash)),
+					startAdminAPI(t, mocks.WithReady(false)),
+				}
+			},
+			expectedLastValidStatus: true,
+		},
+		{
+			name: "one out of 2 is ready with zero config hash",
+			adminAPIClients: func(t *testing.T) []*adminapi.Client {
+				return []*adminapi.Client{
+					startAdminAPI(t, mocks.WithReady(true), mocks.WithConfigurationHash(zeroConfigHash)),
+					startAdminAPI(t, mocks.WithReady(false)),
 				}
 			},
 			expectError: true,
@@ -81,7 +101,9 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 			require.Nil(t, state)
 
 			ctx := context.Background()
-			err := fetcher.TryFetchingValidConfigFromGateways(ctx, zapr.NewLogger(zap.NewNop()), tc.adminAPIClients(t, ctx), nil)
+			clients := tc.adminAPIClients(t)
+			logger := zapr.NewLogger(zap.NewNop())
+			err := fetcher.TryFetchingValidConfigFromGateways(ctx, logger, clients, nil)
 			if tc.expectError {
 				require.Error(t, err)
 				assert.False(t, ok)

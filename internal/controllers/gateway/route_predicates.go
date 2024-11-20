@@ -87,8 +87,6 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 				return true
 			}
 		}
-		// REVIEW: should we directly return false here if parentRef points to a non-Gateway object (like `Service`)?
-		// This means we do not reconcile the route when it is attaching to some non-Gateway parent, like using it for service mesh.
 	}
 
 	return false

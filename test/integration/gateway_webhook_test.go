@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -28,26 +27,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
-	const configResourceName = "kong-validations-gateway"
-	ensureAdmissionRegistration(
-		ctx,
-		t,
-		ns.Name,
-		configResourceName,
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1beta1"},
-					Resources:   []string{"gateways"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
-
-	t.Log("waiting for webhook service to be connective")
-	ensureWebhookServiceIsConnective(ctx, t, configResourceName)
+	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-gateway", ns.Name)
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

@@ -17,19 +17,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 )
 
-func testIsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
-	t *testing.T,
-	cl client.Client,
-	gatewayNN controllers.OptionalNamespacedName,
-	route routeT,
-	expectedResult bool,
-) {
-	logger := logr.Discard()
-
-	result := IsRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, route)
-	require.Equal(t, expectedResult, result)
-}
-
 func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 	type httpRouteTestCase struct {
 		name           string
@@ -214,16 +201,11 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 	}
 
 	for _, tc := range httpRouteTestCases {
-
 		cl := fakeclient.NewClientBuilder().WithScheme(lo.Must(scheme.Get())).WithObjects(tc.objects...).Build()
 		t.Run(tc.name, func(t *testing.T) {
-			testIsRouteAttachedToReconciledGateway(
-				t,
-				cl,
-				tc.gatewayNN,
-				tc.route,
-				tc.expectedResult,
-			)
+			logger := logr.Discard()
+			result := IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](cl, logger, tc.gatewayNN, tc.route)
+			require.Equal(t, tc.expectedResult, result)
 		},
 		)
 	}

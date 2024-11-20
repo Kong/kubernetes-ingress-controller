@@ -138,6 +138,10 @@ Adding a new version? You'll need three changes:
 - Fixed Kong client status check causing unnecessary `config update failed` errors
   and `KongConfigurationApplyFailed` events being generated.
   [#6689](https://github.com/Kong/kubernetes-ingress-controller/pull/6689)
+- Do not emit error logs when group and kind of `parentRef` in a route does not
+  point to a `Gateway` as they can point to other kinds of resources like
+  `Service` when used in service mesh solutions.
+  [#6692](https://github.com/Kong/kubernetes-ingress-controller/pull/6692)
 
 ### Added
 

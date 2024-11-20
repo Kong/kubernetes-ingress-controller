@@ -96,6 +96,7 @@ type Config struct {
 	GatewayAPIControllerName string
 	Impersonate              string
 	EmitKubernetesEvents     bool
+	ClusterDomain            string
 
 	// Ingress status
 	PublishServiceUDP       OptionalNamespacedName
@@ -241,6 +242,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
 		`Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces.`)
 	flagSet.BoolVar(&c.EmitKubernetesEvents, "emit-kubernetes-events", true, `Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.`)
+	flagSet.StringVar(&c.ClusterDomain, "cluster-domain", DefaultClusterDomain, `The cluster domain. This is used e.g. in generating addresses for upstream services.`)
 
 	// Ingress status
 	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",

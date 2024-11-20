@@ -14,6 +14,7 @@
 | `--apiserver-host` | `string` | The Kubernetes API server URL. If not set, the controller will use cluster config discovery. |  |
 | `--apiserver-qps` | `int` | The Kubernetes API RateLimiter maximum queries per second. | `100` |
 | `--cache-sync-timeout` | `duration` | The time limit set to wait for syncing controllers' caches. Set to 0 to use default from controller-runtime. | `2m0s` |
+| `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. | `cluster.local` |
 | `--dump-config` | `bool` | Enable config dumps via web interface host:10256/debug/config. | `false` |
 | `--dump-sensitive-config` | `bool` | Include credentials and TLS secrets in configs exposed with --dump-config flag. | `false` |
 | `--election-id` | `string` | Election id to use for status update. | `5b374a9e.konghq.com` |

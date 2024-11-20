@@ -128,6 +128,12 @@ Adding a new version? You'll need three changes:
 - Log `Object requested backendRef to target, but it does not exist, skipping...`
   as `DEBUG` instead of `ERROR`, enhance `HTTPRoute` status with detailed message.
   [#6746](https://github.com/Kong/kubernetes-ingress-controller/pull/6746)
+- From now on, upstreams produced by KIC from `Service`s that are configured as
+  upstream services (either by `ingress.kubernetes.io/service-upstream` annotation
+  or through `IngressClassNamespacedParameters`'s `serviceUpstream` field, will use
+  a FQDN with a default cluster domain of `cluster.local`.
+  Users can override the default by setting the `cluster-domain` flag.
+  [#6697](https://github.com/Kong/kubernetes-ingress-controller/pull/6697)
 
 ### Fixed
 

@@ -3763,8 +3763,9 @@ func TestGetEndpoints(t *testing.T) {
 		port              *corev1.ServicePort
 		proto             corev1.Protocol
 		fn                func(string, string) ([]*discoveryv1.EndpointSlice, error)
-		result            []util.Endpoint
 		isServiceUpstream bool
+		clusterDomain     string
+		result            []util.Endpoint
 	}{
 		{
 			name:  "no service should return 0 endpoints",
@@ -3857,7 +3858,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			result: []util.Endpoint{
 				{
-					Address: "foo.bar.svc",
+					Address: "foo.bar.svc.cluster.local",
 					Port:    "2080",
 				},
 			},
@@ -3891,11 +3892,49 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			result: []util.Endpoint{
 				{
-					Address: "foo.bar.svc",
+					Address: "foo.bar.svc.cluster.local",
 					Port:    "2080",
 				},
 			},
 			isServiceUpstream: true,
+		},
+		{
+			name: "a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint properly mapping to provided custom domain",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+							Port:       2080,
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+				Port:       2080,
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{}, nil
+			},
+			clusterDomain: "acme.com",
+			result: []util.Endpoint{
+				{
+					Address: "foo.bar.svc.acme.com",
+					Port:    "2080",
+				},
+			},
 		},
 		{
 			name: "should return no endpoints when there is an error searching for endpoints",
@@ -4123,8 +4162,11 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn,
-				testCase.isServiceUpstream)
+			clusterDomain := "cluster.local"
+			if testCase.clusterDomain != "" {
+				clusterDomain = testCase.clusterDomain
+			}
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream, clusterDomain)
 			require.Equal(t, testCase.result, result)
 		})
 	}
@@ -5060,12 +5102,17 @@ func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService 
 }
 
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
-	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer, "", FeatureFlags{
-		// We'll assume these are true for all tests.
-		FillIDs:                           true,
-		ReportConfiguredKubernetesObjects: true,
-		KongServiceFacade:                 true,
-	}, fakeSchemaServiceProvier{},
+	logger := zapr.NewLogger(zap.NewNop())
+	clusterDomain := "cluster.local"
+	p, err := NewTranslator(logger, storer, "",
+		FeatureFlags{
+			// We'll assume these are true for all tests.
+			FillIDs:                           true,
+			ReportConfiguredKubernetesObjects: true,
+			KongServiceFacade:                 true,
+		},
+		fakeSchemaServiceProvier{},
+		clusterDomain,
 	)
 	require.NoError(t, err)
 	return p

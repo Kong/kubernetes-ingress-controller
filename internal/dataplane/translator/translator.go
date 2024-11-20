@@ -97,6 +97,8 @@ type Translator struct {
 
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
+
+	clusterDomain string
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -107,6 +109,7 @@ func NewTranslator(
 	workspace string,
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
+	clusterDomain string,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -124,6 +127,7 @@ func NewTranslator(
 		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
+		clusterDomain:              clusterDomain,
 	}, nil
 }
 

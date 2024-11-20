@@ -22,3 +22,6 @@ const DiagnosticsPort = 10256
 
 // KongClientEventRecorderComponentName is a KongClient component name used to identify the events recording component.
 const KongClientEventRecorderComponentName = "kong-client"
+
+// DefaultClusterDomain is the default cluster domain used by the controller.
+const DefaultClusterDomain = "cluster.local"

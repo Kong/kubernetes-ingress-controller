@@ -102,20 +102,9 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
 	return blder.
 		For(&gatewayapi.UDPRoute{},
-			builder.WithPredicates(predicate.Funcs{
-				GenericFunc: func(_ event.GenericEvent) bool {
-					return false // We don't need to enqueue from generic.
-				},
-				CreateFunc: func(e event.CreateEvent) bool {
-					return IsRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
-				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
-					return IsRouteAttachedToReconciledGateway[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-			}),
+			builder.WithPredicates(
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+			),
 		).
 		Complete(r)
 }

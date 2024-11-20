@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/webhook"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -57,7 +58,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		WithUpdateStatus(),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	const prefixForDuplicationTest = "duplicate-prefix"
 	prepareKongVaultAlreadyProgrammedInGateway(ctx, t, ctrlClient, prefixForDuplicationTest)
@@ -201,7 +202,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	testCases := []struct {
 		name                string
@@ -379,15 +380,12 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/5876
 	// This repeats all test cases without filtering Secrets in the webhook configuration. This behavior is slated
 	// for removal in 4.0, and the following block should be removed along with the behavior.
-	webhookConfig := validatingWebhookConfigWithClientConfig(t, admregv1.WebhookClientConfig{
-		URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", admissionWebhookPort)),
-		CABundle: webhookCert,
-	})
-	// Update requires an object with generated fields populated, so we Get() after using the builder. The builder just
-	// ensures the name and namespace match the original.
+	// Update requires an object with generated fields populated thus original configuration that name
+	// is "validating-webhook-configuration" (see config/webhook/base/manifests.yaml) is hardcoded here.
+	webhookConfig := &admregv1.ValidatingWebhookConfiguration{}
 	require.NoError(t, ctrlClient.Get(
 		ctx,
-		k8stypes.NamespacedName{Name: webhookConfig.Name, Namespace: webhookConfig.Namespace},
+		k8stypes.NamespacedName{Name: "validating-webhook-configuration"},
 		webhookConfig,
 		&client.GetOptions{},
 	))
@@ -458,7 +456,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	testCases := []struct {
 		name                string
@@ -722,7 +720,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	t.Logf("creating some static credentials in %s namespace which will be used to test global validation", ns.Name)
 	for _, secret := range []*corev1.Secret{
@@ -1063,7 +1061,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount)
 
@@ -1231,7 +1229,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfiguration(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	testCases := []struct {
 		name                     string
@@ -1471,4 +1469,21 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 		})
 		return ok && programmed.Status == metav1.ConditionTrue
 	}, programmedWaitTimeout, programmedWaitInterval, "KongVault %s was expected to be programmed", name)
+}
+
+func setupValidatingWebhookConfigurationForEnvTest(
+	ctx context.Context,
+	t *testing.T,
+	webhookServerListenPort int,
+	cert []byte,
+	ctrlClient client.Client,
+) {
+	webhookConfig := webhook.GetWebhookConfigWithKustomize(t)
+	for i := range webhookConfig.Webhooks {
+		webhookConfig.Webhooks[i].ClientConfig = admregv1.WebhookClientConfig{
+			URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", webhookServerListenPort)),
+			CABundle: cert,
+		}
+	}
+	require.NoError(t, ctrlClient.Create(ctx, webhookConfig))
 }

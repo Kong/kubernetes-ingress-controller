@@ -67,12 +67,12 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	t.Log("configuring secrets")
 	certPool := x509.NewCertPool()
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(tlsRouteHostname),
 		certificate.WithDNSNames(tlsRouteHostname),
 	)
 	require.True(t, certPool.AppendCertsFromPEM(tlsRouteExampleTLSCert))
-	extraTLSRouteTLSCert, extraTLSRouteTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	extraTLSRouteTLSCert, extraTLSRouteTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(tlsRouteExtraHostname),
 		certificate.WithDNSNames(tlsRouteExtraHostname),
 	)
@@ -339,7 +339,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("configuring secrets")
 	certPool := x509.NewCertPool()
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(tlsRouteHostname),
 		certificate.WithDNSNames(tlsRouteHostname),
 	)

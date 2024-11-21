@@ -123,7 +123,7 @@ func TestWebhookUpdate(t *testing.T) {
 
 	certPool := x509.NewCertPool()
 	const firstCertificateHostName = "first.example"
-	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(firstCertificateHostName),
 		certificate.WithDNSNames(firstCertificateHostName),
 	)
@@ -140,7 +140,7 @@ func TestWebhookUpdate(t *testing.T) {
 	}
 
 	const secondCertificateHostName = "second.example"
-	secondCertificateCrt, secondCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	secondCertificateCrt, secondCertificateKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(secondCertificateHostName),
 		certificate.WithDNSNames(secondCertificateHostName),
 	)

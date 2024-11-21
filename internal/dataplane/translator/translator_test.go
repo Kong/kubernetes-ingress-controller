@@ -628,7 +628,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 
 func TestCACertificate(t *testing.T) {
 	assert := assert.New(t)
-	caCert1, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	caCert1, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	t.Run("valid CACertificate is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -669,7 +669,7 @@ func TestCACertificate(t *testing.T) {
 		}, state.CACertificates[0])
 	})
 
-	caCert2, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	caCert2, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	t.Run("multiple CACertificates are processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -721,7 +721,7 @@ func TestCACertificate(t *testing.T) {
 		assert.Len(state.CACertificates, 2)
 	})
 
-	expiredCACert, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
+	expiredCACert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
 	t.Run("invalid CACertificates are ignored", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -886,7 +886,7 @@ func TestServiceClientCertificate(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1069,7 +1069,7 @@ func TestServiceClientCertificate(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -2754,7 +2754,7 @@ func TestTranslatorSecret(t *testing.T) {
 			"expected no certificates to be rendered with empty secret")
 	})
 
-	crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt, key := certificate.MustGenerateCertPEMFormat()
 	t.Run("duplicate certificates order by time", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -3116,7 +3116,7 @@ func TestTranslatorSNI(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -4399,9 +4399,9 @@ func TestPickPort(t *testing.T) {
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
 
-	crt1, key1 := certificate.MustGenerateSelfSignedCertPEMFormat()
-	crt2, key2 := certificate.MustGenerateSelfSignedCertPEMFormat()
-	crt3, key3 := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt1, key1 := certificate.MustGenerateCertPEMFormat()
+	crt2, key2 := certificate.MustGenerateCertPEMFormat()
+	crt3, key3 := certificate.MustGenerateCertPEMFormat()
 	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{

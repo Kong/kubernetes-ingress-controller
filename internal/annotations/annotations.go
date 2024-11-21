@@ -66,6 +66,9 @@ const (
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
 	RewriteURIKey        = "/rewrite"
+	TLSVerifyKey         = "/tls-verify"
+	TLSVerifyDepthKey    = "/tls-verify-depth"
+	CACertificatesKey    = "/ca-certificates"
 
 	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -374,4 +377,26 @@ func ExtractRewriteURI(anns map[string]string) (string, bool) {
 func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
 	s, ok := anns[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return s, ok
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+func ExtractTLSVerify(anns map[string]string) (string, bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyKey]
+	return s, ok
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+func ExtractTLSVerifyDepth(anns map[string]string) (string, bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyDepthKey]
+	return s, ok
+}
+
+// ExtractCACertificates extracts the ca-certificates secret names from the annotation.
+// It expects a comma-separated list of certificate names.
+func ExtractCACertificates(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesKey]
+	if !ok {
+		return nil
+	}
+	return strings.Split(s, ",")
 }

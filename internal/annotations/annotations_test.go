@@ -992,3 +992,40 @@ func TestExtractRewriteURI(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractTLSVerify(t *testing.T) {
+	_, ok := ExtractTLSVerify(nil)
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerify(map[string]string{})
+	assert.False(t, ok)
+
+	v, ok := ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "true"})
+	assert.True(t, ok)
+	assert.Equal(t, "true", v)
+}
+
+func TestExtractTLSVerifyDepth(t *testing.T) {
+	_, ok := ExtractTLSVerifyDepth(nil)
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerifyDepth(map[string]string{})
+	assert.False(t, ok)
+
+	v, ok := ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "1"})
+	assert.True(t, ok)
+	assert.Equal(t, "1", v)
+}
+
+func TestExtractCACertificates(t *testing.T) {
+	v := ExtractCACertificates(nil)
+	assert.Empty(t, v)
+
+	v = ExtractCACertificates(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: "foo,bar"})
+	assert.Len(t, v, 2)
+	assert.Equal(t, "foo", v[0])
+	assert.Equal(t, "bar", v[1])
+}

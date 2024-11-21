@@ -33,7 +33,7 @@ func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string) (ce
 		}),
 	)
 
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	cert, key := certificate.MustGenerateCertPEMFormat()
 
 	t.Log("creating client certificate in Konnect")
 	resp, err := sdk.DPCertificates.CreateDataplaneCertificate(ctx, cpID, &sdkkonnectcomp.DataPlaneClientCertificateRequest{

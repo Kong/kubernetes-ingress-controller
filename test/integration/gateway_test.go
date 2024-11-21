@@ -152,7 +152,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("adding a test certificate")
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
 	certName := "cert"
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

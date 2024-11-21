@@ -60,7 +60,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	for _, tss := range testServiceSuffixes {
 		certOpts = append(certOpts, certificate.WithDNSNames(tss+domain), certificate.WithCommonName(tss+domain))
 	}
-	exampleTLSCert, exampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(certOpts...)
+	exampleTLSCert, exampleTLSKey := certificate.MustGenerateCertPEMFormat(certOpts...)
 	tlsSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: tlsSecretName,
@@ -246,7 +246,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	const tlsExampleHostname = "tlsroute.kong.example"
 
 	t.Log("configuring secrets")
-	exampleTLSCert, exampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	exampleTLSCert, exampleTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(tlsExampleHostname), certificate.WithDNSNames(tlsExampleHostname),
 	)
 	certPool := x509.NewCertPool()

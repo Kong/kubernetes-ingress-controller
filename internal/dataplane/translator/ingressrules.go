@@ -21,7 +21,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-func getClientCertIncompatibleProtocols() []string {
+// getNonTLSProtocols returns a list of protocols that do not make Kong establish a TLS connection with an upstream.
+func getNonTLSProtocols() []string {
 	return []string{"http", "grpc", "tcp", "tls_passthrough", "udp", "ws"}
 }
 
@@ -90,36 +91,10 @@ func (ir *ingressRules) populateServices(
 			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
 
 			// extract client certificates intended for use by the service
-			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
-			if secretName != "" {
-				secretKey := k8sService.Namespace + "/" + secretName
-				secret, err := s.GetSecret(k8sService.Namespace, secretName)
-				if err != nil {
-					failuresCollector.PushResourceFailure(
-						fmt.Sprintf("Failed to fetch secret '%s': %v", secretKey, err), k8sService,
-					)
-					continue
-				}
+			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
 
-				// override protocol isn't set yet, need to get it from the annotation
-				protocol := annotations.ExtractProtocolName(k8sService.Annotations)
-				// annotation value does not indicate the effective default, so stuff it in unset
-				if protocol == "" {
-					protocol = "http"
-				}
-				if lo.Contains(getClientCertIncompatibleProtocols(), protocol) {
-					failuresCollector.PushResourceFailure(
-						fmt.Sprintf("client certificate requested for incompatible service protocol '%s'", *service.Protocol),
-						k8sService,
-					)
-				} else {
-					// ensure that the cert is loaded into Kong
-					ir.SecretNameToSNIs.addUniqueParents(secretKey, k8sService)
-					service.ClientCertificate = &kong.Certificate{
-						ID: kong.String(string(secret.UID)),
-					}
-				}
-			}
+			// extract CA certificates intended for use by the service
+			ir.handleServiceCACertificates(s, k8sService, &service, failuresCollector)
 		}
 		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
 
@@ -128,6 +103,96 @@ func (ir *ingressRules) populateServices(
 		ir.ServiceNameToServices[key] = service
 	}
 	return serviceNamesToSkip
+}
+
+func (ir *ingressRules) handleServiceClientCertificates(
+	s store.Storer,
+	k8sService *corev1.Service,
+	service *kongstate.Service,
+	failuresCollector *failures.ResourceFailuresCollector,
+) {
+	secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
+	if secretName != "" {
+		secretKey := k8sService.Namespace + "/" + secretName
+		secret, err := s.GetSecret(k8sService.Namespace, secretName)
+		if err != nil {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("Failed to fetch secret '%s': %v", secretKey, err), k8sService,
+			)
+			return
+		}
+
+		// override protocol isn't set yet, need to get it from the annotation
+		protocol := annotations.ExtractProtocolName(k8sService.Annotations)
+		// annotation value does not indicate the effective default, so stuff it in unset
+		if protocol == "" {
+			protocol = "http"
+		}
+		if lo.Contains(getNonTLSProtocols(), protocol) {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("client certificate requested for incompatible service protocol '%s'", *service.Protocol),
+				k8sService,
+			)
+			return
+		}
+		// ensure that the cert is loaded into Kong
+		ir.SecretNameToSNIs.addUniqueParents(secretKey, k8sService)
+		service.ClientCertificate = &kong.Certificate{
+			ID: kong.String(string(secret.UID)),
+		}
+	}
+}
+
+func (ir *ingressRules) handleServiceCACertificates(
+	s store.Storer,
+	service *corev1.Service,
+	k *kongstate.Service,
+	collector *failures.ResourceFailuresCollector,
+) {
+	certificates := annotations.ExtractCACertificates(service.Annotations)
+	if len(certificates) == 0 {
+		// No CA certificates to process.
+		return
+	}
+
+	// Validate that the service has TLS verification turned on.
+	if k.TLSVerify == nil || !*k.TLSVerify {
+		collector.PushResourceFailure(
+			"CA certificates requested for service without TLS verification enabled",
+			service,
+		)
+	}
+
+	// Validate that the service protocol is compatible with the CA certificates.
+	protocol := annotations.ExtractProtocolName(service.Annotations)
+	if lo.Contains(getNonTLSProtocols(), protocol) {
+		collector.PushResourceFailure(
+			fmt.Sprintf("CA certificates requested for incompatible service protocol '%s'", protocol),
+			service,
+		)
+		return
+	}
+
+	// Process each CA certificate and add it to the Kong Service.
+	for _, certificate := range certificates {
+		secretKey := service.Namespace + "/" + certificate
+		secret, err := s.GetSecret(service.Namespace, certificate)
+		if err != nil {
+			collector.PushResourceFailure(
+				fmt.Sprintf("Failed to fetch secret for CA Certificate '%s': %v", secretKey, err), service,
+			)
+			continue
+		}
+
+		certID, ok := secret.Data["id"]
+		if !ok {
+			collector.PushResourceFailure(
+				fmt.Sprintf("Invalid CA certificate '%s': missing 'id' field in data", secretKey), secret, service,
+			)
+			continue
+		}
+		k.CACertificates = append(k.CACertificates, lo.ToPtr(string(certID)))
+	}
 }
 
 func (ir *ingressRules) generateKongServiceTags(

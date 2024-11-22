@@ -85,7 +85,7 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- Bump go-kong to v0.56.0 to fix [KIC#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703)
+- Bump go-kong to v0.56.0 to fix [#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703)
   Also upgraded the Go version to v1.22.
   [#6657](https://github.com/Kong/kubernetes-ingress-controller/pull/6657)
 

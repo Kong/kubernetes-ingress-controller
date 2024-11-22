@@ -22,6 +22,6 @@ jobs:
         )
       )
     steps:
-      - uses: tibdex/backport@v2
+      - uses: tibdex/backport@v2.0.3
         with:
           github_token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

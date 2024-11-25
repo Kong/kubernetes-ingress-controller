@@ -752,7 +752,7 @@ generate.gateway-api-consts:
 		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
 		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-consts/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
+		OUTPUT=$(shell pwd)/test/consts/zz_generated.gateway.go \
 		go generate -tags=generate_gateway_api_consts ./test/internal/cmd/generate-gateway-api-consts
 
 .PHONY: go-mod-download-gateway-api

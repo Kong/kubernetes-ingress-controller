@@ -14,7 +14,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
+	outputFile = "../../internal/controllers/configuration/zz_generated.controllers.go"
 
 	corev1      = "k8s.io/api/core/v1"
 	discoveryv1 = "k8s.io/api/discovery/v1"
@@ -749,8 +749,8 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
 		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status",configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
-			configurationStatus, 
-			obj.Generation, 
+			configurationStatus,
+			obj.Generation,
 			obj.Status.Conditions,
 		{{- if .ProgrammedCondition.CustomUnknownMessage }}
 			ctrlutils.WithUnknownMessage("{{ .ProgrammedCondition.CustomUnknownMessage }}"),

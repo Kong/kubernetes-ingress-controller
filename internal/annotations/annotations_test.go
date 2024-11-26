@@ -203,6 +203,24 @@ func TestExtractProtocolNames(t *testing.T) {
 			},
 			want: []string{"foo", "bar"},
 		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/protocols": " foo, bar",
+				},
+			},
+			want: []string{"foo", "bar"},
+		},
+		{
+			name: "non-empty with a single protocol empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/protocols": "foo,",
+				},
+			},
+			want: []string{"foo"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -497,6 +515,33 @@ func TestExtractMethods(t *testing.T) {
 			},
 			want: []string{"POST", "GET"},
 		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": " POST, GET",
+				},
+			},
+			want: []string{"POST", "GET"},
+		},
+		{
+			name: "non-empty with a single method empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": "POST,",
+				},
+			},
+			want: []string{"POST"},
+		},
+		{
+			name: "lowercase methods",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": "post,Get",
+				},
+			},
+			want: []string{"POST", "GET"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -528,6 +573,24 @@ func TestExtractSNIs(t *testing.T) {
 				},
 			},
 			want: []string{"hrodna.kong.example", "katowice.kong.example"},
+		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": " hrodna.kong.example, katowice.kong.example",
+				},
+			},
+			want: []string{"hrodna.kong.example", "katowice.kong.example"},
+		},
+		{
+			name: "non-empty with a single sni empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "hrodna.kong.example,",
+				},
+			},
+			want: []string{"hrodna.kong.example"},
 		},
 	}
 	for _, tt := range tests {
@@ -646,6 +709,24 @@ func TestExtractHostAliases(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": " foo.kong.com, bar.kong.com",
+				},
+			},
+			want: []string{"foo.kong.com", "bar.kong.com"},
+		},
+		{
+			name: "non-empty with a single alias empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "foo.kong.com,",
+				},
+			},
+			want: []string{"foo.kong.com"},
 		},
 	}
 	for _, tt := range tests {
@@ -1038,5 +1119,45 @@ func TestExtractCACertificates(t *testing.T) {
 	assert.Equal(t, []string{"foo", "bar", "baz"}, v, "expected to trim spaces")
 
 	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: "foo, bar,  "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
+}
+
+func TestExtractGatewayPublishService(t *testing.T) {
+	v := ExtractGatewayPublishService(nil)
+	assert.Empty(t, v)
+
+	v = ExtractGatewayPublishService(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: "foo"})
+	assert.Equal(t, []string{"foo"}, v)
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: "foo,bar"})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: " foo, bar "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to trim spaces")
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: "foo, bar, "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
+}
+
+func TestExtractUserTags(t *testing.T) {
+	v := ExtractUserTags(nil)
+	assert.Empty(t, v)
+
+	v = ExtractUserTags(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: "foo"})
+	assert.Equal(t, []string{"foo"}, v)
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: "foo,bar"})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: " foo, bar "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to trim spaces")
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: "foo, bar, "})
 	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
 }

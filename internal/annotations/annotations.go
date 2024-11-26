@@ -151,10 +151,7 @@ func ExtractProtocolName(anns map[string]string) string {
 // ExtractProtocolNames extracts the protocols supplied in the annotation.
 func ExtractProtocolNames(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+ProtocolsKey]
-	if len(val) == 0 {
-		return nil
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val)
 }
 
 // ExtractClientCertificate extracts the secret name containing the
@@ -215,19 +212,13 @@ func ExtractHostHeader(anns map[string]string) string {
 // ExtractMethods extracts the methods annotation value.
 func ExtractMethods(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+MethodsKey]
-	if val == "" {
-		return nil
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val, strings.ToUpper)
 }
 
 // ExtractSNIs extracts the route SNI match criteria annotation value.
 func ExtractSNIs(anns map[string]string) ([]string, bool) {
 	val, exists := anns[AnnotationPrefix+SNIsKey]
-	if val == "" {
-		return nil, exists
-	}
-	return strings.Split(val, ","), exists
+	return extractCommaDelimitedStrings(val), exists
 }
 
 // ExtractRequestBuffering extracts the boolean annotation indicating
@@ -253,7 +244,7 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 	if val == "" {
 		return nil, false
 	}
-	return strings.Split(val, ","), true
+	return extractCommaDelimitedStrings(val), true
 }
 
 // ExtractConnectTimeout extracts the connection timeout annotation value.
@@ -345,11 +336,8 @@ func ExtractGatewayPublishService(anns map[string]string) []string {
 	if anns == nil {
 		return []string{}
 	}
-	publish, ok := anns[AnnotationPrefix+GatewayPublishServiceKey]
-	if !ok {
-		return []string{}
-	}
-	return strings.Split(publish, ",")
+	publish := anns[AnnotationPrefix+GatewayPublishServiceKey]
+	return extractCommaDelimitedStrings(publish)
 }
 
 // UpdateGatewayPublishService updates the value of the annotation konghq.com/gatewayclass-unmanaged.
@@ -360,12 +348,7 @@ func UpdateGatewayPublishService(anns map[string]string, services []string) {
 // ExtractUserTags extracts a set of tags from a comma-separated string.
 func ExtractUserTags(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+UserTagKey]
-	// If the annotation is not present, the map provides an empty value, and splitting that will create a slice
-	// containing a single empty string tag. These aren't valid, hence this special case.
-	if len(val) == 0 {
-		return []string{}
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val)
 }
 
 // ExtractRewriteURI extracts the rewrite annotation value.
@@ -424,23 +407,36 @@ func ExtractCACertificates(anns map[string]string) []string {
 
 // extractCommaDelimitedStrings extracts a list of non-empty strings from a comma-separated string.
 // It trims spaces from the strings.
-// TODO: consider using it in other places where we extract comma-separated strings.
-func extractCommaDelimitedStrings(s string) []string {
+// It accepts optional sanitization functions to apply to each string.
+func extractCommaDelimitedStrings(s string, sanitizeFns ...func(string) string) []string {
 	// If it's an empty string, return nil.
 	if strings.TrimSpace(s) == "" {
 		return nil
 	}
 
-	// Split by comma.
-	out := strings.Split(s, ",")
+	// Split values by comma.
+	values := strings.Split(s, ",")
 
-	// Trim spaces in place.
-	for i := range out {
-		out[i] = strings.TrimSpace(out[i])
+	// Allocate an output slice with the same capacity as the input slice.
+	// This may be a bit more than needed as we'll filter out empty strings later.
+	out := make([]string, 0, len(values))
+
+	// Trim and sanitize each value.
+	for _, v := range values {
+		sanitized := strings.TrimSpace(v)
+		if sanitized == "" {
+			// Discard empty strings.
+			continue
+		}
+
+		// Apply optional sanitization functions (e.g. upper-casing).
+		for _, sanitizeFn := range sanitizeFns {
+			sanitized = sanitizeFn(sanitized)
+		}
+
+		// Append to the output slice.
+		out = append(out, sanitized)
 	}
 
-	// Filter out empty strings.
-	return lo.Filter(out, func(s string, _ int) bool {
-		return s != ""
-	})
+	return out
 }

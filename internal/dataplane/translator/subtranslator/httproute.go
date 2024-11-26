@@ -246,7 +246,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 				objectInfo := util.FromK8sObject(parentRoute)
 				tags := util.GenerateTagsForObject(parentRoute)
 				hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
-				routesFromRule, err := generateKongRoutesFromHTTPRouteMatches(
+				routesFromRule, err := GenerateKongRoutesFromHTTPRouteMatches(
 					routeName,
 					[]gatewayapi.HTTPRouteMatch{},
 					filters,
@@ -271,7 +271,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			// Since the grouped matches here are from the same HTTPRoute, it is OK to use the hostnames from the first HTTPRoute.
 			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
 
-			routesFromMatchGroup, err := generateKongRoutesFromHTTPRouteMatches(
+			routesFromMatchGroup, err := GenerateKongRoutesFromHTTPRouteMatches(
 				routeName,
 				matches,
 				filters,
@@ -544,9 +544,9 @@ func mustMarshalJSON[T any](val T) string {
 	return string(key)
 }
 
-// generateKongRoutesFromHTTPRouteMatches converts an HTTPRouteMatches to a slice of Kong Route objects with traditional routes.
+// GenerateKongRoutesFromHTTPRouteMatches converts an HTTPRouteMatches to a slice of Kong Route objects with traditional routes.
 // This function assumes that the HTTPRouteMatches share the query params, headers and methods.
-func generateKongRoutesFromHTTPRouteMatches(
+func GenerateKongRoutesFromHTTPRouteMatches(
 	routeName string,
 	matches []gatewayapi.HTTPRouteMatch,
 	filters []gatewayapi.HTTPRouteFilter,

@@ -156,6 +156,15 @@ Adding a new version? You'll need three changes:
   reconcile objects with `ControlPlaneRef` of type `kic` or without an explicit
   `ControlPlaneRef`.
   [#6690](https://github.com/Kong/kubernetes-ingress-controller/pull/6690)
+- Added support for upstream TLS verification with new Kubernetes `Service`
+  annotations:
+  - `konghq.com/tls-verify`: set to `true` to enable TLS verification for
+    upstream connections of a `Service`.
+  - `konghq.com/tls-verify-depth`: set to an integer to specify the maximum
+    depth of the certificate chain that will be verified.
+  - `konghq.com/ca-certificates`: set to a comma-delimited list of CA
+    certificates' names to use for verification.
+  [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
 
 ## [3.3.1]
 

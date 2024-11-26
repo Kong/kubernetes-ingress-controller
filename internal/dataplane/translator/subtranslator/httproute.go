@@ -251,18 +251,15 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 		}
 
 		for _, matchGroup := range matchGroups {
-			// TODO: sort the match groups for a stable route name.
-			uniqueHTTPRoutes := matchGroup.uniqueHTTPRoutes()
-			firstHTTPRoute := uniqueHTTPRoutes[0]
-			// gather the k8s object information and hostnames from the httproute
-			objectInfo := util.FromK8sObject(firstHTTPRoute)
-			tags := util.GenerateTagsForObject(firstHTTPRoute)
-
-			routeName := translateToKongRouteName(matchGroup, firstHTTPRoute.GetNamespace(), firstHTTPRoute.GetName())
+			// Since we have grouped matches by their parent routes, all the matches in the same group are from the same HTTPRoute.
+			parentRoute := matchGroup[0].parentRoute
+			objectInfo := util.FromK8sObject(parentRoute)
+			tags := util.GenerateTagsForObject(parentRoute)
+			routeName := translateToKongRouteName(matchGroup, parentRoute.GetNamespace(), parentRoute.GetName())
 			matches := matchGroup.httpRouteMatches()
+			// Since the grouped matches here are from the same HTTPRoute, it is OK to use the hostnames from the first HTTPRoute.
+			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
 
-			// Since the grouped matches here are sharing the same hostname as the key used for grouping, it is OK to use the hostnames from the first HTTPRoute.
-			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(firstHTTPRoute)
 			routesFromMatchGroup, err := generateKongRoutesFromHTTPRouteMatches(
 				routeName,
 				matches,
@@ -559,14 +556,9 @@ type httpRouteMatchMeta struct {
 }
 
 // getKey computes a key from an HTTPRouteMatch. Two HTTPRouteMatches will generate the same key if their
-// hostnames, methods, headers, and query parameters are identical. HTTPRouteMatches with the same key can be
-// combined into a single Kong route.
+// parent HTTPRoute, methods, headers, and query parameters are identical.
+// HTTPRouteMatches with the same key can be combined into a single Kong route.
 func (m httpRouteMatchMeta) getKey() string {
-	// Since now we group matches from different HTTPRoutes together, we should also extract hostnames into the key tp group matches.
-	hostnames := m.parentRoute.Spec.Hostnames
-	sort.Slice(hostnames, func(i, j int) bool {
-		return hostnames[i] < hostnames[j]
-	})
 	// Per the HTTPHeader definition at https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPHeader
 	//
 	// Name is the name of the HTTP Header to be matched. Name matching MUST be
@@ -610,12 +602,14 @@ func (m httpRouteMatchMeta) getKey() string {
 	}
 
 	keySource := struct {
-		Hostnames []gatewayapi.Hostname
+		Namespace string
+		Name      string
 		Method    *gatewayapi.HTTPMethod
 		Headers   []gatewayapi.HTTPHeaderMatch
 		Query     []gatewayapi.HTTPQueryParamMatch
 	}{
-		Hostnames: hostnames,
+		Namespace: m.parentRoute.Namespace,
+		Name:      m.parentRoute.Name,
 		Method:    m.Match.Method,
 		Headers:   headers,
 		Query:     queryParams,
@@ -632,18 +626,6 @@ func (l httpRouteMatchMetaList) httpRouteMatches() []gatewayapi.HTTPRouteMatch {
 		matches = append(matches, *matchMeta.Match)
 	}
 	return matches
-}
-
-func (l httpRouteMatchMetaList) uniqueHTTPRoutes() []*gatewayapi.HTTPRoute {
-	routes := lo.Map(l, func(m httpRouteMatchMeta, _ int) *gatewayapi.HTTPRoute {
-		return m.parentRoute
-	})
-	return lo.UniqBy(routes, func(route *gatewayapi.HTTPRoute) k8stypes.NamespacedName {
-		return k8stypes.NamespacedName{
-			Namespace: route.Namespace,
-			Name:      route.Name,
-		}
-	})
 }
 
 // -----------------------------------------------------------------------------

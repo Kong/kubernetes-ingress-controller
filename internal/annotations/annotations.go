@@ -414,22 +414,29 @@ func extractCommaDelimitedStrings(s string, sanitizeFns ...func(string) string) 
 		return nil
 	}
 
-	// Split by comma.
-	out := strings.Split(s, ",")
+	// Split values by comma.
+	values := strings.Split(s, ",")
 
-	// Apply trimming and sanitization functions in place.
-	for i := range out {
-		// Trim spaces.
-		out[i] = strings.TrimSpace(out[i])
+	// Allocate an output slice with the same capacity as the input slice.
+	// This may be a bit more than needed as we'll filter out empty strings later.
+	out := make([]string, 0, len(values))
+
+	// Trim and sanitize each value.
+	for _, v := range values {
+		sanitized := strings.TrimSpace(v)
+		if sanitized == "" {
+			// Discard empty strings.
+			continue
+		}
 
 		// Apply optional sanitization functions (e.g. upper-casing).
 		for _, sanitizeFn := range sanitizeFns {
-			out[i] = sanitizeFn(out[i])
+			sanitized = sanitizeFn(sanitized)
 		}
+
+		// Append to the output slice.
+		out = append(out, sanitized)
 	}
 
-	// Filter out empty strings.
-	return lo.Filter(out, func(s string, _ int) bool {
-		return s != ""
-	})
+	return out
 }

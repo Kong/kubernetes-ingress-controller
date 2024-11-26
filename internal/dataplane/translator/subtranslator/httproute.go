@@ -42,17 +42,6 @@ type KongRouteTranslation struct {
 	Filters []gatewayapi.HTTPRouteFilter
 }
 
-// TranslateHTTPRoute translates a list of HTTPRoutes into a list of HTTPRouteTranslationMeta
-// objects that can be used to instantiate Kong routes and services.
-// The translation is done by grouping the HTTPRoutes by their backendRefs.
-// This means that all the rules of a single HTTPRoute will be grouped together
-// if they share the same backendRefs.
-func TranslateHTTPRoute(route *gatewayapi.HTTPRoute) []*KongServiceTranslation {
-	index := httpRouteTranslationIndex{}
-	index.setRoute(route)
-	return index.translate()
-}
-
 func TranslateHTTPRoutesToKongstateServices(
 	logger logr.Logger,
 	storer store.Storer,
@@ -248,6 +237,28 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			for matchGroupKey, matchGroup := range ruleMatchGroups {
 				matchGroups[matchGroupKey] = append(matchGroups[matchGroupKey], matchGroup...)
 			}
+			// There is a rule that has no matches, which means we should generate a route to match only hostnames for the rule
+			// or a catch-all match when hostname is empty.
+			if len(ruleMatchGroups) == 0 {
+				parentRoute := ruleMeta.parentRoute
+				routeName := fmt.Sprintf("httproute.%s.%s.%d.0",
+					parentRoute.Namespace, parentRoute.Name, ruleMeta.RuleNumber)
+				objectInfo := util.FromK8sObject(parentRoute)
+				tags := util.GenerateTagsForObject(parentRoute)
+				hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
+				routesFromRule, err := generateKongRoutesFromHTTPRouteMatches(
+					routeName,
+					[]gatewayapi.HTTPRouteMatch{},
+					filters,
+					objectInfo,
+					hostnames,
+					tags,
+				)
+				if err != nil {
+					return nil, err
+				}
+				routes = append(routes, routesFromRule...)
+			}
 		}
 
 		for _, matchGroup := range matchGroups {
@@ -274,6 +285,10 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			routes = append(routes, routesFromMatchGroup...)
 		}
 	}
+	// Sort the routes by name to produce a stable order.
+	sort.Slice(routes, func(i, j int) bool {
+		return *routes[i].Name < *routes[j].Name
+	})
 	return routes, nil
 }
 
@@ -289,139 +304,6 @@ func extractUniqueHTTPRoutes(rulesMeta []httpRouteRuleMeta) []*gatewayapi.HTTPRo
 		}
 	})
 	return uniqueRoutes
-}
-
-// -----------------------------------------------------------------------------
-// HTTPRoute Translation - Private - Index
-// -----------------------------------------------------------------------------
-
-// httpRouteTranslationIndex aggregates all rules routing to the same backends group.
-type httpRouteTranslationIndex struct {
-	httpRoute *gatewayapi.HTTPRoute
-	rulesMeta []httpRouteRuleMeta
-}
-
-func (i *httpRouteTranslationIndex) setRoute(route *gatewayapi.HTTPRoute) {
-	i.httpRoute = route
-	i.extractRulesMeta(route)
-}
-
-func (i *httpRouteTranslationIndex) extractRulesMeta(route *gatewayapi.HTTPRoute) {
-	i.rulesMeta = make([]httpRouteRuleMeta, 0, len(route.Spec.Rules))
-
-	for ruleNumber, rule := range route.Spec.Rules {
-		i.rulesMeta = append(i.rulesMeta, httpRouteRuleMeta{
-			RuleNumber:  ruleNumber,
-			Rule:        rule,
-			parentRoute: route,
-		})
-	}
-}
-
-func (i *httpRouteTranslationIndex) translate() []*KongServiceTranslation {
-	rulesGroupedByBackendRed := groupRulesByBackendRefs(i.rulesMeta)
-	translations := make([]*KongServiceTranslation, 0, len(rulesGroupedByBackendRed))
-
-	for _, rulesByBackends := range rulesGroupedByBackendRed {
-		// each backend refs group is a separate Kong service, not eligible for consolidation
-		kongServiceTranslation := i.translateToKongService(rulesByBackends)
-		i.translateToKongServiceRoutes(kongServiceTranslation, rulesByBackends)
-		translations = append(translations, kongServiceTranslation)
-	}
-
-	return translations
-}
-
-func (i *httpRouteTranslationIndex) translateToKongService(rulesMeta []httpRouteRuleMeta) *KongServiceTranslation {
-	return &KongServiceTranslation{
-		Name:        i.translateToKongServiceName(rulesMeta),
-		BackendRefs: i.translateToKongServiceBackends(rulesMeta),
-		KongRoutes:  nil,
-	}
-}
-
-func (i *httpRouteTranslationIndex) translateToKongServiceName(rulesMeta []httpRouteRuleMeta) string {
-	// This should never happen, as we validate for the number of matches in the translator,
-	// but just in case anything changes in the future to avoid panics.
-	firstRuleInGroup := -1
-	if len(rulesMeta) > 0 {
-		// Rules are guaranteed to retain their order, so we can use the first one.
-		firstRuleInGroup = rulesMeta[0].RuleNumber
-	}
-	return fmt.Sprintf(
-		"httproute.%s.%s.%d",
-		i.httpRoute.Namespace,
-		i.httpRoute.Name,
-		firstRuleInGroup,
-	)
-}
-
-func (i *httpRouteTranslationIndex) translateToKongServiceBackends(rulesMeta []httpRouteRuleMeta) []gatewayapi.HTTPBackendRef {
-	if len(rulesMeta) == 0 {
-		return nil
-	}
-	// get the backendRefs and filters from any rule, as they are all the same,
-	// because the the rules are processed in groups wit the same backendRefs and filters.
-	return rulesMeta[0].Rule.BackendRefs
-}
-
-func (i *httpRouteTranslationIndex) translateToKongServiceRoutes(s *KongServiceTranslation, rulesMeta []httpRouteRuleMeta) {
-	for _, rulesByFilter := range groupRulesByFilter(rulesMeta) {
-		// each filter group must be a separate Kong route, not eligible for consolidation
-		// thus need to be translated separately
-		routesByFilter := i.translateToKongRoutes(rulesByFilter)
-		s.KongRoutes = append(s.KongRoutes, routesByFilter...)
-	}
-
-	// Sort the routes by name to ensure that the order is deterministic.
-	sort.Slice(s.KongRoutes, func(i, j int) bool {
-		return s.KongRoutes[i].Name < s.KongRoutes[j].Name
-	})
-}
-
-func (i *httpRouteTranslationIndex) translateToKongRoutes(rulesMeta []httpRouteRuleMeta) []KongRouteTranslation {
-	// All the rules in the group have the same backendRefs and filters.
-	var filters []gatewayapi.HTTPRouteFilter
-	if len(rulesMeta) > 0 {
-		filters = rulesMeta[0].Rule.Filters
-	}
-
-	return translateToKongRoutes(rulesMeta, i.httpRoute.Namespace, i.httpRoute.Name, filters)
-}
-
-func translateToKongRoutes(rulesMeta []httpRouteRuleMeta, namespace string, name string, filters []gatewayapi.HTTPRouteFilter) []KongRouteTranslation {
-	// Group the matches for each rule. Then aggregate the matches eligible for the consolidation
-	// into a single match group.
-	matchGroups := make(map[string]httpRouteMatchMetaList)
-	for _, ruleMeta := range rulesMeta {
-		ruleMatchGroups := groupSliceByKeyFn(ruleMeta.matches(), httpRouteMatchMeta.getKey)
-		for matchGroupKey, matchGroup := range ruleMatchGroups {
-			matchGroups[matchGroupKey] = append(matchGroups[matchGroupKey], matchGroup...)
-		}
-	}
-
-	// Then, for each group, create a KongRoute with the multiple paths.
-	kongRoutes := make([]KongRouteTranslation, 0, len(matchGroups))
-	for _, matchGroup := range matchGroups {
-		kongRouteName := translateToKongRouteName(matchGroup, namespace, name)
-
-		kongRoutes = append(kongRoutes, KongRouteTranslation{
-			Name:    kongRouteName,
-			Matches: matchGroup.httpRouteMatches(),
-			Filters: filters,
-		})
-	}
-
-	// No matches means a catch-all route based on the hostname
-	if len(matchGroups) == 0 {
-		kongRouteName := fmt.Sprintf("httproute.%s.%s.0.0", namespace, name)
-		kongRoutes = append(kongRoutes, KongRouteTranslation{
-			Name:    kongRouteName,
-			Filters: filters,
-		})
-	}
-
-	return kongRoutes
 }
 
 func translateToKongRouteName(matchesMeta httpRouteMatchMetaList, namespace string, name string) string {
@@ -442,13 +324,6 @@ func translateToKongRouteName(matchesMeta httpRouteMatchMetaList, namespace stri
 		firstRuleNumber,
 		firstMatchNumber,
 	)
-}
-
-// groupRulesByBackendRefs groups the rules by their backendRefs.
-// The backendRefs are grouped by their key function.
-// The elements in the groups have the order of the original slice, but the groups themselves are not ordered.
-func groupRulesByBackendRefs(ruleEntries []httpRouteRuleMeta) map[string][]httpRouteRuleMeta {
-	return groupSliceByKeyFn(ruleEntries, httpRouteRuleMeta.getHTTPBackendRefsKey)
 }
 
 // groupRulesByFilter groups the rules by their filters.
@@ -484,12 +359,6 @@ type httpRouteRuleMeta struct {
 // The order of the filters is not important.
 func (m httpRouteRuleMeta) getFiltersKey() string {
 	return getSortedItemsString(m.Rule.Filters)
-}
-
-// getHTTPBackendRefsKey computes a key from a list of backendRefs.
-// The order of backedRefs is not important.
-func (m httpRouteRuleMeta) getHTTPBackendRefsKey() string {
-	return getSortedItemsString(m.Rule.BackendRefs)
 }
 
 // getKongServiceNameByBackendRefs generates service name based on rule's backendRefs and the namespace of the parent HTTPRoute

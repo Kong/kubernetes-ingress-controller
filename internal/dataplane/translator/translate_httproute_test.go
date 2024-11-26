@@ -39,7 +39,6 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	routes       []*gatewayapi.HTTPRoute
 	storeObjects store.FakeObjects
 	expected     func(routes []*gatewayapi.HTTPRoute) ingressRules
-	errs         []error
 }
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -201,14 +200,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -278,14 +277,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -352,14 +351,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -431,14 +430,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -511,14 +510,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -596,14 +595,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -693,15 +692,15 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
-						"httproute.default.basic-httproute.1": routes[0],
+						"httproute.default.svc.default.fake-service.80":   routes[0],
+						"httproute.default.svc.default.fake-service.8080": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // 1 service per route should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -737,11 +736,11 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Parent: routes[0],
 						},
 
-						"httproute.default.basic-httproute.1": {
+						"httproute.default.svc.default.fake-service.8080": {
 							Service: kong.Service{ // 1 service per route should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.1"),
-								Name:           kong.String("httproute.default.basic-httproute.1"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.8080"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.8080"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -849,15 +848,15 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
-						"httproute.default.basic-httproute.2": routes[0],
+						"httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10":   routes[0],
+						"httproute.default.svc.default.foo-v1.8080.90_default.foo-v3.8080.10": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10": {
 							Service: kong.Service{
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10"),
+								Name:           kong.String("httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -898,11 +897,11 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Parent: routes[0],
 						},
 
-						"httproute.default.basic-httproute.2": {
+						"httproute.default.svc.default.foo-v1.8080.90_default.foo-v3.8080.10": {
 							Service: kong.Service{
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.2"),
-								Name:           kong.String("httproute.default.basic-httproute.2"),
+								Host:           kong.String("httproute.default.svc.default.foo-v1.8080.90_default.foo-v3.8080.10"),
+								Name:           kong.String("httproute.default.svc.default.foo-v1.8080.90_default.foo-v3.8080.10"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -1009,14 +1008,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -1174,14 +1173,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10": {
 							Service: kong.Service{
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10"),
+								Name:           kong.String("httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -1372,14 +1371,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10": {
 							Service: kong.Service{
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10"),
+								Name:           kong.String("httproute.default.svc.default.foo-v1.80.90_default.foo-v2.8080.10"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -1539,14 +1538,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(500),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(500),
 								Retries:        kong.Int(5),
@@ -1595,26 +1594,15 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 			ingressRules := newIngressRules()
 
-			var errs []error
 			for _, httproute := range tt.routes {
 				// initialize the HTTPRoute object
 				httproute.SetGroupVersionKind(httprouteGVK)
-
-				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-				if err != nil {
-					errs = append(errs, err)
-				}
 			}
 
+			p.ingressRulesFromHTTPRoutesWithCombinedService(tt.routes, &ingressRules)
 			// verify that we receive the expected values
 			expectedIngressRules := tt.expected(tt.routes)
 			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{})))
-
-			// verify that we receive any and all expected errors
-			for i := range tt.errs {
-				assert.ErrorIs(t, errs[i], tt.errs[i])
-			}
 		})
 	}
 }
@@ -1708,14 +1696,14 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
-						"httproute.default.basic-httproute.0": routes[0],
+						"httproute.default.svc.default.fake-service.80": routes[0],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
-						"httproute.default.basic-httproute.0": {
+						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{ // only 1 service should be created
 								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
 								Protocol:       kong.String("http"),
 								ReadTimeout:    kong.Int(60000),
 								Retries:        kong.Int(5),
@@ -1758,34 +1746,23 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			return func(t *testing.T) {
 				ingressRules := newIngressRules()
 
-				var errs []error
 				for _, httproute := range tt.routes {
 					// initialize the HTTPRoute object
 					httproute.SetGroupVersionKind(httprouteGVK)
-
-					// generate the ingress rules
-					err := tran.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-					if err != nil {
-						errs = append(errs, err)
-					}
 				}
+				tran.ingressRulesFromHTTPRoutesWithCombinedService(tt.routes, &ingressRules)
 
 				// verify that we receive the expected values
 				expectedIngressRules := tt.expected(tt.routes)
 				assert.Equal(t, expectedIngressRules, ingressRules)
-
-				// verify that we receive any and all expected errors
-				assert.Equal(t, tt.errs, errs)
 			}
 		}
 
 		fakestore, err := store.NewFakeStore(tt.storeObjects)
 		require.NoError(t, err)
 		translator := mustNewTranslator(t, fakestore)
-		translatorWithCombinedServiceRoutes := mustNewTranslator(t, fakestore)
 
-		t.Run(tt.msg+" using legacy translator", withTranslator(translator))
-		t.Run(tt.msg+" using combined service routes translator", withTranslator(translatorWithCombinedServiceRoutes))
+		t.Run(tt.msg+" using combined service routes translator", withTranslator(translator))
 	}
 }
 

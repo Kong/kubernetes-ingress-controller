@@ -45,64 +45,9 @@ func (t *Translator) ingressRulesFromHTTPRoutes() ingressRules {
 		t.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutesToTranslate, &result)
 		return result
 	}
-	kongstateServices, routeTranslationFailures := subtranslator.TranslateHTTPRoutesToKongstateServices(
-		t.logger,
-		t.storer,
-		httpRoutesToTranslate,
-	)
-	for serviceName, service := range kongstateServices {
-		result.ServiceNameToServices[serviceName] = service
-		result.ServiceNameToParent[serviceName] = service.Parent
-	}
-	for _, httproute := range httpRoutesToTranslate {
-		namespacedName := k8stypes.NamespacedName{
-			Namespace: httproute.Namespace,
-			Name:      httproute.Name,
-		}
-		translationFailures, hasError := routeTranslationFailures[namespacedName]
-		if hasError && len(translationFailures) > 0 {
-			t.failuresCollector.PushResourceFailure(
-				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
-				httproute,
-			)
-			continue
-		}
-		t.registerSuccessfullyTranslatedObject(httproute)
-	}
 
+	t.ingressRulesFromHTTPRoutesWithCombinedService(httpRoutesToTranslate, &result)
 	return result
-}
-
-// ingressRulesFromHTTPRoute validates and generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
-// If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
-func (t *Translator) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayapi.HTTPRoute) error {
-	for _, kongServiceTranslation := range subtranslator.TranslateHTTPRoute(httproute) {
-		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
-
-		serviceName := kongServiceTranslation.Name
-
-		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithName(t.logger, t.storer, result, serviceName, httproute, "http", backendRefs...)
-		if err != nil {
-			return err
-		}
-
-		// generate the routes for the service and attach them to the service
-		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, t.featureFlags.ExpressionRoutes)
-			if err != nil {
-				return err
-			}
-			service.Routes = append(service.Routes, routes...)
-		}
-
-		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[serviceName] = httproute
-	}
-	applyTimeoutsToService(httproute, result)
-	return nil
 }
 
 // applyTimeoutsToService applies timeouts from HTTPRoute to the service.
@@ -172,6 +117,36 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 	}
 
 	return nil
+}
+
+// ingressRulesFromHTTPRoutesWithCombinedService translates HTTPRoutes to ingress rules with combined Kong services
+// of rules cross different HTTPRoutes (but still in the same namespace).
+// TODO: handle the case of using expression based routes: https://github.com/Kong/kubernetes-ingress-controller/issues/6727.
+func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
+	kongstateServices, routeTranslationFailures := subtranslator.TranslateHTTPRoutesToKongstateServices(
+		t.logger,
+		t.storer,
+		httpRoutes,
+	)
+	for serviceName, service := range kongstateServices {
+		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = service.Parent
+	}
+	for _, httproute := range httpRoutes {
+		namespacedName := k8stypes.NamespacedName{
+			Namespace: httproute.Namespace,
+			Name:      httproute.Name,
+		}
+		translationFailures, hasError := routeTranslationFailures[namespacedName]
+		if hasError && len(translationFailures) > 0 {
+			t.failuresCollector.PushResourceFailure(
+				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
+				httproute,
+			)
+			continue
+		}
+		t.registerSuccessfullyTranslatedObject(httproute)
+	}
 }
 
 // ingressRulesFromHTTPRoutesUsingExpressionRoutes translates HTTPRoutes to expression based routes

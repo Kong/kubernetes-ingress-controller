@@ -832,7 +832,6 @@ func TestCACertificate(t *testing.T) {
 }
 
 func TestServiceClientCertificate(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("valid client-cert annotation", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -944,15 +943,15 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates),
+		assert.Equal(t, 1, len(state.Certificates),
 			"expected one certificates to be rendered")
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Certificates[0].ID)
 
-		assert.Equal(2, len(state.Services))
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, 2, len(state.Services))
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[0].ClientCertificate.ID)
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[1].ClientCertificate.ID)
 	})
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
@@ -1021,11 +1020,11 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(0, len(state.Certificates),
+		assert.Equal(t, 0, len(state.Certificates),
 			"expected no certificates to be rendered")
 
-		assert.Equal(1, len(state.Services))
-		assert.Nil(state.Services[0].ClientCertificate)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 	t.Run("valid cert+secret but incompatible protocol", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
@@ -1112,12 +1111,12 @@ func TestServiceClientCertificate(t *testing.T) {
 
 		require.Len(t, result.TranslationFailures, 1)
 		failure := result.TranslationFailures[0]
-		assert.Contains(failure.Message(), "client certificate requested for incompatible service protocol 'http'")
+		assert.Contains(t, failure.Message(), "Client certificate requested for incompatible service protocol 'http'")
 
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Services))
-		assert.Nil(state.Services[0].ClientCertificate)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 }
 

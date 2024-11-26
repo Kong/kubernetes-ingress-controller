@@ -177,6 +177,13 @@ Adding a new version? You'll need three changes:
   - `konghq.com/ca-certificates`: set to a comma-delimited list of CA
     certificates' names to use for verification.
   [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
+- Combine Kong gateway services from rules of `HTTPRoute` sharing the same
+  backends (same combination of group, kind, namespace, name, port and weight)
+  from different `HTTPRoute` in the same namespace.
+  The name of translated Kong gateway service in changed to
+  `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_[next_backends]...`,
+  like: `httproute.default.svc.default.svc1.80.90_default.svc2.80.10`.
+  [#6711](https://github.com/Kong/kubernetes-ingress-controller/pull/6711)
 
 ## [3.3.1]
 

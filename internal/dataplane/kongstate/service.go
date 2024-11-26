@@ -154,11 +154,7 @@ func (s *Service) overrideTLSVerify(anns map[string]string) {
 	if !exists {
 		return
 	}
-	verify, err := strconv.ParseBool(tlsVerify)
-	if err != nil {
-		return
-	}
-	s.TLSVerify = kong.Bool(verify)
+	s.TLSVerify = kong.Bool(tlsVerify)
 }
 
 func (s *Service) overrideTLSVerifyDepth(anns map[string]string) {
@@ -169,11 +165,7 @@ func (s *Service) overrideTLSVerifyDepth(anns map[string]string) {
 	if !exists {
 		return
 	}
-	val, err := strconv.Atoi(tlsVerifyDepth)
-	if err != nil {
-		return
-	}
-	s.TLSVerifyDepth = kong.Int(val)
+	s.TLSVerifyDepth = kong.Int(tlsVerifyDepth)
 }
 
 // overrideByAnnotation modifies the Kong service based on annotations

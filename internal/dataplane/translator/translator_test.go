@@ -5235,3 +5235,109 @@ func TestTranslator_UpdateStore(t *testing.T) {
 	require.NotEqual(t, originalBuildConfigResult.KongState, newBuildConfigResult.KongState, "KongState should be different after updating the store")
 	require.Len(t, newBuildConfigResult.KongState.Consumers, 1, "expected 1 consumer in the KongState")
 }
+
+func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
+	cert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue()) // Translator validates the certificate.
+	s, err := store.NewFakeStore(store.FakeObjects{
+		Services: []*corev1.Service{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Service",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "svc",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+						annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey: "2",
+						annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca",
+						annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "http",
+							Port: 80,
+						},
+					},
+				},
+			},
+		},
+		Secrets: []*corev1.Secret{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ca",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"cert": cert,
+					"id":   []byte("ca-cert-id"),
+				},
+			},
+		},
+		IngressesV1: []*netv1.Ingress{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: netv1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress",
+					Namespace: "ns",
+				},
+				Spec: netv1.IngressSpec{
+					IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+					Rules: []netv1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path:     "/path",
+											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	p := mustNewTranslator(t, s)
+
+	result := p.BuildKongConfig()
+	require.Empty(t, result.TranslationFailures, "expected no translation failures")
+
+	require.Len(t, result.KongState.Services, 1)
+	svc := result.KongState.Services[0]
+	require.NotNil(t, svc)
+	assert.Equal(t, svc.TLSVerify, lo.ToPtr(true))
+	assert.Equal(t, svc.TLSVerifyDepth, lo.ToPtr(2))
+
+	require.Len(t, svc.CACertificates, 1)
+	assert.Equal(t, "ca-cert-id", *svc.CACertificates[0])
+}

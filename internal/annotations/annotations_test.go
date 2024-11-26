@@ -1002,7 +1002,11 @@ func TestExtractTLSVerify(t *testing.T) {
 
 	v, ok := ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "true"})
 	assert.True(t, ok)
-	assert.Equal(t, "true", v)
+	assert.Equal(t, true, v)
+
+	v, ok = ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "false"})
+	assert.True(t, ok)
+	assert.Equal(t, false, v)
 }
 
 func TestExtractTLSVerifyDepth(t *testing.T) {
@@ -1012,9 +1016,12 @@ func TestExtractTLSVerifyDepth(t *testing.T) {
 	_, ok = ExtractTLSVerifyDepth(map[string]string{})
 	assert.False(t, ok)
 
+	_, ok = ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "non-integer"})
+	assert.False(t, ok)
+
 	v, ok := ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "1"})
 	assert.True(t, ok)
-	assert.Equal(t, "1", v)
+	assert.Equal(t, 1, v)
 }
 
 func TestExtractCACertificates(t *testing.T) {

@@ -654,6 +654,7 @@ func TestPopulateServices(t *testing.T) {
 						Name:      "s-1",
 						Namespace: "test-namespace",
 						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
 							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
 							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1,ca-2",
 						},
@@ -716,6 +717,7 @@ func TestPopulateServices(t *testing.T) {
 						Name:      "s-1",
 						Namespace: "test-namespace",
 						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
 							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1,ca-2",
 						},
 					},
@@ -771,6 +773,7 @@ func TestPopulateServices(t *testing.T) {
 						Name:      "s-1",
 						Namespace: "test-namespace",
 						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
 							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
 							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-not-existing",
 						},
@@ -804,6 +807,7 @@ func TestPopulateServices(t *testing.T) {
 						Name:      "s-1",
 						Namespace: "test-namespace",
 						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
 							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
 							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1",
 						},
@@ -851,7 +855,53 @@ func TestPopulateServices(t *testing.T) {
 						Annotations: map[string]string{
 							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
 							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1",
-							annotations.AnnotationPrefix + annotations.ProtocolKey:       "http",
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "grpc",
+						},
+					},
+				},
+			},
+			k8sSecrets: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-1",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-1"),
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name:      lo.ToPtr("s-1"),
+						TLSVerify: lo.ToPtr(true),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			expectedTranslationFailures: []string{
+				"CA certificates requested for incompatible service protocol 'grpc'",
+			},
+		},
+		{
+			name: "service with a CA certificate but no protocol is specified (default http)",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1",
 						},
 					},
 				},

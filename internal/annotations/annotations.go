@@ -18,6 +18,7 @@ package annotations
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -380,15 +381,35 @@ func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
 }
 
 // ExtractTLSVerify extracts the tls-verify annotation value.
-func ExtractTLSVerify(anns map[string]string) (string, bool) {
+func ExtractTLSVerify(anns map[string]string) (value bool, ok bool) {
 	s, ok := anns[AnnotationPrefix+TLSVerifyKey]
-	return s, ok
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return false, false
+	}
+	verify, err := strconv.ParseBool(s)
+	if err != nil {
+		// If the annotation is present but not a valid boolean string, we consider it not set.
+		return false, false
+	}
+	// If the annotation is present and a valid boolean string, we return the value.
+	return verify, true
 }
 
 // ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
-func ExtractTLSVerifyDepth(anns map[string]string) (string, bool) {
+func ExtractTLSVerifyDepth(anns map[string]string) (int, bool) {
 	s, ok := anns[AnnotationPrefix+TLSVerifyDepthKey]
-	return s, ok
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return 0, false
+	}
+	depth, err := strconv.Atoi(s)
+	if err != nil {
+		// If the annotation is present but not a valid integer string, we consider it not set.
+		return 0, false
+	}
+	// If the annotation is present and a valid integer string, we return the value.
+	return depth, true
 }
 
 // ExtractCACertificates extracts the ca-certificates secret names from the annotation.

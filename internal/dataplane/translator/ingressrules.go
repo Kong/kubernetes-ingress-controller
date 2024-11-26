@@ -21,6 +21,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
+const (
+	// defaultServiceProtocol is the default protocol used by Kong for services.
+	defaultServiceProtocol = "http"
+)
+
 // getNonTLSProtocols returns a list of protocols that do not make Kong establish a TLS connection with an upstream.
 func getNonTLSProtocols() []string {
 	return []string{"http", "grpc", "tcp", "tls_passthrough", "udp", "ws"}
@@ -123,14 +128,10 @@ func (ir *ingressRules) handleServiceClientCertificates(
 		}
 
 		// override protocol isn't set yet, need to get it from the annotation
-		protocol := annotations.ExtractProtocolName(k8sService.Annotations)
-		// annotation value does not indicate the effective default, so stuff it in unset
-		if protocol == "" {
-			protocol = "http"
-		}
+		protocol := getEffectiveServiceProtocol(k8sService)
 		if lo.Contains(getNonTLSProtocols(), protocol) {
 			failuresCollector.PushResourceFailure(
-				fmt.Sprintf("client certificate requested for incompatible service protocol '%s'", *service.Protocol),
+				fmt.Sprintf("Client certificate requested for incompatible service protocol '%s'", *service.Protocol),
 				k8sService,
 			)
 			return
@@ -156,15 +157,16 @@ func (ir *ingressRules) handleServiceCACertificates(
 	}
 
 	// Validate that the service has TLS verification turned on.
-	if k.TLSVerify == nil || !*k.TLSVerify {
+	if v, ok := annotations.ExtractTLSVerify(service.Annotations); !ok || !v {
 		collector.PushResourceFailure(
 			"CA certificates requested for service without TLS verification enabled",
 			service,
 		)
+		return
 	}
 
-	// Validate that the service protocol is compatible with the CA certificates.
-	protocol := annotations.ExtractProtocolName(service.Annotations)
+	// Validate that the effective service protocol is compatible with the CA certificates.
+	protocol := getEffectiveServiceProtocol(service)
 	if lo.Contains(getNonTLSProtocols(), protocol) {
 		collector.PushResourceFailure(
 			fmt.Sprintf("CA certificates requested for incompatible service protocol '%s'", protocol),
@@ -193,6 +195,15 @@ func (ir *ingressRules) handleServiceCACertificates(
 		}
 		k.CACertificates = append(k.CACertificates, lo.ToPtr(string(certID)))
 	}
+}
+
+func getEffectiveServiceProtocol(svc *corev1.Service) string {
+	protocol := annotations.ExtractProtocolName(svc.Annotations)
+	if protocol == "" {
+		// Annotation value does not indicate the effective default on Kong side.
+		protocol = defaultServiceProtocol
+	}
+	return protocol
 }
 
 func (ir *ingressRules) generateKongServiceTags(

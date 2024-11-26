@@ -419,5 +419,28 @@ func ExtractCACertificates(anns map[string]string) []string {
 	if !ok {
 		return nil
 	}
-	return strings.Split(s, ",")
+	return extractCommaDelimitedStrings(s)
+}
+
+// extractCommaDelimitedStrings extracts a list of non-empty strings from a comma-separated string.
+// It trims spaces from the strings.
+// TODO: consider using it in other places where we extract comma-separated strings.
+func extractCommaDelimitedStrings(s string) []string {
+	// If it's an empty string, return nil.
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+
+	// Split by comma.
+	out := strings.Split(s, ",")
+
+	// Trim spaces in place.
+	for i := range out {
+		out[i] = strings.TrimSpace(out[i])
+	}
+
+	// Filter out empty strings.
+	return lo.Filter(out, func(s string, _ int) bool {
+		return s != ""
+	})
 }

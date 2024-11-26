@@ -1032,7 +1032,11 @@ func TestExtractCACertificates(t *testing.T) {
 	assert.Empty(t, v)
 
 	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: "foo,bar"})
-	assert.Len(t, v, 2)
-	assert.Equal(t, "foo", v[0])
-	assert.Equal(t, "bar", v[1])
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: " foo, bar ,baz "})
+	assert.Equal(t, []string{"foo", "bar", "baz"}, v, "expected to trim spaces")
+
+	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: "foo, bar,  "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
 }

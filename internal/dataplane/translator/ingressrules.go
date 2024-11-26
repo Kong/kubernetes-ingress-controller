@@ -26,11 +26,6 @@ const (
 	defaultServiceProtocol = "http"
 )
 
-// getNonTLSProtocols returns a list of protocols that do not make Kong establish a TLS connection with an upstream.
-func getNonTLSProtocols() []string {
-	return []string{"http", "grpc", "tcp", "tls_passthrough", "udp", "ws"}
-}
-
 type ingressRules struct {
 	SecretNameToSNIs      SecretNameToSNIs
 	ServiceNameToServices map[string]kongstate.Service
@@ -129,7 +124,7 @@ func (ir *ingressRules) handleServiceClientCertificates(
 
 		// override protocol isn't set yet, need to get it from the annotation
 		protocol := getEffectiveServiceProtocol(k8sService)
-		if lo.Contains(getNonTLSProtocols(), protocol) {
+		if isNonTLSProtocol(protocol) {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("Client certificate requested for incompatible service protocol '%s'", *service.Protocol),
 				k8sService,
@@ -167,7 +162,7 @@ func (ir *ingressRules) handleServiceCACertificates(
 
 	// Validate that the effective service protocol is compatible with the CA certificates.
 	protocol := getEffectiveServiceProtocol(service)
-	if lo.Contains(getNonTLSProtocols(), protocol) {
+	if isNonTLSProtocol(protocol) {
 		collector.PushResourceFailure(
 			fmt.Sprintf("CA certificates requested for incompatible service protocol '%s'", protocol),
 			service,
@@ -491,4 +486,11 @@ func collectInconsistentAnnotations(
 	}
 
 	return match
+}
+
+// isNonTLSProtocol returns true if the protocol is a non-TLS protocol.
+func isNonTLSProtocol(proto string) bool {
+	// Strings used here for comparison reflect Kong's protocol names.
+	nonTLSProtocols := []string{"http", "grpc", "tcp", "tls_passthrough", "udp", "ws"}
+	return lo.Contains(nonTLSProtocols, proto)
 }

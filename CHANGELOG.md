@@ -116,6 +116,15 @@ Adding a new version? You'll need three changes:
   [#6571](https://github.com/Kong/kubernetes-ingress-controller/pull/6571)
 - Set SNI's certificate ID ref in the generated config.
   [#6660](https://github.com/Kong/kubernetes-ingress-controller/pull/6660)
+- Improved robustness of extracting comma-delimited annotations by trimming whitespace
+  in every value and discarding empty values. Affects following annotations:
+  - `konghq.com/protocols`
+  - `konghq.com/methods`
+  - `konghq.com/snis`
+  - `konghq.com/host-aliases`
+  - `konghq.com/publish-service`
+  - `konghq.com/tags`
+  [#6729](https://github.com/Kong/kubernetes-ingress-controller/pull/6729)
 
 ### Fixed
 

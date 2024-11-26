@@ -37,7 +37,7 @@ import (
 
 func TestIngressGRPC(t *testing.T) {
 	const testHostname = "grpcs-over-ingress.example"
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(testHostname),
 		certificate.WithDNSNames(testHostname),
 	)

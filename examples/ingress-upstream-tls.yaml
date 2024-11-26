@@ -1,0 +1,217 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goecho
+  labels:
+    app: goecho
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goecho
+  template:
+    metadata:
+      labels:
+        app: goecho
+    spec:
+      containers:
+      - name: goecho
+        image: kong/go-echo:0.5.0
+        ports:
+        - containerPort: 443
+        env:
+          - name: HTTPS_PORT
+            value: "443"
+          - name: TLS_CERT_FILE
+            value: "/etc/certs/tls.crt"
+          - name: TLS_KEY_FILE
+            value: "/etc/certs/tls.key"
+        volumeMounts:
+          - mountPath: /etc/certs
+            name: certs
+      volumes:
+        - name: certs
+          secret:
+            secretName: goecho-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: goecho
+  name: goecho
+  annotations:
+    konghq.com/tls-verify: "true"    # Enable TLS verification of the upstream.
+    konghq.com/ca-certificates: "ca" # The CA root certificate secret used for verification.
+    konghq.com/protocol: "https"     # Has to be either https or tls when TLS verification is enabled.
+    konghq.com/host-header: "goecho" # This will make Kong use `goecho` server name when validating server-presented TLS certificate.
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: goecho
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: goecho-ingress
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/preserve-host: "false"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: goecho-2
+    http:
+      paths:
+      - path: /echo
+        pathType: Prefix
+        backend:
+          service:
+            name: goecho
+            port:
+              number: 443
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ca
+  labels:
+    konghq.com/ca-cert: "true"
+  annotations:
+    kubernetes.io/ingress.class: kong
+stringData:
+  id: "cce8c384-721f-4f58-85dd-50834e3e733a"
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    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
+    -----END CERTIFICATE-----
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: goecho-cert
+type: kubernetes.io/tls
+stringData:
+  # Signed with the CA above. Valid for SAN `goecho`.
+  # Will be used by the upstream service to serve HTTPS.
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    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
+    9bHJpJu/1XO5cI0=
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    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
+    dtR4vQpXiNpgS1lKk2ICIJH8VJxJL9EV
+    -----END PRIVATE KEY-----

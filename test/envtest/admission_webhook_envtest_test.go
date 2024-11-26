@@ -42,7 +42,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		ctrlClient = NewControllerClient(t, scheme, envcfg)
 		ns         = CreateNamespace(ctx, t, ctrlClient)
 
-		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -187,7 +187,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -441,7 +441,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -705,7 +705,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -1046,7 +1046,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -1214,7 +1214,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateSelfSignedCertPEMFormat(
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)

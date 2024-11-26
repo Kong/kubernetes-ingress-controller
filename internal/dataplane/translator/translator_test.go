@@ -628,7 +628,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 
 func TestCACertificate(t *testing.T) {
 	assert := assert.New(t)
-	caCert1, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	caCert1, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	t.Run("valid CACertificate is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -669,7 +669,7 @@ func TestCACertificate(t *testing.T) {
 		}, state.CACertificates[0])
 	})
 
-	caCert2, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	caCert2, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	t.Run("multiple CACertificates are processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -721,7 +721,7 @@ func TestCACertificate(t *testing.T) {
 		assert.Len(state.CACertificates, 2)
 	})
 
-	expiredCACert, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
+	expiredCACert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
 	t.Run("invalid CACertificates are ignored", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -832,7 +832,6 @@ func TestCACertificate(t *testing.T) {
 }
 
 func TestServiceClientCertificate(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("valid client-cert annotation", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -886,7 +885,7 @@ func TestServiceClientCertificate(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -944,15 +943,15 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates),
+		assert.Equal(t, 1, len(state.Certificates),
 			"expected one certificates to be rendered")
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Certificates[0].ID)
 
-		assert.Equal(2, len(state.Services))
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, 2, len(state.Services))
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[0].ClientCertificate.ID)
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[1].ClientCertificate.ID)
 	})
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
@@ -1021,11 +1020,11 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(0, len(state.Certificates),
+		assert.Equal(t, 0, len(state.Certificates),
 			"expected no certificates to be rendered")
 
-		assert.Equal(1, len(state.Services))
-		assert.Nil(state.Services[0].ClientCertificate)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 	t.Run("valid cert+secret but incompatible protocol", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
@@ -1069,7 +1068,7 @@ func TestServiceClientCertificate(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1112,12 +1111,12 @@ func TestServiceClientCertificate(t *testing.T) {
 
 		require.Len(t, result.TranslationFailures, 1)
 		failure := result.TranslationFailures[0]
-		assert.Contains(failure.Message(), "client certificate requested for incompatible service protocol 'http'")
+		assert.Contains(t, failure.Message(), "Client certificate requested for incompatible service protocol 'http'")
 
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Services))
-		assert.Nil(state.Services[0].ClientCertificate)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 }
 
@@ -2754,7 +2753,7 @@ func TestTranslatorSecret(t *testing.T) {
 			"expected no certificates to be rendered with empty secret")
 	})
 
-	crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt, key := certificate.MustGenerateCertPEMFormat()
 	t.Run("duplicate certificates order by time", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -3116,7 +3115,7 @@ func TestTranslatorSNI(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -4399,9 +4398,9 @@ func TestPickPort(t *testing.T) {
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
 
-	crt1, key1 := certificate.MustGenerateSelfSignedCertPEMFormat()
-	crt2, key2 := certificate.MustGenerateSelfSignedCertPEMFormat()
-	crt3, key3 := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt1, key1 := certificate.MustGenerateCertPEMFormat()
+	crt2, key2 := certificate.MustGenerateCertPEMFormat()
+	crt3, key3 := certificate.MustGenerateCertPEMFormat()
 	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -5234,4 +5233,110 @@ func TestTranslator_UpdateStore(t *testing.T) {
 	newBuildConfigResult := translator.BuildKongConfig()
 	require.NotEqual(t, originalBuildConfigResult.KongState, newBuildConfigResult.KongState, "KongState should be different after updating the store")
 	require.Len(t, newBuildConfigResult.KongState.Consumers, 1, "expected 1 consumer in the KongState")
+}
+
+func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
+	cert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue()) // Translator validates the certificate.
+	s, err := store.NewFakeStore(store.FakeObjects{
+		Services: []*corev1.Service{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Service",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "svc",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+						annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey: "2",
+						annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca",
+						annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "http",
+							Port: 80,
+						},
+					},
+				},
+			},
+		},
+		Secrets: []*corev1.Secret{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ca",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"cert": cert,
+					"id":   []byte("ca-cert-id"),
+				},
+			},
+		},
+		IngressesV1: []*netv1.Ingress{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: netv1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress",
+					Namespace: "ns",
+				},
+				Spec: netv1.IngressSpec{
+					IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+					Rules: []netv1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path:     "/path",
+											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	p := mustNewTranslator(t, s)
+
+	result := p.BuildKongConfig()
+	require.Empty(t, result.TranslationFailures, "expected no translation failures")
+
+	require.Len(t, result.KongState.Services, 1)
+	svc := result.KongState.Services[0]
+	require.NotNil(t, svc)
+	assert.Equal(t, svc.TLSVerify, lo.ToPtr(true))
+	assert.Equal(t, svc.TLSVerifyDepth, lo.ToPtr(2))
+
+	require.Len(t, svc.CACertificates, 1)
+	assert.Equal(t, "ca-cert-id", *svc.CACertificates[0])
 }

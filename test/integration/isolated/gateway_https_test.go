@@ -65,7 +65,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 					ctx context.Context, t *testing.T, cluster clusters.Cluster, nn k8stypes.NamespacedName, certPool *x509.CertPool, domainName string,
 				) {
 					t.Helper()
-					certificateCrt, firstCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+					certificateCrt, firstCertificateKey := certificate.MustGenerateCertPEMFormat(
 						certificate.WithCommonName(domainName),
 						certificate.WithDNSNames(domainName),
 					)

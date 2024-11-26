@@ -19,6 +19,7 @@ import (
 
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -561,10 +562,13 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 
 func TestPopulateServices(t *testing.T) {
 	testCases := []struct {
-		name                   string
-		k8sServices            []*corev1.Service
-		serviceNamesToServices map[string]kongstate.Service
-		serviceNamesToSkip     map[string]interface{}
+		name                        string
+		k8sServices                 []*corev1.Service
+		k8sSecrets                  []*corev1.Secret
+		serviceNamesToServices      map[string]kongstate.Service
+		serviceNamesToSkip          map[string]interface{}
+		servicesAssertions          map[string]func(*testing.T, *kong.Service)
+		expectedTranslationFailures []string
 	}{
 		{
 			name: "one service to skip, one service to keep",
@@ -636,6 +640,302 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToSkip: map[string]interface{}{
 				"service-to-skip": nil,
 			},
+			expectedTranslationFailures: []string{
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend service-to-skip. This annotation must have the same value across all Services in the backend.",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend service-to-skip. This annotation must have the same value across all Services in the backend.",
+			},
+		},
+		{
+			name: "service with CA certificates",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1,ca-2",
+						},
+					},
+				},
+			},
+			k8sSecrets: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-1",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-1"),
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-2",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-2"),
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name:      lo.ToPtr("s-1"),
+						TLSVerify: lo.ToPtr(true),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			servicesAssertions: map[string]func(*testing.T, *kong.Service){
+				"s-1": func(t *testing.T, svc *kong.Service) {
+					require.NotEmpty(t, svc.CACertificates)
+					require.Len(t, svc.CACertificates, 2)
+					assert.Equal(t, "id-1", *svc.CACertificates[0])
+					assert.Equal(t, "id-2", *svc.CACertificates[1])
+				},
+			},
+		},
+		{
+			name: "service with CA certificates but not TLS verification",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1,ca-2",
+						},
+					},
+				},
+			},
+			k8sSecrets: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-1",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-1"),
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-2",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-2"),
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name: lo.ToPtr("s-1"),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			expectedTranslationFailures: []string{
+				"CA certificates requested for service without TLS verification enabled",
+			},
+		},
+		{
+			name: "service with a CA certificate referring a non-existing secret",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-not-existing",
+						},
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name:      lo.ToPtr("s-1"),
+						TLSVerify: lo.ToPtr(true),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			expectedTranslationFailures: []string{
+				"Failed to fetch secret for CA Certificate 'test-namespace/ca-not-existing': Secret test-namespace/ca-not-existing not found",
+			},
+		},
+		{
+			name: "service with a CA certificate but secret has no id field",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1",
+						},
+					},
+				},
+			},
+			k8sSecrets: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-1",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name:      lo.ToPtr("s-1"),
+						TLSVerify: lo.ToPtr(true),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			expectedTranslationFailures: []string{
+				"Invalid CA certificate 'test-namespace/ca-1': missing 'id' field in data",
+			},
+		},
+		{
+			name: "service with a CA certificate but protocol used is not compatible",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1",
+							annotations.AnnotationPrefix + annotations.ProtocolKey:       "grpc",
+						},
+					},
+				},
+			},
+			k8sSecrets: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-1",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-1"),
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name:      lo.ToPtr("s-1"),
+						TLSVerify: lo.ToPtr(true),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			expectedTranslationFailures: []string{
+				"CA certificates requested for incompatible service protocol 'grpc'",
+			},
+		},
+		{
+			name: "service with a CA certificate but no protocol is specified (default http)",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s-1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
+							annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca-1",
+						},
+					},
+				},
+			},
+			k8sSecrets: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-1",
+						Namespace: "test-namespace",
+					},
+					Data: map[string][]byte{
+						"cert": []byte("cert"),
+						"id":   []byte("id-1"),
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"s-1": {
+					Service: kong.Service{
+						Name:      lo.ToPtr("s-1"),
+						TLSVerify: lo.ToPtr(true),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("s-1").
+							WithNamespace("test-namespace").MustBuild(),
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{},
+			expectedTranslationFailures: []string{
+				"CA certificates requested for incompatible service protocol 'http'",
+			},
 		},
 	}
 
@@ -644,6 +944,7 @@ func TestPopulateServices(t *testing.T) {
 			ingressRules := newIngressRules()
 			fakeStore, err := store.NewFakeStore(store.FakeObjects{
 				Services: tc.k8sServices,
+				Secrets:  tc.k8sSecrets,
 			})
 			require.NoError(t, err)
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
@@ -652,6 +953,22 @@ func TestPopulateServices(t *testing.T) {
 			translatedObjectsCollector := NewObjectsCollector()
 			servicesToBeSkipped := ingressRules.populateServices(logger, fakeStore, failuresCollector, translatedObjectsCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
+
+			if len(tc.expectedTranslationFailures) == 0 {
+				require.Empty(t, failuresCollector.PopResourceFailures())
+			} else {
+				fs := failuresCollector.PopResourceFailures()
+				require.Len(t, fs, len(tc.expectedTranslationFailures))
+				for i, failure := range fs {
+					assert.Equal(t, tc.expectedTranslationFailures[i], failure.Message())
+				}
+			}
+
+			for svcName, assertion := range tc.servicesAssertions {
+				svc, ok := ingressRules.ServiceNameToServices[svcName]
+				require.Truef(t, ok, "expected service %s to be present", svcName)
+				assertion(t, &svc.Service)
+			}
 		})
 	}
 }

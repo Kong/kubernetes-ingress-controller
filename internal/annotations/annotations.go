@@ -18,6 +18,7 @@ package annotations
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -66,6 +67,9 @@ const (
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
 	RewriteURIKey        = "/rewrite"
+	TLSVerifyKey         = "/tls-verify"
+	TLSVerifyDepthKey    = "/tls-verify-depth"
+	CACertificatesKey    = "/ca-certificates"
 
 	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -374,4 +378,69 @@ func ExtractRewriteURI(anns map[string]string) (string, bool) {
 func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
 	s, ok := anns[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return s, ok
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+func ExtractTLSVerify(anns map[string]string) (value bool, ok bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyKey]
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return false, false
+	}
+	verify, err := strconv.ParseBool(s)
+	if err != nil {
+		// If the annotation is present but not a valid boolean string, we consider it not set.
+		return false, false
+	}
+	// If the annotation is present and a valid boolean string, we return the value.
+	return verify, true
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+func ExtractTLSVerifyDepth(anns map[string]string) (int, bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyDepthKey]
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return 0, false
+	}
+	depth, err := strconv.Atoi(s)
+	if err != nil {
+		// If the annotation is present but not a valid integer string, we consider it not set.
+		return 0, false
+	}
+	// If the annotation is present and a valid integer string, we return the value.
+	return depth, true
+}
+
+// ExtractCACertificates extracts the ca-certificates secret names from the annotation.
+// It expects a comma-separated list of certificate names.
+func ExtractCACertificates(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesKey]
+	if !ok {
+		return nil
+	}
+	return extractCommaDelimitedStrings(s)
+}
+
+// extractCommaDelimitedStrings extracts a list of non-empty strings from a comma-separated string.
+// It trims spaces from the strings.
+// TODO: consider using it in other places where we extract comma-separated strings.
+func extractCommaDelimitedStrings(s string) []string {
+	// If it's an empty string, return nil.
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+
+	// Split by comma.
+	out := strings.Split(s, ",")
+
+	// Trim spaces in place.
+	for i := range out {
+		out[i] = strings.TrimSpace(out[i])
+	}
+
+	// Filter out empty strings.
+	return lo.Filter(out, func(s string, _ int) bool {
+		return s != ""
+	})
 }

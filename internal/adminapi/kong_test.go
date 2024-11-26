@@ -21,7 +21,7 @@ import (
 )
 
 func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	cert, key := certificate.MustGenerateCertPEMFormat()
 	caCert := cert
 
 	opts := adminapi.HTTPClientOpts{
@@ -53,7 +53,7 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 }
 
 func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	cert, key := certificate.MustGenerateCertPEMFormat()
 	caCert := cert
 
 	certDir := t.TempDir()

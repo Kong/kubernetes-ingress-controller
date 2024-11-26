@@ -992,3 +992,51 @@ func TestExtractRewriteURI(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractTLSVerify(t *testing.T) {
+	_, ok := ExtractTLSVerify(nil)
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerify(map[string]string{})
+	assert.False(t, ok)
+
+	v, ok := ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "true"})
+	assert.True(t, ok)
+	assert.Equal(t, true, v)
+
+	v, ok = ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "false"})
+	assert.True(t, ok)
+	assert.Equal(t, false, v)
+}
+
+func TestExtractTLSVerifyDepth(t *testing.T) {
+	_, ok := ExtractTLSVerifyDepth(nil)
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerifyDepth(map[string]string{})
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "non-integer"})
+	assert.False(t, ok)
+
+	v, ok := ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "1"})
+	assert.True(t, ok)
+	assert.Equal(t, 1, v)
+}
+
+func TestExtractCACertificates(t *testing.T) {
+	v := ExtractCACertificates(nil)
+	assert.Empty(t, v)
+
+	v = ExtractCACertificates(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: "foo,bar"})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: " foo, bar ,baz "})
+	assert.Equal(t, []string{"foo", "bar", "baz"}, v, "expected to trim spaces")
+
+	v = ExtractCACertificates(map[string]string{AnnotationPrefix + CACertificatesKey: "foo, bar,  "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
+}

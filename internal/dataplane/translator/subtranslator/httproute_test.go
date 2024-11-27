@@ -1445,7 +1445,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 
 			serviceName := tc.rulesMeta[0].getKongServiceNameByBackendRefs()
 
-			kongService, err := translateHTTPRouteRulesMetaToKongstateService(logger, fakestore, serviceName, tc.rulesMeta)
+			kongService, err := translateHTTPRouteRulesMetaToKongstateService(logger, fakestore, serviceName, tc.rulesMeta, false, nil)
 			require.NoError(t, err)
 			require.Equal(t, serviceName, *kongService.Name)
 			require.Len(t, kongService.Backends, len(tc.expectedService.Backends))

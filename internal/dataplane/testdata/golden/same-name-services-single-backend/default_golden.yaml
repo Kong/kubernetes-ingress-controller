@@ -1,9 +1,9 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: httproute.default.svc.default.one.80.50_other.two.80.50
-  id: cb8be55b-3c05-50ab-9189-964d026b1312
-  name: httproute.default.svc.default.one.80.50_other.two.80.50
+  host: httproute.default.test.0
+  id: 5879d21c-33ed-5355-be10-f0911e04d397
+  name: httproute.default.test.0
   port: 80
   protocol: http
   read_timeout: 60000
@@ -36,7 +36,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: httproute.default.svc.default.one.80.50_other.two.80.50
+  name: httproute.default.test.0
   tags:
   - k8s-name:test
   - k8s-namespace:default

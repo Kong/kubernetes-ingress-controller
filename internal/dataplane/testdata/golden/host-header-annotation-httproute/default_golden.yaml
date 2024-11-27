@@ -1,9 +1,9 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: httproute.default.svc.default.httpbin.80
-  id: 04198a15-6d25-58c6-b674-af66a0ef7341
-  name: httproute.default.svc.default.httpbin.80
+  host: httproute.default.httpbin.0
+  id: de4fffcc-97bc-59c6-9ccd-f1fb29b93beb
+  name: httproute.default.httpbin.0
   port: 80
   protocol: http
   read_timeout: 60000
@@ -36,7 +36,7 @@ services:
 upstreams:
 - algorithm: round-robin
   host_header: httpbin.org
-  name: httproute.default.svc.default.httpbin.80
+  name: httproute.default.httpbin.0
   tags:
   - k8s-name:httpbin
   - k8s-namespace:default

@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
@@ -968,7 +969,7 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 	}
 }
 
-func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
+func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 	serviceTypeMeta := metav1.TypeMeta{
 		APIVersion: "v1",
 		Kind:       "Service",
@@ -1003,14 +1004,14 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name            string
-		k8sServices     []*corev1.Service
-		referenceGrants []*gatewayapi.ReferenceGrant
-		rulesMeta       []httpRouteRuleMeta
-		expectedService kongstate.Service
+		name             string
+		k8sServices      []*corev1.Service
+		referenceGrants  []*gatewayapi.ReferenceGrant
+		httpRoutes       []*gatewayapi.HTTPRoute
+		expectedServices map[string]kongstate.Service
 	}{
 		{
-			name: "Multiple rules in one HTTPRoute",
+			name: "multiple rules in one HTTPRoute sharing the same backends",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1018,78 +1019,52 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 						Name:      "service-1",
 						Namespace: "default",
 					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
+				},
+			},
+			httpRoutes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
 							{
-								Name: "http",
-								Port: int32(80),
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
+							},
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
 							},
 						},
 					},
 				},
 			},
-			rulesMeta: []httpRouteRuleMeta{
-				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-										Name: gatewayapi.ObjectName("service-1"),
-										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
-								},
+			expectedServices: map[string]kongstate.Service{
+				"httproute.default.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
+						Host: kong.String("httproute.default.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
 							},
-						},
-					},
-					RuleNumber: 0,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-					},
-				},
-				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-										Name: gatewayapi.ObjectName("service-1"),
-										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
-								},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
 							},
-						},
+							nil,
+						),
 					},
-					RuleNumber: 1,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-					},
-				},
-			},
-			expectedService: kongstate.Service{
-				Backends: []kongstate.ServiceBackend{
-					mustNewKongstateServiceBackend(
-						kongstate.ServiceBackendTypeKubernetesService,
-						k8stypes.NamespacedName{
-							Name:      "service-1",
-							Namespace: "default",
-						},
-						kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-						nil,
-					),
 				},
 			},
 		},
@@ -1102,14 +1077,6 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 						Name:      "service-1",
 						Namespace: "default",
 					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name: "http",
-								Port: int32(80),
-							},
-						},
-					},
 				},
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1117,81 +1084,65 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 						Name:      "service-2",
 						Namespace: "default",
 					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name: "http",
-								Port: int32(80),
-							},
-						},
-					},
 				},
 			},
-			rulesMeta: []httpRouteRuleMeta{
+			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-										Name: gatewayapi.ObjectName("service-1"),
-										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
-								},
-							},
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-										Name: gatewayapi.ObjectName("service-2"),
-										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
-								},
-							},
-						},
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
 					},
-					RuleNumber: 0,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+									builder.NewHTTPBackendRef("service-2").WithPort(80).Build(),
+								},
+							},
 						},
 					},
 				},
 			},
-			expectedService: kongstate.Service{
-				Backends: []kongstate.ServiceBackend{
-					mustNewKongstateServiceBackend(
-						kongstate.ServiceBackendTypeKubernetesService,
-						k8stypes.NamespacedName{
-							Name:      "service-1",
-							Namespace: "default",
-						},
-						kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-						nil,
-					),
-					mustNewKongstateServiceBackend(
-						kongstate.ServiceBackendTypeKubernetesService,
-						k8stypes.NamespacedName{
-							Name:      "service-2",
-							Namespace: "default",
-						},
-						kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-						nil,
-					),
+			expectedServices: map[string]kongstate.Service{
+				"httproute.default.svc.default.service-1.80_default.service-2.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-1.80_default.service-2.80"),
+						Host: kong.String("httproute.default.svc.default.service-1.80_default.service-2.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-2",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
 				},
 			},
 		},
 		{
-			name: "rules from multiple HTTPRoutes in the same namespace",
+			name: "multiple HTTPRoutes in the same namespace",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1199,97 +1150,75 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 						Name:      "service-1",
 						Namespace: "default",
 					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
+				},
+			},
+			httpRoutes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
 							{
-								Name: "http",
-								Port: int32(80),
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
 							},
 						},
 					},
 				},
 			},
-			rulesMeta: []httpRouteRuleMeta{
-				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-										Name: gatewayapi.ObjectName("service-1"),
-										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
-								},
+			expectedServices: map[string]kongstate.Service{
+				"httproute.default.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
+						Host: kong.String("httproute.default.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
 							},
-						},
-					},
-					RuleNumber: 0,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-					},
-				},
-				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
-							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
-										Name: gatewayapi.ObjectName("service-1"),
-										Port: lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
-								},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
 							},
-						},
+							nil,
+						),
 					},
-					RuleNumber: 1,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-2",
-						},
-					},
-				},
-			},
-			expectedService: kongstate.Service{
-				Backends: []kongstate.ServiceBackend{
-					mustNewKongstateServiceBackend(
-						kongstate.ServiceBackendTypeKubernetesService,
-						k8stypes.NamespacedName{
-							Name:      "service-1",
-							Namespace: "default",
-						},
-						kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-						nil,
-					),
 				},
 			},
 		},
 		{
-			name: "rules from multiple HTTPRoutes in the same namespace with correct referenceGrant",
+			name: "multiple HTTPRoutes in the same namespace with correct referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "service-1",
 						Namespace: "default",
-					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name: "http",
-								Port: int32(80),
-							},
-						},
 					},
 				},
 			},
@@ -1317,75 +1246,67 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 					},
 				},
 			},
-			rulesMeta: []httpRouteRuleMeta{
+			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "another-namespace",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-										Name:      gatewayapi.ObjectName("service-1"),
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
-										Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
-						},
-					},
-					RuleNumber: 0,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "another-namespace",
-							Name:      "httproute-1",
 						},
 					},
 				},
 				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: "another-namespace",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-										Name:      gatewayapi.ObjectName("service-1"),
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
-										Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
-						},
-					},
-					RuleNumber: 0,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "another-namespace",
-							Name:      "httproute-2",
 						},
 					},
 				},
 			},
-			expectedService: kongstate.Service{
-				Backends: []kongstate.ServiceBackend{
-					mustNewKongstateServiceBackend(
-						kongstate.ServiceBackendTypeKubernetesService,
-						k8stypes.NamespacedName{
-							Name:      "service-1",
-							Namespace: "default",
-						},
-						kongstate.PortDef{
-							Mode:   kongstate.PortModeByNumber,
-							Number: 80,
-						},
-						nil,
-					),
+			expectedServices: map[string]kongstate.Service{
+				"httproute.another-namespace.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+						Host: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
 				},
 			},
 		},
 		{
-			name: "rules from multiple HTTPRoutes in the same namespace without referenceGrant",
+			name: "multiple HTTPRoutes in the same namespace without referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1393,44 +1314,252 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 						Name:      "service-1",
 						Namespace: "default",
 					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name: "http",
-								Port: int32(80),
-							},
-						},
-					},
 				},
 			},
-			rulesMeta: []httpRouteRuleMeta{
+			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					Rule: gatewayapi.HTTPRouteRule{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "another-namespace",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-										Name:      gatewayapi.ObjectName("service-1"),
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
-										Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
-									},
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
 						},
 					},
-					RuleNumber: 0,
-					parentRoute: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "another-namespace",
-							Name:      "httproute-1",
+				},
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: "another-namespace",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
+								},
+							},
 						},
 					},
 				},
 			},
-			// No backends should be generated.
-			expectedService: kongstate.Service{},
+			expectedServices: map[string]kongstate.Service{
+				"httproute.another-namespace.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+						Host: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{},
+				},
+			},
+		},
+		{
+			name: "multiple rules with different backends in the same HTTPRoute",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: serviceTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-1",
+						Namespace: "default",
+					},
+				},
+				{
+					TypeMeta: serviceTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-2",
+						Namespace: "default",
+					},
+				},
+			},
+			httpRoutes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
+							},
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-2").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: map[string]kongstate.Service{
+				"httproute.default.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
+						Host: kong.String("httproute.default.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
+				},
+				"httproute.default.svc.default.service-2.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-2.80"),
+						Host: kong.String("httproute.default.svc.default.service-2.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-2",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
+				},
+			},
+		},
+		{
+			name: "rules sharing backends from multiple HTTPRoutes in the different namespaces",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: serviceTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-1",
+						Namespace: "default",
+					},
+				},
+			},
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					TypeMeta: refernceGrantTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "grant-from-httproute-to-service",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Namespace: "another-namespace",
+								Kind:      "HTTPRoute",
+								Group:     gatewayapi.V1Group,
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: corev1.GroupName,
+								Kind:  "Service",
+							},
+						},
+					},
+				},
+			},
+			httpRoutes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "another-namespace",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: map[string]kongstate.Service{
+				"httproute.default.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
+						Host: kong.String("httproute.default.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
+				},
+				"httproute.another-namespace.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+						Host: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
+				},
+			},
 		},
 	}
 
@@ -1443,17 +1572,24 @@ func TestTranslateHTTPRouteRulesMetaToKongstateService(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			serviceName := tc.rulesMeta[0].getKongServiceNameByBackendRefs()
-
-			kongService, err := translateHTTPRouteRulesMetaToKongstateService(logger, fakestore, serviceName, tc.rulesMeta)
-			require.NoError(t, err)
-			require.Equal(t, serviceName, *kongService.Name)
-			require.Len(t, kongService.Backends, len(tc.expectedService.Backends))
-			for i, expectedBackend := range tc.expectedService.Backends {
-				require.Equal(t, expectedBackend.Namespace(), kongService.Backends[i].Namespace())
-				require.Equal(t, expectedBackend.Name(), kongService.Backends[i].Name())
-				require.Equal(t, expectedBackend.PortDef(), kongService.Backends[i].PortDef())
-				require.Equal(t, expectedBackend.Weight(), kongService.Backends[i].Weight())
+			kongstateServices, translationFailures := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true)
+			require.Len(t, translationFailures, 0, "Should not get translation errors in translating")
+			require.Len(t, kongstateServices, len(tc.expectedServices))
+			for serviceName, expectedService := range tc.expectedServices {
+				s, ok := kongstateServices[serviceName]
+				require.Truef(t, ok, "Should find service %s in translated services", serviceName)
+				// compare the name and host of the translated service.
+				require.Equal(t, *expectedService.Name, *s.Name, "Service %s should have expected name inside", serviceName)
+				require.Equal(t, *expectedService.Host, *s.Host, "Service %s should have expected host", serviceName)
+				// compare backends.
+				require.Lenf(t, s.Backends, len(expectedService.Backends), "Service %s should have expected number of backends")
+				backendCompareMsg := `Service %s backend %d should have expected %s` // service name, backend index, field name
+				for i, expectedBackend := range expectedService.Backends {
+					require.Equalf(t, s.Backends[i].Namespace(), expectedBackend.Namespace(), backendCompareMsg, serviceName, i, "namespace")
+					require.Equal(t, s.Backends[i].Name(), expectedBackend.Name(), backendCompareMsg, serviceName, i, "name")
+					require.Equal(t, s.Backends[i].PortDef(), expectedBackend.PortDef(), backendCompareMsg, serviceName, i, "port")
+					require.Equal(t, s.Backends[i].Weight(), expectedBackend.Weight(), backendCompareMsg, serviceName, i, "weight")
+				}
 			}
 		})
 	}

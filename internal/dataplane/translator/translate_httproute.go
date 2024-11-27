@@ -126,6 +126,7 @@ func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []
 		t.logger,
 		t.storer,
 		httpRoutes,
+		t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
 	)
 	for serviceName, service := range kongstateServices {
 		result.ServiceNameToServices[serviceName] = service
@@ -136,8 +137,8 @@ func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []
 			Namespace: httproute.Namespace,
 			Name:      httproute.Name,
 		}
-		translationFailures, hasError := routeTranslationFailures[namespacedName]
-		if hasError && len(translationFailures) > 0 {
+		translationFailures := routeTranslationFailures[namespacedName]
+		if len(translationFailures) > 0 {
 			t.failuresCollector.PushResourceFailure(
 				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
 				httproute,

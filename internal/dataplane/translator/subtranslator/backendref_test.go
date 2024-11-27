@@ -166,7 +166,7 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 	}
 }
 
-func commonRouteSpecMock(parentReferentName string) gatewayapi.CommonRouteSpec {
+func commonRouteSpecMock(parentReferentName string) gatewayapi.CommonRouteSpec { //nolint:unparam
 	return gatewayapi.CommonRouteSpec{
 		ParentRefs: []gatewayapi.ParentReference{{
 			Name: gatewayapi.ObjectName(parentReferentName),

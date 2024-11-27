@@ -1,9 +1,42 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: httproute.default.svc.default.httpbin-prod.80.75_default.httpbin-test.80.25
-  id: b6fa5f0e-5164-504b-a000-3b568d82c8a1
-  name: httproute.default.svc.default.httpbin-prod.80.75_default.httpbin-test.80.25
+  host: httproute.default.httpbin.1
+  id: bbf738ea-19e7-5277-8a48-36d555e5ae94
+  name: httproute.default.httpbin.1
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: e148326c-f112-5b0d-9644-4219ccb43cb6
+    name: httproute.default.httpbin.1.0
+    path_handling: v0
+    paths:
+    - ~/httpbin-prod-only$
+    - /httpbin-prod-only/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httpbin
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin-prod
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httproute.default.httpbin.0
+  id: de4fffcc-97bc-59c6-9ccd-f1fb29b93beb
+  name: httproute.default.httpbin.0
   port: 80
   protocol: http
   read_timeout: 60000
@@ -32,39 +65,6 @@ services:
   - k8s-namespace:default
   - k8s-kind:HTTPRoute
   - k8s-group:gateway.networking.k8s.io
-  - k8s-version:v1
-  write_timeout: 60000
-- connect_timeout: 60000
-  host: httproute.default.svc.default.httpbin-prod.80
-  id: a1a4f16c-ce16-57c7-8a4b-79789bdc9603
-  name: httproute.default.svc.default.httpbin-prod.80
-  port: 80
-  protocol: http
-  read_timeout: 60000
-  retries: 5
-  routes:
-  - https_redirect_status_code: 426
-    id: e148326c-f112-5b0d-9644-4219ccb43cb6
-    name: httproute.default.httpbin.1.0
-    path_handling: v0
-    paths:
-    - ~/httpbin-prod-only$
-    - /httpbin-prod-only/
-    preserve_host: true
-    protocols:
-    - http
-    - https
-    strip_path: true
-    tags:
-    - k8s-name:httpbin
-    - k8s-namespace:default
-    - k8s-kind:HTTPRoute
-    - k8s-group:gateway.networking.k8s.io
-    - k8s-version:v1
-  tags:
-  - k8s-name:httpbin-prod
-  - k8s-namespace:default
-  - k8s-kind:Service
   - k8s-version:v1
   write_timeout: 60000
 upstreams:
@@ -104,13 +104,12 @@ upstreams:
       unhealthy:
         tcp_failures: 5
         timeouts: 10
-  name: httproute.default.svc.default.httpbin-prod.80.75_default.httpbin-test.80.25
+  name: httproute.default.httpbin.1
   slots: 100
   tags:
-  - k8s-name:httpbin
+  - k8s-name:httpbin-prod
   - k8s-namespace:default
-  - k8s-kind:HTTPRoute
-  - k8s-group:gateway.networking.k8s.io
+  - k8s-kind:Service
   - k8s-version:v1
 - algorithm: consistent-hashing
   hash_fallback: consumer
@@ -148,10 +147,11 @@ upstreams:
       unhealthy:
         tcp_failures: 5
         timeouts: 10
-  name: httproute.default.svc.default.httpbin-prod.80
+  name: httproute.default.httpbin.0
   slots: 100
   tags:
-  - k8s-name:httpbin-prod
+  - k8s-name:httpbin
   - k8s-namespace:default
-  - k8s-kind:Service
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
   - k8s-version:v1

@@ -1694,7 +1694,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				oldHTTPRoutes = append(oldHTTPRoutes, r.DeepCopy())
 			}
 
-			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true)
+			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true, false)
 			require.Len(t, translationResult.HTTPRouteNameToTranslationErrors, 0, "Should not get translation errors in translating")
 
 			kongstateServices := translationResult.ServiceNameToKongstateService
@@ -1717,6 +1717,120 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			}
 
 			require.Equal(t, oldHTTPRoutes, tc.httpRoutes, "HTTPRoutes should not be modified")
+		})
+	}
+}
+
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
+
+	httpRouteTypeMeta := metav1.TypeMeta{
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Kind:       "HTTPRoute",
+	}
+	backendRefList := []gatewayapi.HTTPBackendRef{
+		{
+			BackendRef: gatewayapi.BackendRef{
+				BackendObjectReference: gatewayapi.BackendObjectReference{
+					Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+					Name:      gatewayapi.ObjectName("service-1"),
+					Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+					Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
+				},
+			},
+		},
+	}
+	httpRouteWithoutHost := &gatewayapi.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+
+	testCases := []struct {
+		name           string
+		rulesMeta      []httpRouteRuleMeta
+		expectedRoutes []kongstate.Route
+		expectError    bool
+	}{
+		{
+			name: "multiple rules with the same(empty) filter from the same HTTPRoute",
+			rulesMeta: []httpRouteRuleMeta{
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/foo"),
+								},
+							},
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/bar"),
+								},
+							},
+						},
+					},
+					RuleNumber:  0,
+					parentRoute: httpRouteWithoutHost,
+				},
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/baz"),
+								},
+							},
+						},
+					},
+					RuleNumber:  1,
+					parentRoute: httpRouteWithoutHost,
+				},
+			},
+			expectedRoutes: []kongstate.Route{
+				{
+					Route: kong.Route{
+						Name:         kong.String("httproute.default.httproute-1.0.0"),
+						Paths:        kong.StringSlice("~/foo$", "~/bar$", "~/baz$"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Protocols: []*string{
+							kong.String("http"),
+							kong.String("https"),
+						},
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1"),
+						},
+					},
+					Ingress: util.FromK8sObject(httpRouteWithoutHost),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta)
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, routes, len(tc.expectedRoutes))
+			for i, expectedRoute := range tc.expectedRoutes {
+				require.Equal(t, expectedRoute, routes[i])
+			}
 		})
 	}
 }

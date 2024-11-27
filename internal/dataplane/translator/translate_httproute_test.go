@@ -2379,7 +2379,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/barr").Build(),
 								},
 								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
 						},
@@ -2391,7 +2391,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service1",
+							Name:      "service-1",
 						},
 					},
 				},
@@ -2399,10 +2399,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1._.0"),
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").
+						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
 							WithPortNumber(80).
 							MustBuild(),
@@ -2410,7 +2410,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 			expectedKongRoutes: map[string][]kongstate.Route{
-				"httproute.default.httproute-1._.0": {
+				"httproute.default.svc.default.service-1.80": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.0.0"),
@@ -2450,7 +2450,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 								},
 								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
 							{
@@ -2458,7 +2458,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/barr").Build(),
 								},
 								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service2").WithPort(80).Build(),
+									builder.NewHTTPBackendRef("service-2").WithPort(80).Build(),
 								},
 							},
 						},
@@ -2470,13 +2470,13 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service1",
+							Name:      "service-1",
 						},
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service2",
+							Name:      "service-2",
 						},
 					},
 				},
@@ -2484,10 +2484,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.foo.com.0"),
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").
+						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
 							WithPortNumber(80).
 							MustBuild(),
@@ -2495,32 +2495,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1._.bar.com.0"),
+						Name: kong.String("httproute.default.svc.default.service-2.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").
-							WithNamespace("default").
-							WithPortNumber(80).
-							MustBuild(),
-					},
-				},
-				{
-					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.foo.com.1"),
-					},
-					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service2").
-							WithNamespace("default").
-							WithPortNumber(80).
-							MustBuild(),
-					},
-				},
-				{
-					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1._.bar.com.1"),
-					},
-					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service2").
+						builder.NewKongstateServiceBackend("service-2").
 							WithNamespace("default").
 							WithPortNumber(80).
 							MustBuild(),
@@ -2528,7 +2506,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 			expectedKongRoutes: map[string][]kongstate.Route{
-				"httproute.default.httproute-1.foo.com.0": {
+				"httproute.default.svc.default.service-1.80": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
@@ -2537,8 +2515,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						},
 						ExpressionRoutes: true,
 					},
-				},
-				"httproute.default.httproute-1._.bar.com.0": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.bar.com.0.0"),
@@ -2548,7 +2524,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						ExpressionRoutes: true,
 					},
 				},
-				"httproute.default.httproute-1.foo.com.1": {
+				"httproute.default.svc.default.service-2.80": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1.foo.com.1.0"),
@@ -2557,8 +2533,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 						},
 						ExpressionRoutes: true,
 					},
-				},
-				"httproute.default.httproute-1._.bar.com.1": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.bar.com.1.0"),
@@ -2593,7 +2567,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 								},
 								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
 						},
@@ -2605,7 +2579,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service1",
+							Name:      "service-1",
 						},
 					},
 				},
@@ -2613,10 +2587,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.foo.com.0"),
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").
+						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
 							WithPortNumber(80).
 							MustBuild(),
@@ -2624,7 +2598,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 			expectedKongRoutes: map[string][]kongstate.Route{
-				"httproute.default.httproute-1.foo.com.0": {
+				"httproute.default.svc.default.service-1.80": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
@@ -2653,7 +2627,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 									builder.NewHTTPRouteMatch().WithPathExact("/v1/barr").Build(),
 								},
 								BackendRefs: []gatewayapi.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 								Timeouts: func() *gatewayapi.HTTPRouteTimeouts {
 									timeout := gatewayapi.Duration("500ms")
@@ -2671,7 +2645,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service1",
+							Name:      "service-1",
 						},
 					},
 				},
@@ -2679,13 +2653,13 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:           kong.String("httproute.default.httproute-1._.0"),
+						Name:           kong.String("httproute.default.svc.default.service-1.80"),
 						ConnectTimeout: kong.Int(500),
 						ReadTimeout:    kong.Int(500),
 						WriteTimeout:   kong.Int(500),
 					},
 					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service1").
+						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
 							WithPortNumber(80).
 							MustBuild(),
@@ -2693,7 +2667,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 			expectedKongRoutes: map[string][]kongstate.Route{
-				"httproute.default.httproute-1._.0": {
+				"httproute.default.svc.default.service-1.80": {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.0.0"),
@@ -2724,7 +2698,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			translator.failuresCollector = failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 
 			result := newIngressRules()
-			translator.ingressRulesFromHTTPRoutesUsingExpressionRoutes(tc.httpRoutes, &result)
+			translator.ingressRulesFromHTTPRoutesWithCombinedService(tc.httpRoutes, &result)
 			// check services
 			require.Equal(t, len(tc.expectedKongServices), len(result.ServiceNameToServices),
 				"should have expected number of services")
@@ -2746,388 +2720,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					require.Equal(t, *expectedRoute.Expression, *r.Expression)
 				}
 			}
-		})
-	}
-}
-
-func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
-	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.GroupVersion.String()}
-
-	testCases := []struct {
-		name                string
-		matchWithPriority   subtranslator.SplitHTTPRouteMatchToKongRoutePriority
-		storeObjects        store.FakeObjects
-		expectedKongService kongstate.Service
-		expectedKongRoute   kongstate.Route
-		expectedError       error
-	}{
-		{
-			name: "no hostname",
-			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: subtranslator.SplitHTTPRouteMatch{
-					Source: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-						Spec: gatewayapi.HTTPRouteSpec{
-							Rules: []gatewayapi.HTTPRouteRule{
-								{
-									Matches: []gatewayapi.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-									},
-									BackendRefs: []gatewayapi.HTTPBackendRef{
-										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-									},
-								},
-							},
-						},
-					},
-					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-					RuleIndex:  0,
-					MatchIndex: 0,
-				},
-				Priority: 1024,
-			},
-			storeObjects: store.FakeObjects{
-				Services: []*corev1.Service{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service1",
-						},
-					},
-				},
-			},
-			expectedKongService: kongstate.Service{
-				Service: kong.Service{
-					Name: kong.String("httproute.default.httproute-1._.0"),
-				},
-				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
-				},
-			},
-			expectedKongRoute: kongstate.Route{
-				Route: kong.Route{
-					Name:         kong.String("httproute.default.httproute-1._.0.0"),
-					Expression:   kong.String(`http.path == "/v1/foo"`),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(false),
-					Priority:     kong.Uint64(1024),
-				},
-				ExpressionRoutes: true,
-			},
-		},
-		{
-			name: "precise hostname and filter",
-			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: subtranslator.SplitHTTPRouteMatch{
-					Source: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{
-								"foo.com",
-							},
-							Rules: []gatewayapi.HTTPRouteRule{
-								{
-									Matches: []gatewayapi.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
-										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-									},
-									BackendRefs: []gatewayapi.HTTPBackendRef{
-										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-									},
-									Filters: []gatewayapi.HTTPRouteFilter{
-										builder.NewHTTPRouteRequestRedirectFilter().
-											WithRequestRedirectStatusCode(301).
-											WithRequestRedirectHost("bar.com").
-											Build(),
-									},
-								},
-							},
-						},
-					},
-					Hostname:   "foo.com",
-					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-					RuleIndex:  0,
-					MatchIndex: 1,
-				},
-				Priority: 1024,
-			},
-			storeObjects: store.FakeObjects{
-				Services: []*corev1.Service{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service1",
-						},
-					},
-				},
-			},
-			expectedKongService: kongstate.Service{
-				Service: kong.Service{
-					Name: kong.String("httproute.default.httproute-1.foo.com.0"),
-				},
-				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
-				},
-			},
-			expectedKongRoute: kongstate.Route{
-				Route: kong.Route{
-					Name:         kong.String("httproute.default.httproute-1.foo.com.0.1"),
-					Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(false),
-					Priority:     kong.Uint64(1024),
-				},
-				Plugins: []kong.Plugin{
-					{
-						Name: kong.String("request-termination"),
-						Config: kong.Configuration{
-							"status_code": kong.Int(301),
-						},
-						Tags: []*string{
-							kong.String("k8s-name:httproute-1"),
-							kong.String("k8s-namespace:default"),
-							kong.String("k8s-kind:HTTPRoute"),
-							kong.String("k8s-group:gateway.networking.k8s.io"),
-							kong.String("k8s-version:v1beta1"),
-						},
-					},
-					{
-						Name: kong.String("response-transformer"),
-						Config: kong.Configuration{
-							"add": subtranslator.TransformerPluginConfig{
-								Headers: []string{"Location: http://bar.com:80/v1/foo"},
-							},
-						},
-						Tags: []*string{
-							kong.String("k8s-name:httproute-1"),
-							kong.String("k8s-namespace:default"),
-							kong.String("k8s-kind:HTTPRoute"),
-							kong.String("k8s-group:gateway.networking.k8s.io"),
-							kong.String("k8s-version:v1beta1"),
-						},
-					},
-				},
-				ExpressionRoutes: true,
-			},
-		},
-		{
-			name: "wildcard hostname with multiple backends",
-			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: subtranslator.SplitHTTPRouteMatch{
-					Source: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{
-								"*.foo.com",
-							},
-							Rules: []gatewayapi.HTTPRouteRule{
-								{
-									Matches: []gatewayapi.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-									},
-									BackendRefs: []gatewayapi.HTTPBackendRef{
-										builder.NewHTTPBackendRef("service1").WithPort(80).WithWeight(10).Build(),
-										builder.NewHTTPBackendRef("service2").WithPort(80).WithWeight(20).Build(),
-									},
-								},
-							},
-						},
-					},
-					Hostname:   "*.foo.com",
-					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-					RuleIndex:  0,
-					MatchIndex: 0,
-				},
-				Priority: 1024,
-			},
-			storeObjects: store.FakeObjects{
-				Services: []*corev1.Service{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service1",
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service2",
-						},
-					},
-				},
-			},
-			expectedKongService: kongstate.Service{
-				Service: kong.Service{
-					Name: kong.String("httproute.default.httproute-1._.foo.com.0"),
-				},
-				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).WithWeight(10).MustBuild(),
-					builder.NewKongstateServiceBackend("service2").WithPortNumber(80).WithWeight(20).MustBuild(),
-				},
-			},
-			expectedKongRoute: kongstate.Route{
-				Route: kong.Route{
-					Name:         kong.String("httproute.default.httproute-1._.foo.com.0.0"),
-					Expression:   kong.String(`(http.host =^ ".foo.com") && (http.path == "/v1/foo")`),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(false),
-					Priority:     kong.Uint64(1024),
-				},
-				ExpressionRoutes: true,
-			},
-		},
-		{
-			name: "precise hostname and no match",
-			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: subtranslator.SplitHTTPRouteMatch{
-					Source: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{
-								"a.foo.com",
-							},
-							Rules: []gatewayapi.HTTPRouteRule{
-								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
-										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-									},
-								},
-							},
-						},
-					},
-					Hostname:   "a.foo.com",
-					Match:      builder.NewHTTPRouteMatch().Build(),
-					RuleIndex:  0,
-					MatchIndex: 0,
-				},
-				Priority: 1024,
-			},
-			storeObjects: store.FakeObjects{
-				Services: []*corev1.Service{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service1",
-						},
-					},
-				},
-			},
-			expectedKongService: kongstate.Service{
-				Service: kong.Service{
-					Name: kong.String("httproute.default.httproute-1.a.foo.com.0"),
-				},
-				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
-				},
-			},
-			expectedKongRoute: kongstate.Route{
-				Route: kong.Route{
-					Name:         kong.String("httproute.default.httproute-1.a.foo.com.0.0"),
-					Expression:   kong.String(`http.host == "a.foo.com"`),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(false),
-					Priority:     kong.Uint64(1024),
-				},
-				ExpressionRoutes: true,
-			},
-		},
-		{
-			name: "no hostname and no match",
-			matchWithPriority: subtranslator.SplitHTTPRouteMatchToKongRoutePriority{
-				Match: subtranslator.SplitHTTPRouteMatch{
-					Source: &gatewayapi.HTTPRoute{
-						TypeMeta: httpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-1",
-						},
-						Spec: gatewayapi.HTTPRouteSpec{
-							Rules: []gatewayapi.HTTPRouteRule{
-								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
-										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-									},
-								},
-							},
-						},
-					},
-					Hostname:   "",
-					Match:      builder.NewHTTPRouteMatch().Build(),
-					RuleIndex:  0,
-					MatchIndex: 0,
-				},
-				Priority: 1024,
-			},
-			storeObjects: store.FakeObjects{
-				Services: []*corev1.Service{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service1",
-						},
-					},
-				},
-			},
-			expectedKongService: kongstate.Service{
-				Service: kong.Service{
-					Name: kong.String("httproute.default.httproute-1._.0"),
-				},
-				Backends: []kongstate.ServiceBackend{
-					builder.NewKongstateServiceBackend("service1").WithPortNumber(80).MustBuild(),
-				},
-			},
-			expectedKongRoute: kongstate.Route{
-				Route: kong.Route{
-					Name:         kong.String("httproute.default.httproute-1._.0.0"),
-					Expression:   kong.String(subtranslator.CatchAllHTTPExpression),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(false),
-					Priority:     kong.Uint64(1024),
-				},
-				ExpressionRoutes: true,
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			fakestore, err := store.NewFakeStore(tc.storeObjects)
-			require.NoError(t, err)
-			translator := mustNewTranslator(t, fakestore)
-			translator.featureFlags.ExpressionRoutes = true
-
-			match := tc.matchWithPriority.Match
-			tc.expectedKongRoute.Tags = util.GenerateTagsForObject(match.Source)
-			tc.expectedKongRoute.Ingress = util.FromK8sObject(match.Source)
-
-			res := newIngressRules()
-			err = translator.ingressRulesFromSplitHTTPRouteMatchWithPriority(&res, tc.matchWithPriority)
-			if tc.expectedError != nil {
-				require.ErrorAs(t, err, tc.expectedError)
-				return
-			}
-			require.NoError(t, err)
-			kongService, ok := res.ServiceNameToServices[*tc.expectedKongService.Name]
-			require.Truef(t, ok, "should find service %s", *tc.expectedKongService.Name)
-			require.Equal(t, tc.expectedKongService.Backends, kongService.Backends)
-			require.Len(t, kongService.Routes, 1)
-			require.Equal(t, tc.expectedKongRoute, kongService.Routes[0])
 		})
 	}
 }

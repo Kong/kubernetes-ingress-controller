@@ -175,9 +175,6 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayapi.HTTPPathMatch) atc.Match
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, path+"/"),
 		)
 	case gatewayapi.PathMatchRegularExpression:
-		// TODO: for compatibility with kong traditional routes, here we append the ^ prefix to match the path from beginning.
-		// Could we allow the regex to match any part of the path?
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/3983
 		return atc.NewPredicateHTTPPath(atc.OpRegexMatch, appendRegexBeginIfNotExist(path))
 	}
 

@@ -61,8 +61,25 @@ func TranslateHTTPRoutesToKongstateServices(
 	storer store.Storer,
 	routes []*gatewayapi.HTTPRoute,
 	combinedServicesFromDifferentHTTPRoutes bool,
+	expressionRoutes bool,
 ) HTTPRoutesTranslationResult {
 	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, combinedServicesFromDifferentHTTPRoutes)
+
+	// first, split HTTPRoutes by hostnames and matches.
+	ruleToSplitMatchesWithPriorities := make(map[string][]SplitHTTPRouteMatchToKongRoutePriority)
+	if expressionRoutes {
+		splitHTTPRouteMatches := []SplitHTTPRouteMatch{}
+		for _, route := range routes {
+			splitHTTPRouteMatches = append(splitHTTPRouteMatches, SplitHTTPRoute(route)...)
+		}
+		// assign priorities to split HTTPRoutes.
+		splitHTTPRouteMatchesWithPriorities := AssignRoutePriorityToSplitHTTPRouteMatches(logger, splitHTTPRouteMatches)
+		for _, matchWithPriority := range splitHTTPRouteMatchesWithPriorities {
+			sourceRoute := matchWithPriority.Match.Source
+			ruleKey := fmt.Sprintf("%s/%s.%d", sourceRoute.Namespace, sourceRoute.Name, matchWithPriority.Match.RuleIndex)
+			ruleToSplitMatchesWithPriorities[ruleKey] = append(ruleToSplitMatchesWithPriorities[ruleKey], matchWithPriority)
+		}
+	}
 
 	kongstateServiceCache := map[string]kongstate.Service{}
 	routeTranslationErrors := map[k8stypes.NamespacedName][]error{}
@@ -70,7 +87,25 @@ func TranslateHTTPRoutesToKongstateServices(
 		if len(rulesMeta) == 0 {
 			continue
 		}
-		service, err := translateHTTPRouteRulesMetaToKongstateService(logger, storer, serviceName, rulesMeta)
+
+		// Sort the rules according to the namespace, name and rule number to guarantee a fixed order.
+		sort.SliceStable(rulesMeta, func(i, j int) bool {
+			return rulesMeta[i].getRuleKey() < rulesMeta[j].getRuleKey()
+		})
+
+		matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{}
+		if expressionRoutes {
+			for _, ruleMeta := range rulesMeta {
+				ruleKey := ruleMeta.getRuleKey()
+				matchesWithPriorities = append(matchesWithPriorities, ruleToSplitMatchesWithPriorities[ruleKey]...)
+			}
+		}
+		service, err := translateHTTPRouteRulesMetaToKongstateService(
+			logger, storer, serviceName, rulesMeta,
+			expressionRoutes,
+			matchesWithPriorities,
+		)
+		// Set translation errors for involved HTTPRoutes on failure of translation.
 		if err != nil {
 			httpRoutes := extractUniqueHTTPRoutes(rulesMeta)
 			for _, route := range httpRoutes {
@@ -82,6 +117,7 @@ func TranslateHTTPRoutesToKongstateServices(
 			}
 			continue
 		}
+
 		kongstateServiceCache[serviceName] = service
 	}
 
@@ -165,6 +201,8 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	storer store.Storer,
 	serviceName string,
 	rulesMeta []httpRouteRuleMeta,
+	expressionRoutes bool,
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 ) (kongstate.Service, error) {
 	// Fill in the common fields of the kongstate.Service.
 	service := kongstate.Service{
@@ -235,13 +273,21 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		applyTimeoutToServiceFromHTTPRouteRule(&service, ruleMeta.Rule)
 	}
 
-	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
-	if err != nil {
-		return kongstate.Service{}, err
+	if expressionRoutes {
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutesWithExpression(matchesWithPriorities)
+		if err != nil {
+			return kongstate.Service{}, err
+		}
+		service.Routes = make([]kongstate.Route, 0, len(routes))
+		service.Routes = append(service.Routes, routes...)
+	} else {
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
+		if err != nil {
+			return kongstate.Service{}, err
+		}
+		service.Routes = make([]kongstate.Route, 0, len(routes))
+		service.Routes = append(service.Routes, routes...)
 	}
-	// preallocate slice for the routes.
-	service.Routes = make([]kongstate.Route, 0, len(routes))
-	service.Routes = append(service.Routes, routes...)
 
 	return service, nil
 }
@@ -355,6 +401,24 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 	return routes, nil
 }
 
+func translateHTTPRouteRulesMetaToKongstateRoutesWithExpression(
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+) ([]kongstate.Route, error) {
+	routes := []kongstate.Route{}
+	for _, matchWithPriority := range matchesWithPriorities {
+		// Since each match is assigned a deterministic priority, we have to generate one route for each split match
+		// because every match have a different priority.
+		// TODO: update the algorithm to assign priorities to matches to make it possible to consilidate some matches.
+		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields.
+		route, err := KongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority)
+		if err != nil {
+			return []kongstate.Route{}, err
+		}
+		routes = append(routes, *route)
+	}
+	return routes, nil
+}
+
 // extractUniqueHTTPRoutes extracts unique HTTPRoutes in a grouped list of HTTPRouteRuleMeta.
 func extractUniqueHTTPRoutes(rulesMeta []httpRouteRuleMeta) []*gatewayapi.HTTPRoute {
 	routes := lo.Map(rulesMeta, func(m httpRouteRuleMeta, _ int) *gatewayapi.HTTPRoute {
@@ -426,6 +490,10 @@ type httpRouteRuleMeta struct {
 // The order of backedRefs is not important.
 func (m httpRouteRuleMeta) getHTTPBackendRefsKey() string {
 	return getSortedItemsString(m.Rule.BackendRefs)
+}
+
+func (m httpRouteRuleMeta) getRuleKey() string {
+	return fmt.Sprintf("%s/%s.%d", m.parentRoute.Namespace, m.parentRoute.Name, m.RuleNumber)
 }
 
 // getFiltersKey computes a key from a list of filters.

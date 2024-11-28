@@ -5,24 +5,53 @@ name: permission check
 
 on:
   workflow_call:
+    inputs:
+      pr_user_login:
+        description: Username of pull request author (if the calling workflow was caused by pull request).
+        required: false
+        type: string
 
 jobs:
-  check-permission:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+  check:
     runs-on: ubuntu-latest
     steps:
-      - name: get user permission
-        id: checkAccess
+      - name: Logging
+        continue-on-error: true
+        run: |
+          echo "${{toJSON(github.event)}}"
+
+      - name: echo
+        run: |
+          echo "github.triggering_actor ${{ github.triggering_actor }}"
+          echo "github.actor ${{ github.actor }}"
+          echo "inputs.pr_user_login ${{ inputs.pr_user_login }}"
+
+      - name: get whether triggering_actor (${{ github.triggering_actor }}) is a contributor
+        id: check_triggering_actor
         uses: actions-cool/check-user-permission@v2
         with:
           require: write
+          check-contributor: true
           username: ${{ github.triggering_actor }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: check user permission
-        if: github.triggering_actor != 'dependabot[bot]' && github.triggering_actor != 'renovate[bot]' && steps.checkAccess.outputs.require-result == 'false'
+
+      - name: Check permissions
+        # If
+        # - this check is triggered by a PR (PR was send by someone else than dependabot or renovate), and
+        # - PR author association is neither 'COLLABORATOR' nor 'OWNER', and
+        # - triggering actor is not a contributor, then exit with an error.
+        if: |
+          inputs.pr_user_login != '' &&
+          inputs.pr_user_login != 'dependabot[bot]' &&
+          inputs.pr_user_login != 'renovate[bot]' &&
+          github.event.pull_request.author_association != 'COLLABORATOR' &&
+          github.event.pull_request.author_association != 'OWNER' &&
+          steps.check_triggering_actor.outputs.check-result == 'false'
         run: |
-          echo "${{ github.triggering_actor }} does not have permissions on this repo."
-          echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
-          echo "Job originally triggered by ${{ github.actor }}"
+          echo "${{ inputs.pr_user_login }} (original PR submitter) does not have permissions on this repo."
+          echo "The CI needs to be retriggered by collaborator or an owner."
+          echo "Contributor check-result for triggering_actor: ${{ github.triggering_actor }} is ${{ steps.check_triggering_actor.outputs.check-result }}"
+          echo "Current permission level for triggering_actor: ${{ github.triggering_actor }} is ${{ steps.check_triggering_actor.outputs.require-result }}"
+          echo "PR author association is ${{ github.event.pull_request.author_association }}"
           exit 1

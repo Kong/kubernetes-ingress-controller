@@ -22,6 +22,8 @@ on:
 jobs:
   check-permission:
     uses: ./.github/workflows/_permission_check.yaml
+    with:
+      pr_user_login: ${{ github.event.pull_request.user.login }}
     secrets: inherit
 
   # NOTE: this job checks if we're up to date with base branch. This is useful

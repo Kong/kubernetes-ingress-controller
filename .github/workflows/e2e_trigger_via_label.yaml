@@ -8,6 +8,8 @@ on:
 jobs:
   check-permission:
     uses: ./.github/workflows/_permission_check.yaml
+    with:
+      pr_user_login: ${{ github.event.pull_request.user.login }}
     if: contains(github.event.*.labels.*.name, 'ci/run-e2e')
     secrets: inherit
   trigger-e2e-tests-targeted:

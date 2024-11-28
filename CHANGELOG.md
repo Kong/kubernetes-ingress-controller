@@ -89,6 +89,7 @@ Adding a new version? You'll need three changes:
 ### Fixed
 
 - Bump go-kong to v0.56.0 to fix [#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703)
+  This way, the OTEL plugin can work properly when the Gateway is upgraded from 3.6 to 3.7.
   Also upgraded the Go version to v1.22.
   [#6657](https://github.com/Kong/kubernetes-ingress-controller/pull/6657)
 

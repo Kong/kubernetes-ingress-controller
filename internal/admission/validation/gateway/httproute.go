@@ -6,14 +6,17 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type routeValidator interface {
@@ -196,11 +199,24 @@ func validateWithKongGateway(
 			Matches: rule.Matches,
 			Filters: rule.Filters,
 		}
-		routes, err := translator.GenerateKongRouteFromTranslation(
-			httproute, translation, translatorFeatures.ExpressionRoutes,
+		var (
+			routes         []kongstate.Route
+			translationErr error
 		)
-		if err != nil {
-			errMsgs = append(errMsgs, err.Error())
+		if translatorFeatures.ExpressionRoutes {
+			routes, translationErr = subtranslator.GenerateKongExpressionRoutesFromTranslation(
+				translation,
+				util.FromK8sObject(httproute),
+				lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) string { return string(h) }),
+				nil, // Tags can be omitted for validation.
+			)
+		} else {
+			routes, translationErr = translator.GenerateKongRouteFromTranslation(
+				httproute, translation,
+			)
+		}
+		if translationErr != nil {
+			errMsgs = append(errMsgs, translationErr.Error())
 			continue
 		}
 		for _, r := range routes {

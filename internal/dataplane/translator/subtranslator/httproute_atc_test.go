@@ -250,7 +250,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			routes, err := GenerateKongExpressionRoutesFromHTTPRouteMatches(
+			routes, err := GenerateKongExpressionRoutesFromTranslation(
 				KongRouteTranslation{
 					Name:    tc.routeName,
 					Matches: tc.matches,

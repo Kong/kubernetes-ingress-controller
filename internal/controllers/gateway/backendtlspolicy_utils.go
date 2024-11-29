@@ -43,7 +43,7 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPoliciesByHTTPRoute(ctx contex
 // getBackendTLSPolicyAncestors returns the list of Gateways associated to the given BackendTLSPolicy.
 // To retrieve such a list, the following steps are performed:
 // 1. Get all the the HTTPRoutes that reference the backends targeted by the policy;
-// 4. Find all the parents in the HTTPRoute status that have already properly resolved by KIC and have the resolvedRefs condition set to true;
+// 2. Find all the parents in the HTTPRoute status that have already properly resolved by KIC and have the resolvedRefs condition set to true.
 // 3. Return all the successfully resolved Gateways.
 func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Context, policy gatewayapi.BackendTLSPolicy) ([]gatewayapi.Gateway, error) {
 	gateways := []gatewayapi.Gateway{}

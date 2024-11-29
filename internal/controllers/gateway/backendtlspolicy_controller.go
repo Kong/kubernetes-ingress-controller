@@ -136,7 +136,7 @@ func indexHTTPRouteOnBackendRef(obj client.Object) []string {
 }
 
 // setupIndexers sets up the indexers for the BackendTLSPolicy controller.
-func setupIndexers(mgr ctrl.Manager) error {
+func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
 		&gatewayapi.BackendTLSPolicy{},

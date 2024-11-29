@@ -86,6 +86,11 @@ func TestCacheStores(t *testing.T) {
 		},
 
 		{
+			name:          "BackendTLSPolicy",
+			objectToStore: &gatewayapi.BackendTLSPolicy{},
+		},
+
+		{
 			name:          "KongPlugin",
 			objectToStore: &kongv1.KongPlugin{},
 		},

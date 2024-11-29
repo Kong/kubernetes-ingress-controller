@@ -3654,9 +3654,20 @@ rules:
   - ""
   resources:
   - namespaces
+  - services
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies
+  verbs:
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io

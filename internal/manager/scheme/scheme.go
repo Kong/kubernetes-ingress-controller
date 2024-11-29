@@ -6,6 +6,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -40,6 +41,10 @@ func Get() (*runtime.Scheme, error) {
 	}
 
 	if err := gatewayv1alpha2.Install(scheme); err != nil {
+		return nil, err
+	}
+
+	if err := gatewayv1alpha3.Install(scheme); err != nil {
 		return nil, err
 	}
 

@@ -619,7 +619,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 ) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
 	var changed bool
 	resolvedRefsStatus := metav1.ConditionFalse
-	reason, err := r.getHTTPRouteRuleReason(ctx, *httpRoute)
+	reason, msg, err := r.getHTTPRouteRuleReason(ctx, *httpRoute)
 	if err != nil {
 		return nil, false, err
 	}
@@ -635,6 +635,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 		ObservedGeneration: httpRoute.Generation,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(reason),
+		Message:            msg,
 	}
 	for _, parentStatus := range parentStatuses {
 		var conditionFound bool
@@ -658,7 +659,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 	return parentStatuses, changed, nil
 }
 
-func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayapi.HTTPRoute) (gatewayapi.RouteConditionReason, error) {
+func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayapi.HTTPRoute) (reason gatewayapi.RouteConditionReason, msg string, err error) {
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
 			backendNamespace := httpRoute.Namespace
@@ -666,35 +667,44 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				backendNamespace = string(*backendRef.Namespace)
 			}
 
+			backendRefGK := string(*backendRef.Kind)
+			if gr := string(*backendRef.Group); gr != "" {
+				backendRefGK = gr + "/" + backendRefGK
+			}
+			targetNN := k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}
+
 			// Check if the BackendRef GroupKind is supported
 			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
-				return gatewayapi.RouteReasonInvalidKind, nil
+				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
 			}
 
 			// Check if all the objects referenced actually exist
 			// Only services are currently supported as BackendRef objects
 			service := &corev1.Service{}
-			err := r.Client.Get(ctx, k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}, service)
-			if err != nil {
+			if err := r.Client.Get(ctx, targetNN, service); err != nil {
 				if !apierrors.IsNotFound(err) {
-					return "", err
+					return "", "", err
 				}
-				return gatewayapi.RouteReasonBackendNotFound, nil
+				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
 			}
 
 			// Check if the object referenced is in another namespace,
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
+				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the HTTPRoute (namespace %s)", targetNN, httpRoute.Namespace)
 				if !r.enableReferenceGrant {
-					return gatewayapi.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted,
+						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
+						nil
 				}
 
 				referenceGrantList := &gatewayapi.ReferenceGrantList{}
 				if err := r.Client.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
-					return "", err
+					return "", "", err
 				}
+				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
 				if len(referenceGrantList.Items) == 0 {
-					return gatewayapi.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 				var isGranted bool
 				for _, grant := range referenceGrantList.Items {
@@ -704,12 +714,12 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 					}
 				}
 				if !isGranted {
-					return gatewayapi.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 			}
 		}
 	}
-	return gatewayapi.RouteReasonResolvedRefs, nil
+	return gatewayapi.RouteReasonResolvedRefs, "", nil
 }
 
 // SetLogger sets the logger.

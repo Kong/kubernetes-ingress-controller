@@ -125,6 +125,9 @@ Adding a new version? You'll need three changes:
   - `konghq.com/publish-service`
   - `konghq.com/tags`
   [#6729](https://github.com/Kong/kubernetes-ingress-controller/pull/6729)
+- Log `Object requested backendRef to target, but it does not exist, skipping...`
+  as `DEBUG` instead of `ERROR`, enhance `HTTPRoute` status with detailed message.
+  [#6746](https://github.com/Kong/kubernetes-ingress-controller/pull/6746)
 
 ### Fixed
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -57,9 +58,9 @@ func backendRefsToKongStateBackends(
 		}
 		if err != nil {
 			if errors.As(err, &store.NotFoundError{}) {
-				logger.Error(err, "Object requested backendRef to target, but it does not exist, skipping...")
+				logger.V(logging.DebugLevel).Info("Object requested backendRef to target, but it does not exist, skipping...")
 			} else {
-				logger.Error(err, "Object requested backendRef to target, but an error occurred, skipping...")
+				logger.Error(err, "Object requested backendRef to target, but an unexpected error occurred, skipping...")
 			}
 			continue
 		}

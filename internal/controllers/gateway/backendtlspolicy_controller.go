@@ -40,7 +40,7 @@ type BackendTLSPolicyReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BackendTLSPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := setupIndexers(mgr); err != nil {
+	if err := setupBackendTLSPolicyIndices(mgr); err != nil {
 		return fmt.Errorf("failed to setup indexers: %w", err)
 	}
 	return ctrl.NewControllerManagedBy(mgr).

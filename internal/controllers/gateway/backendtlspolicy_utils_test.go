@@ -353,3 +353,195 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 		})
 	}
 }
+
+func TestSortGateways(t *testing.T) {
+	tests := []struct {
+		name              string
+		gateways          []gatewayapi.Gateway
+		expected          []gatewayapi.Gateway
+		existingAncestors []gatewayapi.PolicyAncestorStatus
+		policyNamespace   string
+	}{
+		{
+			name: "different namespaces, no existing ancestors",
+			gateways: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+			},
+			expected: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-1",
+					},
+				},
+			},
+		},
+		{
+			name: "same namespace, no existing ancestors",
+			gateways: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+			},
+			expected: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-2",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple combinations, no existing ancestors",
+			gateways: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+			},
+			expected: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-1",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple combinations, with existing ancestors",
+			gateways: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-2",
+					},
+				},
+			},
+			expected: []gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-2",
+						Name:      "gateway-2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "namespace-1",
+						Name:      "gateway-2",
+					},
+				},
+			},
+			existingAncestors: []gatewayapi.PolicyAncestorStatus{
+				{
+					AncestorRef: gatewayapi.ParentReference{
+						Namespace: lo.ToPtr(gatewayapi.Namespace("namespace-2")),
+						Name:      "gateway-2",
+					},
+				},
+				{
+					AncestorRef: gatewayapi.ParentReference{
+						Name: "gateway-1",
+					},
+				},
+			},
+			policyNamespace: "namespace-2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sortGateways(tt.gateways, tt.existingAncestors, tt.policyNamespace)
+			assert.Equal(t, tt.expected, tt.gateways)
+		})
+	}
+}

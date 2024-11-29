@@ -200,7 +200,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForServices(ctx conte
 func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForHTTPRoutes(ctx context.Context, obj client.Object) []reconcile.Request {
 	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "HTTPRoutes", "found", reflect.TypeOf(obj))
+		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "HTTPRoute", "found", reflect.TypeOf(obj))
 		return nil
 	}
 	policiesNN, err := r.getBackendTLSPoliciesByHTTPRoute(ctx, *httpRoute)
@@ -235,12 +235,12 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 	}
 	policies := []reconcile.Request{}
 	for _, httpRoute := range httpRoutes.Items {
-		newPolicies, err := r.getBackendTLSPoliciesByHTTPRoute(ctx, httpRoute)
+		policiesUsedByHTTPRoute, err := r.getBackendTLSPoliciesByHTTPRoute(ctx, httpRoute)
 		if err != nil {
 			r.Log.Error(err, "Failed to list BackendTLSPolicies for HTTPRoute", "httpRoute", httpRoute)
 			return nil
 		}
-		policies = append(policies, lo.Map(newPolicies, func(policy gatewayapi.BackendTLSPolicy, _ int) reconcile.Request {
+		policies = append(policies, lo.Map(policiesUsedByHTTPRoute, func(policy gatewayapi.BackendTLSPolicy, _ int) reconcile.Request {
 			return reconcile.Request{
 				NamespacedName: k8stypes.NamespacedName{
 					Namespace: policy.Namespace,

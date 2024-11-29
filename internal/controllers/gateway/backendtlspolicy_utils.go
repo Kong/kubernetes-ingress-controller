@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"sort"
 
 	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -110,15 +111,24 @@ func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy
 	ancestors := []gatewayapi.PolicyAncestorStatus{}
 
 	// First copy all the ancestorstatuses managed by other controllers.
+	kicAncestors := []gatewayapi.PolicyAncestorStatus{}
 	for _, ancestor := range policy.Status.Ancestors {
 		if ancestor.ControllerName == GetControllerName() {
+			kicAncestors = append(kicAncestors, ancestor)
 			continue
 		}
 		ancestors = append(ancestors, ancestor)
 	}
 
+	// Sort the Gateways to be consistent across subsequent reconciliation loops.
+	sortGateways(gateways, kicAncestors, policy.Namespace)
+
 	// Then enforces all the ancestorsStatuses for the Gateways managed by this controller.
 	for _, gateway := range gateways {
+		// The ancestors are limited to 16, as per the Gateway API specification. in case more Gateways are found, we stop.
+		if len(ancestors) >= 16 {
+			break
+		}
 		ancestor := gatewayapi.PolicyAncestorStatus{
 			AncestorRef: gatewayapi.ParentReference{
 				Group:     lo.ToPtr(gatewayapi.V1Group),
@@ -135,4 +145,33 @@ func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy
 	newPolicy.Status.Ancestors = ancestors
 
 	return r.Status().Patch(ctx, newPolicy, client.MergeFrom(&policy))
+}
+
+// sortGateways sorts the given slice of Gateway objects by namespace and name.
+func sortGateways(gateways []gatewayapi.Gateway, kicAncestors []gatewayapi.PolicyAncestorStatus, policyNamespace string) {
+	kicAncestorsMap := lo.SliceToMap(kicAncestors, func(ancestor gatewayapi.PolicyAncestorStatus) (string, gatewayapi.PolicyAncestorStatus) {
+		namespace := policyNamespace
+		if ancestor.AncestorRef.Namespace != nil {
+			namespace = string(*ancestor.AncestorRef.Namespace)
+		}
+		return namespace + "/" + string(ancestor.AncestorRef.Name), ancestor
+	})
+	sort.Slice(gateways, func(i, j int) bool {
+		_, foundi := kicAncestorsMap[gateways[i].Namespace+"/"+gateways[i].Name]
+		_, foundj := kicAncestorsMap[gateways[j].Namespace+"/"+gateways[j].Name]
+		switch {
+		// the precedence is on Gateways already set in the policy status.
+		case foundi && !foundj:
+			return true
+		case !foundi && foundj:
+			return false
+		// then we sort by namespace/name.
+		case gateways[i].Namespace < gateways[j].Namespace:
+			return true
+		case gateways[i].Namespace > gateways[j].Namespace:
+			return false
+		default:
+			return gateways[i].Name < gateways[j].Name
+		}
+	})
 }

@@ -145,6 +145,17 @@ func setupControllers(
 				LabelSelector:     c.SecretLabelSelector,
 			},
 		},
+		{
+			Enabled: true,
+			Controller: &configuration.CoreV1ConfigMapReconciler{
+				Client:            mgr.GetClient(),
+				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("configmaps"),
+				Scheme:            mgr.GetScheme(),
+				DataplaneClient:   dataplaneClient,
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				ReferenceIndexers: referenceIndexers,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
@@ -487,12 +498,12 @@ func setupControllers(
 					Resource: "backendtlspolicies",
 				}),
 				Controller: &gateway.BackendTLSPolicyReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("BackendTLSPolicy"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
+					Client:            mgr.GetClient(),
+					Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("BackendTLSPolicy"),
+					DataplaneClient:   dataplaneClient,
+					ReferenceIndexers: referenceIndexers,
+					CacheSyncTimeout:  c.CacheSyncTimeout,
+					GatewayNN:         controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},

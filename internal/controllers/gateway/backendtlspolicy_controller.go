@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -31,11 +31,13 @@ import (
 type BackendTLSPolicyReconciler struct {
 	client.Client
 
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	DataplaneClient  controllers.DataPlane
-	CacheSyncTimeout time.Duration
-	StatusQueue      *status.Queue
+	Log               logr.Logger
+	DataplaneClient   controllers.DataPlane
+	CacheSyncTimeout  time.Duration
+	ReferenceIndexers ctrlref.CacheIndexers
+	// If GatewayNN is set,
+	// only resources managed by the specified Gateway are reconciled.
+	GatewayNN controllers.OptionalNamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -226,6 +228,11 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
+
+	if !r.GatewayNN.Matches(gateway) {
+		return nil
+	}
+
 	httpRoutes := &gatewayapi.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
 		client.MatchingFields{httpRouteParentRefIndexKey: gateway.Namespace + "/" + gateway.Name},
@@ -258,7 +265,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes;gateways;gatewayclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies,verbs=get;list;watch;patch;update
-// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=services;configmaps,verbs=get;list;watch
 
 // Reconcile processes the watched objects.
 func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -269,7 +276,6 @@ func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if apierrors.IsNotFound(err) {
 			backendTLSPolicy.Namespace = req.Namespace
 			backendTLSPolicy.Name = req.Name
-
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(backendTLSPolicy)
 		}
 		return ctrl.Result{}, err
@@ -282,13 +288,35 @@ func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	// If there are valid ancestors for the given policy, push the policy to the dataplane cache.
 	if len(ancestors) > 0 {
-		if err := r.DataplaneClient.UpdateObject(backendTLSPolicy); err != nil {
+		acceptedCondition, err := r.validateBackendTLSPolicy(ctx, *backendTLSPolicy)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if err := r.setPolicyStatus(ctx, *backendTLSPolicy, ancestors); err != nil {
+		// If the policy is accepted, update the policy in the dataplane.
+		if acceptedCondition.Status == metav1.ConditionTrue {
+			if err := r.DataplaneClient.UpdateObject(backendTLSPolicy); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			// Update references to ConfigMaps in the dataplane cache.
+			referredConfigMapNames := listConfigMapNamesReferredByBackendTLSPolicy(backendTLSPolicy)
+			if err := ctrlref.UpdateReferencesToConfigMap(
+				ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
+				backendTLSPolicy, referredConfigMapNames); err != nil {
+				if apierrors.IsNotFound(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
+		} else {
+			// In case the policy is not accepted, ensure it gets deleted from the dataplane cache
+			if err := r.DataplaneClient.DeleteObject(backendTLSPolicy); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		if err := r.setPolicyStatus(ctx, *backendTLSPolicy, ancestors, *acceptedCondition); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

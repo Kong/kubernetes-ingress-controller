@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,26 +19,68 @@ import (
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
 // validity. It skips Secrets that do not contain a valid certificate and reports translation failures for them.
 func (t *Translator) getCACerts() []kong.CACertificate {
-	caCertSecrets, err := t.storer.ListCACerts()
+	caCertSecrets, caCertConfigMaps, err := t.storer.ListCACerts()
 	if err != nil {
 		t.logger.Error(err, "Failed to list CA certs")
 		return nil
 	}
 
-	caCerts := make([]kong.CACertificate, 0, len(caCertSecrets))
+	caCerts := make([]kong.CACertificate, 0, len(caCertSecrets)+len(caCertConfigMaps))
 	for _, certSecret := range caCertSecrets {
 		idBytes, ok := certSecret.Data["id"]
 		if !ok {
-			t.registerTranslationFailure("invalid CA certificate: missing 'id' field in data", certSecret)
+			t.registerTranslationFailure("invalid secret CA certificate: missing 'id' field in data", certSecret)
 			continue
 		}
 		secretID := string(idBytes)
 
-		caCert, err := toKongCACertificate(certSecret, secretID)
+		// Allow the certificate key to be named either "cert" or "ca.crt"
+		caCertbytes, certExists := certSecret.Data["cert"]
+		if !certExists {
+			caCertbytes, certExists = certSecret.Data["ca.crt"]
+			if !certExists {
+				relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, t.storer)
+				relatedObjects = append(relatedObjects, certSecret.DeepCopy())
+				t.registerTranslationFailure(fmt.Sprintf(`invalid secret CA certificate %s/%s, neither "cert" nor "ca.crt" key exist`, certSecret.Namespace, certSecret.Name), relatedObjects...)
+				continue
+			}
+		}
+
+		caCert, err := toKongCACertificate(caCertbytes, certSecret, secretID)
 		if err != nil {
 			relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, t.storer)
 			relatedObjects = append(relatedObjects, certSecret.DeepCopy())
-			t.registerTranslationFailure(fmt.Sprintf("invalid CA certificate: %s", err), relatedObjects...)
+			t.registerTranslationFailure(fmt.Sprintf("invalid secret CA certificate: %s", err), relatedObjects...)
+			continue
+		}
+
+		caCerts = append(caCerts, caCert)
+	}
+
+	for _, certConfigMap := range caCertConfigMaps {
+		certID, ok := certConfigMap.Data["id"]
+		if !ok {
+			t.registerTranslationFailure("invalid configmap CA certificate: missing 'id' field in data", certConfigMap)
+			continue
+		}
+
+		// Allow the certificate key to be named either "cert" or "ca.crt"
+		caCertbytes, certExists := certConfigMap.Data["cert"]
+		if !certExists {
+			caCertbytes, certExists = certConfigMap.Data["ca.crt"]
+			if !certExists {
+				relatedObjects := getPluginsAssociatedWithCACertSecret(certID, t.storer)
+				relatedObjects = append(relatedObjects, certConfigMap.DeepCopy())
+				t.registerTranslationFailure(fmt.Sprintf(`invalid configmap CA certificate %s/%s, neither "cert" nor "ca.crt" key exist`, certConfigMap.Namespace, certConfigMap.Name), relatedObjects...)
+				continue
+			}
+		}
+
+		caCert, err := toKongCACertificate([]byte(caCertbytes), certConfigMap, certID)
+		if err != nil {
+			relatedObjects := getPluginsAssociatedWithCACertSecret(certID, t.storer)
+			relatedObjects = append(relatedObjects, certConfigMap.DeepCopy())
+			t.registerTranslationFailure(fmt.Sprintf("invalid configmap CA certificate: %s", err), relatedObjects...)
 			continue
 		}
 
@@ -49,12 +90,8 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 	return caCerts
 }
 
-func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACertificate, error) {
-	caCertbytes, certExists := certSecret.Data["cert"]
-	if !certExists {
-		return kong.CACertificate{}, errors.New("missing 'cert' field in data")
-	}
-	pemBlock, _ := pem.Decode(caCertbytes)
+func toKongCACertificate(caCertBytes []byte, object client.Object, secretID string) (kong.CACertificate, error) {
+	pemBlock, _ := pem.Decode(caCertBytes)
 	if pemBlock == nil {
 		return kong.CACertificate{}, errors.New("invalid PEM block")
 	}
@@ -71,8 +108,8 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 
 	return kong.CACertificate{
 		ID:   kong.String(secretID),
-		Cert: kong.String(string(caCertbytes)),
-		Tags: util.GenerateTagsForObject(certSecret),
+		Cert: kong.String(string(caCertBytes)),
+		Tags: util.GenerateTagsForObject(object),
 	}, nil
 }
 

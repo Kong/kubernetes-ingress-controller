@@ -5295,10 +5295,10 @@ func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
 					Name:      "svc",
 					Namespace: "ns",
 					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
-						annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey: "2",
-						annotations.AnnotationPrefix + annotations.CACertificatesKey: "ca",
-						annotations.AnnotationPrefix + annotations.ProtocolKey:       "https",
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey:        "2",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca",
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
 					},
 				},
 				Spec: corev1.ServiceSpec{

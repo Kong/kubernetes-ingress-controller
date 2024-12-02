@@ -132,7 +132,7 @@ Adding a new version? You'll need three changes:
   upstream services (either by `ingress.kubernetes.io/service-upstream` annotation
   or through `IngressClassNamespacedParameters`'s `serviceUpstream` field, will use
   a FQDN with a default cluster domain of `cluster.local`.
-  Users can override the default by setting the `cluster-domain` flag.
+  Users can override the default by setting the `--cluster-domain` flag.
   [#6697](https://github.com/Kong/kubernetes-ingress-controller/pull/6697)
 
 ### Fixed

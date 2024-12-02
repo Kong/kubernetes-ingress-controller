@@ -33,6 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
@@ -145,8 +146,8 @@ func Run(
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
 	if c.EmitKubernetesEvents {
-		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + KongClientEventRecorderComponentName)
-		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + consts.KongClientEventRecorderComponentName)
+		eventRecorder = mgr.GetEventRecorderFor(consts.KongClientEventRecorderComponentName)
 	} else {
 		setupLog.Info("Emitting Kubernetes events disabled, discarding all events")
 		// Create an empty record.FakeRecorder with no Events channel to discard all events.

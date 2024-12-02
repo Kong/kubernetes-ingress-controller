@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -3858,7 +3859,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			result: []util.Endpoint{
 				{
-					Address: "foo.bar.svc.cluster.local",
+					Address: "foo.bar.svc",
 					Port:    "2080",
 				},
 			},
@@ -3892,7 +3893,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			result: []util.Endpoint{
 				{
-					Address: "foo.bar.svc.cluster.local",
+					Address: "foo.bar.svc",
 					Port:    "2080",
 				},
 			},
@@ -4162,7 +4163,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			clusterDomain := "cluster.local"
+			clusterDomain := consts.DefaultClusterDomain
 			if testCase.clusterDomain != "" {
 				clusterDomain = testCase.clusterDomain
 			}
@@ -5103,7 +5104,6 @@ func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService 
 
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 	logger := zapr.NewLogger(zap.NewNop())
-	clusterDomain := "cluster.local"
 	p, err := NewTranslator(logger, storer, "",
 		FeatureFlags{
 			// We'll assume these are true for all tests.
@@ -5112,7 +5112,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 			KongServiceFacade:                 true,
 		},
 		fakeSchemaServiceProvier{},
-		clusterDomain,
+		consts.DefaultClusterDomain,
 	)
 	require.NoError(t, err)
 	return p

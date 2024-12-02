@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
@@ -219,8 +220,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second.")
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second.")
-	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
-	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
+	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", consts.MetricsPort), "The address the metric endpoint binds to.")
+	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", consts.HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.")
 	flagSet.DurationVar(&c.InitCacheSyncDuration, "init-cache-sync-duration", dataplane.DefaultCacheSyncWaitDuration, `The initial delay to wait for Kubernetes object caches to be synced before the initial configuration.`)
@@ -242,7 +243,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
 		`Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces.`)
 	flagSet.BoolVar(&c.EmitKubernetesEvents, "emit-kubernetes-events", true, `Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.`)
-	flagSet.StringVar(&c.ClusterDomain, "cluster-domain", DefaultClusterDomain, `The cluster domain. This is used e.g. in generating addresses for upstream services.`)
+	flagSet.StringVar(&c.ClusterDomain, "cluster-domain", consts.DefaultClusterDomain, `The cluster domain. This is used e.g. in generating addresses for upstream services.`)
 
 	// Ingress status
 	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
@@ -299,10 +300,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Admission server PEM private key value. Mutually exclusive with --admission-webhook-key-file.`)
 
 	// Diagnostics
-	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/.", DiagnosticsPort))
-	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config.", DiagnosticsPort))
+	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/.", consts.DiagnosticsPort))
+	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config.", consts.DiagnosticsPort))
 	flagSet.BoolVar(&c.DumpSensitiveConfig, "dump-sensitive-config", false, "Include credentials and TLS secrets in configs exposed with --dump-config flag.")
-	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
+	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", consts.DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
 	_ = flagSet.MarkHidden("diagnostic-server-port")
 
 	// Feature Gates (see FEATURE_GATES.md).

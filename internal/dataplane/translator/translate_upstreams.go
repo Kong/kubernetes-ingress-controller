@@ -267,9 +267,13 @@ func getEndpoints(
 	// If service is an upstream service...
 	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
 		// ... return its address as the only endpoint.
+		svcDomainName := service.Name + "." + service.Namespace + ".svc"
+		if clusterDomain != "" {
+			svcDomainName += "." + clusterDomain
+		}
 		return []util.Endpoint{
 			{
-				Address: service.Name + "." + service.Namespace + ".svc." + clusterDomain,
+				Address: svcDomainName,
 				Port:    fmt.Sprint(port.Port),
 			},
 		}

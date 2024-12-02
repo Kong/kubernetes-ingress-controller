@@ -24,6 +24,10 @@ var supportedTypes = []cacheStoreSupportedType{
 		Package: "corev1",
 	},
 	{
+		Type:    "ConfigMap",
+		Package: "corev1",
+	},
+	{
 		Type:    "EndpointSlice",
 		Package: "discoveryv1",
 	},

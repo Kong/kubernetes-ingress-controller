@@ -2,6 +2,7 @@ package translator
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -16,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -90,10 +92,13 @@ func (ir *ingressRules) populateServices(
 			// used for traffic, so cache it amongst the kong Services k8s services.
 			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
 
-			// extract client certificates intended for use by the service
+			// convert the backendTLSPolicy targeting the service to the proper set of annotations.
+			ir.handleBackendTLSPolices(logger, s, k8sService, failuresCollector, translatedObjectsCollector)
+
+			// extract client certificates intended for use by the service.
 			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
 
-			// extract CA certificates intended for use by the service
+			// extract CA certificates intended for use by the service.
 			ir.handleServiceCACertificates(s, k8sService, &service, failuresCollector)
 		}
 		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
@@ -103,6 +108,68 @@ func (ir *ingressRules) populateServices(
 		ir.ServiceNameToServices[key] = service
 	}
 	return serviceNamesToSkip
+}
+
+func (ir *ingressRules) handleBackendTLSPolices(
+	_ logr.Logger,
+	s store.Storer,
+	k8sService *corev1.Service,
+	failuresCollector *failures.ResourceFailuresCollector,
+	_ *ObjectsCollector,
+) {
+	policies, err := s.ListBackendTLSPoliciesByTargetService(client.ObjectKeyFromObject(k8sService))
+	if err != nil {
+		failuresCollector.PushResourceFailure(
+			fmt.Sprintf("Failed to list backendTLSPolicies: %v", err), k8sService,
+		)
+		return
+	}
+	if len(policies) == 0 {
+		return
+	}
+	if len(policies) > 1 {
+		failuresCollector.PushResourceFailure(
+			"Multiple BackendTLSPolicies attached to service", k8sService,
+		)
+		return
+	}
+	policy := policies[0]
+
+	if k8sService.Annotations == nil {
+		k8sService.Annotations = make(map[string]string)
+	}
+
+	annotations.SetTLSVerify(k8sService.Annotations, true)
+	annotations.SetHostHeader(k8sService.Annotations, string(policy.Spec.Validation.Hostname))
+	annotations.SetProtocol(k8sService.Annotations, "https")
+	annotations.SetCACertificates(k8sService.Annotations,
+		lo.Map(policy.Spec.Validation.CACertificateRefs, func(ref gatewayapi.LocalObjectReference, _ int) string {
+			return string(ref.Name)
+		}),
+	)
+	if depth, ok := getTLSVerifyDepthOption(policy.Spec.Options); ok {
+		annotations.SetTLSVerifyDepth(k8sService.Annotations, depth)
+	}
+}
+
+func getTLSVerifyDepthOption(options map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue) (int, bool) {
+	// If the annotation is not set, return no depth.
+	depthStr, ok := options[annotations.TLSVerifyDepthKey]
+	if !ok {
+		return 0, false
+	}
+
+	// If the annotation is not an int, return no depth.
+	depth, err := strconv.Atoi(string(depthStr))
+	if err != nil {
+		return 0, false
+	}
+	// If the annotation is < 0, return no depth.
+	if depth < 0 {
+		return 0, false
+	}
+
+	return depth, true
 }
 
 func (ir *ingressRules) handleServiceClientCertificates(
@@ -145,8 +212,9 @@ func (ir *ingressRules) handleServiceCACertificates(
 	k *kongstate.Service,
 	collector *failures.ResourceFailuresCollector,
 ) {
-	certificates := annotations.ExtractCACertificates(service.Annotations)
-	if len(certificates) == 0 {
+	Secretcertificates := annotations.ExtractCACertificatesFromSecrets(service.Annotations)
+	configMapCertificates := annotations.ExtractCACertificatesFromConfigMap(service.Annotations)
+	if len(Secretcertificates)+len(configMapCertificates) == 0 {
 		// No CA certificates to process.
 		return
 	}
@@ -170,8 +238,8 @@ func (ir *ingressRules) handleServiceCACertificates(
 		return
 	}
 
-	// Process each CA certificate and add it to the Kong Service.
-	for _, certificate := range certificates {
+	// Process each CA certificate from secret and add it to the Kong Service.
+	for _, certificate := range Secretcertificates {
 		secretKey := service.Namespace + "/" + certificate
 		secret, err := s.GetSecret(service.Namespace, certificate)
 		if err != nil {
@@ -189,6 +257,27 @@ func (ir *ingressRules) handleServiceCACertificates(
 			continue
 		}
 		k.CACertificates = append(k.CACertificates, lo.ToPtr(string(certID)))
+	}
+
+	// Process each CA certificate from ConfigMap and add it to the Kong Service.
+	for _, certificate := range configMapCertificates {
+		configmapKey := service.Namespace + "/" + certificate
+		configMap, err := s.GetConfigMap(service.Namespace, certificate)
+		if err != nil {
+			collector.PushResourceFailure(
+				fmt.Sprintf("Failed to fetch configmap for CA Certificate '%s': %v", configmapKey, err), service,
+			)
+			continue
+		}
+
+		certID, ok := configMap.Data["id"]
+		if !ok {
+			collector.PushResourceFailure(
+				fmt.Sprintf("Invalid CA certificate '%s': missing 'id' field in data", configmapKey), configMap, service,
+			)
+			continue
+		}
+		k.CACertificates = append(k.CACertificates, lo.ToPtr(certID))
 	}
 }
 

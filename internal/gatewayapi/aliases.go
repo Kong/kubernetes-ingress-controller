@@ -18,11 +18,10 @@ var (
 
 type (
 	AllowedRoutes                             = gatewayv1.AllowedRoutes
+	AnnotationKey                             = gatewayv1.AnnotationKey
+	AnnotationValue                           = gatewayv1.AnnotationValue
 	BackendObjectReference                    = gatewayv1.BackendObjectReference
 	BackendRef                                = gatewayv1.BackendRef
-	BackendTLSPolicy                          = gatewayv1alpha3.BackendTLSPolicy
-	BackendTLSPolicyList                      = gatewayv1alpha3.BackendTLSPolicyList
-	BackendTLSPolicySpec                      = gatewayv1alpha3.BackendTLSPolicySpec
 	CommonRouteSpec                           = gatewayv1.CommonRouteSpec
 	Duration                                  = gatewayv1.Duration
 	Gateway                                   = gatewayv1.Gateway
@@ -117,6 +116,14 @@ type (
 	UDPRouteRule         = gatewayv1alpha2.UDPRouteRule
 	UDPRouteSpec         = gatewayv1alpha2.UDPRouteSpec
 	UDPRouteStatus       = gatewayv1alpha2.UDPRouteStatus
+
+	BackendTLSPolicy            = gatewayv1alpha3.BackendTLSPolicy
+	BackendTLSPolicyList        = gatewayv1alpha3.BackendTLSPolicyList
+	BackendTLSPolicySpec        = gatewayv1alpha3.BackendTLSPolicySpec
+	BackendTLSPolicyValidation  = gatewayv1alpha3.BackendTLSPolicyValidation
+	SubjectAltName              = gatewayv1alpha3.SubjectAltName
+	SubjectAltNameType          = gatewayv1alpha3.SubjectAltNameType
+	WellKnownCACertificatesType = gatewayv1alpha3.WellKnownCACertificatesType
 )
 
 const (
@@ -189,4 +196,8 @@ const (
 	PolicyConditionAccepted = gatewayv1alpha2.PolicyConditionAccepted
 	PolicyReasonAccepted    = gatewayv1alpha2.PolicyReasonAccepted
 	PolicyReasonConflicted  = gatewayv1alpha2.PolicyReasonConflicted
+	PolicyReasonInvalid     = gatewayv1alpha2.PolicyReasonInvalid
+
+	HostnameSubjectAltNameType = gatewayv1alpha3.HostnameSubjectAltNameType
+	URISubjectAltNameType      = gatewayv1alpha3.URISubjectAltNameType
 )

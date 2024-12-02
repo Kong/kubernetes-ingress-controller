@@ -43,7 +43,7 @@ metadata:
   name: goecho
   annotations:
     konghq.com/tls-verify: "true"    # Enable TLS verification of the upstream.
-    konghq.com/ca-certificates: "ca" # The CA root certificate secret used for verification.
+    konghq.com/ca-certificates-secret: "ca" # The CA root certificate secret used for verification.
     konghq.com/protocol: "https"     # Has to be either https or tls when TLS verification is enabled.
     konghq.com/host-header: "goecho" # This will make Kong use `goecho` server name when validating server-presented TLS certificate.
 spec:

@@ -46,6 +46,11 @@ func TestCacheStores(t *testing.T) {
 		},
 
 		{
+			name:          "ConfigMap",
+			objectToStore: &corev1.ConfigMap{},
+		},
+
+		{
 			name:          "EndpointSlice",
 			objectToStore: &discoveryv1.EndpointSlice{},
 		},

@@ -114,3 +114,30 @@ func KonnectHTTPDoer() kong.Doer {
 		return resp, nil
 	}
 }
+
+// KonnectClientFactory is a factory to create KonnectClient instances.
+type KonnectClientFactory struct {
+	konnectConfig KonnectConfig
+	logger        logr.Logger
+}
+
+// NewKonnectClientFactory creates a new KonnectClientFactory instance.
+func NewKonnectClientFactory(konnectConfig KonnectConfig, logger logr.Logger) *KonnectClientFactory {
+	return &KonnectClientFactory{
+		konnectConfig: konnectConfig,
+		logger:        logger,
+	}
+}
+
+// NewKonnectClient create a new KonnectClient instance, ensuring the connection to Konnect Admin API.
+// Please note it may block for a few seconds while trying to connect to Konnect Admin API.
+func (f *KonnectClientFactory) NewKonnectClient(ctx context.Context) (*KonnectClient, error) {
+	konnectAdminAPIClient, err := NewKongClientForKonnectControlPlane(f.konnectConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating Konnect Control Plane Admin API client: %w", err)
+	}
+	if err := EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), f.logger); err != nil {
+		return nil, fmt.Errorf("failed to ensure connection to Konnect Admin API: %w", err)
+	}
+	return konnectAdminAPIClient, nil
+}

@@ -14,6 +14,25 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 )
 
+// Recorder is an interface for recording metrics.
+type Recorder interface {
+	RecordPushFailure(p Protocol, duration time.Duration, size mo.Option[int], dataplane string, brokenResourcesCount int, err error)
+	RecordPushSuccess(protocol Protocol, duration time.Duration, size mo.Option[int], target string)
+	RecordFallbackPushSuccess(protocol Protocol, duration time.Duration, size mo.Option[int], target string)
+	RecordFallbackPushFailure(protocol Protocol, duration time.Duration, size mo.Option[int], target string, failedResources int, err error)
+	RecordProcessedConfigSnapshotCacheHit()
+	RecordProcessedConfigSnapshotCacheMiss()
+	RecordTranslationFailure(duration time.Duration)
+	RecordTranslationBrokenResources(count int)
+	RecordTranslationSuccess(duration time.Duration)
+	RecordFallbackTranslationBrokenResources(count int)
+	RecordFallbackTranslationFailure(duration time.Duration)
+	RecordFallbackTranslationSuccess(duration time.Duration)
+	RecordFallbackCacheGenerationDuration(since time.Duration, err error)
+}
+
+var _ Recorder = &CtrlFuncMetrics{}
+
 // descriptions of these metrics are found below, where their help text is set in NewCtrlFuncMetrics()
 
 type CtrlFuncMetrics struct {

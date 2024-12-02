@@ -14,7 +14,7 @@ func (l License) SanitizedCopy() License {
 	return License{
 		License: kong.License{
 			ID:        l.ID,
-			Payload:   redactedString,
+			Payload:   RedactedString,
 			CreatedAt: l.CreatedAt,
 			UpdatedAt: l.UpdatedAt,
 		},

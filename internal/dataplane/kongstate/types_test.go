@@ -26,7 +26,7 @@ func TestCertificate_SanitizedCopy(t *testing.T) {
 			want: Certificate{kong.Certificate{
 				ID:        kong.String("1"),
 				Cert:      kong.String("2"),
-				Key:       redactedString,
+				Key:       RedactedString,
 				CreatedAt: int64Ptr(4),
 				SNIs:      []*string{kong.String("5.1"), kong.String("5.2")},
 				Tags:      []*string{kong.String("6.1"), kong.String("6.2")},

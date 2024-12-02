@@ -1,4 +1,4 @@
-package kongstate
+package kongstate_test
 
 import (
 	"testing"
@@ -6,18 +6,18 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
 
 func TestKeyAuth_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   KeyAuth
-		want KeyAuth
+		in   kongstate.KeyAuth
+		want kongstate.KeyAuth
 	}{
 		{
 			name: "fills all fields but Consumer and sanitizes key",
-			in: KeyAuth{
+			in: kongstate.KeyAuth{
 				KeyAuth: kong.KeyAuth{
 					Consumer:  &kong.Consumer{Username: kong.String("foo")},
 					CreatedAt: kong.Int(1),
@@ -26,7 +26,7 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 					Tags:      []*string{kong.String("4.1"), kong.String("4.2")},
 				},
 			},
-			want: KeyAuth{
+			want: kongstate.KeyAuth{
 				KeyAuth: kong.KeyAuth{
 					CreatedAt: kong.Int(1),
 					ID:        kong.String("2"),
@@ -37,7 +37,7 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+			got := *tt.in.SanitizedCopy(kongstate.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -46,12 +46,12 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 func TestHMACAuth_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   HMACAuth
-		want HMACAuth
+		in   kongstate.HMACAuth
+		want kongstate.HMACAuth
 	}{
 		{
 			name: "fills all fields but Consumer and sanitizes secret",
-			in: HMACAuth{
+			in: kongstate.HMACAuth{
 				HMACAuth: kong.HMACAuth{
 					Consumer:  &kong.Consumer{Username: kong.String("foo")},
 					CreatedAt: kong.Int(1),
@@ -61,12 +61,12 @@ func TestHMACAuth_SanitizedCopy(t *testing.T) {
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 			},
-			want: HMACAuth{
+			want: kongstate.HMACAuth{
 				HMACAuth: kong.HMACAuth{
 					CreatedAt: kong.Int(1),
 					ID:        kong.String("2"),
 					Username:  kong.String("3"),
-					Secret:    redactedString,
+					Secret:    kongstate.RedactedString,
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 			},
@@ -82,12 +82,12 @@ func TestHMACAuth_SanitizedCopy(t *testing.T) {
 func TestJWTAuth_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   JWTAuth
-		want JWTAuth
+		in   kongstate.JWTAuth
+		want kongstate.JWTAuth
 	}{
 		{
 			name: "fills all fields but Consumer and sanitizes secret",
-			in: JWTAuth{
+			in: kongstate.JWTAuth{
 				JWTAuth: kong.JWTAuth{
 					Consumer:     &kong.Consumer{Username: kong.String("foo")},
 					CreatedAt:    kong.Int(1),
@@ -99,14 +99,14 @@ func TestJWTAuth_SanitizedCopy(t *testing.T) {
 					Tags:         []*string{kong.String("7.1"), kong.String("7.2")},
 				},
 			},
-			want: JWTAuth{
+			want: kongstate.JWTAuth{
 				JWTAuth: kong.JWTAuth{
 					CreatedAt:    kong.Int(1),
 					ID:           kong.String("2"),
 					Algorithm:    kong.String("3"),
 					Key:          kong.String("4"),
 					RSAPublicKey: kong.String("5"),
-					Secret:       redactedString,
+					Secret:       kongstate.RedactedString,
 					Tags:         []*string{kong.String("7.1"), kong.String("7.2")},
 				},
 			},
@@ -122,12 +122,12 @@ func TestJWTAuth_SanitizedCopy(t *testing.T) {
 func TestBasicAuth_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   BasicAuth
-		want BasicAuth
+		in   kongstate.BasicAuth
+		want kongstate.BasicAuth
 	}{
 		{
 			name: "fills all fields but Consumer and sanitizes password",
-			in: BasicAuth{
+			in: kongstate.BasicAuth{
 				BasicAuth: kong.BasicAuth{
 					Consumer:  &kong.Consumer{Username: kong.String("foo")},
 					CreatedAt: kong.Int(1),
@@ -137,12 +137,12 @@ func TestBasicAuth_SanitizedCopy(t *testing.T) {
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 			},
-			want: BasicAuth{
+			want: kongstate.BasicAuth{
 				BasicAuth: kong.BasicAuth{
 					CreatedAt: kong.Int(1),
 					ID:        kong.String("2"),
 					Username:  kong.String("3"),
-					Password:  redactedString,
+					Password:  kongstate.RedactedString,
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
 			},
@@ -158,12 +158,12 @@ func TestBasicAuth_SanitizedCopy(t *testing.T) {
 func TestOauth2Credential_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		in   Oauth2Credential
-		want Oauth2Credential
+		in   kongstate.Oauth2Credential
+		want kongstate.Oauth2Credential
 	}{
 		{
 			name: "fills all fields but Consumer and sanitizes client secret",
-			in: Oauth2Credential{
+			in: kongstate.Oauth2Credential{
 				Oauth2Credential: kong.Oauth2Credential{
 					Consumer:     &kong.Consumer{Username: kong.String("foo")},
 					CreatedAt:    kong.Int(1),
@@ -175,13 +175,13 @@ func TestOauth2Credential_SanitizedCopy(t *testing.T) {
 					Tags:         []*string{kong.String("7.1"), kong.String("7.2")},
 				},
 			},
-			want: Oauth2Credential{
+			want: kongstate.Oauth2Credential{
 				Oauth2Credential: kong.Oauth2Credential{
 					CreatedAt:    kong.Int(1),
 					ID:           kong.String("2"),
 					Name:         kong.String("3"),
 					ClientID:     kong.String("4"),
-					ClientSecret: redactedString,
+					ClientSecret: kongstate.RedactedString,
 					RedirectURIs: []*string{kong.String("6.1"), kong.String("6.2")},
 					Tags:         []*string{kong.String("7.1"), kong.String("7.2")},
 				},

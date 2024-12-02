@@ -35,7 +35,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -113,7 +112,7 @@ type KongClient struct {
 
 	// prometheusMetrics is the client for shipping metrics information
 	// updates to the prometheus exporter.
-	prometheusMetrics *metrics.CtrlFuncMetrics
+	prometheusMetrics metrics.Recorder
 
 	// kubernetesObjectReportLock is a mutex for thread-safety of
 	// kubernetes object reporting functionality.
@@ -180,9 +179,12 @@ type KongClient struct {
 	// lastValidCacheSnapshot can also represent the fallback cache snapshot that was successfully synced with gateways.
 	lastValidCacheSnapshot *store.CacheStores
 
-	// konnectConfigSynchronizer receives latest successfully applied Kong configuration from KongClient
-	// and uploads it to Konnect.
-	konnectConfigSynchronizer *konnect.ConfigSynchronizer
+	// konnectKongStateUpdater is used to update the state of the Kong Gateway in Konnect.
+	konnectKongStateUpdater KonnectKongStateUpdater
+}
+
+type KonnectKongStateUpdater interface {
+	UpdateKongState(ctx context.Context, kongState *kongstate.KongState, isFallback bool)
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -201,12 +203,13 @@ func NewKongClient(
 	kongConfigBuilder KongConfigBuilder,
 	cacheStores *store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
+	metricsRecorder metrics.Recorder,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                  logger,
 		requestTimeout:          timeout,
 		diagnostic:              diagnostic,
-		prometheusMetrics:       metrics.NewCtrlFuncMetrics(),
+		prometheusMetrics:       metricsRecorder,
 		cache:                   cacheStores,
 		kongConfig:              kongConfig,
 		eventRecorder:           eventRecorder,
@@ -491,7 +494,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	const isFallback = false
 	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 
-	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
+	// Taking into account the results of syncing configuration with Gateways and potential translation
 	// failures, calculate the config status and update it.
 	c.configStatusNotifier.NotifyGatewayConfigStatus(ctx, clients.GatewayConfigApplyStatus{
 		TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
@@ -513,7 +516,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// Send configuration to Konnect ONLY when successfully applied configuration to gateways.
-	c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig, isFallback)
+	c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, isFallback)
 	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
 	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)
 
@@ -633,7 +636,7 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	if gatewaysSyncErr != nil {
 		return fmt.Errorf("failed to sync fallback configuration with gateways: %w", gatewaysSyncErr)
 	}
-	c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, c.kongConfig, isFallback)
+	c.maybeSendOutToKonnectClient(ctx, fallbackParsingResult.KongState, isFallback)
 
 	// Configuration was successfully recovered with the fallback configuration. Store the last valid configuration.
 	c.maybePreserveTheLastValidConfigCache(fallbackCache)
@@ -735,29 +738,12 @@ func (c *KongClient) sendOutToGatewayClients(
 func (c *KongClient) maybeSendOutToKonnectClient(
 	ctx context.Context,
 	s *kongstate.KongState,
-	config sendconfig.Config,
-	_ bool,
+	isFallback bool,
 ) {
-	if c.konnectConfigSynchronizer == nil {
+	if c.konnectKongStateUpdater == nil {
 		return
 	}
-	konnectClient := c.clientsProvider.KonnectClient()
-	if konnectClient == nil {
-		return
-	}
-
-	if config.SanitizeKonnectConfigDumps {
-		s = s.SanitizedCopy(util.DefaultUUIDGenerator{})
-	}
-
-	deckGenParams := deckgen.GenerateDeckContentParams{
-		SelectorTags:                    config.FilterTags,
-		ExpressionRoutes:                config.ExpressionRoutes,
-		PluginSchemas:                   konnectClient.PluginSchemaStore(),
-		AppendStubEntityWhenConfigEmpty: false,
-	}
-	targetContent := deckgen.ToDeckContent(ctx, c.logger, s, deckGenParams)
-	c.konnectConfigSynchronizer.SetTargetContent(targetContent)
+	c.konnectKongStateUpdater.UpdateKongState(ctx, s, isFallback)
 }
 
 func (c *KongClient) sendToClient(
@@ -769,16 +755,11 @@ func (c *KongClient) sendToClient(
 ) (string, error) {
 	logger := c.logger.WithValues("url", client.AdminAPIClient().BaseRootURL())
 
-	// If the client is Konnect and the feature flag is turned on,
-	// we should sanitize the configuration before sending it out.
-	if client.IsKonnect() && config.SanitizeKonnectConfigDumps {
-		s = s.SanitizedCopy(util.DefaultUUIDGenerator{})
-	}
 	deckGenParams := deckgen.GenerateDeckContentParams{
 		SelectorTags:                    config.FilterTags,
 		ExpressionRoutes:                config.ExpressionRoutes,
 		PluginSchemas:                   client.PluginSchemaStore(),
-		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
+		AppendStubEntityWhenConfigEmpty: config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
 	customEntities := make(sendconfig.CustomEntitiesByType)
@@ -806,11 +787,7 @@ func (c *KongClient) sendToClient(
 		&c.diagnostic,
 		isFallback,
 	)
-	// Only record events on applying configuration to Kong gateway here.
-	// Nil error is expected to be passed to indicate success.
-	if !client.IsKonnect() {
-		c.recordApplyConfigurationEvents(err, client.BaseRootURL(), isFallback)
-	}
+	c.recordApplyConfigurationEvents(err, client.BaseRootURL(), isFallback)
 	if err != nil {
 		var (
 			rawResponseBody    []byte
@@ -845,19 +822,17 @@ func (c *KongClient) sendToClient(
 }
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
-// Currently it is used for uploading the node status to konnect control plane.
+// Currently, it is used for uploading the node status to Konnect control plane.
 func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
 	c.configStatusNotifier = n
 }
 
-func (c *KongClient) SetKonnectConfigSynchronizer(s *konnect.ConfigSynchronizer) {
+func (c *KongClient) SetKonnectKongStateUpdater(u KonnectKongStateUpdater) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	c.konnectConfigSynchronizer = s
+	c.konnectKongStateUpdater = u
 }
 
 // -----------------------------------------------------------------------------

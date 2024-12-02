@@ -46,7 +46,7 @@ func PerformUpdate(
 	config Config,
 	targetContent *file.Content,
 	customEntities CustomEntitiesByType,
-	promMetrics *metrics.CtrlFuncMetrics,
+	promMetrics metrics.Recorder,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
 	diagnostic *diagnostics.ClientDiagnostic,

@@ -36,7 +36,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -105,7 +104,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: RedactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
 				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}}, // We don't redact plugins' config.
 				Consumers: []Consumer{
@@ -117,7 +116,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 						},
 					},
 				},
-				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: redactedString}}},
+				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: RedactedString}}},
 				ConsumerGroups: []ConsumerGroup{{
 					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
 				}},
@@ -152,7 +151,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
-			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+			got := *tt.in.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -195,7 +194,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ret := ks.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+		ret := ks.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 		_ = ret
 	}
 }

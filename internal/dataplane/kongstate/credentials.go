@@ -9,10 +9,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// redactedString is used to redact sensitive values in the KongState.
+// RedactedString is used to redact sensitive values in the KongState.
 // It uses a vault URI to pass Konnect Admin API validations (e.g. when a TLS key is expected, it's only possible
 // to pass a valid key or a vault URI).
-var redactedString = kong.String("{vault://redacted-value}")
+var RedactedString = kong.String("{vault://redacted-value}")
 
 // randRedactedString is used to redact sensitive values in the KongState when the value must be random to avoid
 // collisions.
@@ -181,7 +181,7 @@ func (c *HMACAuth) SanitizedCopy() *HMACAuth {
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
 			Username:  c.Username,
-			Secret:    redactedString,
+			Secret:    RedactedString,
 			Tags:      c.Tags,
 		},
 	}
@@ -197,7 +197,7 @@ func (c *JWTAuth) SanitizedCopy() *JWTAuth {
 			Algorithm:    c.Algorithm,
 			Key:          c.Key, // despite field name, "key" is an identifier
 			RSAPublicKey: c.RSAPublicKey,
-			Secret:       redactedString,
+			Secret:       RedactedString,
 			Tags:         c.Tags,
 		},
 	}
@@ -211,7 +211,7 @@ func (c *BasicAuth) SanitizedCopy() *BasicAuth {
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
 			Username:  c.Username,
-			Password:  redactedString,
+			Password:  RedactedString,
 			Tags:      c.Tags,
 		},
 	}
@@ -226,7 +226,7 @@ func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 			ID:           c.ID,
 			Name:         c.Name,
 			ClientID:     c.ClientID,
-			ClientSecret: redactedString,
+			ClientSecret: RedactedString,
 			RedirectURIs: c.RedirectURIs,
 			Tags:         c.Tags,
 		},

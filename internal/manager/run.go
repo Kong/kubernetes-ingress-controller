@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
@@ -200,6 +201,7 @@ func Run(
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
+	metricsRecoreder := metrics.NewCtrlFuncMetrics()
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -214,6 +216,7 @@ func Run(
 		configTranslator,
 		&cache,
 		fallbackConfigGenerator,
+		metricsRecoreder,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -276,10 +279,6 @@ func Run(
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
-		// Run the Konnect Admin API client initialization in a separate goroutine to not block while ensuring
-		// connection.
-		go setupKonnectAdminAPIClientWithClientsMgr(ctx, c.Konnect, clientsManager, setupLog)
-
 		// Set channel to send config status.
 		configStatusNotifier := clients.NewChannelConfigNotifier(logger)
 		dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
@@ -287,17 +286,19 @@ func Run(
 		// Setup Konnect config synchronizer.
 		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizer(
 			ctx,
+			c,
 			mgr,
 			c.Konnect.UploadConfigPeriod,
 			kongConfig,
-			clientsManager,
 			updateStrategyResolver,
 			configStatusNotifier,
+			metricsRecoreder,
 		)
 		if err != nil {
 			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")
+		} else {
+			dataplaneClient.SetKonnectKongStateUpdater(konnectConfigSynchronizer)
 		}
-		dataplaneClient.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
 
 		// Setup Konnect NodeAgent with manager.
 		if err := setupKonnectNodeAgentWithMgr(
@@ -445,28 +446,6 @@ func setupKonnectNodeAgentWithMgr(
 		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)
 	}
 	return nil
-}
-
-// setupKonnectAdminAPIClientWithClientsMgr initializes Konnect Admin API client and sets it to clientsManager.
-// If it fails to initialize the client, it logs the error and returns.
-func setupKonnectAdminAPIClientWithClientsMgr(
-	ctx context.Context,
-	config adminapi.KonnectConfig,
-	clientsManager *clients.AdminAPIClientsManager,
-	logger logr.Logger,
-) {
-	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectControlPlane(config)
-	if err != nil {
-		logger.Error(err, "Failed creating Konnect Control Plane Admin API client, skipping synchronisation")
-		return
-	}
-	if err := adminapi.EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), logger); err != nil {
-		logger.Error(err, "Failed to ensure connection to Konnect Admin API, skipping synchronisation")
-		return
-	}
-
-	clientsManager.SetKonnectClient(konnectAdminAPIClient)
-	logger.Info("Initialized Konnect Admin API client")
 }
 
 type IsReady interface {

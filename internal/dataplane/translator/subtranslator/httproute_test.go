@@ -862,9 +862,11 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 			Namespace: "default",
 		},
 	}
-	longServiceName := "service-with-a-very-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-name-having-251-characters"
-	// hashStr is the SHA256 sum of the original generated service name for the test case where a long service name is generated and trimmed.
-	hashStr := "d39c14b023c01526d6d7a9b4aaf61dbd8daf53eb7241f933daec622ea59e2da9"
+	const (
+		longServiceName = "service-with-a-very-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-name-having-251-characters"
+		// hashStr is the SHA256 sum of the original generated service name for the test case where a long service name is generated and trimmed.
+		hashStr = "d39c14b023c01526d6d7a9b4aaf61dbd8daf53eb7241f933daec622ea59e2da9"
+	)
 	kindService := lo.ToPtr(gatewayapi.Kind("Service"))
 	testCases := []struct {
 		name                string

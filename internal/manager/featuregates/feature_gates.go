@@ -37,6 +37,10 @@ const (
 	// Requires feature gate `FillIDs` to be enabled.
 	KongCustomEntity = "KongCustomEntity"
 
+	// CombinedServicesFromDifferentHTTPRoutes is the name of the feature gate that enables combining rules sharing the same backendRefs
+	// from different HTTPRoutes in the same namespace into one Kong gateway service to reduce total number of Kong gateway services.
+	CombinedServicesFromDifferentHTTPRoutes = "CombinedServicesFromDifferentHTTPRoutes"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -77,12 +81,13 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
-		GatewayAlphaFeature:        false,
-		FillIDsFeature:             true,
-		RewriteURIsFeature:         false,
-		KongServiceFacade:          false,
-		SanitizeKonnectConfigDumps: true,
-		FallbackConfiguration:      false,
-		KongCustomEntity:           true,
+		GatewayAlphaFeature:                     false,
+		FillIDsFeature:                          true,
+		RewriteURIsFeature:                      false,
+		KongServiceFacade:                       false,
+		SanitizeKonnectConfigDumps:              true,
+		FallbackConfiguration:                   false,
+		KongCustomEntity:                        true,
+		CombinedServicesFromDifferentHTTPRoutes: false,
 	}
 }

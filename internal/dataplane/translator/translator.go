@@ -52,6 +52,10 @@ type FeatureFlags struct {
 
 	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
 	KongCustomEntity bool
+
+	// CombinedServicesFromDifferentHTTPRoutes indicates whether we should combine rules from different HTTPRoutes
+	// that are sharing the same combination of backends to one Kong service.
+	CombinedServicesFromDifferentHTTPRoutes bool
 }
 
 func NewFeatureFlags(
@@ -61,13 +65,14 @@ func NewFeatureFlags(
 	enterpriseEdition bool,
 ) FeatureFlags {
 	return FeatureFlags{
-		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		EnterpriseEdition:                 enterpriseEdition,
-		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
-		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
-		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
-		KongCustomEntity:                  featureGates.Enabled(featuregates.KongCustomEntity),
+		ReportConfiguredKubernetesObjects:       updateStatusFlag,
+		ExpressionRoutes:                        dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		EnterpriseEdition:                       enterpriseEdition,
+		FillIDs:                                 featureGates.Enabled(featuregates.FillIDsFeature),
+		RewriteURIs:                             featureGates.Enabled(featuregates.RewriteURIsFeature),
+		KongServiceFacade:                       featureGates.Enabled(featuregates.KongServiceFacade),
+		KongCustomEntity:                        featureGates.Enabled(featuregates.KongCustomEntity),
+		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(featuregates.CombinedServicesFromDifferentHTTPRoutes),
 	}
 }
 

@@ -186,6 +186,11 @@ Adding a new version? You'll need three changes:
   `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_[next_backends]...`
   when the feature is enabled, like:
   `httproute.default.svc.default.svc1.80.90_default.svc2.80.10`.
+  If the calculated service name is longer than 511 chacters, the name will be
+  trimmed to the format with only the first backend reserved in the name:
+  `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_combined.<hash>`
+  where `<hash>` is the hash result of the calculated name, like
+  `httproute.default.svc.default.a-long-long-long-service-name.80_combined.00001111222233334444aaaabbbbcccc`.
   [#6711](https://github.com/Kong/kubernetes-ingress-controller/pull/6711)
 
 ## [3.3.1]

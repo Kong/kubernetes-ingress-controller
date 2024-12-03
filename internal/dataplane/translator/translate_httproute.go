@@ -118,17 +118,21 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 	return nil
 }
 
-// ingressRulesFromHTTPRoutesWithCombinedService translates HTTPRoutes to ingress rules with combined Kong services
-// of rules cross different HTTPRoutes (but still in the same namespace).
-// TODO: handle the case of using expression based routes: https://github.com/Kong/kubernetes-ingress-controller/issues/6727.
+// ingressRulesFromHTTPRoutesWithCombinedService translates a list of HTTPRoutes to ingress rules.
+// When the feature flag CombinedServicesFromDifferentHTTPRoutes is true, it combines rules with same backends
+// to a single Kong gateway service across different HTTPRoutes in the same namespace.
+// When the feature flag is false, it combines rules with same backends in an HTTPRoute to a Kong gateway service.
+// TODO: This would be the common entrance for translating to Kong services in both traditional and expression routes after
+// https://github.com/Kong/kubernetes-ingress-controller/issues/6727 is finished.
+// They would share the code for translation of service names, backends and fields other then routes in Kong services.
 func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
-	kongstateServices, routeTranslationFailures := subtranslator.TranslateHTTPRoutesToKongstateServices(
+	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
 		t.logger,
 		t.storer,
 		httpRoutes,
 		t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
 	)
-	for serviceName, service := range kongstateServices {
+	for serviceName, service := range translationResult.ServiceNameToKongstateService {
 		result.ServiceNameToServices[serviceName] = service
 		result.ServiceNameToParent[serviceName] = service.Parent
 	}
@@ -137,7 +141,8 @@ func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []
 			Namespace: httproute.Namespace,
 			Name:      httproute.Name,
 		}
-		translationFailures := routeTranslationFailures[namespacedName]
+		translationFailures := translationResult.HTTPRouteNameToTranslationErrors[namespacedName]
+		// For HTTPRoutes that errors happened in translation, register translation failures for them.
 		if len(translationFailures) > 0 {
 			t.failuresCollector.PushResourceFailure(
 				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
@@ -145,6 +150,7 @@ func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []
 			)
 			continue
 		}
+		// Register HTTPRoute successfully translated if no translation error found.
 		t.registerSuccessfullyTranslatedObject(httproute)
 	}
 }

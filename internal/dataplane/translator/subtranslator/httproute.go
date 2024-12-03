@@ -1,6 +1,7 @@
 package subtranslator
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	pathlib "path"
@@ -41,6 +42,14 @@ type KongRouteTranslation struct {
 	Filters []gatewayapi.HTTPRouteFilter
 }
 
+// HTTPRoutesTranslationResult is the result of translating HTTPRoutes to Kong gateway services.
+// It includes the kongstate services indexed by the Kong gateway service name
+// and translation errors happened on each HTTPRoute to genereate TranslationFailure events.
+type HTTPRoutesTranslationResult struct {
+	ServiceNameToKongstateService    map[string]kongstate.Service
+	HTTPRouteNameToTranslationErrors map[k8stypes.NamespacedName][]error
+}
+
 // TranslateHTTPRoutesToKongstateServices translates a set of HTTPRoutes to kongstate services,
 // and collect the translation errors in the process of translating.
 func TranslateHTTPRoutesToKongstateServices(
@@ -48,7 +57,7 @@ func TranslateHTTPRoutesToKongstateServices(
 	storer store.Storer,
 	routes []*gatewayapi.HTTPRoute,
 	combinedServicesFromDifferentHTTPRoutes bool,
-) (map[string]kongstate.Service, map[k8stypes.NamespacedName][]error) {
+) HTTPRoutesTranslationResult {
 	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, combinedServicesFromDifferentHTTPRoutes)
 
 	kongstateServiceCache := map[string]kongstate.Service{}
@@ -72,13 +81,16 @@ func TranslateHTTPRoutesToKongstateServices(
 		kongstateServiceCache[serviceName] = service
 	}
 
-	return kongstateServiceCache, routeTranslationErrors
+	return HTTPRoutesTranslationResult{
+		ServiceNameToKongstateService:    kongstateServiceCache,
+		HTTPRouteNameToTranslationErrors: routeTranslationErrors,
+	}
 }
 
 // groupRulesFromHTTPRoutesByKongServiceName groups rules from HTTPRoutes into groups of rules, where each rule group
-// is translated to a Kong service, and assign translated Kong state service name to the rule groups.
+// is translated to a Kong service, and assigns a translated Kong state service name to the rule groups.
 // If combinedServicesFromDifferentHTTPRoutes is true, it groups rules from different HTTPRoutes in the same namespace.
-// Otherwise, it groups rules in the same HTTPRoute.
+// Otherwise, it only groups rules from the same HTTPRoute.
 func groupRulesFromHTTPRoutesByKongServiceName(
 	routes []*gatewayapi.HTTPRoute,
 	combinedServicesFromDifferentHTTPRoutes bool,
@@ -86,7 +98,7 @@ func groupRulesFromHTTPRoutesByKongServiceName(
 	// If we enabled combined service from different HTTPRoutes, we group rules sharing the same backendRefs
 	// from all HTTPRoutes in the same namespace, and generate the Kong service name by backends.
 	if combinedServicesFromDifferentHTTPRoutes {
-		backendCache := newHTTPRouteBackendCache()
+		cache := newHTTPRouteRuleCacheByServiceName()
 		for _, route := range routes {
 			for ruleNumber, rule := range route.Spec.Rules {
 				ruleMeta := httpRouteRuleMeta{
@@ -94,10 +106,10 @@ func groupRulesFromHTTPRoutesByKongServiceName(
 					RuleNumber:  ruleNumber,
 					parentRoute: route,
 				}
-				backendCache.addRule(ruleMeta)
+				cache.addRule(ruleMeta)
 			}
 		}
-		return backendCache.backends
+		return cache.ruleGroups
 	}
 
 	// Otherwise, we still group rules in the same HTTPRoute sharing the same backends,
@@ -433,8 +445,14 @@ func (m httpRouteRuleMeta) getFiltersKey() string {
 //   - A rule can contain at most 16 backends, so the part from backends can have at most 331*16+15=5311 chars.
 //   - A namespace can have at most 63 chars, so the max length of prefix before backends is 9+1+63+1+3+1=78.
 //   - So the maximum possible total length is 5311+78=5389 characters.
+//
+// We do not want to generate a too long service name, so we trim the name if the length generated name exceeds the limit (511 chars).
 func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
 	backendRefs := m.Rule.BackendRefs
+	// The host of service cannot end with `.`, so we append a `_` for rules with empty backends.
+	if len(backendRefs) == 0 {
+		return fmt.Sprintf("httproute.%s.svc._", m.parentRoute.Namespace)
+	}
 
 	backendNames := make([]string, 0, len(backendRefs))
 	for _, backendRef := range backendRefs {
@@ -461,7 +479,17 @@ func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
 	// Sort the backend names to guarantee that the same set of backend {namespace, name, port, weight}
 	// generates the same name.
 	sort.Strings(backendNames)
-	return fmt.Sprintf("httproute.%s.svc.%s", m.parentRoute.Namespace, strings.Join(backendNames, "_"))
+	name := fmt.Sprintf("httproute.%s.svc.%s", m.parentRoute.Namespace, strings.Join(backendNames, "_"))
+	// If the length of the generated service name exceeds the limit, we trim the service name by only keeping the first backend
+	// and append the `combined.<hash>` suffix to prevent conflicts, where hash is the SHA256 digest of the original name.
+	if len(name) > maxKongServiceNameLength {
+		hash := sha256.Sum256([]byte(name))
+		// We have already returned when there are no backends in the rule, so it is safe to use backendNames[0].
+		trimmedName := fmt.Sprintf("httproute.%s.svc.%s_combined.%x", m.parentRoute.Namespace, backendNames[0], hash)
+		// REVIEW: should we emit a log here to tell that the name is trimmed? And should we record the original long name?
+		return trimmedName
+	}
+	return name
 }
 
 func (m *httpRouteRuleMeta) matches() httpRouteMatchMetaList {
@@ -563,19 +591,25 @@ func (l httpRouteMatchMetaList) httpRouteMatches() []gatewayapi.HTTPRouteMatch {
 // HttpRoute Translation - Private - Backend Cache
 // -----------------------------------------------------------------------------
 
-type HTTPRouteBackendCache struct {
-	backends map[string][]httpRouteRuleMeta
+// HTTPRouteRuleCacheByServiceName is the cache to store HTTP rules that are translated to the same Kong gateway service
+// grouped by the name of the Kong gateway service.
+type HTTPRouteRuleCacheByServiceName struct {
+	// ruleGroups is the map from the generated service name to the list of HTTPRoute rules that has the same backends
+	// and will be translated to the Kong gateway service with the name.
+	ruleGroups map[string][]httpRouteRuleMeta
 }
 
-func newHTTPRouteBackendCache() *HTTPRouteBackendCache {
-	return &HTTPRouteBackendCache{
-		backends: make(map[string][]httpRouteRuleMeta),
+// newHTTPRouteRuleCacheByServiceName creates an empty HTTPRouteRuleCacheByServiceName.
+func newHTTPRouteRuleCacheByServiceName() *HTTPRouteRuleCacheByServiceName {
+	return &HTTPRouteRuleCacheByServiceName{
+		ruleGroups: make(map[string][]httpRouteRuleMeta),
 	}
 }
 
-func (c *HTTPRouteBackendCache) addRule(r httpRouteRuleMeta) {
+// addRule adds a rule to the group in the cache with the same target Kong service name.
+func (c *HTTPRouteRuleCacheByServiceName) addRule(r httpRouteRuleMeta) {
 	kongServiceName := r.getKongServiceNameByBackendRefs()
-	c.backends[kongServiceName] = append(c.backends[kongServiceName], r)
+	c.ruleGroups[kongServiceName] = append(c.ruleGroups[kongServiceName], r)
 }
 
 // getSortedItemsString returns a string representation of a list of items,

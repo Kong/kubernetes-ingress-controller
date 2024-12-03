@@ -23,4 +23,8 @@ const (
 
 	// DefualtKongServiceProtocol is the default protocol in translated Kong service.
 	DefualtKongServiceProtocol = "http"
+
+	// maxKongServiceNameLength is the maximum length of generated Kong service name.
+	// if the length of generated Kong service name exceeds the limit, the name will be trimmed.
+	maxKongServiceNameLength = (512 - 1)
 )

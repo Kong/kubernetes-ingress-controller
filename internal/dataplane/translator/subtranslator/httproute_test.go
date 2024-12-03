@@ -862,6 +862,9 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 			Namespace: "default",
 		},
 	}
+	longServiceName := "service-with-a-very-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-name-having-251-characters"
+	// hashStr is the SHA256 sum of the original generated service name for the test case where a long service name is generated and trimmed.
+	hashStr := "d39c14b023c01526d6d7a9b4aaf61dbd8daf53eb7241f933daec622ea59e2da9"
 	kindService := lo.ToPtr(gatewayapi.Kind("Service"))
 	testCases := []struct {
 		name                string
@@ -929,6 +932,15 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 			expectedServiceName: "httproute.default.svc.another-namespace.service-2.80_default.service-1.80_default.service-2.8080",
 		},
 		{
+			name: "no backends",
+			ruleMeta: httpRouteRuleMeta{
+				Rule:        gatewayapi.HTTPRouteRule{},
+				RuleNumber:  0,
+				parentRoute: testHTTPRoute,
+			},
+			expectedServiceName: "httproute.default.svc._",
+		},
+		{
 			name: "multiple backends with weights",
 			ruleMeta: httpRouteRuleMeta{
 				Rule: gatewayapi.HTTPRouteRule{
@@ -959,6 +971,38 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 				parentRoute: testHTTPRoute,
 			},
 			expectedServiceName: "httproute.default.svc.default.service-1.1080.25_default.service-1.80.75",
+		},
+		{
+			name: "multiple backends that generates a name exceeding the length limit",
+			ruleMeta: httpRouteRuleMeta{
+				Rule: gatewayapi.HTTPRouteRule{
+					BackendRefs: []gatewayapi.HTTPBackendRef{
+						{
+							BackendRef: gatewayapi.BackendRef{
+								BackendObjectReference: gatewayapi.BackendObjectReference{
+									Kind: kindService,
+									Name: gatewayapi.ObjectName(longServiceName),
+									Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+								},
+								Weight: lo.ToPtr(int32(75)),
+							},
+						},
+						{
+							BackendRef: gatewayapi.BackendRef{
+								BackendObjectReference: gatewayapi.BackendObjectReference{
+									Kind: kindService,
+									Name: gatewayapi.ObjectName(longServiceName),
+									Port: lo.ToPtr(gatewayapi.PortNumber(8080)),
+								},
+								Weight: lo.ToPtr(int32(25)),
+							},
+						},
+					},
+				},
+				RuleNumber:  0,
+				parentRoute: testHTTPRoute,
+			},
+			expectedServiceName: fmt.Sprintf("httproute.default.svc.default.%s.80.75_combined.%s", longServiceName, hashStr),
 		},
 	}
 
@@ -1142,7 +1186,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple HTTPRoutes in the same namespace",
+			name: "multiple HTTPRoutes with the same same backends in the same namespace",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1212,7 +1256,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple HTTPRoutes in the same namespace with correct referenceGrant",
+			name: "multiple HTTPRoutes with the same same backends in the same namespace with correct referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1306,7 +1350,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple HTTPRoutes in the same namespace without referenceGrant",
+			name: "multiple HTTPRoutes with the same same backends in the same namespace without referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1572,8 +1616,10 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			kongstateServices, translationFailures := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true)
-			require.Len(t, translationFailures, 0, "Should not get translation errors in translating")
+			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true)
+			require.Len(t, translationResult.HTTPRouteNameToTranslationErrors, 0, "Should not get translation errors in translating")
+
+			kongstateServices := translationResult.ServiceNameToKongstateService
 			require.Len(t, kongstateServices, len(tc.expectedServices))
 			for serviceName, expectedService := range tc.expectedServices {
 				s, ok := kongstateServices[serviceName]

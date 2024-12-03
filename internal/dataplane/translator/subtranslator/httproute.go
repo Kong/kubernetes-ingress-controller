@@ -37,9 +37,13 @@ type KongServiceTranslation struct {
 // KongRouteTranslation is a translation of a single HTTPRoute rule into metadata
 // that can be used to instantiate Kong routes.
 type KongRouteTranslation struct {
-	Name    string
-	Matches []gatewayapi.HTTPRouteMatch
-	Filters []gatewayapi.HTTPRouteFilter
+	Name string
+	// OptionalNamedRouteRules represents list of RouteName - an optional name
+	// of the particular route that can be defined in the K8s HTTPRoute,
+	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
+	OptionalNamedRouteRules []string
+	Matches                 []gatewayapi.HTTPRouteMatch
+	Filters                 []gatewayapi.HTTPRouteFilter
 }
 
 // HTTPRoutesTranslationResult is the result of translating HTTPRoutes to Kong gateway services.
@@ -324,9 +328,9 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			// Since we have grouped matches by their parent routes, all the matches in the same group are from the same HTTPRoute.
 			parentRoute := matchGroup[0].parentRoute
 			objectInfo := util.FromK8sObject(parentRoute)
-			tags := util.GenerateTagsForObject(parentRoute)
+			matches, optionalNamedRouteRules := matchGroup.httpRouteMatches()
+			tags := util.GenerateTagsForObject(parentRoute, util.AdditionalTagNamedRouteRules(optionalNamedRouteRules...)...)
 			routeName := translateToKongRouteName(matchGroup, parentRoute.GetNamespace(), parentRoute.GetName())
-			matches := matchGroup.httpRouteMatches()
 			// Since the grouped matches here are from the same HTTPRoute, it is OK to use the hostnames from the first HTTPRoute.
 			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
 
@@ -497,10 +501,11 @@ func (m *httpRouteRuleMeta) matches() httpRouteMatchMetaList {
 
 	for matchNumber, match := range m.Rule.Matches {
 		matches = append(matches, httpRouteMatchMeta{
-			Match:       &match,
-			RuleNumber:  m.RuleNumber,
-			MatchNumber: matchNumber,
-			parentRoute: m.parentRoute,
+			Match:                 &match,
+			RuleNumber:            m.RuleNumber,
+			MatchNumber:           matchNumber,
+			OptionalRouteRuleName: string(lo.FromPtr(m.Rule.Name)),
+			parentRoute:           m.parentRoute,
 		})
 	}
 
@@ -508,10 +513,14 @@ func (m *httpRouteRuleMeta) matches() httpRouteMatchMetaList {
 }
 
 type httpRouteMatchMeta struct {
-	Match       *gatewayapi.HTTPRouteMatch
-	RuleNumber  int
-	MatchNumber int
-	parentRoute *gatewayapi.HTTPRoute
+	Match *gatewayapi.HTTPRouteMatch
+	// OptionalNamedRouteRule represents RouteName - an optional name
+	// of the particular route that can be defined in the K8s HTTPRoute,
+	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
+	OptionalRouteRuleName string
+	RuleNumber            int
+	MatchNumber           int
+	parentRoute           *gatewayapi.HTTPRoute
 }
 
 // getKey computes a key from an HTTPRouteMatch. Two HTTPRouteMatches will generate the same key if their
@@ -579,12 +588,17 @@ func (m httpRouteMatchMeta) getKey() string {
 
 type httpRouteMatchMetaList []httpRouteMatchMeta
 
-func (l httpRouteMatchMetaList) httpRouteMatches() []gatewayapi.HTTPRouteMatch {
-	matches := make([]gatewayapi.HTTPRouteMatch, 0, len(l))
+func (l httpRouteMatchMetaList) httpRouteMatches() (
+	matches []gatewayapi.HTTPRouteMatch, optionalNamedRouteRules []string,
+) {
+	matches = make([]gatewayapi.HTTPRouteMatch, 0, len(l))
 	for _, matchMeta := range l {
 		matches = append(matches, *matchMeta.Match)
+		if sn := matchMeta.OptionalRouteRuleName; sn != "" {
+			optionalNamedRouteRules = append(optionalNamedRouteRules, sn)
+		}
 	}
-	return matches
+	return matches, optionalNamedRouteRules
 }
 
 // -----------------------------------------------------------------------------

@@ -42,7 +42,8 @@ spec:
   parentRefs:
     - name: kong
   rules:
-    - matches:
+    - name: httproute-testing
+      matches:
         - path:
             type: PathPrefix
             value: /httproute-testing
@@ -55,3 +56,29 @@ spec:
           kind: Service
           port: 8080
           weight: 25
+    - name: echo
+      matches:
+        - path:
+            type: PathPrefix
+            value: /echo
+      backendRefs:
+        - name: httpbin
+          kind: Service
+          port: 80
+    - name: content
+      matches:
+        - path:
+            type: PathPrefix
+            value: /content
+      backendRefs:
+        - name: httpbin
+          kind: Service
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /nginx
+      backendRefs:
+        - name: nginx
+          kind: Service
+          port: 8080

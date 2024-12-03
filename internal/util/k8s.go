@@ -148,16 +148,47 @@ func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayapi.Group, gatewayAP
 }
 
 const (
-	K8sNamespaceTagPrefix = "k8s-namespace:"
-	K8sNameTagPrefix      = "k8s-name:"
-	K8sUIDTagPrefix       = "k8s-uid:"
-	K8sKindTagPrefix      = "k8s-kind:"
-	K8sGroupTagPrefix     = "k8s-group:"
-	K8sVersionTagPrefix   = "k8s-version:"
+	K8sNamespaceTagPrefix      = "k8s-namespace:"
+	K8sNameTagPrefix           = "k8s-name:"
+	K8sUIDTagPrefix            = "k8s-uid:"
+	K8sKindTagPrefix           = "k8s-kind:"
+	K8sGroupTagPrefix          = "k8s-group:"
+	K8sVersionTagPrefix        = "k8s-version:"
+	K8sNamedRouteRuleTagPrefix = "k8s-named-route-rules:"
+
+	// ValuesInTagSeparator represents separator used for values of tags.
+	// Validation for tags in Kong Gateway enforces:
+	// "expected printable ascii (except `,` and `/`) or valid utf-8 sequences"
+	// thus ; is a sensible choice for a separator.
+	ValuesInTagSeparator = ";"
 )
 
+type KongTag struct {
+	Prefix string
+	Value  string
+}
+
+func (kt KongTag) String() string {
+	return kt.Prefix + kt.Value
+}
+
+func AdditionalTagNamedRouteRules(optionalNamedRouteRules ...string) []KongTag {
+	optionalNamedRouteRules = lo.Filter(optionalNamedRouteRules, func(s string, _ int) bool {
+		return strings.TrimSpace(s) != ""
+	})
+	if len(optionalNamedRouteRules) == 0 {
+		return nil
+	}
+	return []KongTag{
+		{
+			Prefix: K8sNamedRouteRuleTagPrefix,
+			Value:  strings.Join(optionalNamedRouteRules, ValuesInTagSeparator),
+		},
+	}
+}
+
 // GenerateTagsForObject returns a subset of an object's metadata as a slice of prefixed string pointers.
-func GenerateTagsForObject(obj client.Object) []*string {
+func GenerateTagsForObject(obj client.Object, additionalTags ...KongTag) []*string {
 	if obj == nil {
 		// this should never happen in practice, but it happen in some unit tests
 		// in those cases, the nil object has no tags
@@ -182,6 +213,9 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	}
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
+	}
+	for _, tag := range additionalTags {
+		tags = append(tags, tag.String())
 	}
 
 	tags = append(tags,

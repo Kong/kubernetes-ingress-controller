@@ -16,9 +16,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// GenerateKongExpressionRoutesFromHTTPRouteMatches generates Kong routes from HTTPRouteRule
+// GenerateKongExpressionRoutesFromTranslation generates Kong routes from HTTPRouteRule
 // pointing to a specific backend.
-func GenerateKongExpressionRoutesFromHTTPRouteMatches(
+// NOTICE: currently it's used only for validation in internal/admission/validation/gateway/httproute.go file,
+// for generation of actual config sent to Kong Gateway see ingressRulesFromHTTPRoutesUsingExpressionRoutes(...) method.
+func GenerateKongExpressionRoutesFromTranslation(
 	translation KongRouteTranslation,
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []string,

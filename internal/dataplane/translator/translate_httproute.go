@@ -76,7 +76,7 @@ func (t *Translator) ingressRulesFromHTTPRoute(result *ingressRules, httproute *
 
 		// generate the routes for the service and attach them to the service
 		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, t.featureFlags.ExpressionRoutes)
+			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation)
 			if err != nil {
 				return err
 			}
@@ -210,15 +210,6 @@ func (t *Translator) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes 
 // Translate HTTPRoute - Utils
 // -----------------------------------------------------------------------------
 
-// getHTTPRouteHostnamesAsSliceOfStrings translates the hostnames defined in an
-// HTTPRoute specification into a []*string slice, which is the type required by translating to matchers
-// in expression based routes.
-func getHTTPRouteHostnamesAsSliceOfStrings(httproute *gatewayapi.HTTPRoute) []string {
-	return lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) string {
-		return string(h)
-	})
-}
-
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
 // in an HTTPRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
@@ -229,37 +220,21 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 }
 
 // GenerateKongRouteFromTranslation generates Kong routes from HTTPRoute
-// pointing to a specific backend. It is used for both traditional and expression based routes.
+// pointing to a specific backend. It is used for traditional routes.
 func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
 	translation subtranslator.KongRouteTranslation,
-	expressionRoutes bool,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
 	tags := util.GenerateTagsForObject(httproute)
-
-	// translate to expression based routes when expressionRoutes is enabled.
-	if expressionRoutes {
-		// get the hostnames from the HTTPRoute
-		hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
-		return subtranslator.GenerateKongExpressionRoutesFromHTTPRouteMatches(
-			translation,
-			objectInfo,
-			hostnames,
-			tags,
-		)
-	}
-
-	// get the hostnames from the HTTPRoute
-	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
 
 	return generateKongRoutesFromHTTPRouteMatches(
 		translation.Name,
 		translation.Matches,
 		translation.Filters,
 		objectInfo,
-		hostnames,
+		getHTTPRouteHostnamesAsSliceOfStringPointers(httproute),
 		tags,
 	)
 }

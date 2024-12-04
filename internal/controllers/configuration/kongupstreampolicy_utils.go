@@ -423,7 +423,6 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 		if !ancestorsStatus[i].creationTimestamp.Equal(&ancestorsStatus[j].creationTimestamp) {
 			return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
 		}
-		// REVIEW: the condition will make KongServiceFacade be prior to Service. Should we customize the comparing of kinds here?
 		if ancestorsStatus[i].ancestorKind != ancestorsStatus[j].ancestorKind {
 			return ancestorsStatus[i].ancestorKind < ancestorsStatus[j].ancestorKind
 		}

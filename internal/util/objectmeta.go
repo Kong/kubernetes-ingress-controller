@@ -31,7 +31,7 @@ func FromK8sObject(obj client.Object) K8sObjectInfo {
 	return K8sObjectInfo{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
-		// We return a deep copy here because translator functions may modify annotations
+		// We return a copy of annotations map here because translator functions may modify annotations
 		// and that change would then be stored in store which is not desired.
 		Annotations:      maps.Clone(obj.GetAnnotations()),
 		GroupVersionKind: obj.GetObjectKind().GroupVersionKind(),

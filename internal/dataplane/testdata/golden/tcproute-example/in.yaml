@@ -1,24 +1,35 @@
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: TLSRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
 metadata:
-  name: echo-tls
+  name: example-tcp-gateway
+  namespace: tcp-example
+spec:
+  listeners:
+  - name: tcp
+    protocol: TCP
+    port: 1025
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: echo-plaintext
+  namespace: tcp-namespace
 spec:
   parentRefs:
-    - name: kong
-      sectionName: stream9443
-  hostnames:
-    - tls9443.kong.example
+  - name: example-tcp-gateway
+    namespace: tcp-example
   rules:
-    - backendRefs:
-      - name: echo
-        port: 1025
+  - backendRefs:
+    - name: echo
+      port: 1025
 ---
 apiVersion: v1
 kind: Service
 metadata:
+  name: echo
+  namespace: tcp-namespace
   labels:
     app: echo
-  name: echo
 spec:
   ports:
     - port: 1025

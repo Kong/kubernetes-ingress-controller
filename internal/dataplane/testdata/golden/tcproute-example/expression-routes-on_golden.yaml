@@ -1,9 +1,9 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: tcproute..echo-plaintext.0
-  id: ed5f9dd7-123c-503e-aa23-2ed6dba68fc9
-  name: tcproute..echo-plaintext.0
+  host: tcproute.tcp-namespace.echo-plaintext.0
+  id: e2302e1e-0a75-5174-82f3-c0bc379a108a
+  name: tcproute.tcp-namespace.echo-plaintext.0
   plugins:
   - config:
       message: no existing backendRef provided
@@ -13,14 +13,16 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - https_redirect_status_code: 426
-    id: 2b120f42-e8ea-5efd-8436-e8c5e7336862
-    name: tcproute..echo-plaintext.0.0
-    path_handling: v0
+  - expression: net.dst.port == 1025
+    https_redirect_status_code: 426
+    id: 499ad8b6-ea05-5418-b1b7-7386a13d333b
+    name: tcproute.tcp-namespace.echo-plaintext.0.0
+    priority: 1
     protocols:
     - tcp
     tags:
     - k8s-name:echo-plaintext
+    - k8s-namespace:tcp-namespace
     - k8s-kind:TCPRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1alpha2
@@ -34,7 +36,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: tcproute..echo-plaintext.0
+  name: tcproute.tcp-namespace.echo-plaintext.0
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

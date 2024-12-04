@@ -165,6 +165,9 @@ Adding a new version? You'll need three changes:
   to make sure the order of ancestors in the status is deterministic to fix
   the issue where the status of `KongUpstreamPolicy` is continuously updated.
   [#6767](https://github.com/Kong/kubernetes-ingress-controller/pull/6767)
+- Fixed an issue where `KongPlugin` used as `HTTPRoute`'s `ExtensionRef` filter
+  would produce an invalid configuration.
+  [#6762](https://github.com/Kong/kubernetes-ingress-controller/pull/6762)
 
 ### Added
 

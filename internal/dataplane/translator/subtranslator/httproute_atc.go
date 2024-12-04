@@ -551,7 +551,7 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 ) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
 	httproute := httpRouteMatchWithPriority.Match.Source
-	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagNamedRouteRules(match.OptionalNamedRouteRule)...)
+	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(match.OptionalNamedRouteRule)...)
 
 	// Since we split HTTPRoutes by hostname, rule and match, we generate the route name in
 	// httproute.<namespace>.<name>.<hostname>.<rule index>.<match index> format.

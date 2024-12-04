@@ -329,7 +329,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			parentRoute := matchGroup[0].parentRoute
 			objectInfo := util.FromK8sObject(parentRoute)
 			matches, optionalNamedRouteRules := matchGroup.httpRouteMatches()
-			tags := util.GenerateTagsForObject(parentRoute, util.AdditionalTagNamedRouteRules(optionalNamedRouteRules...)...)
+			tags := util.GenerateTagsForObject(parentRoute, util.AdditionalTagsK8sNamedRouteRule(optionalNamedRouteRules...)...)
 			routeName := translateToKongRouteName(matchGroup, parentRoute.GetNamespace(), parentRoute.GetName())
 			// Since the grouped matches here are from the same HTTPRoute, it is OK to use the hostnames from the first HTTPRoute.
 			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)

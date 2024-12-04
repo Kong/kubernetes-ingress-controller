@@ -270,15 +270,16 @@ func TestGenerateTagsForObject(t *testing.T) {
 		require.ElementsMatch(t, expectedTagSet, tags, "generated tags are not as expected")
 	})
 
-	t.Run("generated tags based on the object with additional tag k8s-named-route-rules", func(t *testing.T) {
+	t.Run("generated tags based on the object with additional tags k8s-named-route-rule", func(t *testing.T) {
 		expectedTagSetWithAdditional := slices.Concat(
 			expectedTagSet,
 			[]*string{
-				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "test" + ValuesInTagSeparator + "echo"),
+				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "test"),
+				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "echo"),
 			},
 		)
 
-		tags := GenerateTagsForObject(testObj, AdditionalTagNamedRouteRules("test", "", " ", "echo")...)
+		tags := GenerateTagsForObject(testObj, AdditionalTagsK8sNamedRouteRule("test", "", " ", "echo")...)
 		require.ElementsMatch(t, expectedTagSetWithAdditional, tags, "generated tags are not as expected")
 	})
 }

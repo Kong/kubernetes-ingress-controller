@@ -62,7 +62,8 @@ services:
     - k8s-kind:HTTPRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1
-    - k8s-named-route-rules:echo;content
+    - k8s-named-route-rule:echo
+    - k8s-named-route-rule:content
   tags:
   - k8s-name:httpbin
   - k8s-namespace:default
@@ -96,7 +97,7 @@ services:
     - k8s-kind:HTTPRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1
-    - k8s-named-route-rules:httproute-testing
+    - k8s-named-route-rule:httproute-testing
   tags:
   - k8s-name:httproute-testing
   - k8s-namespace:default

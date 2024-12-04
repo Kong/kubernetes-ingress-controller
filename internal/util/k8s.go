@@ -154,13 +154,7 @@ const (
 	K8sKindTagPrefix           = "k8s-kind:"
 	K8sGroupTagPrefix          = "k8s-group:"
 	K8sVersionTagPrefix        = "k8s-version:"
-	K8sNamedRouteRuleTagPrefix = "k8s-named-route-rules:"
-
-	// ValuesInTagSeparator represents separator used for values of tags.
-	// Validation for tags in Kong Gateway enforces:
-	// "expected printable ascii (except `,` and `/`) or valid utf-8 sequences"
-	// thus ; is a sensible choice for a separator.
-	ValuesInTagSeparator = ";"
+	K8sNamedRouteRuleTagPrefix = "k8s-named-route-rule:"
 )
 
 type KongTag struct {
@@ -172,19 +166,18 @@ func (kt KongTag) String() string {
 	return kt.Prefix + kt.Value
 }
 
-func AdditionalTagNamedRouteRules(optionalNamedRouteRules ...string) []KongTag {
+// AdditionalTagsK8sNamedRouteRule returns a slice of KongTag with the given named route rules.
+// It filters out empty strings.
+func AdditionalTagsK8sNamedRouteRule(optionalNamedRouteRules ...string) []KongTag {
 	optionalNamedRouteRules = lo.Filter(optionalNamedRouteRules, func(s string, _ int) bool {
 		return strings.TrimSpace(s) != ""
 	})
-	if len(optionalNamedRouteRules) == 0 {
-		return nil
-	}
-	return []KongTag{
-		{
+	return lo.Map(optionalNamedRouteRules, func(s string, _ int) KongTag {
+		return KongTag{
 			Prefix: K8sNamedRouteRuleTagPrefix,
-			Value:  strings.Join(optionalNamedRouteRules, ValuesInTagSeparator),
-		},
-	}
+			Value:  s,
+		}
+	})
 }
 
 // GenerateTagsForObject returns a subset of an object's metadata as a slice of prefixed string pointers.

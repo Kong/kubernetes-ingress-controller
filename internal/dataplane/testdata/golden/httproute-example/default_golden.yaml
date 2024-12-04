@@ -1,6 +1,76 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
+  host: httproute.default.httproute-testing.3
+  id: efb4a7d7-791f-504e-b005-0bd38bf1435e
+  name: httproute.default.httproute-testing.3
+  port: 8080
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 80ab997f-3534-58af-a969-300888c6058a
+    name: httproute.default.httproute-testing.3.0
+    path_handling: v0
+    paths:
+    - ~/nginx$
+    - /nginx/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:nginx
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httproute.default.httproute-testing.1
+  id: 672dc964-a7f8-5a80-a518-96fc39500cc8
+  name: httproute.default.httproute-testing.1
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 4deff45c-4095-55d2-80ab-aea40c0ac7bd
+    name: httproute.default.httproute-testing.1.0
+    path_handling: v0
+    paths:
+    - ~/echo$
+    - /echo/
+    - ~/content$
+    - /content/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:echo
+    - k8s-named-route-rule:content
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
   host: httproute.default.httproute-testing.0
   id: 4e3cb785-a8d0-5866-aa05-117f7c64f24d
   name: httproute.default.httproute-testing.0
@@ -27,6 +97,7 @@ services:
     - k8s-kind:HTTPRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1
+    - k8s-named-route-rule:httproute-testing
   tags:
   - k8s-name:httproute-testing
   - k8s-namespace:default
@@ -35,6 +106,20 @@ services:
   - k8s-version:v1
   write_timeout: 60000
 upstreams:
+- algorithm: round-robin
+  name: httproute.default.httproute-testing.3
+  tags:
+  - k8s-name:nginx
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  name: httproute.default.httproute-testing.1
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
 - algorithm: round-robin
   name: httproute.default.httproute-testing.0
   tags:

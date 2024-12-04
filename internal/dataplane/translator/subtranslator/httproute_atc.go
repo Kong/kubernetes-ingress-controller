@@ -257,11 +257,15 @@ func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]
 }
 
 type SplitHTTPRouteMatch struct {
-	Source     *gatewayapi.HTTPRoute
-	Hostname   string
-	Match      gatewayapi.HTTPRouteMatch
-	RuleIndex  int
-	MatchIndex int
+	Source   *gatewayapi.HTTPRoute
+	Hostname string
+	Match    gatewayapi.HTTPRouteMatch
+	// OptionalNamedRouteRule represents RouteName - an optional name
+	// of the particular route that can be defined in the K8s HTTPRoute,
+	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
+	OptionalNamedRouteRule string
+	RuleIndex              int
+	MatchIndex             int
 }
 
 // SplitHTTPRoute splits HTTPRoutes into matches with at most one hostname, and one rule
@@ -271,22 +275,25 @@ func SplitHTTPRoute(httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
 	splitHTTPRouteByMatch := func(hostname string) []SplitHTTPRouteMatch {
 		ret := []SplitHTTPRouteMatch{}
 		for ruleIndex, rule := range httproute.Spec.Rules {
+			optionalNamedRouteRule := string(lo.FromPtr(rule.Name))
 			if len(rule.Matches) == 0 {
 				ret = append(ret, SplitHTTPRouteMatch{
-					Source:     httproute,
-					Hostname:   hostname,
-					Match:      gatewayapi.HTTPRouteMatch{},
-					RuleIndex:  ruleIndex,
-					MatchIndex: 0,
+					Source:                 httproute,
+					Hostname:               hostname,
+					Match:                  gatewayapi.HTTPRouteMatch{},
+					OptionalNamedRouteRule: optionalNamedRouteRule,
+					RuleIndex:              ruleIndex,
+					MatchIndex:             0,
 				})
 			}
 			for matchIndex, match := range rule.Matches {
 				ret = append(ret, SplitHTTPRouteMatch{
-					Source:     httproute,
-					Hostname:   hostname,
-					Match:      *match.DeepCopy(),
-					RuleIndex:  ruleIndex,
-					MatchIndex: matchIndex,
+					Source:                 httproute,
+					Hostname:               hostname,
+					Match:                  *match.DeepCopy(),
+					OptionalNamedRouteRule: optionalNamedRouteRule,
+					RuleIndex:              ruleIndex,
+					MatchIndex:             matchIndex,
 				})
 			}
 		}
@@ -544,8 +551,9 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 ) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
 	httproute := httpRouteMatchWithPriority.Match.Source
-	tags := util.GenerateTagsForObject(httproute)
-	// since we split HTTPRoutes by hostname, rule and match, we generate the route name in
+	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(match.OptionalNamedRouteRule)...)
+
+	// Since we split HTTPRoutes by hostname, rule and match, we generate the route name in
 	// httproute.<namespace>.<name>.<hostname>.<rule index>.<match index> format.
 	hostnameInRouteName := "_"
 	if len(match.Hostname) > 0 {

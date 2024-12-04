@@ -203,6 +203,11 @@ Adding a new version? You'll need three changes:
   where `<hash>` is the hash result of the calculated name, like
   `httproute.default.svc.default.a-long-long-long-service-name.80_combined.00001111222233334444aaaabbbbcccc`.
   [#6711](https://github.com/Kong/kubernetes-ingress-controller/pull/6711)
+- The new tag `k8s-named-route-rule` is added to a Kong Route, in the case when mapped `HTTPRoute` has
+  routes named (filled `spec.rules[*].name` field) that names will be propagated to one or many instances
+  of aforementioned tag.
+  [#6759](https://github.com/Kong/kubernetes-ingress-controller/pull/6759)
+
 
 ## [3.3.1]
 

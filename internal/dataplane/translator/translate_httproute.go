@@ -230,9 +230,9 @@ func GenerateKongRouteFromTranslation(
 	translation subtranslator.KongRouteTranslation,
 	expressionRoutes bool,
 ) ([]kongstate.Route, error) {
-	// gather the k8s object information and hostnames from the httproute
+	// Gather the k8s object information and hostnames from the HTTPRoute.
 	objectInfo := util.FromK8sObject(httproute)
-	tags := util.GenerateTagsForObject(httproute)
+	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(translation.OptionalNamedRouteRules...)...)
 
 	// translate to expression based routes when expressionRoutes is enabled.
 	if expressionRoutes {

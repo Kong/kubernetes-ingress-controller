@@ -46,8 +46,9 @@ jobs:
       - name: download performance test results
         uses: actions/download-artifact@v4
         with:
-          name: performance-tests-results
+          pattern: performance-tests-results-*
           path: perf-results
+          merge-multiple: true
 
       - name: drawing
         run: |

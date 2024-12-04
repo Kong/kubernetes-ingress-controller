@@ -19,7 +19,8 @@ spec:
   - name: example-tcp-gateway
     namespace: tcp-example
   rules:
-  - backendRefs:
+  - rule: rule-echo
+    backendRefs:
     - name: echo
       port: 1025
 ---

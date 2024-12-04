@@ -26,6 +26,7 @@ services:
     - k8s-kind:TLSRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1alpha2
+    - k8s-named-route-rule:rule-echo
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

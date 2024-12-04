@@ -458,7 +458,7 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 	matchWithPriority SplitGRPCRouteMatchToPriority,
 ) kongstate.Route {
 	grpcRoute := matchWithPriority.Match.Source
-	tags := util.GenerateTagsForObject(grpcRoute)
+	tags := generateTagsForGRPCRoute(grpcRoute)
 	// since we split GRPCRoute by hostname, rule and match, we generate the route name in
 	// grpcroute.<namespace>.<name>.<hostname>.<rule index>.<match index> format.
 	hostname := matchWithPriority.Match.Hostname

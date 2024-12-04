@@ -10,7 +10,8 @@ spec:
   hostnames:
     - tls9443.kong.example
   rules:
-    - backendRefs:
+    - name: rule-echo
+      backendRefs:
       - name: echo
         port: 1025
 ---

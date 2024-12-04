@@ -94,4 +94,3 @@ func (b *HTTPRouteFilterBuilder) WithRequestHeaderRemove(headerNames []string) *
 	b.httpRouteFilter.RequestHeaderModifier.Remove = headerNames
 	return b
 }
-

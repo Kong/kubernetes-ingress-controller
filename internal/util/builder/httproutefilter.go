@@ -95,24 +95,3 @@ func (b *HTTPRouteFilterBuilder) WithRequestHeaderRemove(headerNames []string) *
 	return b
 }
 
-// NewHTTPRouteExtensionRefFilter builds an extension ref HTTPRoute filter.
-func NewHTTPRouteExtensionRefFilter() *HTTPRouteFilterBuilder {
-	filter := gatewayapi.HTTPRouteFilter{
-		Type:         gatewayapi.HTTPRouteFilterExtensionRef,
-		ExtensionRef: &gatewayapi.LocalObjectReference{},
-	}
-	return &HTTPRouteFilterBuilder{httpRouteFilter: filter}
-}
-
-// WithExtensionRef sets the extension reference of the filter.
-func (b *HTTPRouteFilterBuilder) WithExtensionRef(apiGroup, kind, name string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterExtensionRef ||
-		b.httpRouteFilter.ExtensionRef == nil {
-		return b
-	}
-
-	b.httpRouteFilter.ExtensionRef.Group = (gatewayapi.Group)(apiGroup)
-	b.httpRouteFilter.ExtensionRef.Kind = (gatewayapi.Kind)(kind)
-	b.httpRouteFilter.ExtensionRef.Name = (gatewayapi.ObjectName)(name)
-	return b
-}

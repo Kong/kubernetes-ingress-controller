@@ -1607,6 +1607,77 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "HTTPRoute with ExtensionRef plugin",
+			k8sServices: []*corev1.Service{
+				{
+					TypeMeta: serviceTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-1",
+						Namespace: "default",
+					},
+				},
+			},
+			httpRoutes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									{
+										Path: &gatewayapi.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+											Value: lo.ToPtr("/foo"),
+										},
+									},
+								},
+								Filters: []gatewayapi.HTTPRouteFilter{
+									{
+										Type: gatewayapi.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gatewayapi.LocalObjectReference{
+											Name:  "plugin-1",
+											Kind:  "KongPlugin",
+											Group: "configuration.konghq.com",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: map[string]kongstate.Service{
+				"httproute.default.svc.default.service-1.80": {
+					Service: kong.Service{
+						Name: kong.String("httproute.default.svc.default.service-1.80"),
+						Host: kong.String("httproute.default.svc.default.service-1.80"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						mustNewKongstateServiceBackend(
+							kongstate.ServiceBackendTypeKubernetesService,
+							k8stypes.NamespacedName{
+								Name:      "service-1",
+								Namespace: "default",
+							},
+							kongstate.PortDef{
+								Mode:   kongstate.PortModeByNumber,
+								Number: 80,
+							},
+							nil,
+						),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1617,6 +1688,11 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				ReferenceGrants: tc.referenceGrants,
 			})
 			require.NoError(t, err)
+
+			oldHTTPRoutes := make([]*gatewayapi.HTTPRoute, 0, len(tc.httpRoutes))
+			for _, r := range tc.httpRoutes {
+				oldHTTPRoutes = append(oldHTTPRoutes, r.DeepCopy())
+			}
 
 			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true)
 			require.Len(t, translationResult.HTTPRouteNameToTranslationErrors, 0, "Should not get translation errors in translating")
@@ -1639,6 +1715,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					require.Equal(t, s.Backends[i].Weight(), expectedBackend.Weight(), backendCompareMsg, serviceName, i, "weight")
 				}
 			}
+
+			require.Equal(t, oldHTTPRoutes, tc.httpRoutes, "HTTPRoutes should not be modified")
 		})
 	}
 }

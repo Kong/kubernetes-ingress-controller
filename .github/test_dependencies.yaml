@@ -36,7 +36,7 @@ e2e:
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.43.0'
+    kong: '2.44.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.31.2'
   # renovate: datasource=docker depName=kong versioning=docker

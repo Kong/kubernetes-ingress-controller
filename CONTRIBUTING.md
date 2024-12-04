@@ -24,10 +24,7 @@ make without coding:
 - Providing your feedback on the proposed features and designs
 - Reviewing Pull Requests
 
-If you wish to contribute code (features or bug fixes) please keep in mind the following:
-
-- bug fix pull requests should be opened against `main` as the base branch
-- feature pull requests should be opened with `next` as the base branch
+If you wish to contribute code (features or bug fixes) please open pull requests with `main` as the base branch or `release/X.Y.x` if the fix shouldn't be targeted at newer versions.
 
 ## Working with Pull Requests
 
@@ -62,7 +59,7 @@ For a GitHub issue describing a problem/feature request:
 
     1. ensure that all PRs reference the issue they are solving. Keep in mind that the _fixes_/_resolves_ directive only works for PRs merged to the default branch of the repository.
 
-    1. close the issue as soon as all the PRs have been merged to **`main` or `next`**. If it's obvious from PRs that the issue has been resolved, a closing comment on the issue is purely optional.
+    1. close the issue as soon as all the PRs have been merged to **`main`**. If it's obvious from PRs that the issue has been resolved, a closing comment on the issue is purely optional.
 
 - **Other resolutions/rejections**. if resolution happens for any other reason (_resolved without code_, _user's question answered_, _won't fix_, _infeasible_, _not useful_, _alternative approach chosen_, _problem will go away in $FUTURE-VERSION_)
 
@@ -72,8 +69,8 @@ For a closed issue, one can verify which released versions contain the fix/enhan
 Thus:
 
 - if the list includes a release tag: the fix/enhancement is included in that release tag.
-- if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
-- if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
+- if the list includes `release/X.Y.x` but no release tags: the fix/enhancement will come in the nearest patch release.
+- if the list includes `main` : the fix/enhancement will come in the next minor release.
 
 # Enhancements
 

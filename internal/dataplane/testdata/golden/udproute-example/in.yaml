@@ -1,3 +1,14 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-udp-gateway
+  namespace: udp-example
+spec:
+  listeners:
+  - name: udp
+    protocol: UDP
+    port: 9999
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
@@ -5,8 +16,8 @@ metadata:
   namespace: udp-example
 spec:
   parentRefs:
-  - name: kong
-    namespace: default
+  - name: example-udp-gateway
+    namespace: udp-example
   rules:
   - backendRefs:
     - name: tftp

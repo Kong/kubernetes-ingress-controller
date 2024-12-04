@@ -1,28 +1,29 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: udproute.udp-example.tftp.0
-  id: 439fc57a-baff-51a3-9e1f-4e6af6b9dcae
-  name: udproute.udp-example.tftp.0
+  host: tlsroute.tls-namespace.echo-tls.0
+  id: 2a2aad7c-6331-5bcf-bd7c-d9516639f65d
+  name: tlsroute.tls-namespace.echo-tls.0
   plugins:
   - config:
       message: no existing backendRef provided
       status_code: 500
     name: request-termination
-  protocol: udp
+  protocol: tcp
   read_timeout: 60000
   retries: 5
   routes:
-  - https_redirect_status_code: 426
-    id: 2dc0051b-bb8d-5c18-b8b9-77ab64e343da
-    name: udproute.udp-example.tftp.0.0
-    path_handling: v0
+  - expression: tls.sni == "tls9443.kong.example"
+    https_redirect_status_code: 426
+    id: 6e4ceb64-9f9c-5920-bde9-f65031f6f574
+    name: tlsroute.tls-namespace.echo-tls.0.0
+    priority: 1
     protocols:
-    - udp
+    - tls
     tags:
-    - k8s-name:tftp
-    - k8s-namespace:udp-example
-    - k8s-kind:UDPRoute
+    - k8s-name:echo-tls
+    - k8s-namespace:tls-namespace
+    - k8s-kind:TLSRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1alpha2
   tags:
@@ -35,7 +36,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: udproute.udp-example.tftp.0
+  name: tlsroute.tls-namespace.echo-tls.0
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

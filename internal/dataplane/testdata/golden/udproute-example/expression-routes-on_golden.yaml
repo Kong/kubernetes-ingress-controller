@@ -1,0 +1,46 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: udproute.udp-example.tftp.0
+  id: 439fc57a-baff-51a3-9e1f-4e6af6b9dcae
+  name: udproute.udp-example.tftp.0
+  plugins:
+  - config:
+      message: no existing backendRef provided
+      status_code: 500
+    name: request-termination
+  protocol: udp
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: net.dst.port == 9999
+    https_redirect_status_code: 426
+    id: 2dc0051b-bb8d-5c18-b8b9-77ab64e343da
+    name: udproute.udp-example.tftp.0.0
+    priority: 1
+    protocols:
+    - udp
+    tags:
+    - k8s-name:tftp
+    - k8s-namespace:udp-example
+    - k8s-kind:UDPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1alpha2
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: udproute.udp-example.tftp.0
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1

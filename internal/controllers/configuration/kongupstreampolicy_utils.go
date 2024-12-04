@@ -304,6 +304,7 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 			ancestorKind:        upstreamPolicyAncestorKindService,
 			acceptedCondition:   acceptedCondition,
 			programmedCondition: programmedCondition,
+			creationTimestamp:   service.CreationTimestamp,
 		})
 	}
 	for _, serviceFacade := range serviceFacades {
@@ -322,6 +323,7 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 			ancestorKind:        upstreamPolicyAncestorKindKongServiceFacade,
 			acceptedCondition:   acceptedCondition,
 			programmedCondition: programmedCondition,
+			creationTimestamp:   serviceFacade.CreationTimestamp,
 		})
 	}
 
@@ -416,8 +418,19 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 	ancestorsStatus []ancestorStatus,
 ) (gatewayapi.PolicyStatus, error) {
 	// Sort the ancestors by creation timestamp and keep only the oldest ones.
+	// If multiple ancestors have the same creation timestamp, sort by kind, namespace and name.
 	sort.Slice(ancestorsStatus, func(i, j int) bool {
-		return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
+		if !ancestorsStatus[i].creationTimestamp.Equal(&ancestorsStatus[j].creationTimestamp) {
+			return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
+		}
+		// REVIEW: the condition will make KongServiceFacade be prior to Service. Should we customize the comparing of kinds here?
+		if ancestorsStatus[i].ancestorKind != ancestorsStatus[j].ancestorKind {
+			return ancestorsStatus[i].ancestorKind < ancestorsStatus[j].ancestorKind
+		}
+		if ancestorsStatus[i].namespacedName.Namespace != ancestorsStatus[j].namespacedName.Namespace {
+			return ancestorsStatus[i].namespacedName.Namespace < ancestorsStatus[j].namespacedName.Namespace
+		}
+		return ancestorsStatus[i].namespacedName.Name < ancestorsStatus[j].namespacedName.Name
 	})
 	if len(ancestorsStatus) > maxNAncestors {
 		r.Log.Info("status has more ancestors than the Gateway API permits, the newest ones will be ignored",

@@ -161,6 +161,10 @@ Adding a new version? You'll need three changes:
   point to a `Gateway` as they can point to other kinds of resources like
   `Service` when used in service mesh solutions.
   [#6692](https://github.com/Kong/kubernetes-ingress-controller/pull/6692)
+- Set creationTimestamp of ancestor in ancestor status of `KongUpstreamPolicy`
+  to make sure the order of ancestors in the status is deterministic to fix
+  the issue where the status of `KongUpstreamPolicy` is continuously updated.
+  [#6767](https://github.com/Kong/kubernetes-ingress-controller/pull/6767)
 
 ### Added
 

@@ -12,8 +12,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
 )
@@ -45,11 +43,7 @@ func TestExampleUDPRoute(t *testing.T) {
 				cleaner.AddManifest(s)
 
 				t.Logf("verifying that the UDPRoute becomes routable")
-				assert.EventuallyWithT(t, func(c *assert.CollectT) {
-					assert.NoError(
-						c, test.EchoResponds(test.ProtocolUDP, proxyUDPURL, "udproute-example-manifest"),
-					)
-				}, consts.IngressWait, consts.WaitTick)
+				assertEventuallyResponseUDP(t, proxyUDPURL, "udproute-example-manifest")
 
 				return ctx
 			}).

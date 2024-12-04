@@ -16,10 +16,11 @@ const (
 	// In namespace foo.
 	// With IP address 10.244.0.13.
 	// See: http://github.com/kong/go-echo
-	EchoImage    = "kong/go-echo:0.3.0"
-	EchoTCPPort  = 1025
-	EchoUDPPort  = 1026
-	EchoHTTPPort = 1027
+	EchoImage     = "kong/go-echo:0.5.0"
+	EchoTCPPort   = 1025
+	EchoUDPPort   = 1026
+	EchoHTTPPort  = 1027
+	EchoHTTPSPort = 1028
 
 	// GRPCBinImage is the container image name we use for deploying the "grpcbin" GRPC testing tool.
 	// See: https://github.com/Kong/grpcbin
@@ -34,4 +35,9 @@ const (
 
 	// RequestTimeout is the amount of time that will be given to any request to complete.
 	RequestTimeout = 10 * time.Second
+)
+
+const (
+	// konnectDefaultDevServerURL is the default Konnect API server URL used for development.
+	konnectDefaultDevServerURL = "https://us.api.konghq.tech"
 )

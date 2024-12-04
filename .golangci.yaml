@@ -12,13 +12,13 @@ linters:
   - asciicheck
   - bodyclose
   - contextcheck
+  - copyloopvar
   - dogsled
   - durationcheck
   - errcheck
   - errname
   - errorlint
   - exhaustive
-  - exportloopref
   - forbidigo
   - gci
   - gocritic
@@ -47,6 +47,7 @@ linters:
   - unparam
   - unused
   - wastedassign
+  - depguard
 linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
@@ -54,7 +55,14 @@ linters-settings:
     sections:
     - standard
     - default
+    - prefix(github.com/Kong/sdk-konnect-go)
     - prefix(github.com/kong/kubernetes-ingress-controller/v3)
+    - prefix(github.com/kong/kubernetes-configuration)
+  govet:
+    enable-all: true # To have checks like e.g. unusedwrite.
+    disable:
+      - fieldalignment
+      - shadow
   importas:
     no-unaliased: true
     alias:
@@ -83,22 +91,31 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
-    - pkg: github.com/kong/kubernetes-ingress-controller/v[\w\d]+/pkg/apis/configuration/(v[\w\d]+)
+    - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
       alias: kong${1}
-    - pkg: github.com/kong/kubernetes-ingress-controller/v[\w\d]+/pkg/apis/incubator/(v[\w\d]+)
+    - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
       alias: incubator${1}
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
       alias: dpconf
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
       alias: ctrllicense
+
+    - pkg: github.com/Kong/sdk-konnect-go/models/components
+      alias: sdkkonnectcomp
+    - pkg: github.com/Kong/sdk-konnect-go/models/operations
+      alias: sdkkonnectops
+    - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
+      alias: sdkkonnecterrs
+    - pkg: github.com/Kong/sdk-konnect-go/pkg/metadata
+      alias: sdkkonnectmetadata
   forbidigo:
     exclude-godoc-examples: false
     forbid:
-      - 'gatewayv1alpha2|gatewayv1beta1|gatewayv1(# use internal/gatewayapi aliases instead)?'
+      - 'gatewayv1alpha2|gatewayv1alpha3|gatewayv1beta1|gatewayv1(# use internal/gatewayapi aliases instead)?'
       - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
       - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
       - '(gokong|kong)\.NewClient(# use adminapi.NewKongAPIClient instead )?'
-        
+
   gomodguard:
     blocked:
       modules:
@@ -145,6 +162,14 @@ linters-settings:
     zap: false
   prealloc:
     for-loops: true
+  depguard:
+    rules:
+      deprecated-local-apis:
+        deny:
+          - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset
+            desc: github.com/kong/kubernetes-ingress-controller/v3 clientset is deprecated. Use github.com/kong/kubernetes-configuration/pkg/clientset instead.
+          - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/apis
+            desc: github.com/kong/kubernetes-ingress-controller/v3 apis are deprecated. Use github.com/kong/kubernetes-configuration/api instead.
 issues:
   fix: true
   max-same-issues: 0
@@ -171,7 +196,7 @@ issues:
   - path: _test\.go
     linters:
       - gosec
-    text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"
+    text: "Potential hardcoded credentials"
   # Ignore prealloc in tests
   - path: _test\.go
     linters:
@@ -191,15 +216,19 @@ issues:
   # gatewayv1beta1 and gatewayv1 as their values are different between versions, and we can't alias them in internal/gatewayapi/aliases.go.
   - linters:
       - forbidigo
-    text: "use of `(gatewayv1alpha2|gatewayv1beta1|gatewayv1)\\.(SchemeGroupVersion|GroupVersion|GroupName|AddToScheme|Install)"
+    text: "use of `(gatewayv1alpha2|gatewayv1alpha3|gatewayv1beta1|gatewayv1)\\.(SchemeGroupVersion|GroupVersion|GroupName|AddToScheme|Install)"
   # Allow gatewayv1alpha2, gatewayv1beta1 and gatewayv1 types references in internal/gatewayapi/aliases.go as that
   # should be the only place where we use them.
   - linters:
       - forbidigo
-    text: "use of `(gatewayv1alpha2|gatewayv1beta1|gatewayv1)"
+    text: "use of `(gatewayv1alpha2|gatewayv1alpha3|gatewayv1beta1|gatewayv1)"
     path: (internal/gatewayapi/aliases.go|pkg/apis/.*/.*\.go)
-
+  # Allow explicit zero value declarations for integer types
   - linters:
       - revive
     text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
     path: \.go
+  # Ignore G115: integer overflow conversion
+  - linters:
+      - gosec
+    text: "G115: integer overflow conversion"

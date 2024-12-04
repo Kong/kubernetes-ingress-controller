@@ -52,6 +52,10 @@ type FeatureFlags struct {
 
 	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
 	KongCustomEntity bool
+
+	// CombinedServicesFromDifferentHTTPRoutes indicates whether we should combine rules from different HTTPRoutes
+	// that are sharing the same combination of backends to one Kong service.
+	CombinedServicesFromDifferentHTTPRoutes bool
 }
 
 func NewFeatureFlags(
@@ -61,13 +65,14 @@ func NewFeatureFlags(
 	enterpriseEdition bool,
 ) FeatureFlags {
 	return FeatureFlags{
-		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		EnterpriseEdition:                 enterpriseEdition,
-		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
-		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
-		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
-		KongCustomEntity:                  featureGates.Enabled(featuregates.KongCustomEntity),
+		ReportConfiguredKubernetesObjects:       updateStatusFlag,
+		ExpressionRoutes:                        dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		EnterpriseEdition:                       enterpriseEdition,
+		FillIDs:                                 featureGates.Enabled(featuregates.FillIDsFeature),
+		RewriteURIs:                             featureGates.Enabled(featuregates.RewriteURIsFeature),
+		KongServiceFacade:                       featureGates.Enabled(featuregates.KongServiceFacade),
+		KongCustomEntity:                        featureGates.Enabled(featuregates.KongCustomEntity),
+		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(featuregates.CombinedServicesFromDifferentHTTPRoutes),
 	}
 }
 
@@ -88,9 +93,12 @@ type Translator struct {
 
 	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
 	schemaServiceProvider SchemaServiceProvider
+	customEntityTypes     []string
 
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
+
+	clusterDomain string
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -101,6 +109,7 @@ func NewTranslator(
 	workspace string,
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
+	clusterDomain string,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -118,6 +127,7 @@ func NewTranslator(
 		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
+		clusterDomain:              clusterDomain,
 	}, nil
 }
 
@@ -215,6 +225,10 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 				t.registerSuccessfullyTranslatedObject(collection.Entities[i].K8sKongCustomEntity)
 			}
 		}
+		// Update types of translated custom entities in the round of translation
+		// for dumping them from Kong gateway in config fetcher,
+		// because running full build of Kong configuration to get KongState is a heavy operation.
+		t.customEntityTypes = result.CustomEntityTypes()
 	}
 
 	// generate Certificates and SNIs
@@ -264,6 +278,13 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 // InjectLicenseGetter sets a license getter to be used by the translator.
 func (t *Translator) InjectLicenseGetter(licenseGetter license.Getter) {
 	t.licenseGetter = licenseGetter
+}
+
+func (t *Translator) CustomEntityTypes() []string {
+	if t.featureFlags.KongCustomEntity {
+		return t.customEntityTypes
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------

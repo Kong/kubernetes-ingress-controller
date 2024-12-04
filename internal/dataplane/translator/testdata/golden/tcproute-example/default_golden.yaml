@@ -1,0 +1,44 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: tcproute..echo-plaintext.0
+  id: ed5f9dd7-123c-503e-aa23-2ed6dba68fc9
+  name: tcproute..echo-plaintext.0
+  plugins:
+  - config:
+      message: no existing backendRef provided
+      status_code: 500
+    name: request-termination
+  protocol: tcp
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 2b120f42-e8ea-5efd-8436-e8c5e7336862
+    name: tcproute..echo-plaintext.0.0
+    path_handling: v0
+    protocols:
+    - tcp
+    tags:
+    - k8s-name:echo-plaintext
+    - k8s-kind:TCPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1alpha2
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: tcproute..echo-plaintext.0
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1

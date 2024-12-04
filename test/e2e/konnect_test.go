@@ -7,12 +7,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"os/exec"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -299,14 +299,14 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	nodeAPIClient := createKonnectNodeClient(t, rg, cert, key)
 
 	getNodeIDFromAdminAPI := func(proxyPod corev1.Pod) string {
-		client := &http.Client{
-			Timeout: time.Second * 30,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
+		client := cleanhttp.DefaultClient()
+		tr := cleanhttp.DefaultTransport()
+		// Anything related to TLS can be ignored, because only availability is being tested here.
+		// Testing communicating over TLS is done as part of actual E2E test.
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, //nolint:gosec
 		}
+		client.Transport = tr
 
 		forwardCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -324,7 +324,6 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	t.Logf("ensuring all %d proxy replicas have consistent IDs assigned in Node API", len(pods))
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

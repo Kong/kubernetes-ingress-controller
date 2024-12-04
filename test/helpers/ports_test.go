@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,10 +47,11 @@ func TestGetFreePort(t *testing.T) {
 					}
 					s := httptest.Server{
 						Listener: l,
-						Config: &http.Server{ //nolint:gosec
+						Config: &http.Server{
 							Addr: fmt.Sprintf("localhost:%d", p),
 							Handler: http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 							}),
+							ReadHeaderTimeout: 10 * time.Second,
 						},
 					}
 					s.Start()

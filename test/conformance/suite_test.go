@@ -172,7 +172,6 @@ func ensureConformanceTestsNamespacesAreNotPresent(ctx context.Context, client *
 	g.SetLimit(3) //nolint:gomnd
 
 	for _, namespace := range []string{"gateway-conformance-infra", "gateway-conformance-web-backend", "gateway-conformance-app-backend"} {
-		namespace := namespace
 		g.Go(func() error {
 			return ensureNamespaceDeleted(ctx, namespace, client)
 		})

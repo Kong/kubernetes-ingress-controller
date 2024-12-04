@@ -4,6 +4,7 @@ package isolated
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"testing"
@@ -21,10 +22,11 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
@@ -35,6 +37,12 @@ import (
 
 func TestIngressGRPC(t *testing.T) {
 	const testHostname = "grpcs-over-ingress.example"
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName(testHostname),
+		certificate.WithDNSNames(testHostname),
+	)
+	certPool := x509.NewCertPool()
+	assert.True(t, certPool.AppendCertsFromPEM(tlsRouteExampleTLSCert))
 
 	f := features.
 		New("essentials").
@@ -50,8 +58,7 @@ func TestIngressGRPC(t *testing.T) {
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
 
-			t.Log("configuring secret")
-			tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(testHostname))
+			t.Log("configuring certificate secret")
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "secret-test",
@@ -149,6 +156,12 @@ func TestIngressGRPC(t *testing.T) {
 				},
 			).Build()
 			ingress.Annotations[annotations.AnnotationPrefix+annotations.ProtocolsKey] = fmt.Sprintf("%s,%s", gRPC, gRPCS)
+			ingress.Spec.TLS = []netv1.IngressTLS{
+				{
+					Hosts:      []string{testHostname},
+					SecretName: secret.Name,
+				},
+			}
 			assert.NoError(t, clusters.DeployIngress(ctx, cluster, namespace, ingress))
 			cleaner.Add(ingress)
 			ctx = SetInCtxForT(ctx, t, ingress)
@@ -170,17 +183,18 @@ func TestIngressGRPC(t *testing.T) {
 			}, consts.StatusWait, consts.WaitTick)
 
 			verifyEchoResponds := func(hostname string) {
+				t.Helper()
 				// Kong Gateway uses different ports for HTTP and HTTPS traffic,
 				// but in typical setup both ports are exposed on the same IP address.
 				proxyPort := ktfkong.DefaultProxyTLSServicePort
-				tlsEnabled := true
+				certPoolToUse := certPool
 				if hostname == "" {
 					proxyPort = ktfkong.DefaultProxyHTTPPort
-					tlsEnabled = false
+					certPoolToUse = nil
 				}
 				assert.EventuallyWithT(t, func(c *assert.CollectT) {
 					err := grpcEchoResponds(
-						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", tlsEnabled,
+						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", certPoolToUse,
 					)
 					assert.NoError(c, err)
 				}, consts.IngressWait, consts.WaitTick)
@@ -354,6 +368,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 					proxyURL,
 					proxyURL.Host,
 					path,
+					nil,
 					http.StatusOK,
 					expectedMagicNumber,
 					nil,

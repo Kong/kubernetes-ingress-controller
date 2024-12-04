@@ -5,7 +5,7 @@ on:
 
 jobs:
   unit-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
@@ -35,7 +35,7 @@ jobs:
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tests-report-unit
           path: unit-tests.xml

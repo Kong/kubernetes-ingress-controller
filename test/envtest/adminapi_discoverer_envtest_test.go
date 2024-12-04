@@ -43,7 +43,6 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(fmt.Sprintf("%dx%d", tc.subnetC, tc.subnetD), func(t *testing.T) {
 			t.Parallel()
 
@@ -96,7 +95,7 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 	}
 }
 
-func testPodReference(name, ns string) *corev1.ObjectReference { //nolint:unparam
+func testPodReference(name, ns string) *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		Kind:      "Pod",
 		Namespace: ns,

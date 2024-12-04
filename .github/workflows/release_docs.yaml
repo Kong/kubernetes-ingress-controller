@@ -50,7 +50,7 @@ jobs:
           fi
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5
         with:
           workdir: docs.konghq.com
           gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}
@@ -59,7 +59,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create a PR in docs repo
-        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

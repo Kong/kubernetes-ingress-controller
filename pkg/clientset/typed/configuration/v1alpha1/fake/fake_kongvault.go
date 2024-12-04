@@ -40,20 +40,22 @@ var kongvaultsKind = v1alpha1.SchemeGroupVersion.WithKind("KongVault")
 
 // Get takes name of the kongVault, and returns the corresponding kongVault object, and an error if there is any.
 func (c *FakeKongVaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KongVault, err error) {
+	emptyResult := &v1alpha1.KongVault{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(kongvaultsResource, name), &v1alpha1.KongVault{})
+		Invokes(testing.NewRootGetActionWithOptions(kongvaultsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongVault), err
 }
 
 // List takes label and field selectors, and returns the list of KongVaults that match those selectors.
 func (c *FakeKongVaults) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.KongVaultList, err error) {
+	emptyResult := &v1alpha1.KongVaultList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(kongvaultsResource, kongvaultsKind, opts), &v1alpha1.KongVaultList{})
+		Invokes(testing.NewRootListActionWithOptions(kongvaultsResource, kongvaultsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -72,36 +74,39 @@ func (c *FakeKongVaults) List(ctx context.Context, opts v1.ListOptions) (result 
 // Watch returns a watch.Interface that watches the requested kongVaults.
 func (c *FakeKongVaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(kongvaultsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(kongvaultsResource, opts))
 }
 
 // Create takes the representation of a kongVault and creates it.  Returns the server's representation of the kongVault, and an error, if there is any.
 func (c *FakeKongVaults) Create(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.CreateOptions) (result *v1alpha1.KongVault, err error) {
+	emptyResult := &v1alpha1.KongVault{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(kongvaultsResource, kongVault), &v1alpha1.KongVault{})
+		Invokes(testing.NewRootCreateActionWithOptions(kongvaultsResource, kongVault, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongVault), err
 }
 
 // Update takes the representation of a kongVault and updates it. Returns the server's representation of the kongVault, and an error, if there is any.
 func (c *FakeKongVaults) Update(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (result *v1alpha1.KongVault, err error) {
+	emptyResult := &v1alpha1.KongVault{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(kongvaultsResource, kongVault), &v1alpha1.KongVault{})
+		Invokes(testing.NewRootUpdateActionWithOptions(kongvaultsResource, kongVault, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongVault), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKongVaults) UpdateStatus(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (*v1alpha1.KongVault, error) {
+func (c *FakeKongVaults) UpdateStatus(ctx context.Context, kongVault *v1alpha1.KongVault, opts v1.UpdateOptions) (result *v1alpha1.KongVault, err error) {
+	emptyResult := &v1alpha1.KongVault{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(kongvaultsResource, "status", kongVault), &v1alpha1.KongVault{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(kongvaultsResource, "status", kongVault, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongVault), err
 }
@@ -115,7 +120,7 @@ func (c *FakeKongVaults) Delete(ctx context.Context, name string, opts v1.Delete
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(kongvaultsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(kongvaultsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.KongVaultList{})
 	return err
@@ -123,10 +128,11 @@ func (c *FakeKongVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 
 // Patch applies the patch and returns the patched kongVault.
 func (c *FakeKongVaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongVault, err error) {
+	emptyResult := &v1alpha1.KongVault{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(kongvaultsResource, name, pt, data, subresources...), &v1alpha1.KongVault{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(kongvaultsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongVault), err
 }

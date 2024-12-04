@@ -152,7 +152,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("adding a test certificate")
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
 	certName := "cert"
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -427,9 +427,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("waiting for routes from HTTPRoute in other namespace to become operational")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
 	require.Eventually(t, func() bool {
@@ -452,9 +452,9 @@ func TestGatewayFilters(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("confirming other namespace route becomes inaccessible")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming same namespace route still operational")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
 	require.Eventually(t, func() bool {
@@ -483,7 +483,7 @@ func TestGatewayFilters(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming right selector namespace route becomes operational")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 }

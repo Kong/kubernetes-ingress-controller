@@ -9,6 +9,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -57,15 +58,15 @@ func backendRefsToKongStateBackends(
 		}
 		if err != nil {
 			if errors.As(err, &store.NotFoundError{}) {
-				logger.Error(err, "Object requested backendRef to target, but it does not exist, skipping...")
+				logger.V(logging.DebugLevel).Info("Object requested backendRef to target, but it does not exist, skipping...")
 			} else {
-				logger.Error(err, "Object requested backendRef to target, but an error occurred, skipping...")
+				logger.Error(err, "Object requested backendRef to target, but an unexpected error occurred, skipping...")
 			}
 			continue
 		}
 
 		if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) ||
-			!gatewayapi.NewRefCheckerForRoute(route, backendRef).IsRefAllowedByGrant(allowed) {
+			!gatewayapi.NewRefCheckerForRoute(logger, route, backendRef).IsRefAllowedByGrant(allowed) {
 			// we log impermissible refs rather than failing the entire rule. while we cannot actually route to
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and

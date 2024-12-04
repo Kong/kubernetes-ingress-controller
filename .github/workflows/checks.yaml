@@ -20,44 +20,44 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  check-permission:
+    uses: ./.github/workflows/_permission_check.yaml
+    secrets: inherit
+
+  # NOTE: this job checks if we're up to date with base branch. This is useful
+  # because merging a PR which branch was up to date with the base branch does
+  # not require running tests again as the commit is the same.
   up-to-date:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
+    needs: check-permission
     outputs:
       status: ${{ steps.up-to-date.outputs.status }}
+    # NOTE: we only want to check if the head is up to date with the base branch
+    # when pushing to main or a release branch. In PRs we don't want to do that
+    # as there's no point in doing so.
+    # The pattern matching that's used here is almost the same as in the branch
+    # pattern matching above but due to limited functionality in the 'if' syntax
+    # we have to use the 'startsWith' function. This is 'good enough'.
+    # Setting the condition below on the job level would not work as it would
+    # cause the subsequent jobs to not run.
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        if: github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
         with:
           fetch-depth: 0
       - name: Check if PR is up to date, if it is skip workflows for this ref
         id: 'up-to-date'
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.3.0
+        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.8.0
+        if: github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  # This job is used to check if the secrets are available. If they are not, we'll skip jobs that require them.
-  should-run-with-secrets:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
-    runs-on: ubuntu-latest
-    needs:
-    - up-to-date
-    if: needs.up-to-date.outputs.status != 'true'
-    outputs:
-      result: ${{ steps.check.outputs.result }}
-    steps:
-      - name: Check if secrets are available
-        id: check
-        run: |
-          if [ "${{ secrets.PULP_PASSWORD }}" == "" ]; then
-            echo "result=false" >> $GITHUB_OUTPUT
-          else
-            echo "result=true" >> $GITHUB_OUTPUT
-          fi
-
   tools:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     needs:
     - up-to-date
@@ -68,7 +68,7 @@ jobs:
       - name: setup golang
         uses: actions/setup-go@v5
         with:
-          go-version-file: third_party/go.mod
+          go-version-file: go.mod
       - uses: jdx/mise-action@v2
         with:
           install: false
@@ -97,16 +97,15 @@ jobs:
 
   kongintegration-tests:
     needs:
-      - up-to-date
+    - up-to-date
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_kongintegration_tests.yaml
     secrets: inherit
 
   integration-tests:
     needs:
-    - should-run-with-secrets
     - up-to-date
-    if: needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status != 'true'
+    if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
     with:
@@ -134,7 +133,7 @@ jobs:
   # It allows to use this particular job as a required check for PRs.
   # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
   passed:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     needs:
       - up-to-date
@@ -155,13 +154,12 @@ jobs:
 
   test-reports:
     needs:
-      - should-run-with-secrets
       - unit-tests
       - envtest-tests
       - kongintegration-tests
       - integration-tests
       - conformance-tests
       - up-to-date
-    if: always() && needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status != 'true'
+    if: always() && needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit

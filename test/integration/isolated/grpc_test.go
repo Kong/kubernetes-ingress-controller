@@ -5,6 +5,7 @@ package isolated
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"testing"
 
@@ -36,7 +37,6 @@ import (
 
 func TestGRPCRouteEssentials(t *testing.T) {
 	const testHostname = "cholpon.example"
-
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
@@ -152,14 +152,14 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 			t.Log("waiting for routes from GRPCRoute to become operational")
 			assert.Eventually(t, func() bool {
-				err := grpcEchoResponds(ctx, grpcAddr, testHostname, "kong", false)
+				err := grpcEchoResponds(ctx, grpcAddr, testHostname, "kong", nil)
 				if err != nil {
 					t.Log(err)
 				}
 				return err == nil
 			}, consts.IngressWait, consts.WaitTick)
 
-			client, closeGrpcConn, err := grpcBinClient(grpcAddr, testHostname, false)
+			client, closeGrpcConn, err := grpcBinClient(grpcAddr, testHostname, nil)
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				err := closeGrpcConn()
@@ -199,8 +199,8 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	tenv.Test(t, f.Feature())
 }
 
-func grpcEchoResponds(ctx context.Context, url, hostname, input string, enableTLS bool) error {
-	client, closeConn, err := grpcBinClient(url, hostname, enableTLS)
+func grpcEchoResponds(ctx context.Context, url, hostname, input string, certPool *x509.CertPool) error {
+	client, closeConn, err := grpcBinClient(url, hostname, certPool)
 	if err != nil {
 		return err
 	}
@@ -219,17 +219,19 @@ func grpcEchoResponds(ctx context.Context, url, hostname, input string, enableTL
 	return nil
 }
 
-func grpcBinClient(url, hostname string, enableTLS bool) (pb.GRPCBinClient, func() error, error) {
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithAuthority(hostname)}
-	if enableTLS {
-		opts = []grpc.DialOption{grpc.WithTransportCredentials(credentials.NewTLS(
+func grpcBinClient(url, hostname string, certPool *x509.CertPool) (pb.GRPCBinClient, func() error, error) {
+	clientOpts := []grpc.DialOption{grpc.WithAuthority(hostname)}
+	if certPool == nil {
+		clientOpts = append(clientOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	} else {
+		clientOpts = append(clientOpts, grpc.WithTransportCredentials(credentials.NewTLS(
 			&tls.Config{
-				ServerName:         hostname,
-				InsecureSkipVerify: true,
-			},
-		))}
+				MinVersion: tls.VersionTLS12,
+				RootCAs:    certPool,
+			})),
+		)
 	}
-	conn, err := grpc.NewClient(url, opts...)
+	conn, err := grpc.NewClient(url, clientOpts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to dial GRPC server: %w", err)
 	}

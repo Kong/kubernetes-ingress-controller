@@ -109,7 +109,6 @@ func ToDeckContent(
 	})
 
 	for _, u := range k8sState.Upstreams {
-		u := u
 		fillUpstream(&u.Upstream)
 		upstream := file.FUpstream{Upstream: u.Upstream}
 		for _, t := range u.Targets {
@@ -153,16 +152,16 @@ func ToDeckContent(
 	for _, c := range k8sState.Consumers {
 		consumer := file.FConsumer{Consumer: c.Consumer}
 
-		// if a consumer with no username is provided deck wont be able to process it, but we shouldn't
-		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
-		// stopping all updates to the Kong Admin API.
-		if consumer.Username == nil {
-			logger.Error(nil, "Invalid consumer received (username was empty)")
+		// If a consumer with no username and no custom_id is provided deck wont be able to process it,
+		// but we shouldn't fail the rest of the deckgen either or this will result in one bad consumer
+		// being capable of stopping all updates to the Kong Admin API.
+		// This shouldn't happen as we enforce either of those field being present in CRD CEL validation rules.
+		if consumer.Username == nil && consumer.CustomID == nil {
+			logger.Error(nil, "Invalid consumer received (username and custom_id were empty)")
 			continue
 		}
 
 		for _, cg := range c.ConsumerGroups {
-			cg := cg
 			consumer.Groups = append(consumer.Groups, &cg)
 		}
 
@@ -171,38 +170,29 @@ func ToDeckContent(
 		}
 
 		for _, v := range c.KeyAuths {
-			v := v
 			consumer.KeyAuths = append(consumer.KeyAuths, &v.KeyAuth)
 		}
 		for _, v := range c.HMACAuths {
-			v := v
 			consumer.HMACAuths = append(consumer.HMACAuths, &v.HMACAuth)
 		}
 		for _, v := range c.BasicAuths {
-			v := v
 			consumer.BasicAuths = append(consumer.BasicAuths, &v.BasicAuth)
 		}
 		for _, v := range c.JWTAuths {
-			v := v
 			consumer.JWTAuths = append(consumer.JWTAuths, &v.JWTAuth)
 		}
 		for _, v := range c.ACLGroups {
-			v := v
 			consumer.ACLGroups = append(consumer.ACLGroups, &v.ACLGroup)
 		}
 		for _, v := range c.Oauth2Creds {
-			v := v
 			consumer.Oauth2Creds = append(consumer.Oauth2Creds, &v.Oauth2Credential)
 		}
 		for _, v := range c.MTLSAuths {
-			v := v
 			consumer.MTLSAuths = append(consumer.MTLSAuths, &v.MTLSAuth)
 		}
 		content.Consumers = append(content.Consumers, consumer)
 	}
-	sort.SliceStable(content.Consumers, func(i, j int) bool {
-		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
-	})
+	sort.Stable(fConsumerByUsernameAndCustomID(content.Consumers))
 
 	// convert vaults.
 	for _, v := range k8sState.Vaults {

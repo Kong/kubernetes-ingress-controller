@@ -103,20 +103,9 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
 	return blder.
 		For(&gatewayapi.TCPRoute{},
-			builder.WithPredicates(predicate.Funcs{
-				GenericFunc: func(_ event.GenericEvent) bool {
-					return false // we don't need to enqueue from generic
-				},
-				CreateFunc: func(e event.CreateEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
-				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
-					return isRouteAttachedToReconciledGateway[*gatewayapi.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-			}),
+			builder.WithPredicates(
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+			),
 		).
 		Complete(r)
 }
@@ -458,7 +447,6 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false
 	for _, gateway := range gateways {
-		gateway := gateway
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayapi.RouteParentStatus{
 			ParentRef: gatewayapi.ParentReference{

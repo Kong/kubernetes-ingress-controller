@@ -22,13 +22,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
@@ -185,7 +186,6 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				for i, invalidHashOn := range generateInvalidHashOns() {
-					invalidHashOn := invalidHashOn
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 							HashOn: &invalidHashOn,
@@ -203,7 +203,6 @@ func TestCRDValidations(t *testing.T) {
 					return hashOn.Cookie != nil
 				})
 				for i, invalidHashOn := range invalidHashOns {
-					invalidHashOn := invalidHashOn
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 							HashOnFallback: &invalidHashOn,
@@ -823,7 +822,6 @@ func TestCRDValidations(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ns := CreateNamespace(ctx, t, ctrlClient)
 			tc.scenario(ctx, t, ns.Name)

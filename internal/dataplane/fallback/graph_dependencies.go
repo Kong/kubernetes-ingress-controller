@@ -8,12 +8,13 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // ResolveDependencies resolves dependencies for a given object. Dependencies are all objects referenced by the
@@ -52,20 +53,19 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		return resolveTCPIngressDependencies(cache, obj), nil
 	case *incubatorv1alpha1.KongServiceFacade:
 		return resolveKongServiceFacadeDependencies(cache, obj), nil
+	case *kongv1alpha1.KongCustomEntity:
+		return resolveKongCustomEntityDependencies(cache, obj), nil
 	// Object types that have no dependencies.
 	case *netv1.IngressClass,
 		*corev1.Secret,
 		*discoveryv1.EndpointSlice,
 		*gatewayapi.ReferenceGrant,
 		*gatewayapi.Gateway,
+		*gatewayapi.BackendTLSPolicy,
 		*kongv1.KongIngress,
 		*kongv1beta1.KongUpstreamPolicy,
 		*kongv1alpha1.IngressClassParameters,
 		*kongv1alpha1.KongVault:
-		return nil, nil
-	case *kongv1alpha1.KongCustomEntity:
-		// TODO: KongCustomEnity is not supported in failure domain yet.
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/6122
 		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type: %T", obj)

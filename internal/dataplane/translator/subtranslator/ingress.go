@@ -3,6 +3,7 @@ package subtranslator
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -14,13 +15,14 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -136,7 +138,6 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 		}
 
 		for _, httpIngressPath := range ingressRule.HTTP.Paths {
-			httpIngressPath := httpIngressPath
 			httpIngressPath.Path = flattenMultipleSlashes(httpIngressPath.Path)
 
 			if httpIngressPath.Path == "" {
@@ -236,7 +237,9 @@ func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 			route := meta.translateIntoKongRoute()
 			kongStateService.Routes = append(kongStateService.Routes, *route)
 		}
-
+		sort.SliceStable(kongStateService.Routes, func(i, j int) bool {
+			return *kongStateService.Routes[i].Name < *kongStateService.Routes[j].Name
+		})
 		kongStateServiceCache[kongServiceName] = kongStateService
 	}
 
@@ -415,11 +418,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{Namespace: m.ingressNamespace, Name: m.ingressName}, ingressHost)
 
 	route := &kongstate.Route{
-		Ingress: util.K8sObjectInfo{
-			Namespace:   m.parentIngress.GetNamespace(),
-			Name:        m.parentIngress.GetName(),
-			Annotations: m.parentIngress.GetAnnotations(),
-		},
+		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
 			Name:              kong.String(routeName),
 			StripPath:         kong.Bool(false),
@@ -634,12 +633,11 @@ func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 
 		rewriteURI, exists := annotations.ExtractRewriteURI(route.Ingress.Annotations)
 		if !exists {
-			return nil
+			continue
 		}
 		if !rewriteURIEnable {
 			return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
 		}
-
 		if rewriteURI == "" {
 			rewriteURI = "/"
 		}
@@ -656,7 +654,6 @@ func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 				},
 			},
 		})
-
 	}
 	return nil
 }

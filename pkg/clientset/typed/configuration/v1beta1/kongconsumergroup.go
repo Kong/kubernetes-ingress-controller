@@ -20,14 +20,13 @@ package v1beta1
 
 import (
 	"context"
-	"time"
 
 	v1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 	scheme "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // KongConsumerGroupsGetter has a method to return a KongConsumerGroupInterface.
@@ -40,6 +39,7 @@ type KongConsumerGroupsGetter interface {
 type KongConsumerGroupInterface interface {
 	Create(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.CreateOptions) (*v1beta1.KongConsumerGroup, error)
 	Update(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (*v1beta1.KongConsumerGroup, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 	UpdateStatus(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (*v1beta1.KongConsumerGroup, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
@@ -52,144 +52,18 @@ type KongConsumerGroupInterface interface {
 
 // kongConsumerGroups implements KongConsumerGroupInterface
 type kongConsumerGroups struct {
-	client rest.Interface
-	ns     string
+	*gentype.ClientWithList[*v1beta1.KongConsumerGroup, *v1beta1.KongConsumerGroupList]
 }
 
 // newKongConsumerGroups returns a KongConsumerGroups
 func newKongConsumerGroups(c *ConfigurationV1beta1Client, namespace string) *kongConsumerGroups {
 	return &kongConsumerGroups{
-		client: c.RESTClient(),
-		ns:     namespace,
+		gentype.NewClientWithList[*v1beta1.KongConsumerGroup, *v1beta1.KongConsumerGroupList](
+			"kongconsumergroups",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			namespace,
+			func() *v1beta1.KongConsumerGroup { return &v1beta1.KongConsumerGroup{} },
+			func() *v1beta1.KongConsumerGroupList { return &v1beta1.KongConsumerGroupList{} }),
 	}
-}
-
-// Get takes name of the kongConsumerGroup, and returns the corresponding kongConsumerGroup object, and an error if there is any.
-func (c *kongConsumerGroups) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.KongConsumerGroup, err error) {
-	result = &v1beta1.KongConsumerGroup{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of KongConsumerGroups that match those selectors.
-func (c *kongConsumerGroups) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.KongConsumerGroupList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1beta1.KongConsumerGroupList{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested kongConsumerGroups.
-func (c *kongConsumerGroups) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a kongConsumerGroup and creates it.  Returns the server's representation of the kongConsumerGroup, and an error, if there is any.
-func (c *kongConsumerGroups) Create(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.CreateOptions) (result *v1beta1.KongConsumerGroup, err error) {
-	result = &v1beta1.KongConsumerGroup{}
-	err = c.client.Post().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(kongConsumerGroup).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a kongConsumerGroup and updates it. Returns the server's representation of the kongConsumerGroup, and an error, if there is any.
-func (c *kongConsumerGroups) Update(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (result *v1beta1.KongConsumerGroup, err error) {
-	result = &v1beta1.KongConsumerGroup{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		Name(kongConsumerGroup.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(kongConsumerGroup).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *kongConsumerGroups) UpdateStatus(ctx context.Context, kongConsumerGroup *v1beta1.KongConsumerGroup, opts v1.UpdateOptions) (result *v1beta1.KongConsumerGroup, err error) {
-	result = &v1beta1.KongConsumerGroup{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		Name(kongConsumerGroup.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(kongConsumerGroup).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the kongConsumerGroup and deletes it. Returns an error if one occurs.
-func (c *kongConsumerGroups) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *kongConsumerGroups) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched kongConsumerGroup.
-func (c *kongConsumerGroups) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.KongConsumerGroup, err error) {
-	result = &v1beta1.KongConsumerGroup{}
-	err = c.client.Patch(pt).
-		Namespace(c.ns).
-		Resource("kongconsumergroups").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

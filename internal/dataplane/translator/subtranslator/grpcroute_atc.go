@@ -160,15 +160,21 @@ func methodMatcherFromGRPCRegexMethodMatch(service *string, method *string) atc.
 }
 
 func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMatch) atc.Matcher {
-	// sort headerMatches by names to generate a stable output.
-	sort.Slice(headerMatches, func(i, j int) bool {
+	// Sort headerMatches by names to generate a stable output.
+	sort.SliceStable(headerMatches, func(i, j int) bool {
 		return string(headerMatches[i].Name) < string(headerMatches[j].Name)
 	})
 
 	matchers := make([]atc.Matcher, 0, len(headerMatches))
 	for _, headerMatch := range headerMatches {
+		// For GRPC and HTTP code is common,
+		// due too limitations of generics in Go converting seems to be the best option.
+		var hmt *gatewayapi.HeaderMatchType
+		if headerMatch.Type != nil {
+			hmt = lo.ToPtr(gatewayapi.HeaderMatchType(*headerMatch.Type))
+		}
 		httpHeaderMatch := gatewayapi.HTTPHeaderMatch{
-			Type:  headerMatch.Type,
+			Type:  hmt,
 			Name:  gatewayapi.HTTPHeaderName(headerMatch.Name),
 			Value: headerMatch.Value,
 		}

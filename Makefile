@@ -24,15 +24,6 @@ endif
 # Configuration - Golang
 # ------------------------------------------------------------------------------
 
-export GO111MODULE=on
-
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
-
 ifeq (Darwin,$(shell uname -s))
 LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
@@ -48,11 +39,6 @@ LDFLAGS_METADATA ?= \
 # ------------------------------------------------------------------------------
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-
-.PHONY: _download_tool
-_download_tool:
-	(cd third_party && go mod tidy && \
-		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 TOOLS_VERSIONS_FILE = .tools_versions.yaml
 
@@ -109,15 +95,14 @@ GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=gotestsum URL=https://github.com/pmalek/mise-gotestsum.git
-	@$(MAKE) mise-install DEP_VER=gotestsum
+	@$(MAKE) mise-plugin-install DEP=gotestsum
+	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
-CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github-com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
-	GOBIN=$(PROJECT_DIR)/bin go install -v \
-		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
+	$(MAKE) mise-install DEP_VER=go:github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
@@ -133,32 +118,31 @@ yq: mise # Download yq locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=yq
 	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
 
-DLV = $(PROJECT_DIR)/bin/dlv
+DELVE_VERSION = $(shell yq -ojson -r '.delve' < $(TOOLS_VERSIONS_FILE))
+DLV = $(PROJECT_DIR)/bin/installs/go-github-com-go-delve-delve-cmd-dlv/$(DELVE_VERSION)/bin/dlv
 .PHONY: dlv
 dlv: ## Download dlv locally if necessary.
-	@$(MAKE) _download_tool TOOL=dlv
+	$(MAKE) mise-install DEP_VER=go:github.com/go-delve/delve/cmd/dlv@$(DELVE_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
 setup-envtest: mise ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
-	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
+	@$(MAKE) mise-plugin-install DEP=setup-envtest
+	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
 STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
-# TODO: Use staticcheck plugin without alias aftrer https://github.com/pbr0ck3r/asdf-staticcheck/pull/6 is merged.
-	@$(MAKE) mise-plugin-install DEP=staticcheck URL=https://github.com/pmalek/asdf-staticcheck.git
+	@$(MAKE) mise-plugin-install DEP=staticcheck
 	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
 GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report
 .PHONY: go-junit-report
 go-junit-report: ## Download go-junit-report locally if necessary.
-# TODO: Go back to using https://github.com/jwillker/asdf-go-junit-report when https://github.com/jwillker/asdf-go-junit-report/pull/4 merges.
-	@$(MAKE) mise-plugin-install DEP=go-junit-report URL=https://github.com/pmalek/asdf-go-junit-report.git
+	@$(MAKE) mise-plugin-install DEP=go-junit-report
 	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
 # ------------------------------------------------------------------------------
@@ -211,17 +195,25 @@ fmt:
 	go fmt ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck 
+lint: verify.tidy golangci-lint staticcheck
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download
 	$(GOLANGCI_LINT) run --verbose --config $(PROJECT_DIR)/.golangci.yaml $(GOLANGCI_LINT_FLAGS)
 
+# Prepare a list of packages to exclude from staticcheck.
+# This is generated code we don't want to lint.
+STATICCHECK_EXCLUDED_PACKAGES += internal/konnect/controlplanes
+# This is deprecated and staticcheck complains about it. We have depguard linter that prevents other packages from importing it.
+STATICCHECK_EXCLUDED_PACKAGES += pkg/clientset
+# This is deprecated and staticcheck complains about it. We have depguard linter that prevents other packages from importing it.
+STATICCHECK_EXCLUDED_PACKAGES += pkg/apis
+
 .PHONY: staticcheck
 staticcheck: staticcheck.download
 	# Workaround for staticcheck not supporting nolint directives, see: https://github.com/dominikh/go-tools/issues/822.
 	go list ./... | \
-		grep -F -e internal/konnect/controlplanes -v | \
+		grep -F $(foreach pkg,$(STATICCHECK_EXCLUDED_PACKAGES),-e $(pkg)) -v | \
 		xargs $(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests -f stylish
 
 .PHONY: verify.tidy
@@ -250,17 +242,10 @@ verify.generators: verify.repo generate verify.diff
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
-CRD_GEN_PATHS ?= ./pkg/apis/configuration/...
-CRD_INCUBATOR_GEN_PATHS ?= ./pkg/apis/incubator/...
 CRD_OPTIONS ?= "+crd:allowDangerousTypes=true"
 
 .PHONY: manifests
-manifests: manifests.crds manifests.rbac manifests.webhook manifests.single
-
-.PHONY: manifests.crds
-manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_INCUBATOR_GEN_PATHS)" output:crd:artifacts:config=config/crd/incubator
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=kong-ingress webhook paths="$(CRD_GEN_PATHS)" output:crd:artifacts:config=config/crd/bases
+manifests: manifests.rbac manifests.webhook manifests.single
 
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
@@ -283,11 +268,10 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-consts generate.docs generate.go fmt
+generate: generate.controllers generate.gateway-api-consts generate.crd-kustomize generate.docs generate.go fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="$(CRD_GEN_PATHS)"
 	go generate $(PROJECT_DIR)/internal/cmd
 # TODO: Previously this didn't have build tags assigned so technically nothing really
 # happened upon go generate invocation for fips binary.
@@ -296,18 +280,6 @@ generate.controllers: controller-gen
 # relies on a relative path to boilerplate.go.txt which breaks if accessed from internal/cmd/fips.
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/2853
 # go generate --tags fips $(PROJECT_DIR)/internal/cmd/fips
-
-# this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
-.PHONY: generate.clientsets
-generate.clientsets: client-gen
-	$(CLIENT_GEN) \
-		--go-header-file ./hack/boilerplate.go.txt \
-		--logtostderr \
-		--clientset-name clientset \
-		--input-base $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/apis/ \
-		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1,incubator/v1alpha1 \
-		--output-dir pkg/ \
-		--output-pkg $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/
 
 .PHONY: generate.docs
 generate.docs: generate.apidocs generate.cli-arguments-docs
@@ -324,6 +296,9 @@ generate.cli-arguments-docs:
 generate.go:
 	go generate ./...
 
+.PHONY: generate.crd-kustomize
+generate.crd-kustomize:
+	./scripts/generate-crd-kustomize.sh
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
@@ -649,7 +624,7 @@ _ensure-namespace:
 	@kubectl create ns $(KONG_NAMESPACE) 2>/dev/null || true
 
 .PHONY: debug
-debug: install _ensure-namespace
+debug: dlv install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
@@ -669,7 +644,7 @@ debug: install _ensure-namespace
 # specific substitution paths can be isolated to this project only and not shared
 # across projects under $HOME or common XDG_CONFIG_HOME.
 .PHONY: debug.connect
-debug.connect:
+debug.connect: dlv
 	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
 
 SKAFFOLD_DEBUG_PROFILE ?= debug_multi_gw
@@ -689,7 +664,7 @@ debug.skaffold:
 # To make it work with Konnect, you must provide following files under ./config/variants/konnect/debug:
 #   * `konnect.env` with CONTROLLER_KONNECT_CONTROL_PLANE_ID env variable set
 #     to the UUID of a Control Plane you have created in Konnect.
-#   * `tls.crt` and `tls.key` with TLS client cerificate and its key (generated by Konnect).
+#   * `tls.crt` and `tls.key` with TLS client certificate and its key (generated by Konnect).
 .PHONY: debug.skaffold.konnect
 debug.skaffold.konnect:
 	SKAFFOLD_DEBUG_PROFILE=debug-konnect \
@@ -777,7 +752,7 @@ generate.gateway-api-consts:
 		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
 		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-consts/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
+		OUTPUT=$(shell pwd)/test/consts/zz_generated.gateway.go \
 		go generate -tags=generate_gateway_api_consts ./test/internal/cmd/generate-gateway-api-consts
 
 .PHONY: go-mod-download-gateway-api

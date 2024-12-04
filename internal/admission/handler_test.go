@@ -18,12 +18,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 var (
@@ -397,7 +398,6 @@ func TestHandleSecret(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			validator := KongFakeValidator{
 				Result:  tc.validatorOK,
@@ -414,7 +414,7 @@ func TestHandleSecret(t *testing.T) {
 				Operation: admissionv1.Update,
 			}
 
-			logger := testr.NewWithOptions(t, testr.Options{Verbosity: util.DebugLevel})
+			logger := testr.NewWithOptions(t, testr.Options{Verbosity: logging.DebugLevel})
 			referenceIndexer := ctrlref.NewCacheIndexers(logger)
 
 			handler := RequestHandler{

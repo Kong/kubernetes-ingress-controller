@@ -13,8 +13,8 @@ import (
 )
 
 func TestMergeCerts(t *testing.T) {
-	crt1, key1 := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName("foo.com"))
-	crt2, key2 := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName("bar.com"))
+	crt1, key1 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("foo.com"))
+	crt2, key2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("bar.com"))
 	testCases := []struct {
 		name         string
 		certs        []certWrapper

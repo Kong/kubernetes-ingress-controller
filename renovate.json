@@ -3,7 +3,8 @@
   "configMigration": true,
   "enabledManagers": [
     "custom.regex",
-    "kustomize"
+    "kustomize",
+    "gomod"
   ],
   "automerge": false,
   "separateMinorPatch": true,
@@ -14,6 +15,9 @@
   "registryAliases": {
     "kong": "https://charts.konghq.com"
   },
+  "ignorePaths": [
+    "config/crd"
+  ],
   "customManagers": [
     {
       "description": "Match dependencies in .github/test_dependencies.yaml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [registryUrl={}] versioning={}.`",
@@ -59,10 +63,10 @@
       "matchUpdateTypes": [
         "minor"
       ],
-      "matchDepPatterns": [
-        ".*@only-patch"
-      ],
-      "enabled": false
+      "enabled": false,
+      "matchDepNames": [
+        "/.*@only-patch/"
+      ]
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files to trigger regenerate_on_deps_bump.yaml workflow.",
@@ -75,11 +79,37 @@
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files containing images to trigger regenerate_on_deps_bump.yaml workflow.",
-      "matchDepPatterns": [
-        ".*@regenerate"
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ],
+      "matchDepNames": [
+        "/.*@regenerate/"
+      ]
+    },
+    {
+      "description": "Add 'renovate/auto-regenerate' label to a PR if it changes go.mod files to trigger regenerate_on_deps_bump.yaml workflow.",
+      "matchManagers": [
+        "gomod"
       ],
       "addLabels": [
         "renovate/auto-regenerate"
+      ]
+    },
+    {
+      "description": "Ignore all go.mod dependencies as majority of them is handled by dependabot.",
+      "matchManagers": [
+        "gomod"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Enable go.mod dependencies that are not handled by dependabot.",
+      "matchManagers": [
+          "gomod"
+      ],
+      "enabled": true,
+      "matchPackageNames": [
+        "github.com/kong/kubernetes-configuration"
       ]
     }
   ]

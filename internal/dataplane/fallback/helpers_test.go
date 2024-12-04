@@ -12,10 +12,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
@@ -66,13 +67,17 @@ func testKongServiceFacade(t *testing.T, name string) *incubatorv1alpha1.KongSer
 	})
 }
 
-func testKongPlugin(t *testing.T, name string) *kongv1.KongPlugin {
-	return helpers.WithTypeMeta(t, &kongv1.KongPlugin{
+func testKongPlugin(t *testing.T, name string, modifiers ...func(p *kongv1.KongPlugin)) *kongv1.KongPlugin {
+	p := helpers.WithTypeMeta(t, &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: testNamespace,
 		},
 	})
+	for _, mod := range modifiers {
+		mod(p)
+	}
+	return p
 }
 
 func testKongClusterPlugin(t *testing.T, name string) *kongv1.KongClusterPlugin {

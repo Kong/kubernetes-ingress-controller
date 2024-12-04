@@ -26,7 +26,9 @@
 {{ end -}}
 
 {{ range $type.Members -}}
+{{- if not (index .Markers "apireference:kic:exclude") -}}
 | `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+{{ end -}}
 {{ end -}}
 
 {{ end }}

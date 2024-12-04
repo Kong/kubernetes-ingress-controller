@@ -18,14 +18,14 @@ package annotations
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 type ClassMatching int
@@ -67,6 +67,9 @@ const (
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
 	RewriteURIKey        = "/rewrite"
+	TLSVerifyKey         = "/tls-verify"
+	TLSVerifyDepthKey    = "/tls-verify-depth"
+	CACertificatesKey    = "/ca-certificates"
 
 	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -134,56 +137,6 @@ func IngressClassValidatorFuncFromV1Ingress(
 	}
 }
 
-func pluginsFromAnnotations(anns map[string]string) string {
-	return anns[AnnotationPrefix+PluginsKey]
-}
-
-// ExtractKongPluginsFromAnnotations extracts information about Kong
-// Plugins configured using konghq.com/plugins annotation.
-// This returns a list of KongPlugin resource names that should be applied.
-func ExtractKongPluginsFromAnnotations(anns map[string]string) []string {
-	var kongPluginCRs []string
-	v := pluginsFromAnnotations(anns)
-	if v == "" {
-		return kongPluginCRs
-	}
-	for _, kongPlugin := range strings.Split(v, ",") {
-		s := strings.TrimSpace(kongPlugin)
-		if s != "" {
-			kongPluginCRs = append(kongPluginCRs, s)
-		}
-	}
-	return kongPluginCRs
-}
-
-type NamespacedKongPlugin k8stypes.NamespacedName
-
-// ExtractNamespacedKongPluginsFromAnnotations extracts a KongPlugin name and optional namespace from an annotation
-// value. Plugins are delimited by ",". Values are either colon-delimited "namespace:name" strings or name-only
-// strings.
-func ExtractNamespacedKongPluginsFromAnnotations(anns map[string]string) []NamespacedKongPlugin {
-	v := pluginsFromAnnotations(anns)
-	if v == "" {
-		return nil
-	}
-	split := strings.Split(v, ",")
-	plugins := make([]NamespacedKongPlugin, 0, len(split))
-	for _, s := range split {
-		if s != "" {
-			plugin := NamespacedKongPlugin{}
-			if strings.Contains(s, ":") {
-				split := strings.Split(s, ":")
-				plugin.Namespace = strings.TrimSpace(split[0])
-				plugin.Name = strings.TrimSpace(split[1])
-			} else {
-				plugin.Name = strings.TrimSpace(s)
-			}
-			plugins = append(plugins, plugin)
-		}
-	}
-	return plugins
-}
-
 // ExtractConfigurationName extracts the name of the KongIngress object that holds
 // information about the configuration to use in Routes, Services and Upstreams.
 func ExtractConfigurationName(anns map[string]string) string {
@@ -198,10 +151,7 @@ func ExtractProtocolName(anns map[string]string) string {
 // ExtractProtocolNames extracts the protocols supplied in the annotation.
 func ExtractProtocolNames(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+ProtocolsKey]
-	if len(val) == 0 {
-		return nil
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val)
 }
 
 // ExtractClientCertificate extracts the secret name containing the
@@ -262,19 +212,13 @@ func ExtractHostHeader(anns map[string]string) string {
 // ExtractMethods extracts the methods annotation value.
 func ExtractMethods(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+MethodsKey]
-	if val == "" {
-		return nil
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val, strings.ToUpper)
 }
 
 // ExtractSNIs extracts the route SNI match criteria annotation value.
 func ExtractSNIs(anns map[string]string) ([]string, bool) {
 	val, exists := anns[AnnotationPrefix+SNIsKey]
-	if val == "" {
-		return nil, exists
-	}
-	return strings.Split(val, ","), exists
+	return extractCommaDelimitedStrings(val), exists
 }
 
 // ExtractRequestBuffering extracts the boolean annotation indicating
@@ -300,7 +244,7 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 	if val == "" {
 		return nil, false
 	}
-	return strings.Split(val, ","), true
+	return extractCommaDelimitedStrings(val), true
 }
 
 // ExtractConnectTimeout extracts the connection timeout annotation value.
@@ -392,11 +336,8 @@ func ExtractGatewayPublishService(anns map[string]string) []string {
 	if anns == nil {
 		return []string{}
 	}
-	publish, ok := anns[AnnotationPrefix+GatewayPublishServiceKey]
-	if !ok {
-		return []string{}
-	}
-	return strings.Split(publish, ",")
+	publish := anns[AnnotationPrefix+GatewayPublishServiceKey]
+	return extractCommaDelimitedStrings(publish)
 }
 
 // UpdateGatewayPublishService updates the value of the annotation konghq.com/gatewayclass-unmanaged.
@@ -407,12 +348,7 @@ func UpdateGatewayPublishService(anns map[string]string, services []string) {
 // ExtractUserTags extracts a set of tags from a comma-separated string.
 func ExtractUserTags(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+UserTagKey]
-	// If the annotation is not present, the map provides an empty value, and splitting that will create a slice
-	// containing a single empty string tag. These aren't valid, hence this special case.
-	if len(val) == 0 {
-		return []string{}
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val)
 }
 
 // ExtractRewriteURI extracts the rewrite annotation value.
@@ -425,4 +361,82 @@ func ExtractRewriteURI(anns map[string]string) (string, bool) {
 func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
 	s, ok := anns[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return s, ok
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+func ExtractTLSVerify(anns map[string]string) (value bool, ok bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyKey]
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return false, false
+	}
+	verify, err := strconv.ParseBool(s)
+	if err != nil {
+		// If the annotation is present but not a valid boolean string, we consider it not set.
+		return false, false
+	}
+	// If the annotation is present and a valid boolean string, we return the value.
+	return verify, true
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+func ExtractTLSVerifyDepth(anns map[string]string) (int, bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyDepthKey]
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return 0, false
+	}
+	depth, err := strconv.Atoi(s)
+	if err != nil {
+		// If the annotation is present but not a valid integer string, we consider it not set.
+		return 0, false
+	}
+	// If the annotation is present and a valid integer string, we return the value.
+	return depth, true
+}
+
+// ExtractCACertificates extracts the ca-certificates secret names from the annotation.
+// It expects a comma-separated list of certificate names.
+func ExtractCACertificates(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesKey]
+	if !ok {
+		return nil
+	}
+	return extractCommaDelimitedStrings(s)
+}
+
+// extractCommaDelimitedStrings extracts a list of non-empty strings from a comma-separated string.
+// It trims spaces from the strings.
+// It accepts optional sanitization functions to apply to each string.
+func extractCommaDelimitedStrings(s string, sanitizeFns ...func(string) string) []string {
+	// If it's an empty string, return nil.
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+
+	// Split values by comma.
+	values := strings.Split(s, ",")
+
+	// Allocate an output slice with the same capacity as the input slice.
+	// This may be a bit more than needed as we'll filter out empty strings later.
+	out := make([]string, 0, len(values))
+
+	// Trim and sanitize each value.
+	for _, v := range values {
+		sanitized := strings.TrimSpace(v)
+		if sanitized == "" {
+			// Discard empty strings.
+			continue
+		}
+
+		// Apply optional sanitization functions (e.g. upper-casing).
+		for _, sanitizeFn := range sanitizeFns {
+			sanitized = sanitizeFn(sanitized)
+		}
+
+		// Append to the output slice.
+		out = append(out, sanitized)
+	}
+
+	return out
 }

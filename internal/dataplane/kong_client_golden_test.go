@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
@@ -48,6 +49,7 @@ var (
 			// Feature flags that are directly propagated from the feature gates get their defaults.
 			FillIDs:           defaults.Enabled(featuregates.FillIDsFeature),
 			KongServiceFacade: defaults.Enabled(featuregates.KongServiceFacade),
+			KongCustomEntity:  defaults.Enabled(featuregates.KongCustomEntity),
 		}
 	}
 )
@@ -258,7 +260,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{})
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{}, consts.DefaultClusterDomain)
 	require.NoError(t, err, "failed creating translator")
 
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.
@@ -307,7 +309,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 		sendconfig.NewDefaultConfigurationChangeDetector(logger),
 		lastValidConfigFetcher,
 		p,
-		cacheStores,
+		&cacheStores,
 		fallbackConfigGenerator,
 	)
 	require.NoError(t, err)
@@ -370,7 +372,33 @@ func extractObjectsFromYAML(t *testing.T, filePath string) [][]byte {
 type fakeSchemaServiceProvier struct{}
 
 func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
-	return translator.UnavailableSchemaService{}
+	return fakeSchemaService{}
+}
+
+// fakeSchemaService is a stub implementation of the kong.AbstractSchemaService interface returning hardcoded schemas
+// for testing purposes.
+type fakeSchemaService struct{}
+
+func (f fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schema, error) {
+	switch entityType {
+	case "degraphql_routes":
+		return kong.Schema{
+			"fields": []interface{}{
+				map[string]interface{}{
+					"service": map[string]interface{}{
+						"type":      "foreign",
+						"reference": "services",
+					},
+				},
+			},
+		}, nil
+	default:
+		return kong.Schema{}, nil
+	}
+}
+
+func (f fakeSchemaService) Validate(context.Context, kong.EntityType, any) (bool, string, error) {
+	return true, "", nil
 }
 
 func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []client.Object) []byte {

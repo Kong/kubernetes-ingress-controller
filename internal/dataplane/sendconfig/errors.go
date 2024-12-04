@@ -1,24 +1,33 @@
 package sendconfig
 
-import "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+import (
+	"github.com/samber/mo"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+)
 
 // UpdateError wraps several pieces of error information relevant to a failed Kong update attempt.
 type UpdateError struct {
 	rawResponseBody  []byte
+	configSize       mo.Option[int]
 	resourceFailures []failures.ResourceFailure
 	err              error
 }
 
-func NewUpdateError(resourceFailures []failures.ResourceFailure, err error) UpdateError {
+func NewUpdateErrorWithoutResponseBody(resourceFailures []failures.ResourceFailure, err error) UpdateError {
 	return UpdateError{
+		configSize:       mo.None[int](),
 		resourceFailures: resourceFailures,
 		err:              err,
 	}
 }
 
-func NewUpdateErrorWithResponseBody(rawResponseBody []byte, resourceFailures []failures.ResourceFailure, err error) UpdateError {
+func NewUpdateErrorWithResponseBody(
+	rawResponseBody []byte, configSize mo.Option[int], resourceFailures []failures.ResourceFailure, err error,
+) UpdateError {
 	return UpdateError{
 		rawResponseBody:  rawResponseBody,
+		configSize:       configSize,
 		resourceFailures: resourceFailures,
 		err:              err,
 	}
@@ -37,6 +46,12 @@ func (e UpdateError) RawResponseBody() []byte {
 // ResourceFailures returns per-resource failures from a Kong configuration update attempt.
 func (e UpdateError) ResourceFailures() []failures.ResourceFailure {
 	return e.resourceFailures
+}
+
+// ConfigSize returns the size of the configuration that was attempted to be sent to Kong.
+// When it's not applicable, returned option type contains mo.None.
+func (e UpdateError) ConfigSize() mo.Option[int] {
+	return e.configSize
 }
 
 func (e UpdateError) Unwrap() error {

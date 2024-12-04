@@ -13,6 +13,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
@@ -72,7 +73,7 @@ func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*Creat
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -107,7 +108,7 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -162,7 +163,7 @@ func (c *Client) listNodes(ctx context.Context, nextCursor string) (*ListNodeRes
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 
-	httpResp, err := c.httpClient.Do(req)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -192,7 +193,7 @@ func (c *Client) DeleteNode(ctx context.Context, nodeID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -211,7 +212,7 @@ func (c *Client) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}

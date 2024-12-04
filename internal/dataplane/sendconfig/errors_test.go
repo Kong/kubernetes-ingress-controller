@@ -31,7 +31,7 @@ func TestUpdateError(t *testing.T) {
 		},
 	}))
 
-	updateErr := sendconfig.NewUpdateError([]failures.ResourceFailure{someResourceFailure}, testError{})
+	updateErr := sendconfig.NewUpdateErrorWithoutResponseBody([]failures.ResourceFailure{someResourceFailure}, testError{})
 	require.Equal(t, "test error", updateErr.Error())
 	require.Len(t, updateErr.ResourceFailures(), 1)
 	unwraps := errors.As(updateErr, &testError{})

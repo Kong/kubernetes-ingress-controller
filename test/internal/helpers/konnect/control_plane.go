@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -14,10 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	cp "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/roles"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -25,55 +29,64 @@ import (
 // It also sets up a cleanup function for it to be deleted.
 func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
-	rgClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
-		func(_ context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+accessToken())
-			return nil
-		}),
-	)
-	require.NoError(t, err)
-	rolesClient := roles.NewClient(
-		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
-		konnectRolesBaseURL,
-		accessToken(),
-	)
 
-	var rgID uuid.UUID
+	sdk := sdk.New(accessToken(), serverURLOpt())
+
+	var cpID string
 	createRgErr := retry.Do(func() error {
-		rgName := uuid.NewString()
-		createRgResp, err := rgClient.CreateControlPlaneWithResponse(ctx, cp.CreateControlPlaneRequest{
-			Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
-			Labels: &cp.Labels{
-				"created_in_tests": "true",
+		createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
+			sdkkonnectcomp.CreateControlPlaneRequest{
+				Name:        uuid.NewString(),
+				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
+				Labels: map[string]string{
+					test.KonnectControlPlaneLabelCreatedInTests: "true",
+				},
+				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 			},
-			Name:        rgName,
-			ClusterType: cp.ClusterTypeKubernetesIngressController,
-		})
+		)
 		if err != nil {
 			return fmt.Errorf("failed to create control plane: %w", err)
 		}
-		if createRgResp.StatusCode() != http.StatusCreated {
-			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
+		if createResp == nil || createResp.ControlPlane == nil {
+			return fmt.Errorf("failed to create control plane: response is nil, status code %d, response: %v",
+				createResp.GetStatusCode(), createResp)
 		}
-		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
+
+		if createResp.GetStatusCode() != http.StatusCreated {
+			body, err := io.ReadAll(createResp.RawResponse.Body)
+			if err != nil {
+				body = []byte(err.Error())
+			}
+			return fmt.Errorf("failed to create RG: code %d, message %s", createResp.GetStatusCode(), body)
+		}
+		if createResp.ControlPlane == nil || createResp.ControlPlane.ID == "" {
 			return errors.New("No control plane ID in response")
 		}
 
-		rgID = *createRgResp.JSON201.Id
+		cpID = createResp.ControlPlane.ID
 		return nil
 	}, retry.Attempts(5), retry.Delay(time.Second))
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		t.Logf("deleting test Konnect Control Plane: %q", rgID)
+		t.Logf("deleting test Konnect Control Plane: %q", cpID)
 		err := retry.Do(
 			func() error {
-				_, err := rgClient.DeleteControlPlaneWithResponse(ctx, rgID)
+				_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, cpID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", rgID)
+		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", cpID)
+
+		me, err := sdk.Me.GetUsersMe(ctx,
+			// NOTE: Otherwise we use prod server by default.
+			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
 
 		// We have to manually delete roles created for the control plane because Konnect doesn't do it automatically.
 		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
@@ -82,19 +95,36 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		//
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
-		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
-		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
-		for _, role := range rgRoles {
-			if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
-				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
-				err := rolesClient.DeleteRole(ctx, role.ID)
-				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
+		resp, err := sdk.Roles.ListUserRoles(ctx, *me.User.ID,
+			&sdkkonnectops.ListUserRolesQueryParamFilter{},
+			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+		)
+		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", cpID)
+
+		for _, role := range resp.AssignedRoleCollection.Data {
+			if role.EntityID == nil || role.ID == nil {
+				continue
+			}
+			if *role.EntityID != cpID {
+				continue
+			}
+
+			// Delete only roles created for the control plane.
+			t.Logf("deleting test Konnect Control Plane role: %q", *role.ID)
+			_, err := sdk.Roles.UsersRemoveRole(ctx, *me.User.ID, *role.ID,
+				// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
+				sdkkonnectops.WithServerURL(test.KonnectServerURL()),
+			)
+			notFoundErr := &sdkkonnecterrs.NotFoundError{}
+			if !errors.As(err, &notFoundErr) {
+				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", *role.ID)
 			}
 		}
 	})
 
-	t.Logf("created test Konnect Control Plane: %q", rgID.String())
-	return rgID.String()
+	t.Logf("created test Konnect Control Plane: %q", cpID)
+	return cpID
 }
 
 func generateTestKonnectControlPlaneDescription(t *testing.T) string {
@@ -116,7 +146,7 @@ func CreateKonnectAdminAPIClient(t *testing.T, cpID, cert, key string) *adminapi
 
 	c, err := adminapi.NewKongClientForKonnectControlPlane(adminapi.KonnectConfig{
 		ControlPlaneID: cpID,
-		Address:        konnectControlPlaneAdminAPIBaseURL,
+		Address:        konnectControlPlaneAdminAPIBaseURL(),
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,
 			Key:  key,

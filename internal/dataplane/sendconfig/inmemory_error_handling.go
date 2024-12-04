@@ -6,14 +6,12 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored
@@ -90,7 +88,6 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		return nil, nil
 	}
 
-	var resourceErrors []ResourceError //nolint:prealloc
 	var configError ConfigError
 
 	err := json.Unmarshal(body, &configError)
@@ -104,7 +101,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 				logger.Error(nil, "Could not fully parse config error", "message", message)
 			}
 		}
-		return resourceErrors, NewResponseParsingError(body)
+		return nil, NewResponseParsingError(body)
 	}
 	if len(configError.Flattened) == 0 {
 		if len(configError.Message) > 0 {
@@ -113,38 +110,19 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 			logger.Error(nil, "Config error missing per-resource and message", "message", configError.Message)
 		}
 	}
+
+	resourceErrors := make([]ResourceError, 0, len(configError.Flattened))
 	for _, ee := range configError.Flattened {
-		raw := rawResourceError{
-			Name:     ee.Name,
-			ID:       ee.ID,
-			Tags:     ee.Tags,
-			Problems: map[string]string{},
-		}
-		for _, p := range ee.Errors {
-			if len(p.Message) > 0 && len(p.Messages) > 0 {
-				logger.Error(nil, "Entity has both single and array errors for field",
-					"name", ee.Name, "field", p.Field)
-				continue
-			}
-			if len(p.Message) > 0 {
-				switch p.Type {
-				case FlatErrorTypeField:
-					// If the error is associated with a single field, store it in the map under the field name.
-					raw.Problems[p.Field] = p.Message
-				case FlatErrorTypeEntity:
-					// If the error is associated with a whole entity, store it in the map under the entity type and name.
-					raw.Problems[fmt.Sprintf("%s:%s", ee.Type, ee.Name)] = p.Message
-				}
-			}
-			for i, message := range p.Messages {
-				if len(message) > 0 {
-					raw.Problems[fmt.Sprintf("%s[%d]", p.Field, i)] = message
-				}
-			}
-		}
+		raw := flattenedErrorIntoRaw(ee, logger)
 		parsed, err := parseRawResourceError(raw)
 		if err != nil {
-			logger.Error(err, "Entity tags missing fields", "name", ee.Name)
+			logger.Error(err, "API error returned from the gateway for an entity is missing Kubernetes metadata in tags, Kubernetes Event won't be created",
+				"name", ee.Name,
+				"id", ee.ID,
+				"tags", ee.Tags,
+				"type", ee.Type,
+				"raw_error", ee,
+			)
 			continue
 		}
 		resourceErrors = append(resourceErrors, parsed)
@@ -152,46 +130,75 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 	return resourceErrors, nil
 }
 
+func flattenedErrorIntoRaw(ee FlatEntityError, logger logr.Logger) rawResourceError {
+	raw := rawResourceError{
+		Name:     ee.Name,
+		ID:       ee.ID,
+		Tags:     ee.Tags,
+		Problems: map[string]string{},
+	}
+	for _, p := range ee.Errors {
+		if len(p.Message) > 0 && len(p.Messages) > 0 {
+			logger.Error(nil, "Entity has both single and array errors for field",
+				"name", ee.Name, "field", p.Field)
+			continue
+		}
+		if len(p.Message) > 0 {
+			switch p.Type {
+			case FlatErrorTypeField:
+				// If the error is associated with a single field, store it in the map under the field name.
+				raw.Problems[p.Field] = p.Message
+			case FlatErrorTypeEntity:
+				// If the error is associated with a whole entity, store it in the map under the entity type and name.
+				raw.Problems[fmt.Sprintf("%s:%s", ee.Type, ee.Name)] = p.Message
+			}
+		}
+		for i, message := range p.Messages {
+			if len(message) > 0 {
+				raw.Problems[fmt.Sprintf("%s[%d]", p.Field, i)] = message
+			}
+		}
+	}
+	return raw
+}
+
 // parseRawResourceError takes a raw resource error and parses its tags into Kubernetes metadata. If critical tags are
 // missing, it returns an error indicating the missing tag.
 func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
-	re := ResourceError{}
-	re.Problems = raw.Problems
+	re := ResourceError{
+		Problems: raw.Problems,
+	}
+
 	var gvk schema.GroupVersionKind
 	for _, tag := range raw.Tags {
-		if strings.HasPrefix(tag, util.K8sNameTagPrefix) {
+		switch {
+		case strings.HasPrefix(tag, util.K8sNameTagPrefix):
 			re.Name = strings.TrimPrefix(tag, util.K8sNameTagPrefix)
-		}
-		if strings.HasPrefix(tag, util.K8sNamespaceTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sNamespaceTagPrefix):
 			re.Namespace = strings.TrimPrefix(tag, util.K8sNamespaceTagPrefix)
-		}
-		if strings.HasPrefix(tag, util.K8sKindTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sKindTagPrefix):
 			gvk.Kind = strings.TrimPrefix(tag, util.K8sKindTagPrefix)
-		}
-		if strings.HasPrefix(tag, util.K8sVersionTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sVersionTagPrefix):
 			gvk.Version = strings.TrimPrefix(tag, util.K8sVersionTagPrefix)
-		}
-		// this will not set anything for core resources
-		if strings.HasPrefix(tag, util.K8sGroupTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sGroupTagPrefix):
 			gvk.Group = strings.TrimPrefix(tag, util.K8sGroupTagPrefix)
-		}
-		if strings.HasPrefix(tag, util.K8sUIDTagPrefix) {
+		case strings.HasPrefix(tag, util.K8sUIDTagPrefix):
 			re.UID = strings.TrimPrefix(tag, util.K8sUIDTagPrefix)
 		}
 	}
 
 	re.APIVersion, re.Kind = gvk.ToAPIVersionAndKind()
 	if re.Name == "" {
-		return re, fmt.Errorf("no name")
+		return re, fmt.Errorf("resource error has no name tag")
 	}
 	if re.Namespace == "" && !gvkIsClusterScoped(gvk) {
-		return re, fmt.Errorf("no namespace")
+		return re, fmt.Errorf("resource error has no namespace tag, name: %s", raw.Name)
 	}
 	if re.Kind == "" {
-		return re, fmt.Errorf("no kind")
+		return re, fmt.Errorf("resource error has not enough kind, group, version tags, name: %s", raw.Name)
 	}
 	if re.UID == "" {
-		return re, fmt.Errorf("no uid")
+		return re, fmt.Errorf("resource error has no uid tag, name: %s", raw.Name)
 	}
 	return re, nil
 }
@@ -204,36 +211,4 @@ func gvkIsClusterScoped(gvk schema.GroupVersionKind) bool {
 		return gvk.Kind == "KongVault"
 	}
 	return false
-}
-
-// resourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.
-func resourceErrorsToResourceFailures(resourceErrors []ResourceError, logger logr.Logger) []failures.ResourceFailure {
-	var out []failures.ResourceFailure
-	for _, ee := range resourceErrors {
-		obj := metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       ee.Kind,
-				APIVersion: ee.APIVersion,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ee.Namespace,
-				Name:      ee.Name,
-				UID:       k8stypes.UID(ee.UID),
-			},
-		}
-		for problemSource, problem := range ee.Problems {
-			logger.V(util.DebugLevel).Info("Adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
-			resourceFailure, failureCreateErr := failures.NewResourceFailure(
-				fmt.Sprintf("invalid %s: %s", problemSource, problem),
-				&obj,
-			)
-			if failureCreateErr != nil {
-				logger.Error(failureCreateErr, "Could not create resource failure event")
-			} else {
-				out = append(out, resourceFailure)
-			}
-		}
-	}
-
-	return out
 }

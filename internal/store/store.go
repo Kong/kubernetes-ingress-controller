@@ -37,14 +37,15 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 const (
@@ -58,33 +59,24 @@ const (
 type Storer interface {
 	UpdateCache(cs CacheStores)
 
+	// Core Kubernetes resources.
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
+	ListCACerts() ([]*corev1.Secret, error)
+
+	// Kong resources.
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
 	GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error)
-	GetIngressClassName() string
-	GetIngressClassV1(name string) (*netv1.IngressClass, error)
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
-	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
 	GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error)
 	GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error)
 	GetKongVault(name string) (*kongv1alpha1.KongVault, error)
 	GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error)
-
-	ListIngressesV1() []*netv1.Ingress
-	ListIngressClassesV1() []*netv1.IngressClass
 	ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters
-	ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error)
-	ListUDPRoutes() ([]*gatewayapi.UDPRoute, error)
-	ListTCPRoutes() ([]*gatewayapi.TCPRoute, error)
-	ListTLSRoutes() ([]*gatewayapi.TLSRoute, error)
-	ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error)
-	ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error)
-	ListGateways() ([]*gatewayapi.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
@@ -92,9 +84,25 @@ type Storer interface {
 	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
 	ListKongConsumers() []*kongv1.KongConsumer
 	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
-	ListCACerts() ([]*corev1.Secret, error)
 	ListKongVaults() []*kongv1alpha1.KongVault
 	ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity
+
+	// Ingress API resources.
+	GetIngressClassName() string
+	GetIngressClassV1(name string) (*netv1.IngressClass, error)
+	ListIngressesV1() []*netv1.Ingress
+	ListIngressClassesV1() []*netv1.IngressClass
+
+	// Gateway API resources.
+	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
+	ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error)
+	ListUDPRoutes() ([]*gatewayapi.UDPRoute, error)
+	ListTCPRoutes() ([]*gatewayapi.TCPRoute, error)
+	ListTLSRoutes() ([]*gatewayapi.TLSRoute, error)
+	ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error)
+	ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error)
+	ListGateways() ([]*gatewayapi.Gateway, error)
+	ListBackendTLSPolicies() ([]*gatewayapi.BackendTLSPolicy, error)
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -183,7 +191,7 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 		default:
 			class, err := s.GetIngressClassV1(s.ingressClass)
 			if err != nil {
-				s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
+				s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 				continue
 			}
 			if !ctrlutils.IsDefaultIngressClass(class) {
@@ -327,6 +335,10 @@ func (s Store) ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error) {
 // ListGateways returns the list of Gateways in the Gateway cache store.
 func (s Store) ListGateways() ([]*gatewayapi.Gateway, error) {
 	return List[*gatewayapi.Gateway](s.stores)
+}
+
+func (s Store) ListBackendTLSPolicies() ([]*gatewayapi.BackendTLSPolicy, error) {
+	return List[*gatewayapi.BackendTLSPolicy](s.stores)
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from
@@ -710,7 +722,7 @@ func (s Store) ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity {
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	class, err := s.GetIngressClassV1(s.ingressClass)
 	if err != nil {
-		s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
+		s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 		return annotations.ExactClassMatch
 	}
 	if ctrlutils.IsDefaultIngressClass(class) {
@@ -799,6 +811,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1alpha1.KongCustomEntity{}, nil
 	case kongv1alpha1.GroupVersion.WithKind("KongVault"):
 		return &kongv1alpha1.KongVault{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongCustomEntity"):
+		return &kongv1alpha1.KongCustomEntity{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

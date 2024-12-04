@@ -34,7 +34,7 @@ func TestCertificate_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := *tt.in.SanitizedCopy()
+			got := tt.in.SanitizedCopy()
 			assert.Equal(t, tt.want, got)
 		})
 	}

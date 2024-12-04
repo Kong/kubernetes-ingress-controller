@@ -9,43 +9,24 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/net"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+	"github.com/kong/kubernetes-configuration/pkg/clientset/scheme"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {
 	skipTestForNonKindCluster(t)
 	skipTestForRouterFlavors(context.Background(), t, expressions)
-	ctx := context.Background()
 
+	ctx := context.Background()
 	ns, _ := helpers.Setup(ctx, t, env)
 
-	const configResourceName = "kong-validations-kongingress"
-	ensureAdmissionRegistration(
-		ctx,
-		t,
-		ns.Name,
-		configResourceName,
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"configuration.konghq.com"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"kongingresses"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
-
-	t.Log("waiting for webhook service to be connective")
-	ensureWebhookServiceIsConnective(ctx, t, configResourceName)
+	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-kongingress", ns.Name)
 
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

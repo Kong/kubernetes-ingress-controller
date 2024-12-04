@@ -1,0 +1,281 @@
+# In this test case we have 4 independent sets of resources (each including Service, Ingress, Plugin, CustomEntity).
+# In each set, we make one of the objects broken by adding an annotation `test.konghq.com/broken: "true"`.
+
+# Set n. 1: Service s1, Ingress i1, Plugin p1, CustomEntity ce1. ce1 is broken.
+# We expect that the custom entity ce1 is not created, but the other resources are created.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: s1
+  name: s1
+  namespace: default
+  uid: ddc15c38-7f1b-41cb-8b57-46465a7f4427
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: s1
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: i1
+  namespace: default
+  uid: 39ec2b6a-f919-4308-ad2f-07511ab424dd
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: "p1"
+spec:
+  ingressClassName: kong
+  rules:
+    -  http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: s1
+                port:
+                  number: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  namespace: default
+  name: p1
+  uid: e97ca177-6bd2-425f-b3b1-10a521ac02a0
+plugin: degraphql
+config:
+  graphql_server_path: /v1/graphql
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  namespace: default
+  name: ce1
+  uid: af6056e0-e5c7-4bfa-8643-79ef16311686
+  annotations:
+    test.konghq.com/broken: "true"
+spec:
+  controllerName: kong
+  type: degraphql_routes
+  parentRef:
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p1
+  fields:
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
+
+# Set n. 2: Service s2, Ingress i2, Plugin p2, CustomEntity ce2. i2 is broken.
+# We expect that no service, route or plugin is created. Only the custom entity with no references is created.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: s2
+  name: s2
+  namespace: default
+  uid: e1fb0dd7-6ebc-4fac-aa59-9a2d0010dfd6
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: s2
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: i2
+  namespace: default
+  uid: 7b26f36a-e484-424a-b8fd-7d31c63d06a3
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: "p2"
+    test.konghq.com/broken: "true"
+spec:
+  ingressClassName: kong
+  rules:
+    -  http:
+         paths:
+           - path: /
+             pathType: Prefix
+             backend:
+               service:
+                 name: s2
+                 port:
+                   number: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  namespace: default
+  name: p2
+  uid: 993e367c-0cd4-4808-8a55-7da0289b0400
+plugin: degraphql
+config:
+  graphql_server_path: /v1/graphql
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  namespace: default
+  name: ce2
+  uid: cece05c0-543d-4080-b470-7cd7bd4151d3
+spec:
+  controllerName: kong
+  type: degraphql_routes
+  parentRef:
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p2
+  fields:
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
+
+# Set n. 3: Service s3, Ingress i3, Plugin p3, CustomEntity ce3. p3 is broken.
+# We expect that no entities are created at all as all of them depend on the broken plugin.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: s3
+  name: s3
+  namespace: default
+  uid: f816403d-b8c5-4176-9b59-f85d9201c0e0
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: s3
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: i3
+  namespace: default
+  uid: 15bd6b19-3f62-44dc-863a-26d29f3c02be
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: "p3"
+spec:
+  ingressClassName: kong
+  rules:
+    -  http:
+         paths:
+           - path: /
+             pathType: Prefix
+             backend:
+               service:
+                 name: s3
+                 port:
+                   number: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  namespace: default
+  name: p3
+  uid: 65dcd9c3-2cdb-4ce2-aff7-6e5764730029
+  annotations:
+    test.konghq.com/broken: "true"
+plugin: degraphql
+config:
+  graphql_server_path: /v1/graphql
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  namespace: default
+  name: ce3
+  uid: 24e0ef06-b08a-460f-8472-8823684644d5
+spec:
+  controllerName: kong
+  type: degraphql_routes
+  parentRef:
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p3
+  fields:
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
+
+## Set n. 4: Service s4, Ingress i4, Plugin p4, CustomEntity ce4. s4 is broken.
+## We expect that no service, route or plugin is created. Only the custom entity with no references is created.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: s4
+  name: s4
+  namespace: default
+  uid: 72e2cba5-8e70-4414-b194-9a3293315525
+  annotations:
+    test.konghq.com/broken: "true"
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: s4
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: i4
+  namespace: default
+  uid: 0b7fa868-328f-440f-a3e9-b70986967885
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: "p4"
+spec:
+  ingressClassName: kong
+  rules:
+    -  http:
+         paths:
+           - path: /
+             pathType: Prefix
+             backend:
+               service:
+                 name: s4
+                 port:
+                   number: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  namespace: default
+  name: p4
+  uid: 770be827-8328-4fc5-8bef-200157e532ab
+plugin: degraphql
+config:
+  graphql_server_path: /v1/graphql
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  namespace: default
+  name: degraphql-route
+  uid: 220db4f5-bba4-4a1d-924f-39280fb9049c
+spec:
+  controllerName: kong
+  type: degraphql_routes
+  parentRef:
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: p4
+  fields:
+    uri: "/contacts"
+    query: "query{ contacts { name } }"

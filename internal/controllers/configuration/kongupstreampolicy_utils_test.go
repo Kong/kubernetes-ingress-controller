@@ -18,13 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
@@ -33,6 +34,8 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		anotherPolicyName = "another-test-policy"
 		testNamespace     = "test"
 	)
+
+	now := metav1.Now()
 
 	testCases := []struct {
 		name                             string
@@ -43,7 +46,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		updated                          bool
 	}{
 		{
-			name: "2 services referencing the same policy, all accepted. Status update.",
+			name: "3 services referencing the same policy, all accepted. Status update.",
 			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
@@ -58,7 +61,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Now(),
+						CreationTimestamp: now,
 					},
 				},
 				&corev1.Service{
@@ -69,7 +72,19 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
-							Time: metav1.Now().Add(10 * time.Second),
+							Time: now.Add(10 * time.Second),
+						},
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-3",
+						Namespace: testNamespace,
+						Annotations: map[string]string{
+							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+						},
+						CreationTimestamp: metav1.Time{
+							Time: now.Add(5 * time.Second),
 						},
 					},
 				},
@@ -96,6 +111,13 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 											},
 										},
 									},
+									{
+										BackendRef: gatewayapi.BackendRef{
+											BackendObjectReference: gatewayapi.BackendObjectReference{
+												Name: "svc-3",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -105,12 +127,34 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			objectsConfiguredInDataPlane: true,
 			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
+					// Order of ancestors should be svc-1 - svc-3 - svc-2 for the order of creationTimestamp.
 					{
 						AncestorRef: gatewayapi.ParentReference{
 							Group:     lo.ToPtr(gatewayapi.Group("core")),
 							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
 							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
+						},
+						ControllerName: gatewaycontroller.GetControllerName(),
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.PolicyReasonAccepted),
+							},
+							{
+								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Status: metav1.ConditionTrue,
+								Reason: string(gatewayapi.GatewayReasonProgrammed),
+							},
+						},
+					},
+					{
+						AncestorRef: gatewayapi.ParentReference{
+							Group:     lo.ToPtr(gatewayapi.Group("core")),
+							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Name:      gatewayapi.ObjectName("svc-3"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
@@ -213,7 +257,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Now(),
+						CreationTimestamp: now,
 					},
 				},
 				&corev1.Service{
@@ -223,9 +267,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Time{
-							Time: metav1.Now().Add(10 * time.Second),
-						},
+						CreationTimestamp: now,
 					},
 				},
 				&gatewayapi.HTTPRoute{
@@ -322,7 +364,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Now(),
+						CreationTimestamp: now,
 					},
 				},
 				&corev1.Service{
@@ -333,7 +375,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
 						},
 						CreationTimestamp: metav1.Time{
-							Time: metav1.Now().Add(10 * time.Second),
+							Time: now.Add(10 * time.Second),
 						},
 					},
 				},
@@ -410,7 +452,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Now(),
+						CreationTimestamp: now,
 					},
 				},
 				&corev1.Service{
@@ -421,7 +463,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
 						},
 						CreationTimestamp: metav1.Time{
-							Time: metav1.Now().Add(10 * time.Second),
+							Time: now.Add(10 * time.Second),
 						},
 					},
 				},
@@ -502,7 +544,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Now(),
+						CreationTimestamp: now,
 					},
 				},
 				&incubatorv1alpha1.KongServiceFacade{
@@ -513,7 +555,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
-							Time: metav1.Now().Add(10 * time.Second),
+							Time: now.Add(10 * time.Second),
 						},
 					},
 				},
@@ -598,7 +640,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Annotations: map[string]string{
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
-						CreationTimestamp: metav1.Now(),
+						CreationTimestamp: now,
 					},
 				},
 				&incubatorv1alpha1.KongServiceFacade{
@@ -609,7 +651,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
-							Time: metav1.Now().Add(10 * time.Second),
+							Time: now.Add(10 * time.Second),
 						},
 					},
 				},
@@ -681,7 +723,6 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.inputObjects = append(tc.inputObjects, &tc.kongUpstreamPolicy)
 			fakeClient := fakectrlruntimeclient.
@@ -949,6 +990,23 @@ func TestBuildPolicyStatus(t *testing.T) {
 					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-1"),
 					serviceExpectedPolicyAncestorStatus("svc-2"),
 					serviceExpectedPolicyAncestorStatus("svc-1"),
+				},
+			},
+		},
+		{
+			name: "ordered by kind, namespace and name if their creationTimestamp is the same",
+			ancestorsStatuses: []ancestorStatus{
+				serviceStatus("svc-1", now),
+				serviceStatus("svc-2", now),
+				serviceFacadeStatus("svc-facade-1", now),
+				serviceFacadeStatus("svc-facade-2", now),
+			},
+			expected: gatewayapi.PolicyStatus{
+				Ancestors: []gatewayapi.PolicyAncestorStatus{
+					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-1"),
+					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-2"),
+					serviceExpectedPolicyAncestorStatus("svc-1"),
+					serviceExpectedPolicyAncestorStatus("svc-2"),
 				},
 			},
 		},

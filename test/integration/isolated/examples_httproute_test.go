@@ -22,13 +22,14 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
@@ -79,6 +80,7 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 				proxyURL,
 				proxyURL.Host,
 				"/for-auth-users",
+				nil,
 				http.StatusNotFound,
 				"no Route matched with those values",
 				nil,
@@ -140,6 +142,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			proxyURL,
 			proxyURL.Host,
 			additionalRoutePath,
+			nil,
 			http.StatusOK,
 			additionalRouteServiceTarget,
 			nil,
@@ -297,6 +300,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				proxyURL,
 				proxyURL.Host,
 				"/httproute-testing",
+				nil,
 				http.StatusNotFound,
 				"no Route matched with those values",
 				nil,
@@ -310,6 +314,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				proxyURL,
 				proxyURL.Host,
 				newRoute,
+				nil,
 				http.StatusOK,
 				"echo-1",
 				nil,
@@ -321,6 +326,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				proxyURL,
 				proxyURL.Host,
 				newRoute,
+				nil,
 				http.StatusOK,
 				"echo-2",
 				nil,
@@ -355,6 +361,7 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 			proxyURL,
 			proxyURL.Host,
 			"/httproute-testing",
+			nil,
 			http.StatusOK,
 			"echo-1",
 			nil,
@@ -368,6 +375,7 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 			proxyURL,
 			proxyURL.Host,
 			"/httproute-testing",
+			nil,
 			http.StatusOK,
 			"echo-2",
 			nil,

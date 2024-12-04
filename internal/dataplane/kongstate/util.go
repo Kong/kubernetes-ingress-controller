@@ -7,11 +7,12 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func getKongIngressForServices(
@@ -48,7 +49,7 @@ func getKongIngressForServices(
 
 func getKongIngressFromObjectMeta(
 	s store.Storer,
-	obj util.K8sObjectInfo,
+	obj client.Object,
 ) (
 	*kongv1.KongIngress, error,
 ) {
@@ -57,19 +58,19 @@ func getKongIngressFromObjectMeta(
 
 func getKongIngressFromObjAnnotations(
 	s store.Storer,
-	obj util.K8sObjectInfo,
+	obj client.Object,
 ) (
 	*kongv1.KongIngress, error,
 ) {
-	confName := annotations.ExtractConfigurationName(obj.Annotations)
+	confName := annotations.ExtractConfigurationName(obj.GetAnnotations())
 	if confName != "" {
-		ki, err := s.GetKongIngress(obj.Namespace, confName)
+		ki, err := s.GetKongIngress(obj.GetNamespace(), confName)
 		if err == nil {
 			return ki, nil
 		}
 	}
 
-	ki, err := s.GetKongIngress(obj.Namespace, obj.Name)
+	ki, err := s.GetKongIngress(obj.GetNamespace(), obj.GetName())
 	if err == nil {
 		return ki, nil
 	}

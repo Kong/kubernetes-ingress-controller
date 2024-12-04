@@ -47,11 +47,15 @@ func TestMetricsAreServed(t *testing.T) {
 				metrics.MetricNameConfigPushCount,
 				metrics.MetricNameConfigPushBrokenResources,
 				metrics.MetricNameTranslationCount,
+				metrics.MetricNameTranslationDuration,
+				metrics.MetricNameConfigPushSize,
 				metrics.MetricNameTranslationBrokenResources,
 				metrics.MetricNameConfigPushDuration,
 
 				metrics.MetricNameFallbackTranslationBrokenResources,
 				metrics.MetricNameFallbackTranslationCount,
+				metrics.MetricNameFallbackTranslationDuration,
+				metrics.MetricNameFallbackConfigPushSize,
 				metrics.MetricNameFallbackConfigPushCount,
 				metrics.MetricNameFallbackConfigPushSuccessTime,
 				metrics.MetricNameFallbackConfigPushDuration,
@@ -67,6 +71,8 @@ func TestMetricsAreServed(t *testing.T) {
 				metrics.MetricNameConfigPushCount,
 				metrics.MetricNameConfigPushBrokenResources,
 				metrics.MetricNameTranslationCount,
+				metrics.MetricNameTranslationDuration,
+				metrics.MetricNameConfigPushSize,
 				metrics.MetricNameTranslationBrokenResources,
 				metrics.MetricNameConfigPushDuration,
 				metrics.MetricNameConfigPushSuccessTime,
@@ -96,13 +102,10 @@ func TestMetricsAreServed(t *testing.T) {
 				},
 			)
 
-			wantMetrics := tc.expectedMetrics
-
 			metricsURL := fmt.Sprintf("http://%s/metrics", cfg.MetricsAddr)
 			t.Logf("waiting for metrics to be available at %q", metricsURL)
 
-			for _, metric := range wantMetrics {
-				metric := metric
+			for _, metric := range tc.expectedMetrics {
 				t.Run(metric, func(t *testing.T) {
 					require.NoError(t,
 						retry.Do(func() error {
@@ -110,8 +113,8 @@ func TestMetricsAreServed(t *testing.T) {
 							if err != nil {
 								return fmt.Errorf("error %w checking %q", err, metricsURL)
 							}
-
 							defer resp.Body.Close()
+
 							if http.StatusOK != resp.StatusCode {
 								return fmt.Errorf("status code %v not as expected (200)", resp.StatusCode)
 							}

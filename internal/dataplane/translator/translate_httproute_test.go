@@ -39,7 +39,6 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	routes       []*gatewayapi.HTTPRoute
 	storeObjects store.FakeObjects
 	expected     func(routes []*gatewayapi.HTTPRoute) ingressRules
-	errs         []error
 }
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -141,7 +140,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			featureFlags := FeatureFlags{
 				ExpressionRoutes: tc.expressionRoutes,
@@ -239,7 +237,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -312,7 +310,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -391,7 +389,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -469,7 +467,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -549,7 +547,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -639,7 +637,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -733,7 +731,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -773,7 +771,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -893,7 +891,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -936,7 +934,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -1050,7 +1048,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
 											Name: kong.String("request-transformer"),
@@ -1058,6 +1056,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []string{"X-Test-Header-1:test-value-1"},
 												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:basic-httproute"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -1083,7 +1088,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
 											Name: kong.String("request-transformer"),
@@ -1091,6 +1096,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []string{"X-Test-Header-2:test-value-2"},
 												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:basic-httproute"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -1205,7 +1217,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Second two matches consolidated into a single route
 								{
@@ -1232,7 +1244,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Third two matches consolidated into a single route
 								{
@@ -1262,7 +1274,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -1406,7 +1418,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Second two matches consolidated into a single route
 								{
@@ -1433,7 +1445,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 								},
 
 								// Matches from rule 3, that has different filter, are not consolidated
@@ -1460,7 +1472,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
 											Name: kong.String("request-transformer"),
@@ -1468,6 +1480,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []string{"X-Test-Header-1:test-value-1"},
 												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:basic-httproute"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -1556,7 +1575,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -1575,26 +1594,601 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 			ingressRules := newIngressRules()
 
-			var errs []error
 			for _, httproute := range tt.routes {
 				// initialize the HTTPRoute object
 				httproute.SetGroupVersionKind(httprouteGVK)
-
-				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-				if err != nil {
-					errs = append(errs, err)
-				}
 			}
 
+			p.ingressRulesFromHTTPRoutesWithCombinedService(tt.routes, &ingressRules)
 			// verify that we receive the expected values
 			expectedIngressRules := tt.expected(tt.routes)
 			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{})))
+		})
+	}
+}
 
-			// verify that we receive any and all expected errors
-			for i := range tt.errs {
-				assert.ErrorIs(t, errs[i], tt.errs[i])
-			}
+func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T) {
+	var (
+		serviceTypeMeta = metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		}
+		httpRouteTypeMeta = metav1.TypeMeta{
+			APIVersion: string(gatewayapi.V1Group) + "/" + gatewayapi.V1GroupVersion,
+			Kind:       "HTTPRoute",
+		}
+
+		fakeService = &corev1.Service{
+			TypeMeta: serviceTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fake-service",
+				Namespace: "default",
+			},
+		}
+	)
+
+	// test cases when combined services from different HTTPRoute is enabled.
+	testCasesCombinedServicesAcrossHTTPRoutes := []testCaseIngressRulesFromHTTPRoutes{
+		{
+			msg: "an empty list of HTTPRoutes should produce no ingress rules",
+			expected: func(_ []*gatewayapi.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs:      newSecretNameToSNIs(),
+					ServiceNameToParent:   map[string]client.Object{},
+					ServiceNameToServices: make(map[string]kongstate.Service),
+				}
+			},
+		},
+		{
+			msg: "a single HTTPRoute with multiple rules sharing the same backend should be translated to one service",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{fakeService},
+			},
+			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.svc.default.fake-service.80": routes[0],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.svc.default.fake-service.80": {
+							Service: kong.Service{
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
+								ConnectTimeout: kong.Int(60000),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: []kongstate.ServiceBackend{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
+							},
+							Namespace: "default",
+							Parent:    routes[0],
+							Routes: []kongstate.Route{
+								// Only 1 route should be created.
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.0.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/foo$",
+											"~/bar$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[0]),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			msg: "rules with the same backends in multiple HTTPRoutes from same namespace should be translated to one service",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{fakeService},
+			},
+			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.svc.default.fake-service.80": routes[0],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.svc.default.fake-service.80": {
+							Service: kong.Service{
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
+								ConnectTimeout: kong.Int(60000),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: []kongstate.ServiceBackend{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
+							},
+							Namespace: "default",
+							Parent:    routes[0],
+							Routes: []kongstate.Route{
+								// 2 routes should be created for the 2 HTTPRoutes.
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.0.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/foo$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[0]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-2.0.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/bar$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-2"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[1]),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			msg: "rules with the same backends in HTTPRoutes from different namespaces should be translated into multiple services",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: "ns-alter",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: []gatewayapi.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithNamespace("default").WithPort(80).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			storeObjects: store.FakeObjects{
+				Services: []*corev1.Service{fakeService},
+				ReferenceGrants: []*gatewayapi.ReferenceGrant{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "grant-from-ns-alter-to-services",
+							Namespace: "default",
+						},
+						Spec: gatewayapi.ReferenceGrantSpec{
+							From: []gatewayapi.ReferenceGrantFrom{
+								{
+									Group:     gatewayapi.V1Group,
+									Kind:      "HTTPRoute",
+									Namespace: "ns-alter",
+								},
+							},
+							To: []gatewayapi.ReferenceGrantTo{
+								{
+									Group: gatewayapi.Group(corev1.GroupName),
+									Kind:  gatewayapi.Kind("Service"),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.svc.default.fake-service.80":  routes[0],
+						"httproute.ns-alter.svc.default.fake-service.80": routes[1],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.svc.default.fake-service.80": {
+							Service: kong.Service{
+								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
+								ConnectTimeout: kong.Int(60000),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: []kongstate.ServiceBackend{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
+							},
+							Namespace: "default",
+							Parent:    routes[0],
+							Routes: []kongstate.Route{
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.0.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/foo$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[0]),
+								},
+							},
+						},
+						"httproute.ns-alter.svc.default.fake-service.80": {
+							Service: kong.Service{
+								Host:           kong.String("httproute.ns-alter.svc.default.fake-service.80"),
+								Name:           kong.String("httproute.ns-alter.svc.default.fake-service.80"),
+								ConnectTimeout: kong.Int(60000),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: []kongstate.ServiceBackend{
+								builder.NewKongstateServiceBackend("fake-service").WithNamespace("default").WithPortNumber(80).MustBuild(),
+							},
+							Namespace: "ns-alter",
+							Parent:    routes[1],
+							Routes: []kongstate.Route{
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.ns-alter.httproute-2.0.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/bar$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-2"),
+											kong.String("k8s-namespace:ns-alter"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[1]),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			msg: "rules with no backends but RequestRedirect filter should be translated to one service",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Filters: []gatewayapi.HTTPRouteFilter{
+									builder.NewHTTPRouteRequestRedirectFilter().WithRequestRedirectHost("konghq.com").WithRequestRedirectStatusCode(301).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/kong").Build(),
+								},
+							},
+							{
+								Filters: []gatewayapi.HTTPRouteFilter{
+									builder.NewHTTPRouteRequestRedirectFilter().WithRequestRedirectHost("kumahq.com").WithRequestRedirectStatusCode(301).Build(),
+								},
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/kuma").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: func(routes []*gatewayapi.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.svc._": routes[0],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.svc._": {
+							Service: kong.Service{
+								Host:           kong.String("httproute.default.svc._"),
+								Name:           kong.String("httproute.default.svc._"),
+								ConnectTimeout: kong.Int(60000),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends:  []kongstate.ServiceBackend{},
+							Namespace: "default",
+							Parent:    routes[0],
+							Routes: []kongstate.Route{
+								// 2 routes where one for each rule should be created because they have different filters.
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.0.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/kong$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[0]),
+									Plugins: []kong.Plugin{
+										{
+											Name: kong.String("request-termination"),
+											Config: kong.Configuration{
+												"status_code": kong.Int(301),
+											},
+											Tags: []*string{
+												kong.String("k8s-name:httproute-1"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1"),
+											},
+										},
+										{
+											Name: kong.String("response-transformer"),
+											Config: kong.Configuration{
+												"add": subtranslator.TransformerPluginConfig{
+													Headers: []string{"Location: http://konghq.com:80/kong"},
+												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:httproute-1"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1"),
+											},
+										},
+									},
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.1.0"),
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										Paths: kong.StringSlice(
+											"~/kuma$",
+										),
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1"),
+										},
+									},
+									Ingress: util.FromK8sObject(routes[0]),
+									Plugins: []kong.Plugin{
+										{
+											Name: kong.String("request-termination"),
+											Config: kong.Configuration{
+												"status_code": kong.Int(301),
+											},
+											Tags: []*string{
+												kong.String("k8s-name:httproute-1"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1"),
+											},
+										},
+										{
+											Name: kong.String("response-transformer"),
+											Config: kong.Configuration{
+												"add": subtranslator.TransformerPluginConfig{
+													Headers: []string{"Location: http://kumahq.com:80/kuma"},
+												},
+											},
+											Tags: []*string{
+												kong.String("k8s-name:httproute-1"),
+												kong.String("k8s-namespace:default"),
+												kong.String("k8s-kind:HTTPRoute"),
+												kong.String("k8s-group:gateway.networking.k8s.io"),
+												kong.String("k8s-version:v1"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+	}
+	for _, tc := range testCasesCombinedServicesAcrossHTTPRoutes {
+		t.Run(tc.msg, func(t *testing.T) {
+			fakestore, err := store.NewFakeStore(tc.storeObjects)
+			require.NoError(t, err)
+
+			p := mustNewTranslator(t, fakestore)
+			// Set feature flag CombinedServicesFromDifferentHTTPRoutes to true to enable combining services from different HTTPRoutes.
+			p.featureFlags.CombinedServicesFromDifferentHTTPRoutes = true
+
+			ingressRules := newIngressRules()
+			p.ingressRulesFromHTTPRoutesWithCombinedService(tc.routes, &ingressRules)
+			// verify that we receive the expected values
+			expectedIngressRules := tc.expected(tc.routes)
+			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{})))
 		})
 	}
 }
@@ -1725,7 +2319,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 										kong.String("k8s-version:v1beta1"),
 									},
 								},
-								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								Ingress: util.FromK8sObject(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -1738,34 +2332,23 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			return func(t *testing.T) {
 				ingressRules := newIngressRules()
 
-				var errs []error
 				for _, httproute := range tt.routes {
 					// initialize the HTTPRoute object
 					httproute.SetGroupVersionKind(httprouteGVK)
-
-					// generate the ingress rules
-					err := tran.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-					if err != nil {
-						errs = append(errs, err)
-					}
 				}
+				tran.ingressRulesFromHTTPRoutesWithCombinedService(tt.routes, &ingressRules)
 
 				// verify that we receive the expected values
 				expectedIngressRules := tt.expected(tt.routes)
 				assert.Equal(t, expectedIngressRules, ingressRules)
-
-				// verify that we receive any and all expected errors
-				assert.Equal(t, tt.errs, errs)
 			}
 		}
 
 		fakestore, err := store.NewFakeStore(tt.storeObjects)
 		require.NoError(t, err)
 		translator := mustNewTranslator(t, fakestore)
-		translatorWithCombinedServiceRoutes := mustNewTranslator(t, fakestore)
 
-		t.Run(tt.msg+" using legacy translator", withTranslator(translator))
-		t.Run(tt.msg+" using combined service routes translator", withTranslator(translatorWithCombinedServiceRoutes))
+		t.Run(tt.msg+" using combined service routes translator", withTranslator(translator))
 	}
 }
 
@@ -2133,7 +2716,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(tc.fakeObjects)
 			require.NoError(t, err)
@@ -2309,6 +2891,13 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 						Config: kong.Configuration{
 							"status_code": kong.Int(301),
 						},
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1beta1"),
+						},
 					},
 					{
 						Name: kong.String("response-transformer"),
@@ -2316,6 +2905,13 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 							"add": subtranslator.TransformerPluginConfig{
 								Headers: []string{"Location: http://bar.com:80/v1/foo"},
 							},
+						},
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1beta1"),
 						},
 					},
 				},
@@ -2510,7 +3106,6 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(tc.storeObjects)
 			require.NoError(t, err)
@@ -2534,21 +3129,6 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			require.Len(t, kongService.Routes, 1)
 			require.Equal(t, tc.expectedKongRoute, kongService.Routes[0])
 		})
-	}
-}
-
-func k8sObjectInfoOfHTTPRoute(route *gatewayapi.HTTPRoute) util.K8sObjectInfo {
-	anotations := route.Annotations
-
-	return util.K8sObjectInfo{
-		Name:        route.Name,
-		Namespace:   route.Namespace,
-		Annotations: anotations,
-		GroupVersionKind: schema.GroupVersionKind{
-			Group:   "gateway.networking.k8s.io",
-			Version: "v1beta1",
-			Kind:    "HTTPRoute",
-		},
 	}
 }
 

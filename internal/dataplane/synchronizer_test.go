@@ -62,7 +62,7 @@ func TestSynchronizer(t *testing.T) {
 	assert.Equal(t, err.Error(), "server is already running")
 
 	t.Log("verifying that eventually the synchronizer reports as ready for a dbless dataplane")
-	assert.Eventually(t, func() bool { return sync.IsReady() }, testSynchronizerTick*2, testSynchronizerTick)
+	assert.Eventually(t, func() bool { return sync.IsReady() }, testSynchronizerTick*3, testSynchronizerTick)
 
 	t.Log("verifying that the dataplane eventually receieves several successful updates from the synchronizer")
 	assert.Eventually(t, func() bool {
@@ -96,7 +96,6 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 		dpconf.DBModeOff,
 		dpconf.DBModePostgres,
 	} {
-		dbMode := dbMode
 		t.Run(fmt.Sprintf("dbmode=%s", dbMode), func(t *testing.T) {
 			c := &fakeDataplaneClient{dbmode: dbMode, t: t}
 			l, err := zap.NewDevelopment()

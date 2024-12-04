@@ -8,9 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 func TestEnsureProgrammedCondition(t *testing.T) {
@@ -84,16 +85,23 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 		},
 		{
 			name:                "condition present with correct observed generation but different reason",
-			configurationStatus: object.ConfigurationStatusUnknown,
+			configurationStatus: object.ConfigurationStatusFailed,
 			conditions: []metav1.Condition{
 				func() metav1.Condition {
-					cond := expectedProgrammedConditionUnknown
-					cond.Reason = string(kongv1.ReasonInvalid)
+					cond := expectedProgrammedConditionFalse
+					cond.Reason = string("SomeOtherReason")
 					return cond
 				}(),
 			},
-			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionUnknown},
+			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionFalse},
 			expectedUpdateNeeded:      true,
+		},
+		{
+			name:                      "Unknown status should not modify existing Programmed condition",
+			configurationStatus:       object.ConfigurationStatusUnknown,
+			conditions:                []metav1.Condition{expectedProgrammedConditionTrue},
+			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionTrue},
+			expectedUpdateNeeded:      false,
 		},
 		{
 			name:                      "empty conditions",

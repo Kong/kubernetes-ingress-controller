@@ -25,7 +25,7 @@ on:
 
 jobs:
   performance-matrix:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     if: ${{ inputs.res-number-for-perf == '' }}
     runs-on: ubuntu-latest
     strategy:
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kic-image
           path: /tmp
@@ -101,27 +101,27 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: diagnostics-performance-tests
+          name: diagnostics-performance-tests-${{ matrix.resource-number }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-performance-${{ matrix.resource-number }}
           path: "*-tests.xml"
 
       - name: collect performance test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: performance-tests-results
+          name: performance-tests-results-${{ matrix.resource-number }}
           path: "/tmp/kic-perf/*.txt"
           if-no-files-found: ignore
 
   performance-target:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     if: ${{ inputs.res-number-for-perf != '' }}
     runs-on: ubuntu-latest
     strategy:
@@ -129,7 +129,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kic-image
           path: /tmp
@@ -190,21 +190,21 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: diagnostics-performance-tests
+          name: diagnostics-performance-target-tests-${{ inputs.res-number-for-perf }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-performance-target-tests-${{ inputs.res-number-for-perf }}
           path: "*-tests.xml"
 
       - name: collect performance test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: performance-tests-results
+          name: performance-target-tests-results-${{ inputs.res-number-for-perf }}
           path: "/tmp/kic-perf/*.txt"
           if-no-files-found: ignore

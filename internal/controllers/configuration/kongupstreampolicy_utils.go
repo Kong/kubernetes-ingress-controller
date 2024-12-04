@@ -9,14 +9,18 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // maxNAncestors is the maximum number of ancestors that can be stored in the KongUpstreamPolicy status.
@@ -89,6 +93,7 @@ func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(
 	return false, nil
 }
 
+// getServicesReferencingUpstreamPolicy fetches services referencing a KongUpstreamPolicy.
 func (r *KongUpstreamPolicyReconciler) getServicesReferencingUpstreamPolicy(
 	ctx context.Context,
 	upstreamPolicyNN k8stypes.NamespacedName,
@@ -104,6 +109,49 @@ func (r *KongUpstreamPolicyReconciler) getServicesReferencingUpstreamPolicy(
 		return nil, fmt.Errorf("failed listing Services: %w", err)
 	}
 	return services.Items, nil
+}
+
+// getIngressesReferencingService fetches all Ingresses using a Service as its backend.
+func (r *KongUpstreamPolicyReconciler) getIngressesReferencingService(
+	ctx context.Context,
+	serviceNN k8stypes.NamespacedName,
+) ([]netv1.Ingress, error) {
+	ingresses := &netv1.IngressList{}
+	if err := r.List(ctx, ingresses,
+		client.InNamespace(serviceNN.Namespace),
+		client.MatchingFields{routeBackendRefServiceNameIndexKey: serviceNN.String()},
+	); err != nil {
+		return nil, fmt.Errorf("failed listing ingresses: %w", err)
+	}
+	return ingresses.Items, nil
+}
+
+// getHTTPRoutesReferencingService fetches all HTTPRoutes using a service as its backend.
+func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingService(
+	ctx context.Context,
+	serviceNN k8stypes.NamespacedName,
+) ([]gatewayapi.HTTPRoute, error) {
+	httpRoutes := &gatewayapi.HTTPRouteList{}
+	if err := r.List(ctx, httpRoutes,
+		client.MatchingFields{routeBackendRefServiceNameIndexKey: serviceNN.String()},
+	); err != nil {
+		return nil, fmt.Errorf("failed listing HTTPRoutes referencing services: %w", err)
+	}
+	return httpRoutes.Items, nil
+}
+
+// getHTTPRoutesReferencingServiceFacade fetches all HTTPRoutes using a KongServiceFacade as its backend.
+func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingServiceFacade(
+	ctx context.Context,
+	serviceFacadeNN k8stypes.NamespacedName,
+) ([]gatewayapi.HTTPRoute, error) {
+	httpRoutes := &gatewayapi.HTTPRouteList{}
+	if err := r.List(ctx, httpRoutes,
+		client.MatchingFields{routeBackendRefServiceFacadeIndexKey: serviceFacadeNN.String()},
+	); err != nil {
+		return nil, fmt.Errorf("failed listing HTTPRoutes referencing KongServiceFacades: %w", err)
+	}
+	return httpRoutes.Items, nil
 }
 
 // maybeGetServiceFacadesReferencingUpstreamPolicy returns a list of KongServiceFacades that reference the given KongUpstreamPolicy.
@@ -127,6 +175,78 @@ func (r *KongUpstreamPolicyReconciler) maybeGetServiceFacadesReferencingUpstream
 		return nil, fmt.Errorf("failed listing KongServiceFacades: %w", err)
 	}
 	return serviceFacades.Items, nil
+}
+
+// upstreamPolicyUsedByBackendsOfMatchingClass returns true is the KongUpstreamPolicy is referenced in
+// Services or KongServiceFacades that are used in backends of recociled Ingress or HTTPRoute.
+// If it returns false, the reconciliation is terminated and the controller will not update its status and put it into storage
+// because the KongUpstreamPolicy will not be translated into Kong configuration in such situation.
+// This is implemented to prevent races on updating the status of KongUpstreamPolicy.
+// Ref: https://github.com/Kong/kubernetes-ingress-controller/issues/6270.
+func (r *KongUpstreamPolicyReconciler) upstreamPolicyUsedByBackendsOfMatchingClass(
+	ctx context.Context,
+	upstreamPolicyNN k8stypes.NamespacedName,
+	isDefaultIngressClass bool,
+) (bool, error) {
+	// Fetch Services and ServiceFacades.
+	services, err := r.getServicesReferencingUpstreamPolicy(ctx, upstreamPolicyNN)
+	if err != nil {
+		return false, err
+	}
+	serviceFacades, err := r.maybeGetServiceFacadesReferencingUpstreamPolicy(ctx, upstreamPolicyNN)
+	if err != nil {
+		return false, err
+	}
+	// Check if Ingresses use services referencing reconciled KongUpstreamPolicy as backend.
+	for _, service := range services {
+		ingresses, err := r.getIngressesReferencingService(ctx, k8stypes.NamespacedName{Namespace: service.Namespace, Name: service.Name})
+		if err != nil {
+			return false, err
+		}
+		for _, ingress := range ingresses {
+			if utils.MatchesIngressClass(&ingress, r.IngressClassName, isDefaultIngressClass) {
+				return true, nil
+			}
+		}
+	}
+	// Check if HTTPRoutes use services/KongServiceFacades referencing reconciled KongUpstreamPolicy as backend.
+	if r.HTTPRouteEnabled {
+		for _, service := range services {
+			httpRoutes, err := r.getHTTPRoutesReferencingService(ctx, k8stypes.NamespacedName{Namespace: service.Namespace, Name: service.Name})
+			if err != nil {
+				return false, err
+			}
+			for _, httpRoute := range httpRoutes {
+				attached := r.isRouteAttachedToReconciledGateway(&httpRoute) //nolint:contextcheck
+				if attached {
+					return true, nil
+				}
+			}
+		}
+		for _, serviceFacade := range serviceFacades {
+			httpRoutes, err := r.getHTTPRoutesReferencingServiceFacade(ctx, k8stypes.NamespacedName{Namespace: serviceFacade.Namespace, Name: serviceFacade.Name})
+			if err != nil {
+				return false, err
+			}
+			for _, httpRoute := range httpRoutes {
+				attached := r.isRouteAttachedToReconciledGateway(&httpRoute) //nolint:contextcheck
+				if attached {
+					return true, nil
+				}
+			}
+		}
+	}
+	// If no Ingress or HTTPRoute satisfied, return false.
+	return false, nil
+}
+
+// isRouteAttachedToReconciledGateway returns true if HTTPRoute is attached to any reconciled gateway.
+func (r *KongUpstreamPolicyReconciler) isRouteAttachedToReconciledGateway(httpRoute *gatewayapi.HTTPRoute) bool {
+	return gatewaycontroller.IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](
+		r.Client, r.Log,
+		controllers.NewOptionalNamespacedName(mo.Option[k8stypes.NamespacedName]{}),
+		httpRoute,
+	)
 }
 
 // buildAncestorsStatus creates a list of services with their conditions associated.
@@ -159,7 +279,6 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 	// Build the status for each ancestor (Services and KongServiceFacades).
 	ancestorsStatus := make([]ancestorStatus, 0, len(services)+len(serviceFacades))
 	for _, service := range services {
-		service := service
 		acceptedCondition := acceptedCondition
 		programmedCondition := programmedCondition
 
@@ -185,10 +304,10 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 			ancestorKind:        upstreamPolicyAncestorKindService,
 			acceptedCondition:   acceptedCondition,
 			programmedCondition: programmedCondition,
+			creationTimestamp:   service.CreationTimestamp,
 		})
 	}
 	for _, serviceFacade := range serviceFacades {
-		serviceFacade := serviceFacade
 		programmedCondition := programmedCondition
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(&serviceFacade) {
 			// If the KongServiceFacade is not configured, we change it to False.
@@ -204,6 +323,7 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 			ancestorKind:        upstreamPolicyAncestorKindKongServiceFacade,
 			acceptedCondition:   acceptedCondition,
 			programmedCondition: programmedCondition,
+			creationTimestamp:   serviceFacade.CreationTimestamp,
 		})
 	}
 
@@ -298,8 +418,18 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 	ancestorsStatus []ancestorStatus,
 ) (gatewayapi.PolicyStatus, error) {
 	// Sort the ancestors by creation timestamp and keep only the oldest ones.
+	// If multiple ancestors have the same creation timestamp, sort by kind, namespace and name.
 	sort.Slice(ancestorsStatus, func(i, j int) bool {
-		return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
+		if !ancestorsStatus[i].creationTimestamp.Equal(&ancestorsStatus[j].creationTimestamp) {
+			return ancestorsStatus[i].creationTimestamp.Before(&ancestorsStatus[j].creationTimestamp)
+		}
+		if ancestorsStatus[i].ancestorKind != ancestorsStatus[j].ancestorKind {
+			return ancestorsStatus[i].ancestorKind < ancestorsStatus[j].ancestorKind
+		}
+		if ancestorsStatus[i].namespacedName.Namespace != ancestorsStatus[j].namespacedName.Namespace {
+			return ancestorsStatus[i].namespacedName.Namespace < ancestorsStatus[j].namespacedName.Namespace
+		}
+		return ancestorsStatus[i].namespacedName.Name < ancestorsStatus[j].namespacedName.Name
 	})
 	if len(ancestorsStatus) > maxNAncestors {
 		r.Log.Info("status has more ancestors than the Gateway API permits, the newest ones will be ignored",
@@ -410,4 +540,22 @@ func isSupportedHTTPRouteBackendRef(br gatewayapi.BackendRef) bool {
 	// For Kind nil case should never happen as it defaults on the API level to 'Service'. We can safely consider
 	// nil to be treated as 'Service' if it would happen for any reason.
 	return groupIsCoreOrNilOrEmpty && kindIsServiceOrNil
+}
+
+// backendRefToServiceFacadeRef returns the key of KongServiceFacade in namespace/name format
+// if the backendRef points to a ServiceFacade.
+func backendRefToServiceFacadeRef(routeNamespace string, br gatewayapi.BackendRef) serviceKey {
+	if !backendRefIsServiceFacade(br) {
+		return ""
+	}
+	namespace := routeNamespace
+	if br.Namespace != nil {
+		namespace = string(*br.Namespace)
+	}
+	return buildServiceReference(namespace, string(br.Name))
+}
+
+func backendRefIsServiceFacade(br gatewayapi.BackendRef) bool {
+	return br.Group != nil && *br.Group == gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group) &&
+		br.Kind != nil && *br.Kind == "KongServiceFacade"
 }

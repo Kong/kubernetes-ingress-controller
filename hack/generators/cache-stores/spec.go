@@ -56,6 +56,10 @@ var supportedTypes = []cacheStoreSupportedType{
 		Type:    "Gateway",
 		Package: "gatewayapi",
 	},
+	{
+		Type:    "BackendTLSPolicy",
+		Package: "gatewayapi",
+	},
 	// Kong types
 	{
 		Type:       "KongPlugin",

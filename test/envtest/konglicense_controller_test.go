@@ -13,13 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-)
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
-const (
-	waitTime = 3 * time.Second
-	tickTime = 100 * time.Millisecond
+	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 )
 
 func TestKongLicenseController(t *testing.T) {

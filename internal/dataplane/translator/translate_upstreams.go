@@ -11,11 +11,13 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
 )
 
 func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]kongstate.Upstream, map[string]kongstate.Service) {
@@ -76,24 +78,24 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port)
+				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port, t.clusterDomain)
 
 				if len(newTargets) == 0 {
-					t.logger.V(util.InfoLevel).Info("No targets could be found for kubernetes service",
+					t.logger.V(logging.InfoLevel).Info("No targets could be found for kubernetes service",
 						"namespace", k8sService.Namespace, "name", k8sService.Name, "kong_service", *service.Name)
 				}
 
-				// if weights were set for the backend then that weight needs to be
+				// If weights were set for the backend then that weight needs to be
 				// distributed equally among all the targets.
 				if weight, weightPresent := backend.Weight().Get(); weightPresent && len(newTargets) != 0 {
-					// initialize the weight of the target based on the weight of the backend
+					// Initialize the weight of the target based on the weight of the backend
 					// which governs that target (and potentially more). If the weight of the
 					// backend is 0 then this indicates an intention to drop all targets from
 					// this backend from the load-balancer and is a special situation where
 					// all derived targets will receive a weight of 0.
 					targetWeight := weight
 
-					// if the backend governing this target is not set to a weight of 0,
+					// If the backend governing this target is not set to a weight of 0,
 					// all targets derived from the backend split the weight, therefore
 					// equally splitting the traffic load.
 					if weight != 0 {
@@ -115,17 +117,21 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 			}
 
 			targets := lo.Values(targetMap)
-			// warn if an upstream was created with 0 targets
-			if len(targets) == 0 {
-				t.logger.V(util.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
+			// Warn if an upstream was created with 0 targets and no request-termination plugin is present.
+			// When the plugin is present there (may be a result of RequestRedirect filter) there may not be
+			// a target service (it may point to an arbitrary URL), hence do not log a warn.
+			if len(targets) == 0 && !lo.ContainsBy(service.Plugins, func(p kong.Plugin) bool {
+				return p.Name != nil && *p.Name == "request-termination"
+			}) {
+				t.logger.V(logging.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
 			}
 
-			// define the upstream including all the newly populated targets
+			// Define the upstream including all the newly populated targets
 			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String(name),
-					Tags: service.Tags, // populated by populateServices already
+					Tags: service.Tags, // Populated by populateServices already.
 				},
 				Service: service,
 				Targets: targets,
@@ -150,7 +156,6 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 			}, nil
 		}
 		for _, port := range svc.Spec.Ports {
-			port := port
 			if port.Port == wantPort.Number {
 				return &port, nil
 			}
@@ -161,7 +166,6 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 			return nil, fmt.Errorf("rules with an ExternalName service must specify numeric ports")
 		}
 		for _, port := range svc.Spec.Ports {
-			port := port
 			if port.Name == wantPort.Name {
 				return &port, nil
 			}
@@ -191,6 +195,7 @@ func getServiceEndpoints(
 	s store.Storer,
 	svc *corev1.Service,
 	servicePort *corev1.ServicePort,
+	clusterDomain string,
 ) []kongstate.Target {
 	logger = logger.WithValues(
 		"service_name", svc.Name,
@@ -207,7 +212,7 @@ func getServiceEndpoints(
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
-		logger.V(util.DebugLevel).Info("Unable to retrieve IngressClassParameters", "error", err)
+		logger.V(logging.DebugLevel).Info("Unable to retrieve IngressClassParameters", "error", err)
 	} else {
 		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
@@ -215,11 +220,11 @@ func getServiceEndpoints(
 	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream)
+		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream, clusterDomain)
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
-		logger.V(util.DebugLevel).Info("No active endpoints")
+		logger.V(logging.DebugLevel).Info("No active endpoints")
 	}
 
 	return targetsForEndpoints(endpoints)
@@ -253,6 +258,7 @@ func getEndpoints(
 	proto corev1.Protocol,
 	getEndpointSlices func(string, string) ([]*discoveryv1.EndpointSlice, error),
 	isSvcUpstream bool,
+	clusterDomain string,
 ) []util.Endpoint {
 	if service == nil || port == nil {
 		return []util.Endpoint{}
@@ -261,9 +267,13 @@ func getEndpoints(
 	// If service is an upstream service...
 	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
 		// ... return its address as the only endpoint.
+		svcDomainName := service.Name + "." + service.Namespace + ".svc"
+		if clusterDomain != "" {
+			svcDomainName += "." + clusterDomain
+		}
 		return []util.Endpoint{
 			{
-				Address: service.Name + "." + service.Namespace + ".svc",
+				Address: svcDomainName,
 				Port:    fmt.Sprint(port.Port),
 			},
 		}
@@ -277,7 +287,7 @@ func getEndpoints(
 
 	// ExternalName services
 	if service.Spec.Type == corev1.ServiceTypeExternalName {
-		logger.V(util.DebugLevel).Info("Found service of type=ExternalName")
+		logger.V(logging.DebugLevel).Info("Found service of type=ExternalName")
 		return []util.Endpoint{
 			{
 				Address: service.Spec.ExternalName,
@@ -286,13 +296,13 @@ func getEndpoints(
 		}
 	}
 
-	logger.V(util.DebugLevel).Info("Fetching EndpointSlices")
+	logger.V(logging.DebugLevel).Info("Fetching EndpointSlices")
 	endpointSlices, err := getEndpointSlices(service.Namespace, service.Name)
 	if err != nil {
 		logger.Error(err, "Error fetching EndpointSlices")
 		return []util.Endpoint{}
 	}
-	logger.V(util.DebugLevel).Info("Fetched EndpointSlices", "count", len(endpointSlices))
+	logger.V(logging.DebugLevel).Info("Fetched EndpointSlices", "count", len(endpointSlices))
 
 	// Avoid duplicated upstream servers when the service contains
 	// multiple port definitions sharing the same target port.
@@ -327,7 +337,7 @@ func getEndpoints(
 			}
 		}
 	}
-	logger.V(util.DebugLevel).Info("Found endpoints", "endpoints", upstreamServers)
+	logger.V(logging.DebugLevel).Info("Found endpoints", "endpoints", upstreamServers)
 	return upstreamServers
 }
 

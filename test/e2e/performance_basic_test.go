@@ -165,7 +165,6 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 		resourceYaml := ""
 		for j := i; j < i+batchSize && j < defaultResNum; j++ {
 			resourceYaml += fmt.Sprintf(rulesTpl, j, j, j, j, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, j))), j, j, fmt.Sprintf(consumerUsername, j), j)
-
 		}
 		err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
 		require.NoError(t, err)
@@ -219,7 +218,6 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	t.Logf("time to make 1 ingress rules take effect when %d ingress exists: %v", defaultResNum, effectTime.Sub(completionTime))
 	writeResultToTempFile(t, oneResourceUpdateReport, defaultResNum, int(completionTime.Sub(startTime).Milliseconds()))
 	writeResultToTempFile(t, oneResourceTakeEffectReport, defaultResNum, int(effectTime.Sub(completionTime).Milliseconds()))
-
 }
 
 func getRandomList(n int) []int {
@@ -269,7 +267,7 @@ func writeResultToTempFile(t *testing.T, filename string, resourceNum, time int)
 	// if the file already exists, it will be overwritten
 	// if the file does not exist, it will be created
 	defaultResultDir := "/tmp/kic-perf/"
-	if err := os.MkdirAll(defaultResultDir, 0755); err != nil {
+	if err := os.MkdirAll(defaultResultDir, 0o755); err != nil {
 		t.Logf("failed to create directory: %v", err)
 		return
 	}

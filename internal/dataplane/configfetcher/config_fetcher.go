@@ -14,12 +14,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 type LastValidConfigFetcher interface {
 	// TryFetchingValidConfigFromGateways tries to fetch a valid configuration from all gateways and persists it if found.
-	TryFetchingValidConfigFromGateways(ctx context.Context, logger logr.Logger, gatewayClients []*adminapi.Client) error
+	TryFetchingValidConfigFromGateways(ctx context.Context, logger logr.Logger, gatewayClients []*adminapi.Client, customEntityTypes []string) error
 
 	// LastValidConfig returns the last valid config and true if there's one available. Otherwise, second return value is false.
 	LastValidConfig() (*kongstate.KongState, bool)
@@ -108,8 +108,9 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 	ctx context.Context,
 	logger logr.Logger,
 	gatewayClients []*adminapi.Client,
+	customEntityTypes []string,
 ) error {
-	logger.V(util.DebugLevel).Info("Fetching last good configuration from gateway clients", "count", len(gatewayClients))
+	logger.V(logging.DebugLevel).Info("Fetching last good configuration from gateway clients", "count", len(gatewayClients))
 
 	var (
 		goodKongState *kongstate.KongState
@@ -117,8 +118,11 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		clientUsed    *adminapi.Client
 	)
 	for _, client := range gatewayClients {
-		logger.V(util.DebugLevel).Info("Fetching configuration", "url", client.BaseRootURL())
-		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient())
+		logger.V(logging.DebugLevel).Info("Fetching configuration", "url", client.BaseRootURL())
+		// Copy the dump configuration and add custom entity types to fetch config with custom entities.
+		config := cf.config
+		config.CustomEntityTypes = customEntityTypes
+		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient(), config)
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -147,13 +151,16 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 			goodKongState.FillIDs(logger, cf.workspace)
 		}
 		cf.lastValidState = goodKongState
-		logger.V(util.DebugLevel).Info("Last good configuration fetched from Kong node", "url", clientUsed.BaseRootURL())
+		logger.V(logging.DebugLevel).Info("Last good configuration fetched from Kong node", "url", clientUsed.BaseRootURL())
+		// If we've found at least one good configuration, we can return early without an error.
+		// We got what we wanted, which is the last good configuration.
+		return nil
 	}
 	return errs
 }
 
-func (cf *DefaultKongLastGoodConfigFetcher) getKongRawState(ctx context.Context, client *kong.Client) (*utils.KongRawState, error) {
-	return dump.Get(ctx, client, cf.config)
+func (cf *DefaultKongLastGoodConfigFetcher) getKongRawState(ctx context.Context, client *kong.Client, config dump.Config) (*utils.KongRawState, error) {
+	return dump.Get(ctx, client, config)
 }
 
 func (cf *DefaultKongLastGoodConfigFetcher) getKongStatus(ctx context.Context, client *kong.Client) (*kong.Status, error) {

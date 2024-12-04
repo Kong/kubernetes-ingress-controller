@@ -18,9 +18,9 @@ on:
 
 jobs:
   coverage:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
-    if: ${{ inputs.coverage && !cancelled() }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
+    if: ${{ inputs.coverage && !cancelled() }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
           merge-multiple: true
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           name: combined-coverage
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -43,7 +43,7 @@ jobs:
           verbose: true
 
   buildpulse-report:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: ${{ inputs.buildpulse && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: buildpulse/buildpulse-action@v0.11.0
+        uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: 962416
           repository: 127765544

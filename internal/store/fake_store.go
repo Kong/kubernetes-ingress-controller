@@ -20,12 +20,13 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 // FakeObjects can be used to populate a fake Store.
@@ -39,6 +40,7 @@ type FakeObjects struct {
 	GRPCRoutes                     []*gatewayapi.GRPCRoute
 	ReferenceGrants                []*gatewayapi.ReferenceGrant
 	Gateways                       []*gatewayapi.Gateway
+	BackendTLSPolicies             []*gatewayapi.BackendTLSPolicy
 	TCPIngresses                   []*kongv1beta1.TCPIngress
 	UDPIngresses                   []*kongv1beta1.UDPIngress
 	IngressClassParametersV1alpha1 []*kongv1alpha1.IngressClassParameters
@@ -122,6 +124,12 @@ func NewFakeStore(
 	gatewayStore := cache.NewStore(namespacedKeyFunc)
 	for _, gw := range objects.Gateways {
 		if err := gatewayStore.Add(gw); err != nil {
+			return nil, err
+		}
+	}
+	backendTLSPolicyStore := cache.NewStore(namespacedKeyFunc)
+	for _, policy := range objects.BackendTLSPolicies {
+		if err := backendTLSPolicyStore.Add(policy); err != nil {
 			return nil, err
 		}
 	}
@@ -233,6 +241,7 @@ func NewFakeStore(
 			GRPCRoute:                      grpcrouteStore,
 			ReferenceGrant:                 referencegrantStore,
 			Gateway:                        gatewayStore,
+			BackendTLSPolicy:               backendTLSPolicyStore,
 			TCPIngress:                     tcpIngressStore,
 			UDPIngress:                     udpIngressStore,
 			Service:                        serviceStore,
@@ -273,6 +282,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
 		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):           gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
 		reflect.TypeOf(&gatewayapi.Gateway{}):                  gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
 		reflect.TypeOf(&kongv1beta1.TCPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
 		reflect.TypeOf(&kongv1beta1.UDPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
 		reflect.TypeOf(&kongv1alpha1.IngressClassParameters{}): kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
@@ -317,6 +327,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.GRPCRoutes)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.BackendTLSPolicies)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.TCPIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.UDPIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)

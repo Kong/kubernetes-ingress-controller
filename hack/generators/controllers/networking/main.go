@@ -14,13 +14,13 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
+	outputFile = "../../internal/controllers/configuration/zz_generated.controllers.go"
 
 	corev1      = "k8s.io/api/core/v1"
 	discoveryv1 = "k8s.io/api/discovery/v1"
 	netv1       = "k8s.io/api/networking/v1"
 
-	kongv1       = "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1       = "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/v3/api/configuration/v1beta1"
 	kongv1alpha1 = "github.com/kong/kubernetes-ingress-controller/v3/api/configuration/v1alpha1"
 
@@ -162,6 +162,7 @@ var inputControllersNeeded = &typesNeeded{
 		ProgrammedCondition: ProgrammedConditionConfiguration{
 			UpdatesEnabled: true,
 		},
+		HasControlPlaneReference: true,
 	},
 	typeNeeded{
 		Group:                            "configuration.konghq.com",
@@ -181,6 +182,7 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
+		HasControlPlaneReference:          true,
 	},
 	typeNeeded{
 		Group:                             "configuration.konghq.com",
@@ -263,6 +265,7 @@ var inputControllersNeeded = &typesNeeded{
 		},
 		AcceptsIngressClassNameAnnotation: true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
+		HasControlPlaneReference:          true,
 	},
 	typeNeeded{
 		Group:                            "configuration.konghq.com",
@@ -414,6 +417,11 @@ type typeNeeded struct {
 	// NeedUpdateReferences is true if we need to update the reference relationships
 	// between reconciled object and other objects.
 	NeedsUpdateReferences bool
+
+	// HasControlPlaneReference is true if the object's spec has a control plane reference.
+	// If true, the controller will only reconcile the object if the control plane reference is set to 'kic' or
+	// is left empty.
+	HasControlPlaneReference bool
 }
 
 type ProgrammedConditionConfiguration struct {
@@ -483,12 +491,12 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1alpha1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 )
 `
 
@@ -560,16 +568,29 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 	}
 {{- end}}
 {{- if .AcceptsIngressClassNameAnnotation}}
+	{{- if .HasControlPlaneReference }}
+	cpRefPredicate := ctrlutils.GenerateCPReferenceMatchesPredicate[*{{.PackageImportAlias}}.{{.Kind}}]()
+	{{- end}}
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
-			builder.WithPredicates(predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass)),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+				{{- if .HasControlPlaneReference }}
+				cpRefPredicate,
+				{{- end}}
+			),
 		)
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
     return blder.Watches(&{{.PackageImportAlias}}.{{.Kind}}{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(preds),
+		builder.WithPredicates(
+			preds,
+			{{- if .HasControlPlaneReference }}
+			cpRefPredicate,
+			{{- end}}
+		),
 	).
 		Complete(r)
 {{- else}}
@@ -632,11 +653,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		}
 		return ctrl.Result{}, err
 	}
-	log.V(util.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
+	log.V(logging.DebugLevel).Info("Reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)
 		{{if .NeedsUpdateReferences}}
 		// remove reference record where the {{.Kind}} is the referrer
 		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
@@ -663,16 +684,16 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
 			// if none exists.
-			log.V(util.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+			log.V(logging.DebugLevel).Info("Could not retrieve IngressClass", "ingressclass", r.IngressClassName)
 		}
 	}
 	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
-		log.V(util.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
+		log.V(logging.DebugLevel).Info("Object missing ingress class, ensuring it's removed from configuration",
 		"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 	} else {
-		log.V(util.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+		log.V(logging.DebugLevel).Info("Object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 		"class", r.IngressClassName)
 	}
 {{end}}
@@ -704,20 +725,20 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		{{- if .IngressAddressUpdatesEnabled }}
-		log.V(util.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if  !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
-			log.V(util.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			log.V(logging.DebugLevel).Info("Resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
-		log.V(util.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		log.V(util.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
 		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
@@ -725,11 +746,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		{{- end }}
 
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
-		log.V(util.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status",configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
-			configurationStatus, 
-			obj.Generation, 
+			configurationStatus,
+			obj.Generation,
 			obj.Status.Conditions,
 		{{- if .ProgrammedCondition.CustomUnknownMessage }}
 			ctrlutils.WithUnknownMessage("{{ .ProgrammedCondition.CustomUnknownMessage }}"),
@@ -740,7 +761,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
-		log.V(util.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 {{- end}}
 

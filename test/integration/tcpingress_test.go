@@ -3,11 +3,10 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -21,9 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
@@ -35,114 +35,9 @@ var (
 	tlsMutex sync.Mutex
 )
 
-func TestTCPIngressEssentials(t *testing.T) {
-	RunWhenKongExpressionRouter(context.Background(), t)
-	ctx := context.Background()
-
-	t.Parallel()
-	// Ensure no other TCP tests run concurrently to avoid fights over the port
-	t.Log("locking TCP port")
-	tcpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking TCP port")
-		tcpMutex.Unlock()
-	})
-
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("setting up the TCPIngress tests")
-	testName := "tcpingress"
-	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, test.HTTPBinPort))
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(deployment)
-
-	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(service)
-
-	t.Logf("routing to service %s via TCPIngress", service.Name)
-	tcp := &kongv1beta1.TCPIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testName,
-			Namespace: ns.Name,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Spec: kongv1beta1.TCPIngressSpec{
-			Rules: []kongv1beta1.IngressRule{
-				{
-					Port: ktfkong.DefaultTCPServicePort,
-					Backend: kongv1beta1.IngressBackend{
-						ServiceName: service.Name,
-						ServicePort: 80,
-					},
-				},
-			},
-		},
-	}
-	tcp, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(tcp)
-
-	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
-	ingCli := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name)
-	assert.Eventually(t, func() bool {
-		curIng, err := ingCli.Get(ctx, tcp.Name, metav1.GetOptions{})
-		if err != nil || curIng == nil {
-			return false
-		}
-		ingresses := curIng.Status.LoadBalancer.Ingress
-		for _, ingress := range ingresses {
-			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-				t.Logf("tcpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
-				return true
-			}
-		}
-		return false
-	}, statusWait, waitTick, true)
-
-	t.Logf("verifying TCP Ingress %s operational", tcp.Name)
-	tcpProxyURL := fmt.Sprintf("http://%s:", proxyTCPURL)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-			// Expected: "<title>httpbin.org</title>"
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
-
-	t.Logf("tearing down TCPIngress %s and ensuring that the relevant backend routes are removed", tcp.Name)
-	require.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL)
-		if err != nil {
-			return true
-		}
-		defer resp.Body.Close()
-		return false
-	}, ingressWait, waitTick)
-}
-
 func TestTCPIngressTLS(t *testing.T) {
-	RunWhenKongExpressionRouter(context.Background(), t)
+	ctx := context.Background()
+	RunWhenKongExpressionRouter(ctx, t)
 	t.Parallel()
 
 	t.Log("locking Gateway TLS ports")
@@ -152,7 +47,6 @@ func TestTCPIngressTLS(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("setting up the TCPIngress tests")
@@ -161,6 +55,26 @@ func TestTCPIngressTLS(t *testing.T) {
 	require.NoError(t, err)
 
 	testServiceSuffixes := []string{"alpha", "bravo", "charlie"}
+	const domain = ".example"
+	var certOpts []certificate.SelfSignedCertificateOption
+	for _, tss := range testServiceSuffixes {
+		certOpts = append(certOpts, certificate.WithDNSNames(tss+domain), certificate.WithCommonName(tss+domain))
+	}
+	exampleTLSCert, exampleTLSKey := certificate.MustGenerateCertPEMFormat(certOpts...)
+	tlsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: tlsSecretName,
+		},
+		Data: map[string][]byte{
+			"tls.crt": exampleTLSCert,
+			"tls.key": exampleTLSKey,
+		},
+	}
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, tlsSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
+	certPool := x509.NewCertPool()
+	require.True(t, certPool.AppendCertsFromPEM(exampleTLSCert))
+
 	testServices := make(map[string]*corev1.Service)
 
 	for _, i := range testServiceSuffixes {
@@ -197,9 +111,15 @@ func TestTCPIngressTLS(t *testing.T) {
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
+			TLS: []kongv1beta1.IngressTLS{
+				{
+					Hosts:      []string{testServiceSuffixes[0] + domain, testServiceSuffixes[1] + domain},
+					SecretName: tlsSecretName,
+				},
+			},
 			Rules: []kongv1beta1.IngressRule{
 				{
-					Host: testServiceSuffixes[0] + ".example",
+					Host: testServiceSuffixes[0] + domain,
 					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[0]].Name,
@@ -207,7 +127,7 @@ func TestTCPIngressTLS(t *testing.T) {
 					},
 				},
 				{
-					Host: testServiceSuffixes[1] + ".example",
+					Host: testServiceSuffixes[1] + domain,
 					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[1]].Name,
@@ -230,9 +150,15 @@ func TestTCPIngressTLS(t *testing.T) {
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
+			TLS: []kongv1beta1.IngressTLS{
+				{
+					Hosts:      []string{testServiceSuffixes[2] + domain},
+					SecretName: tlsSecretName,
+				},
+			},
 			Rules: []kongv1beta1.IngressRule{
 				{
-					Host: testServiceSuffixes[2] + ".example",
+					Host: testServiceSuffixes[2] + domain,
 					Port: ktfkong.DefaultTLSServicePort,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[2]].Name,
@@ -249,8 +175,9 @@ func TestTCPIngressTLS(t *testing.T) {
 		t.Logf("verifying TCP Ingress for %s.example operational", i)
 		require.Eventually(t, func() bool {
 			conn, err := tls.Dial("tcp", proxyTLSURL, &tls.Config{
-				InsecureSkipVerify: true,
-				ServerName:         fmt.Sprintf("%s.example", i),
+				MinVersion: tls.VersionTLS12,
+				ServerName: fmt.Sprintf("%s.example", i),
+				RootCAs:    certPool,
 			})
 			if err != nil {
 				return false
@@ -280,8 +207,9 @@ func TestTCPIngressTLS(t *testing.T) {
 	t.Logf("verifying TCP Ingress routes to new upstream after update")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", proxyTLSURL, &tls.Config{
-			InsecureSkipVerify: true,
-			ServerName:         fmt.Sprintf("%s.example", testServiceSuffixes[0]),
+			MinVersion: tls.VersionTLS12,
+			ServerName: fmt.Sprintf("%s.example", testServiceSuffixes[0]),
+			RootCAs:    certPool,
 		})
 		if err != nil {
 			return false
@@ -318,9 +246,11 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	const tlsExampleHostname = "tlsroute.kong.example"
 
 	t.Log("configuring secrets")
-	exampleTLSCert, exampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	exampleTLSCert, exampleTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(tlsExampleHostname), certificate.WithDNSNames(tlsExampleHostname),
 	)
+	certPool := x509.NewCertPool()
+	certPool.AppendCertsFromPEM(exampleTLSCert)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tlsSecretName,
@@ -389,7 +319,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, tlsRouteHostname, true)
+		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
 		assert.NoError(c, err)
 	}, ingressWait, waitTick)
 }

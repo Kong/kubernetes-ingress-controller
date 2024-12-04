@@ -31,8 +31,12 @@ certificates:
     7InkkRoDnTrU3Ro=
     -----END PRIVATE KEY-----
   snis:
-  - name: 3.example.com
-  - name: 4.example.com
+  - certificate:
+      id: 8aade13c-1470-46bd-9849-9a74e349214f
+    name: 3.example.com
+  - certificate:
+      id: 8aade13c-1470-46bd-9849-9a74e349214f
+    name: 4.example.com
 - cert: |-
     -----BEGIN CERTIFICATE-----
     MIIBoTCCAQoCCQC/V5OfTXu7xDANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDDApr
@@ -64,8 +68,12 @@ certificates:
     5GTyl7XJmyY/
     -----END PRIVATE KEY-----
   snis:
-  - name: 1.example.com
-  - name: 2.example.com
+  - certificate:
+      id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+    name: 1.example.com
+  - certificate:
+      id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+    name: 2.example.com
 services:
 - connect_timeout: 60000
   host: foo-svc.bar-namespace.80.svc

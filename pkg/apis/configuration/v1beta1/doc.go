@@ -15,6 +15,9 @@ limitations under the License.
 */
 
 // Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
+//
+// Deprecated: API types were migrated to github.com/kong/kubernetes-configuration/api. This package will be removed in
+// the future.
 // +kubebuilder:object:generate=true
 // +groupName=configuration.konghq.com
 package v1beta1

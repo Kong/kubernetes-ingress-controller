@@ -23,9 +23,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -315,7 +316,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "KongConsumer" &&
 				e.InvolvedObject.Name == consumer.Name &&
-				e.Message == "invalid : HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")"
+				e.Message == fmt.Sprintf("invalid consumer:%s: HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")", consumer.Name)
 		})
 		if lo.Count(matches, true) != 1 {
 			t.Logf("not all events matched: %+v", matches)

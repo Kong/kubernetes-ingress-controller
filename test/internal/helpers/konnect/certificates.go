@@ -2,15 +2,19 @@ package konnect
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	cpc "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/controlplanesconfig"
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/Kong/sdk-konnect-go/retry"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // CreateClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API
@@ -18,23 +22,33 @@ import (
 func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string) (certPEM string, keyPEM string) {
 	t.Helper()
 
-	rgConfigClient, err := cpc.NewClientWithResponses(fmt.Sprintf(konnectControlPlanesConfigBaseURLFmt, cpID), cpc.WithRequestEditorFn(
-		func(_ context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+accessToken())
-			return nil
+	sdk := sdk.New(accessToken(), serverURLOpt(),
+		sdkkonnectgo.WithRetryConfig(retry.Config{
+			Backoff: &retry.BackoffStrategy{
+				InitialInterval: 100,
+				MaxInterval:     2000,
+				Exponent:        1.2,
+				MaxElapsedTime:  10000,
+			},
 		}),
-		cpc.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
 	)
-	require.NoError(t, err)
 
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	cert, key := certificate.MustGenerateCertPEMFormat()
 
 	t.Log("creating client certificate in Konnect")
-	resp, err := rgConfigClient.PostDpClientCertificatesWithResponse(ctx, cpc.PostDpClientCertificatesJSONRequestBody{
+	resp, err := sdk.DPCertificates.CreateDataplaneCertificate(ctx, cpID, &sdkkonnectcomp.DataPlaneClientCertificateRequest{
 		Cert: string(cert),
 	})
 	require.NoError(t, err)
-	require.Equalf(t, http.StatusCreated, resp.StatusCode(), "failed creating client certificate: %s", string(resp.Body))
+
+	if !assert.Equal(t, http.StatusCreated, resp.GetStatusCode()) {
+		body, err := io.ReadAll(resp.RawResponse.Body)
+		if err != nil {
+			body = []byte(err.Error())
+		}
+		require.Failf(t, "failed creating client certificate", "body %s", body)
+		return "", ""
+	}
 
 	return string(cert), string(key)
 }

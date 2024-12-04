@@ -182,10 +182,16 @@ jobs:
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
 
-      - run: |
+      - name: Set KONG_IMAGE_ARTIFACT
+        if: ${{ always() }}
+        run: |
           if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
-            echo "KONG_IMAGE_ARTIFACT=kongimage-$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}" >> $GITHUB_ENV
+            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
           fi
+          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
+            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          fi
+          echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
       - name: upload diagnostics
         if: ${{ always() }}
@@ -291,10 +297,16 @@ jobs:
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
           TEST_GKE_CLUSTER_RELEASE_CHANNEL: "rapid"
 
-      - run: |
+      - name: Set KONG_IMAGE_ARTIFACT
+        if: ${{ always() }}
+        run: |
           if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
-            echo "KONG_IMAGE_ARTIFACT=kongimage-$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}" >> $GITHUB_ENV
+            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
           fi
+          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
+            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          fi
+          echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
       - name: upload diagnostics
         if: ${{ always() }}
@@ -394,10 +406,16 @@ jobs:
           # multiple kind clusters within a single job, so only 1 is allowed at a time.
           GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
 
-      - run: |
+      - name: Set KONG_IMAGE_ARTIFACT
+        if: ${{ always() }}
+        run: |
           if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
-            echo "KONG_IMAGE_ARTIFACT=kongimage-$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}" >> $GITHUB_ENV
+            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
           fi
+          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
+            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          fi
+          echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
       - name: upload diagnostics
         if: ${{ always() }}

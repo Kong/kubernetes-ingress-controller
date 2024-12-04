@@ -73,9 +73,8 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 // When the feature flag CombinedServicesFromDifferentHTTPRoutes is true, it combines rules with same backends
 // to a single Kong gateway service across different HTTPRoutes in the same namespace.
 // When the feature flag is false, it combines rules with same backends in an HTTPRoute to a Kong gateway service.
-// TODO: This would be the common entrance for translating to Kong services in both traditional and expression routes after
-// https://github.com/Kong/kubernetes-ingress-controller/issues/6727 is finished.
-// They would share the code for translation of service names, backends and fields other then routes in Kong services.
+// When the feature flag ExpressionRoutes is set to true, expression based Kong routes will be translated from matches of HTTPRoutes.
+// Otherwise, traditional Kong routes are translated.
 func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
 	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
 		t.logger,

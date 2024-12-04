@@ -1,6 +1,8 @@
 package subtranslator
 
 import (
+	"fmt"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -1040,7 +1042,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			splitHTTPRoutesWithPriorities := AssignRoutePriorityToSplitHTTPRouteMatches(logr.Discard(), tc.matches)
+			splitHTTPRoutesWithPriorities := assignRoutePriorityToSplitHTTPRouteMatches(logr.Discard(), tc.matches)
 			require.Equal(t, len(tc.priorities), len(splitHTTPRoutesWithPriorities), "should have required number of results")
 			for _, r := range splitHTTPRoutesWithPriorities {
 				httpRoute := r.Match.Source
@@ -1053,6 +1055,241 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					matchIndex: r.Match.MatchIndex,
 				}], r.Priority, "httproute %s/%s: hostname %s, rule %d match %d",
 					httpRoute.Namespace, httpRoute.Name, httpRoute.Spec.Hostnames[0], r.Match.RuleIndex, r.Match.MatchIndex)
+			}
+		})
+	}
+}
+
+func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		routes               []*gatewayapi.HTTPRoute
+		expectedSplitMatches splitHTTPRouteMatchesWithPrioritiesGroupedByRule
+	}{
+		{
+			name: "single HTTPRoute with single rule, no hostname and single match",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single HTTPRoute with single rule and multiple hostnames and multiple matches",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname("a.foo.com"),
+							gatewayapi.Hostname("b.bar.com"),
+						},
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "a.foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "a.foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "b.bar.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "b.bar.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single HTTPRoute with multiple rules where one of them does not contain a match",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname("foo.com"),
+						},
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+							{
+								// No matches.
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+				},
+				"ns1/httproute-1.1": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple HTTPRoutes where one of them does not have hostnames and matches",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname("foo.com"),
+						},
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-2",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+				},
+				"ns1/httproute-2.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rulesToMatchesWithPriorities := groupHTTPRouteMatchesWithPrioritiesByRule(logr.Discard(), tc.routes)
+			require.Len(t, rulesToMatchesWithPriorities, len(tc.expectedSplitMatches))
+			for _, route := range tc.routes {
+				for ruleIndex := range route.Spec.Rules {
+					ruleKey := fmt.Sprintf("%s/%s.%d", route.Namespace, route.Name, ruleIndex)
+					expectedMatches := tc.expectedSplitMatches[ruleKey]
+					actualMatches, ok := rulesToMatchesWithPriorities[ruleKey]
+					require.Truef(t, ok, "Should find matches from rule %s in HTTPRoute %s/%s", ruleIndex, route.Name, route.Name)
+					require.Len(t, actualMatches, len(expectedMatches), "Rule %d in HTTPRoute %s/%s should have expected number of split matches",
+						ruleIndex, route.Namespace, route.Name)
+					// Sort the matches from the same rule by hostname and match index for comparing.
+					// We need to sort the matches because their order were shuffled during the `assignRoutePriorityToSplitHTTPRouteMatches`
+					// which takes matches from a map.
+					sort.Slice(actualMatches, func(i, j int) bool {
+						if actualMatches[i].Match.Hostname != actualMatches[j].Match.Hostname {
+							return actualMatches[i].Match.Hostname < actualMatches[j].Match.Hostname
+						}
+						return actualMatches[i].Match.MatchIndex < actualMatches[j].Match.MatchIndex
+					})
+					for i, expectedMatch := range expectedMatches {
+						require.Equalf(t, expectedMatch.Match.Hostname, actualMatches[i].Match.Hostname, "Split match %d in rule %s, HTTPRoute %s/%s should have expected hostname",
+							i, ruleIndex, route.Namespace, route.Name)
+						require.Equalf(t, expectedMatch.Match.Match, actualMatches[i].Match.Match, "Split match %d should have expected HTTPRoute match",
+							i, ruleIndex, route.Namespace, route.Name)
+					}
+				}
 			}
 		})
 	}

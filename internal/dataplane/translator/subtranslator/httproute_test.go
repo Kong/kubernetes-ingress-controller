@@ -1722,7 +1722,6 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 }
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
-
 	httpRouteTypeMeta := metav1.TypeMeta{
 		APIVersion: "gateway.networking.k8s.io/v1",
 		Kind:       "HTTPRoute",

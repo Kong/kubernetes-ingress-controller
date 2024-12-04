@@ -54,6 +54,8 @@ type HTTPRoutesTranslationResult struct {
 	HTTPRouteNameToTranslationErrors map[k8stypes.NamespacedName][]error
 }
 
+type splitHTTPRouteMatchesWithPrioritiesGroupedByRule map[string][]SplitHTTPRouteMatchToKongRoutePriority
+
 // TranslateHTTPRoutesToKongstateServices translates a set of HTTPRoutes to kongstate services,
 // and collect the translation errors in the process of translating.
 func TranslateHTTPRoutesToKongstateServices(
@@ -65,20 +67,12 @@ func TranslateHTTPRoutesToKongstateServices(
 ) HTTPRoutesTranslationResult {
 	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, combinedServicesFromDifferentHTTPRoutes)
 
-	// first, split HTTPRoutes by hostnames and matches.
-	ruleToSplitMatchesWithPriorities := make(map[string][]SplitHTTPRouteMatchToKongRoutePriority)
+	// When feature flag expression routes is enabled, we need first split the matches and assign priorities to them
+	// to set proper priorities to the translated Kong routes for satisfying the specification of priorities of HTTPRoute matches:
+	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
+	ruleToSplitMatchesWithPriorities := make(splitHTTPRouteMatchesWithPrioritiesGroupedByRule)
 	if expressionRoutes {
-		splitHTTPRouteMatches := []SplitHTTPRouteMatch{}
-		for _, route := range routes {
-			splitHTTPRouteMatches = append(splitHTTPRouteMatches, SplitHTTPRoute(route)...)
-		}
-		// assign priorities to split HTTPRoutes.
-		splitHTTPRouteMatchesWithPriorities := AssignRoutePriorityToSplitHTTPRouteMatches(logger, splitHTTPRouteMatches)
-		for _, matchWithPriority := range splitHTTPRouteMatchesWithPriorities {
-			sourceRoute := matchWithPriority.Match.Source
-			ruleKey := fmt.Sprintf("%s/%s.%d", sourceRoute.Namespace, sourceRoute.Name, matchWithPriority.Match.RuleIndex)
-			ruleToSplitMatchesWithPriorities[ruleKey] = append(ruleToSplitMatchesWithPriorities[ruleKey], matchWithPriority)
-		}
+		ruleToSplitMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
 	}
 
 	kongstateServiceCache := map[string]kongstate.Service{}
@@ -274,7 +268,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	}
 
 	if expressionRoutes {
-		routes, err := translateHTTPRouteRulesMetaToKongstateRoutesWithExpression(matchesWithPriorities)
+		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
@@ -398,24 +392,6 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 	sort.Slice(routes, func(i, j int) bool {
 		return *routes[i].Name < *routes[j].Name
 	})
-	return routes, nil
-}
-
-func translateHTTPRouteRulesMetaToKongstateRoutesWithExpression(
-	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
-) ([]kongstate.Route, error) {
-	routes := []kongstate.Route{}
-	for _, matchWithPriority := range matchesWithPriorities {
-		// Since each match is assigned a deterministic priority, we have to generate one route for each split match
-		// because every match have a different priority.
-		// TODO: update the algorithm to assign priorities to matches to make it possible to consilidate some matches.
-		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields.
-		route, err := KongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority)
-		if err != nil {
-			return []kongstate.Route{}, err
-		}
-		routes = append(routes, *route)
-	}
 	return routes, nil
 }
 
@@ -558,7 +534,6 @@ func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
 		hash := sha256.Sum256([]byte(name))
 		// We have already returned when there are no backends in the rule, so it is safe to use backendNames[0].
 		trimmedName := fmt.Sprintf("httproute.%s.svc.%s_combined.%x", m.parentRoute.Namespace, backendNames[0], hash)
-		// REVIEW: should we emit a log here to tell that the name is trimmed? And should we record the original long name?
 		return trimmedName
 	}
 	return name

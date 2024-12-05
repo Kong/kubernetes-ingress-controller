@@ -19,7 +19,8 @@ spec:
   - name: example-udp-gateway
     namespace: udp-example
   rules:
-  - backendRefs:
+  - name: rule-tftp
+    backendRefs:
     - name: tftp
       port: 9999
 ---

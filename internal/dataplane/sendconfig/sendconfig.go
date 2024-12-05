@@ -77,7 +77,7 @@ func PerformUpdate(
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client, diagnostic)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
-	err = updateStrategy.Update(ctx, ContentWithHash{
+	size, err := updateStrategy.Update(ctx, ContentWithHash{
 		Content:        targetContent,
 		CustomEntities: customEntities,
 		Hash:           newSHA,

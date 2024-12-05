@@ -65,7 +65,7 @@ func NewUpdateStrategyDBModeKonnect(
 	concurrency int,
 	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
-) UpdateStrategyDBMode {
+) *UpdateStrategyDBMode {
 	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, diagnostic, logger)
 	s.isKonnect = true
 	return s
@@ -159,12 +159,14 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 				}
 			}
 		case <-ctx.Done():
-			if diagnostic != nil {
+			// Release resource error lock before sending diffs to diagnostic server to prevent blocking of main procedure of updating.
+			s.resourceErrorLock.Unlock()
+			// REVIEW: Is there a better way to judge whether dumping diffs enabled than directly checking the channel?
+			if diagnostic != nil && diagnostic.Diffs != nil {
 				diff.Timestamp = time.Now().Format(time.RFC3339)
 				diagnostic.Diffs <- diff
 				s.logger.V(logging.DebugLevel).Info("recorded database update events and diff", "hash", hash)
 			}
-			s.resourceErrorLock.Unlock()
 			return
 		}
 	}

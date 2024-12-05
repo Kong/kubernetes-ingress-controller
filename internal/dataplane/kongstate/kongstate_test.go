@@ -1348,7 +1348,79 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					Route: []string{"collision", "collision"},
 				},
 			},
-			want: []string{"test-bae3267aa", "test-bae3267aafead3adb6031bc1c732516336e7f7b324baf61bb68a39cc89112741"},
+			want: []string{
+				"test-b1b50e2fe",
+				"test-b1b50e2fea3955bfc13ffed52f9074e50f5056c2173fc05b8ff04388ecd25ffe",
+			},
+		},
+		{
+			name: "binding to route and consumer group",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]util.ForeignRelations{
+				"default:foo-plugin": {
+					Route:         []string{"route1", "route2", "route3"},
+					ConsumerGroup: []string{"group1"},
+				},
+			},
+			want: []string{
+				"test-512a42cb1",
+				"test-944f0bd89",
+				"test-c091fbb10",
+			},
+		},
+		{
+			name: "binding to routes and consumer",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]util.ForeignRelations{
+				"default:foo-plugin": {
+					Route:    []string{"route1", "route2", "route3"},
+					Consumer: []string{"consumer1"},
+				},
+			},
+			want: []string{
+				"test-ebd486ffe",
+				"test-3aaa2f367",
+				"test-5420f37ef",
+			},
+		},
+		{
+			name: "binding to service and consumer group",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]util.ForeignRelations{
+				"default:foo-plugin": {
+					Service:  []string{"service1", "service2", "service3"},
+					Consumer: []string{"consumer1"},
+				},
+			},
+			want: []string{
+				"test-42768cbda",
+				"test-6e9279c81",
+				"test-9bbcb305f",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1358,8 +1430,12 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			})
 			// this is not testing the kongPluginFromK8SPlugin failure cases, so there is no failures collector
 			got := buildPlugins(log, store, nil, tt.pluginRels)
-			require.Len(t, got, 2)
-			require.Equal(t, tt.want, []string{*got[0].InstanceName, *got[1].InstanceName})
+			require.Len(t, got, len(tt.want))
+			gotInstanceNames := lo.Map(got, func(p Plugin, _ int) string { return *p.InstanceName })
+			require.Equal(t, tt.want, gotInstanceNames)
+
+			gotUniqueInstanceNames := lo.Uniq(gotInstanceNames)
+			require.Len(t, gotUniqueInstanceNames, len(tt.want), "should only return unique instance names")
 		})
 	}
 }

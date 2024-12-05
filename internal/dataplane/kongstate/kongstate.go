@@ -574,25 +574,29 @@ func buildPlugins(
 		usedInstanceNames := sets.New[string]()
 		for _, rel := range relations.GetCombinations() {
 			plugin := plugin.DeepCopy()
-			var sha [32]byte
-			// ID is populated because that is read by decK and in_memory
-			// translator too
+
+			var toHash string
+
+			// ID is populated because that is read by decK and in_memory translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
-				sha = sha256.Sum256([]byte("service-" + rel.Service))
+				toHash += "_service-" + rel.Service
 			}
 			if rel.Route != "" {
 				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
-				sha = sha256.Sum256([]byte("route-" + rel.Route))
+				toHash += "_route-" + rel.Route
 			}
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
-				sha = sha256.Sum256([]byte("consumer-" + rel.Consumer))
+				toHash += "_consumer-" + rel.Consumer
 			}
 			if rel.ConsumerGroup != "" {
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
-				sha = sha256.Sum256([]byte("group-" + rel.ConsumerGroup))
+				toHash += "_group-" + rel.ConsumerGroup
 			}
+
+			sha := sha256.Sum256([]byte(toHash))
+
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates
 			// unless we add some sort of suffix.
 			if plugin.InstanceName != nil {

@@ -168,6 +168,11 @@ Adding a new version? You'll need three changes:
 - Fixed an issue where `KongPlugin` used as `HTTPRoute`'s `ExtensionRef` filter
   would produce an invalid configuration.
   [#6762](https://github.com/Kong/kubernetes-ingress-controller/pull/6762)
+- Fixed an issue of assigning duplicated instance names to plugins where
+  `KongPlugin`s would be bound to multiple entities, e.g.:
+  - route R1 and consumer group CG
+  - route R2 and consumer group CG
+  [#6786](https://github.com/Kong/kubernetes-ingress-controller/pull/6786)
 
 ### Added
 

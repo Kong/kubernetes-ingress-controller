@@ -150,10 +150,10 @@ Adding a new version? You'll need three changes:
   [#6585](https://github.com/Kong/kubernetes-ingress-controller/pull/6585)
 - Fix panic when handling `KongConsumer` without `username` specified.
   [#6665](https://github.com/Kong/kubernetes-ingress-controller/pull/6665)
-- Get rid of redundant log `info  No targets found to create upstream ...` for
-  `HTTPRoute` with `RequestRedirect` or when `request-termination` Kong Plugin
-  is used.
-  [#6687](https://github.com/Kong/kubernetes-ingress-controller/pull/6686).
+- Get rid of redundant log `info  No targets found to create upstream ...` because
+  such misconfiguration is reported to user with Kubernetes events or in the `status`
+  field of an affected object.
+  [#6781](https://github.com/Kong/kubernetes-ingress-controller/pull/6781)
 - Fixed Kong client status check causing unnecessary `config update failed` errors
   and `KongConfigurationApplyFailed` events being generated.
   [#6689](https://github.com/Kong/kubernetes-ingress-controller/pull/6689)

@@ -116,16 +116,6 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				}
 			}
 
-			targets := lo.Values(targetMap)
-			// Warn if an upstream was created with 0 targets and no request-termination plugin is present.
-			// When the plugin is present there (may be a result of RequestRedirect filter) there may not be
-			// a target service (it may point to an arbitrary URL), hence do not log a warn.
-			if len(targets) == 0 && !lo.ContainsBy(service.Plugins, func(p kong.Plugin) bool {
-				return p.Name != nil && *p.Name == "request-termination"
-			}) {
-				t.logger.V(logging.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
-			}
-
 			// Define the upstream including all the newly populated targets
 			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
@@ -134,7 +124,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					Tags: service.Tags, // Populated by populateServices already.
 				},
 				Service: service,
-				Targets: targets,
+				Targets: lo.Values(targetMap),
 			}
 			upstreams = append(upstreams, upstream)
 			upstreamDedup[name] = empty

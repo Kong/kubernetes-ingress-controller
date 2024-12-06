@@ -7,6 +7,7 @@ const (
 	KindTCPRoute           = "TCPRoute"
 	KindHTTPRoute          = "HTTPRoute"
 	KindGRPCRoute          = "GRPCRoute"
+	KindBackendTLSPolicy   = "BackendTLSPolicy"
 	KindIngress            = "Ingress"
 	KindKongServiceFacade  = "KongServiceFacade"
 	KindKongUDPIngress     = "UDPIngress"

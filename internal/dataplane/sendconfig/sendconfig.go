@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -22,7 +23,7 @@ import (
 // -----------------------------------------------------------------------------
 
 type UpdateStrategyResolver interface {
-	ResolveUpdateStrategy(client UpdateClient) UpdateStrategy
+	ResolveUpdateStrategy(client UpdateClient, diagnostic *diagnostics.ClientDiagnostic) UpdateStrategy
 }
 
 type AdminAPIClient interface {
@@ -48,6 +49,7 @@ func PerformUpdate(
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
+	diagnostic *diagnostics.ClientDiagnostic,
 	isFallback bool,
 ) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()
@@ -72,7 +74,7 @@ func PerformUpdate(
 		}
 	}
 
-	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
+	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client, diagnostic)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
 	size, err := updateStrategy.Update(ctx, ContentWithHash{

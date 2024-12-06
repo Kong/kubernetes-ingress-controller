@@ -216,6 +216,12 @@ Adding a new version? You'll need three changes:
   those names will be propagated to one or many instances of aforementioned tag.
   [#6759](https://github.com/Kong/kubernetes-ingress-controller/pull/6759)
   [#6780](https://github.com/Kong/kubernetes-ingress-controller/pull/6780)
+- Added `BackendTLSPolicy` support. The user can now reference any kubernetes `Service`
+  in the `BackendTLSPolicy` spec, and in case the service is used as a backend by
+  `HTTPRoute`s that reference a Kong Gateway as parent, such Backend TLS configuration
+  is applied to the service section of the Kong configuration.
+  [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 
 
 ## [3.3.1]

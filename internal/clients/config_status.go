@@ -32,6 +32,7 @@ type GatewayConfigApplyStatus struct {
 
 // KonnectConfigUploadStatus stores the status of uploading configuration to Konnect.
 type KonnectConfigUploadStatus struct {
+	// Failed indicates whether the config upload to Konnect failed.
 	Failed bool
 }
 

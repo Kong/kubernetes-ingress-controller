@@ -59,7 +59,7 @@ func (c *Certificate) SanitizedCopy() Certificate {
 		kong.Certificate{
 			ID:        c.ID,
 			Cert:      c.Cert,
-			Key:       redactedString,
+			Key:       RedactedString,
 			CreatedAt: c.CreatedAt,
 			SNIs:      c.SNIs,
 			Tags:      c.Tags,

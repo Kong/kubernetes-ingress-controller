@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"strconv"
@@ -575,31 +576,31 @@ func buildPlugins(
 		for _, rel := range relations.GetCombinations() {
 			plugin := plugin.DeepCopy()
 
-			var toHash string
+			var toHash bytes.Buffer
 
 			// ID is populated because that is read by decK and in_memory translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
-				toHash += "_service-" + rel.Service
+				toHash.WriteString("_service-" + rel.Service)
 			}
 			if rel.Route != "" {
 				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
-				toHash += "_route-" + rel.Route
+				toHash.WriteString("_route-" + rel.Route)
 			}
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
-				toHash += "_consumer-" + rel.Consumer
+				toHash.WriteString("_consumer-" + rel.Consumer)
 			}
 			if rel.ConsumerGroup != "" {
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
-				toHash += "_group-" + rel.ConsumerGroup
+				toHash.WriteString("_group-" + rel.ConsumerGroup)
 			}
-
-			sha := sha256.Sum256([]byte(toHash))
 
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates
 			// unless we add some sort of suffix.
 			if plugin.InstanceName != nil {
+
+				sha := sha256.Sum256(toHash.Bytes())
 				suffix := fmt.Sprintf("%x", sha)
 				short := suffix[:9]
 				suffixed := fmt.Sprintf("%s-%s", *plugin.InstanceName, short)

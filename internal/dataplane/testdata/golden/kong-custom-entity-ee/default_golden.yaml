@@ -4,6 +4,18 @@ degraphql_routes:
   service:
     id: 9e262d22-26f2-5bcb-8d57-c5229fb8c5a2
   uri: /contacts
+plugins:
+- config:
+    graphql_server_path: /v1/graphql
+  name: degraphql
+  route: default.i1.s1..80
+  tags:
+  - k8s-name:degraphql
+  - k8s-namespace:default
+  - k8s-kind:KongPlugin
+  - k8s-uid:e97ca177-6bd2-425f-b3b1-10a521ac02a0
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
 services:
 - connect_timeout: 60000
   host: s1.default.80.svc

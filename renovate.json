@@ -103,14 +103,15 @@
       "enabled": false
     },
     {
-      "description": "Enable go.mod dependencies that are not handled by dependabot.",
+      "description": "Enable go dependency - github.com/kong/kubernetes-configuration - which is not handled by dependabot.",
       "matchManagers": [
           "gomod"
       ],
       "enabled": true,
       "matchPackageNames": [
         "github.com/kong/kubernetes-configuration"
-      ]
+      ],
+      "ignoreUnstable": false
     }
   ]
 }

@@ -173,6 +173,9 @@ Adding a new version? You'll need three changes:
   - route R1 and consumer group CG
   - route R2 and consumer group CG
   [#6786](https://github.com/Kong/kubernetes-ingress-controller/pull/6786)
+- Check referenced `KongCustomEntity`'s `parentRef` and verify if referenced
+  `KongPlugin` or `KongClusterPlugin` exists
+  [#6791](https://github.com/Kong/kubernetes-ingress-controller/pull/6791)
 
 ### Added
 

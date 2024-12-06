@@ -302,6 +302,11 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 		return "", false, nil
 	}
 
+	var (
+		namespace = k8sEntity.Namespace
+		name      = parentRef.Name
+	)
+
 	// Extract the plugin key to get the plugin relations.
 	parentRefNamespace := lo.FromPtrOr(parentRef.Namespace, "")
 	// if the namespace in parentRef is not same as the namespace of KCE itself, check if the reference is allowed by ReferenceGrant.
@@ -314,10 +319,21 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 		if err != nil {
 			return "", false, err
 		}
-		return paretRefNamespace + ":" + parentRef.Name, true, nil
+		namespace = paretRefNamespace
 	}
 
-	return k8sEntity.Namespace + ":" + parentRef.Name, true, nil
+	var err error
+	switch *parentRef.Kind {
+	case "KongPlugin":
+		_, err = cacheStore.GetKongPlugin(namespace, name)
+	case "KongClusterPlugin":
+		_, err = cacheStore.GetKongClusterPlugin(name)
+	}
+	if err != nil {
+		return "", false, err
+	}
+
+	return namespace + ":" + name, true, nil
 }
 
 func findCustomEntityForeignFields(

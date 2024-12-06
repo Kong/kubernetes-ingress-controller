@@ -967,13 +967,12 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 	for _, failure := range resourceFailures {
 		for _, obj := range failure.CausingObjects() {
 			gvk := obj.GetObjectKind().GroupVersionKind()
-			c.logger.Error(
-				errors.New("object failed to apply"),
-				"recording a Warning event for object",
+			c.logger.V(logging.DebugLevel).Info(
+				"object failed to apply - recording a Warning event for object",
 				"name", obj.GetName(),
 				"namespace", obj.GetNamespace(),
 				"kind", gvk.Kind,
-				"apiVersion", gvk.Group+"/"+gvk.Version,
+				"apiVersion", gvk.GroupVersion().String(),
 				"reason", reason,
 				"message", failure.Message(),
 			)

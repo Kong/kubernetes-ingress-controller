@@ -8,7 +8,7 @@ e2e:
     - 'v1.29.10'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.31.1'
+    - '1.31.3'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.

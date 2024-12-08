@@ -219,6 +219,10 @@ Adding a new version? You'll need three changes:
   those names will be propagated to one or many instances of aforementioned tag.
   [#6759](https://github.com/Kong/kubernetes-ingress-controller/pull/6759)
   [#6780](https://github.com/Kong/kubernetes-ingress-controller/pull/6780)
+- Added the flag `--secret-label-selector` to set the label selector for `Secrets` to ingest.
+  By setting this flag, the secrets that are ingested will be limited to those having this label set to "true".
+  This can reduce the memory usage in scenarios with a large number of giant secrets.
+  [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
 
 
 ## [3.3.1]

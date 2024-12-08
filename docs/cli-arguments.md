@@ -92,6 +92,7 @@
 | `--publish-service-udp` | `namespaced-name` | Service fronting UDP routing resources in "namespace/name" format. The controller will update UDP route status information with this Service's endpoints. If omitted, the same Service will be used for both TCP and UDP routes. |  |
 | `--publish-status-address` | `strings` | Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
 | `--publish-status-address-udp` | `strings` | Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
+| `--secret-label-selector` | `string` | Limits the secrets ingested to those having this label set to "true". If not specified, all secrets are ingested. |  |
 | `--skip-ca-certificates` | `bool` | Disable syncing CA certificate syncing (for use with multi-workspace environments). | `false` |
 | `--sync-period` | `duration` | Determine the minimum frequency at which watched resources are reconciled. Set to 0 to use default from controller-runtime. | `10h0m0s` |
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller. | `0s` |

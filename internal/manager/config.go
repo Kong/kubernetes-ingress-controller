@@ -131,8 +131,11 @@ type Config struct {
 	GatewayAPIReferenceGrantController bool
 	GatewayAPIGRPCRouteController      bool
 
-	// KIC can only reconciling the specified Gateway.
+	// GatewayToReconcile specifies the Gateway to be reconciled.
 	GatewayToReconcile OptionalNamespacedName
+
+	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
+	SecretLabelSelector string
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -280,6 +283,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.GatewayAPIGRPCRouteController, "enable-controller-gwapi-grpcroute", true, "Enable the Gateway API GRPCRoute controller.")
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayToReconcile, namespacedNameFromFlagValue, nnTypeNameOverride), "gateway-to-reconcile",
 		`Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway.`)
+	flagSet.StringVar(&c.SecretLabelSelector, "secret-label-selector", "",
+		`Limits the secrets ingested to those having this label set to "true". If not specified, all secrets are ingested.`)
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
 	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
 	flagSet.BoolVar(&c.KongLicenseEnabled, "enable-controller-kong-license", true, "Enable the KongLicense controller.")

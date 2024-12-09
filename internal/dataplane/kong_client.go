@@ -813,16 +813,19 @@ func (c *KongClient) sendToClient(
 			updateErr          sendconfig.UpdateError
 			responseParsingErr sendconfig.ResponseParsingError
 		)
-		if errors.As(err, &updateErr) {
+
+		switch {
+		case errors.As(err, &updateErr):
 			reason := KongConfigurationApplyFailedEventReason
 			if isFallback {
 				reason = FallbackKongConfigurationApplyFailedEventReason
 			}
 			c.recordResourceFailureEvents(updateErr.ResourceFailures(), reason)
-		}
-		if errors.As(err, &responseParsingErr) {
+			rawResponseBody = updateErr.RawResponseBody()
+		case errors.As(err, &responseParsingErr):
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
+
 		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {

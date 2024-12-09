@@ -1945,7 +1945,7 @@ func (s *fakeSchemaService) Get(_ context.Context, entityType string) (kong.Sche
 	return schema, nil
 }
 
-func (s *fakeSchemaService) Validate(ctx context.Context, entityType kong.EntityType, entity interface{}) (bool, string, error) {
+func (s *fakeSchemaService) Validate(_ context.Context, _ kong.EntityType, _ interface{}) (bool, string, error) {
 	return true, "", nil
 }
 

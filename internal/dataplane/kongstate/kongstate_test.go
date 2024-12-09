@@ -206,7 +206,7 @@ func extractNotEmptyFieldNames(s KongState) []string {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		v := reflect.ValueOf(s).Field(i)
-		if !f.Anonymous && f.IsExported() && !v.IsZero() {
+		if !f.Anonymous && f.IsExported() && v.IsValid() && !v.IsZero() {
 			fields = append(fields, f.Name)
 		}
 	}

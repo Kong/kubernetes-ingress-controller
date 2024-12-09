@@ -157,6 +157,8 @@ func (t *Translator) UpdateCache(c store.CacheStores) {
 // BuildKongConfig creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes.
 func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
+	ctx := context.Background()
+
 	// Translate and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		t.ingressRulesFromIngressV1(),
@@ -218,7 +220,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 
 	// process custom entities
 	if t.featureFlags.KongCustomEntity {
-		result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
+		result.FillCustomEntities(ctx, t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
 		// Register successcully translated KCEs to set the status of these KCEs.
 		for _, collection := range result.CustomEntities {
 			for i := range collection.Entities {

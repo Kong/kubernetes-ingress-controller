@@ -1931,18 +1931,22 @@ func TestFillOverrides_ServiceFailures(t *testing.T) {
 	}
 }
 
-type fakeSchemaGetter struct {
+type fakeSchemaService struct {
 	schemas map[string]kong.Schema
 }
 
-var _ SchemaGetter = &fakeSchemaGetter{}
+var _ SchemaService = &fakeSchemaService{}
 
-func (s *fakeSchemaGetter) Get(_ context.Context, entityType string) (kong.Schema, error) {
+func (s *fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schema, error) {
 	schema, ok := s.schemas[entityType]
 	if !ok {
 		return nil, fmt.Errorf("schema not found")
 	}
 	return schema, nil
+}
+
+func (s *fakeSchemaService) Validate(ctx context.Context, entityType kong.EntityType, entity interface{}) (bool, string, error) {
+	return true, "", nil
 }
 
 func TestIsRemotePluginReferenceAllowed(t *testing.T) {

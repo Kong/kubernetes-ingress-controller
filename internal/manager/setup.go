@@ -39,6 +39,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
@@ -489,22 +490,25 @@ func setupLicenseGetter(
 // setupKonnectConfigSynchronizer sets up Konnect config sychronizer and adds it to the manager runnables.
 func setupKonnectConfigSynchronizer(
 	ctx context.Context,
+	cfg *Config,
 	mgr manager.Manager,
 	configUploadPeriod time.Duration,
 	kongConfig sendconfig.Config,
-	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,
+	metricsRecorder metrics.Recorder,
 ) (*konnect.ConfigSynchronizer, error) {
 	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
+	konnectClientFactory := adminapi.NewKonnectClientFactory(cfg.Konnect, logger.WithName("konnect-client-factory"))
 	s := konnect.NewConfigSynchronizer(
 		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
 		kongConfig,
 		configUploadPeriod,
-		clientsProvider,
+		konnectClientFactory,
 		updateStrategyResolver,
 		sendconfig.NewDefaultConfigurationChangeDetector(logger),
 		configStatusNotifier,
+		metricsRecorder,
 	)
 	err := mgr.Add(s)
 	if err != nil {

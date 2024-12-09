@@ -223,6 +223,12 @@ Adding a new version? You'll need three changes:
   By setting this flag, the secrets that are ingested will be limited to those having this label set to "true".
   This can reduce the memory usage in scenarios with a large number of giant secrets.
   [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
+- Added `BackendTLSPolicy` support. The user can now reference any kubernetes `Service`
+  in the `BackendTLSPolicy` spec, and in case the service is used as a backend by
+  `HTTPRoute`s that reference a Kong Gateway as parent, such Backend TLS configuration
+  is applied to the service section of the Kong configuration.
+  [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 
 
 ## [3.3.1]

@@ -275,6 +275,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 	}
 	testCases := []struct {
 		name                     string
+		plugins                  []*kongv1.KongPlugin
 		referenceGrants          []*gatewayapi.ReferenceGrant
 		customEntity             *kongv1alpha1.KongCustomEntity
 		schema                   EntitySchema
@@ -283,7 +284,15 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 		foreignFieldCombinations [][]entityForeignFieldValue
 	}{
 		{
-			name:         "attached to single entity: service",
+			name: "attached to single entity: service",
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "fake-plugin",
+					},
+				},
+			},
 			customEntity: testCustomEntity,
 			schema: EntitySchema{
 				Fields: map[string]EntityField{
@@ -315,7 +324,15 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 			},
 		},
 		{
-			name:         "attached to routes and consumers",
+			name: "attached to routes and consumers",
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "fake-plugin",
+					},
+				},
+			},
 			customEntity: testCustomEntity,
 			schema: EntitySchema{
 				Fields: map[string]EntityField{
@@ -380,6 +397,14 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 				Fields: map[string]EntityField{
 					"foo":     {Name: "foo", Type: EntityFieldTypeString, Required: true},
 					"service": {Name: "service", Type: EntityFieldTypeForeign, Reference: "services"},
+				},
+			},
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "another-namespace",
+						Name:      "fake-plugin",
+					},
 				},
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
@@ -514,6 +539,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cacheStore, err := store.NewFakeStore(store.FakeObjects{
+				KongPlugins:     tc.plugins,
 				ReferenceGrants: tc.referenceGrants,
 			})
 			require.NoError(t, err)
@@ -1097,6 +1123,186 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				})
 				require.Truef(t, hasError, "translation error for KongCustomEntity %s not found", nsName)
 			}
+		})
+	}
+}
+
+func TestFindCustomEntityRelatedPlugin(t *testing.T) {
+	testCases := []struct {
+		name            string
+		referenceGrants []*gatewayapi.ReferenceGrant
+		plugins         []*kongv1.KongPlugin
+		customEntity    *kongv1alpha1.KongCustomEntity
+		expectedRef     string
+		expectedResult  bool
+		expectedErr     bool
+	}{
+		{
+			name:    "referenced plugin does not exist in the store - error",
+			plugins: []*kongv1.KongPlugin{},
+			customEntity: &kongv1alpha1.KongCustomEntity{
+				TypeMeta: customEntityTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "session-foo",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "sessions",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"name":"session1"}`),
+					},
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+						Kind:      lo.ToPtr("KongPlugin"),
+						Name:      "ratelimiting-1",
+						Namespace: lo.ToPtr("default"),
+					},
+				},
+			},
+			expectedErr: true,
+		},
+		{
+			name: "referenced plugin exists in the store",
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "ratelimiting-1",
+					},
+					PluginName: "ratelimiting",
+				},
+			},
+			customEntity: &kongv1alpha1.KongCustomEntity{
+				TypeMeta: customEntityTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "session-foo",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "sessions",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"name":"session1"}`),
+					},
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+						Kind:      lo.ToPtr("KongPlugin"),
+						Name:      "ratelimiting-1",
+						Namespace: lo.ToPtr("default"),
+					},
+				},
+			},
+			expectedRef:    "default:ratelimiting-1",
+			expectedResult: true,
+		},
+		{
+			name: "referenced plugin exists but in different namespace without cross-namespace reference grant",
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "different-ns",
+						Name:      "ratelimiting-1",
+					},
+					PluginName: "ratelimiting",
+				},
+			},
+			customEntity: &kongv1alpha1.KongCustomEntity{
+				TypeMeta: customEntityTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "session-foo",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "sessions",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"name":"session1"}`),
+					},
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+						Kind:      lo.ToPtr("KongPlugin"),
+						Name:      "ratelimiting-1",
+						Namespace: lo.ToPtr("different-ns"),
+					},
+				},
+			},
+			expectedErr: true,
+		},
+		{
+			name: "referenced plugin exists but in different namespace with cross-namespace reference grant",
+			referenceGrants: []*gatewayapi.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "different-ns",
+						Name:      "grant-kce-to-plugin",
+					},
+					Spec: gatewayapi.ReferenceGrantSpec{
+						From: []gatewayapi.ReferenceGrantFrom{
+							{
+								Namespace: gatewayapi.Namespace("default"),
+								Group:     gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Kind:      "KongCustomEntity",
+							},
+						},
+						To: []gatewayapi.ReferenceGrantTo{
+							{
+								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Kind:  gatewayapi.Kind("KongPlugin"),
+							},
+						},
+					},
+				},
+			},
+			plugins: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "different-ns",
+						Name:      "ratelimiting-1",
+					},
+					PluginName: "ratelimiting",
+				},
+			},
+			customEntity: &kongv1alpha1.KongCustomEntity{
+				TypeMeta: customEntityTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "session-foo",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType:     "sessions",
+					ControllerName: annotations.DefaultIngressClass,
+					Fields: apiextensionsv1.JSON{
+						Raw: []byte(`{"name":"session1"}`),
+					},
+					ParentRef: &kongv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+						Kind:      lo.ToPtr("KongPlugin"),
+						Name:      "ratelimiting-1",
+						Namespace: lo.ToPtr("different-ns"),
+					},
+				},
+			},
+			expectedRef:    "different-ns:ratelimiting-1",
+			expectedResult: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := store.NewFakeStore(store.FakeObjects{
+				ReferenceGrants: tc.referenceGrants,
+				KongPlugins:     tc.plugins,
+			})
+			require.NoError(t, err)
+			ref, ret, err := findCustomEntityRelatedPlugin(logr.Discard(), s, tc.customEntity)
+			if tc.expectedErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedRef, ref)
+			require.Equal(t, tc.expectedResult, ret)
 		})
 	}
 }

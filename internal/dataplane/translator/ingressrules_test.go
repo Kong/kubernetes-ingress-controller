@@ -366,11 +366,11 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 
 func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 	for _, tt := range []struct {
-		name               string
-		services           []*corev1.Service
-		annotations        map[string]string
-		expected           bool
-		expectedLogEntries []string
+		name                     string
+		services                 []*corev1.Service
+		annotations              map[string]string
+		expected                 bool
+		expectedLogReasonEntries []string
 	}{
 		{
 			name:        "if no services are provided, then there's no validation failure",
@@ -495,7 +495,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 				"konghq.com/baz": "foo",
 			},
 			expected: false,
-			expectedLogEntries: []string{
+			expectedLogReasonEntries: []string{
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
@@ -539,7 +539,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 				"konghq.com/foo": "bar",
 			},
 			expected: false,
-			expectedLogEntries: []string{
+			expectedLogReasonEntries: []string{
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
@@ -547,14 +547,17 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			core, logs := observer.New(zap.InfoLevel)
+			core, logs := observer.New(zap.DebugLevel)
 			logger := zapr.NewLogger(zap.New(core))
-
 			failuresCollector := failures.NewResourceFailuresCollector(logger)
 			assert.Equal(t, tt.expected, collectInconsistentAnnotations(tt.services, tt.annotations, failuresCollector, ""))
-			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
-			for i := range tt.expectedLogEntries {
-				assert.Contains(t, logs.All()[i].Entry.Message, tt.expectedLogEntries[i])
+			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogReasonEntries), "expecting as many translation failures as log entries")
+
+			allLogReasonEntries := lo.Map(logs.All(), func(e observer.LoggedEntry, _ int) string {
+				return e.ContextMap()["reason"].(string)
+			})
+			for i := range tt.expectedLogReasonEntries {
+				assert.Contains(t, allLogReasonEntries[i], tt.expectedLogReasonEntries[i])
 			}
 		})
 	}

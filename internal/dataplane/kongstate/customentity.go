@@ -190,7 +190,7 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 		// Fetch the entity schema.
-		schema, err := ks.fetchEntitySchema(schemaService, entity.Spec.EntityType)
+		schema, err := ks.fetchEntitySchema(ctx, schemaService, entity.Spec.EntityType)
 		if err != nil {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("failed to fetch entity schema for entity type %s: %v", entity.Spec.EntityType, err),
@@ -256,13 +256,13 @@ func (ks *KongState) CustomEntityTypes() []string {
 
 // fetchEntitySchema fetches schema of an entity by its type and stores the schema in its custom entity collection
 // as a cache to avoid excessive calling of Kong admin APIs.
-func (ks *KongState) fetchEntitySchema(schemaGetter SchemaService, entityType string) (EntitySchema, error) {
+func (ks *KongState) fetchEntitySchema(ctx context.Context, schemaGetter SchemaService, entityType string) (EntitySchema, error) {
 	collection, ok := ks.CustomEntities[entityType]
 	if ok {
 		return collection.Schema, nil
 	}
 	// Use `context.Background()` here because `BuildKongConfig` does not provide a context.
-	schema, err := schemaGetter.Get(context.Background(), entityType)
+	schema, err := schemaGetter.Get(ctx, entityType)
 	if err != nil {
 		return EntitySchema{}, err
 	}

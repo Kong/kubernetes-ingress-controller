@@ -21,27 +21,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
-
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
 )
 
-// TestIngressVerifyUpstreamTLS tests that user-provided annotations for TLS verification are respected accordingly.
+// TestBackendTLSPolicyt tests that BackendTLSPolicies are properly configured.
 // It exposes an HTTPS goecho server listening with a certificate signed by an intermediate CA. The Service is associated
 // with a root CA certificate which should be used to verify the upstream server's certificate. The test first sets the
 // TLS verification depth to 0, which should fail the TLS handshake (as that would only pass with a self-signed cert).
 // Then, it sets the TLS verification depth to 1, which should pass with one intermediate CA.
-func TestIngressVerifyUpstreamTLS(t *testing.T) {
+func TestBackendTLSPolicyt(t *testing.T) {
 	const (
-		caSecretName        = "ca"
-		anotherCASecretName = "another-ca"
-		certsVolumeName     = "certs"
+		caConfigMapName        = "ca"
+		anotherCAConfigMapName = "another-ca"
+		certsVolumeName        = "certs"
 
 		echoRoute            = "/echo"
 		goEchoServerHostname = "goecho"
@@ -52,19 +53,18 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 	f := features.
 		New("verify upstream TLS").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
-		WithLabel(testlabels.Kind, testlabels.KindIngress).
+		WithLabel(testlabels.Kind, testlabels.KindBackendTLSPolicy).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		WithSetup("prepare gateway API client", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
-			kongClients, err := clientset.NewForConfig(cluster.Config())
+			gwapiClient, err := gatewayclient.NewForConfig(cluster.Config())
 			require.NoError(t, err)
-			return SetInCtxForT(ctx, t, kongClients)
+			return SetInCtxForT(ctx, t, gwapiClient)
 		}).
 		WithSetup("generate certificate", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
-			ingressClass := GetIngressClassFromCtx(ctx)
 
 			caCert := certificate.MustGenerateCert(
 				certificate.WithCommonName("ca"),
@@ -90,25 +90,22 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			// It has to present the server certificate first, followed by the intermediate certificate.
 			bundle := bytes.Join([][]byte{cert, intermediateCertPEM}, nil)
 
-			t.Log("Deploying CA secret")
-			caSecret := &corev1.Secret{
+			t.Log("Deploying CA configmap")
+			caConfigmap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: caSecretName,
+					Name: caConfigMapName,
 					Labels: map[string]string{
 						configuration.CACertLabelKey: "true",
 					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
 				},
-				StringData: map[string]string{
-					"id":   uuid.NewString(),
-					"cert": string(caCertPEM),
+				Data: map[string]string{
+					"id":     uuid.NewString(),
+					"ca.crt": string(caCertPEM),
 				},
 			}
-			caSecret, err := cluster.Client().CoreV1().Secrets(namespace).Create(ctx, caSecret, metav1.CreateOptions{})
+			caConfigmap, err := cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, caConfigmap, metav1.CreateOptions{})
 			assert.NoError(t, err)
-			cleaner.Add(caSecret)
+			cleaner.Add(caConfigmap)
 
 			t.Log("Deploying goecho certificate")
 			goechoSecret := &corev1.Secret{
@@ -123,37 +120,50 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			_, err = cluster.Client().CoreV1().Secrets(namespace).Create(ctx, goechoSecret, metav1.CreateOptions{})
 			assert.NoError(t, err)
 
-			t.Log("Deploying another CA secret to verify multiple CA certificates can be bound to a service")
+			t.Log("Deploying another CA configmap to verify multiple CA certificates can be bound to a service")
 			anotherCA, _ := certificate.MustGenerateCertPEMFormat(
 				certificate.WithCommonName("another-ca"),
 				certificate.WithCATrue(),
 			)
-			anotherCaSecret := &corev1.Secret{
+			anotherCaConfigMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: anotherCASecretName,
+					Name: anotherCAConfigMapName,
 					Labels: map[string]string{
 						configuration.CACertLabelKey: "true",
 					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
 				},
-				StringData: map[string]string{
-					"id":   uuid.NewString(),
-					"cert": string(anotherCA),
+				Data: map[string]string{
+					"id":     uuid.NewString(),
+					"ca.crt": string(anotherCA),
 				},
 			}
-			anotherCaSecret, err = cluster.Client().CoreV1().Secrets(namespace).Create(ctx, anotherCaSecret, metav1.CreateOptions{})
+			anotherCaConfigMap, err = cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, anotherCaConfigMap, metav1.CreateOptions{})
 			assert.NoError(t, err)
-			cleaner.Add(anotherCaSecret)
+			cleaner.Add(anotherCaConfigMap)
 
 			return ctx
 		}).
-		WithSetup("deploy goecho service and expose it via ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		WithSetup("deploy goecho service and expose it via HTTPRoute", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
+			gwapiClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
+
 			ns := GetNamespaceForT(ctx, t)
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
-			ingressClass := GetIngressClassFromCtx(ctx)
+
+			t.Log("Create GatewayClass")
+			gatewayClassName := uuid.NewString()
+			gatewayCLass, err := helpers.DeployGatewayClass(ctx, gwapiClient, gatewayClassName)
+			assert.NoError(t, err)
+			cleaner.Add(gatewayCLass)
+
+			t.Log("Create Gateway")
+			gatewayName := uuid.NewString()
+			gateway, err := helpers.DeployGateway(ctx, gwapiClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
+				gw.Name = gatewayName
+			})
+			assert.NoError(t, err)
+			cleaner.Add(gateway)
+
 			container := generators.NewContainer("goecho", test.EchoImage, test.EchoHTTPSPort)
 			container.VolumeMounts = []corev1.VolumeMount{
 				{
@@ -186,41 +196,88 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 					},
 				},
 			}
-			deployment, err := cluster.Client().AppsV1().Deployments(ns).Create(ctx, deployment, metav1.CreateOptions{})
+			deployment, err = cluster.Client().AppsV1().Deployments(ns).Create(ctx, deployment, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(deployment)
 
 			t.Logf("Exposing deployment %s via service", deployment.Name)
 			service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 
-			t.Logf("Setting up service annotations for TLS verification")
-			service.Annotations = map[string]string{
-				annotations.AnnotationPrefix + annotations.ProtocolKey:              "https", // Only https or tls are supported.
-				annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-				annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: strings.Join([]string{caSecretName, anotherCASecretName}, ","),
-				annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey:        "0", // First, we'll set it to 0 to make sure it fails.
-			}
 			service, err = cluster.Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(service)
 			ctx = SetInCtxForT(ctx, t, service)
 
-			t.Logf("Exposing service %s via ingress", service.Name)
-			ingress := generators.NewIngressForService(echoRoute, map[string]string{}, service)
-			ingress.Spec.IngressClassName = lo.ToPtr(ingressClass)
-			ingress.Spec.Rules[0].Host = goEchoServerHostname
-			_, err = cluster.Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+			t.Logf("Expose service %s via HTTPRoute", service.Name)
+			httpRoute := &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name: gatewayapi.ObjectName(gateway.Name),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							BackendRefs: []gatewayapi.HTTPBackendRef{
+								{
+									BackendRef: gatewayapi.BackendRef{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Name: gatewayapi.ObjectName(service.Name),
+											Port: lo.ToPtr(gatewayapi.PortNumber(1028)),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			_, err = gwapiClient.GatewayV1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
 			assert.NoError(t, err)
-			cleaner.Add(ingress)
 
-			t.Log("Waiting for ingress status readiness")
-			assert.EventuallyWithT(t, func(t *assert.CollectT) {
-				lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, cluster, ns, ingress)
-				if !assert.NoError(t, err) {
-					return
-				}
-				assert.NotEmpty(t, lbstatus.Ingress)
-			}, consts.StatusWait, consts.WaitTick)
+			t.Logf("Targeting service %s with backendTLSPolicy", service.Name)
+			backendTLSPolicy := &gatewayapi.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "goecho-tls-policy",
+				},
+				Spec: gatewayapi.BackendTLSPolicySpec{
+					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
+								Group: "core",
+								Kind:  "Service",
+								Name:  gatewayapi.ObjectName(service.Name),
+							},
+						},
+					},
+					Validation: gatewayapi.BackendTLSPolicyValidation{
+						CACertificateRefs: []gatewayapi.LocalObjectReference{
+							{
+								Group: "core",
+								Kind:  "ConfigMap",
+								Name:  caConfigMapName,
+							},
+							{
+								Group: "core",
+								Kind:  "ConfigMap",
+								Name:  anotherCAConfigMapName,
+							},
+						},
+						Hostname: goEchoServerHostname,
+					},
+					Options: map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue{
+						gatewayapi.AnnotationKey(strings.ReplaceAll(annotations.TLSVerifyDepthKey, "/", "")): gatewayapi.AnnotationValue("0"),
+					},
+				},
+			}
+			backendTLSPolicy, err = gwapiClient.GatewayV1alpha3().BackendTLSPolicies(ns).Create(ctx, backendTLSPolicy, metav1.CreateOptions{})
+			assert.NoError(t, err)
+			ctx = SetInCtxForT(ctx, t, backendTLSPolicy)
 
 			return ctx
 		}).
@@ -243,13 +300,24 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			return ctx
 		}).
 		Assess("verify that Kong can access the upstream service when using correct host", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			service := GetFromCtxForT[*corev1.Service](ctx, t)
-			cluster := GetClusterFromCtx(ctx)
+			backendTLSPolicy := GetFromCtxForT[*gatewayapi.BackendTLSPolicy](ctx, t)
+			gwapiClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 
 			t.Log("Fixing TLS verification depth to a sufficient value = 1")
-			service.Annotations[annotations.AnnotationPrefix+annotations.TLSVerifyDepthKey] = "1"
-			_, err := cluster.Client().CoreV1().Services(service.Namespace).Update(ctx, service, metav1.UpdateOptions{})
-			require.NoError(t, err)
+			require.Eventually(t, func() bool {
+				backendTLSPolicy, err := gwapiClient.GatewayV1alpha3().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Get(ctx, backendTLSPolicy.Name, metav1.GetOptions{})
+				if err != nil {
+					t.Logf("Failed to get BackendTLSPolicy: %v", err)
+					return false
+				}
+				backendTLSPolicy.Spec.Options[gatewayapi.AnnotationKey(strings.ReplaceAll(annotations.TLSVerifyDepthKey, "/", ""))] = "1"
+				_, err = gwapiClient.GatewayV1alpha3().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Update(ctx, backendTLSPolicy, metav1.UpdateOptions{})
+				if err != nil {
+					t.Logf("Failed to update BackendTLSPolicy: %v", err)
+					return false
+				}
+				return true
+			}, consts.StatusWait, consts.WaitTick)
 
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			require.EventuallyWithT(t, func(t *assert.CollectT) {

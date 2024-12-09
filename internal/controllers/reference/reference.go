@@ -15,6 +15,7 @@ import (
 const (
 	VersionV1      = "v1"
 	KindSecret     = "Secret"
+	KindConfigMap  = "ConfigMap"
 	CACertLabelKey = "konghq.com/ca-cert"
 )
 
@@ -54,7 +55,46 @@ func UpdateReferencesToSecret(
 		}
 	}
 
-	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, referencedSecretNameMap)
+	return removeOutdatedReferencesToConfigMap(ctx, indexers, c, dataplaneClient, referrer, referencedSecretNameMap)
+}
+
+// UpdateReferencesToConfigMap updates the reference records between referrer and each ConfigMap
+// in namespacedNames in record cache.
+func UpdateReferencesToConfigMap(
+	ctx context.Context,
+	c client.Client, indexers CacheIndexers, dataplaneClient controllers.DataPlaneClient,
+	referrer client.Object, referencedConfigMapNameMap map[k8stypes.NamespacedName]struct{},
+) error {
+	for nsName := range referencedConfigMapNameMap {
+		configMap := &corev1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: VersionV1,
+				Kind:       KindConfigMap,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: nsName.Namespace,
+				Name:      nsName.Name,
+			},
+		}
+
+		// Here we update the reference relationship even when the referred configmap does not exist yet
+		// If the referred ConfiMap is created, it could be reconciled in ConfigMap controller.
+		referrerCopy := referrer.DeepCopyObject().(client.Object)
+		if err := indexers.SetObjectReference(
+			referrerCopy, configMap.DeepCopy()); err != nil {
+			return err
+		}
+
+		if err := c.Get(ctx, nsName, configMap); err != nil {
+			return err
+		}
+
+		if err := dataplaneClient.UpdateObject(configMap); err != nil {
+			return err
+		}
+	}
+
+	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, referencedConfigMapNameMap)
 }
 
 // removeOutdatedReferenceToSecret removes outdated reference records to secrets in reference indexer.
@@ -101,6 +141,64 @@ func removeOutdatedReferencesToSecret(
 				}
 			} else {
 				// if the secret does not exist in k8s, we ignore the error and continue the check and delete operation.
+				// for other errors, we return the error and stop the operation.
+				if !apierrors.IsNotFound(getErr) {
+					return err
+				}
+			}
+
+			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// removeOutdatedReferencesToConfigMap removes outdated reference records to configMaps in reference indexer.
+// ConfigMaps that are referred by referrer are passed in referredConfigMapNameMap parameter.
+// If a ConfigMap is not referenced by any other object after deleting outdated reference records,
+// and it does not have label "konghq.com/ca-cert:true", it is not possible to be used in Kong gateway config
+// and should be removed from the object cache inside KongClient.
+func removeOutdatedReferencesToConfigMap(
+	ctx context.Context,
+	indexers CacheIndexers, c client.Client, dataplaneClient controllers.DataPlaneClient,
+	referrer client.Object, referredConfigMapNameMap map[k8stypes.NamespacedName]struct{},
+) error {
+	referents, err := indexers.ListReferredObjects(referrer)
+	if err != nil {
+		return err
+	}
+	for _, obj := range referents {
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		// delete the reference record if the secret is not referred by the service.
+		if gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindConfigMap {
+			namespacedName := k8stypes.NamespacedName{
+				Namespace: obj.GetNamespace(),
+				Name:      obj.GetName(),
+			}
+
+			// if the configmap is still referenced, no operations are taken so continue here.
+			if _, ok := referredConfigMapNameMap[namespacedName]; ok {
+				continue
+			}
+
+			if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
+				return err
+			}
+			// remove the configMap in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
+			// Do this check and delete when the reference count may be reduced by 1.
+
+			// retrieve the configMap in k8s and check it has the label.
+			configMap := &corev1.ConfigMap{}
+			getErr := c.Get(ctx, namespacedName, configMap)
+			// if the configMap exists in k8s and has the label, we should not delete it in object cache.
+			if getErr == nil {
+				if configMap.Labels != nil && configMap.Labels[CACertLabelKey] == "true" {
+					continue
+				}
+			} else {
+				// if the configMap does not exist in k8s, we ignore the error and continue the check and delete operation.
 				// for other errors, we return the error and stop the operation.
 				if !apierrors.IsNotFound(getErr) {
 					return err

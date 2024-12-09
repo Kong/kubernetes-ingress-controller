@@ -18,15 +18,6 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - backendtlspolicies
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - gatewayclasses
   - grpcroutes
   - httproutes
@@ -37,6 +28,16 @@ rules:
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies/status
+  verbs:
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io

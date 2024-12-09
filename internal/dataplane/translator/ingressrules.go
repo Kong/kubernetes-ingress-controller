@@ -154,7 +154,7 @@ func (ir *ingressRules) handleBackendTLSPolices(
 
 func getTLSVerifyDepthOption(options map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue) (int, bool) {
 	// If the annotation is not set, return no depth.
-	depthStr, ok := options[annotations.TLSVerifyDepthKey]
+	depthStr, ok := options[gatewayapi.AnnotationKey(strings.ReplaceAll(annotations.TLSVerifyDepthKey, "/", ""))]
 	if !ok {
 		return 0, false
 	}

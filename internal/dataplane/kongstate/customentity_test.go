@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"testing"
@@ -1101,9 +1102,10 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 
 			ks := tc.initialState
 			ks.FillCustomEntities(
+				context.Background(),
 				logr.Discard(), s,
 				failuresCollector,
-				&fakeSchemaGetter{schemas: tc.schemas}, "",
+				&fakeSchemaService{schemas: tc.schemas}, "",
 			)
 			for entityType, expectedObjectList := range tc.expectedCustomEntities {
 				require.NotNil(t, ks.CustomEntities[entityType])

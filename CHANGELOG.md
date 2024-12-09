@@ -223,7 +223,9 @@ Adding a new version? You'll need three changes:
   By setting this flag, the secrets that are ingested will be limited to those having this label set to "true".
   This can reduce the memory usage in scenarios with a large number of giant secrets.
   [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
-
+- Added schema validation for `KongCustomEntity`. Kubernetes event will be created for
+  each validation error for `KongCustomEntity` objects.
+  [#6802](https://github.com/Kong/kubernetes-ingress-controller/pull/6802)
 
 ## [3.3.1]
 

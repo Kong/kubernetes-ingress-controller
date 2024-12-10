@@ -88,18 +88,21 @@ func (ir *ingressRules) populateServices(
 		}
 
 		for _, k8sService := range k8sServices {
+			// We need to create a copy of the k8s service as we need to modify it. The original is read
+			// by another routine and we may incur in a data race.
+			k8sServiceCopy := k8sService.DeepCopy()
 			// at this point we know the Kubernetes service itself is valid and can be
 			// used for traffic, so cache it amongst the kong Services k8s services.
-			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
+			service.K8sServices[fmt.Sprintf("%s/%s", k8sServiceCopy.Namespace, k8sServiceCopy.Name)] = k8sServiceCopy
 
 			// convert the backendTLSPolicy targeting the service to the proper set of annotations.
-			ir.handleBackendTLSPolices(logger, s, k8sService, failuresCollector, translatedObjectsCollector)
+			ir.handleBackendTLSPolices(logger, s, k8sServiceCopy, failuresCollector, translatedObjectsCollector)
 
 			// extract client certificates intended for use by the service.
-			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
+			ir.handleServiceClientCertificates(s, k8sServiceCopy, &service, failuresCollector)
 
 			// extract CA certificates intended for use by the service.
-			ir.handleServiceCACertificates(s, k8sService, &service, failuresCollector)
+			ir.handleServiceCACertificates(s, k8sServiceCopy, &service, failuresCollector)
 		}
 		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
 

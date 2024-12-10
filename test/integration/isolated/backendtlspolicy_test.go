@@ -33,12 +33,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
 )
 
-// TestBackendTLSPolicyt tests that BackendTLSPolicies are properly configured.
+// TestBackendTLSPolicy tests that BackendTLSPolicies are properly configured.
 // It exposes an HTTPS goecho server listening with a certificate signed by an intermediate CA. The Service is associated
 // with a root CA certificate which should be used to verify the upstream server's certificate. The test first sets the
 // TLS verification depth to 0, which should fail the TLS handshake (as that would only pass with a self-signed cert).
 // Then, it sets the TLS verification depth to 1, which should pass with one intermediate CA.
-func TestBackendTLSPolicyt(t *testing.T) {
+func TestBackendTLSPolicy(t *testing.T) {
 	const (
 		caConfigMapName        = "ca"
 		anotherCAConfigMapName = "another-ca"

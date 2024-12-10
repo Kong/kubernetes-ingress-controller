@@ -471,7 +471,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 
 		referredSecretNames := listSecretNamesReferredByGateway(gateway)
-		if err := ctrlref.UpdateReferencesToSecretorConfigMap(
+		if err := ctrlref.UpdateReferencesToSecretOrConfigMap(
 			ctx,
 			r.Client,
 			r.ReferenceIndexers,

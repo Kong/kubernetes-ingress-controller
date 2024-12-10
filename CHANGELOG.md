@@ -248,9 +248,8 @@ Adding a new version? You'll need three changes:
   [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
   [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 - Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
-  to ingest. By setting this flag, the secrets that are ingested will be limited
-  to those having this label set to "true". This can reduce the memory usage in
-  scenarios with a large number of giant secrets. The default value is `konghq.com/configmap`.
+  to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
+  to those having this label set to "true". This limits the amount of resources that are kept in memory. The default value is `konghq.com/configmap`.
   [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 
 ## [3.3.1]

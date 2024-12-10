@@ -46,7 +46,7 @@ func updateReferredObjects(
 	for _, nsName := range referredSecretList {
 		referredSecretNameMap[nsName] = struct{}{}
 	}
-	return ctrlref.UpdateReferencesToSecretorConfigMap(
+	return ctrlref.UpdateReferencesToSecretOrConfigMap(
 		ctx,
 		client,
 		refIndexers,

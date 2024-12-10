@@ -26,9 +26,9 @@ type secretOrConfigMapT interface {
 		*corev1.Secret
 }
 
-// UpdateReferencesToSecretorConfigMap updates the reference records between referrer and each secret or configmap
+// UpdateReferencesToSecretOrConfigMap updates the reference records between referrer and each secret or configmap
 // in namespacedNames in record cache.
-func UpdateReferencesToSecretorConfigMap[t secretOrConfigMapT](
+func UpdateReferencesToSecretOrConfigMap[t secretOrConfigMapT](
 	ctx context.Context,
 	c client.Client,
 	indexers CacheIndexers,

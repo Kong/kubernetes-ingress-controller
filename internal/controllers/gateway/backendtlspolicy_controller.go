@@ -302,7 +302,7 @@ func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 			// Update references to ConfigMaps in the dataplane cache.
 			referredConfigMapNames := listConfigMapNamesReferredByBackendTLSPolicy(backendTLSPolicy)
-			if err := ctrlref.UpdateReferencesToSecretorConfigMap(
+			if err := ctrlref.UpdateReferencesToSecretOrConfigMap(
 				ctx,
 				r.Client,
 				r.ReferenceIndexers,

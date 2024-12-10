@@ -154,6 +154,7 @@ func setupControllers(
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				ReferenceIndexers: referenceIndexers,
+				LabelSelector:     c.ConfigMapLabelSelector,
 			},
 		},
 		// ---------------------------------------------------------------------------

@@ -193,16 +193,15 @@ func removeOutdatedReferencesToConfigMap(
 			configMap := &corev1.ConfigMap{}
 			getErr := c.Get(ctx, namespacedName, configMap)
 			// if the configMap exists in k8s and has the label, we should not delete it in object cache.
-			if getErr == nil {
-				if configMap.Labels != nil && configMap.Labels[CACertLabelKey] == "true" {
-					continue
-				}
-			} else {
-				// if the configMap does not exist in k8s, we ignore the error and continue the check and delete operation.
+			if getErr != nil {
+			        // if the configMap does not exist in k8s, we ignore the error and continue the check and delete operation.
 				// for other errors, we return the error and stop the operation.
 				if !apierrors.IsNotFound(getErr) {
 					return err
 				}
+			}
+			if configMap.Labels != nil && configMap.Labels[CACertLabelKey] == "true" {
+					continue
 			}
 
 			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {

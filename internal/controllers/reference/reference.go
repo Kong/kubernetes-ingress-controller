@@ -55,7 +55,7 @@ func UpdateReferencesToSecret(
 		}
 	}
 
-	return removeOutdatedReferencesToConfigMap(ctx, indexers, c, dataplaneClient, referrer, referencedSecretNameMap)
+	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, referencedSecretNameMap)
 }
 
 // UpdateReferencesToConfigMap updates the reference records between referrer and each ConfigMap
@@ -94,7 +94,7 @@ func UpdateReferencesToConfigMap(
 		}
 	}
 
-	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, referencedConfigMapNameMap)
+	return removeOutdatedReferencesToConfigMap(ctx, indexers, c, dataplaneClient, referrer, referencedConfigMapNameMap)
 }
 
 // removeOutdatedReferenceToSecret removes outdated reference records to secrets in reference indexer.

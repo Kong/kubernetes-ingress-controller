@@ -93,6 +93,7 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
+	// TODO(czeslavo): move it to Konnect synchronizer
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
 	// config.InMemory that is meant for regular Kong Gateway clients.
 	if client.IsKonnect() {

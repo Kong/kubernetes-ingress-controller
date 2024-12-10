@@ -1,9 +1,9 @@
 package diagnostics
 
 import (
+	"container/list"
 	"fmt"
 
-	"github.com/golang-collections/collections/queue"
 	"github.com/kong/go-database-reconciler/pkg/diff"
 )
 
@@ -46,7 +46,7 @@ func NewEntityDiff(diff string, action string, entity diff.Entity) EntityDiff {
 // diffMap holds DB mode diff history.
 type diffMap struct {
 	diffs     map[string]ConfigDiff
-	hashQueue *queue.Queue
+	hashQueue *list.List
 	length    int
 	times     map[string]string
 	latest    string
@@ -57,18 +57,27 @@ func newDiffMap(length int) diffMap {
 		diffs:     map[string]ConfigDiff{},
 		times:     map[string]string{},
 		length:    length,
-		hashQueue: queue.New(),
+		hashQueue: list.New(),
 	}
 }
 
-// Update adds a diff to the diffMap. If the diffMap holds the maximum number of diffs in history, it removes the
-// oldest diff.
+// Update adds a diff to the diffMap.
+// If the diffMap holds the maximum number of diffs in history, it removes the oldest diff.
 func (d *diffMap) Update(diff ConfigDiff) {
 	if d.hashQueue.Len() == d.length {
-		oldest := d.hashQueue.Dequeue().(string)
+		back := d.hashQueue.Back()
+		if back == nil {
+			return
+		}
+		d.hashQueue.Remove(back)
+		oldest, ok := back.Value.(string)
+		if !ok {
+			return
+		}
 		delete(d.diffs, oldest)
+		delete(d.times, oldest)
 	}
-	d.hashQueue.Enqueue(diff.Hash)
+	d.hashQueue.PushFront(diff.Hash)
 	d.diffs[diff.Hash] = diff
 	d.times[diff.Hash] = diff.Timestamp
 	d.latest = diff.Hash

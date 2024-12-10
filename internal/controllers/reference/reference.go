@@ -171,14 +171,14 @@ func removeOutdatedReferencesToConfigMap(
 	}
 	for _, obj := range referents {
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		// delete the reference record if the secret is not referred by the service.
+		// Delete the reference record if the secret is not referred by the service.
 		if gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindConfigMap {
 			namespacedName := k8stypes.NamespacedName{
 				Namespace: obj.GetNamespace(),
 				Name:      obj.GetName(),
 			}
 
-			// if the configmap is still referenced, no operations are taken so continue here.
+			// If the configmap is still referenced, no operations are taken so continue here.
 			if _, ok := referredConfigMapNameMap[namespacedName]; ok {
 				continue
 			}
@@ -186,7 +186,7 @@ func removeOutdatedReferencesToConfigMap(
 			if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
 				return err
 			}
-			// remove the configMap in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
+			// Remove the configMap in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
 			// Do this check and delete when the reference count may be reduced by 1.
 
 			// retrieve the configMap in k8s and check it has the label.

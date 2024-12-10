@@ -259,7 +259,7 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 // list namespaced names of configmaps referred by the gateway.
 func listConfigMapNamesReferredByBackendTLSPolicy(policy *gatewayapi.BackendTLSPolicy) map[k8stypes.NamespacedName]struct{} {
 	// no need to check group and kind, as if they were different from core/Configmap, the policy would have been marked as invalid.
-	nsNames := make(map[k8stypes.NamespacedName]struct{})
+	nsNames := make(map[k8stypes.NamespacedName]struct{}, len(policy.Spec.Validation.CACertificateRefs))
 	for _, certRef := range policy.Spec.Validation.CACertificateRefs {
 		nsName := k8stypes.NamespacedName{
 			Namespace: policy.Namespace,

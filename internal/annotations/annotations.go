@@ -396,8 +396,8 @@ func ExtractTLSVerifyDepth(anns map[string]string) (int, bool) {
 	return depth, true
 }
 
-// ExtractCACertificatesFromSecrets extracts the ca-certificates secret names from the annotation.
-// It expects a comma-separated list of certificate names.
+// ExtractCACertificatesFromSecrets extracts the ca-certificates secret names from the `ca-certificates-secret` annotation.
+// It expects a comma-separated list of secret names containing CA certificates.
 func ExtractCACertificatesFromSecrets(anns map[string]string) []string {
 	s, ok := anns[AnnotationPrefix+CACertificatesSecretsKey]
 	if !ok {

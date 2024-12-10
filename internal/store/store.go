@@ -159,13 +159,13 @@ func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 
 // GetConfigMap returns a ConfigMap using the namespace and name as key.
 func (s Store) GetConfigMap(namespace, name string) (*corev1.ConfigMap, error) {
-	key := fmt.Sprintf("%v/%v", namespace, name)
+	key := fmt.Sprintf("%s/%s", namespace, name)
 	configMap, exists, err := s.stores.ConfigMap.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, NotFoundError{fmt.Sprintf("ConfigMap %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("ConfigMap %s not found", key)}
 	}
 	return configMap.(*corev1.ConfigMap), nil
 }

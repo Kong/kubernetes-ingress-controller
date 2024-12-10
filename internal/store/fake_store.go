@@ -164,8 +164,7 @@ func NewFakeStore(
 	}
 	configMapStore := cache.NewStore(namespacedKeyFunc)
 	for _, s := range objects.ConfigMaps {
-		err := configMapStore.Add(s)
-		if err != nil {
+		if err := configMapStore.Add(s); err != nil {
 			return nil, err
 		}
 	}

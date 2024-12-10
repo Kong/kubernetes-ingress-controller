@@ -92,13 +92,13 @@ func (ir *ingressRules) populateServices(
 			// used for traffic, so cache it amongst the kong Services k8s services.
 			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
 
-			// convert the backendTLSPolicy targeting the service to the proper set of annotations.
+			// Convert the backendTLSPolicy targeting the service to the proper set of annotations.
 			ir.handleBackendTLSPolices(logger, s, k8sService, failuresCollector, translatedObjectsCollector)
 
-			// extract client certificates intended for use by the service.
+			// Extract client certificates intended for use by the service.
 			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
 
-			// extract CA certificates intended for use by the service.
+			// Extract CA certificates intended for use by the service.
 			ir.handleServiceCACertificates(s, k8sService, &service, failuresCollector)
 		}
 		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)

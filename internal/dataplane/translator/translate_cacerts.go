@@ -34,7 +34,7 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 		}
 		secretID := string(idBytes)
 
-		// Allow the certificate key to be named either "cert" or "ca.crt"
+		// Allow the certificate key to be named either "cert" or "ca.crt".
 		caCertbytes, certExists := certSecret.Data["cert"]
 		if !certExists {
 			caCertbytes, certExists = certSecret.Data["ca.crt"]

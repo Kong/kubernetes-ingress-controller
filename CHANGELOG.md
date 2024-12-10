@@ -144,6 +144,10 @@ Adding a new version? You'll need three changes:
   a FQDN with a default cluster domain of `""`.
   Users can override the default by setting the `--cluster-domain` flag.
   [#6697](https://github.com/Kong/kubernetes-ingress-controller/pull/6697)
+- Translate `RequestRedirect` HTTPRoute filter to `redirect` plugin if Kong
+  gateway supports (Kong gateway with version >= 3.9.0). This safisfies the
+  specification of preserving paths in redirect response from the request.
+  [#6804](https://github.com/Kong/kubernetes-ingress-controller/pull/6804)
 
 ### Fixed
 

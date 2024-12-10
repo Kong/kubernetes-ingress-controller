@@ -56,23 +56,28 @@ type HTTPRoutesTranslationResult struct {
 
 type splitHTTPRouteMatchesWithPrioritiesGroupedByRule map[string][]SplitHTTPRouteMatchToKongRoutePriority
 
+// TranslateHTTPRouteToKongstateServiceOptions is the set of options to translate HTTPRoutes to kongstate services.
+type TranslateHTTPRouteToKongstateServiceOptions struct {
+	CombinedServicesFromDifferentHTTPRoutes bool
+	ExpressionRoutes                        bool
+	SupportRedirectPlugin                   bool
+}
+
 // TranslateHTTPRoutesToKongstateServices translates a set of HTTPRoutes to kongstate services,
 // and collect the translation errors in the process of translating.
 func TranslateHTTPRoutesToKongstateServices(
 	logger logr.Logger,
 	storer store.Storer,
 	routes []*gatewayapi.HTTPRoute,
-	combinedServicesFromDifferentHTTPRoutes bool,
-	expressionRoutes bool,
-	supportRedirectPlugin bool,
+	options TranslateHTTPRouteToKongstateServiceOptions,
 ) HTTPRoutesTranslationResult {
-	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, combinedServicesFromDifferentHTTPRoutes)
+	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, options.CombinedServicesFromDifferentHTTPRoutes)
 
 	// When feature flag expression routes is enabled, we need first split the matches and assign priorities to them
 	// to set proper priorities to the translated Kong routes for satisfying the specification of priorities of HTTPRoute matches:
 	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
 	var ruleToSplitMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
-	if expressionRoutes {
+	if options.ExpressionRoutes {
 		ruleToSplitMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
 	}
 
@@ -89,7 +94,7 @@ func TranslateHTTPRoutesToKongstateServices(
 		})
 
 		var matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority
-		if expressionRoutes {
+		if options.ExpressionRoutes {
 			for _, ruleMeta := range rulesMeta {
 				ruleKey := ruleMeta.getRuleKey()
 				matchesWithPriorities = append(matchesWithPriorities, ruleToSplitMatchesWithPriorities[ruleKey]...)
@@ -97,8 +102,9 @@ func TranslateHTTPRoutesToKongstateServices(
 		}
 		service, err := translateHTTPRouteRulesMetaToKongstateService(
 			logger, storer, serviceName, rulesMeta,
-			expressionRoutes,
 			matchesWithPriorities,
+			options.ExpressionRoutes,
+			options.SupportRedirectPlugin,
 		)
 		// Set translation errors for involved HTTPRoutes on failure of translation.
 		if err != nil {
@@ -196,8 +202,8 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	storer store.Storer,
 	serviceName string,
 	rulesMeta []httpRouteRuleMeta,
-	expressionRoutes bool,
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+	expressionRoutes bool,
 	supportRedirectPlugin bool,
 ) (kongstate.Service, error) {
 	// Fill in the common fields of the kongstate.Service.
@@ -270,13 +276,13 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	}
 
 	if expressionRoutes {
-		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities)
+		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities, supportRedirectPlugin)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
 		service.Routes = routes
 	} else {
-		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta, supportRedirectPlugin)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
@@ -1130,7 +1136,8 @@ func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirect
 	if modifier.Hostname != nil {
 		hostname = string(*modifier.Hostname)
 	}
-	// If `Port` is nil, port should be left empty for using well-known port for the scheme.
+	// As gateway API specified, if `Port` is nil, port should be left empty for using well-known port for the scheme.
+	// REVIEW: should we keep the default port 80 as the existing implementation?
 	portStr := ""
 	if modifier.Port != nil {
 		port := int(*modifier.Port)

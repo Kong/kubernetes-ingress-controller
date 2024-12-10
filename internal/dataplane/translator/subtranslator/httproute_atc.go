@@ -635,6 +635,7 @@ func groupHTTPRouteMatchesWithPrioritiesByRule(
 // that are poiting to the same service to list of kongstate route with expressions.
 func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	routes := make([]kongstate.Route, 0, len(matchesWithPriorities))
 	for _, matchWithPriority := range matchesWithPriorities {
@@ -643,7 +644,7 @@ func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 		// TODO: update the algorithm to assign priorities to matches to make it possible to consolidate some matches.
 		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields:
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/6807
-		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority)
+		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, supportRedirectPlugin)
 		if err != nil {
 			return []kongstate.Route{}, err
 		}

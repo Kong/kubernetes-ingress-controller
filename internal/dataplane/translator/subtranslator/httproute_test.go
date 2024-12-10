@@ -109,7 +109,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
 							Headers: []string{
-								"Location: http://example.org:80/test",
+								"Location: http://example.org/test",
 							},
 						},
 					},
@@ -1694,7 +1694,12 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				oldHTTPRoutes = append(oldHTTPRoutes, r.DeepCopy())
 			}
 
-			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true, false)
+			translateOptions := TranslateHTTPRouteToKongstateServiceOptions{
+				CombinedServicesFromDifferentHTTPRoutes: true,
+				ExpressionRoutes:                        false,
+				SupportRedirectPlugin:                   false,
+			}
+			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, translateOptions)
 			require.Len(t, translationResult.HTTPRouteNameToTranslationErrors, 0, "Should not get translation errors in translating")
 
 			kongstateServices := translationResult.ServiceNameToKongstateService
@@ -1819,7 +1824,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta)
+			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, false)
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -1832,7 +1837,6 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {

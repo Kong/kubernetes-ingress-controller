@@ -76,13 +76,16 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 // When the feature flag ExpressionRoutes is set to true, expression based Kong routes will be translated from matches of HTTPRoutes.
 // Otherwise, traditional Kong routes are translated.
 func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
+	translateOptions := subtranslator.TranslateHTTPRouteToKongstateServiceOptions{
+		CombinedServicesFromDifferentHTTPRoutes: t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
+		ExpressionRoutes:                        t.featureFlags.ExpressionRoutes,
+		SupportRedirectPlugin:                   t.featureFlags.SupportRedirectPlugin,
+	}
 	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
 		t.logger,
 		t.storer,
 		httpRoutes,
-		t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
-		t.featureFlags.ExpressionRoutes,
-		t.featureFlags.SupportRedirectPlugin,
+		translateOptions,
 	)
 	for serviceName, service := range translationResult.ServiceNameToKongstateService {
 		result.ServiceNameToServices[serviceName] = service

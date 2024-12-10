@@ -37,7 +37,7 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 	caCertsData := lo.Map(caCertSecrets, func(secret *corev1.Secret, _ int) intermediateT {
 		return intermediateT{
 			obj: secret.DeepCopy(),
-			data: lo.MapValues(secret.Data, func(v []byte, k string) string {
+			data: lo.MapValues(secret.Data, func(v []byte, _ string) string {
 				return string(v)
 			}),
 		}

@@ -189,7 +189,10 @@ func newMockUpdateStrategyResolver() *mockUpdateStrategyResolver {
 	}
 }
 
-func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateClient) sendconfig.UpdateStrategy {
+func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(
+	c sendconfig.UpdateClient,
+	_ *diagnostics.ClientDiagnostic,
+) sendconfig.UpdateStrategy {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -1025,7 +1028,7 @@ func setupTestKongClient(
 ) *KongClient {
 	logger := zapr.NewLogger(zap.NewNop())
 	timeout := time.Second
-	diagnostic := diagnostics.ConfigDumpDiagnostic{}
+	diagnostic := diagnostics.ClientDiagnostic{}
 	config := sendconfig.Config{
 		SanitizeKonnectConfigDumps: true,
 	}
@@ -1340,7 +1343,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			kongClient, err := NewKongClient(
 				zapr.NewLogger(zap.NewNop()),
 				time.Second,
-				diagnostics.ConfigDumpDiagnostic{
+				diagnostics.ClientDiagnostic{
 					Configs: diagnosticsCh,
 				},
 				sendconfig.Config{
@@ -1476,7 +1479,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 	kongClient, err := NewKongClient(
 		zapr.NewLogger(zap.NewNop()),
 		time.Second,
-		diagnostics.ConfigDumpDiagnostic{
+		diagnostics.ClientDiagnostic{
 			Configs: diagnosticsCh,
 		},
 		sendconfig.Config{
@@ -1622,7 +1625,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	kongClient, err := NewKongClient(
 		zapr.NewLogger(zap.NewNop()),
 		time.Second,
-		diagnostics.ConfigDumpDiagnostic{
+		diagnostics.ClientDiagnostic{
 			Configs: diagnosticsCh,
 		},
 		sendconfig.Config{
@@ -1732,7 +1735,7 @@ func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
 			kongClient, err := NewKongClient(
 				zapr.NewLogger(zap.NewNop()),
 				time.Second,
-				diagnostics.ConfigDumpDiagnostic{},
+				diagnostics.ClientDiagnostic{},
 				sendconfig.Config{
 					FallbackConfiguration:         tc.fallbackConfigurationFeatureEnabled,
 					UseLastValidConfigForFallback: tc.useLastValidConfigForFallbackEnabled,
@@ -1820,7 +1823,7 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			diagnosticsCh := make(chan diagnostics.ConfigDump, 1) // make it buffered to avoid blocking
-			kongClient.diagnostic = diagnostics.ConfigDumpDiagnostic{
+			kongClient.diagnostic = diagnostics.ClientDiagnostic{
 				Configs:               diagnosticsCh,
 				DumpsIncludeSensitive: tc.dumpsIncludeSensitive,
 			}
@@ -1955,7 +1958,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 			kongClient, err := NewKongClient(
 				zapr.NewLogger(zap.NewNop()),
 				time.Second,
-				diagnostics.ConfigDumpDiagnostic{},
+				diagnostics.ClientDiagnostic{},
 				sendconfig.Config{
 					FallbackConfiguration: true,
 				},

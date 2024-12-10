@@ -228,7 +228,15 @@ Adding a new version? You'll need three changes:
   By setting this flag, the secrets that are ingested will be limited to those having this label set to "true".
   This can reduce the memory usage in scenarios with a large number of giant secrets.
   [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
-
+- Added `/debug/config/diff-report` diagnostic endpoint. This endpoint is
+  available in DB mode when the `--dump-config` and `--dump-sensitive-config`
+  are enabled. It returns the latest diff information for the controller's last
+  configuration sync along with config hash and sync timestamp metadata. The
+  controller maintains the last 5 diffs in cache. You can retrieve older diffs
+  by appending a `?hash=<hash>` query string argument. Available config hashes
+  and their timestamps are listed under the `available` section of the
+  response.
+  [#6131](https://github.com/Kong/kubernetes-ingress-controller/pull/6131)
 
 ## [3.3.1]
 

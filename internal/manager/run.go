@@ -51,7 +51,7 @@ import (
 func Run(
 	ctx context.Context,
 	c *Config,
-	diagnostic diagnostics.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")

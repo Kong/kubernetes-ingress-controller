@@ -52,6 +52,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 		dump.Config{},
 		semver.MustParse("3.6.0"),
 		10,
+		nil,
 		logger,
 	)
 

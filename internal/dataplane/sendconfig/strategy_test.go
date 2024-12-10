@@ -92,7 +92,7 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 				InMemory: tc.inMemory,
 			}, zapr.NewLogger(zap.NewNop()))
 
-			strategy := resolver.ResolveUpdateStrategy(updateClient)
+			strategy := resolver.ResolveUpdateStrategy(updateClient, nil)
 			require.Equal(t, tc.expectedStrategyType, strategy.Type())
 			assert.True(t, client.adminAPIClientWasCalled)
 			assert.Equal(t, tc.expectKonnectControlPlaneCall, client.konnectControlPlaneWasCalled)

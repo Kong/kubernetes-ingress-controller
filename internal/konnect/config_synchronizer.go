@@ -138,6 +138,7 @@ func (s *ConfigSynchronizer) uploadConfig(ctx context.Context, client *adminapi.
 		s.prometheusMetrics,
 		s.updateStrategyResolver,
 		s.configChangeDetector,
+		nil,
 		isFallback,
 	)
 	if err != nil {

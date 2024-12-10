@@ -288,8 +288,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway.`)
 	flagSet.StringVar(&c.SecretLabelSelector, "secret-label-selector", "",
 		`Limits the secrets ingested to those having this label set to "true". If not specified, all secrets are ingested.`)
-	flagSet.StringVar(&c.ConfigMapLabelSelector, "configmap-label-selector", "",
-		`Limits the configmaps ingested to those having this label set to "true". If not specified, all configmaps are ingested.`)
+	flagSet.StringVar(&c.ConfigMapLabelSelector, "configmap-label-selector", consts.DefaultConfigMapSelector,
+		`Limits the configmaps ingested to those having this label set to "true".`)
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
 	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
 	flagSet.BoolVar(&c.KongLicenseEnabled, "enable-controller-kong-license", true, "Enable the KongLicense controller.")

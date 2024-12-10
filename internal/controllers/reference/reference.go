@@ -178,7 +178,7 @@ func removeOutdatedReferencesToConfigMap(
 				Name:      obj.GetName(),
 			}
 
-			// If the configmap is still referenced, no operations are taken so continue here.
+			// if the configmap is still referenced, no operations are taken so continue here.
 			if _, ok := referredConfigMapNameMap[namespacedName]; ok {
 				continue
 			}
@@ -186,7 +186,7 @@ func removeOutdatedReferencesToConfigMap(
 			if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
 				return err
 			}
-			// Remove the configMap in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
+			// remove the configMap in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
 			// Do this check and delete when the reference count may be reduced by 1.
 
 			// retrieve the configMap in k8s and check it has the label.
@@ -194,14 +194,14 @@ func removeOutdatedReferencesToConfigMap(
 			getErr := c.Get(ctx, namespacedName, configMap)
 			// if the configMap exists in k8s and has the label, we should not delete it in object cache.
 			if getErr != nil {
-			        // if the configMap does not exist in k8s, we ignore the error and continue the check and delete operation.
+				// if the configMap does not exist in k8s, we ignore the error and continue the check and delete operation.
 				// for other errors, we return the error and stop the operation.
 				if !apierrors.IsNotFound(getErr) {
 					return err
 				}
 			}
 			if configMap.Labels != nil && configMap.Labels[CACertLabelKey] == "true" {
-					continue
+				continue
 			}
 
 			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {

@@ -93,7 +93,7 @@ func (ir *ingressRules) populateServices(
 			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
 
 			// Convert the backendTLSPolicy targeting the service to the proper set of annotations.
-			ir.handleBackendTLSPolices(logger, s, k8sService, failuresCollector, translatedObjectsCollector)
+			ir.handleBackendTLSPolices(s, k8sService, failuresCollector)
 
 			// Extract client certificates intended for use by the service.
 			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
@@ -111,11 +111,9 @@ func (ir *ingressRules) populateServices(
 }
 
 func (ir *ingressRules) handleBackendTLSPolices(
-	_ logr.Logger,
 	s store.Storer,
 	k8sService *corev1.Service,
 	failuresCollector *failures.ResourceFailuresCollector,
-	_ *ObjectsCollector,
 ) {
 	policies, err := s.ListBackendTLSPoliciesByTargetService(client.ObjectKeyFromObject(k8sService))
 	if err != nil {
@@ -212,9 +210,9 @@ func (ir *ingressRules) handleServiceCACertificates(
 	k *kongstate.Service,
 	collector *failures.ResourceFailuresCollector,
 ) {
-	Secretcertificates := annotations.ExtractCACertificatesFromSecrets(service.Annotations)
-	configMapCertificates := annotations.ExtractCACertificatesFromConfigMap(service.Annotations)
-	if len(Secretcertificates)+len(configMapCertificates) == 0 {
+	secretcertificates := annotations.ExtractCACertificateSecretNames(service.Annotations)
+	configMapCertificates := annotations.ExtractCACertificateConfigMapNames(service.Annotations)
+	if len(secretcertificates)+len(configMapCertificates) == 0 {
 		// No CA certificates to process.
 		return
 	}
@@ -239,7 +237,7 @@ func (ir *ingressRules) handleServiceCACertificates(
 	}
 
 	// Process each CA certificate from secret and add it to the Kong Service.
-	for _, certificate := range Secretcertificates {
+	for _, certificate := range secretcertificates {
 		secretKey := service.Namespace + "/" + certificate
 		secret, err := s.GetSecret(service.Namespace, certificate)
 		if err != nil {

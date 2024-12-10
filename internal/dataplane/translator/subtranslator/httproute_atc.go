@@ -23,6 +23,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []string,
 	tags []*string,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	// initialize the route with route name, preserve_host, and tags.
 	r := kongstate.Route{
@@ -53,7 +54,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 	// if the rule has request redirect filter(s), we need to generate a route for each match to
 	// attach plugins for the filter.
 	if hasRedirectFilter {
-		return generateKongExpressionRoutesWithRequestRedirectFilter(translation, ingressObjectInfo, hostnames, tags)
+		return generateKongExpressionRoutesWithRequestRedirectFilter(translation, ingressObjectInfo, hostnames, tags, supportRedirectPlugin)
 	}
 
 	// if we do not need to generate a kong route for each match, we OR matchers from all matches together.
@@ -66,7 +67,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	if err := SetRoutePlugins(&r, translation.Filters, "", tags, true); err != nil {
+	if err := SetRoutePlugins(&r, translation.Filters, "", tags, true, supportRedirectPlugin); err != nil {
 		return nil, err
 	}
 	return []kongstate.Route{r}, nil
@@ -77,6 +78,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []string,
 	tags []*string,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	routes := make([]kongstate.Route, 0, len(translation.Matches))
 	for _, match := range translation.Matches {
@@ -105,7 +107,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 		if match.Path != nil && match.Path.Value != nil {
 			path = *match.Path.Value
 		}
-		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags, true); err != nil {
+		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags, true, supportRedirectPlugin); err != nil {
 			return nil, err
 		}
 		routes = append(routes, matchRoute)
@@ -545,6 +547,7 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 // based kong route with assigned priority.
 func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
+	supportRedirectPlugin bool,
 ) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
 	httproute := httpRouteMatchWithPriority.Match.Source
@@ -599,7 +602,7 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 			path = *match.Match.Path.Value
 		}
 
-		if err := SetRoutePlugins(r, rule.Filters, path, tags, true); err != nil {
+		if err := SetRoutePlugins(r, rule.Filters, path, tags, true, supportRedirectPlugin); err != nil {
 			return nil, err
 		}
 	}

@@ -261,6 +261,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 				tc.ingressObjectInfo,
 				tc.hostnames,
 				kong.StringSlice(tc.tags...),
+				false,
 			)
 
 			if tc.expectedError != nil {

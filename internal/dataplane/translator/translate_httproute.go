@@ -82,6 +82,7 @@ func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []
 		httpRoutes,
 		t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
 		t.featureFlags.ExpressionRoutes,
+		t.featureFlags.SupportRedirectPlugin,
 	)
 	for serviceName, service := range translationResult.ServiceNameToKongstateService {
 		result.ServiceNameToServices[serviceName] = service
@@ -134,6 +135,7 @@ func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
 	translation subtranslator.KongRouteTranslation,
 	expressionRoutes bool,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	// Gather the k8s object information and hostnames from the HTTPRoute.
 	objectInfo := util.FromK8sObject(httproute)
@@ -148,6 +150,7 @@ func GenerateKongRouteFromTranslation(
 			objectInfo,
 			hostnames,
 			tags,
+			supportRedirectPlugin,
 		)
 	}
 
@@ -160,5 +163,6 @@ func GenerateKongRouteFromTranslation(
 		objectInfo,
 		hostnames,
 		tags,
+		supportRedirectPlugin,
 	)
 }

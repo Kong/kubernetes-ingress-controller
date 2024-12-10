@@ -279,7 +279,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false)
+			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false, false)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, result.Plugins)
 
@@ -1830,6 +1830,93 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			for i, expectedRoute := range tc.expectedRoutes {
 				require.Equal(t, expectedRoute, routes[i])
 			}
+		})
+	}
+
+}
+
+func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {
+	testCases := []struct {
+		name             string
+		modifier         *gatewayapi.HTTPRequestRedirectFilter
+		expectedScheme   string
+		expectedHostPort string
+	}{
+		{
+			name: "Has scheme, host and port",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				Scheme:   lo.ToPtr("https"),
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Port:     lo.ToPtr(gatewayapi.PortNumber(8443)),
+			},
+			expectedScheme:   "https",
+			expectedHostPort: "a.com:8443",
+		},
+		{
+			name: "no scheme, http scheme should be returned",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+			},
+			expectedScheme:   "http",
+			expectedHostPort: "a.com",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			urlScheme, hostPort := schemeHostPortFromHTTPPathModifier(tc.modifier)
+			require.Equal(t, tc.expectedScheme, urlScheme)
+			require.Equal(t, tc.expectedHostPort, hostPort)
+		})
+	}
+}
+
+func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
+	testCases := []struct {
+		name               string
+		modifier           *gatewayapi.HTTPRequestRedirectFilter
+		expectedKongPlugin kong.Plugin
+	}{
+		{
+			name: "full path replace",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				StatusCode: lo.ToPtr(301),
+				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:            gatewayapi.FullPathHTTPPathModifier,
+					ReplaceFullPath: lo.ToPtr("/foo"),
+				},
+			},
+			expectedKongPlugin: kong.Plugin{
+				Name: kong.String("redirect"),
+				Config: kong.Configuration{
+					"status_code":        lo.ToPtr(301),
+					"location":           lo.ToPtr("http://a.com/foo"),
+					"keep_incoming_path": lo.ToPtr(false),
+				},
+			},
+		},
+		{
+			name: "no path replace",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				StatusCode: lo.ToPtr(301),
+				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Scheme:     lo.ToPtr("http"),
+			},
+			expectedKongPlugin: kong.Plugin{
+				Name: kong.String("redirect"),
+				Config: kong.Configuration{
+					"status_code":        lo.ToPtr(301),
+					"location":           lo.ToPtr("http://a.com"),
+					"keep_incoming_path": lo.ToPtr(true),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expectedKongPlugin, generateRequestRedirectUsingRedirectKongPlugin(tc.modifier))
 		})
 	}
 }

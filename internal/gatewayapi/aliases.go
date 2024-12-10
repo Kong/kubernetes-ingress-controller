@@ -53,6 +53,7 @@ type (
 	HTTPRouteFilterType                       = gatewayv1.HTTPRouteFilterType
 	HTTPURLRewriteFilter                      = gatewayv1.HTTPURLRewriteFilter
 	HTTPPathModifier                          = gatewayv1.HTTPPathModifier
+	HTTPPathModifierType                      = gatewayv1.HTTPPathModifierType
 	HTTPRouteList                             = gatewayv1.HTTPRouteList
 	HTTPRouteMatch                            = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule                             = gatewayv1.HTTPRouteRule

@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
@@ -143,10 +144,12 @@ type CustomEntity struct {
 	ForeignEntityIDs map[kong.EntityType]string
 }
 
-// SchemaGetter is the interface to fetch the schema of a Kong entity by its type.
+// SchemaService is the interface to fetch the schema of a Kong entity by its type.
 // Used for fetching schema of custom entity for filling "foreign" field referring to other entities.
-type SchemaGetter interface {
+// It can also validate an entity against its schema.
+type SchemaService interface {
 	Get(ctx context.Context, entityType string) (kong.Schema, error)
+	Validate(ctx context.Context, entityType kong.EntityType, entity interface{}) (bool, string, error)
 }
 
 type entityForeignFieldValue struct {
@@ -157,10 +160,11 @@ type entityForeignFieldValue struct {
 
 // FillCustomEntities fills custom entities in KongState.
 func (ks *KongState) FillCustomEntities(
+	ctx context.Context,
 	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
-	schemaGetter SchemaGetter,
+	schemaService SchemaService,
 	workspace string,
 ) {
 	entities := s.ListKongCustomEntities()
@@ -186,11 +190,25 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 		// Fetch the entity schema.
-		schema, err := ks.fetchEntitySchema(schemaGetter, entity.Spec.EntityType)
+		schema, err := ks.fetchEntitySchema(ctx, schemaService, entity.Spec.EntityType)
 		if err != nil {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("failed to fetch entity schema for entity type %s: %v", entity.Spec.EntityType, err),
 				entity,
+			)
+			continue
+		}
+
+		valid, msg, err := schemaService.Validate(ctx, kong.EntityType(entity.Spec.EntityType), entity.Spec.Fields)
+		if err != nil {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("failed validating entity %s: %v", client.ObjectKeyFromObject(entity), err), entity,
+			)
+			continue
+		}
+		if !valid {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("entity %s failed validation: %s", client.ObjectKeyFromObject(entity), msg), entity,
 			)
 			continue
 		}
@@ -238,13 +256,13 @@ func (ks *KongState) CustomEntityTypes() []string {
 
 // fetchEntitySchema fetches schema of an entity by its type and stores the schema in its custom entity collection
 // as a cache to avoid excessive calling of Kong admin APIs.
-func (ks *KongState) fetchEntitySchema(schemaGetter SchemaGetter, entityType string) (EntitySchema, error) {
+func (ks *KongState) fetchEntitySchema(ctx context.Context, schemaService SchemaService, entityType string) (EntitySchema, error) {
 	collection, ok := ks.CustomEntities[entityType]
 	if ok {
 		return collection.Schema, nil
 	}
 	// Use `context.Background()` here because `BuildKongConfig` does not provide a context.
-	schema, err := schemaGetter.Get(context.Background(), entityType)
+	schema, err := schemaService.Get(ctx, entityType)
 	if err != nil {
 		return EntitySchema{}, err
 	}

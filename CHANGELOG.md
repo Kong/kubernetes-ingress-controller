@@ -237,6 +237,9 @@ Adding a new version? You'll need three changes:
   and their timestamps are listed under the `available` section of the
   response.
   [#6131](https://github.com/Kong/kubernetes-ingress-controller/pull/6131)
+- Added schema validation for `KongCustomEntity`. Kubernetes event will be created for
+  each validation error for `KongCustomEntity` objects.
+  [#6802](https://github.com/Kong/kubernetes-ingress-controller/pull/6802)
 
 ## [3.3.1]
 

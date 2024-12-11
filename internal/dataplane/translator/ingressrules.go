@@ -155,12 +155,8 @@ func (ir *ingressRules) handleBackendTLSPolices(
 }
 
 func getTLSVerifyDepthOption(options map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue) (int, bool) {
-	const (
-		tlsVerifyDepthKey = "tls-verify-depth"
-	)
-
 	// If the annotation is not set, return no depth.
-	depthStr, ok := options[tlsVerifyDepthKey]
+	depthStr, ok := options[gatewayapi.TLSVerifyDepthKey]
 	if !ok {
 		return 0, false
 	}

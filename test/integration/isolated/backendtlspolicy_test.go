@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -23,7 +22,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	constsmgr "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
@@ -274,7 +272,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 						Hostname: goEchoServerHostname,
 					},
 					Options: map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue{
-						gatewayapi.AnnotationKey(strings.ReplaceAll(annotations.TLSVerifyDepthKey, "/", "")): gatewayapi.AnnotationValue("0"),
+						gatewayapi.TLSVerifyDepthKey: gatewayapi.AnnotationValue("0"),
 					},
 				},
 			}
@@ -313,7 +311,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 					t.Logf("Failed to get BackendTLSPolicy: %v", err)
 					return false
 				}
-				backendTLSPolicy.Spec.Options[gatewayapi.AnnotationKey(strings.ReplaceAll(annotations.TLSVerifyDepthKey, "/", ""))] = "1"
+				backendTLSPolicy.Spec.Options[gatewayapi.TLSVerifyDepthKey] = "1"
 				_, err = gwapiClient.GatewayV1alpha3().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Update(ctx, backendTLSPolicy, metav1.UpdateOptions{})
 				if err != nil {
 					t.Logf("Failed to update BackendTLSPolicy: %v", err)

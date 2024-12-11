@@ -241,6 +241,16 @@ Adding a new version? You'll need three changes:
 - Added schema validation for `KongCustomEntity`. Kubernetes event will be created for
   each validation error for `KongCustomEntity` objects.
   [#6802](https://github.com/Kong/kubernetes-ingress-controller/pull/6802)
+- Added `BackendTLSPolicy` support. The user can now reference any Kubernetes `Service`
+  in the `BackendTLSPolicy` spec, and in case the service is used as a backend by
+  `HTTPRoute`s that reference a Kong Gateway as parent, such Backend TLS configuration
+  is applied to the service section of the Kong configuration.
+  [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
+- Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
+  to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
+  to those having this label set to "true". This limits the amount of resources that are kept in memory. The default value is `konghq.com/configmap`.
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 
 ## [3.3.1]
 

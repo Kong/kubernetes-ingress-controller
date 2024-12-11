@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -47,6 +48,7 @@ type FakeObjects struct {
 	Services                       []*corev1.Service
 	EndpointSlices                 []*discoveryv1.EndpointSlice
 	Secrets                        []*corev1.Secret
+	ConfigMaps                     []*corev1.ConfigMap
 	KongPlugins                    []*kongv1.KongPlugin
 	KongClusterPlugins             []*kongv1.KongClusterPlugin
 	KongIngresses                  []*kongv1.KongIngress
@@ -160,6 +162,12 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	configMapStore := cache.NewStore(namespacedKeyFunc)
+	for _, s := range objects.ConfigMaps {
+		if err := configMapStore.Add(s); err != nil {
+			return nil, err
+		}
+	}
 	endpointSliceStore := cache.NewStore(namespacedKeyFunc)
 	for _, e := range objects.EndpointSlices {
 		err := endpointSliceStore.Add(e)
@@ -247,6 +255,7 @@ func NewFakeStore(
 			Service:                        serviceStore,
 			EndpointSlice:                  endpointSliceStore,
 			Secret:                         secretsStore,
+			ConfigMap:                      configMapStore,
 			Plugin:                         kongPluginsStore,
 			ClusterPlugin:                  kongClusterPluginsStore,
 			Consumer:                       consumerStore,
@@ -282,7 +291,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
 		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):           gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
 		reflect.TypeOf(&gatewayapi.Gateway{}):                  gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
-		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
+		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):         gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
 		reflect.TypeOf(&kongv1beta1.TCPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
 		reflect.TypeOf(&kongv1beta1.UDPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
 		reflect.TypeOf(&kongv1alpha1.IngressClassParameters{}): kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),

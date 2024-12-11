@@ -195,10 +195,10 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 
 			t.Logf("Setting up service annotations for TLS verification")
 			service.Annotations = map[string]string{
-				annotations.AnnotationPrefix + annotations.ProtocolKey:       "https", // Only https or tls are supported.
-				annotations.AnnotationPrefix + annotations.TLSVerifyKey:      "true",
-				annotations.AnnotationPrefix + annotations.CACertificatesKey: strings.Join([]string{caSecretName, anotherCASecretName}, ","),
-				annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey: "0", // First, we'll set it to 0 to make sure it fails.
+				annotations.AnnotationPrefix + annotations.ProtocolKey:              "https", // Only https or tls are supported.
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+				annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: strings.Join([]string{caSecretName, anotherCASecretName}, ","),
+				annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey:        "0", // First, we'll set it to 0 to make sure it fails.
 			}
 			service, err = cluster.Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
 			assert.NoError(t, err)

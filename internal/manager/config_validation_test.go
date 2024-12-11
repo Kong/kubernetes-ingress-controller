@@ -123,6 +123,15 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedValue: "konghq.com/label-for-caching",
 			},
 		},
+		"--configmap-label-selector": {
+			{
+				Input: "konghq.com/label-for-caching",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.ConfigMapLabelSelector
+				},
+				ExpectedValue: "konghq.com/label-for-caching",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {

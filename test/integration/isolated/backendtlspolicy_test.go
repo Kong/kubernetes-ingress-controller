@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	constsmgr "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
@@ -95,7 +96,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: caConfigMapName,
 					Labels: map[string]string{
-						configuration.CACertLabelKey: "true",
+						configuration.CACertLabelKey:       "true",
+						constsmgr.DefaultConfigMapSelector: "true",
 					},
 				},
 				Data: map[string]string{
@@ -129,7 +131,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: anotherCAConfigMapName,
 					Labels: map[string]string{
-						configuration.CACertLabelKey: "true",
+						configuration.CACertLabelKey:       "true",
+						constsmgr.DefaultConfigMapSelector: "true",
 					},
 				},
 				Data: map[string]string{

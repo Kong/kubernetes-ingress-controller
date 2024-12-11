@@ -393,19 +393,19 @@ func findCustomEntityForeignFields(
 			foreignRelations.Service = getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
 		case string(kong.EntityTypeRoutes):
 			foreignRouteFields = append(foreignRouteFields, fieldName)
-			foreignRelations.Route = lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
+			foreignRelations.Route = lo.FilterMap(rels.Routes, func(r *Route, _ int) (util.FR, bool) {
 				if err := r.FillID(workspace); err != nil {
-					return "", false
+					return util.FR{}, false
 				}
-				return *r.ID, true
+				return util.FR{Identifier: *r.ID, Referer: k8sEntity}, true
 			})
 		case string(kong.EntityTypeConsumers):
 			foreignConsumerFields = append(foreignConsumerFields, fieldName)
-			foreignRelations.Consumer = lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
+			foreignRelations.Consumer = lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (util.FR, bool) {
 				if err := c.FillID(workspace); err != nil {
-					return "", false
+					return util.FR{}, false
 				}
-				return *c.ID, true
+				return util.FR{Identifier: *c.ID, Referer: k8sEntity}, true
 			})
 		} // end of switch
 	}
@@ -419,21 +419,21 @@ func findCustomEntityForeignFields(
 			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
 				fieldName:         fieldName,
 				foreignEntityType: kong.EntityTypeServices,
-				foreignEntityID:   combination.Service,
+				foreignEntityID:   combination.Service.Identifier,
 			})
 		}
 		for _, fieldName := range foreignRouteFields {
 			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
 				fieldName:         fieldName,
 				foreignEntityType: kong.EntityTypeRoutes,
-				foreignEntityID:   combination.Route,
+				foreignEntityID:   combination.Route.Identifier,
 			})
 		}
 		for _, fieldName := range foreignConsumerFields {
 			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
 				fieldName:         fieldName,
 				foreignEntityType: kong.EntityTypeConsumers,
-				foreignEntityID:   combination.Consumer,
+				foreignEntityID:   combination.Consumer.Identifier,
 			})
 		}
 		ret = append(ret, foreignFieldValues)

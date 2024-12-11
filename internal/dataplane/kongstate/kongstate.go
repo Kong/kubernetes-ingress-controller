@@ -411,15 +411,19 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 		if !ok {
 			relations = util.ForeignRelations{}
 		}
+		fr := util.FR{
+			Identifier: identifier,
+			Referer:    referrer,
+		}
 		switch t {
 		case ConsumerRelation:
-			relations.Consumer = append(relations.Consumer, identifier)
+			relations.Consumer = append(relations.Consumer, fr)
 		case ConsumerGroupRelation:
-			relations.ConsumerGroup = append(relations.ConsumerGroup, identifier)
+			relations.ConsumerGroup = append(relations.ConsumerGroup, fr)
 		case RouteRelation:
-			relations.Route = append(relations.Route, identifier)
+			relations.Route = append(relations.Route, fr)
 		case ServiceRelation:
-			relations.Service = append(relations.Service, identifier)
+			relations.Service = append(relations.Service, fr)
 		}
 		pluginRels[pluginKey] = relations
 	}
@@ -548,14 +552,27 @@ func buildPlugins(
 	for pluginIdentifier, relations := range pluginRels {
 		identifier := strings.Split(pluginIdentifier, ":")
 		namespace, kongPluginName := identifier[0], identifier[1]
-		k8sPlugin, k8sClusterPlugin, err := getKongPluginOrKongClusterPlugin(s, namespace, kongPluginName)
+		k8sPlugin, k8sClusterPlugin, pluginFound, err := getKongPluginOrKongClusterPlugin(s, namespace, kongPluginName)
 		if err != nil {
 			logger.Error(err, "Failed to fetch KongPlugin resource",
 				"kongplugin_name", kongPluginName,
 				"kongplugin_namespace", namespace)
 			continue
 		}
-
+		// For non-existing plugin push failure K8s Events for all K8s object that reference it.
+		if !pluginFound {
+			for _, rel := range relations.GetCombinations() {
+				for _, ref := range rel.ToList() {
+					if !ref.IsEmpty() {
+						failuresCollector.PushResourceFailure(
+							fmt.Sprintf("referenced KongPlugin or KongClusterPlugin %q does not exist", kongPluginName),
+							ref.Referer,
+						)
+					}
+				}
+			}
+			continue
+		}
 		var plugin Plugin
 		if k8sPlugin != nil {
 			plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin)
@@ -579,27 +596,30 @@ func buildPlugins(
 			var toHash bytes.Buffer
 
 			// ID is populated because that is read by decK and in_memory translator too
-			if rel.Service != "" {
-				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
-				toHash.WriteString("_service-" + rel.Service)
+			if !rel.Service.IsEmpty() {
+				relSvc := rel.Service.Identifier
+				plugin.Service = &kong.Service{ID: kong.String(relSvc)}
+				toHash.WriteString("_service-" + relSvc)
 			}
-			if rel.Route != "" {
-				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
-				toHash.WriteString("_route-" + rel.Route)
+			if !rel.Route.IsEmpty() {
+				relRoute := rel.Route.Identifier
+				plugin.Route = &kong.Route{ID: kong.String(relRoute)}
+				toHash.WriteString("_route-" + relRoute)
 			}
-			if rel.Consumer != "" {
-				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
-				toHash.WriteString("_consumer-" + rel.Consumer)
+			if !rel.Consumer.IsEmpty() {
+				relConsumer := rel.Consumer.Identifier
+				plugin.Consumer = &kong.Consumer{ID: kong.String(relConsumer)}
+				toHash.WriteString("_consumer-" + relConsumer)
 			}
-			if rel.ConsumerGroup != "" {
-				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
-				toHash.WriteString("_group-" + rel.ConsumerGroup)
+			if !rel.ConsumerGroup.IsEmpty() {
+				relConsumerGroup := rel.ConsumerGroup.Identifier
+				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(relConsumerGroup)}
+				toHash.WriteString("_group-" + relConsumerGroup)
 			}
 
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates
 			// unless we add some sort of suffix.
 			if plugin.InstanceName != nil {
-
 				sha := sha256.Sum256(toHash.Bytes())
 				suffix := fmt.Sprintf("%x", sha)
 				short := suffix[:9]
@@ -755,36 +775,40 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 
 // getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.
 // It fills the IDs of services directly referred, and IDs of services where referred routes attaches to.
-func getServiceIDFromPluginRels(log logr.Logger, rels RelatedEntitiesRef, routeAttachedService map[string]*Service, workspace string) []string {
+func getServiceIDFromPluginRels(
+	log logr.Logger, rels RelatedEntitiesRef, routeAttachedService map[string]*Service, workspace string,
+) []util.FR {
 	// Return IDs of directly referred services.
 	if len(rels.Services) > 0 {
-		return lo.FilterMap(rels.Services, func(s *Service, _ int) (string, bool) {
+		return lo.FilterMap(rels.Services, func(s *Service, _ int) (util.FR, bool) {
 			if err := s.FillID(workspace); err != nil {
 				log.Error(err, "failed to fill ID for service")
-				return "", false
+				return util.FR{}, false
 			}
-			return *s.ID, true
-		},
-		)
+			return util.FR{Identifier: *s.ID, Referer: s.Parent}, true
+		})
 	}
 	// Returns IDs of services where the referred routes attaches.
-	if len(rels.Routes) > 0 {
-		serviceIDs := lo.FilterMap(
-			rels.Routes, func(r *Route, _ int) (string, bool) {
-				svc, ok := routeAttachedService[*r.Name]
-				if !ok {
-					return "", false
-				}
-				if err := svc.FillID(workspace); err != nil {
-					log.Error(err, "failed to fill ID for service")
-					return "", false
-				}
-				return *svc.ID, true
-			},
-		)
-		return lo.Uniq(serviceIDs)
-	}
-	return nil
+	serviceIDs := lo.FilterMap(
+		rels.Routes,
+		func(r *Route, _ int) (util.FR, bool) {
+			svc, ok := routeAttachedService[*r.Name]
+			if !ok {
+				return util.FR{}, false
+			}
+			if err := svc.FillID(workspace); err != nil {
+				log.Error(err, "failed to fill ID for service")
+				return util.FR{}, false
+			}
+			return util.FR{
+				Identifier: *svc.ID,
+				Referer:    svc.Parent,
+			}, true
+		},
+	)
+	return lo.UniqBy(serviceIDs, func(fr util.FR) string {
+		return fr.Identifier
+	})
 }
 
 // getPluginRelatedEntitiesRef gets services/routes/consumers referred by each plugin and returns the pointer to them.

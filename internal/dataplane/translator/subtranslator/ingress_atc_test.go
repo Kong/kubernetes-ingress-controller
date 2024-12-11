@@ -625,10 +625,13 @@ func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
 
 func TestPathMatcherFromIngressPath(t *testing.T) {
 	testCases := []struct {
-		name        string
-		path        netv1.HTTPIngressPath
-		regexPrefix string
-		expression  string
+		name          string
+		path          netv1.HTTPIngressPath
+		regexPrefix   string
+		segmentPrefix string
+		expression    string
+		expectError   bool
+		errorContains string
 	}{
 		{
 			name: "simple prefix match",
@@ -687,6 +690,61 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 			expression: `http.path ~ "^/"`,
 		},
 		{
+			name: "segment match without wildcard",
+			path: netv1.HTTPIngressPath{
+				Path:     "/!/api/foo",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/!",
+			expression:    `(http.path.segments.len == 2) && (http.path.segments.0 == "api") && (http.path.segments.1 == "foo")`,
+		},
+		{
+			name: "segment match with wildcard",
+			path: netv1.HTTPIngressPath{
+				Path:     "/!/api/foo/*/bar",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/!",
+			expression:    `(http.path.segments.len == 4) && (http.path.segments.0 == "api") && (http.path.segments.1 == "foo") && (http.path.segments.3 == "bar")`,
+		},
+		{
+			name: "segments match with trailing **",
+			path: netv1.HTTPIngressPath{
+				Path:     "/SEG_PREFIX/SEG_PREFIX/**",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/SEG_PREFIX",
+			expression:    `(http.path.segments.len >= 1) && (http.path.segments.0 == "SEG_PREFIX")`,
+		},
+		{
+			name: "segment match with a literal * not representing wildcard",
+			path: netv1.HTTPIngressPath{
+				Path:     "/!/api/*/foo/\\*/bar",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/!",
+			expression:    `(http.path.segments.len == 5) && (http.path.segments.0 == "api") && (http.path.segments.2 == "foo") && (http.path.segments.3 == "*") && (http.path.segments.4 == "bar")`,
+		},
+		{
+			name: "segments match with only a **",
+			path: netv1.HTTPIngressPath{
+				Path:     "/!/**",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/!",
+			expression:    `http.path.segments.len >= 0`,
+		},
+		{
+			name: "segment match with ** in the middle segments should be invalid",
+			path: netv1.HTTPIngressPath{
+				Path:     "/!/a/**/b",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			segmentPrefix: "/!",
+			expectError:   true,
+			errorContains: "'**' can only appear on the last segment",
+		},
+		{
 			name: "empty implementation specific (non-regex) match",
 			path: netv1.HTTPIngressPath{
 				Path:     "",
@@ -702,8 +760,14 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 			if regexPrefix == "" {
 				regexPrefix = ControllerPathRegexPrefix
 			}
-			matcher := pathMatcherFromIngressPath(tc.path, regexPrefix)
-			require.Equal(t, tc.expression, matcher.Expression())
+			matcher, err := pathMatcherFromIngressPath(tc.path, regexPrefix, tc.segmentPrefix)
+			if !tc.expectError {
+				require.NoError(t, err)
+				require.Equal(t, tc.expression, matcher.Expression())
+			} else {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errorContains)
+			}
 		})
 	}
 }

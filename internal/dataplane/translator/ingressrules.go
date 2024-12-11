@@ -88,18 +88,22 @@ func (ir *ingressRules) populateServices(
 		}
 
 		for _, k8sService := range k8sServices {
-			// at this point we know the Kubernetes service itself is valid and can be
-			// used for traffic, so cache it amongst the kong Services k8s services.
-			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
+			// We need to create a copy of the k8s service as we need to modify it. The original is read
+			// by another routine and we may incur in a data race.
+			k8sServiceCopy := k8sService.DeepCopy()
 
 			// Convert the backendTLSPolicy targeting the service to the proper set of annotations.
-			ir.handleBackendTLSPolices(s, k8sService, failuresCollector)
+			ir.handleBackendTLSPolices(s, k8sServiceCopy, failuresCollector)
 
 			// Extract client certificates intended for use by the service.
-			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
+			ir.handleServiceClientCertificates(s, k8sServiceCopy, &service, failuresCollector)
 
 			// Extract CA certificates intended for use by the service.
-			ir.handleServiceCACertificates(s, k8sService, &service, failuresCollector)
+			ir.handleServiceCACertificates(s, k8sServiceCopy, &service, failuresCollector)
+
+			// at this point we know the Kubernetes service itself is valid and can be
+			// used for traffic, so cache it amongst the kong Services k8s services.
+			service.K8sServices[fmt.Sprintf("%s/%s", k8sServiceCopy.Namespace, k8sServiceCopy.Name)] = k8sServiceCopy
 		}
 		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
 
@@ -152,7 +156,7 @@ func (ir *ingressRules) handleBackendTLSPolices(
 
 func getTLSVerifyDepthOption(options map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue) (int, bool) {
 	// If the annotation is not set, return no depth.
-	depthStr, ok := options[annotations.TLSVerifyDepthKey]
+	depthStr, ok := options[gatewayapi.TLSVerifyDepthKey]
 	if !ok {
 		return 0, false
 	}

@@ -264,7 +264,8 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 // -----------------------------------------------------------------------------
 
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes;gateways;gatewayclasses,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies,verbs=get;list;watch;patch;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies/status,verbs=patch;update
 // +kubebuilder:rbac:groups="",resources=services;configmaps,verbs=get;list;watch
 
 // Reconcile processes the watched objects.

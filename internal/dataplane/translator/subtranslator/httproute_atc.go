@@ -611,7 +611,6 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 func groupHTTPRouteMatchesWithPrioritiesByRule(
 	logger logr.Logger, routes []*gatewayapi.HTTPRoute,
 ) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
-	//
 	splitHTTPRouteMatches := []SplitHTTPRouteMatch{}
 	for _, route := range routes {
 		splitHTTPRouteMatches = append(splitHTTPRouteMatches, SplitHTTPRoute(route)...)
@@ -634,12 +633,13 @@ func groupHTTPRouteMatchesWithPrioritiesByRule(
 func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 ) ([]kongstate.Route, error) {
-	routes := []kongstate.Route{}
+	routes := make([]kongstate.Route, 0, len(matchesWithPriorities))
 	for _, matchWithPriority := range matchesWithPriorities {
 		// Since each match is assigned a deterministic priority, we have to generate one route for each split match
 		// because every match have a different priority.
 		// TODO: update the algorithm to assign priorities to matches to make it possible to consolidate some matches.
-		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields.
+		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields:
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/6807
 		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority)
 		if err != nil {
 			return []kongstate.Route{}, err

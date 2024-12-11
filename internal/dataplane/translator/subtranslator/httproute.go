@@ -70,7 +70,7 @@ func TranslateHTTPRoutesToKongstateServices(
 	// When feature flag expression routes is enabled, we need first split the matches and assign priorities to them
 	// to set proper priorities to the translated Kong routes for satisfying the specification of priorities of HTTPRoute matches:
 	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
-	ruleToSplitMatchesWithPriorities := make(splitHTTPRouteMatchesWithPrioritiesGroupedByRule)
+	var ruleToSplitMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
 	if expressionRoutes {
 		ruleToSplitMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
 	}
@@ -87,7 +87,7 @@ func TranslateHTTPRoutesToKongstateServices(
 			return rulesMeta[i].getRuleKey() < rulesMeta[j].getRuleKey()
 		})
 
-		matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{}
+		var matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority
 		if expressionRoutes {
 			for _, ruleMeta := range rulesMeta {
 				ruleKey := ruleMeta.getRuleKey()
@@ -272,15 +272,13 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		if err != nil {
 			return kongstate.Service{}, err
 		}
-		service.Routes = make([]kongstate.Route, 0, len(routes))
-		service.Routes = append(service.Routes, routes...)
+		service.Routes = routes
 	} else {
 		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
-		service.Routes = make([]kongstate.Route, 0, len(routes))
-		service.Routes = append(service.Routes, routes...)
+		service.Routes = routes
 	}
 
 	return service, nil

@@ -1,11 +1,29 @@
 package util
 
+import "sigs.k8s.io/controller-runtime/pkg/client"
+
+// FR represents a foreign relation.
+type FR struct {
+	Identifier string
+	// Referer represents K8s object that references a Plugin.
+	Referer client.Object
+}
+
+func (fr FR) IsEmpty() bool {
+	return fr == FR{}
+}
+
 type ForeignRelations struct {
-	Consumer, ConsumerGroup, Route, Service []string
+	Consumer, ConsumerGroup, Route, Service []FR
 }
 
 type Rel struct {
-	Consumer, ConsumerGroup, Route, Service string
+	Consumer, ConsumerGroup, Route, Service FR
+}
+
+// ToList returns a list of FRs of Consumer, ConsumerGroup, Route, Service as one list.
+func (r Rel) ToList() [4]FR {
+	return [4]FR{r.Consumer, r.ConsumerGroup, r.Route, r.Service}
 }
 
 func (relations *ForeignRelations) GetCombinations() []Rel {

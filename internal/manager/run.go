@@ -41,6 +41,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -172,11 +173,13 @@ func Run(
 		clientsManager.Run()
 	}
 
+	supportRedirectPlugin := kongSemVersion.GTE(versions.KongRedirectPluginCutoff)
 	translatorFeatureFlags := translator.NewFeatureFlags(
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,
 		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
+		supportRedirectPlugin,
 	)
 
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))

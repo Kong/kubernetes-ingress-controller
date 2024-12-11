@@ -59,6 +59,26 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectStatusCode(code int) *HTTPRo
 	return b
 }
 
+func (b *HTTPRouteFilterBuilder) WithRequestRedirectPathModifier(modifierType gatewayapi.HTTPPathModifierType, path string) *HTTPRouteFilterBuilder {
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
+		b.httpRouteFilter.RequestRedirect == nil {
+		return b
+	}
+	if modifierType == gatewayapi.FullPathHTTPPathModifier {
+		b.httpRouteFilter.RequestRedirect.Path = &gatewayapi.HTTPPathModifier{
+			Type:            gatewayapi.FullPathHTTPPathModifier,
+			ReplaceFullPath: lo.ToPtr(path),
+		}
+	}
+	if modifierType == gatewayapi.PrefixMatchHTTPPathModifier {
+		b.httpRouteFilter.RequestRedirect.Path = &gatewayapi.HTTPPathModifier{
+			Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			ReplacePrefixMatch: lo.ToPtr(path),
+		}
+	}
+	return b
+}
+
 // NewHTTPRouteRequestHeaderModifierFilter builds a request header modifier HTTPRoute filter.
 func NewHTTPRouteRequestHeaderModifierFilter() *HTTPRouteFilterBuilder {
 	filter := gatewayapi.HTTPRouteFilter{

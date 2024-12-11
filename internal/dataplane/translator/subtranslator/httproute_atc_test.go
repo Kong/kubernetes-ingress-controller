@@ -141,7 +141,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 							Name: kong.String("response-transformer"),
 							Config: kong.Configuration{
 								"add": TransformerPluginConfig{
-									Headers: []string{`Location: http://a.foo.com:80/exact/0`},
+									Headers: []string{`Location: http://a.foo.com/exact/0`},
 								},
 							},
 						},
@@ -167,7 +167,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 							Name: kong.String("response-transformer"),
 							Config: kong.Configuration{
 								"add": TransformerPluginConfig{
-									Headers: []string{`Location: http://a.foo.com:80/exact/1`},
+									Headers: []string{`Location: http://a.foo.com/exact/1`},
 								},
 							},
 						},
@@ -261,6 +261,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 				tc.ingressObjectInfo,
 				tc.hostnames,
 				kong.StringSlice(tc.tags...),
+				false,
 			)
 
 			if tc.expectedError != nil {

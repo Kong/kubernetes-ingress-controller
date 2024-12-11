@@ -175,9 +175,6 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayapi.HTTPPathMatch) atc.Match
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, path+"/"),
 		)
 	case gatewayapi.PathMatchRegularExpression:
-		// TODO: for compatibility with kong traditional routes, here we append the ^ prefix to match the path from beginning.
-		// Could we allow the regex to match any part of the path?
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/3983
 		return atc.NewPredicateHTTPPath(atc.OpRegexMatch, appendRegexBeginIfNotExist(path))
 	}
 
@@ -454,14 +451,14 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	return priority
 }
 
-// AssignRoutePriorityToSplitHTTPRouteMatches assigns priority to
+// assignRoutePriorityToSplitHTTPRouteMatches assigns priority to
 // ALL split matches from ALL HTTPRoutes in the cache.
 // Firstly assign "fixed" bits by the following fields of the match:
 // hostname, path type, path length, method match, number of header matches, number of query param matches.
 // If ties exists in the first step, where multiple matches has the same priority
 // calculated from the fields, we run a sort for the matches in the tie
 // and assign the bits for "relative order" according to the sorting result of these matches.
-func AssignRoutePriorityToSplitHTTPRouteMatches(
+func assignRoutePriorityToSplitHTTPRouteMatches(
 	logger logr.Logger,
 	splitHTTPRouteMatches []SplitHTTPRouteMatch,
 ) []SplitHTTPRouteMatchToKongRoutePriority {
@@ -544,9 +541,9 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 	return true
 }
 
-// KongExpressionRouteFromHTTPRouteMatchWithPriority translates a split HTTPRoute match into expression
+// kongExpressionRouteFromHTTPRouteMatchWithPriority translates a split HTTPRoute match into expression
 // based kong route with assigned priority.
-func KongExpressionRouteFromHTTPRouteMatchWithPriority(
+func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
 ) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
@@ -610,20 +607,44 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 	return r, nil
 }
 
-// KongServiceNameFromSplitHTTPRouteMatch generates service name from split HTTPRoute match.
-// since one HTTPRoute may be split by hostname and rule, the service name will be generated
-// in the format "httproute.<namespace>.<name>.<hostname>.<rule index>".
-// For example: `httproute.default.example.foo.com.0`.
-func KongServiceNameFromSplitHTTPRouteMatch(match SplitHTTPRouteMatch) string {
-	httproute := match.Source
-	hostname := "_"
-	if len(match.Hostname) > 0 {
-		hostname = strings.ReplaceAll(match.Hostname, "*", "_")
+// groupHTTPRouteMatchesWithPrioritiesByRule groups split HTTPRoute matches that has priorities assigned by the source HTTPRoute rule,.
+func groupHTTPRouteMatchesWithPrioritiesByRule(
+	logger logr.Logger, routes []*gatewayapi.HTTPRoute,
+) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
+	splitHTTPRouteMatches := []SplitHTTPRouteMatch{}
+	for _, route := range routes {
+		splitHTTPRouteMatches = append(splitHTTPRouteMatches, SplitHTTPRoute(route)...)
 	}
-	return fmt.Sprintf("httproute.%s.%s.%s.%d",
-		httproute.Namespace,
-		httproute.Name,
-		hostname,
-		match.RuleIndex,
-	)
+	// assign priorities to split HTTPRoutes.
+	splitHTTPRouteMatchesWithPriorities := assignRoutePriorityToSplitHTTPRouteMatches(logger, splitHTTPRouteMatches)
+
+	// group the matches with priorities by its source HTTPRoute rule.
+	ruleToSplitMatchesWithPriorities := splitHTTPRouteMatchesWithPrioritiesGroupedByRule{}
+	for _, matchWithPriority := range splitHTTPRouteMatchesWithPriorities {
+		sourceRoute := matchWithPriority.Match.Source
+		ruleKey := fmt.Sprintf("%s/%s.%d", sourceRoute.Namespace, sourceRoute.Name, matchWithPriority.Match.RuleIndex)
+		ruleToSplitMatchesWithPriorities[ruleKey] = append(ruleToSplitMatchesWithPriorities[ruleKey], matchWithPriority)
+	}
+	return ruleToSplitMatchesWithPriorities
+}
+
+// translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression translates a list of split HTTPRoute matches with assigned priorities
+// that are poiting to the same service to list of kongstate route with expressions.
+func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+) ([]kongstate.Route, error) {
+	routes := make([]kongstate.Route, 0, len(matchesWithPriorities))
+	for _, matchWithPriority := range matchesWithPriorities {
+		// Since each match is assigned a deterministic priority, we have to generate one route for each split match
+		// because every match have a different priority.
+		// TODO: update the algorithm to assign priorities to matches to make it possible to consolidate some matches.
+		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields:
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/6807
+		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority)
+		if err != nil {
+			return []kongstate.Route{}, err
+		}
+		routes = append(routes, *route)
+	}
+	return routes, nil
 }

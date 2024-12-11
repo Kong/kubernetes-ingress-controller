@@ -95,14 +95,14 @@ func (ir *ingressRules) populateServices(
 			// used for traffic, so cache it amongst the kong Services k8s services.
 			service.K8sServices[fmt.Sprintf("%s/%s", k8sServiceCopy.Namespace, k8sServiceCopy.Name)] = k8sServiceCopy
 
-			// convert the backendTLSPolicy targeting the service to the proper set of annotations.
-			ir.handleBackendTLSPolices(logger, s, k8sServiceCopy, failuresCollector, translatedObjectsCollector)
+			// Convert the backendTLSPolicy targeting the service to the proper set of annotations.
+			ir.handleBackendTLSPolices(s, k8sService, failuresCollector)
 
-			// extract client certificates intended for use by the service.
-			ir.handleServiceClientCertificates(s, k8sServiceCopy, &service, failuresCollector)
+			// Extract client certificates intended for use by the service.
+			ir.handleServiceClientCertificates(s, k8sService, &service, failuresCollector)
 
-			// extract CA certificates intended for use by the service.
-			ir.handleServiceCACertificates(s, k8sServiceCopy, &service, failuresCollector)
+			// Extract CA certificates intended for use by the service.
+			ir.handleServiceCACertificates(s, k8sService, &service, failuresCollector)
 		}
 		service.Tags = ir.generateKongServiceTags(k8sServices, service, logger)
 
@@ -114,11 +114,9 @@ func (ir *ingressRules) populateServices(
 }
 
 func (ir *ingressRules) handleBackendTLSPolices(
-	_ logr.Logger,
 	s store.Storer,
 	k8sService *corev1.Service,
 	failuresCollector *failures.ResourceFailuresCollector,
-	_ *ObjectsCollector,
 ) {
 	policies, err := s.ListBackendTLSPoliciesByTargetService(client.ObjectKeyFromObject(k8sService))
 	if err != nil {
@@ -157,7 +155,7 @@ func (ir *ingressRules) handleBackendTLSPolices(
 
 func getTLSVerifyDepthOption(options map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue) (int, bool) {
 	// If the annotation is not set, return no depth.
-	depthStr, ok := options[gatewayapi.AnnotationKey(strings.ReplaceAll(annotations.TLSVerifyDepthKey, "/", ""))]
+	depthStr, ok := options[annotations.TLSVerifyDepthKey]
 	if !ok {
 		return 0, false
 	}
@@ -215,9 +213,9 @@ func (ir *ingressRules) handleServiceCACertificates(
 	k *kongstate.Service,
 	collector *failures.ResourceFailuresCollector,
 ) {
-	Secretcertificates := annotations.ExtractCACertificatesFromSecrets(service.Annotations)
-	configMapCertificates := annotations.ExtractCACertificatesFromConfigMap(service.Annotations)
-	if len(Secretcertificates)+len(configMapCertificates) == 0 {
+	secretcertificates := annotations.ExtractCACertificateSecretNames(service.Annotations)
+	configMapCertificates := annotations.ExtractCACertificateConfigMapNames(service.Annotations)
+	if len(secretcertificates)+len(configMapCertificates) == 0 {
 		// No CA certificates to process.
 		return
 	}
@@ -242,7 +240,7 @@ func (ir *ingressRules) handleServiceCACertificates(
 	}
 
 	// Process each CA certificate from secret and add it to the Kong Service.
-	for _, certificate := range Secretcertificates {
+	for _, certificate := range secretcertificates {
 		secretKey := service.Namespace + "/" + certificate
 		secret, err := s.GetSecret(service.Namespace, certificate)
 		if err != nil {

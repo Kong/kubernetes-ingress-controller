@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"sort"
+	"strings"
 
 	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -233,29 +234,23 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 		}
 	}
 
-	var invalidMessage string
+	var invalidMessages []string
 	for _, caCert := range policy.Spec.Validation.CACertificateRefs {
 		if (caCert.Group != "core" && caCert.Group != "") || caCert.Kind != "ConfigMap" {
-			invalidMessage = "CACertificateRefs must reference ConfigMaps in the core group"
+			invalidMessages = append(invalidMessages, "CACertificateRefs must reference ConfigMaps in the core group")
 			break
 		}
 	}
 	if len(policy.Spec.Validation.SubjectAltNames) > 0 {
-		if invalidMessage != "" {
-			invalidMessage += " - "
-		}
-		invalidMessage += "SubjectAltNames feature is not currently supported"
+		invalidMessages = append(invalidMessages, "SubjectAltNames feature is not currently supported")
 	}
 	if policy.Spec.Validation.WellKnownCACertificates != nil {
-		if invalidMessage != "" {
-			invalidMessage += " - "
-		}
-		invalidMessage += "WellKnownCACertificates feature is not currently supported"
+		invalidMessages = append(invalidMessages, "WellKnownCACertificates feature is not currently supported")
 	}
-	if invalidMessage != "" {
+	if len(invalidMessages) > 0 {
 		acceptedCondition.Status = metav1.ConditionFalse
 		acceptedCondition.Reason = string(gatewayapi.PolicyReasonInvalid)
-		acceptedCondition.Message = invalidMessage
+		acceptedCondition.Message = strings.Join(invalidMessages, " - ")
 	}
 
 	return acceptedCondition, nil
@@ -264,7 +259,7 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 // list namespaced names of configmaps referred by the gateway.
 func listConfigMapNamesReferredByBackendTLSPolicy(policy *gatewayapi.BackendTLSPolicy) map[k8stypes.NamespacedName]struct{} {
 	// no need to check group and kind, as if they were different from core/Configmap, the policy would have been marked as invalid.
-	nsNames := make(map[k8stypes.NamespacedName]struct{})
+	nsNames := make(map[k8stypes.NamespacedName]struct{}, len(policy.Spec.Validation.CACertificateRefs))
 	for _, certRef := range policy.Spec.Validation.CACertificateRefs {
 		nsName := k8stypes.NamespacedName{
 			Namespace: policy.Namespace,

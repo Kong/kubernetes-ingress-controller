@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,62 +27,50 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 		return nil
 	}
 
-	caCerts := make([]kong.CACertificate, 0, len(caCertSecrets)+len(caCertConfigMaps))
-	for _, certSecret := range caCertSecrets {
-		idBytes, ok := certSecret.Data["id"]
-		if !ok {
-			t.registerTranslationFailure("invalid secret CA certificate: missing 'id' field in data", certSecret)
-			continue
-		}
-		secretID := string(idBytes)
-
-		// Allow the certificate key to be named either "cert" or "ca.crt"
-		caCertbytes, certExists := certSecret.Data["cert"]
-		if !certExists {
-			caCertbytes, certExists = certSecret.Data["ca.crt"]
-			if !certExists {
-				relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, t.storer)
-				relatedObjects = append(relatedObjects, certSecret.DeepCopy())
-				t.registerTranslationFailure(fmt.Sprintf(`invalid secret CA certificate %s/%s, neither "cert" nor "ca.crt" key exist`, certSecret.Namespace, certSecret.Name), relatedObjects...)
-				continue
-			}
-		}
-
-		caCert, err := toKongCACertificate(caCertbytes, certSecret, secretID)
-		if err != nil {
-			relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, t.storer)
-			relatedObjects = append(relatedObjects, certSecret.DeepCopy())
-			t.registerTranslationFailure(fmt.Sprintf("invalid secret CA certificate: %s", err), relatedObjects...)
-			continue
-		}
-
-		caCerts = append(caCerts, caCert)
+	// intermediateT stores the object and its data for easier handling.
+	// intermediateT.data can come either from secret.Data (map[string]byte) or configmap.Data (map[string]string).
+	type intermediateT struct {
+		obj  client.Object
+		data map[string]string
 	}
 
-	for _, certConfigMap := range caCertConfigMaps {
-		certID, ok := certConfigMap.Data["id"]
+	caCertsData := lo.Map(caCertSecrets, func(secret *corev1.Secret, _ int) intermediateT {
+		return intermediateT{
+			obj: secret.DeepCopy(),
+			data: lo.MapValues(secret.Data, func(v []byte, _ string) string {
+				return string(v)
+			}),
+		}
+	})
+	caCertsData = append(caCertsData, lo.Map(caCertConfigMaps, func(configmap *corev1.ConfigMap, _ int) intermediateT {
+		return intermediateT{obj: configmap.DeepCopy(), data: configmap.Data}
+	})...)
+
+	caCerts := make([]kong.CACertificate, 0, len(caCertSecrets)+len(caCertConfigMaps))
+	for _, caCertData := range caCertsData {
+		secretID, ok := caCertData.data["id"]
 		if !ok {
-			t.registerTranslationFailure("invalid configmap CA certificate: missing 'id' field in data", certConfigMap)
+			t.registerTranslationFailure("invalid secret CA certificate: missing 'id' field in data", caCertData.obj)
 			continue
 		}
 
-		// Allow the certificate key to be named either "cert" or "ca.crt"
-		caCertbytes, certExists := certConfigMap.Data["cert"]
+		// Allow the certificate key to be named either "cert" or "ca.crt".
+		caCertStr, certExists := caCertData.data["cert"]
 		if !certExists {
-			caCertbytes, certExists = certConfigMap.Data["ca.crt"]
+			caCertStr, certExists = caCertData.data["ca.crt"]
 			if !certExists {
-				relatedObjects := getPluginsAssociatedWithCACertSecret(certID, t.storer)
-				relatedObjects = append(relatedObjects, certConfigMap.DeepCopy())
-				t.registerTranslationFailure(fmt.Sprintf(`invalid configmap CA certificate %s/%s, neither "cert" nor "ca.crt" key exist`, certConfigMap.Namespace, certConfigMap.Name), relatedObjects...)
+				relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, t.storer)
+				relatedObjects = append(relatedObjects, caCertData.obj)
+				t.registerTranslationFailure(fmt.Sprintf(`invalid secret CA certificate %s/%s, neither "cert" nor "ca.crt" key exist`, caCertData.obj.GetNamespace(), caCertData.obj.GetName()), relatedObjects...)
 				continue
 			}
 		}
 
-		caCert, err := toKongCACertificate([]byte(caCertbytes), certConfigMap, certID)
+		caCert, err := toKongCACertificate([]byte(caCertStr), caCertData.obj, secretID)
 		if err != nil {
-			relatedObjects := getPluginsAssociatedWithCACertSecret(certID, t.storer)
-			relatedObjects = append(relatedObjects, certConfigMap.DeepCopy())
-			t.registerTranslationFailure(fmt.Sprintf("invalid configmap CA certificate: %s", err), relatedObjects...)
+			relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, t.storer)
+			relatedObjects = append(relatedObjects, caCertData.obj)
+			t.registerTranslationFailure(fmt.Sprintf("invalid secret CA certificate: %s", err), relatedObjects...)
 			continue
 		}
 

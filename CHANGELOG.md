@@ -219,6 +219,7 @@ Adding a new version? You'll need three changes:
   where `<hash>` is the hash result of the calculated name, like
   `httproute.default.svc.default.a-long-long-long-service-name.80_combined.00001111222233334444aaaabbbbcccc`.
   [#6711](https://github.com/Kong/kubernetes-ingress-controller/pull/6711)
+  [#6766](https://github.com/Kong/kubernetes-ingress-controller/pull/6766)
 - The new tag `k8s-named-route-rule` is added to a Kong Route, in the case when mapped `HTTPRoute`, `GRPCRoute`,
   `TCPRoute`, `TLSRoute` or `UDPRoute` has one or many route rules named (filled `spec.rules[*].name` field),
   those names will be propagated to one or many instances of aforementioned tag.
@@ -228,13 +229,29 @@ Adding a new version? You'll need three changes:
   By setting this flag, the secrets that are ingested will be limited to those having this label set to "true".
   This can reduce the memory usage in scenarios with a large number of giant secrets.
   [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
-- Added `BackendTLSPolicy` support. The user can now reference any kubernetes `Service`
+- Added `/debug/config/diff-report` diagnostic endpoint. This endpoint is
+  available in DB mode when the `--dump-config` and `--dump-sensitive-config`
+  are enabled. It returns the latest diff information for the controller's last
+  configuration sync along with config hash and sync timestamp metadata. The
+  controller maintains the last 5 diffs in cache. You can retrieve older diffs
+  by appending a `?hash=<hash>` query string argument. Available config hashes
+  and their timestamps are listed under the `available` section of the
+  response.
+  [#6131](https://github.com/Kong/kubernetes-ingress-controller/pull/6131)
+- Added schema validation for `KongCustomEntity`. Kubernetes event will be created for
+  each validation error for `KongCustomEntity` objects.
+  [#6802](https://github.com/Kong/kubernetes-ingress-controller/pull/6802)
+- Added `BackendTLSPolicy` support. The user can now reference any Kubernetes `Service`
   in the `BackendTLSPolicy` spec, and in case the service is used as a backend by
   `HTTPRoute`s that reference a Kong Gateway as parent, such Backend TLS configuration
   is applied to the service section of the Kong configuration.
   [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
   [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
-
+- Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
+  to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
+  to those having this label set to "true". This limits the amount of resources that are kept in memory.
+  The default value is `konghq.com/configmap`.
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 
 ## [3.3.1]
 

@@ -471,9 +471,14 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 
 		referredSecretNames := listSecretNamesReferredByGateway(gateway)
-		if err := ctrlref.UpdateReferencesToSecret(
-			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
-			gateway, referredSecretNames); err != nil {
+		if err := ctrlref.UpdateReferencesToSecretOrConfigMap(
+			ctx,
+			r.Client,
+			r.ReferenceIndexers,
+			r.DataplaneClient,
+			gateway,
+			referredSecretNames,
+			&corev1.Secret{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}

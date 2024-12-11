@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
@@ -96,7 +97,10 @@ func newMockUpdateStrategyResolver() *mockUpdateStrategyResolver {
 	}
 }
 
-func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateClient) sendconfig.UpdateStrategy {
+func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(
+	c sendconfig.UpdateClient,
+	_ *diagnostics.ClientDiagnostic,
+) sendconfig.UpdateStrategy {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 

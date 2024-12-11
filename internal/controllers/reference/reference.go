@@ -19,93 +19,83 @@ const (
 	CACertLabelKey = "konghq.com/ca-cert"
 )
 
-// UpdateReferencesToSecret updates the reference records between referrer and each secret
+type secretOrConfigMapT interface {
+	client.Object
+
+	*corev1.ConfigMap |
+		*corev1.Secret
+}
+
+// UpdateReferencesToSecretOrConfigMap updates the reference records between referrer and each secret or configmap
 // in namespacedNames in record cache.
-func UpdateReferencesToSecret(
+func UpdateReferencesToSecretOrConfigMap[t secretOrConfigMapT](
 	ctx context.Context,
-	c client.Client, indexers CacheIndexers, dataplaneClient controllers.DataPlaneClient,
-	referrer client.Object, referencedSecretNameMap map[k8stypes.NamespacedName]struct{},
+	c client.Client,
+	indexers CacheIndexers,
+	dataplaneClient controllers.DataPlaneClient,
+	referrer client.Object,
+	referencedSecretOrConfigMapNameMap map[k8stypes.NamespacedName]struct{},
+	referencedObject t,
 ) error {
-	for nsName := range referencedSecretNameMap {
-		secret := &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: VersionV1,
-				Kind:       KindSecret,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: nsName.Namespace,
-				Name:      nsName.Name,
-			},
+	for nsName := range referencedSecretOrConfigMapNameMap {
+		var obj client.Object
+		switch (any)(referencedObject).(type) {
+		case *corev1.Secret:
+			obj = &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: VersionV1,
+					Kind:       KindSecret,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: nsName.Namespace,
+					Name:      nsName.Name,
+				},
+			}
+		case *corev1.ConfigMap:
+			obj = &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: VersionV1,
+					Kind:       KindConfigMap,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: nsName.Namespace,
+					Name:      nsName.Name,
+				},
+			}
 		}
 
-		// Here we update the reference relationship even when the referred secret does not exist yet
-		// If the referred secret is created, it could be reconciled in secret controller.
+		// Here we update the reference relationship even when the referred secret or configmap does not exist yet
+		// If the referred secret or configmap is created, it could be reconciled in secret or configmap controller.
 		referrerCopy := referrer.DeepCopyObject().(client.Object)
-		if err := indexers.SetObjectReference(
-			referrerCopy, secret.DeepCopy()); err != nil {
+		if err := indexers.SetObjectReference(referrerCopy, obj); err != nil {
 			return err
 		}
 
-		if err := c.Get(ctx, nsName, secret); err != nil {
+		if err := c.Get(ctx, nsName, obj); err != nil {
 			return err
 		}
 
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
+		if err := dataplaneClient.UpdateObject(obj); err != nil {
 			return err
 		}
 	}
 
-	return removeOutdatedReferencesToConfigMap(ctx, indexers, c, dataplaneClient, referrer, referencedSecretNameMap)
+	return removeOutdatedReferencesToSecretOrConfigMap(ctx, indexers, c, dataplaneClient, referrer, referencedSecretOrConfigMapNameMap)
 }
 
-// UpdateReferencesToConfigMap updates the reference records between referrer and each ConfigMap
-// in namespacedNames in record cache.
-func UpdateReferencesToConfigMap(
-	ctx context.Context,
-	c client.Client, indexers CacheIndexers, dataplaneClient controllers.DataPlaneClient,
-	referrer client.Object, referencedConfigMapNameMap map[k8stypes.NamespacedName]struct{},
-) error {
-	for nsName := range referencedConfigMapNameMap {
-		configMap := &corev1.ConfigMap{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: VersionV1,
-				Kind:       KindConfigMap,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: nsName.Namespace,
-				Name:      nsName.Name,
-			},
-		}
-
-		// Here we update the reference relationship even when the referred configmap does not exist yet
-		// If the referred ConfiMap is created, it could be reconciled in ConfigMap controller.
-		referrerCopy := referrer.DeepCopyObject().(client.Object)
-		if err := indexers.SetObjectReference(
-			referrerCopy, configMap.DeepCopy()); err != nil {
-			return err
-		}
-
-		if err := c.Get(ctx, nsName, configMap); err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(configMap); err != nil {
-			return err
-		}
-	}
-
-	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, referencedConfigMapNameMap)
-}
-
-// removeOutdatedReferenceToSecret removes outdated reference records to secrets in reference indexer.
-// secrets that are referred by referrer are passed in referredSecretNames parameter.
-// If a secret is not referenced by any other object after deleting outdated reference records,
+// removeOutdatedReferencesToSecretOrConfigMap removes outdated reference records to secrets or configmaps
+// in reference indexer.
+// objects that are referred by referrer are passed in referredSecretOrConfigMapNameMap parameter.
+// If a secret or a configmap is not referenced by any other object after deleting outdated reference records,
 // and it does not have label "konghq.com/ca-cert:true", it is not possible to be used in Kong gateway config
 // and should be removed from the object cache inside KongClient.
-func removeOutdatedReferencesToSecret(
+func removeOutdatedReferencesToSecretOrConfigMap(
 	ctx context.Context,
-	indexers CacheIndexers, c client.Client, dataplaneClient controllers.DataPlaneClient,
-	referrer client.Object, referredSecretNameMap map[k8stypes.NamespacedName]struct{},
+	indexers CacheIndexers,
+	c client.Client,
+	dataplaneClient controllers.DataPlaneClient,
+	referrer client.Object,
+	referredSecretOrConfigMapNameMap map[k8stypes.NamespacedName]struct{},
 ) error {
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
@@ -113,43 +103,43 @@ func removeOutdatedReferencesToSecret(
 	}
 	for _, obj := range referents {
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		// delete the reference record if the secret is not referred by the service.
-		if gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindSecret {
-			namespacedName := k8stypes.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      obj.GetName(),
-			}
+		if gvk.Group != corev1.GroupName || gvk.Version != VersionV1 || (gvk.Kind != KindSecret && gvk.Kind != KindConfigMap) {
+			continue
+		}
 
-			// if the secret is still referenced, no operations are taken so continue here.
-			if _, ok := referredSecretNameMap[namespacedName]; ok {
+		namespacedName := k8stypes.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
+		}
+
+		// if the secret or configmap is still referenced, no operations are taken so continue here.
+		if _, ok := referredSecretOrConfigMapNameMap[namespacedName]; ok {
+			continue
+		}
+
+		if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
+			return err
+		}
+		// remove the secret or configmap in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
+		// Do this check and delete when the reference count may be reduced by 1.
+
+		// retrieve the secret or configmap in k8s and check it has the label.
+		getErr := c.Get(ctx, namespacedName, obj)
+		// if the secret or configmap exists in k8s and has the label, we should not delete it in object cache.
+		if getErr == nil {
+			if obj.GetLabels() != nil && obj.GetLabels()[CACertLabelKey] == "true" {
 				continue
 			}
-
-			if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
+		} else {
+			// if the secret or configmap does not exist in k8s, we ignore the error and continue the check and delete operation.
+			// for other errors, we return the error and stop the operation.
+			if !apierrors.IsNotFound(getErr) {
 				return err
 			}
-			// remove the secret in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
-			// Do this check and delete when the reference count may be reduced by 1.
+		}
 
-			// retrieve the secret in k8s and check it has the label.
-			secret := &corev1.Secret{}
-			getErr := c.Get(ctx, namespacedName, secret)
-			// if the secret exists in k8s and has the label, we should not delete it in object cache.
-			if getErr == nil {
-				if secret.Labels != nil && secret.Labels[CACertLabelKey] == "true" {
-					continue
-				}
-			} else {
-				// if the secret does not exist in k8s, we ignore the error and continue the check and delete operation.
-				// for other errors, we return the error and stop the operation.
-				if !apierrors.IsNotFound(getErr) {
-					return err
-				}
-			}
-
-			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
-				return err
-			}
+		if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
+			return err
 		}
 	}
 	return nil

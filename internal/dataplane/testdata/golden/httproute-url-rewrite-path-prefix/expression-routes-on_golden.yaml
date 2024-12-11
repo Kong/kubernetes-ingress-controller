@@ -1,9 +1,9 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: httproute.default.httproute-testing._.0
-  id: 2fad71d1-7599-5c6e-9d4f-4afd44f99587
-  name: httproute.default.httproute-testing._.0
+  host: httproute.default.httproute-testing.0
+  id: 4e3cb785-a8d0-5866-aa05-117f7c64f24d
+  name: httproute.default.httproute-testing.0
   port: 8080
   protocol: http
   read_timeout: 60000
@@ -42,7 +42,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: httproute.default.httproute-testing._.0
+  name: httproute.default.httproute-testing.0
   tags:
   - k8s-name:httproute-testing
   - k8s-namespace:default

@@ -1106,19 +1106,19 @@ func TestExtractTLSVerifyDepth(t *testing.T) {
 }
 
 func TestExtractCACertificates(t *testing.T) {
-	v := ExtractCACertificatesFromSecrets(nil)
+	v := ExtractCACertificateSecretNames(nil)
 	assert.Empty(t, v)
 
-	v = ExtractCACertificatesFromSecrets(map[string]string{})
+	v = ExtractCACertificateSecretNames(map[string]string{})
 	assert.Empty(t, v)
 
-	v = ExtractCACertificatesFromSecrets(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: "foo,bar"})
+	v = ExtractCACertificateSecretNames(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: "foo,bar"})
 	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
 
-	v = ExtractCACertificatesFromSecrets(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: " foo, bar ,baz "})
+	v = ExtractCACertificateSecretNames(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: " foo, bar ,baz "})
 	assert.Equal(t, []string{"foo", "bar", "baz"}, v, "expected to trim spaces")
 
-	v = ExtractCACertificatesFromSecrets(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: "foo, bar,  "})
+	v = ExtractCACertificateSecretNames(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: "foo, bar,  "})
 	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
 }
 

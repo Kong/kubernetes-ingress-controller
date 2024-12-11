@@ -68,7 +68,7 @@ func TestTelemetry(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, diagnostics.ConfigDumpDiagnostic{}, logger)
+		err = manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 

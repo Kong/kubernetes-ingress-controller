@@ -1,9 +1,9 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: httproute.default.httproute-testing._.3
-  id: 23683d37-44ee-559b-add2-a0b650ad36c0
-  name: httproute.default.httproute-testing._.3
+  host: httproute.default.httproute-testing.3
+  id: efb4a7d7-791f-504e-b005-0bd38bf1435e
+  name: httproute.default.httproute-testing.3
   port: 8080
   protocol: http
   read_timeout: 60000
@@ -29,9 +29,9 @@ services:
   - k8s-version:v1
   write_timeout: 60000
 - connect_timeout: 60000
-  host: httproute.default.httproute-testing._.2
-  id: ff054481-b58a-588f-a8c4-e6cedb6cb489
-  name: httproute.default.httproute-testing._.2
+  host: httproute.default.httproute-testing.1
+  id: 672dc964-a7f8-5a80-a518-96fc39500cc8
+  name: httproute.default.httproute-testing.1
   port: 80
   protocol: http
   read_timeout: 60000
@@ -51,21 +51,6 @@ services:
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1
     - k8s-named-route-rule:content
-  tags:
-  - k8s-name:httpbin
-  - k8s-namespace:default
-  - k8s-kind:Service
-  - k8s-version:v1
-  write_timeout: 60000
-- connect_timeout: 60000
-  host: httproute.default.httproute-testing._.1
-  id: 13be00e6-9c94-561f-9598-8896cd755468
-  name: httproute.default.httproute-testing._.1
-  port: 80
-  protocol: http
-  read_timeout: 60000
-  retries: 5
-  routes:
   - expression: (http.path == "/echo") || (http.path ^= "/echo/")
     https_redirect_status_code: 426
     id: 88d36cfe-fbb0-5d7a-93c1-df18d1db3a12
@@ -87,9 +72,9 @@ services:
   - k8s-version:v1
   write_timeout: 60000
 - connect_timeout: 60000
-  host: httproute.default.httproute-testing._.0
-  id: 2fad71d1-7599-5c6e-9d4f-4afd44f99587
-  name: httproute.default.httproute-testing._.0
+  host: httproute.default.httproute-testing.0
+  id: 4e3cb785-a8d0-5866-aa05-117f7c64f24d
+  name: httproute.default.httproute-testing.0
   port: 8080
   protocol: http
   read_timeout: 60000
@@ -118,28 +103,21 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: httproute.default.httproute-testing._.3
+  name: httproute.default.httproute-testing.3
   tags:
   - k8s-name:nginx
   - k8s-namespace:default
   - k8s-kind:Service
   - k8s-version:v1
 - algorithm: round-robin
-  name: httproute.default.httproute-testing._.2
+  name: httproute.default.httproute-testing.1
   tags:
   - k8s-name:httpbin
   - k8s-namespace:default
   - k8s-kind:Service
   - k8s-version:v1
 - algorithm: round-robin
-  name: httproute.default.httproute-testing._.1
-  tags:
-  - k8s-name:httpbin
-  - k8s-namespace:default
-  - k8s-kind:Service
-  - k8s-version:v1
-- algorithm: round-robin
-  name: httproute.default.httproute-testing._.0
+  name: httproute.default.httproute-testing.0
   tags:
   - k8s-name:httproute-testing
   - k8s-namespace:default

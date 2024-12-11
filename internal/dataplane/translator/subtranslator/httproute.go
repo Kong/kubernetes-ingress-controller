@@ -54,6 +54,8 @@ type HTTPRoutesTranslationResult struct {
 	HTTPRouteNameToTranslationErrors map[k8stypes.NamespacedName][]error
 }
 
+type splitHTTPRouteMatchesWithPrioritiesGroupedByRule map[string][]SplitHTTPRouteMatchToKongRoutePriority
+
 // TranslateHTTPRoutesToKongstateServices translates a set of HTTPRoutes to kongstate services,
 // and collect the translation errors in the process of translating.
 func TranslateHTTPRoutesToKongstateServices(
@@ -61,8 +63,17 @@ func TranslateHTTPRoutesToKongstateServices(
 	storer store.Storer,
 	routes []*gatewayapi.HTTPRoute,
 	combinedServicesFromDifferentHTTPRoutes bool,
+	expressionRoutes bool,
 ) HTTPRoutesTranslationResult {
 	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, combinedServicesFromDifferentHTTPRoutes)
+
+	// When feature flag expression routes is enabled, we need first split the matches and assign priorities to them
+	// to set proper priorities to the translated Kong routes for satisfying the specification of priorities of HTTPRoute matches:
+	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
+	var ruleToSplitMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
+	if expressionRoutes {
+		ruleToSplitMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
+	}
 
 	kongstateServiceCache := map[string]kongstate.Service{}
 	routeTranslationErrors := map[k8stypes.NamespacedName][]error{}
@@ -70,7 +81,25 @@ func TranslateHTTPRoutesToKongstateServices(
 		if len(rulesMeta) == 0 {
 			continue
 		}
-		service, err := translateHTTPRouteRulesMetaToKongstateService(logger, storer, serviceName, rulesMeta)
+
+		// Sort the rules according to the namespace, name and rule number to guarantee a fixed order.
+		sort.SliceStable(rulesMeta, func(i, j int) bool {
+			return rulesMeta[i].getRuleKey() < rulesMeta[j].getRuleKey()
+		})
+
+		var matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority
+		if expressionRoutes {
+			for _, ruleMeta := range rulesMeta {
+				ruleKey := ruleMeta.getRuleKey()
+				matchesWithPriorities = append(matchesWithPriorities, ruleToSplitMatchesWithPriorities[ruleKey]...)
+			}
+		}
+		service, err := translateHTTPRouteRulesMetaToKongstateService(
+			logger, storer, serviceName, rulesMeta,
+			expressionRoutes,
+			matchesWithPriorities,
+		)
+		// Set translation errors for involved HTTPRoutes on failure of translation.
 		if err != nil {
 			httpRoutes := extractUniqueHTTPRoutes(rulesMeta)
 			for _, route := range httpRoutes {
@@ -82,6 +111,7 @@ func TranslateHTTPRoutesToKongstateServices(
 			}
 			continue
 		}
+
 		kongstateServiceCache[serviceName] = service
 	}
 
@@ -165,6 +195,8 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	storer store.Storer,
 	serviceName string,
 	rulesMeta []httpRouteRuleMeta,
+	expressionRoutes bool,
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 ) (kongstate.Service, error) {
 	// Fill in the common fields of the kongstate.Service.
 	service := kongstate.Service{
@@ -235,13 +267,19 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		applyTimeoutToServiceFromHTTPRouteRule(&service, ruleMeta.Rule)
 	}
 
-	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
-	if err != nil {
-		return kongstate.Service{}, err
+	if expressionRoutes {
+		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities)
+		if err != nil {
+			return kongstate.Service{}, err
+		}
+		service.Routes = routes
+	} else {
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
+		if err != nil {
+			return kongstate.Service{}, err
+		}
+		service.Routes = routes
 	}
-	// preallocate slice for the routes.
-	service.Routes = make([]kongstate.Route, 0, len(routes))
-	service.Routes = append(service.Routes, routes...)
 
 	return service, nil
 }
@@ -428,6 +466,10 @@ func (m httpRouteRuleMeta) getHTTPBackendRefsKey() string {
 	return getSortedItemsString(m.Rule.BackendRefs)
 }
 
+func (m httpRouteRuleMeta) getRuleKey() string {
+	return fmt.Sprintf("%s/%s.%d", m.parentRoute.Namespace, m.parentRoute.Name, m.RuleNumber)
+}
+
 // getFiltersKey computes a key from a list of filters.
 // The order of the filters is not important.
 func (m httpRouteRuleMeta) getFiltersKey() string {
@@ -490,7 +532,6 @@ func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
 		hash := sha256.Sum256([]byte(name))
 		// We have already returned when there are no backends in the rule, so it is safe to use backendNames[0].
 		trimmedName := fmt.Sprintf("httproute.%s.svc.%s_combined.%x", m.parentRoute.Namespace, backendNames[0], hash)
-		// REVIEW: should we emit a log here to tell that the name is trimmed? And should we record the original long name?
 		return trimmedName
 	}
 	return name

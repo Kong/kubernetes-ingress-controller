@@ -1,0 +1,161 @@
+# NOTE: when applied you'll be able to access the goecho service via the gateway with "goecho" hostname:
+# curl -H "Host: goecho" $PROXY
+---
+apiVersion: v1
+kind: Secret
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURXakNDQWtLZ0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREJGTVFzd0NRWURWUVFHRXdKVlV6RVQKTUJFR0ExVUVDQXdLUTJGc2FXWnZjbTVwWVRFaE1COEdBMVVFQ2d3WVNXNTBaWEp1WlhRZ1YybGtaMmwwY3lCUQpkSGtnVEhSa01DQVhEVEkwTVRJeE1URTBORFl4TkZvWUR6TXdNalF3TkRFek1UUTBOakUwV2pCV01Rc3dDUVlEClZRUUdFd0pCVlRFVE1CRUdBMVVFQ0F3S1UyOXRaUzFUZEdGMFpURWhNQjhHQTFVRUNnd1lTVzUwWlhKdVpYUWcKVjJsa1oybDBjeUJRZEhrZ1RIUmtNUTh3RFFZRFZRUUREQVpuYjJWamFHOHdnZ0VpTUEwR0NTcUdTSWIzRFFFQgpBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRQ0RHemVZU0Y2RnM2Y01LUlZLam1TQVFVZXRXTHk2WXpWZVFXeHZzenM0CjJpZFZpaHFXMjYrV1Rqa3dvbmNBampwNFRPdGplMy9QeEgySXZZK3JmUnNhYVpraW9yUmdiN3d0VzFHWWhQYlYKbjUwTk5zOGNaR1RtNmlsbXNnbG1jK01KWWc0bklBdjcrUm9mRU9VRDdVMWw2UnpwRU94TStQcVkxQUhFSFRmZwp6aWxIOEhVSElsazFkcU5VQXdYRDBMaGxUT05GdzhvckgxZlUyWEcwSXRoVnlqdG1qcFNtbmVMQThkdkxIeEl6CnhkSzk3L2J3bUVQdUNFSDIza3pWRWdXUDIzNzhUeVp5NkZTWGMrUnZ1VTFsQisrd2VteG12dVIxZ2lZMTMzcHMKd3N4ZkVBS2JPR1hYWEsyZWFZME10MTBPYjhzUHdwNk9GdDZvZTA0ZW14RTdBZ01CQUFHalFqQkFNQjBHQTFVZApEZ1FXQkJUZk5hUHRUeENzWlJtbFpCV21YQk1yQXJLZTREQWZCZ05WSFNNRUdEQVdnQlJSU3FPa2RmdHNhSTg5CjJIVnU3NzRRckI1RlRqQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFZSHJTTTM3YzFybU4wbTdZajIrQkZwQXUKNVk3QktjckdsUjVqUkdTTUV2NC9kc2pxREZ1b04wN1hmWmR4L2QzdXlNNnU4RWQwSE9Vby8yZUFkTDVOb1prZgpuLy9zOGZVWFFSNVBzSG1qZWtCTHFNMS9jTE1CTkhiSThvYzBjYWpYQ0FTRUowRG8rL2VvdE12bHcwRDJWY2tKCjZEdm1TN0lyL3U0MkdORGxlZ1JFWStvazJyaWhsQ2M2UEs1TkxwbEJxYStrb0xMQlhRcVFTVWpTZjRHWjQzdXkKdWF5WUpGcWthcWROT3FsNUdQbDR0eEpJUk1OOUVWS3pRaXAxVHBJL3RvR2tTSUx2aTZkRmowNlpTMXVYeEU4TQpPRVVkTVQzb3RKWmhPRGExZVRTU28wWWc0S1RQQXJpLzF4T3VqTjNvY2VoRWFtdkRNQkVxZDZMWkx2Q2VGdz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQ0RHemVZU0Y2RnM2Y00KS1JWS2ptU0FRVWV0V0x5Nll6VmVRV3h2c3pzNDJpZFZpaHFXMjYrV1Rqa3dvbmNBampwNFRPdGplMy9QeEgySQp2WStyZlJzYWFaa2lvclJnYjd3dFcxR1loUGJWbjUwTk5zOGNaR1RtNmlsbXNnbG1jK01KWWc0bklBdjcrUm9mCkVPVUQ3VTFsNlJ6cEVPeE0rUHFZMUFIRUhUZmd6aWxIOEhVSElsazFkcU5VQXdYRDBMaGxUT05GdzhvckgxZlUKMlhHMEl0aFZ5anRtanBTbW5lTEE4ZHZMSHhJenhkSzk3L2J3bUVQdUNFSDIza3pWRWdXUDIzNzhUeVp5NkZTWApjK1J2dVUxbEIrK3dlbXhtdnVSMWdpWTEzM3Bzd3N4ZkVBS2JPR1hYWEsyZWFZME10MTBPYjhzUHdwNk9GdDZvCmUwNGVteEU3QWdNQkFBRUNnZ0VBRllNbVJLai9SWDM4ZDN6WVB3TU5UNVFta0RXQ3hpeVlLYTZmZmRhUmJac3kKSUJHSW1sOVN1TjE5K2RKMnAxTXZHZVU1TEhvcnR5bzlGTzVSd0NoSGhiWjFCNTlkN0lMNUJCSTdXY1RiZ2FMdQprS2dCSk4zK1JudCtycGlnL1R3ZnNUN3pKbzFXR2hLK0xBSElLalJLWW1IMU9mTHFheGpoZWFrejN2dVNXeU1NCnVJdWdPMDZIL3Zadmg2bmYreU9oaXpwbWJFRVFOYmc5elhJeDlrVkY4anpkNkxRT0YrTTJQcHluWklqcktLNU4KT1oreURJWVc0MFZKemVEZXB1S0tQY2lGWFVCaFM3cU5lKyt3ZTlKUytBeU54VHl6c2dESjV5cVkvQmxockRZVgpDWEFMSzBUdkNiMm5rOXVXaG9HL2NwM1ROa1BiUWVOM2VnaTBmSWhYWlFLQmdRQzRUdENOSk9ycVdjMkJlY0l2CjZHZk9xM1ZXaG4ybHllSExtZ1ljTkE3WHAwSWg0VG0vSEw2T0lCRGhhYk1wUytkeUdUSHhTT21RUEVjMUxQNjQKYW9rcTY4d1FBS1lQRmpWUHNPMkJBZCtZLzdpMmEvK29nRTlLTEwvbGZUZ21QNDJMMEg1d29BWW54bHJnb1F6WApua0NDUVFNU2R4bUpyTmUrVVRxVS90TE1Ud0tCZ1FDMkdxVzgxL2srZU5yS3lualdCZndLK1lOVTdncW11VllnCmpNUTdLK1RRU0pMNXd2MkVrQ2x2cHhVdldFalFtT1I4YlZqZGpGbUFhMHVpejdDWTlRSzlJeVM1ZzRkU0wwVE4Kb25pRjc1bEtRa0VaV1M0QTlVcVpJWFJxTXV6cmRubzVpSnB2ZlpHSUJ6VEpPbCtkcUtQZmtTRUZmUHZ3UXBXMgpjMmxHeWdsVlZRS0JnQzlRVEVsdmlMN1FmdWtXRUx1cnRicGdXYWIwcjV5M3pyY3R1eFBTYVYwREd2OEhpb045CkpZM212VzZnYTlYV0hud3o2NVk5V1hnbGdVSXRZdGFFd3VHNTFwRGxHYndWdjJuTnlhcXNpSElHYzZ5ZzNPaXMKeDY0Sy90Z3k1UThza1hHcS9FcDlTaGM3M0doOTc0WUtvaFRPQzdQWnp6eUFtb0hJNkhrSFVhWVJBb0dBQmJyRQo2RElyWjJuS0NJTmlWZW1PU3BJYkxicm5udU5KOEhBOVpGYzNOYzV5d1dUL01RS1FLekVvbTNxOW44S1B2ZEo2CjcwMlJLMWMwNUFTQTIrOHBqT1hrSytvVmdlSjIyYmw0N1UzaWx0R0sxczlWZ1RZMmlLYmkwTXlWWTdzd2tVcloKQVJVRVZURlUyZGY2VmkyT0ttU1lrMkdoVTZma3FmN3Jtd3lVU3BrQ2dZQU1jL04zK2p4VzN5L08yWFE0QmRMSwpjQms5YnZLTDBBQnB3Vmg3djlvSzNnTHQrTHFYMWZzcXJ3bmNCYTNCUUc5R2hnTHpMQUI0T1cxSjBCckhQN3lNCnl2eFF1S2tSTUNtT3NrNVVvbUhDR2dUMHV5Njh3dUJ4NGplK0Q2Q0VpWDhYa0QvS3RzZTM0aUM2VzR2OCsxS3AKSzR2YXp6WmNURzd5NkcvMW9jUFhHdz09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+metadata:
+  name: goecho-tls
+type: Opaque
+---
+apiVersion: v1
+kind: ConfigMap
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDbTCCAlWgAwIBAgIUVqWYdKxXFTJEgfsxg0NLgw8KdW0wDQYJKoZIhvcNAQEL
+    BQAwRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExITAfBgNVBAoM
+    GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAgFw0yNDEyMTExNDQ0MDFaGA8zMDI0
+    MDQxMzE0NDQwMVowRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWEx
+    ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcN
+    AQEBBQADggEPADCCAQoCggEBAKwhV817FJ+krSoQwOu+TBL6wy8UHJO7fC4bv8SI
+    TicWicZxEwUc+jS1hx9qtPlUya//f1va2Ii/Dg7dZpSlvmSKibNNKBq9ebBHQ6d8
+    F8UsjvRLH68gBCkJnpTzonW8ed2k25qlDoQ0Wm897A9B/MxQKtIKG/CcR0zw43uq
+    cCd7+q+XtMZXFiKer9qKNmwoUTrAfIe7Oivh2llLD7OmMdR3hJCHuQyM2Lg7cdJx
+    6HUpdy4oCq9/SVeYtxMJvAxUm88YTbeGfiHVWQCGX2UhYexLE69VvOq1ZH7Ic9YW
+    qu9o4mff3fLAJbkjjWoXdxrZIHJe64yimGzjuxmFLO3EBEcCAwEAAaNTMFEwHQYD
+    VR0OBBYEFFFKo6R1+2xojz3YdW7vvhCsHkVOMB8GA1UdIwQYMBaAFFFKo6R1+2xo
+    jz3YdW7vvhCsHkVOMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+    AIYoKhB/NydPYfVBPw66wJ7KCLoowF+qcVn+P/zSqmjlC5ycpK5toe/BkxPCx0YH
+    ysTC4AGD3oxgNn24Bzkq96GcmwgXLscAOScGRlNzeT2WbVmYBDtqzst6mxbYTLWF
+    bHH1A+PBLfmxBS7oswc03bzayGqaRIHru7FWObhjI4s17BYEP4LQtCBIDU6QpR9a
+    1QV8JwDy2L+EMH80JURii801ZuKK6mzisZQEj4PJZvkYpRovc3a804eRvtk9cjDe
+    TChP2U1pgR5LtkWOWFEehLx7s46f68vlBaMV/zWaPjd52g+3ujfXWLYv7jX/3CAk
+    rewqAvVHqaj7J0YW8dWVRb8=
+    -----END CERTIFICATE-----
+  id: 30E144FD-582A-40F7-956C-1FA34308FA9C
+metadata:
+  labels:
+    konghq.com/ca-cert: "true"
+    # NOTE: using the default config map selector.
+    konghq.com/configmap: "true"
+  name: ca
+  namespace: kong
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: goecho-tls-policy
+spec:
+  options:
+    tls-verify-depth: "1"
+  targetRefs:
+  - group: core
+    kind: Service
+    name: goecho
+  validation:
+    caCertificateRefs:
+    - group: core
+      kind: ConfigMap
+      name: ca
+    hostname: goecho
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: goecho
+  name: goecho
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goecho
+  template:
+    metadata:
+      labels:
+        app: goecho
+    spec:
+      containers:
+      - env:
+        - name: HTTPS_PORT
+          value: "1028"
+        - name: TLS_CERT_FILE
+          value: /etc/certs/tls.crt
+        - name: TLS_KEY_FILE
+          value: /etc/certs/tls.key
+        image: kong/go-echo:0.5.0
+        imagePullPolicy: IfNotPresent
+        name: goecho
+        ports:
+        - containerPort: 1028
+          protocol: TCP
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/certs
+          name: certs
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: certs
+        secret:
+          secretName: goecho-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goecho
+spec:
+  ports:
+  - port: 1028
+    protocol: TCP
+    targetPort: 1028
+  selector:
+    app: goecho
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+spec:
+  gatewayClassName: kong
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-1
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: kong
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: goecho
+      port: 1028
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+---

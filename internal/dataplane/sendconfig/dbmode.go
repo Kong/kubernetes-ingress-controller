@@ -192,7 +192,7 @@ func resourceErrorFromEntityAction(event diff.EntityAction) (ResourceError, erro
 			event.Entity.Kind, event.Entity.Name, reflected.Kind())
 	}
 	tagsValue := reflected.FieldByName("Tags")
-	if !tagsValue.IsValid() || tagsValue.IsZero() {
+	if !tagsValue.IsValid() || tagsValue.IsZero() || tagsValue.IsNil() {
 		return ResourceError{}, fmt.Errorf("entity %s/%s of type %s lacks 'Tags' field",
 			event.Entity.Kind, event.Entity.Name, reflect.TypeOf(subj))
 	}

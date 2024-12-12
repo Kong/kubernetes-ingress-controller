@@ -110,6 +110,7 @@ jobs:
     secrets: inherit
     with:
       log-output-file: /tmp/integration-tests-kic-logs
+      kong-enterprise-container-repo: kong/kong-gateway-dev
 
   conformance-tests:
     needs:

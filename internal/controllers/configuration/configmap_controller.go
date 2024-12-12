@@ -75,7 +75,7 @@ func (r *CoreV1ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		For(&corev1.ConfigMap{},
 			builder.WithPredicates(
-				predicate.And(
+				predicate.Or(
 					predicateFuncs,
 					labelPredicate,
 				)),

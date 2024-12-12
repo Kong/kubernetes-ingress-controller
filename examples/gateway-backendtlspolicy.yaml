@@ -42,7 +42,6 @@ metadata:
     # NOTE: using the default config map selector.
     konghq.com/configmap: "true"
   name: ca
-  namespace: kong
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy

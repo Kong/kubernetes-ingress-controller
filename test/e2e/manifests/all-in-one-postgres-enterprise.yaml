@@ -3918,7 +3918,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         lifecycle:
           preStop:
             exec:
@@ -4040,7 +4040,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -4139,7 +4139,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         name: kong-migrations
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
@@ -4154,7 +4154,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

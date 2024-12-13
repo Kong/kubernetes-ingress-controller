@@ -2,10 +2,12 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -238,6 +240,20 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 	for _, caCert := range policy.Spec.Validation.CACertificateRefs {
 		if (caCert.Group != "core" && caCert.Group != "") || caCert.Kind != "ConfigMap" {
 			invalidMessages = append(invalidMessages, "CACertificateRefs must reference ConfigMaps in the core group")
+			break
+		}
+
+		var (
+			cm          corev1.ConfigMap
+			configMapNN = k8stypes.NamespacedName{
+				Namespace: policy.Namespace,
+				Name:      string(caCert.Name),
+			}
+		)
+		if err := r.Get(ctx, configMapNN, &cm); err != nil {
+			invalidMessages = append(invalidMessages,
+				fmt.Sprintf("failed getting ConfigMap %s set as CACertificateRef: %s", configMapNN, err),
+			)
 			break
 		}
 	}

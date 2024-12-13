@@ -79,7 +79,7 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		For(&corev1.Secret{},
 			builder.WithPredicates(
-				predicate.And(
+				predicate.Or(
 					predicateFuncs,
 					labelPredicate,
 				)),

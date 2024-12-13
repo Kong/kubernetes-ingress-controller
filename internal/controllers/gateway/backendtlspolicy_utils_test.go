@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -764,9 +765,80 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Message: "CACertificateRefs must reference ConfigMaps in the core group - SubjectAltNames feature is not currently supported - WellKnownCACertificates feature is not currently supported",
 			},
 		},
+		{
+			name: "valid policy referencing not existing CACert (ConfigMap)",
+			policy: &gatewayapi.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-policy",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.BackendTLSPolicySpec{
+					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
+								Group: "core",
+								Kind:  "Service",
+								Name:  "example-service",
+							},
+						},
+					},
+					Validation: gatewayapi.BackendTLSPolicyValidation{
+						CACertificateRefs: []gatewayapi.LocalObjectReference{
+							{
+								Group: "",
+								Kind:  "ConfigMap",
+								Name:  gatewayapi.ObjectName("example-configmap"),
+							},
+						},
+					},
+				},
+			},
+			expected: &metav1.Condition{
+				Type:    string(gatewayapi.PolicyConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gatewayapi.PolicyReasonInvalid),
+				Message: "failed getting ConfigMap default/example-configmap set as CACertificateRef: configmaps \"example-configmap\" not found",
+			},
+		},
+		{
+			name: "valid policy referencing not existing CACert (ConfigMap, group core)",
+			policy: &gatewayapi.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-policy",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.BackendTLSPolicySpec{
+					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
+								Group: "core",
+								Kind:  "Service",
+								Name:  "example-service",
+							},
+						},
+					},
+					Validation: gatewayapi.BackendTLSPolicyValidation{
+						CACertificateRefs: []gatewayapi.LocalObjectReference{
+							{
+								Group: "core",
+								Kind:  "ConfigMap",
+								Name:  gatewayapi.ObjectName("example-configmap"),
+							},
+						},
+					},
+				},
+			},
+			expected: &metav1.Condition{
+				Type:    string(gatewayapi.PolicyConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gatewayapi.PolicyReasonInvalid),
+				Message: "failed getting ConfigMap default/example-configmap set as CACertificateRef: configmaps \"example-configmap\" not found",
+			},
+		},
 	}
 
 	scheme := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, gatewayapi.InstallV1(scheme))
 	require.NoError(t, gatewayapi.InstallV1alpha3(scheme))
 
@@ -783,6 +855,11 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					&gatewayapi.BackendTLSPolicy{},
 					backendTLSPolicyTargetRefIndexKey,
 					indexBackendTLSPolicyOnTargetRef,
+				).
+				WithIndex(
+					&gatewayapi.BackendTLSPolicy{},
+					backendTLSPolicyValidationCARefIndexKey,
+					indexBackendTLSPolicyOnValidationCACertificateRef,
 				).
 				Build()
 

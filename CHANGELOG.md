@@ -133,6 +133,10 @@ Adding a new version? You'll need three changes:
   any needed information is reported in the status of the affected object or
   with Kubernetes events.
   [#6790](https://github.com/Kong/kubernetes-ingress-controller/pull/6790)
+- Do not log `ERROR` when referenced `KongPlugin` or `KongClusterPlugin` does not exist,
+  instead generate a Kubernetes Event - `KongConfigurationTranslationFailed` for object
+  that references it.
+  [#6814](https://github.com/Kong/kubernetes-ingress-controller/pull/6814)
 - From now on, upstreams produced by KIC from `Service`s that are configured as
   upstream services (either by `ingress.kubernetes.io/service-upstream` annotation
   or through `IngressClassNamespacedParameters`'s `serviceUpstream` field), will use
@@ -247,6 +251,7 @@ Adding a new version? You'll need three changes:
   is applied to the service section of the Kong configuration.
   [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
   [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
+  [#6837](https://github.com/Kong/kubernetes-ingress-controller/pull/6837)
 - Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
   to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
   to those having this label set to "true". This limits the amount of resources that are kept in memory.

@@ -65,6 +65,8 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		// TCP services cannot have paths, and we don't catch this as a translation error
 		"konghq.com/protocol": "tcp",
 		"konghq.com/path":     "/aitmatov",
+		// Referencing non-existent KongPlugins.
+		"konghq.com/plugins": "foo,bar",
 	}
 	service.Namespace = ns.Name
 	require.NoError(t, ctrlClient.Create(ctx, service))
@@ -75,6 +77,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		"konghq.com/strip-path": "true",
 		"konghq.com/protocols":  "grpcs",
 		"konghq.com/methods":    "GET",
+		"konghq.com/plugins":    "baz",
 	}, service)
 	ingress.Spec.IngressClassName = lo.ToPtr(ingressClassName)
 	ingress.Namespace = ns.Name
@@ -99,33 +102,59 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		}
 		t.Logf("got %d events", len(events.Items))
 
-		matches := make([]bool, 4)
+		const numberOfExpectedEvents = 7
+		matches := make([]bool, numberOfExpectedEvents)
 		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Ingress" &&
 				e.InvolvedObject.Name == ingress.Name &&
 				e.Message == "invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
 		})
 		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&
 				e.Message == "invalid path: value must be null"
 		})
 		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&
 				e.Message == "invalid service:httpbin.httpbin.80: failed conditional validation given value of field 'protocol'"
 		})
 		matches[3] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`, e.Message)
-			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Pod" &&
 				e.InvolvedObject.Name == podName &&
 				ok && err == nil
 		})
-		if lo.Count(matches, true) != 4 {
+		matches[4] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				e.Message == `referenced KongPlugin or KongClusterPlugin "foo" does not exist`
+		})
+		matches[5] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				e.Message == `referenced KongPlugin or KongClusterPlugin "bar" does not exist`
+		})
+		matches[6] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
+				e.InvolvedObject.Kind == "Ingress" &&
+				e.InvolvedObject.Name == ingress.Name &&
+				e.Message == `referenced KongPlugin or KongClusterPlugin "baz" does not exist`
+		})
+		if lo.Count(matches, true) != numberOfExpectedEvents {
 			t.Logf("not all events matched: %+v", matches)
 			return false
 		}
@@ -281,6 +310,8 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 			Name: "donenbai",
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClassName,
+				// Referencing non-existent KongPlugin.
+				"konghq.com/plugins": "foo",
 			},
 		},
 		Username: "donenbai",
@@ -311,14 +342,23 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 		}
 		t.Logf("got %d events", len(events.Items))
 
-		matches := make([]bool, 1)
+		const numberOfExpectedEvents = 2
+		matches := make([]bool, numberOfExpectedEvents)
 		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "KongConsumer" &&
 				e.InvolvedObject.Name == consumer.Name &&
 				e.Message == fmt.Sprintf("invalid consumer:%s: HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")", consumer.Name)
 		})
-		if lo.Count(matches, true) != 1 {
+		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
+				e.InvolvedObject.Kind == "KongConsumer" &&
+				e.InvolvedObject.Name == consumer.Name &&
+				e.Message == `referenced KongPlugin or KongClusterPlugin "foo" does not exist`
+		})
+		if lo.Count(matches, true) != numberOfExpectedEvents {
 			t.Logf("not all events matched: %+v", matches)
 			return false
 		}

@@ -54,6 +54,7 @@ func (r *BackendTLSPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		}).
 		For(&gatewayapi.BackendTLSPolicy{}).
+		Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForConfigMaps)).
 		Watches(&corev1.Service{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForServices)).
 		Watches(&gatewayapi.HTTPRoute{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForHTTPRoutes)).
 		Watches(&gatewayapi.Gateway{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForGateways)).
@@ -65,6 +66,9 @@ func (r *BackendTLSPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 const (
+	// backendTLSPolicyValidationCARefIndexKey is the index key for BackendTLSPolicy objects by their validation CA configmap reference.
+	// The value is the name of the configmap.
+	backendTLSPolicyValidationCARefIndexKey = "backendtlspolicy-validation-cacertificateref"
 	// backendTLSPolicyTargetRefIndexKey is the index key for BackendTLSPolicy objects by their target service reference.
 	// The value is the name of the service.
 	backendTLSPolicyTargetRefIndexKey = "backendtlspolicy-targetref"
@@ -90,6 +94,23 @@ func indexBackendTLSPolicyOnTargetRef(obj client.Object) []string {
 		}
 	}
 	return services
+}
+
+// indexBackendTLSPolicyOnValidationCACertificateRef indexes BackendTLSPolicy objects
+// by their validation CA Certificate configmap reference.
+func indexBackendTLSPolicyOnValidationCACertificateRef(obj client.Object) []string {
+	policy, ok := obj.(*gatewayapi.BackendTLSPolicy)
+	if !ok {
+		return []string{}
+	}
+
+	configmaps := []string{}
+	for _, cacertref := range policy.Spec.Validation.CACertificateRefs {
+		if (cacertref.Group == "" || cacertref.Group == "core") && cacertref.Kind == "ConfigMap" {
+			configmaps = append(configmaps, string(cacertref.Name))
+		}
+	}
+	return configmaps
 }
 
 // indexHTTPRouteOnParentRef indexes HTTPRoute objects by their parent Gateway references.
@@ -150,6 +171,15 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
+		&gatewayapi.BackendTLSPolicy{},
+		backendTLSPolicyValidationCARefIndexKey,
+		indexBackendTLSPolicyOnValidationCACertificateRef,
+	); err != nil {
+		return fmt.Errorf("failed to index backendTLSPolicies on validation CA configmap reference: %w", err)
+	}
+
+	if err := mgr.GetCache().IndexField(
+		context.Background(),
 		&gatewayapi.HTTPRoute{},
 		httpRouteParentRefIndexKey,
 		indexHTTPRouteOnParentRef,
@@ -172,6 +202,30 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 // BackendTLSPolicy Controller - Event Handlers
 // -----------------------------------------------------------------------------
+
+// listBackendTLSPoliciesForConfigMaps returns the list of BackendTLSPolicies that targets the given ConfigMap.
+func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForConfigMaps(ctx context.Context, obj client.Object) []reconcile.Request {
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "ConfigMap", "found", reflect.TypeOf(obj))
+		return nil
+	}
+	policies := &gatewayapi.BackendTLSPolicyList{}
+	if err := r.List(ctx, policies,
+		client.InNamespace(cm.Namespace),
+		client.MatchingFields{backendTLSPolicyValidationCARefIndexKey: cm.Name},
+	); err != nil {
+		r.Log.Error(err, "Failed to list BackendTLSPolicies for ConfigMap", "configmap", cm)
+		return nil
+	}
+	requests := make([]reconcile.Request, 0, len(policies.Items))
+	for _, policy := range policies.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKeyFromObject(&policy),
+		})
+	}
+	return requests
+}
 
 // listBackendTLSPoliciesForServices returns the list of BackendTLSPolicies that targets the given Service.
 func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForServices(ctx context.Context, obj client.Object) []reconcile.Request {

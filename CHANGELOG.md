@@ -251,6 +251,7 @@ Adding a new version? You'll need three changes:
   is applied to the service section of the Kong configuration.
   [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
   [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
+  [#6837](https://github.com/Kong/kubernetes-ingress-controller/pull/6837)
 - Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
   to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
   to those having this label set to "true". This limits the amount of resources that are kept in memory.

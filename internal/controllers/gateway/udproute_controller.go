@@ -361,14 +361,16 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
 	debug(log, udproute, "Ensuring status contains Gateway associations")
-	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, udproute, gateways...)
+	updated, res, err := r.ensureGatewayReferenceStatusAdded(ctx, udproute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
 		return ctrl.Result{}, err
 	}
-	if statusUpdated {
+	if !res.IsZero() {
+		return res, nil
+	}
+	if updated {
 		// if the status was updated it will trigger a follow-up reconciliation
-		// so we don't need to do anything further here.
 		return ctrl.Result{}, nil
 	}
 
@@ -431,7 +433,11 @@ var udprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given UDPRoute and ensures that the status
 // for the UDPRoute is updated appropriately.
-func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, udproute *gatewayapi.UDPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
+// It returns true if controller should requeue the object. Either because
+// the status update resulted in a conflict or because the status was updated.
+func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(
+	ctx context.Context, udproute *gatewayapi.UDPRoute, gateways ...supportedGatewayWithCondition,
+) (bool, ctrl.Result, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := getParentStatuses(udproute, udproute.Status.Parents)
 
@@ -494,7 +500,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 
 	// if we didn't have to actually make any changes, no status update is needed
 	if !statusChangesWereMade && !programmedConditionChanged {
-		return false, nil
+		return false, ctrl.Result{}, nil
 	}
 
 	// update the udproute status with the new status references
@@ -504,10 +510,14 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, udproute); err != nil {
-		return false, err
+	res, err := handleUpdateError(r.Status().Update(ctx, udproute), r.Log, udproute)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	if !res.IsZero() {
+		return false, res, nil
 	}
 
 	// the status needed an update and it was updated successfully
-	return true, nil
+	return true, ctrl.Result{}, nil
 }

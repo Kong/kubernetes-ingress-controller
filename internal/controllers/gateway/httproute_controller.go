@@ -402,12 +402,14 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Ensure we have no status for no-longer defined parentRefs.
 	if wasAnyStatusRemoved := ensureNoStaleParentStatus(httproute); wasAnyStatusRemoved {
-		if err := r.Status().Update(ctx, httproute); err != nil {
+		err := r.Status().Update(ctx, httproute)
+		res, err := handleUpdateError(err, log, httproute)
+		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to prune stale Gateway parent statuses from %s status: %w",
 				client.ObjectKeyFromObject(httproute), err,
 			)
 		}
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
 	// the referenced gateway object(s) for the HTTPRoute needs to be ready
@@ -445,14 +447,16 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
 	debug(log, httproute, "Ensuring status contains Gateway associations")
-	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
+	updated, res, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
 		return ctrl.Result{}, err
 	}
-	if statusUpdated {
+	if !res.IsZero() {
+		return res, nil
+	}
+	if updated {
 		// if the status was updated it will trigger a follow-up reconciliation
-		// so we don't need to do anything further here.
 		return ctrl.Result{}, nil
 	}
 
@@ -521,7 +525,11 @@ var httprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given HTTPRoute and ensures that the status
 // for the HTTPRoute is updated appropriately.
-func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayapi.HTTPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
+// It returns true if controller should requeue the object. Either because
+// the status update resulted in a conflict or because the status was updated.
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(
+	ctx context.Context, httproute *gatewayapi.HTTPRoute, gateways ...supportedGatewayWithCondition,
+) (bool, ctrl.Result, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
 
@@ -571,7 +579,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 
 	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, httproute, parentStatuses)
 	if err != nil {
-		return false, err
+		return false, ctrl.Result{}, err
 	}
 
 	// initialize "programmed" condition to Unknown.
@@ -593,7 +601,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 
 	// if we didn't have to actually make any changes, no status update is needed
 	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {
-		return false, nil
+		return false, ctrl.Result{}, nil
 	}
 
 	// update the httproute status with the new status references
@@ -603,12 +611,16 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, httproute); err != nil {
-		return false, err
+	res, err := handleUpdateError(r.Status().Update(ctx, httproute), r.Log, httproute)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	if !res.IsZero() {
+		return false, res, nil
 	}
 
 	// the status needed an update and it was updated successfully
-	return true, nil
+	return true, ctrl.Result{}, nil
 }
 
 // setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.

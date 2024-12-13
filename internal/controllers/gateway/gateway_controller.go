@@ -511,7 +511,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			gateway.Annotations = map[string]string{}
 		}
 		annotations.UpdateGatewayPublishService(gateway.Annotations, services)
-		return ctrl.Result{}, r.Update(ctx, gateway)
+
+		err := r.Update(ctx, gateway)
+		return handleUpdateError(err, log, gateway)
 	}
 
 	serviceRefs := annotations.ExtractGatewayPublishService(gateway.Annotations)
@@ -559,7 +561,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			Reason:             string(gatewayapi.GatewayReasonPending),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+
+		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return handleUpdateError(err, log, gateway)
 	}
 
 	// When deployed on Kubernetes Kong can not be relied on for the address data needed for Gateway because
@@ -622,17 +626,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is
 	// a given and we can simply update spec to status.
 	debug(log, gateway, "Updating the gateway status if necessary")
-	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses, combinedAddresses)
-	if err != nil {
-		if apierrors.IsConflict(err) {
-			// if there's a conflict that's normal just requeue to retry, no need to make noise.
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	if isChanged {
-		debug(log, gateway, "Gateway status updated")
-		return ctrl.Result{}, nil
+	res, err := r.updateAddressesAndListenersStatus(ctx, log, gateway, listenerStatuses, combinedAddresses)
+	if err != nil || !res.IsZero() {
+		return res, err
 	}
 
 	info(log, gateway, "Gateway provisioning complete")
@@ -860,10 +856,11 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 // If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Programmed condition is posted.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
+	log logr.Logger,
 	gateway *gatewayapi.Gateway,
 	listenerStatuses []gatewayapi.ListenerStatus,
 	addresses []gatewayapi.GatewayStatusAddress,
-) (bool, error) {
+) (ctrl.Result, error) {
 	if !isGatewayProgrammed(gateway) {
 		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = addresses
@@ -875,11 +872,17 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Reason:             string(gatewayapi.GatewayReasonProgrammed),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+
+		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return handleUpdateError(err, r.Log, gateway)
 	}
 	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {
 		gateway.Status.Listeners = listenerStatuses
-		return true, r.Status().Update(ctx, gateway)
+
+		err := r.Status().Update(ctx, gateway)
+		return handleUpdateError(err, r.Log, gateway)
 	}
-	return false, nil
+
+	info(log, gateway, "Gateway status updated")
+	return ctrl.Result{}, nil
 }

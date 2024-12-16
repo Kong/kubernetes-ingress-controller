@@ -24,6 +24,9 @@ func (p DefaultCacheGraphProvider) CacheToGraph(c store.CacheStores) (*ConfigGra
 	g := NewConfigGraph()
 
 	for _, s := range c.ListAllStores() {
+		if s == nil {
+			continue
+		}
 		for _, o := range s.List() {
 			obj, ok := o.(client.Object)
 			if !ok {

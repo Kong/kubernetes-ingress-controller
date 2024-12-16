@@ -3,6 +3,7 @@ package kongstate
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -378,7 +379,9 @@ type NamespacedKongPlugin struct {
 	Name      string
 }
 
-func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger) map[string]util.ForeignRelations {
+func (ks *KongState) getPluginRelations(
+	cacheStore store.Storer, log logr.Logger, failuresCollector *failures.ResourceFailuresCollector,
+) map[string]util.ForeignRelations {
 	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
 	pluginRels := map[string]util.ForeignRelations{}
 
@@ -400,9 +403,13 @@ func (ks *KongState) getPluginRelations(cacheStore store.Storer, log logr.Logger
 		//
 		// Code in buildPlugins() will combine plugin associations into
 		// multi-entity plugins within the local namespace
-		namespace, err := extractReferredPluginNamespace(log, cacheStore, referrer, plugin)
+		namespace, err := extractReferredPluginNamespaceIfAllowed(log, cacheStore, referrer, plugin)
 		if err != nil {
-			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			if errors.As(err, &referredPluginNotAllowedError{}) {
+				failuresCollector.PushResourceFailure(err.Error(), referrer)
+			} else {
+				log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			}
 			return
 		}
 
@@ -487,58 +494,6 @@ type pluginReference struct {
 	Referrer  client.Object
 	Namespace string
 	Name      string
-}
-
-func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginReference) error {
-	// remote plugin. considered part of this namespace if a suitable ReferenceGrant exists
-	grants, err := s.ListReferenceGrants()
-	if err != nil {
-		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
-	}
-	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
-		log,
-		gatewayapi.ReferenceGrantFrom{
-			Group:     gatewayapi.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
-			Kind:      gatewayapi.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
-			Namespace: gatewayapi.Namespace(r.Referrer.GetNamespace()),
-		},
-		grants,
-	)
-
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
-	// Our reference checking code wasn't originally designed to handle multiple object types and relationships and
-	// wasn't designed with much guidance for future usage. It expects something akin to the BackendRef section of an
-	// HTTPRoute or similar, since that's what it was originally designed for. A future simplified model should probably
-	// work with source and target client.Object resources derived from the particular resources' reference specs, as
-	// those reference formats aren't necessarily consistent. We should possibly push for a standard upstream utility as
-	// part of https://github.com/kubernetes/enhancements/issues/3766 if it proceeds further, as this is can be difficult
-	// to wrap your head around when deep in the code that's checking an individual use case. A standard model for "these
-	// are the inputs and outputs for a reference grant check, derive them from your spec" should help avoid inconsistency
-	// in check implementation.
-
-	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
-	// name and namespace.
-	pluginReference := gatewayapi.PluginLabelReference{
-		Namespace: &r.Namespace,
-		Name:      r.Name,
-	}
-
-	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
-	// we should put the referrer on the "target" and the plugin on the "backendRef".
-
-	log.V(logging.TraceLevel).Info("requested grant to plugins",
-		"from-namespace", r.Referrer.GetNamespace(),
-		"from-group", r.Referrer.GetObjectKind().GroupVersionKind().Group,
-		"from-kind", r.Referrer.GetObjectKind().GroupVersionKind().Kind,
-		"to-namespace", r.Namespace,
-		"to-name", r.Name,
-	)
-
-	if !gatewayapi.NewRefCheckerForKongPlugin(log, r.Referrer, pluginReference).IsRefAllowedByGrant(allowed) {
-		return fmt.Errorf("no grant found for %s in %s to plugin %s in %s requested remote KongPlugin bind",
-			r.Referrer.GetObjectKind().GroupVersionKind().Kind, r.Referrer.GetNamespace(), r.Name, r.Namespace)
-	}
-	return nil
 }
 
 func buildPlugins(
@@ -691,7 +646,7 @@ func (ks *KongState) FillPlugins(
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
-	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations(s, log))
+	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations(s, log, failuresCollector))
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity
@@ -819,15 +774,21 @@ func getServiceIDFromPluginRels(
 //
 // TODO: refactor the building of plugin related entities and share the result between here and building plugins:
 // https://github.com/Kong/kubernetes-ingress-controller/issues/6115
-func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log logr.Logger) PluginRelatedEntitiesRefs {
+func (ks *KongState) getPluginRelatedEntitiesRef(
+	cacheStore store.Storer, log logr.Logger, failuresCollector *failures.ResourceFailuresCollector,
+) PluginRelatedEntitiesRefs {
 	pluginRels := PluginRelatedEntitiesRefs{
 		RelatedEntities:      map[string]RelatedEntitiesRef{},
 		RouteAttachedService: map[string]*Service{},
 	}
 	addRelation := func(referrer client.Object, plugin k8stypes.NamespacedName, entity any) {
-		namespace, err := extractReferredPluginNamespace(log, cacheStore, referrer, plugin)
+		namespace, err := extractReferredPluginNamespaceIfAllowed(log, cacheStore, referrer, plugin)
 		if err != nil {
-			log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			if errors.As(err, &referredPluginNotAllowedError{}) {
+				failuresCollector.PushResourceFailure(err.Error(), referrer)
+			} else {
+				log.Error(err, "could not bind requested plugin", "plugin", plugin.Name, "namespace", plugin.Namespace)
+			}
 			return
 		}
 		pluginKey := namespace + ":" + plugin.Name
@@ -882,7 +843,15 @@ func (ks *KongState) getPluginRelatedEntitiesRef(cacheStore store.Storer, log lo
 	return pluginRels
 }
 
-func extractReferredPluginNamespace(
+type referredPluginNotAllowedError struct {
+	pluginReference gatewayapi.PluginLabelReference
+}
+
+func (e referredPluginNotAllowedError) Error() string {
+	return fmt.Sprintf("no grant found to referenced %q plugin in the requested remote KongPlugin bind", e.pluginReference)
+}
+
+func extractReferredPluginNamespaceIfAllowed(
 	log logr.Logger, cacheStore store.Storer, referrer client.Object, plugin k8stypes.NamespacedName,
 ) (string, error) {
 	// There are 2 types of KongPlugin references: local and remote.
@@ -910,4 +879,57 @@ func extractReferredPluginNamespace(
 		return "", err
 	}
 	return plugin.Namespace, nil
+}
+
+func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginReference) error {
+	// remote plugin. considered part of this namespace if a suitable ReferenceGrant exists
+	grants, err := s.ListReferenceGrants()
+	if err != nil {
+		return fmt.Errorf("could not retrieve ReferenceGrants from store when building plugin relations map: %w", err)
+	}
+	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
+		log,
+		gatewayapi.ReferenceGrantFrom{
+			Group:     gatewayapi.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
+			Kind:      gatewayapi.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
+			Namespace: gatewayapi.Namespace(r.Referrer.GetNamespace()),
+		},
+		grants,
+	)
+
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+	// Our reference checking code wasn't originally designed to handle multiple object types and relationships and
+	// wasn't designed with much guidance for future usage. It expects something akin to the BackendRef section of an
+	// HTTPRoute or similar, since that's what it was originally designed for. A future simplified model should probably
+	// work with source and target client.Object resources derived from the particular resources' reference specs, as
+	// those reference formats aren't necessarily consistent. We should possibly push for a standard upstream utility as
+	// part of https://github.com/kubernetes/enhancements/issues/3766 if it proceeds further, as this is can be difficult
+	// to wrap your head around when deep in the code that's checking an individual use case. A standard model for "these
+	// are the inputs and outputs for a reference grant check, derive them from your spec" should help avoid inconsistency
+	// in check implementation.
+
+	// we don't have a full plugin resource here for the grant checker, so we build a fake one with the correct
+	// name and namespace.
+	pluginReference := gatewayapi.PluginLabelReference{
+		Namespace: &r.Namespace,
+		Name:      r.Name,
+	}
+
+	// Because we should check whether it is allowed to refer FROM the referrer TO the plugin here,
+	// we should put the referrer on the "target" and the plugin on the "backendRef".
+
+	log.V(logging.TraceLevel).Info("requested grant to plugins",
+		"from-namespace", r.Referrer.GetNamespace(),
+		"from-group", r.Referrer.GetObjectKind().GroupVersionKind().Group,
+		"from-kind", r.Referrer.GetObjectKind().GroupVersionKind().Kind,
+		"to-namespace", r.Namespace,
+		"to-name", r.Name,
+	)
+
+	if !gatewayapi.NewRefCheckerForKongPlugin(log, r.Referrer, pluginReference).IsRefAllowedByGrant(allowed) {
+		return referredPluginNotAllowedError{
+			pluginReference: pluginReference,
+		}
+	}
+	return nil
 }

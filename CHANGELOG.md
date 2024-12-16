@@ -133,10 +133,11 @@ Adding a new version? You'll need three changes:
   any needed information is reported in the status of the affected object or
   with Kubernetes events.
   [#6790](https://github.com/Kong/kubernetes-ingress-controller/pull/6790)
-- Do not log `ERROR` when referenced `KongPlugin` or `KongClusterPlugin` does not exist,
-  instead generate a Kubernetes Event - `KongConfigurationTranslationFailed` for object
-  that references it.
+- Do not log `ERROR` when referenced `KongPlugin` or `KongClusterPlugin` does not exist
+  or there is no grant that allows referencing it, instead generate a Kubernetes Event
+  `KongConfigurationTranslationFailed` for object that references it.
   [#6814](https://github.com/Kong/kubernetes-ingress-controller/pull/6814)
+  [#6841](https://github.com/Kong/kubernetes-ingress-controller/pull/6841)
 - From now on, upstreams produced by KIC from `Service`s that are configured as
   upstream services (either by `ingress.kubernetes.io/service-upstream` annotation
   or through `IngressClassNamespacedParameters`'s `serviceUpstream` field), will use

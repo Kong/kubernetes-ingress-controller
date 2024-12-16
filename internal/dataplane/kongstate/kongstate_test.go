@@ -677,7 +677,7 @@ func TestGetPluginRelations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			store, err := store.NewFakeStore(store.FakeObjects{})
 			require.NoError(t, err)
-			computedPluginRelations := tt.data.inputState.getPluginRelations(store, logr.Discard())
+			computedPluginRelations := tt.data.inputState.getPluginRelations(store, logr.Discard(), nil)
 			if diff := cmp.Diff(tt.data.expectedPluginRelations, computedPluginRelations); diff != "" {
 				t.Fatal("expected value differs from actual, see the human-readable diff:", diff)
 			}
@@ -816,10 +816,12 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 
 	store, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(b, err)
+	logger := logr.Discard()
+	failuresCollector := failures.NewResourceFailuresCollector(logger)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fr := ks.getPluginRelations(store, logr.Discard())
+		fr := ks.getPluginRelations(store, logger, failuresCollector)
 		_ = fr
 	}
 }

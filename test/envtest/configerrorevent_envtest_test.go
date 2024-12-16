@@ -66,7 +66,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		"konghq.com/protocol": "tcp",
 		"konghq.com/path":     "/aitmatov",
 		// Referencing non-existent KongPlugins.
-		"konghq.com/plugins": "foo,bar",
+		"konghq.com/plugins": "foo,bar,n1:p1",
 	}
 	service.Namespace = ns.Name
 	require.NoError(t, ctrlClient.Create(ctx, service))
@@ -102,7 +102,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		}
 		t.Logf("got %d events", len(events.Items))
 
-		const numberOfExpectedEvents = 7
+		const numberOfExpectedEvents = 8
 		matches := make([]bool, numberOfExpectedEvents)
 		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
@@ -153,6 +153,13 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 				e.InvolvedObject.Kind == "Ingress" &&
 				e.InvolvedObject.Name == ingress.Name &&
 				e.Message == `referenced KongPlugin or KongClusterPlugin "baz" does not exist`
+		})
+		matches[7] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				e.Message == `no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind`
 		})
 		if lo.Count(matches, true) != numberOfExpectedEvents {
 			t.Logf("not all events matched: %+v", matches)
@@ -311,7 +318,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClassName,
 				// Referencing non-existent KongPlugin.
-				"konghq.com/plugins": "foo",
+				"konghq.com/plugins": "foo, n1:p1",
 			},
 		},
 		Username: "donenbai",
@@ -342,7 +349,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 		}
 		t.Logf("got %d events", len(events.Items))
 
-		const numberOfExpectedEvents = 2
+		const numberOfExpectedEvents = 3
 		matches := make([]bool, numberOfExpectedEvents)
 		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
@@ -357,6 +364,13 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 				e.InvolvedObject.Kind == "KongConsumer" &&
 				e.InvolvedObject.Name == consumer.Name &&
 				e.Message == `referenced KongPlugin or KongClusterPlugin "foo" does not exist`
+		})
+		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Type == corev1.EventTypeWarning &&
+				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
+				e.InvolvedObject.Kind == "KongConsumer" &&
+				e.InvolvedObject.Name == consumer.Name &&
+				e.Message == `no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind`
 		})
 		if lo.Count(matches, true) != numberOfExpectedEvents {
 			t.Logf("not all events matched: %+v", matches)

@@ -205,8 +205,10 @@ Adding a new version? You'll need three changes:
     upstream connections of a `Service`.
   - `konghq.com/tls-verify-depth`: set to an integer to specify the maximum
     depth of the certificate chain that will be verified.
-  - `konghq.com/ca-certificates`: set to a comma-delimited list of CA
-    certificates' names to use for verification.
+  - `konghq.com/ca-certificates-secrets`: set to a comma-delimited list of CA
+    certificate Secrets' names to use for verification.
+  - `konghq.com/ca-certificates-configmaps`: set to a comma-delimited list of CA
+    certificate ConfigMaps' names to use for verification.
   [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
 - Combine Kong gateway services from rules of `HTTPRoute` sharing the same
   backends (same combination of group, kind, namespace, name, port and weight)

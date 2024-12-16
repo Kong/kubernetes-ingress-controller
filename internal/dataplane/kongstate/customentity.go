@@ -178,7 +178,7 @@ func (ks *KongState) FillCustomEntities(
 	}
 	// Fetch relations between plugins and services/routes/consumers and store the pointer to translated Kong entities.
 	// Used for fetching entity referred by a custom entity and fill the ID of referred entity.
-	pluginRels := ks.getPluginRelatedEntitiesRef(s, logger)
+	pluginRels := ks.getPluginRelatedEntitiesRef(s, logger, failuresCollector)
 
 	for _, entity := range entities {
 		// reject the custom entity if its type is in "known" entity types that are already processed.
@@ -333,7 +333,7 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 			Namespace: parentRefNamespace,
 			Name:      parentRef.Name,
 		}
-		paretRefNamespace, err := extractReferredPluginNamespace(logger, cacheStore, k8sEntity, nn)
+		paretRefNamespace, err := extractReferredPluginNamespaceIfAllowed(logger, cacheStore, k8sEntity, nn)
 		if err != nil {
 			return "", false, err
 		}

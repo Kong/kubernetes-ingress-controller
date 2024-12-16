@@ -1153,8 +1153,7 @@ func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirect
 		hostname = string(*modifier.Hostname)
 	}
 	// As gateway API specified, if `Port` is nil, port should be left empty for using well-known port for the scheme.
-	// REVIEW: should we keep the default port 80 as the existing implementation?
-	// This breaks usage of using `https` scheme and empty port intending to redirect requests to HTTPS scheme and port 80.
+	// This changed the behavior in previous versions of using port `80` if the port is not given.
 	portStr := ""
 	if modifier.Port != nil {
 		port := int(*modifier.Port)

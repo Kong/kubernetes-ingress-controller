@@ -147,6 +147,13 @@ Adding a new version? You'll need three changes:
 - Translate `RequestRedirect` HTTPRoute filter to `redirect` plugin if Kong
   gateway supports (Kong gateway with version >= 3.9.0). This safisfies the
   specification of preserving paths in redirect response from the request.
+  The target port of redirect is set to empty when the `port` of the filter is
+  not given for remaining the port in the request for the conformance with
+  gateway API specification. This changed the behavior in the previous versions
+  of using port `80` as the redirect target when `port` is not given. It will
+  break the uncommon usage of using `https` scheme and empty `port` in the
+  filter while intending to redirect the requests to HTTPS service in port 80.
+  For such usage, please explicitly specify the `port` to `80` in the filter.
   [#6804](https://github.com/Kong/kubernetes-ingress-controller/pull/6804)
 
 ### Fixed

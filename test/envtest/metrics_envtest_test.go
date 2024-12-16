@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -95,14 +96,16 @@ func TestMetricsAreServed(t *testing.T) {
 					mocks.WithConfigPostErrorOnlyOnFirstRequest(),
 				)
 			}
-			cfg, _ := RunManager(ctx, t, envcfg,
+			addr := fmt.Sprintf("localhost:%d", helpers.GetFreePort(t))
+			_, _ = RunManager(ctx, t, envcfg,
 				AdminAPIOptFns(adminAPIOpts...),
 				func(cfg *manager.Config) {
 					cfg.FeatureGates[featuregates.FallbackConfiguration] = tc.fallbackConfigurationEnabled
 				},
+				WithMetricsAddr(addr),
 			)
 
-			metricsURL := fmt.Sprintf("http://%s/metrics", cfg.MetricsAddr)
+			metricsURL := fmt.Sprintf("http://%s/metrics", addr)
 			t.Logf("waiting for metrics to be available at %q", metricsURL)
 
 			for _, metric := range tc.expectedMetrics {

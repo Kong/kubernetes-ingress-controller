@@ -60,3 +60,27 @@ func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 	}
 	return c, nil
 }
+
+// CacheStoresLockNotInitializedError is returned when the RW lock in the cache stores is nil.
+// It indicates that the CacheStores may not be correctly initialized.
+type CacheStoresLockNotInitializedError struct{}
+
+var _ error = CacheStoresLockNotInitializedError{}
+
+func (e CacheStoresLockNotInitializedError) Error() string {
+	return "lock of cache stores not initialized"
+}
+
+// Available returns whether the cache is correctly initialized and available for loading/storing objects.
+// When the lock or any of the stores in `nil`, it returns false.
+func (c CacheStores) Available() bool {
+	if c.l == nil {
+		return false
+	}
+	for _, store := range c.ListAllStores() {
+		if store == nil {
+			return false
+		}
+	}
+	return true
+}

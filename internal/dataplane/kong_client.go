@@ -598,6 +598,9 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	currentCache store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
 ) error {
+	if !currentCache.Available() {
+		return errors.New("failed to generate fallback configuration: cache snapshot not available")
+	}
 	// Generate a fallback cache snapshot.
 	fallbackCache, generatedCacheMetadata, err := c.generateFallbackCache(currentCache, brokenObjects)
 	if err != nil {

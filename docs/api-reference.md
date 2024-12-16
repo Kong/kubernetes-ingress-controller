@@ -518,10 +518,10 @@ ObjectReference defines reference of a kubernetes object.
 
 | Field | Description |
 | --- | --- |
-| `group` _string_ |  |
-| `kind` _string_ |  |
+| `group` _string_ | Group defines the API group of the referred object. |
+| `kind` _string_ | Kind defines the kind of the referred object. |
 | `namespace` _string_ | Empty namespace means the same namespace of the owning object. |
-| `name` _string_ |  |
+| `name` _string_ | Name defines the name of the referred object. |
 
 
 _Appears in:_

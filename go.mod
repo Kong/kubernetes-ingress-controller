@@ -18,6 +18,9 @@ go 1.23.2
 //
 // toolchain go1.21.0
 
+// NOTICE: Issue https://github.com/Kong/kubernetes-ingress-controller/issues/6823 has to be resolved.
+replace github.com/kong/go-kong => github.com/kong/go-kong v0.60.0
+
 require (
 	cloud.google.com/go/container v1.42.0
 	github.com/Masterminds/sprig/v3 v3.3.0

@@ -702,28 +702,27 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	hostnames []*string,
 	tags []*string,
 ) ([]kongstate.Route, error) {
+	r := kongstate.Route{
+		Ingress: ingressObjectInfo,
+		Route: kong.Route{
+			Name:         kong.String(routeName),
+			Protocols:    kong.StringSlice("http", "https"),
+			PreserveHost: kong.Bool(true),
+			Tags:         tags,
+		},
+	}
+	// Attach any hostnames associated with the HTTPRoute.
+	if len(hostnames) > 0 {
+		r.Hosts = hostnames
+	}
+	// It's acceptable for an HTTPRoute to have no matches in the rulesets,
+	// but only backends as long as there are hostnames. In this case, we
+	// match all traffic based on the hostname and leave all other routing
+	// options default.
+	// For rules with no hostnames, we generate a "catch-all" route for it.
 	if len(matches) == 0 {
-		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
-		// but only backends as long as there are hostnames. In this case, we
-		// match all traffic based on the hostname and leave all other routing
-		// options default.
-		// for rules with no hostnames, we generate a "catch-all" route for it.
-		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name:         kong.String(routeName),
-				Protocols:    kong.StringSlice("http", "https"),
-				PreserveHost: kong.Bool(true),
-				Tags:         tags,
-			},
-		}
-		r.Hosts = append(r.Hosts, hostnames...)
-
 		return []kongstate.Route{r}, nil
 	}
-
-	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)
-	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
 	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
@@ -773,26 +772,6 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	}
 
 	return routes, nil
-}
-
-func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
-	// build the route object using the method and pathing information
-	r := kongstate.Route{
-		Ingress: ingressObjectInfo,
-		Route: kong.Route{
-			Name:         kong.String(routeName),
-			Protocols:    kong.StringSlice("http", "https"),
-			PreserveHost: kong.Bool(true),
-			// metadata tags aren't added here, they're added by the caller
-		},
-	}
-
-	// attach any hostnames associated with the httproute
-	if len(hostnames) > 0 {
-		r.Hosts = hostnames
-	}
-
-	return r
 }
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch

@@ -1,0 +1,207 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+spec:
+  gatewayClassName: kong
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-echo
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: key-auth,acl-consumer-group-1
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /echo
+    backendRefs:
+    - name: echo
+      kind: Service
+      port: 80
+      weight: 75
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-httpbin
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /httpbin
+    backendRefs:
+    - name: httpbin
+      kind: Service
+      port: 80
+      weight: 75
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  labels:
+    app: echo
+spec:
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+      - name: echo
+        image: kong/go-echo:0.5.0
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo
+  name: echo
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 1027
+  selector:
+    app: echo
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin-deployment
+  labels:
+    app: httpbin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      containers:
+      - name: httpbin
+        image: kong/httpbin:0.2.1
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: httpbin
+  name: httpbin
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: httpbin
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: consumer-auth-1
+  labels:
+    konghq.com/credential: key-auth
+type: Opaque
+stringData:
+  key: password1
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer1
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: consumer1
+credentials:
+- consumer-auth-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: consumer-auth-2
+  labels:
+    konghq.com/credential: key-auth
+type: Opaque
+stringData:
+  key: password2
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer2
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: consumer2
+credentials:
+- consumer-auth-2
+consumerGroups:
+- cg1
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: key-auth
+plugin: key-auth
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongConsumerGroup
+metadata:
+  name: cg1
+  annotations:
+    kubernetes.io/ingress.class: kong
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: acl-consumer-group-1
+plugin: acl
+config:
+  include_consumer_groups: true
+  allow:
+  - cg1

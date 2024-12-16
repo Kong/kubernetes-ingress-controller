@@ -69,8 +69,8 @@ const (
 	RewriteURIKey               = "/rewrite"
 	TLSVerifyKey                = "/tls-verify"
 	TLSVerifyDepthKey           = "/tls-verify-depth"
-	CACertificatesSecretsKey    = "/ca-certificates-secret"
-	CACertificatesConfigMapsKey = "/ca-certificates-configmap"
+	CACertificatesSecretsKey    = "/ca-certificates-secrets"
+	CACertificatesConfigMapsKey = "/ca-certificates-configmaps"
 
 	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged

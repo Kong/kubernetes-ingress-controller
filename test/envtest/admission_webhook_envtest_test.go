@@ -1157,7 +1157,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 					"algorithm": "RS256",
 				},
 			}),
-			"missing required field(s): rsa_public_key, key, secret",
+			"missing required field(s): rsa_public_key, key",
 		)
 
 		hmacAlgos := []string{"HS256", "HS384", "HS512"}

@@ -18,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -59,8 +58,7 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.ProxySyncSeconds = 0.1
 	cfg.InitCacheSyncDuration = 0
 
-	p := helpers.GetFreePort(t)
-	cfg.MetricsAddr = fmt.Sprintf("localhost:%d", p)
+	cfg.MetricsAddr = "0"
 
 	// And other settings which are irrelevant here.
 	cfg.Konnect.ConfigSynchronizationEnabled = false
@@ -181,6 +179,12 @@ func WithAdmissionWebhookEnabled(key, cert []byte, addr string) func(cfg *manage
 		cfg.AdmissionServer.ListenAddr = addr
 		cfg.AdmissionServer.Key = string(key)
 		cfg.AdmissionServer.Cert = string(cert)
+	}
+}
+
+func WithMetricsAddr(addr string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.MetricsAddr = addr
 	}
 }
 

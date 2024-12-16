@@ -198,8 +198,10 @@ func validateWithKongGateway(
 		}
 		routes, err := translator.GenerateKongRouteFromTranslation(
 			httproute, translation,
-			translatorFeatures.ExpressionRoutes,
-			translatorFeatures.SupportRedirectPlugin,
+			subtranslator.TranslateHTTPRouteRulesToKongRouteOptions{
+				ExpressionRoutes:      translatorFeatures.ExpressionRoutes,
+				SupportRedirectPlugin: translatorFeatures.SupportRedirectPlugin,
+			},
 		)
 		if err != nil {
 			errMsgs = append(errMsgs, err.Error())

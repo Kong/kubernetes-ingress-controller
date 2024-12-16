@@ -279,7 +279,8 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false, false)
+			options := setKongRoutePluginsOptions{}
+			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, options)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, result.Plugins)
 
@@ -1824,7 +1825,11 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, false)
+			generateOptions := TranslateHTTPRouteRulesToKongRouteOptions{
+				ExpressionRoutes:      false,
+				SupportRedirectPlugin: false,
+			}
+			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, generateOptions)
 			if tc.expectError {
 				require.Error(t, err)
 				return

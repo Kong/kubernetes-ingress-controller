@@ -137,15 +137,14 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
 	translation subtranslator.KongRouteTranslation,
-	expressionRoutes bool,
-	supportRedirectPlugin bool,
+	options subtranslator.TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	// Gather the k8s object information and hostnames from the HTTPRoute.
 	objectInfo := util.FromK8sObject(httproute)
 	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(translation.OptionalNamedRouteRules...)...)
 
 	// translate to expression based routes when expressionRoutes is enabled.
-	if expressionRoutes {
+	if options.ExpressionRoutes {
 		// get the hostnames from the HTTPRoute
 		hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
 		return subtranslator.GenerateKongExpressionRoutesFromHTTPRouteMatches(
@@ -153,7 +152,7 @@ func GenerateKongRouteFromTranslation(
 			objectInfo,
 			hostnames,
 			tags,
-			supportRedirectPlugin,
+			options.SupportRedirectPlugin,
 		)
 	}
 
@@ -166,6 +165,6 @@ func GenerateKongRouteFromTranslation(
 		objectInfo,
 		hostnames,
 		tags,
-		supportRedirectPlugin,
+		options,
 	)
 }

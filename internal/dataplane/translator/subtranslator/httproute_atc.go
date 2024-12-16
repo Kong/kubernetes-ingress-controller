@@ -67,7 +67,11 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	if err := SetRoutePlugins(&r, translation.Filters, "", tags, true, supportRedirectPlugin); err != nil {
+	setPluginsOptions := setKongRoutePluginsOptions{
+		expressionsRouterEnabled:  true,
+		redirectKongPluginEnabled: supportRedirectPlugin,
+	}
+	if err := setRoutePlugins(&r, translation.Filters, "", tags, setPluginsOptions); err != nil {
 		return nil, err
 	}
 	return []kongstate.Route{r}, nil
@@ -107,7 +111,11 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 		if match.Path != nil && match.Path.Value != nil {
 			path = *match.Path.Value
 		}
-		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags, true, supportRedirectPlugin); err != nil {
+		setPluginsOptions := setKongRoutePluginsOptions{
+			expressionsRouterEnabled:  true,
+			redirectKongPluginEnabled: supportRedirectPlugin,
+		}
+		if err := setRoutePlugins(&matchRoute, translation.Filters, path, tags, setPluginsOptions); err != nil {
 			return nil, err
 		}
 		routes = append(routes, matchRoute)
@@ -601,8 +609,11 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		if match.Match.Path != nil && match.Match.Path.Value != nil {
 			path = *match.Match.Path.Value
 		}
-
-		if err := SetRoutePlugins(r, rule.Filters, path, tags, true, supportRedirectPlugin); err != nil {
+		setPluginsOptions := setKongRoutePluginsOptions{
+			expressionsRouterEnabled:  true,
+			redirectKongPluginEnabled: supportRedirectPlugin,
+		}
+		if err := setRoutePlugins(r, rule.Filters, path, tags, setPluginsOptions); err != nil {
 			return nil, err
 		}
 	}

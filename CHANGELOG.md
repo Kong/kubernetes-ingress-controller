@@ -145,9 +145,9 @@ Adding a new version? You'll need three changes:
   Users can override the default by setting the `--cluster-domain` flag.
   [#6697](https://github.com/Kong/kubernetes-ingress-controller/pull/6697)
 - Translate `RequestRedirect` HTTPRoute filter to `redirect` plugin if supported
-  by Kong gateway supports (Kong gateway with version >= 3.9.0). This satisfies 
-  the Gateway API specification of preserving paths in redirect response from 
-  the request.
+  by Kong gateway (versions >= 3.9.0).
+  This satisfies the Gateway API specification of preserving paths in redirect
+  response from the request.
   The target port of redirect is set to empty when the `port` of the filter is
   not given for remaining the port in the request for the conformance with
   gateway API specification. This changed the behavior from previous versions

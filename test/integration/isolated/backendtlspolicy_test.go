@@ -39,9 +39,9 @@ import (
 // Then, it sets the TLS verification depth to 1, which should pass with one intermediate CA.
 func TestBackendTLSPolicy(t *testing.T) {
 	const (
-		caConfigMapName        = "ca"
-		anotherCAConfigMapName = "another-ca"
-		certsVolumeName        = "certs"
+		caConfigMapName = "ca-configmap"
+		caSecretName    = "ca-secret"
+		certsVolumeName = "certs"
 
 		echoRoute            = "/echo"
 		goEchoServerHostname = "goecho"
@@ -120,27 +120,26 @@ func TestBackendTLSPolicy(t *testing.T) {
 			_, err = cluster.Client().CoreV1().Secrets(namespace).Create(ctx, goechoSecret, metav1.CreateOptions{})
 			assert.NoError(t, err)
 
-			t.Log("Deploying another CA configmap to verify multiple CA certificates can be bound to a service")
+			t.Log("Deploying a CA secret to verify multiple CA certificates of different kinds can be bound to a service")
 			anotherCA, _ := certificate.MustGenerateCertPEMFormat(
 				certificate.WithCommonName("another-ca"),
 				certificate.WithCATrue(),
 			)
-			anotherCaConfigMap := &corev1.ConfigMap{
+			caSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: anotherCAConfigMapName,
+					Name: caSecretName,
 					Labels: map[string]string{
-						configuration.CACertLabelKey:       "true",
-						constsmgr.DefaultConfigMapSelector: "true",
+						configuration.CACertLabelKey: "true",
 					},
 				},
-				Data: map[string]string{
-					"id":     uuid.NewString(),
-					"ca.crt": string(anotherCA),
+				Data: map[string][]byte{
+					"id":     []byte(uuid.NewString()),
+					"ca.crt": anotherCA,
 				},
 			}
-			anotherCaConfigMap, err = cluster.Client().CoreV1().ConfigMaps(namespace).Create(ctx, anotherCaConfigMap, metav1.CreateOptions{})
+			caSecret, err = cluster.Client().CoreV1().Secrets(namespace).Create(ctx, caSecret, metav1.CreateOptions{})
 			assert.NoError(t, err)
-			cleaner.Add(anotherCaConfigMap)
+			cleaner.Add(caSecret)
 
 			return ctx
 		}).
@@ -265,8 +264,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 							},
 							{
 								Group: "core",
-								Kind:  "ConfigMap",
-								Name:  anotherCAConfigMapName,
+								Kind:  "Secret",
+								Name:  caSecretName,
 							},
 						},
 						Hostname: goEchoServerHostname,

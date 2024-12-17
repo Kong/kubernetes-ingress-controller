@@ -240,8 +240,8 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForConfigMaps(ctx con
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "ConfigMap", "found", reflect.TypeOf(obj))
 		return nil
 	}
-	policies := &gatewayapi.BackendTLSPolicyList{}
-	if err := r.List(ctx, policies,
+	policies := gatewayapi.BackendTLSPolicyList{}
+	if err := r.List(ctx, &policies,
 		client.InNamespace(cm.Namespace),
 		client.MatchingFields{backendTLSPolicyValidationCARefConfigMapIndexKey: cm.Name},
 	); err != nil {
@@ -264,8 +264,8 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForSecrets(ctx contex
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Secret", "found", reflect.TypeOf(obj))
 		return nil
 	}
-	policies := &gatewayapi.BackendTLSPolicyList{}
-	if err := r.List(ctx, policies,
+	policies := gatewayapi.BackendTLSPolicyList{}
+	if err := r.List(ctx, &policies,
 		client.InNamespace(secret.Namespace),
 		client.MatchingFields{backendTLSPolicyValidationCARefSecretIndexKey: secret.Name},
 	); err != nil {

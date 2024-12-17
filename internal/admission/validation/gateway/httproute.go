@@ -6,14 +6,17 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 type routeValidator interface {
@@ -190,15 +193,40 @@ func validateWithKongGateway(
 	// Use KIC translator that works both for traditional and expressions based routes.
 	var kongRoutes []kong.Route
 	var errMsgs []string
+	// Gather the K8s object information and hostnames from the HTTPRoute.
+	objectInfo := util.FromK8sObject(httproute)
+	hostnames := lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) string {
+		return string(h)
+	})
 	for _, rule := range httproute.Spec.Rules {
 		translation := subtranslator.KongRouteTranslation{
 			Name:    "validation-attempt",
 			Matches: rule.Matches,
 			Filters: rule.Filters,
 		}
-		routes, err := translator.GenerateKongRouteFromTranslation(
-			httproute, translation, translatorFeatures.ExpressionRoutes,
+
+		var (
+			routes []kongstate.Route
+			err    error
 		)
+		tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(translation.OptionalNamedRouteRules...)...)
+		if translatorFeatures.ExpressionRoutes {
+			routes, err = subtranslator.GenerateKongExpressionRoutesFromTranslationForValidation(
+				translation,
+				objectInfo,
+				hostnames,
+				tags,
+			)
+		} else {
+			routes, err = subtranslator.GenerateKongRoutesFromHTTPRouteMatches(
+				translation.Name,
+				translation.Matches,
+				translation.Filters,
+				objectInfo,
+				lo.ToSlicePtr(hostnames),
+				tags,
+			)
+		}
 		if err != nil {
 			errMsgs = append(errMsgs, err.Error())
 			continue

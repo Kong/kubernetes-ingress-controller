@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -581,6 +582,59 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "valid policy with multiple CACertificateRefs",
+			policy: &gatewayapi.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-policy",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.BackendTLSPolicySpec{
+					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
+								Group: "core",
+								Kind:  "Service",
+								Name:  "example-service",
+							},
+						},
+					},
+					Validation: gatewayapi.BackendTLSPolicyValidation{
+						CACertificateRefs: []gatewayapi.LocalObjectReference{
+							{
+								Group: "",
+								Kind:  "ConfigMap",
+								Name:  "example-configmap",
+							},
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  "example-secret",
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "example-secret",
+						Namespace: "default",
+					},
+				},
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "example-configmap",
+						Namespace: "default",
+					},
+				},
+			},
+			expected: &metav1.Condition{
+				Type:   string(gatewayapi.PolicyConditionAccepted),
+				Status: metav1.ConditionTrue,
+				Reason: string(gatewayapi.PolicyConditionAccepted),
+			},
+		},
+		{
 			name: "policy with conflicting target refs",
 			policy: &gatewayapi.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -646,8 +700,8 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 						CACertificateRefs: []gatewayapi.LocalObjectReference{
 							{
 								Group: "core",
-								Kind:  "Secret",
-								Name:  "example-secret",
+								Kind:  "WrongKind",
+								Name:  "example-wrongKind",
 							},
 						},
 					},
@@ -657,7 +711,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Type:    string(gatewayapi.PolicyConditionAccepted),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(gatewayapi.PolicyReasonInvalid),
-				Message: "CACertificateRefs must reference ConfigMaps in the core group",
+				Message: "CACertificateRefs must reference ConfigMaps or Secrets in the core group",
 			},
 		},
 		{
@@ -751,8 +805,8 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 						CACertificateRefs: []gatewayapi.LocalObjectReference{
 							{
 								Group: "core",
-								Kind:  "Secret",
-								Name:  "example-secret",
+								Kind:  "WrongKind",
+								Name:  "example-wrongkind",
 							},
 						},
 					},
@@ -762,7 +816,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Type:    string(gatewayapi.PolicyConditionAccepted),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(gatewayapi.PolicyReasonInvalid),
-				Message: "CACertificateRefs must reference ConfigMaps in the core group - SubjectAltNames feature is not currently supported - WellKnownCACertificates feature is not currently supported",
+				Message: "CACertificateRefs must reference ConfigMaps or Secrets in the core group - SubjectAltNames feature is not currently supported - WellKnownCACertificates feature is not currently supported",
 			},
 		},
 		{
@@ -797,7 +851,42 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Type:    string(gatewayapi.PolicyConditionAccepted),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(gatewayapi.PolicyReasonInvalid),
-				Message: "failed getting ConfigMap default/example-configmap set as CACertificateRef: configmaps \"example-configmap\" not found",
+				Message: "failed getting *v1.ConfigMap default/example-configmap set as CACertificateRef: configmaps \"example-configmap\" not found",
+			},
+		},
+		{
+			name: "valid policy referencing not existing CACert (Secret)",
+			policy: &gatewayapi.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-policy",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.BackendTLSPolicySpec{
+					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
+								Group: "core",
+								Kind:  "Service",
+								Name:  "example-service",
+							},
+						},
+					},
+					Validation: gatewayapi.BackendTLSPolicyValidation{
+						CACertificateRefs: []gatewayapi.LocalObjectReference{
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  gatewayapi.ObjectName("example-secret"),
+							},
+						},
+					},
+				},
+			},
+			expected: &metav1.Condition{
+				Type:    string(gatewayapi.PolicyConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gatewayapi.PolicyReasonInvalid),
+				Message: "failed getting *v1.Secret default/example-secret set as CACertificateRef: secrets \"example-secret\" not found",
 			},
 		},
 		{
@@ -832,7 +921,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Type:    string(gatewayapi.PolicyConditionAccepted),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(gatewayapi.PolicyReasonInvalid),
-				Message: "failed getting ConfigMap default/example-configmap set as CACertificateRef: configmaps \"example-configmap\" not found",
+				Message: "failed getting *v1.ConfigMap default/example-configmap set as CACertificateRef: configmaps \"example-configmap\" not found",
 			},
 		},
 	}
@@ -860,6 +949,11 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					&gatewayapi.BackendTLSPolicy{},
 					backendTLSPolicyValidationCARefConfigMapIndexKey,
 					indexBackendTLSPolicyOnValidationCACertificateConfigMapRef,
+				).
+				WithIndex(
+					&gatewayapi.BackendTLSPolicy{},
+					backendTLSPolicyValidationCARefSecretIndexKey,
+					indexBackendTLSPolicyOnValidationCACertificateSecretRef,
 				).
 				Build()
 

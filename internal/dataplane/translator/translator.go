@@ -57,6 +57,7 @@ type FeatureFlags struct {
 	// that are sharing the same combination of backends to one Kong service.
 	CombinedServicesFromDifferentHTTPRoutes bool
 	// SupportRedirectPlugin indicates whether the Kong gateway supports the `redirect` plugin.
+	// This is supported starting with Kong 3.9.
 	// If `redirect` plugin is supported, we will translate the `requestRedirect` filter to `redirect` plugin
 	// so preserving paths of request in the redirect response can be supported.
 	SupportRedirectPlugin bool

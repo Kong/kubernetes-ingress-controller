@@ -1233,7 +1233,6 @@ func generateRequestRedirectUsingRedirectKongPlugin(
 	} else {
 		location = path
 	}
-	fmt.Println("==== ", location)
 	redirectPlugin.Config["location"] = kong.String(location)
 	redirectPlugin.Config["keep_incoming_path"] = kong.Bool(preservePath)
 

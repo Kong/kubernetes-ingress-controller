@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
@@ -238,21 +240,29 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 
 	var invalidMessages []string
 	for _, caCert := range policy.Spec.Validation.CACertificateRefs {
-		if (caCert.Group != "core" && caCert.Group != "") || caCert.Kind != "ConfigMap" {
-			invalidMessages = append(invalidMessages, "CACertificateRefs must reference ConfigMaps in the core group")
+		if (caCert.Group != "core" && caCert.Group != "") || (caCert.Kind != ctrlref.KindConfigMap && caCert.Kind != ctrlref.KindSecret) {
+			invalidMessages = append(invalidMessages, "CACertificateRefs must reference ConfigMaps or Secrets in the core group")
 			break
 		}
 
 		var (
-			cm          corev1.ConfigMap
-			configMapNN = k8stypes.NamespacedName{
+			caCertObj   client.Object
+			caCertObjNN = k8stypes.NamespacedName{
 				Namespace: policy.Namespace,
 				Name:      string(caCert.Name),
 			}
 		)
-		if err := r.Get(ctx, configMapNN, &cm); err != nil {
+		// No need for default in this switch as if the Kind is different from Secret or ConfigMap, we never get here.
+		switch caCert.Kind {
+		case ctrlref.KindSecret:
+			caCertObj = &corev1.Secret{}
+		case ctrlref.KindConfigMap:
+			caCertObj = &corev1.ConfigMap{}
+		}
+
+		if err := r.Get(ctx, caCertObjNN, caCertObj); err != nil {
 			invalidMessages = append(invalidMessages,
-				fmt.Sprintf("failed getting ConfigMap %s set as CACertificateRef: %s", configMapNN, err),
+				fmt.Sprintf("failed getting %s %s set as CACertificateRef: %s", reflect.TypeOf(caCertObj).String(), caCertObjNN, err),
 			)
 			break
 		}
@@ -272,11 +282,13 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 	return acceptedCondition, nil
 }
 
-// list namespaced names of configmaps referred by the gateway.
-func listConfigMapNamesReferredByBackendTLSPolicy(policy *gatewayapi.BackendTLSPolicy) map[k8stypes.NamespacedName]struct{} {
-	// no need to check group and kind, as if they were different from core/Configmap, the policy would have been marked as invalid.
+// list namespaced names of configmaps or secrets referred by the gateway.
+func listCaCertNamespacedNamesReferredByBackendTLSPolicy(policy *gatewayapi.BackendTLSPolicy, caCertKind gatewayapi.Kind) map[k8stypes.NamespacedName]struct{} {
 	nsNames := make(map[k8stypes.NamespacedName]struct{}, len(policy.Spec.Validation.CACertificateRefs))
 	for _, certRef := range policy.Spec.Validation.CACertificateRefs {
+		if certRef.Kind != caCertKind {
+			continue
+		}
 		nsName := k8stypes.NamespacedName{
 			Namespace: policy.Namespace,
 			Name:      string(certRef.Name),

@@ -816,6 +816,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
+	case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
+		return &corev1.ConfigMap{}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Discovery APIs
 	// ----------------------------------------------------------------------------

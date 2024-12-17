@@ -858,8 +858,8 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				).
 				WithIndex(
 					&gatewayapi.BackendTLSPolicy{},
-					backendTLSPolicyValidationCARefIndexKey,
-					indexBackendTLSPolicyOnValidationCACertificateRef,
+					backendTLSPolicyValidationCARefConfigMapIndexKey,
+					indexBackendTLSPolicyOnValidationCACertificateConfigMapRef,
 				).
 				Build()
 

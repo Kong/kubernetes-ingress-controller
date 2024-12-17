@@ -204,7 +204,6 @@ Adding a new version? You'll need three changes:
 - There is no redundant space in header `Location` when `HTTPRoute` with
   requestRedirect filter is used.
   [#6855](https://github.com/Kong/kubernetes-ingress-controller/pull/6855)
-  
 
 ### Added
 

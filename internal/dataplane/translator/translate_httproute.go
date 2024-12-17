@@ -76,12 +76,16 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 // When the feature flag ExpressionRoutes is set to true, expression based Kong routes will be translated from matches of HTTPRoutes.
 // Otherwise, traditional Kong routes are translated.
 func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
+	translateOptions := subtranslator.TranslateHTTPRouteToKongstateServiceOptions{
+		CombinedServicesFromDifferentHTTPRoutes: t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
+		ExpressionRoutes:                        t.featureFlags.ExpressionRoutes,
+		SupportRedirectPlugin:                   t.featureFlags.SupportRedirectPlugin,
+	}
 	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
 		t.logger,
 		t.storer,
 		httpRoutes,
-		t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
-		t.featureFlags.ExpressionRoutes,
+		translateOptions,
 	)
 	for serviceName, service := range translationResult.ServiceNameToKongstateService {
 		result.ServiceNameToServices[serviceName] = service
@@ -133,14 +137,14 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
 	translation subtranslator.KongRouteTranslation,
-	expressionRoutes bool,
+	options subtranslator.TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	// Gather the k8s object information and hostnames from the HTTPRoute.
 	objectInfo := util.FromK8sObject(httproute)
 	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(translation.OptionalNamedRouteRules...)...)
 
 	// translate to expression based routes when expressionRoutes is enabled.
-	if expressionRoutes {
+	if options.ExpressionRoutes {
 		// get the hostnames from the HTTPRoute
 		hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
 		return subtranslator.GenerateKongExpressionRoutesFromHTTPRouteMatches(
@@ -148,6 +152,7 @@ func GenerateKongRouteFromTranslation(
 			objectInfo,
 			hostnames,
 			tags,
+			options.SupportRedirectPlugin,
 		)
 	}
 
@@ -160,5 +165,6 @@ func GenerateKongRouteFromTranslation(
 		objectInfo,
 		hostnames,
 		tags,
+		options,
 	)
 }

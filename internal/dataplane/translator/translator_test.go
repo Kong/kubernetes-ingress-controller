@@ -4749,12 +4749,12 @@ func TestNewFeatureFlags(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		featureGates      map[string]bool
-		routerFlavor      dpconf.RouterFlavor
-		updateStatusFlag  bool
-		enterpriseEdition bool
-
-		expectedFeatureFlags FeatureFlags
+		featureGates          map[string]bool
+		routerFlavor          dpconf.RouterFlavor
+		updateStatusFlag      bool
+		enterpriseEdition     bool
+		supportRedirectPlugin bool
+		expectedFeatureFlags  FeatureFlags
 	}{
 		{
 			name:         "traditional compatible router and update status enabled",
@@ -4788,7 +4788,7 @@ func TestNewFeatureFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition)
+			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition, tc.supportRedirectPlugin)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 		})

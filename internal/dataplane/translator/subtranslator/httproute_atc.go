@@ -23,6 +23,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []string,
 	tags []*string,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	// initialize the route with route name, preserve_host, and tags.
 	r := kongstate.Route{
@@ -53,7 +54,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 	// if the rule has request redirect filter(s), we need to generate a route for each match to
 	// attach plugins for the filter.
 	if hasRedirectFilter {
-		return generateKongExpressionRoutesWithRequestRedirectFilter(translation, ingressObjectInfo, hostnames, tags)
+		return generateKongExpressionRoutesWithRequestRedirectFilter(translation, ingressObjectInfo, hostnames, tags, supportRedirectPlugin)
 	}
 
 	// if we do not need to generate a kong route for each match, we OR matchers from all matches together.
@@ -66,7 +67,11 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	if err := SetRoutePlugins(&r, translation.Filters, "", tags, true); err != nil {
+	setPluginsOptions := setKongRoutePluginsOptions{
+		expressionsRouterEnabled:  true,
+		redirectKongPluginEnabled: supportRedirectPlugin,
+	}
+	if err := setRoutePlugins(&r, translation.Filters, "", tags, setPluginsOptions); err != nil {
 		return nil, err
 	}
 	return []kongstate.Route{r}, nil
@@ -77,6 +82,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []string,
 	tags []*string,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	routes := make([]kongstate.Route, 0, len(translation.Matches))
 	for _, match := range translation.Matches {
@@ -105,7 +111,11 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 		if match.Path != nil && match.Path.Value != nil {
 			path = *match.Path.Value
 		}
-		if err := SetRoutePlugins(&matchRoute, translation.Filters, path, tags, true); err != nil {
+		setPluginsOptions := setKongRoutePluginsOptions{
+			expressionsRouterEnabled:  true,
+			redirectKongPluginEnabled: supportRedirectPlugin,
+		}
+		if err := setRoutePlugins(&matchRoute, translation.Filters, path, tags, setPluginsOptions); err != nil {
 			return nil, err
 		}
 		routes = append(routes, matchRoute)
@@ -545,6 +555,7 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 // based kong route with assigned priority.
 func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
+	supportRedirectPlugin bool,
 ) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
 	httproute := httpRouteMatchWithPriority.Match.Source
@@ -598,8 +609,11 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		if match.Match.Path != nil && match.Match.Path.Value != nil {
 			path = *match.Match.Path.Value
 		}
-
-		if err := SetRoutePlugins(r, rule.Filters, path, tags, true); err != nil {
+		setPluginsOptions := setKongRoutePluginsOptions{
+			expressionsRouterEnabled:  true,
+			redirectKongPluginEnabled: supportRedirectPlugin,
+		}
+		if err := setRoutePlugins(r, rule.Filters, path, tags, setPluginsOptions); err != nil {
 			return nil, err
 		}
 	}
@@ -632,6 +646,7 @@ func groupHTTPRouteMatchesWithPrioritiesByRule(
 // that are poiting to the same service to list of kongstate route with expressions.
 func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	routes := make([]kongstate.Route, 0, len(matchesWithPriorities))
 	for _, matchWithPriority := range matchesWithPriorities {
@@ -640,7 +655,7 @@ func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 		// TODO: update the algorithm to assign priorities to matches to make it possible to consolidate some matches.
 		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields:
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/6807
-		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority)
+		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, supportRedirectPlugin)
 		if err != nil {
 			return []kongstate.Route{}, err
 		}

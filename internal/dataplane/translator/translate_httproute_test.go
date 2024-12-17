@@ -2101,7 +2101,7 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 											Name: kong.String("response-transformer"),
 											Config: kong.Configuration{
 												"add": subtranslator.TransformerPluginConfig{
-													Headers: []string{"Location: http://konghq.com:80/kong"},
+													Headers: []string{"Location: http://konghq.com/kong"},
 												},
 											},
 											Tags: []*string{
@@ -2153,7 +2153,7 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 											Name: kong.String("response-transformer"),
 											Config: kong.Configuration{
 												"add": subtranslator.TransformerPluginConfig{
-													Headers: []string{"Location: http://kumahq.com:80/kuma"},
+													Headers: []string{"Location: http://kumahq.com/kuma"},
 												},
 											},
 											Tags: []*string{

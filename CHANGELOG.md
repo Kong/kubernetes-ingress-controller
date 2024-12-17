@@ -201,6 +201,10 @@ Adding a new version? You'll need three changes:
 - Fixed validation of JWT credentials using non HMAC algorithms where `secret`
   field was incorrectly required.
   [#6848](https://github.com/Kong/kubernetes-ingress-controller/pull/6848)
+- There is no redundant space in header `Location` when `HTTPRoute` with
+  requestRedirect filter is used.
+  [#6855](https://github.com/Kong/kubernetes-ingress-controller/pull/6855)
+  
 
 ### Added
 

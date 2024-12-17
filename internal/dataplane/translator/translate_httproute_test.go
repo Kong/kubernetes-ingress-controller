@@ -1052,7 +1052,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
 												"append": subtranslator.TransformerPluginConfig{
-													Headers: []string{"X-Test-Header-1:test-value-1"},
+													Headers: []subtranslator.Header{subtranslator.NewHeader("X-Test-Header-1", "test-value-1")},
 												},
 											},
 											Tags: []*string{
@@ -1092,7 +1092,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
 												"append": subtranslator.TransformerPluginConfig{
-													Headers: []string{"X-Test-Header-2:test-value-2"},
+													Headers: []subtranslator.Header{subtranslator.NewHeader("X-Test-Header-2", "test-value-2")},
 												},
 											},
 											Tags: []*string{
@@ -1476,7 +1476,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 											Name: kong.String("request-transformer"),
 											Config: kong.Configuration{
 												"append": subtranslator.TransformerPluginConfig{
-													Headers: []string{"X-Test-Header-1:test-value-1"},
+													Headers: []subtranslator.Header{subtranslator.NewHeader("X-Test-Header-1", "test-value-1")},
 												},
 											},
 											Tags: []*string{
@@ -2101,7 +2101,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 											Name: kong.String("response-transformer"),
 											Config: kong.Configuration{
 												"add": subtranslator.TransformerPluginConfig{
-													Headers: []string{"Location: http://konghq.com/kong"},
+													Headers: []subtranslator.Header{
+														subtranslator.NewHeader("Location", "http://konghq.com/kong"),
+													},
 												},
 											},
 											Tags: []*string{
@@ -2153,7 +2155,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 											Name: kong.String("response-transformer"),
 											Config: kong.Configuration{
 												"add": subtranslator.TransformerPluginConfig{
-													Headers: []string{"Location: http://kumahq.com/kuma"},
+													Headers: []subtranslator.Header{
+														subtranslator.NewHeader("Location", "http://kumahq.com/kuma"),
+													},
 												},
 											},
 											Tags: []*string{

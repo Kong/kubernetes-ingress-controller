@@ -254,10 +254,12 @@ Adding a new version? You'll need three changes:
 - Added `BackendTLSPolicy` support. The user can now reference any Kubernetes `Service`
   in the `BackendTLSPolicy` spec, and in case the service is used as a backend by
   `HTTPRoute`s that reference a Kong Gateway as parent, such Backend TLS configuration
-  is applied to the service section of the Kong configuration.
+  is applied to the service section of the Kong configuration. The `BackendTLSPolicies`
+  CA Certificates can be set in `Secret`s or `ConfigMap`s.
   [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
   [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
   [#6837](https://github.com/Kong/kubernetes-ingress-controller/pull/6837)
+  [#6853](https://github.com/Kong/kubernetes-ingress-controller/pull/6853)
 - Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
   to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
   to those having this label set to "true". This limits the amount of resources that are kept in memory.

@@ -719,8 +719,7 @@ func (s Store) ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error) {
 	err = cache.ListAll(s.stores.Secret,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*corev1.Secret)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			if p, ok := ob.(*corev1.Secret); ok {
 				secrets = append(secrets, p)
 			}
 		})
@@ -730,9 +729,7 @@ func (s Store) ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error) {
 	err = cache.ListAll(s.stores.ConfigMap,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*corev1.ConfigMap)
-			// We don't check the ingressClass here, as configmaps as CA certs are used for Gateway API BackendTLSPolicies.
-			if ok {
+			if p, ok := ob.(*corev1.ConfigMap); ok {
 				configMaps = append(configMaps, p)
 			}
 		})
@@ -816,6 +813,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
+	case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
+		return &corev1.ConfigMap{}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Discovery APIs
 	// ----------------------------------------------------------------------------

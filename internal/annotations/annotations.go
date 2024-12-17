@@ -455,13 +455,29 @@ func SetTLSVerify(anns map[string]string, value bool) {
 	anns[AnnotationPrefix+TLSVerifyKey] = strconv.FormatBool(value)
 }
 
-// SetCACertificates merge the ca-certificates secret names into the already existing CA certificates set via annotation.
-func SetCACertificates(anns map[string]string, certificates []string) {
+// SetConfigMapCACertificates merge the ca-certificates configmap names into the already existing CA certificates set via annotation.
+func SetConfigMapCACertificates(anns map[string]string, configMapCertificates []string) {
+	if len(configMapCertificates) == 0 {
+		return
+	}
 	existingCACerts := anns[AnnotationPrefix+CACertificatesConfigMapsKey]
 	if existingCACerts == "" {
-		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = strings.Join(certificates, ",")
+		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = strings.Join(configMapCertificates, ",")
 	} else {
-		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = existingCACerts + "," + strings.Join(certificates, ",")
+		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = existingCACerts + "," + strings.Join(configMapCertificates, ",")
+	}
+}
+
+// SetSecretCACertificates merge the ca-certificates secret names into the already existing CA certificates set via annotation.
+func SetSecretCACertificates(anns map[string]string, secretCertificates []string) {
+	if len(secretCertificates) == 0 {
+		return
+	}
+	existingCACerts := anns[AnnotationPrefix+CACertificatesSecretsKey]
+	if existingCACerts == "" {
+		anns[AnnotationPrefix+CACertificatesSecretsKey] = strings.Join(secretCertificates, ",")
+	} else {
+		anns[AnnotationPrefix+CACertificatesSecretsKey] = existingCACerts + "," + strings.Join(secretCertificates, ",")
 	}
 }
 

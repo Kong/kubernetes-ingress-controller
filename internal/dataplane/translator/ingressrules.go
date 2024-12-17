@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -144,9 +145,20 @@ func (ir *ingressRules) handleBackendTLSPolices(
 	annotations.SetTLSVerify(k8sService.Annotations, true)
 	annotations.SetHostHeader(k8sService.Annotations, string(policy.Spec.Validation.Hostname))
 	annotations.SetProtocol(k8sService.Annotations, "https")
-	annotations.SetCACertificates(k8sService.Annotations,
-		lo.Map(policy.Spec.Validation.CACertificateRefs, func(ref gatewayapi.LocalObjectReference, _ int) string {
-			return string(ref.Name)
+	annotations.SetConfigMapCACertificates(k8sService.Annotations,
+		lo.FilterMap(policy.Spec.Validation.CACertificateRefs, func(ref gatewayapi.LocalObjectReference, _ int) (string, bool) {
+			if ref.Kind != ctrlref.KindConfigMap {
+				return "", false
+			}
+			return string(ref.Name), true
+		}),
+	)
+	annotations.SetSecretCACertificates(k8sService.Annotations,
+		lo.FilterMap(policy.Spec.Validation.CACertificateRefs, func(ref gatewayapi.LocalObjectReference, _ int) (string, bool) {
+			if ref.Kind != ctrlref.KindSecret {
+				return "", false
+			}
+			return string(ref.Name), true
 		}),
 	)
 	if depth, ok := getTLSVerifyDepthOption(policy.Spec.Options); ok {

@@ -1143,7 +1143,8 @@ func generateKongRouteModifierFromExtensionRef(pluginNamesFromExtensionRef []str
 func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirectFilter) (string, string) {
 	// Since the `redirect` plugin requires the scheme, we do not change the logic to use `http` scheme when scheme is empty.
 	// TODO: According to the spec of gateway API, the original scheme should be kept if no scheme is given.
-	// So the logic may be changed if Kong gateway supports.
+	// So the logic may be changed if Kong gateway supports:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/6856
 	scheme := "http"
 	if modifier.Scheme != nil {
 		scheme = *modifier.Scheme

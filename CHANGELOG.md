@@ -186,6 +186,9 @@ Adding a new version? You'll need three changes:
 - Check referenced `KongCustomEntity`'s `parentRef` and verify if referenced
   `KongPlugin` or `KongClusterPlugin` exists.
   [#6791](https://github.com/Kong/kubernetes-ingress-controller/pull/6791)
+- Fixed validation of JWT credentials using non HMAC algorithms where `secret`
+  field was incorrectly required.
+  [#6848](https://github.com/Kong/kubernetes-ingress-controller/pull/6848)
 
 ### Added
 

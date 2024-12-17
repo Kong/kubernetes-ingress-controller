@@ -102,7 +102,7 @@ func TestValidateCredentials(t *testing.T) {
 					"algorithm": []byte("RS256"),
 				},
 			},
-			wantErr: fmt.Errorf("missing required field(s): rsa_public_key, key, secret"),
+			wantErr: fmt.Errorf("missing required field(s): rsa_public_key, key"),
 		},
 		{
 			name: "valid jwt credential with RS256",
@@ -117,11 +117,10 @@ func TestValidateCredentials(t *testing.T) {
 				Data: map[string][]byte{
 					"algorithm":      []byte("RS256"),
 					"key":            []byte(""),
-					"secret":         []byte(""),
 					"rsa_public_key": []byte(""),
 				},
 			},
-			wantErr: fmt.Errorf("some fields were invalid due to missing data: rsa_public_key, key, secret"),
+			wantErr: fmt.Errorf("some fields were invalid due to missing data: rsa_public_key, key"),
 		},
 		{
 			name: "invalid credential type",
@@ -183,6 +182,91 @@ func TestValidateCredentials(t *testing.T) {
 				},
 			},
 			wantErr: fmt.Errorf("some fields were invalid due to missing data: key"),
+		},
+		{
+			name: "invalid jwt credential with HS256 missing secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS256"),
+					"key":       []byte("key-name"),
+				},
+			},
+			wantErr: fmt.Errorf("missing required field(s): secret"),
+		},
+		{
+			name: "invalid jwt credential with HS384 missing secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS384"),
+					"key":       []byte("key-name"),
+				},
+			},
+			wantErr: fmt.Errorf("missing required field(s): secret"),
+		},
+		{
+			name: "invalid jwt credential with HS512 missing secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS512"),
+					"key":       []byte("key-name"),
+				},
+			},
+			wantErr: fmt.Errorf("missing required field(s): secret"),
+		},
+		{
+			name: "valid jwt credential with RS256 missing secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm":      []byte("RS256"),
+					"key":            []byte("key-name"),
+					"rsa_public_key": []byte("-----BEGIN PUBLIC KEY----- AXAXAXAAXA... -----END PUBLIC KEY-----"),
+				},
+			},
+		},
+		{
+			name: "valid jwt credential with RS512 missing secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "jwt",
+					},
+				},
+				Data: map[string][]byte{
+					"algorithm":      []byte("RS512"),
+					"key":            []byte("key-name"),
+					"rsa_public_key": []byte("-----BEGIN PUBLIC KEY----- AXAXAXAAXA... -----END PUBLIC KEY-----"),
+				},
+			},
 		},
 	}
 	for _, tt := range tests {

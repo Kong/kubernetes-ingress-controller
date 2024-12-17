@@ -1,3 +1,4 @@
+# It sets up an `/echo` HTTPRoute secured with an ACL plugin, allowing only consumers belonging to the `cg1` consumer group (`consumer2`) to access it.
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:

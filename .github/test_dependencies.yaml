@@ -3,7 +3,7 @@ e2e:
     # renovate: datasource=docker depName=kindest/node versioning=docker
     - 'v1.32.0'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.30.6'
+    - 'v1.30.8'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.29.12'
   gke:

@@ -156,6 +156,7 @@ Adding a new version? You'll need three changes:
   filter while intending to redirect the requests to HTTPS service in port 80.
   For such usage, please explicitly specify the `port` to `80` in the filter.
   [#6804](https://github.com/Kong/kubernetes-ingress-controller/pull/6804)
+- Promote `KongCustomEntity` feature gate to GA.
 
 ### Fixed
 

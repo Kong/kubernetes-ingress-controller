@@ -113,7 +113,7 @@ Adding a new version? You'll need three changes:
 - 🎓 `KongCustomEntity` API has been promoted from beta to GA.
 - 🔎 Added `/debug/config/diff-report` diagnostic endpoint. It returns the latest
   diff information for the controller's last configuration sync along with config
-  hash and sync timestamp metadata.
+  hash and sync timestamp metadata. It's only supported with Gateways running in DB mode.
 - 📊 Added the `--secret-label-selector` and `--configmap-label-selector` to
   limit the number of `Secret`s and `ConfigMap`s ingested by the controller. By
   setting this flag, the `Secret`s and `ConfigMap`s that are ingested will be limited

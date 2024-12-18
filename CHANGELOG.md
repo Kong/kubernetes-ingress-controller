@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.0](#340)
  - [3.3.1](#331)
  - [3.3.0](#330)
  - [3.2.4](#324)
@@ -99,16 +100,104 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.4.0]
 
-### Deprecated
+> Release date: 2024-12-18
 
-- CRD type bindings under `/pkg` and clientsets under `/pkg/clientset` are deprecated
-  and will be removed in the next major release. Until then, they won't be updated.
-  They were migrated to a new dedicated [repository][kconf]. If you depend on them,
-  please update your dependencies to use the new repository.
+### Highlights
 
-[kconf]: https://github.com/kong/kubernetes-configuration
+- 🎂 New LTS version.
+- 🔒 Added Upstream TLS verification, both via `Service` annotations and Gateway
+  API `BackendTLSPolicy`. By using this feature, it is now possible to set up encrypted
+  communication between Kong and the backends.
+- 🎓 `KongCustomEntity` API has been promoted from beta to GA.
+- 🔎 Added `/debug/config/diff-report` diagnostic endpoint. It returns the latest
+  diff information for the controller's last configuration sync along with config
+  hash and sync timestamp metadata.
+- 📊 Added the `--secret-label-selector` and `--configmap-label-selector` to
+  limit the number of `Secret`s and `ConfigMap`s ingested by the controller. By
+  setting this flag, the `Secret`s and `ConfigMap`s that are ingested will be limited
+  to those having the flag's value as a label set to "true". This can reduce the
+  memory usage in scenarios with a large number of big `Secret`s and `ConfigMap`s.
+
+### Added
+
+- Added Prometheus metrics `ingress_controller_configuration_push_size`
+  and `ingress_controller_fallback_configuration_push_size` to record size of
+  the config sent to a Kong DataPlane by the controller in DB-less mode.
+  [#6664](https://github.com/Kong/kubernetes-ingress-controller/pull/6664)
+- Added support for `ControlPlaneRef` in `KongConsumer`, `KongConsumerGroup`,
+  and `KongVault` reconcilers. From now, objects that have `ControlPlaneRef`
+  of type other than `kic` will be ignored by the reconcilers. KIC will still
+  reconcile objects with `ControlPlaneRef` of type `kic` or without an explicit
+  `ControlPlaneRef`.
+  [#6690](https://github.com/Kong/kubernetes-ingress-controller/pull/6690)
+- Combine Kong gateway services from rules of `HTTPRoute` sharing the same
+  backends (same combination of group, kind, namespace, name, port and weight)
+  from different `HTTPRoute` in the same namespace.
+  The feature is enabled when feature gate `CombinedServicesFromDifferentHTTPRoutes`
+  is enabled. The feature gate is disabled by default.
+  The name of translated Kong gateway service is changed to
+  `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_[next_backends]...`
+  when the feature is enabled, like:
+  `httproute.default.svc.default.svc1.80.90_default.svc2.80.10`.
+  If the calculated service name is longer than 511 characters
+  (maximum allowed by Kong or Konnect), the name will be trimmed to the format
+  with only the first backend reserved in the name:
+  `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_combined.<hash>`
+  where `<hash>` is the hash result of the calculated name, like
+  `httproute.default.svc.default.a-long-long-long-service-name.80_combined.00001111222233334444aaaabbbbcccc`.
+  [#6711](https://github.com/Kong/kubernetes-ingress-controller/pull/6711)
+  [#6766](https://github.com/Kong/kubernetes-ingress-controller/pull/6766)
+- The new tag `k8s-named-route-rule` is added to a Kong Route, in the case when
+  mapped `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `TLSRoute` or `UDPRoute` has one
+  or many route rules named (filled `spec.rules[*].name` field), those names will
+  be propagated to one or many instances of aforementioned tag.
+  [#6759](https://github.com/Kong/kubernetes-ingress-controller/pull/6759)
+  [#6780](https://github.com/Kong/kubernetes-ingress-controller/pull/6780)
+- Added `/debug/config/diff-report` diagnostic endpoint. This endpoint is
+  available in DB mode when the `--dump-config` and `--dump-sensitive-config`
+  are enabled. It returns the latest diff information for the controller's last
+  configuration sync along with config hash and sync timestamp metadata. The
+  controller maintains the last 5 diffs in cache. You can retrieve older diffs
+  by appending a `?hash=<hash>` query string argument. Available config hashes
+  and their timestamps are listed under the `available` section of the
+  response.
+  [#6131](https://github.com/Kong/kubernetes-ingress-controller/pull/6131)
+- Added schema validation for `KongCustomEntity`. Kubernetes event will be created
+  for each validation error for `KongCustomEntity` objects.
+  [#6802](https://github.com/Kong/kubernetes-ingress-controller/pull/6802)
+- Added support for upstream TLS verification with new Kubernetes `Service`
+  annotations:
+  - `konghq.com/tls-verify`: set to `true` to enable TLS verification for
+    upstream connections of a `Service`.
+  - `konghq.com/tls-verify-depth`: set to an integer to specify the maximum
+    depth of the certificate chain that will be verified.
+  - `konghq.com/ca-certificates-secrets`: set to a comma-delimited list of CA
+    certificate Secrets' names to use for verification.
+  - `konghq.com/ca-certificates-configmaps`: set to a comma-delimited list of CA
+    certificate ConfigMaps' names to use for verification.
+  [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
+- Added Support for upstream TLS verification with the Gateway API `BackendTLSPolicy`
+  API. The user can reference any Kubernetes `Service` in the `BackendTLSPolicy`
+  spec, and in case the service is used as a backend by `HTTPRoute`s that reference
+  a Kong Gateway as parent, such Backend TLS configuration is applied to the service
+  section of the Kong configuration. The `BackendTLSPolicies` CA Certificates can
+  be set in `Secret`s or `ConfigMap`s.
+  [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
+  [#6837](https://github.com/Kong/kubernetes-ingress-controller/pull/6837)
+  [#6853](https://github.com/Kong/kubernetes-ingress-controller/pull/6853)
+- Added the flag `--secret-label-selector` to set the label selector for `Secrets`
+  to ingest. By setting this flag, the secrets that are ingested will be limited
+  to those having the flag's value as a label set to "true". This can reduce the
+  memory usage in scenarios with a large number of giant secrets.
+  [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
+- Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
+  to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
+  to those having the flag's value as a label set to "true". This limits the amount
+  of resources that are kept in memory. The default value is `konghq.com/configmap`.
+  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
 
 ### Changed
 
@@ -206,81 +295,14 @@ Adding a new version? You'll need three changes:
   requestRedirect filter is used.
   [#6855](https://github.com/Kong/kubernetes-ingress-controller/pull/6855)
 
-### Added
+### Deprecated
 
-- Added Prometheus metrics `ingress_controller_configuration_push_size`
-  and `ingress_controller_fallback_configuration_push_size` to record size of
-  the config sent to a Kong DataPlane by the controller in DB-less mode.
-  [#6664](https://github.com/Kong/kubernetes-ingress-controller/pull/6664)
-- Added support for `ControlPlaneRef` in `KongConsumer`, `KongConsumerGroup`,
-  and `KongVault` reconcilers. From now, objects that have `ControlPlaneRef`
-  of type other than `kic` will be ignored by the reconcilers. KIC will still
-  reconcile objects with `ControlPlaneRef` of type `kic` or without an explicit
-  `ControlPlaneRef`.
-  [#6690](https://github.com/Kong/kubernetes-ingress-controller/pull/6690)
-- Added support for upstream TLS verification with new Kubernetes `Service`
-  annotations:
-  - `konghq.com/tls-verify`: set to `true` to enable TLS verification for
-    upstream connections of a `Service`.
-  - `konghq.com/tls-verify-depth`: set to an integer to specify the maximum
-    depth of the certificate chain that will be verified.
-  - `konghq.com/ca-certificates-secrets`: set to a comma-delimited list of CA
-    certificate Secrets' names to use for verification.
-  - `konghq.com/ca-certificates-configmaps`: set to a comma-delimited list of CA
-    certificate ConfigMaps' names to use for verification.
-  [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
-- Combine Kong gateway services from rules of `HTTPRoute` sharing the same
-  backends (same combination of group, kind, namespace, name, port and weight)
-  from different `HTTPRoute` in the same namespace.
-  The feature is enabled when feature gate `CombinedServicesFromDifferentHTTPRoutes`
-  is enabled. The feature gate is disabled by default.
-  The name of translated Kong gateway service is changed to
-  `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_[next_backends]...`
-  when the feature is enabled, like:
-  `httproute.default.svc.default.svc1.80.90_default.svc2.80.10`.
-  If the calculated service name is longer than 511 characters
-  (maximum allowed by Kong or Konnect), the name will be trimmed to the format
-  with only the first backend reserved in the name:
-  `httproute.<namespace>.svc.<backend_ns>.<backend_name>.<backend_port>.[backend_weight]_combined.<hash>`
-  where `<hash>` is the hash result of the calculated name, like
-  `httproute.default.svc.default.a-long-long-long-service-name.80_combined.00001111222233334444aaaabbbbcccc`.
-  [#6711](https://github.com/Kong/kubernetes-ingress-controller/pull/6711)
-  [#6766](https://github.com/Kong/kubernetes-ingress-controller/pull/6766)
-- The new tag `k8s-named-route-rule` is added to a Kong Route, in the case when mapped `HTTPRoute`, `GRPCRoute`,
-  `TCPRoute`, `TLSRoute` or `UDPRoute` has one or many route rules named (filled `spec.rules[*].name` field),
-  those names will be propagated to one or many instances of aforementioned tag.
-  [#6759](https://github.com/Kong/kubernetes-ingress-controller/pull/6759)
-  [#6780](https://github.com/Kong/kubernetes-ingress-controller/pull/6780)
-- Added the flag `--secret-label-selector` to set the label selector for `Secrets` to ingest.
-  By setting this flag, the secrets that are ingested will be limited to those having this label set to "true".
-  This can reduce the memory usage in scenarios with a large number of giant secrets.
-  [#6795](https://github.com/Kong/kubernetes-ingress-controller/pull/6795)
-- Added `/debug/config/diff-report` diagnostic endpoint. This endpoint is
-  available in DB mode when the `--dump-config` and `--dump-sensitive-config`
-  are enabled. It returns the latest diff information for the controller's last
-  configuration sync along with config hash and sync timestamp metadata. The
-  controller maintains the last 5 diffs in cache. You can retrieve older diffs
-  by appending a `?hash=<hash>` query string argument. Available config hashes
-  and their timestamps are listed under the `available` section of the
-  response.
-  [#6131](https://github.com/Kong/kubernetes-ingress-controller/pull/6131)
-- Added schema validation for `KongCustomEntity`. Kubernetes event will be created for
-  each validation error for `KongCustomEntity` objects.
-  [#6802](https://github.com/Kong/kubernetes-ingress-controller/pull/6802)
-- Added `BackendTLSPolicy` support. The user can now reference any Kubernetes `Service`
-  in the `BackendTLSPolicy` spec, and in case the service is used as a backend by
-  `HTTPRoute`s that reference a Kong Gateway as parent, such Backend TLS configuration
-  is applied to the service section of the Kong configuration. The `BackendTLSPolicies`
-  CA Certificates can be set in `Secret`s or `ConfigMap`s.
-  [#6712](https://github.com/Kong/kubernetes-ingress-controller/pull/6712)
-  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
-  [#6837](https://github.com/Kong/kubernetes-ingress-controller/pull/6837)
-  [#6853](https://github.com/Kong/kubernetes-ingress-controller/pull/6853)
-- Added the flag `--configmap-label-selector` to set the label selector for `ConfigMap`s
-  to ingest. By setting this flag, the `ConfigMap`s that are ingested will be limited
-  to those having this label set to "true". This limits the amount of resources that are kept in memory.
-  The default value is `konghq.com/configmap`.
-  [#6753](https://github.com/Kong/kubernetes-ingress-controller/pull/6753)
+- CRD type bindings under `/pkg` and clientsets under `/pkg/clientset` are deprecated
+  and will be removed in the next major release. Until then, they won't be updated.
+  They were migrated to a new dedicated [repository][kconf]. If you depend on them,
+  please update your dependencies to use the new repository.
+
+[kconf]: https://github.com/kong/kubernetes-configuration
 
 ## [3.3.1]
 
@@ -3932,6 +3954,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.3.1...v3.4.0
 [3.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.4...v3.3.0
 [3.2.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.2.3...v3.2.4

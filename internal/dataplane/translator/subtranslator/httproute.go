@@ -1145,14 +1145,8 @@ func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirect
 	// TODO: According to the spec of gateway API, the original scheme should be kept if no scheme is given.
 	// So the logic may be changed if Kong gateway supports:
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/6856
-	scheme := "http"
-	if modifier.Scheme != nil {
-		scheme = *modifier.Scheme
-	}
-	hostname := ""
-	if modifier.Hostname != nil {
-		hostname = string(*modifier.Hostname)
-	}
+	scheme := lo.FromPtrOr(modifier.Scheme, "http")
+	hostname := string(lo.FromPtrOr(modifier.Hostname, ""))
 	// As gateway API specified, if `Port` is nil, port should be left empty for using well-known port for the scheme.
 	// This changed the behavior in previous versions of using port `80` if the port is not given.
 	portStr := ""
@@ -1173,29 +1167,30 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		},
 	}
 
-	var locationHeader string
-
 	if modifier.Path != nil &&
 		modifier.Path.Type == gatewayapi.FullPathHTTPPathModifier &&
 		modifier.Path.ReplaceFullPath != nil {
 		// only ReplaceFullPath currently supported
 		path = *modifier.Path.ReplaceFullPath
 	}
+
+	const headerLocationKey = "Location"
+	var headerLocation Header
 	if modifier.Hostname != nil {
 		scheme, hostPort := schemeHostPortFromHTTPPathModifier(modifier)
 		location := pathlib.Join(hostPort, path)
 		if scheme != "" {
 			location = scheme + "://" + location
 		}
-		locationHeader = "Location: " + location
+		headerLocation = NewHeader(headerLocationKey, location)
 	} else {
-		locationHeader = "Location: " + path
+		headerLocation = NewHeader(headerLocationKey, path)
 	}
 
 	transformerPlugin := transformerPlugin{
 		Type: transformerPluginTypeResponse,
 		Add: TransformerPluginConfig{
-			Headers: []string{locationHeader},
+			Headers: []Header{headerLocation},
 		},
 	}
 
@@ -1277,16 +1272,32 @@ type transformerPlugin struct {
 	Remove  TransformerPluginConfig        `json:"remove,omitempty"`
 }
 
+// Header represents a header as a string "key:value" or just "key". This is the format accepted
+// by TransformerPluginConfig.
+type Header string
+
+// NewHeader creates a new Header with the given key and value in format accepted by TransformerPluginConfig.
+// For key-only header (e.g. for remove filter), set value to an empty string.
+func NewHeader(key, value string) Header {
+	// It's important to return the value in the format "key:value" (without a space after the colon)
+	// to not have a redundant whitespace (some browser does not trim it).
+	if value != "" {
+		return Header(fmt.Sprintf("%s:%s", key, value))
+	}
+	// Having only key is correct in the case of remove filter.
+	return Header(key)
+}
+
 // TransformerPluginConfig is a configuration for request-transformer and response-transformer plugins'
 // "add", "append", and "remove" fields.
 type TransformerPluginConfig struct {
-	Headers []string `json:"headers,omitempty"`
+	Headers []Header `json:"headers,omitempty"`
 }
 
 // TransformerPluginReplaceConfig is a configuration for request-transformer and response-transformer plugins'
 // "replace" field.
 type TransformerPluginReplaceConfig struct {
-	Headers []string `json:"headers,omitempty"`
+	Headers []Header `json:"headers,omitempty"`
 	URI     string   `json:"uri,omitempty"`
 }
 
@@ -1297,7 +1308,7 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	// modifier.Set is converted to a pair composed of "replace" and "add"
 	if modifier.Set != nil {
-		setModifiers := make([]string, 0, len(modifier.Set))
+		setModifiers := make([]Header, 0, len(modifier.Set))
 		for _, s := range modifier.Set {
 			setModifiers = append(setModifiers, kongHeaderFormatter(s))
 		}
@@ -1311,7 +1322,7 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	// modifier.Add is converted to "append"
 	if modifier.Add != nil {
-		appendModifiers := make([]string, 0, len(modifier.Add))
+		appendModifiers := make([]Header, 0, len(modifier.Add))
 		for _, a := range modifier.Add {
 			appendModifiers = append(appendModifiers, kongHeaderFormatter(a))
 		}
@@ -1322,15 +1333,17 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	if modifier.Remove != nil {
 		plugin.Remove = TransformerPluginConfig{
-			Headers: modifier.Remove,
+			Headers: lo.Map(modifier.Remove, func(headerKey string, _ int) Header {
+				return NewHeader(headerKey, "")
+			}),
 		}
 	}
 
 	return plugin
 }
 
-func kongHeaderFormatter(header gatewayapi.HTTPHeader) string {
-	return fmt.Sprintf("%s:%s", header.Name, header.Value)
+func kongHeaderFormatter(header gatewayapi.HTTPHeader) Header {
+	return NewHeader(string(header.Name), header.Value)
 }
 
 func generateRequestTransformerForURLRewrite(
@@ -1390,17 +1403,14 @@ func generateRequestTransformerForURLRewritePath(
 func generateRequestTransformerForURLRewriteHostname(
 	filter *gatewayapi.HTTPURLRewriteFilter,
 ) transformerPlugin {
+	hostHeader := []Header{NewHeader("host", string(*filter.Hostname))}
 	return transformerPlugin{
 		Type: transformerPluginTypeRequest,
 		Replace: TransformerPluginReplaceConfig{
-			Headers: []string{
-				fmt.Sprintf("host:%s", string(*filter.Hostname)),
-			},
+			Headers: hostHeader,
 		},
 		Add: TransformerPluginConfig{
-			Headers: []string{
-				fmt.Sprintf("host:%s", string(*filter.Hostname)),
-			},
+			Headers: hostHeader,
 		},
 	}
 }

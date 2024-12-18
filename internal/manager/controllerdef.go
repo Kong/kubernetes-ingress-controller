@@ -493,11 +493,18 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/BackendTLSPolicy"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1alpha3.GroupVersion.Group,
-					Version:  gatewayv1alpha3.GroupVersion.Version,
-					Resource: "backendtlspolicies",
-				}),
+				RequiredCRDs: append(
+					baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "httproutes",
+					},
+					schema.GroupVersionResource{
+						Group:    gatewayv1alpha3.GroupVersion.Group,
+						Version:  gatewayv1alpha3.GroupVersion.Version,
+						Resource: "backendtlspolicies",
+					}),
 				Controller: &gateway.BackendTLSPolicyReconciler{
 					Client:            mgr.GetClient(),
 					Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("BackendTLSPolicy"),

@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func int64Ptr(i int64) *int64 {
@@ -118,7 +116,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+			got := tt.in.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}

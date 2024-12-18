@@ -30,13 +30,12 @@ type ConfigSynchronizer struct {
 	logger                 logr.Logger
 	syncTicker             *time.Ticker
 	kongConfig             sendconfig.Config
-	clientsProvider        clients.AdminAPIClientsProvider
+	konnectClient          *adminapi.KonnectClient
 	prometheusMetrics      *metrics.CtrlFuncMetrics
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
 	configStatusNotifier   clients.ConfigStatusNotifier
-
-	targetContent *file.Content
+	targetContent          *file.Content
 
 	lock sync.RWMutex
 }
@@ -45,7 +44,7 @@ func NewConfigSynchronizer(
 	logger logr.Logger,
 	kongConfig sendconfig.Config,
 	configUploadPeriod time.Duration,
-	clientsProvider clients.AdminAPIClientsProvider,
+	konnectClient *adminapi.KonnectClient,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configStatusNotifier clients.ConfigStatusNotifier,
@@ -54,7 +53,7 @@ func NewConfigSynchronizer(
 		logger:                 logger,
 		syncTicker:             time.NewTicker(configUploadPeriod),
 		kongConfig:             kongConfig,
-		clientsProvider:        clientsProvider,
+		konnectClient:          konnectClient,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
@@ -96,7 +95,7 @@ func (s *ConfigSynchronizer) runKonnectUpdateServer(ctx context.Context) {
 			s.syncTicker.Stop()
 		case <-s.syncTicker.C:
 			s.logger.Info("Start uploading to Konnect")
-			client := s.clientsProvider.KonnectClient()
+			client := s.konnectClient
 			if client == nil {
 				s.logger.Info("Konnect client not ready, skipping")
 				continue

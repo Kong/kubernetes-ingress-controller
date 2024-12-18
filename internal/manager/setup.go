@@ -501,7 +501,7 @@ func setupKonnectConfigSynchronizer(
 		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
 		kongConfig,
 		configUploadPeriod,
-		clientsProvider,
+		clientsProvider.KonnectClient(),
 		updateStrategyResolver,
 		sendconfig.NewDefaultConfigurationChangeDetector(logger),
 		configStatusNotifier,

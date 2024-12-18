@@ -1,29 +1,36 @@
 package konnect
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
+
+func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
+	t.Helper()
+
+	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), &http.Client{})
+	require.NoError(t, err)
+
+	rgID := uuid.NewString()
+	return adminapi.NewKonnectClient(c, rgID, false)
+}
 
 func TestConfigSynchronizer_GetTargetContentCopy(t *testing.T) {
 	content := &file.Content{
@@ -53,146 +60,18 @@ func TestConfigSynchronizer_GetTargetContentCopy(t *testing.T) {
 	require.NotSame(t, content, copiedContent, "Copied content should not point to the same object with the original content")
 }
 
-// ----------------------------------------------------------------------------
-// Mocks: Mock interfaces to run sendconfig.PerformUpdate in tests.
-// TODO: These are (mostly) copied from internal/dataplane package, but there are also differences because we do not need so man features for the tests here.
-// Should we extract the mock interfaces for sendconfig.PerformUpdate to common packages?
-// ----------------------------------------------------------------------------
-
-// mockGatewayClientsProvider is a mock implementation of dataplane.AdminAPIClientsProvider.
-type mockGatewayClientsProvider struct {
-	gatewayClients []*adminapi.Client
-	konnectClient  *adminapi.KonnectClient
-	dbMode         dpconf.DBMode
-}
-
-func (p *mockGatewayClientsProvider) KonnectClient() *adminapi.KonnectClient {
-	return p.konnectClient
-}
-
-func (p *mockGatewayClientsProvider) GatewayClients() []*adminapi.Client {
-	return p.gatewayClients
-}
-
-func (p *mockGatewayClientsProvider) GatewayClientsToConfigure() []*adminapi.Client {
-	if p.dbMode.IsDBLessMode() {
-		return p.gatewayClients
-	}
-	if len(p.gatewayClients) == 0 {
-		return []*adminapi.Client{}
-	}
-	return p.gatewayClients[:1]
-}
-
-// mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategyResolver.
-type mockUpdateStrategyResolver struct {
-	updateCalledForURLs       []string
-	lastUpdatedContentForURLs map[string]sendconfig.ContentWithHash
-	lock                      sync.RWMutex
-}
-
-func newMockUpdateStrategyResolver() *mockUpdateStrategyResolver {
-	return &mockUpdateStrategyResolver{
-		lastUpdatedContentForURLs: map[string]sendconfig.ContentWithHash{},
-	}
-}
-
-func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(
-	c sendconfig.UpdateClient,
-	_ *diagnostics.ClientDiagnostic,
-) sendconfig.UpdateStrategy {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-
-	url := c.AdminAPIClient().BaseRootURL()
-	return &mockUpdateStrategy{onUpdate: f.updateCalledForURLCallback(url)}
-}
-
-// updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
-// That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func(sendconfig.ContentWithHash) (mo.Option[int], error) {
-	return func(content sendconfig.ContentWithHash) (mo.Option[int], error) {
-		f.lock.Lock()
-		defer f.lock.Unlock()
-
-		f.updateCalledForURLs = append(f.updateCalledForURLs, url)
-		f.lastUpdatedContentForURLs[url] = content
-		// Mock returned config size.
-		return mo.Some(22), nil
-	}
-}
-
-// getUpdateCalledForURLs returns the called URLs.
-func (f *mockUpdateStrategyResolver) getUpdateCalledForURLs() []string {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
-
-	urls := make([]string, 0, len(f.updateCalledForURLs))
-	urls = append(urls, f.updateCalledForURLs...)
-	return urls
-}
-
-func (f *mockUpdateStrategyResolver) lastUpdatedContentForURL(url string) (sendconfig.ContentWithHash, bool) {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
-	c, ok := f.lastUpdatedContentForURLs[url]
-	return c, ok
-}
-
-// mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
-type mockUpdateStrategy struct {
-	onUpdate func(content sendconfig.ContentWithHash) (mo.Option[int], error)
-}
-
-func (m *mockUpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (n mo.Option[int], err error) {
-	return m.onUpdate(targetContent)
-}
-
-func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
-	return metrics.ProtocolDBLess
-}
-
-func (m *mockUpdateStrategy) Type() string {
-	return "Mock"
-}
-
-// mockConfigurationChangeDetector is a mock implementation of sendconfig.ConfigurationChangeDetector.
-type mockConfigurationChangeDetector struct{}
-
-func (m mockConfigurationChangeDetector) HasConfigurationChanged(
-	_ context.Context, oldSHA []byte, newSHA []byte, _ *file.Content, _ sendconfig.KonnectAwareClient, _ sendconfig.StatusClient,
-) (bool, error) {
-	return !bytes.Equal(oldSHA, newSHA), nil
-}
-
-func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
-	t.Helper()
-
-	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), &http.Client{})
-	require.NoError(t, err)
-
-	rgID := uuid.NewString()
-	return adminapi.NewKonnectClient(c, rgID, false)
-}
-
-// ----------------------------------------------------------------------------
-// End of Mocks
-// ----------------------------------------------------------------------------
-
 func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 	sendConfigPeriod := 10 * time.Millisecond
 	testKonnectClient := mustSampleKonnectClient(t)
-	resolver := newMockUpdateStrategyResolver()
-
+	resolver := mocks.NewUpdateStrategyResolver()
+	log := logr.Discard()
 	s := &ConfigSynchronizer{
-		logger:     logr.Discard(),
-		syncTicker: time.NewTicker(sendConfigPeriod),
-		clientsProvider: &mockGatewayClientsProvider{
-			konnectClient: testKonnectClient,
-		},
+		logger:                 logr.Discard(),
+		syncTicker:             time.NewTicker(sendConfigPeriod),
+		konnectClient:          testKonnectClient,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: resolver,
-		configChangeDetector:   mockConfigurationChangeDetector{},
+		configChangeDetector:   sendconfig.NewDefaultConfigurationChangeDetector(log),
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 	}
 
@@ -202,7 +81,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 
 	t.Logf("Verifying that no URL are updated when no configuration received")
 	require.Never(t, func() bool {
-		return len(resolver.getUpdateCalledForURLs()) != 0
+		return len(resolver.GetUpdateCalledForURLs()) != 0
 	}, 10*sendConfigPeriod, sendConfigPeriod, "Should not update any URL when no configuration received")
 
 	t.Logf("Verifying that the new config updated when received")
@@ -226,24 +105,20 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		},
 	}
 	s.SetTargetContent(content)
-	require.Eventually(t, func() bool {
-		urls := resolver.getUpdateCalledForURLs()
-		if len(urls) != 1 {
-			return false
-		}
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		urls := resolver.GetUpdateCalledForURLs()
+		require.Len(t, urls, 1, "should update only one URL (Konnect)")
 		url := urls[0]
-		contentWithHash, ok := resolver.lastUpdatedContentForURL(url)
-		if !ok {
-			return false
-		}
-		return assert.ObjectsAreEqual(content, contentWithHash.Content)
-	}, 10*sendConfigPeriod, sendConfigPeriod, "Should send expected configuration in time after received configuration")
+		contentWithHash, ok := resolver.LastUpdatedContentForURL(url)
+		require.True(t, ok, "should have last updated content for the URL")
+		require.Empty(t, cmp.Diff(content, contentWithHash.Content), "should send expected configuration")
+	}, 10*sendConfigPeriod, sendConfigPeriod)
 
 	t.Logf("Verifying that update is not called when config not changed")
-	l := len(resolver.getUpdateCalledForURLs())
+	l := len(resolver.GetUpdateCalledForURLs())
 	s.SetTargetContent(content)
 	require.Never(t, func() bool {
-		return len(resolver.getUpdateCalledForURLs()) != l
+		return len(resolver.GetUpdateCalledForURLs()) != l
 	}, 10*sendConfigPeriod, sendConfigPeriod)
 
 	t.Logf("Verifying that new config are not sent after context cancelled")
@@ -262,7 +137,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 	// The latest updated content should always be the content in the previous update
 	// because it should not update new content after context cancelled.
 	require.Never(t, func() bool {
-		urls := resolver.getUpdateCalledForURLs()
+		urls := resolver.GetUpdateCalledForURLs()
 		l := len(urls)
 		if l == 0 {
 			return false
@@ -271,7 +146,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		if url != testKonnectClient.BaseRootURL() {
 			return false
 		}
-		contentWithHash, ok := resolver.lastUpdatedContentForURL(url)
+		contentWithHash, ok := resolver.LastUpdatedContentForURL(url)
 		if !ok {
 			return false
 		}

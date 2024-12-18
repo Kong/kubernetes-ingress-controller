@@ -36,7 +36,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -152,7 +151,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
-			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+			got := *tt.in.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -195,7 +194,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ret := ks.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+		ret := ks.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 		_ = ret
 	}
 }

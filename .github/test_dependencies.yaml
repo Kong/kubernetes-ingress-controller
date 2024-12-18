@@ -16,7 +16,7 @@ e2e:
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.31.4'
+      kind: 'v1.32.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.24.1'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
@@ -416,10 +414,6 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 // TLSRouteReconciler - Status Helpers
 // -----------------------------------------------------------------------------
 
-// tlsrouteParentKind indicates the only object KIND that this TLSRoute
-// implementation supports for route object parent references.
-var tlsrouteParentKind = "Gateway"
-
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given TLSRoute and ensures that the status
 // for the TLSRoute is updated appropriately.
@@ -428,70 +422,13 @@ var tlsrouteParentKind = "Gateway"
 func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(
 	ctx context.Context, tlsroute *gatewayapi.TLSRoute, gateways ...supportedGatewayWithCondition,
 ) (bool, ctrl.Result, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(tlsroute, tlsroute.Status.Parents)
+	parentStatuses, statusChangesWereMade := parentStatusesForRoute(
+		tlsroute,
+		tlsroute.Status.Parents,
+		gateways...,
+	)
 
-	// overlay the parent ref statuses for all new gateway references
-	statusChangesWereMade := false
-	for _, gateway := range gateways {
-		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayapi.RouteParentStatus{
-			ParentRef: gatewayapi.ParentReference{
-				Group:     (*gatewayapi.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindPtr(tlsrouteParentKind),
-				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayapi.ObjectName(gateway.gateway.Name),
-			},
-			ControllerName: GetControllerName(),
-			Conditions: []metav1.Condition{{
-				Type:               string(gatewayapi.RouteConditionAccepted),
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: tlsroute.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.RouteReasonAccepted),
-			}},
-		}
-
-		if gateway.listenerName != "" {
-			sectionName := gatewayapi.SectionName(gateway.listenerName)
-			gatewayParentStatus.ParentRef.SectionName = &sectionName
-		}
-
-		// if the reference already exists and doesn't require any changes
-		// then just leave it alone.
-		parentRefKey := gateway.gateway.Namespace + "/" + gateway.gateway.Name
-		if existingGatewayParentStatus, exists := parentStatuses[parentRefKey]; exists {
-			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
-			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
-				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
-				lo.ContainsBy(existingGatewayParentStatus.Conditions, func(condition metav1.Condition) bool {
-					return sameCondition(gatewayParentStatus.Conditions[0], condition)
-				}) {
-				continue
-			}
-		}
-
-		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[parentRefKey] = gatewayParentStatus
-		statusChangesWereMade = true
-	}
-
-	// initialize "programmed" condition to Unknown.
-	// do not update the condition If a "Programmed" condition is already present.
-	programmedConditionChanged := false
-	programmedConditionUnknown := metav1.Condition{
-		Type:               ConditionTypeProgrammed,
-		Status:             metav1.ConditionUnknown,
-		Reason:             string(ConditionReasonProgrammedUnknown),
-		ObservedGeneration: tlsroute.Generation,
-		LastTransitionTime: metav1.Now(),
-	}
-	for _, parentStatus := range parentStatuses {
-		if !parentStatusHasProgrammedCondition(parentStatus) {
-			programmedConditionChanged = true
-			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
-		}
-	}
+	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(tlsroute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
 	if !statusChangesWereMade && !programmedConditionChanged {

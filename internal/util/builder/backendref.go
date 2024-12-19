@@ -19,7 +19,7 @@ func NewBackendRef(name string) *BackendRefBuilder {
 		backendRef: gatewayapi.BackendRef{
 			BackendObjectReference: gatewayapi.BackendObjectReference{
 				Name: gatewayapi.ObjectName(name),
-				Kind: util.StringToGatewayAPIKindV1Alpha2Ptr("Service"), // default value
+				Kind: util.StringToGatewayAPIKindPtr("Service"), // default value
 			},
 		},
 	}

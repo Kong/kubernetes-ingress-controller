@@ -43,10 +43,10 @@ func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, erro
 func metricsAccessFilterFromFlagValue(flagValue string) (cfgtypes.MetricsAccessFilter, error) {
 	switch flagValue {
 	case string(cfgtypes.MetricsAccessFilterOff), string(cfgtypes.MetricsAccessFilterRBAC):
+		return cfgtypes.MetricsAccessFilter(flagValue), nil
 	default:
 		return "", fmt.Errorf("unsupported metrics filter %s", flagValue)
 	}
-	return cfgtypes.MetricsAccessFilter(flagValue), nil
 }
 
 func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {

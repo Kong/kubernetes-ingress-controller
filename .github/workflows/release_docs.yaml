@@ -74,6 +74,6 @@ jobs:
           delete-branch: true
           draft: true
           labels: |
-            Kubernetes Team
+            team-k8s
             review:autodoc
           body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

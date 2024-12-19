@@ -2,11 +2,14 @@ package gateway
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // getParentStatuses creates a parent status map for the provided route given the
@@ -41,12 +44,8 @@ func routeParentStatusKey[routeT gatewayapi.RouteT](
 	}
 
 	switch any(route).(type) {
-	case *gatewayapi.HTTPRoute:
-		return fmt.Sprintf("%s/%s/%s",
-			namespace,
-			parentRef.GetName(),
-			parentRef.GetSectionName().OrEmpty())
-	case *gatewayapi.GRPCRoute:
+	case *gatewayapi.HTTPRoute,
+		*gatewayapi.GRPCRoute:
 		return fmt.Sprintf("%s/%s/%s",
 			namespace,
 			parentRef.GetName(),
@@ -125,4 +124,112 @@ func setRouteStatusParents[T gatewayapi.RouteT](route T, parents []gatewayapi.Ro
 	case *gatewayapi.GRPCRoute:
 		r.Status.Parents = parents
 	}
+}
+
+// parentStatusesForRoute returns route parent statuses for the given route
+// and its supported gateways.
+// It returns a map of parent statuses and a boolean indicating whether any
+// changes were made.
+func parentStatusesForRoute[routeT gatewayapi.RouteT](
+	route routeT,
+	routeParentStatuses []gatewayapi.RouteParentStatus,
+	gateways ...supportedGatewayWithCondition,
+) (map[string]*gatewayapi.RouteParentStatus, bool) {
+	// map the existing parentStatues to avoid duplications
+	parentStatuses := getParentStatuses(route, routeParentStatuses)
+
+	// overlay the parent ref statuses for all new gateway references
+	statusChangesWereMade := false
+	for _, gateway := range gateways {
+
+		// build a new status for the parent Gateway
+		gatewayParentStatus := gatewayParentStatusForRoute(route, gateway, withSectionName(gateway.listenerName))
+
+		// if the reference already exists and doesn't require any changes
+		// then just leave it alone.
+		parentRefKey := routeParentStatusKey(route, gateway)
+		if existing, ok := parentStatuses[parentRefKey]; ok {
+			// check if the parentRef and controllerName are equal, and whether
+			// the new condition is present in existing conditions
+			if reflect.DeepEqual(existing.ParentRef, gatewayParentStatus.ParentRef) &&
+				existing.ControllerName == gatewayParentStatus.ControllerName &&
+				lo.ContainsBy(existing.Conditions, func(condition metav1.Condition) bool {
+					return sameCondition(gatewayParentStatus.Conditions[0], condition)
+				}) {
+				continue
+			}
+		}
+
+		// otherwise overlay the new status on top the list of parentStatuses
+		parentStatuses[parentRefKey] = gatewayParentStatus
+		statusChangesWereMade = true
+	}
+	return parentStatuses, statusChangesWereMade
+}
+
+func withSectionName(sectionName string) func(*gatewayapi.RouteParentStatus) {
+	return func(routeParentStatus *gatewayapi.RouteParentStatus) {
+		if sectionName != "" {
+			routeParentStatus.ParentRef.SectionName = (*gatewayapi.SectionName)(&sectionName)
+		}
+	}
+}
+
+func gatewayParentStatusForRoute[routeT gatewayapi.RouteT](
+	route routeT,
+	parentGateway supportedGatewayWithCondition,
+	opts ...func(*gatewayapi.RouteParentStatus),
+) *gatewayapi.RouteParentStatus {
+	parentGVK := parentGateway.gateway.GroupVersionKind()
+	if parentGVK.Kind == "" {
+		parentGVK.Kind = gatewayapi.V1GatewayTypeMeta.Kind
+	}
+	if parentGVK.Group == "" {
+		parentGVK.Group = gatewayapi.V1GatewayTypeMeta.GroupVersionKind().Group
+		parentGateway.gateway.SetGroupVersionKind(parentGVK)
+	}
+
+	var (
+		parentRef = gatewayapi.ParentReference{
+			Group:     util.StringToTypedPtr[*gatewayapi.Group](parentGateway.gateway.GroupVersionKind().Group),
+			Kind:      util.StringToTypedPtr[*gatewayapi.Kind](parentGateway.gateway.Kind),
+			Namespace: (*gatewayapi.Namespace)(&parentGateway.gateway.Namespace),
+			Name:      gatewayapi.ObjectName(parentGateway.gateway.Name),
+		}
+		routeParentStatus = &gatewayapi.RouteParentStatus{
+			ParentRef:      parentRef,
+			ControllerName: GetControllerName(),
+			Conditions: []metav1.Condition{
+				{
+					Type:               parentGateway.condition.Type,
+					Status:             parentGateway.condition.Status,
+					ObservedGeneration: route.GetGeneration(),
+					LastTransitionTime: metav1.Now(),
+					Reason:             parentGateway.condition.Reason,
+				},
+			},
+		}
+	)
+
+	for _, opt := range opts {
+		opt(routeParentStatus)
+	}
+
+	return routeParentStatus
+}
+
+func initializeParentStatusesWithProgrammedCondition[routeT gatewayapi.RouteT](
+	route routeT,
+	parentStatuses map[string]*gatewayapi.RouteParentStatus,
+) bool {
+	// do not update the condition if a "Programmed" condition is already present.
+	changed := false
+	programmedConditionUnknown := newProgrammedConditionUnknown(route)
+	for _, ps := range parentStatuses {
+		if !parentStatusHasProgrammedCondition(ps) {
+			ps.Conditions = append(ps.Conditions, programmedConditionUnknown)
+			changed = true
+		}
+	}
+	return changed
 }

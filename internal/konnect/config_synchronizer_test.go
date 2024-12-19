@@ -18,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -69,7 +68,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		logger:                 logr.Discard(),
 		syncTicker:             time.NewTicker(sendConfigPeriod),
 		konnectClient:          testKonnectClient,
-		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
+		metricsRecorder:        mocks.MetricsRecorder{},
 		updateStrategyResolver: resolver,
 		configChangeDetector:   sendconfig.NewDefaultConfigurationChangeDetector(log),
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},

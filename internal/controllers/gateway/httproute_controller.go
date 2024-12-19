@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -518,10 +517,6 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // HTTPRouteReconciler - Status Helpers
 // -----------------------------------------------------------------------------
 
-// httprouteParentKind indicates the only object KIND that this HTTPRoute
-// implementation supports for route object parent references.
-var httprouteParentKind = "Gateway"
-
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given HTTPRoute and ensures that the status
 // for the HTTPRoute is updated appropriately.
@@ -530,74 +525,18 @@ var httprouteParentKind = "Gateway"
 func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	ctx context.Context, httproute *gatewayapi.HTTPRoute, gateways ...supportedGatewayWithCondition,
 ) (bool, ctrl.Result, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
-
-	// overlay the parent ref statuses for all new gateway references
-	statusChangesWereMade := false
-	for _, gateway := range gateways {
-		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayapi.RouteParentStatus{
-			ParentRef: gatewayapi.ParentReference{
-				Group:     (*gatewayapi.Group)(&gatewayv1.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindPtr(httprouteParentKind),
-				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayapi.ObjectName(gateway.gateway.Name),
-			},
-			ControllerName: GetControllerName(),
-			Conditions: []metav1.Condition{{
-				Type:               gateway.condition.Type,
-				Status:             gateway.condition.Status,
-				ObservedGeneration: httproute.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             gateway.condition.Reason,
-			}},
-		}
-		if gateway.listenerName != "" {
-			gatewayParentStatus.ParentRef.SectionName = lo.ToPtr(gatewayapi.SectionName(gateway.listenerName))
-		}
-
-		key := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)
-
-		// if the reference already exists and doesn't require any changes
-		// then just leave it alone.
-		if existingGatewayParentStatus, exists := parentStatuses[key]; exists {
-			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
-			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
-				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
-				lo.ContainsBy(existingGatewayParentStatus.Conditions, func(condition metav1.Condition) bool {
-					return sameCondition(gatewayParentStatus.Conditions[0], condition)
-				}) {
-				continue
-			}
-		}
-
-		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[key] = gatewayParentStatus
-		statusChangesWereMade = true
-	}
+	parentStatuses, statusChangesWereMade := parentStatusesForRoute(
+		httproute,
+		httproute.Status.Parents,
+		gateways...,
+	)
 
 	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, httproute, parentStatuses)
 	if err != nil {
 		return false, ctrl.Result{}, err
 	}
 
-	// initialize "programmed" condition to Unknown.
-	// do not update the condition If a "Programmed" condition is already present.
-	programmedConditionChanged := false
-	programmedConditionUnknown := metav1.Condition{
-		Type:               ConditionTypeProgrammed,
-		Status:             metav1.ConditionUnknown,
-		Reason:             string(ConditionReasonProgrammedUnknown),
-		ObservedGeneration: httproute.Generation,
-		LastTransitionTime: metav1.Now(),
-	}
-	for _, parentStatus := range parentStatuses {
-		if !parentStatusHasProgrammedCondition(parentStatus) {
-			programmedConditionChanged = true
-			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
-		}
-	}
+	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(httproute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
 	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {

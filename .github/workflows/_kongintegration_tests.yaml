@@ -47,13 +47,24 @@ jobs:
 
       - run: echo "GOTESTSUM_JUNITFILE=kongintegration-${{ matrix.name }}-tests.xml" >> $GITHUB_ENV
 
+      - uses: 1password/load-secrets-action@v2
+        id: konnect-pat
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN_TEAM_K8S_PUBLIC }}
+          PAT: 'op://team-k8s-public/team-k8s - konnect - KIC tests PAT/password'
+
+      - if: ${{ steps.konnect-pat.outputs.PAT == '' }}
+        run: exit 1
+
       - name: run kong integration tests
         run: make test.kongintegration
         env:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
           GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
-          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
+          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ steps.konnect-pat.outputs.PAT }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_ENTERPRISE: ${{ matrix.enterprise }}
 

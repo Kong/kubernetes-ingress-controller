@@ -1,4 +1,4 @@
-package mocks
+package kongstate
 
 import "github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 

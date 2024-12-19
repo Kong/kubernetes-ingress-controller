@@ -5,8 +5,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func TestKeyAuth_SanitizedCopy(t *testing.T) {
@@ -37,7 +35,7 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+			got := *tt.in.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}

@@ -112,6 +112,14 @@
         "github.com/kong/kubernetes-configuration"
       ],
       "ignoreUnstable": false
+    },
+    {
+      "description": "Custom extractVersion for kustomize.",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "packageNames": ["kubernetes-sigs/kustomize"],
+      "extractVersion": "^kustomize\\/v(?<version>\\d+\\.\\d+\\.\\d+)$"
     }
   ]
 }

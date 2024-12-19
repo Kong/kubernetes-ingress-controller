@@ -17,6 +17,12 @@ func NewTicker() *TimeTicker {
 	}
 }
 
+func NewTickerWithDuration(d time.Duration) *TimeTicker {
+	return &TimeTicker{
+		ticker: time.NewTicker(d),
+	}
+}
+
 type TimeTicker struct {
 	ticker *time.Ticker
 }

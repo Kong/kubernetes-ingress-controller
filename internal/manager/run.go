@@ -13,6 +13,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -272,42 +273,34 @@ func Run(
 	instanceIDProvider := NewInstanceIDProvider()
 
 	if c.Konnect.ConfigSynchronizationEnabled {
-		konnectNodesAPIClient, err := nodes.NewClient(c.Konnect)
-		if err != nil {
-			return fmt.Errorf("failed creating konnect client: %w", err)
-		}
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
-		// Run the Konnect Admin API client initialization in a separate goroutine to not block while ensuring
-		// connection.
-		go setupKonnectAdminAPIClientWithClientsMgr(ctx, c.Konnect, clientsManager, setupLog)
-
-		// Set channel to send config status.
+		// Set up a config status notifier to be used by Konnect related components. Register it with the data plane
+		// client so it can send status updates to Konnect.
 		configStatusNotifier := clients.NewChannelConfigNotifier(logger)
 		dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
 
-		// Setup Konnect config synchronizer.
-		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizer(
+		// Setup Konnect ConfigSynchronizer with manager.
+		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizerWithMgr(
 			ctx,
 			mgr,
-			c.Konnect.UploadConfigPeriod,
+			c,
 			kongConfig,
-			clientsManager,
 			updateStrategyResolver,
 			configStatusNotifier,
 			metricsRecorder,
 		)
 		if err != nil {
 			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")
+		} else {
+			dataplaneClient.SetKonnectKongStateUpdater(konnectConfigSynchronizer)
 		}
-		dataplaneClient.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
 
 		// Setup Konnect NodeAgent with manager.
 		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
-			konnectNodesAPIClient,
 			configStatusNotifier,
 			clientsManager,
 			setupLog,
@@ -315,7 +308,6 @@ func Run(
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
-
 	}
 
 	// Setup and inject license getter.
@@ -413,33 +405,24 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 }
 
 // setupKonnectNodeAgentWithMgr creates and adds Konnect NodeAgent as the manager's Runnable.
-// Returns error if failed to create Konnect NodeAgent.
 func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
-	konnectNodeAPIClient *nodes.Client,
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 	instanceIDProvider *InstanceIDProvider,
 ) error {
-	var hostname string
-	nn, err := util.GetPodNN()
+	konnectNodesAPIClient, err := nodes.NewClient(c.Konnect)
 	if err != nil {
-		logger.Error(err, "Failed getting pod name and/or namespace, fallback to use hostname as node name in Konnect")
-		hostname, _ = os.Hostname()
-	} else {
-		hostname = nn.String()
-		logger.Info(fmt.Sprintf("Using %s as controller's node name in Konnect", hostname))
+		return fmt.Errorf("failed creating konnect client: %w", err)
 	}
-	version := metadata.Release
-
 	agent := konnect.NewNodeAgent(
-		hostname,
-		version,
+		resolveControllerHostnameForKonnect(logger),
+		metadata.Release,
 		c.Konnect.RefreshNodePeriod,
 		logger,
-		konnectNodeAPIClient,
+		konnectNodesAPIClient,
 		configStatusSubscriber,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
@@ -451,26 +434,22 @@ func setupKonnectNodeAgentWithMgr(
 	return nil
 }
 
-// setupKonnectAdminAPIClientWithClientsMgr initializes Konnect Admin API client and sets it to clientsManager.
-// If it fails to initialize the client, it logs the error and returns.
-func setupKonnectAdminAPIClientWithClientsMgr(
-	ctx context.Context,
-	config adminapi.KonnectConfig,
-	clientsManager *clients.AdminAPIClientsManager,
-	logger logr.Logger,
-) {
-	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectControlPlane(config)
+// resolveControllerHostnameForKonnect resolves the hostname to be used by Konnect NodeAgent. It tries to get the pod
+// name and namespace, and if it fails, it falls back to using the hostname. If that fails too, it generates a random
+// UUID.
+func resolveControllerHostnameForKonnect(logger logr.Logger) string {
+	nn, err := util.GetPodNN()
 	if err != nil {
-		logger.Error(err, "Failed creating Konnect Control Plane Admin API client, skipping synchronisation")
-		return
+		logger.Error(err, "Failed getting pod name and/or namespace, falling back to use hostname as node name in Konnect")
+		hostname, err := os.Hostname()
+		if err != nil {
+			logger.Error(err, "Failed getting hostname, falling back to random UUID as node name in Konnect")
+			return uuid.NewString()
+		}
+		return hostname
 	}
-	if err := adminapi.EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), logger); err != nil {
-		logger.Error(err, "Failed to ensure connection to Konnect Admin API, skipping synchronisation")
-		return
-	}
-
-	clientsManager.SetKonnectClient(konnectAdminAPIClient)
-	logger.Info("Initialized Konnect Admin API client")
+	logger.WithValues("hostname", nn.String()).Info("Resolved controller hostname for Konnect")
+	return nn.String()
 }
 
 type IsReady interface {

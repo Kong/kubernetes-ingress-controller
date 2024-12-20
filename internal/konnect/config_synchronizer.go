@@ -31,7 +31,7 @@ type ConfigSynchronizer struct {
 	syncTicker             *time.Ticker
 	kongConfig             sendconfig.Config
 	clientsProvider        clients.AdminAPIClientsProvider
-	prometheusMetrics      *metrics.CtrlFuncMetrics
+	metricsRecorder        metrics.Recorder
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
 	configStatusNotifier   clients.ConfigStatusNotifier
@@ -49,13 +49,14 @@ func NewConfigSynchronizer(
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configStatusNotifier clients.ConfigStatusNotifier,
+	metricsRecorder metrics.Recorder,
 ) *ConfigSynchronizer {
 	return &ConfigSynchronizer{
 		logger:                 logger,
 		syncTicker:             time.NewTicker(configUploadPeriod),
 		kongConfig:             kongConfig,
 		clientsProvider:        clientsProvider,
-		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
+		metricsRecorder:        metricsRecorder,
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 		configStatusNotifier:   configStatusNotifier,
@@ -135,7 +136,7 @@ func (s *ConfigSynchronizer) uploadConfig(ctx context.Context, client *adminapi.
 		targetContent,
 		// Konnect client does not upload custom entities.
 		sendconfig.CustomEntitiesByType{},
-		s.prometheusMetrics,
+		s.metricsRecorder,
 		s.updateStrategyResolver,
 		s.configChangeDetector,
 		nil,

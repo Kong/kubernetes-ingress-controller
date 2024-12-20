@@ -68,7 +68,22 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
+require (
+	cel.dev/expr v0.18.0 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
+	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/google/cel-go v0.22.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.31.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
+	k8s.io/apiserver v0.32.0 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
+)
 
 require (
 	cloud.google.com/go/auth v0.13.0 // indirect

@@ -85,6 +85,7 @@
 | `--kubeconfig` | `string` | Path to the kubeconfig file. |  |
 | `--log-format` | `string` | Format of logs of the controller. Allowed values are text and json. | `text` |
 | `--log-level` | `string` | Level of logging for the controller. Allowed values are trace, debug, info, and error. | `info` |
+| `--metrics-access-filter` | `string` | Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). | `"off"` |
 | `--metrics-bind-address` | `string` | The address the metric endpoint binds to. | `:10255` |
 | `--profiling` | `bool` | Enable profiling via web interface host:10256/debug/pprof/. | `false` |
 | `--proxy-sync-seconds` | `float` | Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. | `3` |

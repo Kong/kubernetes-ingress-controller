@@ -40,6 +40,15 @@ func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, erro
 	}), nil
 }
 
+func metricsAccessFilterFromFlagValue(flagValue string) (cfgtypes.MetricsAccessFilter, error) {
+	switch flagValue {
+	case string(cfgtypes.MetricsAccessFilterOff), string(cfgtypes.MetricsAccessFilterRBAC):
+		return cfgtypes.MetricsAccessFilter(flagValue), nil
+	default:
+		return "", fmt.Errorf("unsupported metrics filter %s", flagValue)
+	}
+}
+
 func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
 	if !gatewayAPIControllerNameRegex.MatchString(flagValue) {
 		return "", errors.New("the expected format is example.com/controller-name")

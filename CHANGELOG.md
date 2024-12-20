@@ -102,7 +102,19 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
-> Release date: TBD
+### Changed
+
+- Remove usage of `kube-rbac-proxy` from `default` kustomization.
+  Its functionality of can be now achieved by using the new flag `--metrics-access-filter`
+  (or a corresponding `CONTROLLER_METRICS_ACCESS_FILTER` env).
+  The default value for the flag is `off` which doesn't restrict the access to the metrics
+  endpoint. The flag can be set to `rbac` which will configure KIC to verify the token
+  sent with the request.
+  For more information on this migration please consult
+  [kubernetes-sigs/kubebuilder#3907][kubebuilder_3907].
+  [#6861](https://github.com/Kong/kubernetes-ingress-controller/pull/6861)
+
+[kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
 ### Fixed
 

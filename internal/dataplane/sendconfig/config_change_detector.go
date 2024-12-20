@@ -63,6 +63,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	// In case of Konnect, we skip further steps that are meant to detect Kong instances crash/reset
 	// that are not relevant for Konnect.
 	// We're sure that if oldSHA and newSHA are equal, we are safe to skip the update.
+	// TODO(czeslavo): split this into two separate detectors, one for Konnect and one for Kong.
 	if client.IsKonnect() {
 		return false, nil
 	}

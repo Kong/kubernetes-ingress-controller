@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -234,7 +235,7 @@ func ensureAllKongStateFieldsAreCoveredInTest(t *testing.T, testedFields []strin
 func TestGetPluginRelations(t *testing.T) {
 	type data struct {
 		inputState              KongState
-		expectedPluginRelations map[string]util.ForeignRelations
+		expectedPluginRelations map[string]rels.ForeignRelations
 	}
 	tests := []struct {
 		name string
@@ -244,7 +245,7 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "empty state",
 			data: data{
 				inputState:              KongState{},
-				expectedPluginRelations: map[string]util.ForeignRelations{},
+				expectedPluginRelations: map[string]rels.ForeignRelations{},
 			},
 		},
 		{
@@ -270,9 +271,9 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
-						"ns1:foo": {Consumer: []util.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer}}},
-						"ns1:bar": {Consumer: []util.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer}}},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {Consumer: []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer}}},
+						"ns1:bar": {Consumer: []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer}}},
 					},
 				}
 			}(),
@@ -300,9 +301,9 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
-						"ns1:foo": {ConsumerGroup: []util.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup}}},
-						"ns1:bar": {ConsumerGroup: []util.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup}}},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup}}},
+						"ns1:bar": {ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup}}},
 					},
 				}
 			}(),
@@ -332,9 +333,9 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
-						"ns1:foo": {Service: []util.FR{{Identifier: "foo-service", Referer: k8sService}}},
-						"ns1:bar": {Service: []util.FR{{Identifier: "foo-service", Referer: k8sService}}},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {Service: []rels.FR{{Identifier: "foo-service", Referer: k8sService}}},
+						"ns1:bar": {Service: []rels.FR{{Identifier: "foo-service", Referer: k8sService}}},
 					},
 				}
 			}(),
@@ -373,9 +374,9 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
-						"ns2:foo": {Route: []util.FR{{Identifier: "foo-route", Referer: &k8sIngress}}},
-						"ns2:bar": {Route: []util.FR{{Identifier: "foo-route", Referer: &k8sIngress}}},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns2:foo": {Route: []rels.FR{{Identifier: "foo-route", Referer: &k8sIngress}}},
+						"ns2:bar": {Route: []rels.FR{{Identifier: "foo-route", Referer: &k8sIngress}}},
 					},
 				}
 			}(),
@@ -426,10 +427,10 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
-						"ns2:foo": {Route: []util.FR{{Identifier: "foo-route", Referer: k8sIngress}}},
-						"ns2:bar": {Route: []util.FR{{Identifier: "foo-route", Referer: k8sIngress}, {Identifier: "bar-route", Referer: k8sIngress}}},
-						"ns2:baz": {Route: []util.FR{{Identifier: "bar-route", Referer: k8sIngress}}},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns2:foo": {Route: []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}}},
+						"ns2:bar": {Route: []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}, {Identifier: "bar-route", Referer: k8sIngress}}},
+						"ns2:baz": {Route: []rels.FR{{Identifier: "bar-route", Referer: k8sIngress}}},
 					},
 				}
 			}(),
@@ -584,33 +585,33 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
+					expectedPluginRelations: map[string]rels.ForeignRelations{
 						"ns1:foo": {
-							Consumer:      []util.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer1FooBar}},
-							ConsumerGroup: []util.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup1FooBar}},
-							Service:       []util.FR{{Identifier: "foo-service", Referer: k8sService}},
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer1FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup1FooBar}},
+							Service:       []rels.FR{{Identifier: "foo-service", Referer: k8sService}},
 						},
 						"ns1:bar": {
-							Consumer:      []util.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer1FooBar}},
-							ConsumerGroup: []util.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup1FooBar}},
-							Service:       []util.FR{{Identifier: "foo-service", Referer: k8sService}},
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer1FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup1FooBar}},
+							Service:       []rels.FR{{Identifier: "foo-service", Referer: k8sService}},
 						},
 						"ns1:foobar": {
-							Consumer: []util.FR{{Identifier: "bar-consumer", Referer: &k8sKongConsumer1Foobar}},
+							Consumer: []rels.FR{{Identifier: "bar-consumer", Referer: &k8sKongConsumer1Foobar}},
 						},
 						"ns2:foo": {
-							Consumer:      []util.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer2FooBar}},
-							ConsumerGroup: []util.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup2FooBar}},
-							Route:         []util.FR{{Identifier: "foo-route", Referer: k8sIngress}},
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer2FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup2FooBar}},
+							Route:         []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}},
 						},
 						"ns2:bar": {
-							Consumer:      []util.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer2FooBar}},
-							ConsumerGroup: []util.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup2FooBar}, {Identifier: "bar-consumer-group", Referer: &k8sKongConsumerGroup2BarBaz}},
-							Route:         []util.FR{{Identifier: "foo-route", Referer: k8sIngress}, {Identifier: "bar-route", Referer: k8sIngress}},
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer2FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup2FooBar}, {Identifier: "bar-consumer-group", Referer: &k8sKongConsumerGroup2BarBaz}},
+							Route:         []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}, {Identifier: "bar-route", Referer: k8sIngress}},
 						},
 						"ns2:baz": {
-							Route:         []util.FR{{Identifier: "bar-route", Referer: k8sIngress}},
-							ConsumerGroup: []util.FR{{Identifier: "bar-consumer-group", Referer: &k8sKongConsumerGroup2BarBaz}},
+							Route:         []rels.FR{{Identifier: "bar-route", Referer: k8sIngress}},
+							ConsumerGroup: []rels.FR{{Identifier: "bar-consumer-group", Referer: &k8sKongConsumerGroup2BarBaz}},
 						},
 					},
 				}
@@ -665,8 +666,8 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 						},
 					},
-					expectedPluginRelations: map[string]util.ForeignRelations{
-						"default:rate-limiting-1": {Consumer: []util.FR{{Identifier: "1234-1234", Referer: &k8sKongConsumer}}},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"default:rate-limiting-1": {Consumer: []rels.FR{{Identifier: "1234-1234", Referer: &k8sKongConsumer}}},
 					},
 				}
 			}(),
@@ -1405,7 +1406,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		in         []*kongv1.KongPlugin
-		pluginRels map[string]util.ForeignRelations
+		pluginRels map[string]rels.ForeignRelations
 		want       []string
 	}{
 		{
@@ -1420,11 +1421,11 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					InstanceName: "test",
 				},
 			},
-			pluginRels: map[string]util.ForeignRelations{
+			pluginRels: map[string]rels.ForeignRelations{
 				"default:foo-plugin": {
 					// this shouldn't happen in practice, as all generated route names are unique
 					// however, it's hard to find a SHA256 collision with two different inputs
-					Route: []util.FR{{Identifier: "collision"}, {Identifier: "collision"}},
+					Route: []rels.FR{{Identifier: "collision"}, {Identifier: "collision"}},
 				},
 			},
 			want: []string{
@@ -1443,10 +1444,10 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					InstanceName: "test",
 				},
 			},
-			pluginRels: map[string]util.ForeignRelations{
+			pluginRels: map[string]rels.ForeignRelations{
 				"default:foo-plugin": {
-					Route:         []util.FR{{Identifier: "route1"}, {Identifier: "route2"}, {Identifier: "route3"}},
-					ConsumerGroup: []util.FR{{Identifier: "group1"}},
+					Route:         []rels.FR{{Identifier: "route1"}, {Identifier: "route2"}, {Identifier: "route3"}},
+					ConsumerGroup: []rels.FR{{Identifier: "group1"}},
 				},
 			},
 			want: []string{
@@ -1466,10 +1467,10 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					InstanceName: "test",
 				},
 			},
-			pluginRels: map[string]util.ForeignRelations{
+			pluginRels: map[string]rels.ForeignRelations{
 				"default:foo-plugin": {
-					Route:    []util.FR{{Identifier: "route1"}, {Identifier: "route2"}, {Identifier: "route3"}},
-					Consumer: []util.FR{{Identifier: "consumer1"}},
+					Route:    []rels.FR{{Identifier: "route1"}, {Identifier: "route2"}, {Identifier: "route3"}},
+					Consumer: []rels.FR{{Identifier: "consumer1"}},
 				},
 			},
 			want: []string{
@@ -1489,10 +1490,10 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					InstanceName: "test",
 				},
 			},
-			pluginRels: map[string]util.ForeignRelations{
+			pluginRels: map[string]rels.ForeignRelations{
 				"default:foo-plugin": {
-					Service:  []util.FR{{Identifier: "service1"}, {Identifier: "service2"}, {Identifier: "service3"}},
-					Consumer: []util.FR{{Identifier: "consumer1"}},
+					Service:  []rels.FR{{Identifier: "service1"}, {Identifier: "service2"}, {Identifier: "service3"}},
+					Consumer: []rels.FR{{Identifier: "consumer1"}},
 				},
 			},
 			want: []string{

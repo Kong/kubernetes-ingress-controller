@@ -42,7 +42,7 @@ jobs:
       - name: Detect changes
         id: detect-changes
         run: |
-          if [[ `cd docs.konghq.com && git status --porcelain` ]]; then
+          if [[ $(cd docs.konghq.com && git status --porcelain) ]]; then
             echo "Changes detected in docs repo"
             echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
           else
@@ -74,6 +74,6 @@ jobs:
           delete-branch: true
           draft: true
           labels: |
-            Kubernetes Team
+            team-k8s
             review:autodoc
           body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

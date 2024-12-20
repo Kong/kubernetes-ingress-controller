@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
@@ -200,6 +201,7 @@ func Run(
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
+	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -214,6 +216,7 @@ func Run(
 		configTranslator,
 		&cache,
 		fallbackConfigGenerator,
+		metricsRecorder,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -293,6 +296,7 @@ func Run(
 			clientsManager,
 			updateStrategyResolver,
 			configStatusNotifier,
+			metricsRecorder,
 		)
 		if err != nil {
 			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")

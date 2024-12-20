@@ -105,13 +105,23 @@
     {
       "description": "Enable go dependency - github.com/kong/kubernetes-configuration - which is not handled by dependabot.",
       "matchManagers": [
-          "gomod"
+        "gomod"
       ],
       "enabled": true,
       "matchPackageNames": [
         "github.com/kong/kubernetes-configuration"
       ],
       "ignoreUnstable": false
+    },
+    {
+      "description": "Custom extractVersion for kustomize.",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "kubernetes-sigs/kustomize"
+      ],
+      "extractVersion": "^kustomize\\/v(?<version>\\d+\\.\\d+\\.\\d+)$"
     }
   ]
 }

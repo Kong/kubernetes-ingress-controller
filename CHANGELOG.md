@@ -116,6 +116,14 @@ Adding a new version? You'll need three changes:
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
+### Fixed
+
+- Custom Prometheus metrics (e.g. `ingress_controller_configuration_push_count`,
+  `ingress_controller_configuration_push_broken_resource_count`, etc.) were not
+  collected properly when the Konnect integration was enabled (only Konnect-related
+  metrics were collected, omitting regular DP metrics). This has been fixed.
+  [#6881](https://github.com/Kong/kubernetes-ingress-controller/pull/6881)
+
 ## [3.4.0]
 
 > Release date: 2024-12-18

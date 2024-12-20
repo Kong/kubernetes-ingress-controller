@@ -43,6 +43,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
@@ -510,6 +511,7 @@ func setupKonnectConfigSynchronizer(
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,
+	metricsRecorder metrics.Recorder,
 ) (*konnect.ConfigSynchronizer, error) {
 	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
 	s := konnect.NewConfigSynchronizer(
@@ -520,6 +522,7 @@ func setupKonnectConfigSynchronizer(
 		updateStrategyResolver,
 		sendconfig.NewDefaultConfigurationChangeDetector(logger),
 		configStatusNotifier,
+		metricsRecorder,
 	)
 	err := mgr.Add(s)
 	if err != nil {

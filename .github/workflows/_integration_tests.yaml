@@ -55,10 +55,12 @@ jobs:
       - id: set-versions
         name: Set versions
         run: |
-          echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          (
+            echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )"
+            echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )"
+            echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )"
+            echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )"
+          ) >> $GITHUB_OUTPUT
 
   integration-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
@@ -161,14 +163,18 @@ jobs:
           fi
 
           if [ "${{ matrix.enterprise }}" == "true" ]; then
-            echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${kong_ee_tag}" >> $GITHUB_ENV
-            echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}" >> $GITHUB_ENV
-            echo "TEST_KONG_ENTERPRISE=true" >> $GITHUB_ENV
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_ee_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}"
+              echo "TEST_KONG_ENTERPRISE=true"
+            ) >> $GITHUB_ENV
           else
-            echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${kong_oss_tag}" >> $GITHUB_ENV
-            echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}" >> $GITHUB_ENV
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_oss_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}"
+            ) >> $GITHUB_ENV
           fi
 
       - name: checkout repository

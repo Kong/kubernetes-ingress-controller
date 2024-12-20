@@ -24,10 +24,12 @@ jobs:
       - name: Add standard tags
         id: tags-standard
         run: |
-          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_OUTPUT
-          echo 'type=raw,value=nightly' >> $GITHUB_OUTPUT
-          echo "type=raw,value={{date 'YYYY-MM-DD'}}" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          (
+            echo 'TAGS_STANDARD<<EOF'
+            echo 'type=raw,value=nightly'
+            echo "type=raw,value={{date 'YYYY-MM-DD'}}"
+            echo 'EOF'
+          ) >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

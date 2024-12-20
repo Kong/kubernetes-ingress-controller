@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -381,9 +382,9 @@ type NamespacedKongPlugin struct {
 
 func (ks *KongState) getPluginRelations(
 	cacheStore store.Storer, log logr.Logger, failuresCollector *failures.ResourceFailuresCollector,
-) map[string]util.ForeignRelations {
+) map[string]rels.ForeignRelations {
 	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
-	pluginRels := map[string]util.ForeignRelations{}
+	pluginRels := map[string]rels.ForeignRelations{}
 
 	type entityRelationType int
 	const (
@@ -416,9 +417,9 @@ func (ks *KongState) getPluginRelations(
 		pluginKey := namespace + ":" + plugin.Name
 		relations, ok := pluginRels[pluginKey]
 		if !ok {
-			relations = util.ForeignRelations{}
+			relations = rels.ForeignRelations{}
 		}
-		fr := util.FR{
+		fr := rels.FR{
 			Identifier: identifier,
 			Referer:    referrer,
 		}
@@ -500,7 +501,7 @@ func buildPlugins(
 	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
-	pluginRels map[string]util.ForeignRelations,
+	pluginRels map[string]rels.ForeignRelations,
 ) []Plugin {
 	var plugins []Plugin
 
@@ -516,8 +517,8 @@ func buildPlugins(
 		}
 		// For non-existing plugin push failure K8s Events for all K8s object that reference it.
 		if !pluginFound {
-			for _, rel := range relations.GetCombinations() {
-				for _, ref := range rel.ToList() {
+			for _, relation := range relations.GetCombinations() {
+				for _, ref := range relation.ToList() {
 					if !ref.IsEmpty() {
 						failuresCollector.PushResourceFailure(
 							fmt.Sprintf("referenced KongPlugin or KongClusterPlugin %q does not exist", kongPluginName),
@@ -731,37 +732,37 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 // getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.
 // It fills the IDs of services directly referred, and IDs of services where referred routes attaches to.
 func getServiceIDFromPluginRels(
-	log logr.Logger, rels RelatedEntitiesRef, routeAttachedService map[string]*Service, workspace string,
-) []util.FR {
+	log logr.Logger, rer RelatedEntitiesRef, routeAttachedService map[string]*Service, workspace string,
+) []rels.FR {
 	// Return IDs of directly referred services.
-	if len(rels.Services) > 0 {
-		return lo.FilterMap(rels.Services, func(s *Service, _ int) (util.FR, bool) {
+	if len(rer.Services) > 0 {
+		return lo.FilterMap(rer.Services, func(s *Service, _ int) (rels.FR, bool) {
 			if err := s.FillID(workspace); err != nil {
 				log.Error(err, "failed to fill ID for service")
-				return util.FR{}, false
+				return rels.FR{}, false
 			}
-			return util.FR{Identifier: *s.ID, Referer: s.Parent}, true
+			return rels.FR{Identifier: *s.ID, Referer: s.Parent}, true
 		})
 	}
 	// Returns IDs of services where the referred routes attaches.
 	serviceIDs := lo.FilterMap(
-		rels.Routes,
-		func(r *Route, _ int) (util.FR, bool) {
+		rer.Routes,
+		func(r *Route, _ int) (rels.FR, bool) {
 			svc, ok := routeAttachedService[*r.Name]
 			if !ok {
-				return util.FR{}, false
+				return rels.FR{}, false
 			}
 			if err := svc.FillID(workspace); err != nil {
 				log.Error(err, "failed to fill ID for service")
-				return util.FR{}, false
+				return rels.FR{}, false
 			}
-			return util.FR{
+			return rels.FR{
 				Identifier: *svc.ID,
 				Referer:    svc.Parent,
 			}, true
 		},
 	)
-	return lo.UniqBy(serviceIDs, func(fr util.FR) string {
+	return lo.UniqBy(serviceIDs, func(fr rels.FR) string {
 		return fr.Identifier
 	})
 }

@@ -52,7 +52,7 @@ jobs:
 
       - name: Add major.minor tag
         id: add-major-minor-tag
-        if: ${{ steps.parse-semver-tag.outputs.prerelease == '' }}
+        if: ${{ steps.parse-semver-tag.outputs.prerelease == '' && inputs.tag != '' }}
         run: |
           echo "tag=type=raw,value=${{ steps.parse-semver-tag.outputs.major }}.${{ steps.parse-semver-tag.outputs.minor }}" >> $GITHUB_OUTPUT
 
@@ -60,7 +60,7 @@ jobs:
         id: merge-tags
         run: |
           echo "tags<<EOF" >> $GITHUB_OUTPUT
-          if [ -n "${{ steps.major-minor-tag.outputs.tag }}" ]; then
+          if [ -n "${{ steps.add-major-minor-tag.outputs.tag }}" ]; then
             echo "${{ steps.add-major-minor-tag.outputs.tag }}" >> $GITHUB_OUTPUT
           fi
           echo "${{ steps.add-standard-tag.outputs.tag }}" >> $GITHUB_OUTPUT

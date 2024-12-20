@@ -134,7 +134,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -246,7 +245,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -368,7 +366,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')

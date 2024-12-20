@@ -21,6 +21,7 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func TestConfigSynchronizer_GetTargetContentCopy(t *testing.T) {
@@ -184,7 +185,7 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 		clientsProvider: &mockGatewayClientsProvider{
 			konnectClient: testKonnectClient,
 		},
-		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
+		metricsRecorder:        mocks.MetricsRecorder{},
 		updateStrategyResolver: resolver,
 		configChangeDetector:   mockConfigurationChangeDetector{},
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},

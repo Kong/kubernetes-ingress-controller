@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"testing"
-	"time"
 
-	"github.com/avast/retry-go/v4"
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	"github.com/Kong/sdk-konnect-go/retry"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -30,53 +29,36 @@ import (
 func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
 
-	sdk := sdk.New(accessToken(), serverURLOpt())
+	sdk := sdk.New(accessToken(), serverURLOpt(), sdkkonnectgo.WithRetryConfig(retry.Config{
+		Strategy: "backoff",
+		Backoff: &retry.BackoffStrategy{
+			InitialInterval: 100,
+			MaxInterval:     2000,
+			Exponent:        1.2,
+			MaxElapsedTime:  10000,
+		},
+	}))
 
-	var cpID string
-	createRgErr := retry.Do(func() error {
-		createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
-			sdkkonnectcomp.CreateControlPlaneRequest{
-				Name:        uuid.NewString(),
-				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
-				Labels: map[string]string{
-					test.KonnectControlPlaneLabelCreatedInTests: "true",
-				},
-				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
+	createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
+		sdkkonnectcomp.CreateControlPlaneRequest{
+			Name:        uuid.NewString(),
+			Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
+			Labels: map[string]string{
+				test.KonnectControlPlaneLabelCreatedInTests: "true",
 			},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create control plane: %w", err)
-		}
-		if createResp == nil || createResp.ControlPlane == nil {
-			return fmt.Errorf("failed to create control plane: response is nil, status code %d, response: %v",
-				createResp.GetStatusCode(), createResp)
-		}
-
-		if createResp.GetStatusCode() != http.StatusCreated {
-			body, err := io.ReadAll(createResp.RawResponse.Body)
-			if err != nil {
-				body = []byte(err.Error())
-			}
-			return fmt.Errorf("failed to create RG: code %d, message %s", createResp.GetStatusCode(), body)
-		}
-		if createResp.ControlPlane == nil || createResp.ControlPlane.ID == "" {
-			return errors.New("No control plane ID in response")
-		}
-
-		cpID = createResp.ControlPlane.ID
-		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
-	require.NoError(t, createRgErr)
+			ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, createResp)
+	require.NotNil(t, createResp.ControlPlane)
+	require.Equal(t, http.StatusCreated, createResp.GetStatusCode())
+	require.NotNil(t, createResp.ControlPlane.ID)
+	cpID := createResp.ControlPlane.ID
 
 	t.Cleanup(func() {
 		t.Logf("deleting test Konnect Control Plane: %q", cpID)
-		err := retry.Do(
-			func() error {
-				_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, cpID)
-				return err
-			},
-			retry.Attempts(5), retry.Delay(time.Second),
-		)
+		_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, cpID)
 		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", cpID)
 
 		me, err := sdk.Me.GetUsersMe(ctx,

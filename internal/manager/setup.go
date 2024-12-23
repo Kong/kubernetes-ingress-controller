@@ -516,7 +516,7 @@ func setupKonnectConfigSynchronizerWithMgr(
 		konnect.ConfigSynchronizerParams{
 			Logger:                 ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
 			KongConfig:             kongConfig,
-			ConfigUploadPeriod:     cfg.Konnect.UploadConfigPeriod,
+			ConfigUploadTicker:     cfg.Konnect.UploadConfigPeriod,
 			KonnectClientFactory:   adminapi.NewKonnectClientFactory(cfg.Konnect, ctrl.LoggerFrom(ctx).WithName("konnect-client-factory")),
 			UpdateStrategyResolver: updateStrategyResolver,
 			ConfigChangeDetector: sendconfig.NewDefaultConfigurationChangeDetector(

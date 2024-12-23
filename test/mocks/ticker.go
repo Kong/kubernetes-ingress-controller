@@ -88,3 +88,7 @@ func (t *Ticker) Add(d time.Duration) {
 		t.lastTick = t.time
 	}
 }
+
+func (t *Ticker) Tick() {
+	t.Add(t.d + time.Second)
+}

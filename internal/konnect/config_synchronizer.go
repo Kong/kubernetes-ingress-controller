@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -44,15 +45,13 @@ type ConfigSynchronizer struct {
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
 	configStatusNotifier   clients.ConfigStatusNotifier
 
-	syncTicker *time.Ticker
+	syncTicker Ticker
 
 	konnectAdminClient     *adminapi.KonnectClient
 	konnectAdminClientLock sync.RWMutex
 
-	// targetConfig is the latest configuration to be uploaded to Konnect.
 	targetConfig targetConfig
-	// configLock is used to prevent data
-	configLock sync.RWMutex
+	configLock   sync.RWMutex
 }
 
 type targetConfig struct {
@@ -67,7 +66,7 @@ type targetConfig struct {
 type ConfigSynchronizerParams struct {
 	Logger                 logr.Logger
 	KongConfig             sendconfig.Config
-	ConfigUploadPeriod     time.Duration
+	ConfigUploadTicker     Ticker
 	KonnectClientFactory   ClientFactory
 	UpdateStrategyResolver sendconfig.UpdateStrategyResolver
 	ConfigChangeDetector   sendconfig.ConfigurationChangeDetector
@@ -79,7 +78,7 @@ func NewConfigSynchronizer(p ConfigSynchronizerParams) *ConfigSynchronizer {
 	return &ConfigSynchronizer{
 		logger:                 p.Logger,
 		kongConfig:             p.KongConfig,
-		syncTicker:             time.NewTicker(p.ConfigUploadPeriod),
+		syncTicker:             p.ConfigUploadTicker,
 		konnectClientFactory:   p.KonnectClientFactory,
 		updateStrategyResolver: p.UpdateStrategyResolver,
 		configChangeDetector:   p.ConfigChangeDetector,
@@ -171,7 +170,8 @@ func (s *ConfigSynchronizer) run(ctx context.Context) {
 		case <-ctx.Done():
 			s.logger.Info("Context done: shutting down the Konnect configuration synchronizer")
 			s.syncTicker.Stop()
-		case <-s.syncTicker.C:
+			return
+		case <-s.syncTicker.Channel():
 			s.handleConfigSynchronizationTick(ctx)
 		}
 	}
@@ -194,11 +194,6 @@ func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context
 		s.logger.Error(err, "Failed to upload configuration to Konnect")
 		logKonnectErrors(s.logger, err)
 	}
-
-	// Notify the status of the configuration upload to the system reporting it.
-	s.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
-		Failed: err != nil,
-	})
 }
 
 // uploadConfig sends the given configuration to Konnect.
@@ -226,9 +221,14 @@ func (s *ConfigSynchronizer) uploadConfig(
 		nil,
 		targetCfg.IsFallback,
 	)
+	noConfigAcceptedYet := newSHA == nil
+	s.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
+		Failed: err != nil || noConfigAcceptedYet,
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to perform update: %w", err)
 	}
+
 	client.SetLastConfigSHA(newSHA)
 	return nil
 }

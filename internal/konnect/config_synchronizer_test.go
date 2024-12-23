@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -40,7 +41,7 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 	s := konnect.NewConfigSynchronizer(
 		konnect.ConfigSynchronizerParams{
 			Logger:                 log,
-			ConfigUploadPeriod:     sendConfigPeriod,
+			ConfigUploadTicker:     clock.NewTickerWithDuration(sendConfigPeriod),
 			KonnectClientFactory:   &mocks.KonnectClientFactory{Client: testKonnectClient},
 			UpdateStrategyResolver: resolver,
 			ConfigChangeDetector:   sendconfig.NewDefaultConfigurationChangeDetector(log),
@@ -144,7 +145,7 @@ func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
 			KongConfig: sendconfig.Config{
 				SanitizeKonnectConfigDumps: true,
 			},
-			ConfigUploadPeriod:     sendConfigPeriod,
+			ConfigUploadTicker:     clock.NewTickerWithDuration(sendConfigPeriod),
 			KonnectClientFactory:   &mocks.KonnectClientFactory{Client: testKonnectClient},
 			UpdateStrategyResolver: resolver,
 			ConfigChangeDetector:   sendconfig.NewDefaultConfigurationChangeDetector(log),
@@ -183,4 +184,82 @@ func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
 		require.NotNil(t, cert.Key, "expected certificate key")
 		require.Equal(t, "{vault://redacted-value}", *cert.Key, "expected redacted certificate key")
 	}, 10*sendConfigPeriod, sendConfigPeriod)
+}
+
+func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
+	testCases := []struct {
+		name                string
+		returnErrorOnUpdate bool
+		expectedStatus      clients.KonnectConfigUploadStatus
+	}{
+		{
+			name:                "success",
+			returnErrorOnUpdate: false,
+			expectedStatus: clients.KonnectConfigUploadStatus{
+				Failed: false,
+			},
+		},
+		{
+			name:                "failure",
+			returnErrorOnUpdate: true,
+			expectedStatus: clients.KonnectConfigUploadStatus{
+				Failed: true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			log := logr.Discard()
+			ticker := clock.NewTickerWithDuration(10 * time.Millisecond)
+			testKonnectClient := mustSampleKonnectClient(t)
+			resolver := mocks.NewUpdateStrategyResolver()
+			if tc.returnErrorOnUpdate {
+				resolver.ReturnErrorOnUpdate(testKonnectClient.BaseRootURL())
+			}
+			configStatusNotifier := &mocks.ConfigStatusNotifier{}
+			s := konnect.NewConfigSynchronizer(
+				konnect.ConfigSynchronizerParams{
+					Logger: log,
+					KongConfig: sendconfig.Config{
+						SanitizeKonnectConfigDumps: true,
+					},
+					ConfigUploadTicker:     ticker,
+					KonnectClientFactory:   &mocks.KonnectClientFactory{Client: testKonnectClient},
+					UpdateStrategyResolver: resolver,
+					ConfigChangeDetector:   &mocks.ConfigurationChangeDetector{ConfigurationChanged: true},
+					ConfigStatusNotifier:   configStatusNotifier,
+					MetricsRecorder:        &mocks.MetricsRecorder{},
+				},
+			)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			go func() {
+				err := s.Start(ctx)
+				require.NoError(t, err)
+			}()
+
+			kongState := func() *kongstate.KongState {
+				return &kongstate.KongState{
+					Services: []kongstate.Service{
+						{
+							Service: kong.Service{
+								Name: kong.String("service1"),
+								Host: kong.String("example.com"),
+							},
+						},
+					},
+				}
+			}
+			s.UpdateKongState(ctx, kongState(), false)
+
+			if !assert.EventuallyWithT(t, func(t *assert.CollectT) {
+				status, ok := configStatusNotifier.LastKonnectConfigStatus()
+				require.True(t, ok, "should have received Konnect config status")
+				require.Equal(t, tc.expectedStatus, status, "should have received expected Konnect config status")
+			}, 10*time.Second, time.Millisecond) {
+				t.Logf("Received Konnect config statuses: %v", configStatusNotifier.KonnectConfigStatuses())
+			}
+		})
+	}
 }

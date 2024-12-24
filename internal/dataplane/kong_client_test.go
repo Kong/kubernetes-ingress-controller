@@ -1048,6 +1048,7 @@ func setupTestKongClient(
 		configBuilder,
 		&cacheStores,
 		newMockFallbackConfigGenerator(),
+		mocks.MetricsRecorder{},
 	)
 	require.NoError(t, err)
 	return kongClient
@@ -1078,6 +1079,7 @@ func attachKonnectConfigSynchronizer(
 		updateStrategyResolver,
 		configChangeDetector,
 		configStatusNotifier,
+		mocks.MetricsRecorder{},
 	)
 	kc.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
 	err := konnectConfigSynchronizer.Start(ctx)
@@ -1355,6 +1357,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 				configBuilder,
 				&originalCache,
 				fallbackConfigGenerator,
+				mocks.MetricsRecorder{},
 			)
 			require.NoError(t, err)
 
@@ -1490,6 +1493,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		configBuilder,
 		&originalCache,
 		fallbackConfigGenerator,
+		mocks.MetricsRecorder{},
 	)
 	require.NoError(t, err)
 
@@ -1636,6 +1640,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 		configBuilder,
 		&originalCache,
 		fallbackConfigGenerator,
+		mocks.MetricsRecorder{},
 	)
 	require.NoError(t, err)
 
@@ -1745,6 +1750,7 @@ func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
 				configBuilder,
 				&originalCache,
 				fallbackConfigGenerator,
+				mocks.MetricsRecorder{},
 			)
 			require.NoError(t, err)
 
@@ -1967,6 +1973,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 				configBuilder,
 				&originalCache,
 				fallbackConfigGenerator,
+				mocks.MetricsRecorder{},
 			)
 			require.NoError(t, err)
 

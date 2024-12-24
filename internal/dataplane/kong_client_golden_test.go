@@ -310,6 +310,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 		p,
 		&cacheStores,
 		fallbackConfigGenerator,
+		mocks.MetricsRecorder{},
 	)
 	require.NoError(t, err)
 

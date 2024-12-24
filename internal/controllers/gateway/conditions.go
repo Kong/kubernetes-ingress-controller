@@ -64,12 +64,9 @@ func setRouteParentStatusCondition(parentStatus *gatewayapi.RouteParentStatus, n
 }
 
 func parentStatusHasProgrammedCondition(parentStatus *gatewayapi.RouteParentStatus) bool {
-	for _, condition := range parentStatus.Conditions {
-		if condition.Type == ConditionTypeProgrammed {
-			return true
-		}
-	}
-	return false
+	return lo.ContainsBy(parentStatus.Conditions, func(c metav1.Condition) bool {
+		return c.Type == ConditionTypeProgrammed
+	})
 }
 
 // ensureParentsProgrammedCondition ensures that provided route's parent statuses
@@ -118,15 +115,10 @@ func ensureParentsProgrammedCondition[
 					Name:      gatewayapi.ObjectName(gateway.Name),
 					Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
 					Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-					SectionName: func() *gatewayapi.SectionName {
-						// We don't need to check whether the listener matches route's spec
-						// because that should already be done via getSupportedGatewayForRoute
-						// at this point.
-						if g.listenerName != "" {
-							return lo.ToPtr(gatewayapi.SectionName(g.listenerName))
-						}
-						return nil
-					}(),
+					// We don't need to check whether the listener matches route's spec
+					// because that should already be done via getSupportedGatewayForRoute
+					// at this point.
+					SectionName: lo.EmptyableToPtr(gatewayapi.SectionName(g.listenerName)),
 
 					// TODO: set port after gateway port matching implemented:
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/3016

@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func TestConfigSynchronizer_GetTargetContentCopy(t *testing.T) {
@@ -185,12 +186,12 @@ func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 	resolver := newMockUpdateStrategyResolver()
 
 	s := &ConfigSynchronizer{
-		logger:     logr.Discard(),
-		syncTicker: time.NewTicker(sendConfigPeriod),
+		logger:          logr.Discard(),
+		syncTicker:      time.NewTicker(sendConfigPeriod),
+		metricsRecorder: mocks.MetricsRecorder{},
 		clientsProvider: &mockGatewayClientsProvider{
 			konnectClient: testKonnectClient,
 		},
-		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		updateStrategyResolver: resolver,
 		configChangeDetector:   mockConfigurationChangeDetector{},
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},

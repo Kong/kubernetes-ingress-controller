@@ -141,7 +141,6 @@ func parentStatusesForRoute[routeT gatewayapi.RouteT](
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false
 	for _, gateway := range gateways {
-
 		// build a new status for the parent Gateway
 		gatewayParentStatus := gatewayParentStatusForRoute(route, gateway, withSectionName(gateway.listenerName))
 

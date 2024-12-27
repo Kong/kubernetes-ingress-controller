@@ -59,7 +59,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create a PR in docs repo
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

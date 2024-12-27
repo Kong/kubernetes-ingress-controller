@@ -62,12 +62,15 @@ func TestConfigSynchronizer_GetTargetContentCopy(t *testing.T) {
 func TestConfigSynchronizer_RunKonnectUpdateServer(t *testing.T) {
 	sendConfigPeriod := 10 * time.Millisecond
 	testKonnectClient := mustSampleKonnectClient(t)
+	clientsProvider := &mocks.MockGatewayClientsProvider{
+		KonnectClientInstance: testKonnectClient,
+	}
 	resolver := mocks.NewUpdateStrategyResolver()
 	log := logr.Discard()
 	s := &ConfigSynchronizer{
 		logger:                 logr.Discard(),
 		syncTicker:             time.NewTicker(sendConfigPeriod),
-		konnectClient:          testKonnectClient,
+		clientsProvider:        clientsProvider,
 		metricsRecorder:        mocks.MetricsRecorder{},
 		updateStrategyResolver: resolver,
 		configChangeDetector:   sendconfig.NewDefaultConfigurationChangeDetector(log),

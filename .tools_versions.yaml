@@ -23,6 +23,6 @@ staticcheck: "2024.1.1"
 # renovate: datasource=github-releases depName=go-delve/delve
 delve: "1.24.0"
 # renovate: datasource=github-releases depName=rhysd/actionlint
-actionlint: "1.7.4"
+actionlint: "1.7.5"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 shellcheck: "0.10.0"

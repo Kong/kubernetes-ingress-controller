@@ -291,8 +291,8 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 		ExpressionRoutes:      tc.featureFlags.ExpressionRoutes,
 		FallbackConfiguration: len(objectsToBeConsideredBroken) > 0,
 	}
-	clientsProvider := &mockGatewayClientsProvider{
-		gatewayClients: []*adminapi.Client{adminAPIClient},
+	clientsProvider := &mocks.MockGatewayClientsProvider{
+		GatewayClientList: []*adminapi.Client{adminAPIClient},
 	}
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(cfg, logger)
 	lastValidConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(tc.featureFlags.FillIDs, "default")

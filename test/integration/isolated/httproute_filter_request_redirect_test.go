@@ -29,11 +29,7 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("deploy Kong addon", featureSetup(
-			withKongProxyEnvVars(map[string]string{
-				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
-			}),
-		)).
+		WithSetup("deploy Kong addon", featureSetup()).
 		WithSetup("deploying a gateway and a backend `httpbin` service", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)

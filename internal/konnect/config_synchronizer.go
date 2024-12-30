@@ -30,7 +30,7 @@ type ConfigSynchronizer struct {
 	logger                 logr.Logger
 	syncTicker             *time.Ticker
 	kongConfig             sendconfig.Config
-	konnectClient          *adminapi.KonnectClient
+	clientsProvider        clients.AdminAPIClientsProvider
 	metricsRecorder        metrics.Recorder
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
@@ -44,7 +44,7 @@ func NewConfigSynchronizer(
 	logger logr.Logger,
 	kongConfig sendconfig.Config,
 	configUploadPeriod time.Duration,
-	konnectClient *adminapi.KonnectClient,
+	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configStatusNotifier clients.ConfigStatusNotifier,
@@ -54,7 +54,7 @@ func NewConfigSynchronizer(
 		logger:                 logger,
 		syncTicker:             time.NewTicker(configUploadPeriod),
 		kongConfig:             kongConfig,
-		konnectClient:          konnectClient,
+		clientsProvider:        clientsProvider,
 		metricsRecorder:        metricsRecorder,
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
@@ -96,7 +96,7 @@ func (s *ConfigSynchronizer) runKonnectUpdateServer(ctx context.Context) {
 			s.syncTicker.Stop()
 		case <-s.syncTicker.C:
 			s.logger.Info("Start uploading to Konnect")
-			client := s.konnectClient
+			client := s.clientsProvider.KonnectClient()
 			if client == nil {
 				s.logger.Info("Konnect client not ready, skipping")
 				continue

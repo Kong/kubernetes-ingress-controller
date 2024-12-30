@@ -56,6 +56,9 @@ jobs:
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_ENTERPRISE: ${{ matrix.enterprise }}
+          KONNECT_SDK_HTTP_DUMP_REQUEST: true
+          KONNECT_SDK_HTTP_DUMP_RESPONSE: true
+          KONNECT_SDK_HTTP_DUMP_RESPONSE_ERROR: true
 
       - name: collect test coverage
         uses: actions/upload-artifact@v4

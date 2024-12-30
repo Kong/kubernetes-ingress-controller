@@ -502,32 +502,33 @@ func setupLicenseGetter(
 	return nil, nil
 }
 
-// setupKonnectConfigSynchronizer sets up Konnect config sychronizer and adds it to the manager runnables.
-func setupKonnectConfigSynchronizer(
+// setupKonnectConfigSynchronizerWithMgr sets up Konnect config sychronizer and adds it to the manager runnables.
+func setupKonnectConfigSynchronizerWithMgr(
 	ctx context.Context,
 	mgr manager.Manager,
-	configUploadPeriod time.Duration,
+	cfg *Config,
 	kongConfig sendconfig.Config,
-	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,
 	metricsRecorder metrics.Recorder,
 ) (*konnect.ConfigSynchronizer, error) {
-	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
 	s := konnect.NewConfigSynchronizer(
-		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
-		kongConfig,
-		configUploadPeriod,
-		clientsProvider.KonnectClient(),
-		updateStrategyResolver,
-		sendconfig.NewDefaultConfigurationChangeDetector(logger),
-		configStatusNotifier,
-		metricsRecorder,
+		konnect.ConfigSynchronizerParams{
+			Logger:                 ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
+			KongConfig:             kongConfig,
+			ConfigUploadTicker:     cfg.Konnect.UploadConfigPeriod,
+			KonnectClientFactory:   adminapi.NewKonnectClientFactory(cfg.Konnect, ctrl.LoggerFrom(ctx).WithName("konnect-client-factory")),
+			UpdateStrategyResolver: updateStrategyResolver,
+			ConfigChangeDetector: sendconfig.NewDefaultConfigurationChangeDetector(
+				ctrl.LoggerFrom(ctx).WithName("konnect-config-change-detector"),
+			),
+			ConfigStatusNotifier: configStatusNotifier,
+			MetricsRecorder:      metricsRecorder,
+		},
 	)
 	err := mgr.Add(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not add Konnect config synchronizer to manager: %w", err)
 	}
-
 	return s, nil
 }

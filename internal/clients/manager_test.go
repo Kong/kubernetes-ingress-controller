@@ -207,12 +207,6 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
 	require.Equal(t, m.GatewayClientsCount(), 1, "expecting one initial client")
 	require.Len(t, m.GatewayClientsToConfigure(), 1, "Expecting one initial client")
-
-	konnectTestClient := &adminapi.KonnectClient{}
-	m.SetKonnectClient(konnectTestClient)
-	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
-	require.Equal(t, m.GatewayClientsCount(), 1, "konnect client should not be counted in GatewayClientsCount")
-	require.Equal(t, konnectTestClient, m.KonnectClient(), "konnect client should be returned from KonnectClient")
 }
 
 func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {

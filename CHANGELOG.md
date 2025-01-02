@@ -100,6 +100,10 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [3.4.1]
+
+> Release date: 2025-01-02
+
 ## [3.4.0]
 
 > Release date: 2024-12-18

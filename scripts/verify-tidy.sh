@@ -22,6 +22,8 @@ set -eo pipefail
 # Verify that Go is properly installed and available
 command -v go >/dev/null 2>&1 || { echo 'please install Go or use an image that has it'; exit 1; }
 
+export
+
 backup_go_mod_files()
 {
     mod=$(mktemp)

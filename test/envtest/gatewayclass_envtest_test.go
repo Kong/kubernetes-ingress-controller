@@ -318,7 +318,9 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
+			// NOTE: We do not run this test in parallel because reconcilers running in parallel can compete
+			// for the same Gateway and annotate it with konghq.com/publish-service annotation matching
+			// their own publish service.
 
 			var (
 				ctx    context.Context

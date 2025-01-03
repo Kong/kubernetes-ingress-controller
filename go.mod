@@ -22,7 +22,7 @@ go 1.23.2
 replace github.com/kong/go-kong => github.com/kong/go-kong v0.60.0
 
 require (
-	cloud.google.com/go/container v1.42.0
+	cloud.google.com/go/container v1.42.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/blang/semver/v4 v4.0.0

@@ -146,6 +146,28 @@ func (s *Service) overrideRetries(anns map[string]string) {
 	s.Retries = kong.Int(val)
 }
 
+func (s *Service) overrideTLSVerify(anns map[string]string) {
+	if s == nil {
+		return
+	}
+	tlsVerify, exists := annotations.ExtractTLSVerify(anns)
+	if !exists {
+		return
+	}
+	s.TLSVerify = kong.Bool(tlsVerify)
+}
+
+func (s *Service) overrideTLSVerifyDepth(anns map[string]string) {
+	if s == nil {
+		return
+	}
+	tlsVerifyDepth, exists := annotations.ExtractTLSVerifyDepth(anns)
+	if !exists {
+		return
+	}
+	s.TLSVerifyDepth = kong.Int(tlsVerifyDepth)
+}
+
 // overrideByAnnotation modifies the Kong service based on annotations
 // on the Kubernetes service.
 func (s *Service) overrideByAnnotation(anns map[string]string) {
@@ -158,6 +180,8 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 	s.overrideWriteTimeout(anns)
 	s.overrideReadTimeout(anns)
 	s.overrideRetries(anns)
+	s.overrideTLSVerify(anns)
+	s.overrideTLSVerifyDepth(anns)
 }
 
 // override sets Service fields using Kubernetes Service annotations.

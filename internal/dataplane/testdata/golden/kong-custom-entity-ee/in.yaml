@@ -22,7 +22,7 @@ metadata:
   uid: 39ec2b6a-f919-4308-ad2f-07511ab424dd
   annotations:
     konghq.com/strip-path: "true"
-    konghq.com/plugins: "p1"
+    konghq.com/plugins: "degraphql"
 spec:
   ingressClassName: kong
   rules:
@@ -58,7 +58,7 @@ spec:
   parentRef:
     group: configuration.konghq.com
     kind: KongPlugin
-    name: p1
+    name: degraphql
   fields:
     uri: "/contacts"
     query: "query{ contacts { name } }"

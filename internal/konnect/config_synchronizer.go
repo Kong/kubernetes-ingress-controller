@@ -30,13 +30,12 @@ type ConfigSynchronizer struct {
 	logger                 logr.Logger
 	syncTicker             *time.Ticker
 	kongConfig             sendconfig.Config
-	clientsProvider        clients.AdminAPIClientsProvider
-	prometheusMetrics      *metrics.CtrlFuncMetrics
+	konnectClient          *adminapi.KonnectClient
+	metricsRecorder        metrics.Recorder
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 	configChangeDetector   sendconfig.ConfigurationChangeDetector
 	configStatusNotifier   clients.ConfigStatusNotifier
-
-	targetContent *file.Content
+	targetContent          *file.Content
 
 	lock sync.RWMutex
 }
@@ -45,17 +44,18 @@ func NewConfigSynchronizer(
 	logger logr.Logger,
 	kongConfig sendconfig.Config,
 	configUploadPeriod time.Duration,
-	clientsProvider clients.AdminAPIClientsProvider,
+	konnectClient *adminapi.KonnectClient,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configStatusNotifier clients.ConfigStatusNotifier,
+	metricsRecorder metrics.Recorder,
 ) *ConfigSynchronizer {
 	return &ConfigSynchronizer{
 		logger:                 logger,
 		syncTicker:             time.NewTicker(configUploadPeriod),
 		kongConfig:             kongConfig,
-		clientsProvider:        clientsProvider,
-		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
+		konnectClient:          konnectClient,
+		metricsRecorder:        metricsRecorder,
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 		configStatusNotifier:   configStatusNotifier,
@@ -96,7 +96,7 @@ func (s *ConfigSynchronizer) runKonnectUpdateServer(ctx context.Context) {
 			s.syncTicker.Stop()
 		case <-s.syncTicker.C:
 			s.logger.Info("Start uploading to Konnect")
-			client := s.clientsProvider.KonnectClient()
+			client := s.konnectClient
 			if client == nil {
 				s.logger.Info("Konnect client not ready, skipping")
 				continue
@@ -135,9 +135,10 @@ func (s *ConfigSynchronizer) uploadConfig(ctx context.Context, client *adminapi.
 		targetContent,
 		// Konnect client does not upload custom entities.
 		sendconfig.CustomEntitiesByType{},
-		s.prometheusMetrics,
+		s.metricsRecorder,
 		s.updateStrategyResolver,
 		s.configChangeDetector,
+		nil,
 		isFallback,
 	)
 	if err != nil {

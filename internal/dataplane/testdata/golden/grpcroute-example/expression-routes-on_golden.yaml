@@ -1,6 +1,76 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
+  host: grpcroute.default.grpcbin.example.com.2
+  id: 3ffe4b8d-2338-5124-ae9f-8dccbb3af27b
+  name: grpcroute.default.grpcbin.example.com.2
+  plugins:
+  - config:
+      message: no existing backendRef provided
+      status_code: 500
+    name: request-termination
+  protocol: grpcs
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/grpcbin.GRPCBin/Get") && (http.host == "example.com")
+    https_redirect_status_code: 426
+    id: 22f4a0b8-634d-558a-99fb-3cf82f273636
+    name: grpcroute.default.grpcbin.example.com.2.0
+    preserve_host: true
+    priority: 26766487871743
+    tags:
+    - k8s-name:grpcbin
+    - k8s-namespace:default
+    - k8s-kind:GRPCRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:grpcbin-dummy-unary
+    - k8s-named-route-rule:grpcbin-default
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: grpcroute.default.grpcbin.example.com.1
+  id: 4d9f08e3-4be4-5155-85df-879454f38400
+  name: grpcroute.default.grpcbin.example.com.1
+  plugins:
+  - config:
+      message: no existing backendRef provided
+      status_code: 500
+    name: request-termination
+  protocol: grpcs
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/grpcbin.GRPCBin/Default") && (http.host == "example.com")
+    https_redirect_status_code: 426
+    id: c0838597-8475-5f04-b4f9-42f0bf2f40cb
+    name: grpcroute.default.grpcbin.example.com.1.0
+    preserve_host: true
+    priority: 26766487904511
+    tags:
+    - k8s-name:grpcbin
+    - k8s-namespace:default
+    - k8s-kind:GRPCRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:grpcbin-dummy-unary
+    - k8s-named-route-rule:grpcbin-default
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
   host: grpcroute.default.grpcbin.example.com.0
   id: e3750232-74d7-5496-bf14-1c266ec17184
   name: grpcroute.default.grpcbin.example.com.0
@@ -25,6 +95,8 @@ services:
     - k8s-kind:GRPCRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1
+    - k8s-named-route-rule:grpcbin-dummy-unary
+    - k8s-named-route-rule:grpcbin-default
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN
@@ -34,6 +106,24 @@ services:
   - k8s-version:v1
   write_timeout: 60000
 upstreams:
+- algorithm: round-robin
+  name: grpcroute.default.grpcbin.example.com.2
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+- algorithm: round-robin
+  name: grpcroute.default.grpcbin.example.com.1
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
 - algorithm: round-robin
   name: grpcroute.default.grpcbin.example.com.0
   tags:

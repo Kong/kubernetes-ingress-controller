@@ -189,9 +189,8 @@ func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 	}
 	var methods []*string
 	for _, method := range annMethods {
-		sanitizedMethod := strings.TrimSpace(strings.ToUpper(method))
-		if validMethods.MatchString(sanitizedMethod) {
-			methods = append(methods, kong.String(sanitizedMethod))
+		if validMethods.MatchString(method) {
+			methods = append(methods, kong.String(method))
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
@@ -214,9 +213,8 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 	}
 	var snis []*string
 	for _, sni := range annSNIs {
-		sanitizedSNI := strings.TrimSpace(sni)
-		if validSNIs.MatchString(sanitizedSNI) {
-			snis = append(snis, kong.String(sanitizedSNI))
+		if validSNIs.MatchString(sni) {
+			snis = append(snis, kong.String(sni))
 		} else {
 			// SNI is not a valid hostname
 			logger.Error(nil, "Invalid SNI", "route_name", r.Name, "sni", sni)
@@ -305,21 +303,20 @@ func (r *Route) overrideHosts(logger logr.Logger, anns map[string]string) {
 	}
 
 	// avoid allowing duplicate hosts or host-aliases from being added
-	appendIfMissing := func(hosts []*string, sanitizedHost string) []*string {
+	appendIfMissing := func(hosts []*string, host string) []*string {
 		for _, uniqueHost := range hosts {
-			if *uniqueHost == sanitizedHost {
+			if *uniqueHost == host {
 				return hosts
 			}
 		}
-		return append(hosts, kong.String(sanitizedHost))
+		return append(hosts, kong.String(host))
 	}
 
 	// Merge hosts and host-aliases
 	hosts = append(hosts, r.Hosts...)
 	for _, hostAlias := range annHostAliases {
-		sanitizedHost := strings.TrimSpace(hostAlias)
-		if validHosts.MatchString(sanitizedHost) {
-			hosts = appendIfMissing(hosts, sanitizedHost)
+		if validHosts.MatchString(hostAlias) {
+			hosts = appendIfMissing(hosts, hostAlias)
 		} else {
 			// Host Alias is not a valid hostname
 			logger.Error(nil, "Invalid host alias", "value", hostAlias, "kongroute", r.Name)

@@ -18,33 +18,34 @@ import (
 )
 
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
-// If both are not found, an error is returned.
+// If both don't exist pluginFound is set to false.
 func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
-	*kongv1.KongPlugin,
-	*kongv1.KongClusterPlugin,
-	error,
+	kp *kongv1.KongPlugin,
+	kcp *kongv1.KongClusterPlugin,
+	pluginFound bool,
+	err error,
 ) {
 	plugin, pluginErr := s.GetKongPlugin(namespace, name)
 	if pluginErr != nil {
 		if !errors.As(pluginErr, &store.NotFoundError{}) {
-			return nil, nil, fmt.Errorf("failed fetching KongPlugin: %w", pluginErr)
+			return nil, nil, false, fmt.Errorf("failed fetching KongPlugin: %w", pluginErr)
 		}
 
 		// If KongPlugin is not found, try to fetch KongClusterPlugin.
 		clusterPlugin, err := s.GetKongClusterPlugin(name)
 		if err != nil {
 			if !errors.As(err, &store.NotFoundError{}) {
-				return nil, nil, fmt.Errorf("failed fetching KongClusterPlugin: %w", err)
+				return nil, nil, false, fmt.Errorf("failed fetching KongClusterPlugin: %w", err)
 			}
 
 			// Both KongPlugin and KongClusterPlugin are not found.
-			return nil, nil, fmt.Errorf("no KongPlugin or KongClusterPlugin was found for %s/%s", namespace, name)
+			return nil, nil, false, nil
 		}
 
-		return nil, clusterPlugin, nil
+		return nil, clusterPlugin, true, nil
 	}
 
-	return plugin, nil, nil
+	return plugin, nil, true, nil
 }
 
 func kongPluginFromK8SClusterPlugin(

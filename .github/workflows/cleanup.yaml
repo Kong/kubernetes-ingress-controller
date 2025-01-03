@@ -37,4 +37,8 @@ jobs:
       - name: cleanup orphaned test clusters
         run: go run ./hack/cleanup konnect
         env:
+          # Ref: https://github.com/Kong/sdk-konnect-go/issues/20
+          KONG_CUSTOM_DOMAIN: konghq.tech
+          # NOTE: This token has to align with the domain above until the linked
+          # issue is resolved.
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}

@@ -960,10 +960,16 @@ spec:
                   to the entity(service/route/consumer) where the plugin is attached.
                 properties:
                   group:
+                    description: Group defines the API group of the referred object.
                     type: string
                   kind:
+                    description: Kind defines the kind of the referred object.
+                    enum:
+                    - KongPlugin
+                    - KongClusterPlugin
                     type: string
                   name:
+                    description: Name defines the name of the referred object.
                     type: string
                   namespace:
                     description: Empty namespace means the same namespace of the owning
@@ -981,6 +987,9 @@ spec:
             - fields
             - type
             type: object
+            x-kubernetes-validations:
+            - message: The type field cannot be one of the known Kong entity types
+              rule: '!(self.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
           status:
             description: Status stores the reconciling status of the resource.
             properties:
@@ -1065,8 +1074,6 @@ spec:
         x-kubernetes-validations:
         - message: The spec.type field is immutable
           rule: self.spec.type == oldSelf.spec.type
-        - message: The spec.type field cannot be known Kong entity types
-          rule: '!(self.spec.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
     served: true
     storage: true
     subresources:
@@ -3253,6 +3260,8 @@ spec:
                             Ports is a list of records of service ports
                             If used, every port defined in the service should have an entry in it
                           items:
+                            description: PortStatus represents the error condition
+                              of a service port
                             properties:
                               error:
                                 description: |-
@@ -3424,6 +3433,8 @@ spec:
                             Ports is a list of records of service ports
                             If used, every port defined in the service should have an entry in it
                           items:
+                            description: PortStatus represents the error condition
+                              of a service port
                             properties:
                               error:
                                 description: |-
@@ -3516,18 +3527,19 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
-  - ""
-  resources:
+  - configmaps
   - nodes
   - secrets
   verbs:
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -3653,7 +3665,10 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - namespaces
+  - secrets
+  - services
   verbs:
   - get
   - list
@@ -3661,6 +3676,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies
   - gatewayclasses
   - grpcroutes
   - httproutes
@@ -3672,6 +3688,13 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies/status
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
@@ -3862,7 +3885,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong:3.8
+        image: kong:3.9
         lifecycle:
           preStop:
             exec:
@@ -3918,7 +3941,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:3.3
+        image: kong/kubernetes-ingress-controller:3.4
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -3966,7 +3989,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong:3.8
+        image: kong:3.9
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -4055,7 +4078,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:3.8
+        image: kong:3.9
         name: kong-migrations
       initContainers:
       - command:
@@ -4068,7 +4091,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong:3.8
+        image: kong:3.9
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

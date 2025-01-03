@@ -12,12 +12,14 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/zapr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -34,7 +36,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -150,7 +152,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
-			got := *tt.in.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+			got := *tt.in.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -193,7 +195,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ret := ks.SanitizedCopy(mocks.StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
+		ret := ks.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 		_ = ret
 	}
 }
@@ -206,7 +208,7 @@ func extractNotEmptyFieldNames(s KongState) []string {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		v := reflect.ValueOf(s).Field(i)
-		if !f.Anonymous && f.IsExported() && !v.IsZero() {
+		if !f.Anonymous && f.IsExported() && v.IsValid() && !v.IsZero() {
 			fields = append(fields, f.Name)
 		}
 	}
@@ -231,377 +233,453 @@ func ensureAllKongStateFieldsAreCoveredInTest(t *testing.T, testedFields []strin
 }
 
 func TestGetPluginRelations(t *testing.T) {
-	type args struct {
-		state KongState
+	type data struct {
+		inputState              KongState
+		expectedPluginRelations map[string]rels.ForeignRelations
 	}
 	tests := []struct {
 		name string
-		args args
-		want map[string]util.ForeignRelations
+		data data
 	}{
 		{
 			name: "empty state",
-			want: map[string]util.ForeignRelations{},
+			data: data{
+				inputState:              KongState{},
+				expectedPluginRelations: map[string]rels.ForeignRelations{},
+			},
 		},
 		{
 			name: "single consumer annotation",
-			args: args{
-				state: KongState{
-					Consumers: []Consumer{
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("foo-consumer"),
-							},
-							K8sKongConsumer: kongv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-									},
+			data: func() data {
+				k8sKongConsumer := kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						Consumers: []Consumer{
+							{
+								Consumer: kong.Consumer{
+									Username: kong.String("foo-consumer"),
 								},
+								K8sKongConsumer: k8sKongConsumer,
 							},
 						},
 					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"ns1:foo": {Consumer: []string{"foo-consumer"}},
-				"ns1:bar": {Consumer: []string{"foo-consumer"}},
-			},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {Consumer: []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer}}},
+						"ns1:bar": {Consumer: []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer}}},
+					},
+				}
+			}(),
 		},
 		{
 			name: "single consumer group annotation",
-			args: args{
-				state: KongState{
-					ConsumerGroups: []ConsumerGroup{
-						{
-							ConsumerGroup: kong.ConsumerGroup{
-								Name: kong.String("foo-consumer-group"),
-							},
-							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-									},
+			data: func() data {
+				k8sKongConsumerGroup := kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						ConsumerGroups: []ConsumerGroup{
+							{
+								ConsumerGroup: kong.ConsumerGroup{
+									Name: kong.String("foo-consumer-group"),
 								},
+								K8sKongConsumerGroup: k8sKongConsumerGroup,
 							},
 						},
 					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"ns1:foo": {ConsumerGroup: []string{"foo-consumer-group"}},
-				"ns1:bar": {ConsumerGroup: []string{"foo-consumer-group"}},
-			},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup}}},
+						"ns1:bar": {ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup}}},
+					},
+				}
+			}(),
 		},
 		{
 			name: "single service annotation",
-			args: args{
-				state: KongState{
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							K8sServices: map[string]*corev1.Service{
-								"foo-service": {
-									ObjectMeta: metav1.ObjectMeta{
-										Namespace: "ns1",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-										},
-									},
+			data: func() data {
+				k8sService := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						Services: []Service{
+							{
+								Service: kong.Service{
+									Name: kong.String("foo-service"),
+								},
+								K8sServices: map[string]*corev1.Service{
+									"foo-service": k8sService,
 								},
 							},
 						},
 					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"ns1:foo": {Service: []string{"foo-service"}},
-				"ns1:bar": {Service: []string{"foo-service"}},
-			},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {Service: []rels.FR{{Identifier: "foo-service", Referer: k8sService}}},
+						"ns1:bar": {Service: []rels.FR{{Identifier: "foo-service", Referer: k8sService}}},
+					},
+				}
+			}(),
 		},
 		{
 			name: "single Ingress annotation",
-			args: args{
-				state: KongState{
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							Routes: []Route{
-								{
-									Route: kong.Route{
-										Name: kong.String("foo-route"),
-									},
-									Ingress: util.K8sObjectInfo{
-										Name:      "some-ingress",
-										Namespace: "ns2",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+			data: func() data {
+				k8sIngress := netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-ingress",
+						Namespace: "ns2",
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						Services: []Service{
+							{
+								Service: kong.Service{
+									Name: kong.String("foo-service"),
+								},
+								Routes: []Route{
+									{
+										Route: kong.Route{
+											Name: kong.String("foo-route"),
+										},
+										Ingress: util.K8sObjectInfo{
+											Name:      k8sIngress.Name,
+											Namespace: k8sIngress.Namespace,
+											Annotations: map[string]string{
+												annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+											},
 										},
 									},
 								},
 							},
 						},
 					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"ns2:foo": {Route: []string{"foo-route"}},
-				"ns2:bar": {Route: []string{"foo-route"}},
-			},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns2:foo": {Route: []rels.FR{{Identifier: "foo-route", Referer: &k8sIngress}}},
+						"ns2:bar": {Route: []rels.FR{{Identifier: "foo-route", Referer: &k8sIngress}}},
+					},
+				}
+			}(),
 		},
 		{
 			name: "multiple routes with annotation",
-			args: args{
-				state: KongState{
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							Routes: []Route{
-								{
-									Route: kong.Route{
-										Name: kong.String("foo-route"),
-									},
-									Ingress: util.K8sObjectInfo{
-										Name:      "some-ingress",
-										Namespace: "ns2",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+			data: func() data {
+				k8sIngress := &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-ingress",
+						Namespace: "ns2",
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						Services: []Service{
+							{
+								Service: kong.Service{
+									Name: kong.String("foo-service"),
+								},
+								Routes: []Route{
+									{
+										Route: kong.Route{
+											Name: kong.String("foo-route"),
+										},
+										Ingress: util.K8sObjectInfo{
+											Name:      k8sIngress.Name,
+											Namespace: k8sIngress.Namespace,
+											Annotations: map[string]string{
+												annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+											},
 										},
 									},
-								},
-								{
-									Route: kong.Route{
-										Name: kong.String("bar-route"),
-									},
-									Ingress: util.K8sObjectInfo{
-										Name:      "some-ingress",
-										Namespace: "ns2",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
+									{
+										Route: kong.Route{
+											Name: kong.String("bar-route"),
+										},
+										Ingress: util.K8sObjectInfo{
+											Name:      k8sIngress.Name,
+											Namespace: k8sIngress.Namespace,
+											Annotations: map[string]string{
+												annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
+											},
 										},
 									},
 								},
 							},
 						},
 					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"ns2:foo": {Route: []string{"foo-route"}},
-				"ns2:bar": {Route: []string{"foo-route", "bar-route"}},
-				"ns2:baz": {Route: []string{"bar-route"}},
-			},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns2:foo": {Route: []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}}},
+						"ns2:bar": {Route: []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}, {Identifier: "bar-route", Referer: k8sIngress}}},
+						"ns2:baz": {Route: []rels.FR{{Identifier: "bar-route", Referer: k8sIngress}}},
+					},
+				}
+			}(),
 		},
 		{
 			name: "multiple consumers, consumer groups, routes and services",
-			args: args{
-				state: KongState{
-					Consumers: []Consumer{
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("foo-consumer"),
-							},
-							K8sKongConsumer: kongv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-									},
+			data: func() data {
+				// Kong consumers.
+				k8sKongConsumer1Foobar := kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
+						},
+					},
+				}
+				k8sKongConsumer1FooBar := kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+				k8sKongConsumer2FooBar := kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns2",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+				// Kong consumer groups.
+				k8sKongConsumerGroup1FooBar := kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+				k8sKongConsumerGroup2FooBar := kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns2",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+
+				k8sKongConsumerGroup2BarBaz := kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns2",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
+						},
+					},
+				}
+				// Services
+				k8sService := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+						},
+					},
+				}
+				// Ingress
+				k8sIngress := &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-ingress",
+						Namespace: "ns2",
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						Consumers: []Consumer{
+							{
+								Consumer: kong.Consumer{
+									Username: kong.String("foo-consumer"),
 								},
+								K8sKongConsumer: k8sKongConsumer1FooBar,
+							},
+							{
+								Consumer: kong.Consumer{
+									Username: kong.String("foo-consumer"),
+								},
+								K8sKongConsumer: k8sKongConsumer2FooBar,
+							},
+							{
+								Consumer: kong.Consumer{
+									Username: kong.String("bar-consumer"),
+								},
+								K8sKongConsumer: k8sKongConsumer1Foobar,
 							},
 						},
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("foo-consumer"),
-							},
-							K8sKongConsumer: kongv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns2",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-									},
+						ConsumerGroups: []ConsumerGroup{
+							{
+								ConsumerGroup: kong.ConsumerGroup{
+									Name: kong.String("foo-consumer-group"),
 								},
+								K8sKongConsumerGroup: k8sKongConsumerGroup1FooBar,
+							},
+							{
+								ConsumerGroup: kong.ConsumerGroup{
+									Name: kong.String("foo-consumer-group"),
+								},
+								K8sKongConsumerGroup: k8sKongConsumerGroup2FooBar,
+							},
+							{
+								ConsumerGroup: kong.ConsumerGroup{
+									Name: kong.String("bar-consumer-group"),
+								},
+								K8sKongConsumerGroup: k8sKongConsumerGroup2BarBaz,
 							},
 						},
-						{
-							Consumer: kong.Consumer{
-								Username: kong.String("bar-consumer"),
-							},
-							K8sKongConsumer: kongv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
+						Services: []Service{
+							{
+								Service: kong.Service{
+									Name: kong.String("foo-service"),
+								},
+								K8sServices: map[string]*corev1.Service{
+									"foo-service": k8sService,
+								},
+								Routes: []Route{
+									{
+										Route: kong.Route{
+											Name: kong.String("foo-route"),
+										},
+										Ingress: util.K8sObjectInfo{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+											},
+										},
+									},
+									{
+										Route: kong.Route{
+											Name: kong.String("bar-route"),
+										},
+										Ingress: util.K8sObjectInfo{
+											Name:      "some-ingress",
+											Namespace: "ns2",
+											Annotations: map[string]string{
+												annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
+											},
+										},
 									},
 								},
 							},
 						},
 					},
-					ConsumerGroups: []ConsumerGroup{
-						{
-							ConsumerGroup: kong.ConsumerGroup{
-								Name: kong.String("foo-consumer-group"),
-							},
-							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-									},
-								},
-							},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"ns1:foo": {
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer1FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup1FooBar}},
+							Service:       []rels.FR{{Identifier: "foo-service", Referer: k8sService}},
 						},
-						{
-							ConsumerGroup: kong.ConsumerGroup{
-								Name: kong.String("foo-consumer-group"),
-							},
-							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns2",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-									},
-								},
-							},
+						"ns1:bar": {
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer1FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup1FooBar}},
+							Service:       []rels.FR{{Identifier: "foo-service", Referer: k8sService}},
 						},
-						{
-							ConsumerGroup: kong.ConsumerGroup{
-								Name: kong.String("bar-consumer-group"),
-							},
-							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "ns2",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
-									},
-								},
-							},
+						"ns1:foobar": {
+							Consumer: []rels.FR{{Identifier: "bar-consumer", Referer: &k8sKongConsumer1Foobar}},
+						},
+						"ns2:foo": {
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer2FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup2FooBar}},
+							Route:         []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}},
+						},
+						"ns2:bar": {
+							Consumer:      []rels.FR{{Identifier: "foo-consumer", Referer: &k8sKongConsumer2FooBar}},
+							ConsumerGroup: []rels.FR{{Identifier: "foo-consumer-group", Referer: &k8sKongConsumerGroup2FooBar}, {Identifier: "bar-consumer-group", Referer: &k8sKongConsumerGroup2BarBaz}},
+							Route:         []rels.FR{{Identifier: "foo-route", Referer: k8sIngress}, {Identifier: "bar-route", Referer: k8sIngress}},
+						},
+						"ns2:baz": {
+							Route:         []rels.FR{{Identifier: "bar-route", Referer: k8sIngress}},
+							ConsumerGroup: []rels.FR{{Identifier: "bar-consumer-group", Referer: &k8sKongConsumerGroup2BarBaz}},
 						},
 					},
-					Services: []Service{
-						{
-							Service: kong.Service{
-								Name: kong.String("foo-service"),
-							},
-							K8sServices: map[string]*corev1.Service{
-								"foo-service": {
-									ObjectMeta: metav1.ObjectMeta{
-										Namespace: "ns1",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-										},
-									},
-								},
-							},
-							Routes: []Route{
-								{
-									Route: kong.Route{
-										Name: kong.String("foo-route"),
-									},
-									Ingress: util.K8sObjectInfo{
-										Name:      "some-ingress",
-										Namespace: "ns2",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-										},
-									},
-								},
-								{
-									Route: kong.Route{
-										Name: kong.String("bar-route"),
-									},
-									Ingress: util.K8sObjectInfo{
-										Name:      "some-ingress",
-										Namespace: "ns2",
-										Annotations: map[string]string{
-											annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"ns1:foo":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Service: []string{"foo-service"}},
-				"ns1:bar":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Service: []string{"foo-service"}},
-				"ns1:foobar": {Consumer: []string{"bar-consumer"}},
-				"ns2:foo": {
-					Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Route: []string{"foo-route"},
-				},
-				"ns2:bar": {
-					Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group", "bar-consumer-group"}, Route: []string{"foo-route", "bar-route"},
-				},
-				"ns2:baz": {Route: []string{"bar-route"}, ConsumerGroup: []string{"bar-consumer-group"}},
-			},
+				}
+			}(),
 		},
 		{
 			name: "consumer with custom_id and a plugin attached",
-			args: args{
-				state: KongState{
-					Consumers: []Consumer{
-						{
-							Consumer: kong.Consumer{
-								CustomID: kong.String("1234-1234"),
+			data: func() data {
+				k8sKongConsumer := kongv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "rate-limiting-1",
+						},
+					},
+				}
+
+				return data{
+					inputState: KongState{
+						Consumers: []Consumer{
+							{
+								Consumer: kong.Consumer{
+									CustomID: kong.String("1234-1234"),
+								},
+								K8sKongConsumer: k8sKongConsumer,
 							},
-							K8sKongConsumer: kongv1.KongConsumer{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "default",
-									Annotations: map[string]string{
-										annotations.AnnotationPrefix + annotations.PluginsKey: "rate-limiting-1",
+						},
+						Plugins: []Plugin{
+							{
+								Plugin: kong.Plugin{
+									Name: kong.String("rate-limiting"),
+								},
+								K8sParent: &kongv1.KongPlugin{
+									ObjectMeta: metav1.ObjectMeta{
+										Namespace: "default",
+										Name:      "rate-limiting-1",
 									},
+									PluginName: "rate-limiting",
+								},
+							},
+							{
+								Plugin: kong.Plugin{
+									Name: kong.String("basic-auth"),
+								},
+								K8sParent: &kongv1.KongPlugin{
+									ObjectMeta: metav1.ObjectMeta{
+										Namespace: "default",
+										Name:      "basic-auth-1",
+									},
+									PluginName: "basic-auth",
 								},
 							},
 						},
 					},
-					Plugins: []Plugin{
-						{
-							Plugin: kong.Plugin{
-								Name: kong.String("rate-limiting"),
-							},
-							K8sParent: &kongv1.KongPlugin{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "default",
-									Name:      "rate-limiting-1",
-								},
-								PluginName: "rate-limiting",
-							},
-						},
-						{
-							Plugin: kong.Plugin{
-								Name: kong.String("basic-auth"),
-							},
-							K8sParent: &kongv1.KongPlugin{
-								ObjectMeta: metav1.ObjectMeta{
-									Namespace: "default",
-									Name:      "basic-auth-1",
-								},
-								PluginName: "basic-auth",
-							},
-						},
+					expectedPluginRelations: map[string]rels.ForeignRelations{
+						"default:rate-limiting-1": {Consumer: []rels.FR{{Identifier: "1234-1234", Referer: &k8sKongConsumer}}},
 					},
-				},
-			},
-			want: map[string]util.ForeignRelations{
-				"default:rate-limiting-1": {Consumer: []string{"1234-1234"}},
-			},
+				}
+			}(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store, err := store.NewFakeStore(store.FakeObjects{})
 			require.NoError(t, err)
-			if got := tt.args.state.getPluginRelations(store, logr.Discard()); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getPluginRelations() = %v, want %v", got, tt.want)
+			computedPluginRelations := tt.data.inputState.getPluginRelations(store, logr.Discard(), nil)
+			if diff := cmp.Diff(tt.data.expectedPluginRelations, computedPluginRelations); diff != "" {
+				t.Fatal("expected value differs from actual, see the human-readable diff:", diff)
 			}
 		})
 	}
@@ -738,10 +816,12 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 
 	store, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(b, err)
+	logger := logr.Discard()
+	failuresCollector := failures.NewResourceFailuresCollector(logger)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fr := ks.getPluginRelations(store, logr.Discard())
+		fr := ks.getPluginRelations(store, logger, failuresCollector)
 		_ = fr
 	}
 }
@@ -1326,7 +1406,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		in         []*kongv1.KongPlugin
-		pluginRels map[string]util.ForeignRelations
+		pluginRels map[string]rels.ForeignRelations
 		want       []string
 	}{
 		{
@@ -1341,14 +1421,86 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					InstanceName: "test",
 				},
 			},
-			pluginRels: map[string]util.ForeignRelations{
+			pluginRels: map[string]rels.ForeignRelations{
 				"default:foo-plugin": {
 					// this shouldn't happen in practice, as all generated route names are unique
 					// however, it's hard to find a SHA256 collision with two different inputs
-					Route: []string{"collision", "collision"},
+					Route: []rels.FR{{Identifier: "collision"}, {Identifier: "collision"}},
 				},
 			},
-			want: []string{"test-bae3267aa", "test-bae3267aafead3adb6031bc1c732516336e7f7b324baf61bb68a39cc89112741"},
+			want: []string{
+				"test-b1b50e2fe",
+				"test-b1b50e2fea3955bfc13ffed52f9074e50f5056c2173fc05b8ff04388ecd25ffe",
+			},
+		},
+		{
+			name: "binding to route and consumer group",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]rels.ForeignRelations{
+				"default:foo-plugin": {
+					Route:         []rels.FR{{Identifier: "route1"}, {Identifier: "route2"}, {Identifier: "route3"}},
+					ConsumerGroup: []rels.FR{{Identifier: "group1"}},
+				},
+			},
+			want: []string{
+				"test-512a42cb1",
+				"test-944f0bd89",
+				"test-c091fbb10",
+			},
+		},
+		{
+			name: "binding to routes and consumer",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]rels.ForeignRelations{
+				"default:foo-plugin": {
+					Route:    []rels.FR{{Identifier: "route1"}, {Identifier: "route2"}, {Identifier: "route3"}},
+					Consumer: []rels.FR{{Identifier: "consumer1"}},
+				},
+			},
+			want: []string{
+				"test-ebd486ffe",
+				"test-3aaa2f367",
+				"test-5420f37ef",
+			},
+		},
+		{
+			name: "binding to service and consumer group",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]rels.ForeignRelations{
+				"default:foo-plugin": {
+					Service:  []rels.FR{{Identifier: "service1"}, {Identifier: "service2"}, {Identifier: "service3"}},
+					Consumer: []rels.FR{{Identifier: "consumer1"}},
+				},
+			},
+			want: []string{
+				"test-42768cbda",
+				"test-6e9279c81",
+				"test-9bbcb305f",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1358,8 +1510,12 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			})
 			// this is not testing the kongPluginFromK8SPlugin failure cases, so there is no failures collector
 			got := buildPlugins(log, store, nil, tt.pluginRels)
-			require.Len(t, got, 2)
-			require.Equal(t, tt.want, []string{*got[0].InstanceName, *got[1].InstanceName})
+			require.Len(t, got, len(tt.want))
+			gotInstanceNames := lo.Map(got, func(p Plugin, _ int) string { return *p.InstanceName })
+			require.Equal(t, tt.want, gotInstanceNames)
+
+			gotUniqueInstanceNames := lo.Uniq(gotInstanceNames)
+			require.Len(t, gotUniqueInstanceNames, len(tt.want), "should only return unique instance names")
 		})
 	}
 }
@@ -1855,18 +2011,22 @@ func TestFillOverrides_ServiceFailures(t *testing.T) {
 	}
 }
 
-type fakeSchemaGetter struct {
+type fakeSchemaService struct {
 	schemas map[string]kong.Schema
 }
 
-var _ SchemaGetter = &fakeSchemaGetter{}
+var _ SchemaService = &fakeSchemaService{}
 
-func (s *fakeSchemaGetter) Get(_ context.Context, entityType string) (kong.Schema, error) {
+func (s *fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schema, error) {
 	schema, ok := s.schemas[entityType]
 	if !ok {
 		return nil, fmt.Errorf("schema not found")
 	}
 	return schema, nil
+}
+
+func (s *fakeSchemaService) Validate(_ context.Context, _ kong.EntityType, _ interface{}) (bool, string, error) {
+	return true, "", nil
 }
 
 func TestIsRemotePluginReferenceAllowed(t *testing.T) {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -211,23 +210,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 ) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
-	const webhookName = "kong-validations-gateway"
-	ensureAdmissionRegistration(
-		ctx,
-		t,
-		namespace,
-		webhookName,
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1beta1"},
-					Resources:   []string{"httproutes"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
+	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-gateway", ns.Name)
 
 	t.Log("creating a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -256,9 +239,6 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGateway)
 	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
-
-	t.Log("waiting for webhook service to be connective")
-	ensureWebhookServiceIsConnective(ctx, t, webhookName)
 
 	return namespace, gatewayClient, managedGateway, unmanagedGateway
 }

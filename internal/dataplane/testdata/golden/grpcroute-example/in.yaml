@@ -9,13 +9,29 @@ spec:
   hostnames:
   - "example.com"
   rules:
-  - backendRefs:
+  - name: grpcbin-dummy-unary
+    backendRefs:
     - name: grpcbin
       port: 443
     matches:
     - method:
         service: "grpcbin.GRPCBin"
         method: "DummyUnary"
+  - name: grpcbin-default
+    backendRefs:
+    - name: grpcbin
+      port: 443
+    matches:
+    - method:
+        service: "grpcbin.GRPCBin"
+        method: "Default"
+  - backendRefs:
+    - name: grpcbin
+      port: 443
+    matches:
+    - method:
+        service: "grpcbin.GRPCBin"
+        method: "Get"
 ---
 apiVersion: v1
 kind: Service

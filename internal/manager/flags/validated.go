@@ -16,15 +16,14 @@ func WithDefault[T any](defaultValue T) ValidatedValueOpt[T] {
 }
 
 func stringFromAny(s any) string {
-	if stringer, ok := s.(fmt.Stringer); ok {
-		return fmt.Sprintf("%q", stringer.String())
+	switch ss := s.(type) {
+	case string:
+		return ss
+	case fmt.Stringer:
+		return fmt.Sprintf("%q", ss.String())
+	default:
+		panic(fmt.Errorf("unknown type %T", s))
 	}
-
-	if str, ok := s.(string); ok {
-		return str
-	}
-
-	panic(fmt.Errorf("unknown type %T", s))
 }
 
 // WithTypeNameOverride overrides the type name that's printed in the help message.

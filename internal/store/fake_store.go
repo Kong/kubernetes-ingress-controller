@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -40,12 +41,14 @@ type FakeObjects struct {
 	GRPCRoutes                     []*gatewayapi.GRPCRoute
 	ReferenceGrants                []*gatewayapi.ReferenceGrant
 	Gateways                       []*gatewayapi.Gateway
+	BackendTLSPolicies             []*gatewayapi.BackendTLSPolicy
 	TCPIngresses                   []*kongv1beta1.TCPIngress
 	UDPIngresses                   []*kongv1beta1.UDPIngress
 	IngressClassParametersV1alpha1 []*kongv1alpha1.IngressClassParameters
 	Services                       []*corev1.Service
 	EndpointSlices                 []*discoveryv1.EndpointSlice
 	Secrets                        []*corev1.Secret
+	ConfigMaps                     []*corev1.ConfigMap
 	KongPlugins                    []*kongv1.KongPlugin
 	KongClusterPlugins             []*kongv1.KongClusterPlugin
 	KongIngresses                  []*kongv1.KongIngress
@@ -126,6 +129,12 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	backendTLSPolicyStore := cache.NewStore(namespacedKeyFunc)
+	for _, policy := range objects.BackendTLSPolicies {
+		if err := backendTLSPolicyStore.Add(policy); err != nil {
+			return nil, err
+		}
+	}
 	tcpIngressStore := cache.NewStore(namespacedKeyFunc)
 	for _, ingress := range objects.TCPIngresses {
 		err := tcpIngressStore.Add(ingress)
@@ -150,6 +159,12 @@ func NewFakeStore(
 	for _, s := range objects.Secrets {
 		err := secretsStore.Add(s)
 		if err != nil {
+			return nil, err
+		}
+	}
+	configMapStore := cache.NewStore(namespacedKeyFunc)
+	for _, s := range objects.ConfigMaps {
+		if err := configMapStore.Add(s); err != nil {
 			return nil, err
 		}
 	}
@@ -234,11 +249,13 @@ func NewFakeStore(
 			GRPCRoute:                      grpcrouteStore,
 			ReferenceGrant:                 referencegrantStore,
 			Gateway:                        gatewayStore,
+			BackendTLSPolicy:               backendTLSPolicyStore,
 			TCPIngress:                     tcpIngressStore,
 			UDPIngress:                     udpIngressStore,
 			Service:                        serviceStore,
 			EndpointSlice:                  endpointSliceStore,
 			Secret:                         secretsStore,
+			ConfigMap:                      configMapStore,
 			Plugin:                         kongPluginsStore,
 			ClusterPlugin:                  kongClusterPluginsStore,
 			Consumer:                       consumerStore,
@@ -274,6 +291,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
 		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):           gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
 		reflect.TypeOf(&gatewayapi.Gateway{}):                  gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):         gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
 		reflect.TypeOf(&kongv1beta1.TCPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
 		reflect.TypeOf(&kongv1beta1.UDPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
 		reflect.TypeOf(&kongv1alpha1.IngressClassParameters{}): kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
@@ -318,6 +336,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.GRPCRoutes)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.BackendTLSPolicies)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.TCPIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.UDPIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)

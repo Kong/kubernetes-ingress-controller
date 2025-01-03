@@ -58,9 +58,11 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 	// Object types that have no dependencies.
 	case *netv1.IngressClass,
 		*corev1.Secret,
+		*corev1.ConfigMap,
 		*discoveryv1.EndpointSlice,
 		*gatewayapi.ReferenceGrant,
 		*gatewayapi.Gateway,
+		*gatewayapi.BackendTLSPolicy,
 		*kongv1.KongIngress,
 		*kongv1beta1.KongUpstreamPolicy,
 		*kongv1alpha1.IngressClassParameters,

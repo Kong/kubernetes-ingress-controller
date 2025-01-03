@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - '**'
   push:
@@ -47,11 +47,10 @@ jobs:
         if: github.event_name == 'push' &&
           (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Check if PR is up to date, if it is skip workflows for this ref
         id: 'up-to-date'
-        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.7.3
+        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.8.0
         if: github.event_name == 'push' &&
           (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
         with:

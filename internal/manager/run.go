@@ -33,13 +33,16 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -50,7 +53,7 @@ import (
 func Run(
 	ctx context.Context,
 	c *Config,
-	diagnostic diagnostics.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
@@ -145,8 +148,8 @@ func Run(
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
 	if c.EmitKubernetesEvents {
-		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + KongClientEventRecorderComponentName)
-		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + consts.KongClientEventRecorderComponentName)
+		eventRecorder = mgr.GetEventRecorderFor(consts.KongClientEventRecorderComponentName)
 	} else {
 		setupLog.Info("Emitting Kubernetes events disabled, discarding all events")
 		// Create an empty record.FakeRecorder with no Events channel to discard all events.
@@ -171,17 +174,20 @@ func Run(
 		clientsManager.Run()
 	}
 
+	supportRedirectPlugin := kongSemVersion.GTE(versions.KongRedirectPluginCutoff)
 	translatorFeatureFlags := translator.NewFeatureFlags(
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,
 		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
+		supportRedirectPlugin,
 	)
 
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager))
+
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager), c.ClusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
 	}
@@ -195,6 +201,7 @@ func Run(
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
+	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -209,6 +216,7 @@ func Run(
 		configTranslator,
 		&cache,
 		fallbackConfigGenerator,
+		metricsRecorder,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -288,6 +296,7 @@ func Run(
 			clientsManager,
 			updateStrategyResolver,
 			configStatusNotifier,
+			metricsRecorder,
 		)
 		if err != nil {
 			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")

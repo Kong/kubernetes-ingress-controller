@@ -1,0 +1,40 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-udp-gateway
+  namespace: udp-example
+spec:
+  listeners:
+  - name: udp
+    protocol: UDP
+    port: 9999
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: tftp
+  namespace: udp-example
+spec:
+  parentRefs:
+  - name: example-udp-gateway
+    namespace: udp-example
+  rules:
+  - name: rule-tftp
+    backendRefs:
+    - name: tftp
+      port: 9999
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tftp
+  namespace: udp-example
+spec:
+  ports:
+  - port: 9999
+    name: tftp
+    protocol: UDP
+    targetPort: 9999
+  selector:
+    app: tftp
+  type: ClusterIP

@@ -46,7 +46,14 @@ func updateReferredObjects(
 	for _, nsName := range referredSecretList {
 		referredSecretNameMap[nsName] = struct{}{}
 	}
-	return ctrlref.UpdateReferencesToSecret(ctx, client, refIndexers, dataplaneClient, obj, referredSecretNameMap)
+	return ctrlref.UpdateReferencesToSecretOrConfigMap(
+		ctx,
+		client,
+		refIndexers,
+		dataplaneClient,
+		obj,
+		referredSecretNameMap,
+		&corev1.Secret{})
 }
 
 func listCoreV1ServiceReferredSecrets(service *corev1.Service) []k8stypes.NamespacedName {

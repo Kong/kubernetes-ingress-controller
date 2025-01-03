@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -97,52 +95,58 @@ func BenchmarkFromK8sObject(b *testing.B) {
 	}
 }
 
-func TestTypeMetaFromK8sObject(t *testing.T) {
-	testCases := []struct {
-		name     string
-		obj      client.Object
-		typeMeta metav1.TypeMeta
+func TestFromK8sObjectReturnsADeepCopy(t *testing.T) {
+	testcases := []struct {
+		name       string
+		obj        client.Object
+		updateFunc func(info *K8sObjectInfo)
 	}{
 		{
-			name: "empty group",
-			obj: &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Service",
-				},
+			name: "change annotation value",
+			obj: &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "svc",
-					Namespace: "default",
+					Name:        "name",
+					Namespace:   "namespace",
+					Annotations: map[string]string{"a": "1", "b": "2"},
 				},
 			},
-			typeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Service",
+			updateFunc: func(info *K8sObjectInfo) {
+				info.Annotations["a"] = "3"
 			},
 		},
 		{
-			name: "non-empty group",
+			name: "add new annotation",
 			obj: &netv1.Ingress{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "networking.k8s.io/v1",
-					Kind:       "Ingress",
-				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ing",
-					Namespace: "default",
+					Name:        "name",
+					Namespace:   "namespace",
+					Annotations: map[string]string{"a": "1", "b": "2"},
 				},
 			},
-			typeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
+			updateFunc: func(info *K8sObjectInfo) {
+				info.Annotations["c"] = "3"
+			},
+		},
+		{
+			name: "set annotations to nil",
+			obj: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "name",
+					Namespace:   "namespace",
+					Annotations: map[string]string{"a": "1", "b": "2"},
+				},
+			},
+			updateFunc: func(info *K8sObjectInfo) {
+				info.Annotations = nil
 			},
 		},
 	}
 
-	for _, tc := range testCases {
+	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			typeMeta := TypeMetaFromK8sObject(tc.obj)
-			require.Equal(t, tc.typeMeta, typeMeta)
+			info := FromK8sObject(tc.obj)
+			tc.updateFunc(&info)
+			assert.NotEqual(t, tc.obj.GetAnnotations(), info.GetAnnotations())
 		})
 	}
 }

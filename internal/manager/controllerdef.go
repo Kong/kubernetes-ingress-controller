@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
@@ -141,6 +142,19 @@ func setupControllers(
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				ReferenceIndexers: referenceIndexers,
+				LabelSelector:     c.SecretLabelSelector,
+			},
+		},
+		{
+			Enabled: true,
+			Controller: &configuration.CoreV1ConfigMapReconciler{
+				Client:            mgr.GetClient(),
+				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("configmaps"),
+				Scheme:            mgr.GetScheme(),
+				DataplaneClient:   dataplaneClient,
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				ReferenceIndexers: referenceIndexers,
+				LabelSelector:     c.ConfigMapLabelSelector,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -468,6 +482,36 @@ func setupControllers(
 					CacheSyncTimeout: c.CacheSyncTimeout,
 					StatusQueue:      kubernetesStatusQueue,
 					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+				},
+			},
+		},
+		{
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature) &&
+				c.GatewayAPIGatewayController &&
+				c.GatewayAPIHTTPRouteController,
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/BackendTLSPolicy"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(
+					baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "httproutes",
+					},
+					schema.GroupVersionResource{
+						Group:    gatewayv1alpha3.GroupVersion.Group,
+						Version:  gatewayv1alpha3.GroupVersion.Version,
+						Resource: "backendtlspolicies",
+					}),
+				Controller: &gateway.BackendTLSPolicyReconciler{
+					Client:            mgr.GetClient(),
+					Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("BackendTLSPolicy"),
+					DataplaneClient:   dataplaneClient,
+					ReferenceIndexers: referenceIndexers,
+					CacheSyncTimeout:  c.CacheSyncTimeout,
+					GatewayNN:         controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},

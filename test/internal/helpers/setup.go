@@ -30,7 +30,7 @@ func Setup(ctx context.Context, t *testing.T, env environments.Environment) (*co
 		// a separate context.
 		ctx := context.Background()
 		t.Logf("Start cleanup for test %s", t.Name())
-		dumpDiagnosticsIfFailed(ctx, t, cluster)
+		DumpDiagnosticsIfFailed(ctx, t, cluster)
 		assert.NoError(t, cleaner.Cleanup(ctx))
 	})
 

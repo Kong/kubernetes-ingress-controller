@@ -114,6 +114,24 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedErrorContains: "namespace cannot be empty",
 			},
 		},
+		"--secret-label-selector": {
+			{
+				Input: "konghq.com/label-for-caching",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.SecretLabelSelector
+				},
+				ExpectedValue: "konghq.com/label-for-caching",
+			},
+		},
+		"--configmap-label-selector": {
+			{
+				Input: "konghq.com/label-for-caching",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.ConfigMapLabelSelector
+				},
+				ExpectedValue: "konghq.com/label-for-caching",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {

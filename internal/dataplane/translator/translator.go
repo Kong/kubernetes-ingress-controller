@@ -52,6 +52,15 @@ type FeatureFlags struct {
 
 	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
 	KongCustomEntity bool
+
+	// CombinedServicesFromDifferentHTTPRoutes indicates whether we should combine rules from different HTTPRoutes
+	// that are sharing the same combination of backends to one Kong service.
+	CombinedServicesFromDifferentHTTPRoutes bool
+	// SupportRedirectPlugin indicates whether the Kong gateway supports the `redirect` plugin.
+	// This is supported starting with Kong 3.9.
+	// If `redirect` plugin is supported, we will translate the `requestRedirect` filter to `redirect` plugin
+	// so preserving paths of request in the redirect response can be supported.
+	SupportRedirectPlugin bool
 }
 
 func NewFeatureFlags(
@@ -59,15 +68,18 @@ func NewFeatureFlags(
 	routerFlavor dpconf.RouterFlavor,
 	updateStatusFlag bool,
 	enterpriseEdition bool,
+	supportRedirectPlugin bool,
 ) FeatureFlags {
 	return FeatureFlags{
-		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		ExpressionRoutes:                  dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		EnterpriseEdition:                 enterpriseEdition,
-		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
-		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
-		KongServiceFacade:                 featureGates.Enabled(featuregates.KongServiceFacade),
-		KongCustomEntity:                  featureGates.Enabled(featuregates.KongCustomEntity),
+		ReportConfiguredKubernetesObjects:       updateStatusFlag,
+		ExpressionRoutes:                        dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		EnterpriseEdition:                       enterpriseEdition,
+		FillIDs:                                 featureGates.Enabled(featuregates.FillIDsFeature),
+		RewriteURIs:                             featureGates.Enabled(featuregates.RewriteURIsFeature),
+		KongServiceFacade:                       featureGates.Enabled(featuregates.KongServiceFacade),
+		KongCustomEntity:                        featureGates.Enabled(featuregates.KongCustomEntity),
+		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(featuregates.CombinedServicesFromDifferentHTTPRoutes),
+		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }
 
@@ -92,6 +104,8 @@ type Translator struct {
 
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
+
+	clusterDomain string
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -102,6 +116,7 @@ func NewTranslator(
 	workspace string,
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
+	clusterDomain string,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -119,6 +134,7 @@ func NewTranslator(
 		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
+		clusterDomain:              clusterDomain,
 	}, nil
 }
 
@@ -148,6 +164,8 @@ func (t *Translator) UpdateCache(c store.CacheStores) {
 // BuildKongConfig creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes.
 func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
+	ctx := context.Background()
+
 	// Translate and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		t.ingressRulesFromIngressV1(),
@@ -209,7 +227,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 
 	// process custom entities
 	if t.featureFlags.KongCustomEntity {
-		result.FillCustomEntities(t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
+		result.FillCustomEntities(ctx, t.logger, t.storer, t.failuresCollector, t.schemaServiceProvider.GetSchemaService(), t.workspace)
 		// Register successcully translated KCEs to set the status of these KCEs.
 		for _, collection := range result.CustomEntities {
 			for i := range collection.Entities {

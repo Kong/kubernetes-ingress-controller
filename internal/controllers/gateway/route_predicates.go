@@ -9,10 +9,32 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
+
+func IsRouteAttachedToReconciledGatewayPredicate[routeT gatewayapi.RouteT](
+	cl client.Client,
+	logger logr.Logger,
+	gatewayNN controllers.OptionalNamespacedName,
+) predicate.Predicate {
+	return predicate.Funcs{
+		GenericFunc: func(_ event.GenericEvent) bool {
+			return false // we don't need to enqueue from generic
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			return IsRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isOrWasRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, e)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return IsRouteAttachedToReconciledGateway[routeT](cl, logger, gatewayNN, e.Object)
+		},
+	}
+}
 
 func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,
@@ -67,9 +89,8 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 		if parentRef.Group != nil {
 			group = string(*parentRef.Group)
 		}
-
-		switch {
-		case kind == "Gateway" && group == gatewayapi.GroupVersion.Group:
+		// Check the parent gateway if the parentRef points to a gateway that is possible to be controlled by KIC.
+		if kind == "Gateway" && group == gatewayapi.GroupVersion.Group {
 			var gateway gatewayapi.Gateway
 			err := cl.Get(context.Background(), k8stypes.NamespacedName{Namespace: namespace, Name: string(parentRef.Name)}, &gateway)
 			if err != nil {
@@ -87,12 +108,6 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			if isGatewayClassControlled(&gatewayClass) {
 				return true
 			}
-		default:
-			log.Error(
-				fmt.Errorf("unsupported parentRef kind %s and group %s", kind, group),
-				"Got an unexpected kind and group when checking route's parentRefs",
-			)
-			return false
 		}
 	}
 

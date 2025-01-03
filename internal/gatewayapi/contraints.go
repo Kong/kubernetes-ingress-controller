@@ -1,6 +1,10 @@
 package gatewayapi
 
-import "sigs.k8s.io/controller-runtime/pkg/client"
+import (
+	"fmt"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 type HostnameT interface {
 	Hostname | string
@@ -32,4 +36,11 @@ type BackendRefT interface {
 type PluginLabelReference struct {
 	Namespace *string
 	Name      string
+}
+
+func (plr PluginLabelReference) String() string {
+	if plr.Namespace == nil {
+		return plr.Name
+	}
+	return fmt.Sprintf("%s:%s", *plr.Namespace, plr.Name)
 }

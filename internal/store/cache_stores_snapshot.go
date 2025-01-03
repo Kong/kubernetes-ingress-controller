@@ -15,6 +15,9 @@ import (
 
 // TakeSnapshot takes a snapshot of the CacheStores.
 func (c CacheStores) TakeSnapshot() (CacheStores, error) {
+	if c.l == nil {
+		return CacheStores{}, CacheStoresLockNotInitializedError{}
+	}
 	// Create a fresh CacheStores instance to store the snapshot
 	// in the c.takeSnapshot method. It happens here because it's
 	// not required to be guarded by a lock.
@@ -63,6 +66,9 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash SnapshotHash) (
 	newHash SnapshotHash,
 	err error,
 ) {
+	if c.l == nil {
+		return CacheStores{}, "", CacheStoresLockNotInitializedError{}
+	}
 	// Initialize all variables that don't need to be guarded by a lock.
 	snapshot = NewCacheStores()
 	listOfStores := c.ListAllStores()

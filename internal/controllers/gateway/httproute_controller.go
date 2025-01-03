@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,20 +131,9 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
 	return blder.
 		For(&gatewayapi.HTTPRoute{},
-			builder.WithPredicates(predicate.Funcs{
-				GenericFunc: func(_ event.GenericEvent) bool {
-					return false // we don't need to enqueue from generic
-				},
-				CreateFunc: func(e event.CreateEvent) bool {
-					return IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					return isOrWasRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e)
-				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
-					return IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN, e.Object)
-				},
-			}),
+			builder.WithPredicates(
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+			),
 		).
 		Complete(r)
 }
@@ -413,12 +401,14 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Ensure we have no status for no-longer defined parentRefs.
 	if wasAnyStatusRemoved := ensureNoStaleParentStatus(httproute); wasAnyStatusRemoved {
-		if err := r.Status().Update(ctx, httproute); err != nil {
+		err := r.Status().Update(ctx, httproute)
+		res, err := handleUpdateError(err, log, httproute)
+		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to prune stale Gateway parent statuses from %s status: %w",
 				client.ObjectKeyFromObject(httproute), err,
 			)
 		}
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
 	// the referenced gateway object(s) for the HTTPRoute needs to be ready
@@ -456,14 +446,16 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we can update the object status to indicate that it's now properly linked
 	// to the configured Gateways.
 	debug(log, httproute, "Ensuring status contains Gateway associations")
-	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
+	updated, res, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
 	if err != nil {
 		// don't proceed until the statuses can be updated appropriately
 		return ctrl.Result{}, err
 	}
-	if statusUpdated {
+	if !res.IsZero() {
+		return res, nil
+	}
+	if updated {
 		// if the status was updated it will trigger a follow-up reconciliation
-		// so we don't need to do anything further here.
 		return ctrl.Result{}, nil
 	}
 
@@ -525,86 +517,30 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // HTTPRouteReconciler - Status Helpers
 // -----------------------------------------------------------------------------
 
-// httprouteParentKind indicates the only object KIND that this HTTPRoute
-// implementation supports for route object parent references.
-var httprouteParentKind = "Gateway"
-
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given HTTPRoute and ensures that the status
 // for the HTTPRoute is updated appropriately.
-func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayapi.HTTPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
-
-	// overlay the parent ref statuses for all new gateway references
-	statusChangesWereMade := false
-	for _, gateway := range gateways {
-		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayapi.RouteParentStatus{
-			ParentRef: gatewayapi.ParentReference{
-				Group:     (*gatewayapi.Group)(&gatewayv1.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindPtr(httprouteParentKind),
-				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayapi.ObjectName(gateway.gateway.Name),
-			},
-			ControllerName: GetControllerName(),
-			Conditions: []metav1.Condition{{
-				Type:               gateway.condition.Type,
-				Status:             gateway.condition.Status,
-				ObservedGeneration: httproute.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             gateway.condition.Reason,
-			}},
-		}
-		if gateway.listenerName != "" {
-			gatewayParentStatus.ParentRef.SectionName = lo.ToPtr(gatewayapi.SectionName(gateway.listenerName))
-		}
-
-		key := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)
-
-		// if the reference already exists and doesn't require any changes
-		// then just leave it alone.
-		if existingGatewayParentStatus, exists := parentStatuses[key]; exists {
-			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
-			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
-				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
-				lo.ContainsBy(existingGatewayParentStatus.Conditions, func(condition metav1.Condition) bool {
-					return sameCondition(gatewayParentStatus.Conditions[0], condition)
-				}) {
-				continue
-			}
-		}
-
-		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[key] = gatewayParentStatus
-		statusChangesWereMade = true
-	}
+// It returns true if controller should requeue the object. Either because
+// the status update resulted in a conflict or because the status was updated.
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(
+	ctx context.Context, httproute *gatewayapi.HTTPRoute, gateways ...supportedGatewayWithCondition,
+) (bool, ctrl.Result, error) {
+	parentStatuses, statusChangesWereMade := parentStatusesForRoute(
+		httproute,
+		httproute.Status.Parents,
+		gateways...,
+	)
 
 	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, httproute, parentStatuses)
 	if err != nil {
-		return false, err
+		return false, ctrl.Result{}, err
 	}
 
-	// initialize "programmed" condition to Unknown.
-	// do not update the condition If a "Programmed" condition is already present.
-	programmedConditionChanged := false
-	programmedConditionUnknown := metav1.Condition{
-		Type:               ConditionTypeProgrammed,
-		Status:             metav1.ConditionUnknown,
-		Reason:             string(ConditionReasonProgrammedUnknown),
-		ObservedGeneration: httproute.Generation,
-		LastTransitionTime: metav1.Now(),
-	}
-	for _, parentStatus := range parentStatuses {
-		if !parentStatusHasProgrammedCondition(parentStatus) {
-			programmedConditionChanged = true
-			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
-		}
-	}
+	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(httproute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
 	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {
-		return false, nil
+		return false, ctrl.Result{}, nil
 	}
 
 	// update the httproute status with the new status references
@@ -614,12 +550,16 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, httproute); err != nil {
-		return false, err
+	res, err := handleUpdateError(r.Status().Update(ctx, httproute), r.Log, httproute)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	if !res.IsZero() {
+		return false, res, nil
 	}
 
 	// the status needed an update and it was updated successfully
-	return true, nil
+	return true, ctrl.Result{}, nil
 }
 
 // setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
@@ -630,7 +570,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 ) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
 	var changed bool
 	resolvedRefsStatus := metav1.ConditionFalse
-	reason, err := r.getHTTPRouteRuleReason(ctx, *httpRoute)
+	reason, msg, err := r.getHTTPRouteRuleReason(ctx, *httpRoute)
 	if err != nil {
 		return nil, false, err
 	}
@@ -646,6 +586,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 		ObservedGeneration: httpRoute.Generation,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(reason),
+		Message:            msg,
 	}
 	for _, parentStatus := range parentStatuses {
 		var conditionFound bool
@@ -669,7 +610,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 	return parentStatuses, changed, nil
 }
 
-func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayapi.HTTPRoute) (gatewayapi.RouteConditionReason, error) {
+func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayapi.HTTPRoute) (reason gatewayapi.RouteConditionReason, msg string, err error) {
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
 			backendNamespace := httpRoute.Namespace
@@ -677,35 +618,44 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				backendNamespace = string(*backendRef.Namespace)
 			}
 
+			backendRefGK := string(*backendRef.Kind)
+			if gr := string(*backendRef.Group); gr != "" {
+				backendRefGK = gr + "/" + backendRefGK
+			}
+			targetNN := k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}
+
 			// Check if the BackendRef GroupKind is supported
 			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
-				return gatewayapi.RouteReasonInvalidKind, nil
+				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
 			}
 
 			// Check if all the objects referenced actually exist
 			// Only services are currently supported as BackendRef objects
 			service := &corev1.Service{}
-			err := r.Client.Get(ctx, k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}, service)
-			if err != nil {
+			if err := r.Client.Get(ctx, targetNN, service); err != nil {
 				if !apierrors.IsNotFound(err) {
-					return "", err
+					return "", "", err
 				}
-				return gatewayapi.RouteReasonBackendNotFound, nil
+				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
 			}
 
 			// Check if the object referenced is in another namespace,
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
+				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the HTTPRoute (namespace %s)", targetNN, httpRoute.Namespace)
 				if !r.enableReferenceGrant {
-					return gatewayapi.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted,
+						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
+						nil
 				}
 
 				referenceGrantList := &gatewayapi.ReferenceGrantList{}
 				if err := r.Client.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
-					return "", err
+					return "", "", err
 				}
+				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
 				if len(referenceGrantList.Items) == 0 {
-					return gatewayapi.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 				var isGranted bool
 				for _, grant := range referenceGrantList.Items {
@@ -715,12 +665,12 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 					}
 				}
 				if !isGranted {
-					return gatewayapi.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 			}
 		}
 	}
-	return gatewayapi.RouteReasonResolvedRefs, nil
+	return gatewayapi.RouteReasonResolvedRefs, "", nil
 }
 
 // SetLogger sets the logger.

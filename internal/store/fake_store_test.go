@@ -531,17 +531,31 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
+				Name:      "foo-secret",
 				Namespace: "default",
 			},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
+	configMaps := []*corev1.ConfigMap{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-configmap",
+				Namespace: "default",
+			},
+		},
+	}
+	store, err := NewFakeStore(
+		FakeObjects{
+			Secrets:    secrets,
+			ConfigMaps: configMaps,
+		},
+	)
 	require.Nil(err)
 	require.NotNil(store)
-	certs, err := store.ListCACerts()
+	secretCerts, configMapCerts, err := store.ListCACerts()
 	assert.Nil(err)
-	assert.Len(certs, 0)
+	assert.Len(secretCerts, 0, "expect no secrets as CA certificates")
+	assert.Len(configMapCerts, 0, "expect no configmaps as CA certificates")
 
 	secrets = []*corev1.Secret{
 		{
@@ -572,9 +586,51 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{Secrets: secrets})
 	require.Nil(err)
 	require.NotNil(store)
-	certs, err = store.ListCACerts()
+	secretCerts, configMapCerts, err = store.ListCACerts()
 	assert.Nil(err)
-	assert.Len(certs, 2, "expect two secrets as CA certificates")
+	assert.Len(secretCerts, 2, "expect two secrets as CA certificates")
+	assert.Len(configMapCerts, 0, "expect 0 configmap as CA certificates")
+
+	secrets = []*corev1.Secret{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+		},
+	}
+	configMaps = []*corev1.ConfigMap{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-configmap",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+		},
+	}
+	store, err = NewFakeStore(
+		FakeObjects{
+			Secrets:    secrets,
+			ConfigMaps: configMaps,
+		},
+	)
+	require.Nil(err)
+	require.NotNil(store)
+	secretCerts, configMapCerts, err = store.ListCACerts()
+	assert.Nil(err)
+	assert.Len(secretCerts, 1, "expect 1 secret as CA certificates")
+	assert.Len(configMapCerts, 1, "expect 1 configmap as CA certificates")
 }
 
 func TestFakeStoreHTTPRoute(t *testing.T) {

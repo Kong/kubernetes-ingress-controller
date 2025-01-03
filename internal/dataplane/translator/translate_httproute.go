@@ -3,8 +3,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -41,97 +39,8 @@ func (t *Translator) ingressRulesFromHTTPRoutes() ingressRules {
 		httpRoutesToTranslate = append(httpRoutesToTranslate, httproute)
 	}
 
-	if t.featureFlags.ExpressionRoutes {
-		t.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutesToTranslate, &result)
-		return result
-	}
-
-	for _, httproute := range httpRoutesToTranslate {
-		if err := t.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
-			t.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
-		} else {
-			// at this point the object has been configured and can be
-			// reported as successfully translated.
-			t.registerSuccessfullyTranslatedObject(httproute)
-		}
-	}
-
+	t.ingressRulesFromHTTPRoutesWithCombinedService(httpRoutesToTranslate, &result)
 	return result
-}
-
-// ingressRulesFromHTTPRoute validates and generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
-// If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
-func (t *Translator) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayapi.HTTPRoute) error {
-	for _, kongServiceTranslation := range subtranslator.TranslateHTTPRoute(httproute) {
-		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
-
-		serviceName := kongServiceTranslation.Name
-
-		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithName(t.logger, t.storer, result, serviceName, httproute, "http", backendRefs...)
-		if err != nil {
-			return err
-		}
-
-		// generate the routes for the service and attach them to the service
-		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, t.featureFlags.ExpressionRoutes)
-			if err != nil {
-				return err
-			}
-			service.Routes = append(service.Routes, routes...)
-		}
-
-		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[serviceName] = httproute
-	}
-	applyTimeoutsToService(httproute, result)
-	return nil
-}
-
-// applyTimeoutsToService applies timeouts from HTTPRoute to the service.
-// If the HTTPRoute has multiple rules, the timeout from the last rule which has specific timeout will be applied to the service.
-// If the HTTPRoute has multiple rules and the first rule doesn't have timeout, the default timeout will be applied to the service.
-func applyTimeoutsToService(httpRoute *gatewayapi.HTTPRoute, rules *ingressRules) {
-	// If the HTTPRoute doesn't have rules, we don't need to apply timeouts to the service.
-	if httpRoute.Spec.Rules == nil {
-		return
-	}
-
-	backendRequestTimeout := DefaultServiceTimeout
-	for _, rule := range httpRoute.Spec.Rules {
-		if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-			duration, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-			// We ignore the error here because the rule.Timeouts.BackendRequest is validated
-			// to be a strict subset of Golang time.ParseDuration so it should never happen
-			if err != nil {
-				continue
-			}
-			backendRequestTimeout = int(duration.Milliseconds())
-		}
-	}
-
-	// if the backendRequestTimeout is the same as the default timeout, we don't need to apply it to the service.
-	if backendRequestTimeout == DefaultServiceTimeout {
-		return
-	}
-
-	// due rules.ServiceNameToServices is a map, we need to iterate over the map to find the service
-	// which has the same parent as the HTTPRoute.
-	for serviceName, service := range rules.ServiceNameToServices {
-		if service.Parent.GetObjectKind() == httpRoute.GetObjectKind() && service.Parent.GetName() == httpRoute.Name && service.Parent.GetNamespace() == httpRoute.Namespace {
-			// Due to only one field being available in the Gateway API to control this behavior,
-			// when users set `spec.rules[].timeouts` in HTTPRoute,
-			// KIC will also set ReadTimeout, WriteTimeout and ConnectTimeout for the service to this value
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/4914#issuecomment-1813964669
-			service.Service.ReadTimeout = kong.Int(backendRequestTimeout)
-			service.Service.ConnectTimeout = kong.Int(backendRequestTimeout)
-			service.Service.WriteTimeout = kong.Int(backendRequestTimeout)
-			rules.ServiceNameToServices[serviceName] = service
-		}
-	}
 }
 
 func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlags) error {
@@ -160,48 +69,43 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 	return nil
 }
 
-// ingressRulesFromHTTPRoutesUsingExpressionRoutes translates HTTPRoutes to expression based routes
-// when ExpressionRoutes feature flag is enabled.
-// Because we need to assign different priorities based on the hostname and match in the specification of HTTPRoutes,
-// We need to split the HTTPRoutes into ones with only one hostname and one match, then assign priority to them
-// and finally translate the split HTTPRoutes into Kong services and routes with assigned priorities.
-func (t *Translator) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
-	// first, split HTTPRoutes by hostnames and matches.
-	splitHTTPRouteMatches := []subtranslator.SplitHTTPRouteMatch{}
-	for _, httproute := range httpRoutes {
-		splitHTTPRouteMatches = append(splitHTTPRouteMatches, subtranslator.SplitHTTPRoute(httproute)...)
+// ingressRulesFromHTTPRoutesWithCombinedService translates a list of HTTPRoutes to ingress rules.
+// When the feature flag CombinedServicesFromDifferentHTTPRoutes is true, it combines rules with same backends
+// to a single Kong gateway service across different HTTPRoutes in the same namespace.
+// When the feature flag is false, it combines rules with same backends in an HTTPRoute to a Kong gateway service.
+// When the feature flag ExpressionRoutes is set to true, expression based Kong routes will be translated from matches of HTTPRoutes.
+// Otherwise, traditional Kong routes are translated.
+func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
+	translateOptions := subtranslator.TranslateHTTPRouteToKongstateServiceOptions{
+		CombinedServicesFromDifferentHTTPRoutes: t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
+		ExpressionRoutes:                        t.featureFlags.ExpressionRoutes,
+		SupportRedirectPlugin:                   t.featureFlags.SupportRedirectPlugin,
 	}
-	// assign priorities to split HTTPRoutes.
-	splitHTTPRoutesWithPriorities := subtranslator.AssignRoutePriorityToSplitHTTPRouteMatches(t.logger, splitHTTPRouteMatches)
-	httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
-
-	// translate split HTTPRoute matches to ingress rules, including services, routes, upstreams.
-	for _, httpRouteWithPriority := range splitHTTPRoutesWithPriorities {
-		err := t.ingressRulesFromSplitHTTPRouteMatchWithPriority(result, httpRouteWithPriority)
-		if err != nil {
-			nsName := k8stypes.NamespacedName{
-				Namespace: httpRouteWithPriority.Match.Source.Namespace,
-				Name:      httpRouteWithPriority.Match.Source.Name,
-			}
-			httpRouteNameToTranslationFailure[nsName] = append(httpRouteNameToTranslationFailure[nsName], err)
-		}
+	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
+		t.logger,
+		t.storer,
+		httpRoutes,
+		translateOptions,
+	)
+	for serviceName, service := range translationResult.ServiceNameToKongstateService {
+		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = service.Parent
 	}
-	// Register successful translated objects and translation failures.
-	// Because one HTTPRoute may be split into multiple HTTPRoutes, we need to de-duplicate by namespace and name.
 	for _, httproute := range httpRoutes {
-		nsName := k8stypes.NamespacedName{
+		namespacedName := k8stypes.NamespacedName{
 			Namespace: httproute.Namespace,
 			Name:      httproute.Name,
 		}
-		if translationFailures, ok := httpRouteNameToTranslationFailure[nsName]; !ok {
-			applyTimeoutsToService(httproute, result)
-		} else {
-			t.registerTranslationFailure(
+		translationFailures := translationResult.HTTPRouteNameToTranslationErrors[namespacedName]
+		// For HTTPRoutes that errors happened in translation, register translation failures for them.
+		if len(translationFailures) > 0 {
+			t.failuresCollector.PushResourceFailure(
 				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
 				httproute,
 			)
 			continue
 		}
+		// Register HTTPRoute successfully translated if no translation error found.
 		t.registerSuccessfullyTranslatedObject(httproute)
 	}
 }
@@ -233,14 +137,14 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
 	translation subtranslator.KongRouteTranslation,
-	expressionRoutes bool,
+	options subtranslator.TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
-	// gather the k8s object information and hostnames from the httproute
+	// Gather the k8s object information and hostnames from the HTTPRoute.
 	objectInfo := util.FromK8sObject(httproute)
-	tags := util.GenerateTagsForObject(httproute)
+	tags := util.GenerateTagsForObject(httproute, util.AdditionalTagsK8sNamedRouteRule(translation.OptionalNamedRouteRules...)...)
 
 	// translate to expression based routes when expressionRoutes is enabled.
-	if expressionRoutes {
+	if options.ExpressionRoutes {
 		// get the hostnames from the HTTPRoute
 		hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
 		return subtranslator.GenerateKongExpressionRoutesFromHTTPRouteMatches(
@@ -248,267 +152,19 @@ func GenerateKongRouteFromTranslation(
 			objectInfo,
 			hostnames,
 			tags,
+			options.SupportRedirectPlugin,
 		)
 	}
 
 	// get the hostnames from the HTTPRoute
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
-
-	return generateKongRoutesFromHTTPRouteMatches(
+	return subtranslator.GenerateKongRoutesFromHTTPRouteMatches(
 		translation.Name,
 		translation.Matches,
 		translation.Filters,
 		objectInfo,
 		hostnames,
 		tags,
+		options,
 	)
-}
-
-// generateKongRoutesFromHTTPRouteMatches converts an HTTPRouteMatches to a slice of Kong Route objects with traditional routes.
-// This function assumes that the HTTPRouteMatches share the query params, headers and methods.
-func generateKongRoutesFromHTTPRouteMatches(
-	routeName string,
-	matches []gatewayapi.HTTPRouteMatch,
-	filters []gatewayapi.HTTPRouteFilter,
-	ingressObjectInfo util.K8sObjectInfo,
-	hostnames []*string,
-	tags []*string,
-) ([]kongstate.Route, error) {
-	if len(matches) == 0 {
-		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
-		// but only backends as long as there are hostnames. In this case, we
-		// match all traffic based on the hostname and leave all other routing
-		// options default.
-		// for rules with no hostnames, we generate a "catch-all" route for it.
-		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name:         kong.String(routeName),
-				Protocols:    kong.StringSlice("http", "https"),
-				PreserveHost: kong.Bool(true),
-				Tags:         tags,
-			},
-		}
-		r.Hosts = append(r.Hosts, hostnames...)
-
-		return []kongstate.Route{r}, nil
-	}
-
-	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)
-	r.Tags = tags
-
-	// convert header matching from HTTPRoute to Route format
-	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
-	if err != nil {
-		return []kongstate.Route{}, err
-	}
-	if len(headers) > 0 {
-		r.Route.Headers = headers
-	}
-
-	// stripPath needs to be disabled by default to be conformant with the Gateway API
-	r.StripPath = kong.Bool(false)
-
-	// Check if the route has a RequestRedirect or URLRewrite with non-nil ReplacePrefixMatch - if it does, we need to
-	// generate a route for each match as the path is used to modify routes and generate plugins.
-	hasRedirectFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
-	})
-
-	routes, err := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter)
-	if err != nil {
-		return nil, err
-	}
-
-	var path string
-	if hasURLRewriteWithReplacePrefixMatchFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
-			filter.URLRewrite.Path != nil &&
-			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
-			filter.URLRewrite.Path.ReplacePrefixMatch != nil
-	}); hasURLRewriteWithReplacePrefixMatchFilter {
-		// In the case of URLRewrite with non-nil ReplacePrefixMatch, we rely on a CEL validation rule that disallows
-		// rules with multiple matches if the URLRewrite filter is present. We can be certain that if the filter is
-		// present, there is at most only one match. Based on that, we can determine the path from the first match.
-		// See: https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131
-		if len(matches) > 0 && matches[0].Path != nil && matches[0].Path.Value != nil {
-			path = *matches[0].Path.Value
-		}
-	}
-
-	// If the redirect filter has not been set, we still need to set the route plugins.
-	if !hasRedirectFilter {
-		if err := subtranslator.SetRoutePlugins(&r, filters, path, tags, false); err != nil {
-			return nil, err
-		}
-		routes = []kongstate.Route{r}
-	}
-
-	return routes, nil
-}
-
-// getRoutesFromMatches converts all the httpRoute matches to the proper set of kong routes.
-func getRoutesFromMatches(
-	matches []gatewayapi.HTTPRouteMatch,
-	route *kongstate.Route,
-	filters []gatewayapi.HTTPRouteFilter,
-	tags []*string,
-	hasRedirectFilter bool,
-) ([]kongstate.Route, error) {
-	seenMethods := make(map[string]struct{})
-	routes := make([]kongstate.Route, 0)
-
-	for _, match := range matches {
-		// if the rule specifies the redirectFilter, we cannot put all the paths under the same route,
-		// as the kong plugin needs to know the exact path to use to perform redirection.
-		if hasRedirectFilter {
-			matchRoute := route
-			// configure path matching information about the route if paths matching was defined
-			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
-			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
-			// For exact matches, we transform the path into a regular expression that terminates after the value
-			if match.Path != nil {
-				paths := generateKongRoutePathFromHTTPRouteMatch(match)
-				for _, p := range paths {
-					matchRoute.Route.Paths = append(matchRoute.Route.Paths, kong.String(p))
-				}
-			}
-
-			// configure method matching information about the route if method
-			// matching was defined.
-			if match.Method != nil {
-				method := string(*match.Method)
-				if _, ok := seenMethods[method]; !ok {
-					matchRoute.Route.Methods = append(matchRoute.Route.Methods, kong.String(string(*match.Method)))
-					seenMethods[method] = struct{}{}
-				}
-			}
-			path := ""
-			if match.Path.Value != nil {
-				path = *match.Path.Value
-			}
-
-			// generate kong plugins from rule.filters
-			if err := subtranslator.SetRoutePlugins(matchRoute, filters, path, tags, false); err != nil {
-				return nil, err
-			}
-
-			routes = append(routes, *route)
-		} else {
-			// Configure path matching information about the route if paths matching was defined
-			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
-			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
-			// For exact matches, we transform the path into a regular expression that terminates after the value.
-			if match.Path != nil {
-				for _, path := range generateKongRoutePathFromHTTPRouteMatch(match) {
-					route.Route.Paths = append(route.Route.Paths, kong.String(path))
-				}
-			}
-
-			if match.Method != nil {
-				method := string(*match.Method)
-				if _, ok := seenMethods[method]; !ok {
-					route.Route.Methods = append(route.Route.Methods, kong.String(string(*match.Method)))
-					seenMethods[method] = struct{}{}
-				}
-			}
-		}
-	}
-	return routes, nil
-}
-
-func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []string {
-	switch *match.Path.Type {
-	case gatewayapi.PathMatchExact:
-		return []string{subtranslator.KongPathRegexPrefix + *match.Path.Value + "$"}
-
-	case gatewayapi.PathMatchPathPrefix:
-		paths := make([]string, 0, 2)
-		path := *match.Path.Value
-		paths = append(paths, fmt.Sprintf("%s%s$", subtranslator.KongPathRegexPrefix, path))
-		if !strings.HasSuffix(path, "/") {
-			path = fmt.Sprintf("%s/", path)
-		}
-		return append(paths, path)
-
-	case gatewayapi.PathMatchRegularExpression:
-		return []string{subtranslator.KongPathRegexPrefix + *match.Path.Value}
-	}
-
-	return []string{""} // unreachable code
-}
-
-func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
-	// build the route object using the method and pathing information
-	r := kongstate.Route{
-		Ingress: ingressObjectInfo,
-		Route: kong.Route{
-			Name:         kong.String(routeName),
-			Protocols:    kong.StringSlice("http", "https"),
-			PreserveHost: kong.Bool(true),
-			// metadata tags aren't added here, they're added by the caller
-		},
-	}
-
-	// attach any hostnames associated with the httproute
-	if len(hostnames) > 0 {
-		r.Hosts = hostnames
-	}
-
-	return r
-}
-
-func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef) []gatewayapi.BackendRef {
-	backendRefs := make([]gatewayapi.BackendRef, 0, len(httpBackendRef))
-
-	for _, hRef := range httpBackendRef {
-		backendRefs = append(backendRefs, hRef.BackendRef)
-	}
-	return backendRefs
-}
-
-// ingressRulesFromSplitHTTPRouteMatchWithPriority translates a single match split from HTTPRoute
-// to ingress rule, including Kong service and Kong route.
-func (t *Translator) ingressRulesFromSplitHTTPRouteMatchWithPriority(
-	rules *ingressRules,
-	httpRouteMatchWithPriority subtranslator.SplitHTTPRouteMatchToKongRoutePriority,
-) error {
-	match := httpRouteMatchWithPriority.Match
-	httpRoute := httpRouteMatchWithPriority.Match.Source
-	if match.RuleIndex >= len(httpRoute.Spec.Rules) {
-		t.logger.Error(nil, "Split match has rule out of bound of rules in source HTTPRoute",
-			"rule_index", match.RuleIndex, "rule_count", len(httpRoute.Spec.Rules))
-		return nil
-	}
-
-	rule := httpRoute.Spec.Rules[match.RuleIndex]
-	backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
-	serviceName := subtranslator.KongServiceNameFromSplitHTTPRouteMatch(httpRouteMatchWithPriority.Match)
-
-	kongService, err := generateKongServiceFromBackendRefWithName(
-		t.logger,
-		t.storer,
-		rules,
-		serviceName,
-		httpRoute,
-		"http",
-		backendRefs...,
-	)
-	if err != nil {
-		return err
-	}
-
-	additionalRoutes, err := subtranslator.KongExpressionRouteFromHTTPRouteMatchWithPriority(httpRouteMatchWithPriority)
-	if err != nil {
-		return err
-	}
-
-	kongService.Routes = append(
-		kongService.Routes,
-		*additionalRoutes,
-	)
-	// cache the service to avoid duplicates in further loop iterations
-	rules.ServiceNameToServices[serviceName] = kongService
-	rules.ServiceNameToParent[serviceName] = httpRoute
-	return nil
 }

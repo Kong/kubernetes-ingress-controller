@@ -24,8 +24,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: collect test coverage artifacts
         id: download-coverage
@@ -51,8 +49,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: download tests report
         id: download-coverage

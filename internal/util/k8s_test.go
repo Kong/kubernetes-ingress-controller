@@ -18,11 +18,12 @@ package util
 
 import (
 	"context"
+	"slices"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
@@ -264,8 +265,21 @@ func TestGenerateTagsForObject(t *testing.T) {
 		},
 	}
 
-	tags := GenerateTagsForObject(testObj)
-	if diff := cmp.Diff(expectedTagSet, tags); diff != "" {
-		t.Fatalf("generated tags are not as expected, diff:\n%s", diff)
-	}
+	t.Run("generated tags based on the object", func(t *testing.T) {
+		tags := GenerateTagsForObject(testObj)
+		require.ElementsMatch(t, expectedTagSet, tags, "generated tags are not as expected")
+	})
+
+	t.Run("generated tags based on the object with additional tags k8s-named-route-rule", func(t *testing.T) {
+		expectedTagSetWithAdditional := slices.Concat(
+			expectedTagSet,
+			[]*string{
+				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "test"),
+				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "echo"),
+			},
+		)
+
+		tags := GenerateTagsForObject(testObj, AdditionalTagsK8sNamedRouteRule("test", "", " ", "echo")...)
+		require.ElementsMatch(t, expectedTagSetWithAdditional, tags, "generated tags are not as expected")
+	})
 }

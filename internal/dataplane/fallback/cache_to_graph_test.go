@@ -47,6 +47,11 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			expectedAdjacencyMap: map[string][]string{},
 		},
 		{
+			name:                 "cache with stores being nil",
+			cache:                store.CacheStores{},
+			expectedAdjacencyMap: map[string][]string{},
+		},
+		{
 			name: "cache with Ingress and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&netv1.Ingress{

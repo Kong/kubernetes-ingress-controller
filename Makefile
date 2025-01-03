@@ -145,6 +145,20 @@ go-junit-report: ## Download go-junit-report locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=go-junit-report
 	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
+ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
+ACTIONLINT = $(PROJECT_DIR)/bin/installs/actionlint/$(ACTIONLINT_VERSION)/bin/actionlint
+.PHONY: download.actionlint
+download.actionlint: mise yq ## Download actionlint locally if necessary.
+	@$(MISE) plugin install --yes -q actionlint
+	@$(MISE) install -q actionlint@$(ACTIONLINT_VERSION)
+
+SHELLCHECK_VERSION = $(shell $(YQ) -r '.shellcheck' < $(TOOLS_VERSIONS_FILE))
+SHELLCHECK = $(PROJECT_DIR)/bin/installs/shellcheck/$(SHELLCHECK_VERSION)/bin/shellcheck
+.PHONY: download.shellcheck
+download.shellcheck: mise yq ## Download shellcheck locally if necessary.
+	@$(MISE) plugin install --yes -q shellcheck
+	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -196,6 +210,13 @@ fmt:
 
 .PHONY: lint
 lint: verify.tidy golangci-lint staticcheck
+
+.PHONY: lint.actions
+lint.actions: download.actionlint download.shellcheck
+# TODO: add more files to be checked
+	SHELLCHECK_OPTS='--exclude=SC2086,SC2155,SC2046' \
+	$(ACTIONLINT) -shellcheck $(SHELLCHECK) \
+		./.github/workflows/*
 
 .PHONY: golangci-lint
 golangci-lint: golangci-lint.download
@@ -752,7 +773,7 @@ generate.gateway-api-consts:
 		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
 		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-consts/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
+		OUTPUT=$(shell pwd)/test/consts/zz_generated.gateway.go \
 		go generate -tags=generate_gateway_api_consts ./test/internal/cmd/generate-gateway-api-consts
 
 .PHONY: go-mod-download-gateway-api

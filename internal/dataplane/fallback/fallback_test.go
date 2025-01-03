@@ -94,7 +94,7 @@ func TestGenerator_GenerateExcludingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateExcludingBrokenObjects(inputCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass)})
 		require.NoError(t, err)
 		require.Equal(t, inputCacheStores, graphProvider.CacheToGraphLastCalledWith(), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 		require.Empty(t, fallbackCache.IngressClassV1.List(), "ingressClass should be excluded as it's broken")
 		require.Empty(t, fallbackCache.Service.List(), "service should be excluded as it depends on ingressClass")
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it depends on service")
@@ -105,7 +105,7 @@ func TestGenerator_GenerateExcludingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateExcludingBrokenObjects(inputCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(service)})
 		require.NoError(t, err)
 		require.Equal(t, inputCacheStores, graphProvider.CacheToGraphLastCalledWith(), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 		require.Empty(t, fallbackCache.Service.List(), "service should be excluded as it's broken")
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it depends on service")
 		require.ElementsMatch(t, fallbackCache.IngressClassV1.List(), []any{ingressClass}, "ingressClass shouldn't be excluded as it doesn't depend on service")
@@ -116,7 +116,7 @@ func TestGenerator_GenerateExcludingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateExcludingBrokenObjects(inputCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(serviceFacade)})
 		require.NoError(t, err)
 		require.Equal(t, inputCacheStores, graphProvider.CacheToGraphLastCalledWith(), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it's broken")
 		require.ElementsMatch(t, fallbackCache.IngressClassV1.List(), []any{ingressClass}, "ingressClass shouldn't be excluded as it doesn't depend on service")
 		require.ElementsMatch(t, fallbackCache.Service.List(), []any{service}, "service shouldn't be excluded as it doesn't depend on serviceFacade")
@@ -127,7 +127,7 @@ func TestGenerator_GenerateExcludingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateExcludingBrokenObjects(inputCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(plugin)})
 		require.NoError(t, err)
 		require.Equal(t, inputCacheStores, graphProvider.CacheToGraphLastCalledWith(), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 		require.Empty(t, fallbackCache.Plugin.List(), "plugin should be excluded as it's broken")
 		require.ElementsMatch(t, fallbackCache.IngressClassV1.List(), []any{ingressClass}, "ingressClass shouldn't be excluded as it doesn't depend on plugin")
 		require.ElementsMatch(t, fallbackCache.Service.List(), []any{service}, "service shouldn't be excluded as it doesn't depend on plugin")
@@ -138,7 +138,7 @@ func TestGenerator_GenerateExcludingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateExcludingBrokenObjects(inputCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass), fallback.GetObjectHash(service)})
 		require.NoError(t, err)
 		require.Equal(t, inputCacheStores, graphProvider.CacheToGraphLastCalledWith(), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 		require.Empty(t, fallbackCache.IngressClassV1.List(), "ingressClass should be excluded as it's broken")
 		require.Empty(t, fallbackCache.Service.List(), "service should be excluded as it's broken")
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it depends on service")
@@ -225,7 +225,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2),
 			"expected the generator to call CacheToGraph with the input cache stores and the last valid cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
 		fallbackIngressClass, err := getFromStore[*netv1.IngressClass](fallbackCache.IngressClassV1, ingressClass)
 		require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2),
 			"expected the generator to call CacheToGraph with the input cache stores and fallback cache")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
 		fallbackService, err := getFromStore[*corev1.Service](fallbackCache.Service, service)
 		require.NoError(t, err)
@@ -268,7 +268,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(serviceFacade)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it's broken and it's not present in the last valid cache snapshot")
 
@@ -289,7 +289,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(plugin)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
 		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
@@ -310,7 +310,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass), fallback.GetObjectHash(service)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
 		fallbackIngressClass, err := getFromStore[*netv1.IngressClass](fallbackCache.IngressClassV1, ingressClass)
 		require.NoError(t, err)
@@ -331,7 +331,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		fallbackCache, _, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, nil, []fallback.ObjectHash{fallback.GetObjectHash(ingressClass), fallback.GetObjectHash(service)})
 		require.NoError(t, err)
 		require.Equal(t, []store.CacheStores{inputCacheStores}, graphProvider.CacheToGraphLastNCalledWith(1), "expected the generator to call CacheToGraph with the input cache stores only")
-		require.NotSame(t, inputCacheStores, fallbackCache)
+		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
 		require.Empty(t, fallbackCache.IngressClassV1.List(), "ingressClass should be excluded as it's broken and there's no last valid cache snapshot")
 		require.Empty(t, fallbackCache.Service.List(), "service should be excluded as it's broken and there's no last valid cache snapshot")

@@ -38,7 +38,7 @@ func TestTelemetry(t *testing.T) {
 	t.Parallel()
 
 	t.Log("configuring TLS listener - server for telemetry data")
-	cert := certificate.MustGenerateSelfSignedCert()
+	cert := certificate.MustGenerateCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.
@@ -68,7 +68,7 @@ func TestTelemetry(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, diagnostics.ConfigDumpDiagnostic{}, logger)
+		err = manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 
@@ -356,6 +356,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		"<14>"+
 			"signal=kic-ping;"+
 			"db=off;"+
+			"feature-combinedservicesfromdifferenthttproutes=false;"+
 			"feature-fallbackconfiguration=false;"+
 			"feature-fillids=true;"+
 			"feature-gateway-service-discovery=false;"+

@@ -18,28 +18,6 @@ import (
 // -----------------------------------------------------------------------------
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch
-// and converts these header matching rules to the format expected by go-kong.
-func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTPHeaderMatch) (map[string][]string, error) {
-	// iterate through each provided header match checking for invalid
-	// options and otherwise converting to kong type format.
-	convertedHeaders := make(map[string][]string)
-	for _, header := range headers {
-		if _, exists := convertedHeaders[string(header.Name)]; exists {
-			return nil, fmt.Errorf("multiple header matches for the same header are not allowed: %s",
-				string(header.Name))
-		}
-		switch {
-		case header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression:
-			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
-		case header.Type == nil || *header.Type == gatewayapi.HeaderMatchExact:
-			convertedHeaders[string(header.Name)] = []string{header.Value}
-		default:
-			return nil, fmt.Errorf("unknown/unsupported header match type: %s", string(*header.Type))
-		}
-	}
-
-	return convertedHeaders, nil
-}
 
 // generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is provided by the caller.

@@ -78,7 +78,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port)
+				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port, t.clusterDomain)
 
 				if len(newTargets) == 0 {
 					t.logger.V(logging.InfoLevel).Info("No targets could be found for kubernetes service",
@@ -116,16 +116,6 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				}
 			}
 
-			targets := lo.Values(targetMap)
-			// Warn if an upstream was created with 0 targets and no request-termination plugin is present.
-			// When the plugin is present there (may be a result of RequestRedirect filter) there may not be
-			// a target service (it may point to an arbitrary URL), hence do not log a warn.
-			if len(targets) == 0 && !lo.ContainsBy(service.Plugins, func(p kong.Plugin) bool {
-				return p.Name != nil && *p.Name == "request-termination"
-			}) {
-				t.logger.V(logging.InfoLevel).Info("No targets found to create upstream", "service_name", *service.Name)
-			}
-
 			// Define the upstream including all the newly populated targets
 			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
@@ -134,7 +124,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					Tags: service.Tags, // Populated by populateServices already.
 				},
 				Service: service,
-				Targets: targets,
+				Targets: lo.Values(targetMap),
 			}
 			upstreams = append(upstreams, upstream)
 			upstreamDedup[name] = empty
@@ -195,6 +185,7 @@ func getServiceEndpoints(
 	s store.Storer,
 	svc *corev1.Service,
 	servicePort *corev1.ServicePort,
+	clusterDomain string,
 ) []kongstate.Target {
 	logger = logger.WithValues(
 		"service_name", svc.Name,
@@ -219,7 +210,7 @@ func getServiceEndpoints(
 	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream)
+		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream, clusterDomain)
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
@@ -257,6 +248,7 @@ func getEndpoints(
 	proto corev1.Protocol,
 	getEndpointSlices func(string, string) ([]*discoveryv1.EndpointSlice, error),
 	isSvcUpstream bool,
+	clusterDomain string,
 ) []util.Endpoint {
 	if service == nil || port == nil {
 		return []util.Endpoint{}
@@ -265,9 +257,13 @@ func getEndpoints(
 	// If service is an upstream service...
 	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
 		// ... return its address as the only endpoint.
+		svcDomainName := service.Name + "." + service.Namespace + ".svc"
+		if clusterDomain != "" {
+			svcDomainName += "." + clusterDomain
+		}
 		return []util.Endpoint{
 			{
-				Address: service.Name + "." + service.Namespace + ".svc",
+				Address: svcDomainName,
 				Port:    fmt.Sprint(port.Port),
 			},
 		}

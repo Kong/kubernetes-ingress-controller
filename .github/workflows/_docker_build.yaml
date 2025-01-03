@@ -52,7 +52,7 @@ jobs:
 
       - name: Add major.minor tag
         id: add-major-minor-tag
-        if: ${{ steps.parse-semver-tag.outputs.prerelease == '' }}
+        if: ${{ steps.parse-semver-tag.outputs.prerelease == '' && inputs.tag != '' }}
         run: |
           echo "tag=type=raw,value=${{ steps.parse-semver-tag.outputs.major }}.${{ steps.parse-semver-tag.outputs.minor }}" >> $GITHUB_OUTPUT
 
@@ -60,7 +60,7 @@ jobs:
         id: merge-tags
         run: |
           echo "tags<<EOF" >> $GITHUB_OUTPUT
-          if [ -n "${{ steps.major-minor-tag.outputs.tag }}" ]; then
+          if [ -n "${{ steps.add-major-minor-tag.outputs.tag }}" ]; then
             echo "${{ steps.add-major-minor-tag.outputs.tag }}" >> $GITHUB_OUTPUT
           fi
           echo "${{ steps.add-standard-tag.outputs.tag }}" >> $GITHUB_OUTPUT
@@ -79,8 +79,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
       - name: Setup golang
@@ -103,7 +101,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5.5.1
+        uses: docker/metadata-action@v5.6.1
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |

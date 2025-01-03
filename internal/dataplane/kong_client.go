@@ -109,11 +109,11 @@ type KongClient struct {
 
 	// diagnostic is the client and configuration for reporting diagnostic
 	// information during data-plane update runtime.
-	diagnostic diagnostics.ConfigDumpDiagnostic
+	diagnostic diagnostics.ClientDiagnostic
 
-	// prometheusMetrics is the client for shipping metrics information
+	// metricsRecorder is the client for shipping metrics information
 	// updates to the prometheus exporter.
-	prometheusMetrics *metrics.CtrlFuncMetrics
+	metricsRecorder metrics.Recorder
 
 	// kubernetesObjectReportLock is a mutex for thread-safety of
 	// kubernetes object reporting functionality.
@@ -190,7 +190,7 @@ type KongClient struct {
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	diagnostic diagnostics.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ClientDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode dpconf.DBMode,
@@ -201,12 +201,13 @@ func NewKongClient(
 	kongConfigBuilder KongConfigBuilder,
 	cacheStores *store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
+	metricsRecorder metrics.Recorder,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                  logger,
 		requestTimeout:          timeout,
 		diagnostic:              diagnostic,
-		prometheusMetrics:       metrics.NewCtrlFuncMetrics(),
+		metricsRecorder:         metricsRecorder,
 		cache:                   cacheStores,
 		kongConfig:              kongConfig,
 		eventRecorder:           eventRecorder,
@@ -454,9 +455,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 		}
 		hasNewSnapshotToBeProcessed := newSnapshotHash != store.SnapshotHashEmpty
 		if !hasNewSnapshotToBeProcessed {
-			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheHit()
+			c.metricsRecorder.RecordProcessedConfigSnapshotCacheHit()
 		} else {
-			c.prometheusMetrics.RecordProcessedConfigSnapshotCacheMiss()
+			c.metricsRecorder.RecordProcessedConfigSnapshotCacheMiss()
 		}
 		if hasNewSnapshotToBeProcessed {
 			c.logger.V(logging.DebugLevel).Info("New configuration snapshot detected", "hash", newSnapshotHash)
@@ -478,13 +479,13 @@ func (c *KongClient) Update(ctx context.Context) error {
 	translationDuration := time.Since(translationStart)
 
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
-		c.prometheusMetrics.RecordTranslationFailure(translationDuration)
-		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
+		c.metricsRecorder.RecordTranslationFailure(translationDuration)
+		c.metricsRecorder.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
 	} else {
-		c.prometheusMetrics.RecordTranslationSuccess(translationDuration)
-		c.prometheusMetrics.RecordTranslationBrokenResources(0)
+		c.metricsRecorder.RecordTranslationSuccess(translationDuration)
+		c.metricsRecorder.RecordTranslationBrokenResources(0)
 		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
 	}
 
@@ -598,6 +599,9 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	currentCache store.CacheStores,
 	brokenObjects []fallback.ObjectHash,
 ) error {
+	if !currentCache.Available() {
+		return errors.New("failed to generate fallback configuration: cache snapshot not available")
+	}
 	// Generate a fallback cache snapshot.
 	fallbackCache, generatedCacheMetadata, err := c.generateFallbackCache(currentCache, brokenObjects)
 	if err != nil {
@@ -616,12 +620,12 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 
 	if failuresCount := len(fallbackParsingResult.TranslationFailures); failuresCount > 0 {
 		c.recordResourceFailureEvents(fallbackParsingResult.TranslationFailures, FallbackKongConfigurationTranslationFailedEventReason)
-		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(failuresCount)
-		c.prometheusMetrics.RecordFallbackTranslationFailure(translationDuration)
+		c.metricsRecorder.RecordFallbackTranslationBrokenResources(failuresCount)
+		c.metricsRecorder.RecordFallbackTranslationFailure(translationDuration)
 		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building fallback data-plane configuration", "count", failuresCount, "duration", translationDuration.String())
 	} else {
-		c.prometheusMetrics.RecordFallbackTranslationBrokenResources(0)
-		c.prometheusMetrics.RecordFallbackTranslationSuccess(translationDuration)
+		c.metricsRecorder.RecordFallbackTranslationBrokenResources(0)
+		c.metricsRecorder.RecordFallbackTranslationSuccess(translationDuration)
 		c.logger.V(logging.DebugLevel).Info("Successfully built fallback configuration from caches", "duration", translationDuration.String())
 	}
 
@@ -646,7 +650,7 @@ func (c *KongClient) generateFallbackCache(
 ) (s store.CacheStores, metadata fallback.GeneratedCacheMetadata, err error) {
 	start := time.Now()
 	defer func() {
-		c.prometheusMetrics.RecordFallbackCacheGenerationDuration(time.Since(start), err)
+		c.metricsRecorder.RecordFallbackCacheGenerationDuration(time.Since(start), err)
 	}()
 	if c.kongConfig.UseLastValidConfigForFallback {
 		return c.fallbackConfigGenerator.GenerateBackfillingBrokenObjects(
@@ -797,9 +801,10 @@ func (c *KongClient) sendToClient(
 		config,
 		targetContent,
 		customEntities,
-		c.prometheusMetrics,
+		c.metricsRecorder,
 		c.updateStrategyResolver,
 		c.configChangeDetector,
+		&c.diagnostic,
 		isFallback,
 	)
 	// Only record events on applying configuration to Kong gateway here.
@@ -813,16 +818,19 @@ func (c *KongClient) sendToClient(
 			updateErr          sendconfig.UpdateError
 			responseParsingErr sendconfig.ResponseParsingError
 		)
-		if errors.As(err, &updateErr) {
+
+		switch {
+		case errors.As(err, &updateErr):
 			reason := KongConfigurationApplyFailedEventReason
 			if isFallback {
 				reason = FallbackKongConfigurationApplyFailedEventReason
 			}
 			c.recordResourceFailureEvents(updateErr.ResourceFailures(), reason)
-		}
-		if errors.As(err, &responseParsingErr) {
+			rawResponseBody = updateErr.RawResponseBody()
+		case errors.As(err, &responseParsingErr):
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
+
 		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {
@@ -864,13 +872,13 @@ type sendDiagnosticFn func(meta diagnostics.DumpMeta, raw []byte)
 func prepareSendDiagnosticFn(
 	ctx context.Context,
 	logger logr.Logger,
-	diagnosticConfig diagnostics.ConfigDumpDiagnostic,
+	diagnosticConfig diagnostics.ClientDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
 	isFallback bool,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (diagnostics.ConfigDumpDiagnostic{}) {
+	if diagnosticConfig == (diagnostics.ClientDiagnostic{}) {
 		// noop, diagnostics won't be sent
 		return func(diagnostics.DumpMeta, []byte) {}
 	}
@@ -967,13 +975,12 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 	for _, failure := range resourceFailures {
 		for _, obj := range failure.CausingObjects() {
 			gvk := obj.GetObjectKind().GroupVersionKind()
-			c.logger.Error(
-				errors.New("object failed to apply"),
-				"recording a Warning event for object",
+			c.logger.V(logging.DebugLevel).Info(
+				"object failed to apply - recording a Warning event for object",
 				"name", obj.GetName(),
 				"namespace", obj.GetNamespace(),
 				"kind", gvk.Kind,
-				"apiVersion", gvk.Group+"/"+gvk.Version,
+				"apiVersion", gvk.GroupVersion().String(),
 				"reason", reason,
 				"message", failure.Message(),
 			)

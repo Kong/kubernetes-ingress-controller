@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup go
         uses: actions/setup-go@v5
@@ -35,3 +33,20 @@ jobs:
 
       - name: Verify generators consistency
         run: make verify.generators
+
+  actionlint:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - name: Run actionlint
+        env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
+        run: make lint.actions

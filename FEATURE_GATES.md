@@ -27,7 +27,7 @@ Please read the [Important Notes](#important-notes) section before using any `Al
 
 An additional **warning** for end-users who are reading this documentation and trying to enable `Alpha` or `Beta` features: it is **very important** to understand that features that are currently in an `Alpha` or `Beta` state may **become `Deprecated` at any time** and **may be removed as part of the next consecutive minor release**. This is especially true for `Alpha` maturity features. In other words, **until a feature becomes GA there are no guarantees that it's going to continue being available**. To avoid disruption to your services engage with the community and read the [CHANGELOG](/CHANGELOG.md) carefully to track progress. Alternatively **do not use features until they have reached a GA status**.
 
-[k8s-keps]:https://github.com/kubernetes/enhancements
+[k8s-kep]:https://github.com/kubernetes/enhancements
 [kic-keps]:https://github.com/Kong/kubernetes-ingress-controller/tree/main/keps
 [releases]:https://github.com/Kong/kubernetes-ingress-controller/releases
 [kong-docs]:https://github.com/Kong/docs.konghq.com
@@ -54,6 +54,7 @@ Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will
 | CombinedServices | `true`  | Beta  | 2.11.0 | 3.0.0 |
 | ExpressionRoutes | `false` | Alpha | 2.10.0 | 3.0.0 |
 | Knative          | `false` | Alpha | 0.8.0  | 3.0.0 |
+| KongCustomEntity | `true`  | GA    | 3.4.0  | TBD   |
 
 Features that reach GA and over time become stable will be removed from this table, they can be found in the main [KIC CRD Documentation][specs] and [Guides][guides].
 
@@ -62,17 +63,18 @@ Features that reach GA and over time become stable will be removed from this tab
 
 ### Feature gates for Alpha or Beta features
 
-| Feature                    | Default | Stage | Since  | Until |
-|----------------------------|---------|-------|--------|-------|
-| GatewayAlpha               | `false` | Alpha | 2.6.0  | TBD   |
-| FillIDs                    | `false` | Alpha | 2.10.0 | 3.0.0 |
-| FillIDs                    | `true`  | Beta  | 3.0.0  | TBD   |
-| RewriteURIs                | `false` | Alpha | 2.12.0 | TBD   |
-| KongServiceFacade          | `false` | Alpha | 3.1.0  | TBD   |
-| SanitizeKonnectConfigDumps | `true`  | Beta  | 3.1.0  | TBD   |
-| FallbackConfiguration      | `false` | Alpha | 3.2.0  | TBD   |
-| KongCustomEntity           | `false` | Alpha | 3.2.0  | 3.3.0 |
-| KongCustomEntity           | `true`  | Beta  | 3.3.0  | TBD   |
+| Feature                                 | Default | Stage | Since  | Until |
+|-----------------------------------------|---------|-------|--------|-------|
+| GatewayAlpha                            | `false` | Alpha | 2.6.0  | TBD   |
+| FillIDs                                 | `false` | Alpha | 2.10.0 | 3.0.0 |
+| FillIDs                                 | `true`  | Beta  | 3.0.0  | TBD   |
+| RewriteURIs                             | `false` | Alpha | 2.12.0 | TBD   |
+| KongServiceFacade                       | `false` | Alpha | 3.1.0  | TBD   |
+| SanitizeKonnectConfigDumps              | `true`  | Beta  | 3.1.0  | TBD   |
+| FallbackConfiguration                   | `false` | Alpha | 3.2.0  | TBD   |
+| KongCustomEntity                        | `false` | Alpha | 3.2.0  | 3.3.0 |
+| KongCustomEntity                        | `true`  | Beta  | 3.3.0  | 3.4.0 |
+| CombinedServicesFromDifferentHTTPRoutes | `false` | Alpha | 3.4.0  | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

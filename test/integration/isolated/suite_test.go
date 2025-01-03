@@ -240,7 +240,9 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 
 		cleaner := clusters.NewCleaner(cluster)
 		t.Cleanup(func() {
-			if err := cleaner.Cleanup(ctx); err != nil {
+			helpers.DumpDiagnosticsIfFailed(ctx, t, cluster)
+			t.Logf("Start cleanup for test %s", t.Name())
+			if err := cleaner.Cleanup(context.Background()); err != nil { //nolint:contextcheck
 				fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
 			}
 		})

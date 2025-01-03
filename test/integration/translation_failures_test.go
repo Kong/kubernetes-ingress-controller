@@ -60,7 +60,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{createdSecret},
-					reasonContains: "invalid CA certificate: missing 'cert' field in data",
+					reasonContains: `neither "cert" nor "ca.crt" key exist`,
 				}
 			},
 		},
@@ -80,7 +80,7 @@ func TestTranslationFailures(t *testing.T) {
 				return expectedTranslationFailure{
 					// expect events for both: a faulty secret and a plugin referring it
 					causingObjects: []client.Object{createdSecret, createdPlugin},
-					reasonContains: "invalid CA certificate: missing 'cert' field in data",
+					reasonContains: `neither "cert" nor "ca.crt" key exist`,
 				}
 			},
 		},

@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
@@ -259,7 +260,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{})
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{}, consts.DefaultClusterDomain)
 	require.NoError(t, err, "failed creating translator")
 
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.
@@ -299,7 +300,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	kongClient, err := NewKongClient(
 		logger,
 		timeout,
-		diagnostics.ConfigDumpDiagnostic{},
+		diagnostics.ClientDiagnostic{},
 		cfg,
 		mocks.NewEventRecorder(),
 		dpconf.DBModeOff, // Test will run in DB-less mode only for now. In the future, we may want to test DB mode as well.
@@ -310,6 +311,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 		p,
 		&cacheStores,
 		fallbackConfigGenerator,
+		mocks.MetricsRecorder{},
 	)
 	require.NoError(t, err)
 

@@ -24,15 +24,13 @@ const (
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
 func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
+	// NOTE: The domain for global endpoints is overridden in cleanup.yaml workflow.
+	// See https://github.com/Kong/sdk-konnect-go/issues/20 for details
 	sdk := sdk.New(konnectAccessToken,
 		sdkkonnectgo.WithServerURL(test.KonnectServerURL()),
 	)
 
-	me, err := sdk.Me.GetUsersMe(ctx,
-		// NOTE: Otherwise we use prod server by default.
-		// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
-		sdkkonnectops.WithServerURL(test.KonnectServerURL()),
-	)
+	me, err := sdk.Me.GetUsersMe(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get user info: %w", err)
 	}
@@ -149,9 +147,6 @@ func findOrphanedRolesToDelete(
 		// NOTE: Sadly we can't do filtering here (yet?) because ListUserRolesQueryParamFilter
 		// can only match by exact name and we match against a list of orphaned control plane IDs.
 		&sdkkonnectops.ListUserRolesQueryParamFilter{},
-		// NOTE: Otherwise we use prod server by default.
-		// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
-		sdkkonnectops.WithServerURL(test.KonnectServerURL()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list user roles: %w", err)
@@ -195,11 +190,7 @@ func deleteRoles(
 	var errs []error
 	for _, roleID := range rolesIDsToDelete {
 		log.Info("Deleting role", "id", roleID)
-		_, err := sdk.UsersRemoveRole(ctx, userID, roleID,
-			// NOTE: Otherwise we use prod server by default.
-			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
-			sdkkonnectops.WithServerURL(test.KonnectServerURL()),
-		)
+		_, err := sdk.UsersRemoveRole(ctx, userID, roleID)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete role %s: %w", roleID, err))
 		}

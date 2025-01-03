@@ -1,6 +1,8 @@
 package util
 
 import (
+	"maps"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,9 +29,11 @@ func (k K8sObjectInfo) GetNamespace() string {
 // calling FromK8sObject will have an effect on the original object.
 func FromK8sObject(obj client.Object) K8sObjectInfo {
 	return K8sObjectInfo{
-		Name:             obj.GetName(),
-		Namespace:        obj.GetNamespace(),
-		Annotations:      obj.GetAnnotations(),
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		// We return a copy of annotations map here because translator functions may modify annotations
+		// and that change would then be stored in store which is not desired.
+		Annotations:      maps.Clone(obj.GetAnnotations()),
 		GroupVersionKind: obj.GetObjectKind().GroupVersionKind(),
 	}
 }
@@ -40,9 +44,4 @@ func TypeMetaFromGVK(gvk schema.GroupVersionKind) metav1.TypeMeta {
 		APIVersion: gvk.GroupVersion().String(),
 		Kind:       gvk.Kind,
 	}
-}
-
-// TypeMetaFromK8sObject returns the typemeta of a client Object by its GVK.
-func TypeMetaFromK8sObject(obj client.Object) metav1.TypeMeta {
-	return TypeMetaFromGVK(obj.GetObjectKind().GroupVersionKind())
 }

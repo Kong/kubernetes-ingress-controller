@@ -168,6 +168,73 @@ func TestOverrideService(t *testing.T) {
 				annotations.AnnotationPrefix + annotations.WriteTimeoutKey:   "100",
 			},
 		},
+		{
+			name: "tls-verify override to false",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey: "false",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host:      kong.String("foo.com"),
+					TLSVerify: kong.Bool(false),
+				},
+			},
+		},
+		{
+			name: "tls-verify override to true",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey: "true",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host:      kong.String("foo.com"),
+					TLSVerify: kong.Bool(true),
+				},
+			},
+		},
+		{
+			name: "tls-verify override to unexpected value",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey: "unexpected",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+		},
+		{
+			name: "tls-verify-depth override",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey: "10",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host:           kong.String("foo.com"),
+					TLSVerifyDepth: kong.Int(10),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

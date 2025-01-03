@@ -18,6 +18,7 @@ package annotations
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -40,32 +41,36 @@ const (
 
 	AnnotationPrefix = "konghq.com"
 
-	ConfigurationKey     = "/override"
-	PluginsKey           = "/plugins"
-	ProtocolKey          = "/protocol"
-	ProtocolsKey         = "/protocols"
-	ClientCertKey        = "/client-cert"
-	StripPathKey         = "/strip-path"
-	PathKey              = "/path"
-	HTTPSRedirectCodeKey = "/https-redirect-status-code"
-	PreserveHostKey      = "/preserve-host"
-	RegexPriorityKey     = "/regex-priority"
-	HostHeaderKey        = "/host-header"
-	MethodsKey           = "/methods"
-	SNIsKey              = "/snis"
-	RequestBuffering     = "/request-buffering"
-	ResponseBuffering    = "/response-buffering"
-	HostAliasesKey       = "/host-aliases"
-	RegexPrefixKey       = "/regex-prefix"
-	ConnectTimeoutKey    = "/connect-timeout"
-	WriteTimeoutKey      = "/write-timeout"
-	ReadTimeoutKey       = "/read-timeout"
-	RetriesKey           = "/retries"
-	HeadersKey           = "/headers"
-	HeadersSeparatorKey  = "/headers-separator"
-	PathHandlingKey      = "/path-handling"
-	UserTagKey           = "/tags"
-	RewriteURIKey        = "/rewrite"
+	ConfigurationKey            = "/override"
+	PluginsKey                  = "/plugins"
+	ProtocolKey                 = "/protocol"
+	ProtocolsKey                = "/protocols"
+	ClientCertKey               = "/client-cert"
+	StripPathKey                = "/strip-path"
+	PathKey                     = "/path"
+	HTTPSRedirectCodeKey        = "/https-redirect-status-code"
+	PreserveHostKey             = "/preserve-host"
+	RegexPriorityKey            = "/regex-priority"
+	HostHeaderKey               = "/host-header"
+	MethodsKey                  = "/methods"
+	SNIsKey                     = "/snis"
+	RequestBuffering            = "/request-buffering"
+	ResponseBuffering           = "/response-buffering"
+	HostAliasesKey              = "/host-aliases"
+	RegexPrefixKey              = "/regex-prefix"
+	ConnectTimeoutKey           = "/connect-timeout"
+	WriteTimeoutKey             = "/write-timeout"
+	ReadTimeoutKey              = "/read-timeout"
+	RetriesKey                  = "/retries"
+	HeadersKey                  = "/headers"
+	HeadersSeparatorKey         = "/headers-separator"
+	PathHandlingKey             = "/path-handling"
+	UserTagKey                  = "/tags"
+	RewriteURIKey               = "/rewrite"
+	TLSVerifyKey                = "/tls-verify"
+	TLSVerifyDepthKey           = "/tls-verify-depth"
+	CACertificatesSecretsKey    = "/ca-certificates-secrets"
+	CACertificatesConfigMapsKey = "/ca-certificates-configmaps"
 
 	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -147,10 +152,7 @@ func ExtractProtocolName(anns map[string]string) string {
 // ExtractProtocolNames extracts the protocols supplied in the annotation.
 func ExtractProtocolNames(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+ProtocolsKey]
-	if len(val) == 0 {
-		return nil
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val)
 }
 
 // ExtractClientCertificate extracts the secret name containing the
@@ -211,19 +213,13 @@ func ExtractHostHeader(anns map[string]string) string {
 // ExtractMethods extracts the methods annotation value.
 func ExtractMethods(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+MethodsKey]
-	if val == "" {
-		return nil
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val, strings.ToUpper)
 }
 
 // ExtractSNIs extracts the route SNI match criteria annotation value.
 func ExtractSNIs(anns map[string]string) ([]string, bool) {
 	val, exists := anns[AnnotationPrefix+SNIsKey]
-	if val == "" {
-		return nil, exists
-	}
-	return strings.Split(val, ","), exists
+	return extractCommaDelimitedStrings(val), exists
 }
 
 // ExtractRequestBuffering extracts the boolean annotation indicating
@@ -249,7 +245,7 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 	if val == "" {
 		return nil, false
 	}
-	return strings.Split(val, ","), true
+	return extractCommaDelimitedStrings(val), true
 }
 
 // ExtractConnectTimeout extracts the connection timeout annotation value.
@@ -341,11 +337,8 @@ func ExtractGatewayPublishService(anns map[string]string) []string {
 	if anns == nil {
 		return []string{}
 	}
-	publish, ok := anns[AnnotationPrefix+GatewayPublishServiceKey]
-	if !ok {
-		return []string{}
-	}
-	return strings.Split(publish, ",")
+	publish := anns[AnnotationPrefix+GatewayPublishServiceKey]
+	return extractCommaDelimitedStrings(publish)
 }
 
 // UpdateGatewayPublishService updates the value of the annotation konghq.com/gatewayclass-unmanaged.
@@ -356,12 +349,7 @@ func UpdateGatewayPublishService(anns map[string]string, services []string) {
 // ExtractUserTags extracts a set of tags from a comma-separated string.
 func ExtractUserTags(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+UserTagKey]
-	// If the annotation is not present, the map provides an empty value, and splitting that will create a slice
-	// containing a single empty string tag. These aren't valid, hence this special case.
-	if len(val) == 0 {
-		return []string{}
-	}
-	return strings.Split(val, ",")
+	return extractCommaDelimitedStrings(val)
 }
 
 // ExtractRewriteURI extracts the rewrite annotation value.
@@ -374,4 +362,136 @@ func ExtractRewriteURI(anns map[string]string) (string, bool) {
 func ExtractUpstreamPolicy(anns map[string]string) (string, bool) {
 	s, ok := anns[kongv1beta1.KongUpstreamPolicyAnnotationKey]
 	return s, ok
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+func ExtractTLSVerify(anns map[string]string) (value bool, ok bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyKey]
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return false, false
+	}
+	verify, err := strconv.ParseBool(s)
+	if err != nil {
+		// If the annotation is present but not a valid boolean string, we consider it not set.
+		return false, false
+	}
+	// If the annotation is present and a valid boolean string, we return the value.
+	return verify, true
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+func ExtractTLSVerifyDepth(anns map[string]string) (int, bool) {
+	s, ok := anns[AnnotationPrefix+TLSVerifyDepthKey]
+	if !ok {
+		// If the annotation is not present, we consider it not set.
+		return 0, false
+	}
+	depth, err := strconv.Atoi(s)
+	if err != nil {
+		// If the annotation is present but not a valid integer string, we consider it not set.
+		return 0, false
+	}
+	// If the annotation is present and a valid integer string, we return the value.
+	return depth, true
+}
+
+// ExtractCACertificateSecretNames extracts the ca-certificates secret names from the `ca-certificates-secret` annotation.
+// It expects a comma-separated list of secret names containing CA certificates.
+func ExtractCACertificateSecretNames(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesSecretsKey]
+	if !ok {
+		return nil
+	}
+	return extractCommaDelimitedStrings(s)
+}
+
+func ExtractCACertificateConfigMapNames(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesConfigMapsKey]
+	if !ok {
+		return nil
+	}
+	return extractCommaDelimitedStrings(s)
+}
+
+// extractCommaDelimitedStrings extracts a list of non-empty strings from a comma-separated string.
+// It trims spaces from the strings.
+// It accepts optional sanitization functions to apply to each string.
+func extractCommaDelimitedStrings(s string, sanitizeFns ...func(string) string) []string {
+	// If it's an empty string, return nil.
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+
+	// Split values by comma.
+	values := strings.Split(s, ",")
+
+	// Allocate an output slice with the same capacity as the input slice.
+	// This may be a bit more than needed as we'll filter out empty strings later.
+	out := make([]string, 0, len(values))
+
+	// Trim and sanitize each value.
+	for _, v := range values {
+		sanitized := strings.TrimSpace(v)
+		if sanitized == "" {
+			// Discard empty strings.
+			continue
+		}
+
+		// Apply optional sanitization functions (e.g. upper-casing).
+		for _, sanitizeFn := range sanitizeFns {
+			sanitized = sanitizeFn(sanitized)
+		}
+
+		// Append to the output slice.
+		out = append(out, sanitized)
+	}
+
+	return out
+}
+
+// SetTLSVerify sets the tls-verify annotation value.
+func SetTLSVerify(anns map[string]string, value bool) {
+	anns[AnnotationPrefix+TLSVerifyKey] = strconv.FormatBool(value)
+}
+
+// SetConfigMapCACertificates merge the ca-certificates configmap names into the already existing CA certificates set via annotation.
+func SetConfigMapCACertificates(anns map[string]string, configMapCertificates []string) {
+	if len(configMapCertificates) == 0 {
+		return
+	}
+	existingCACerts := anns[AnnotationPrefix+CACertificatesConfigMapsKey]
+	if existingCACerts == "" {
+		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = strings.Join(configMapCertificates, ",")
+	} else {
+		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = existingCACerts + "," + strings.Join(configMapCertificates, ",")
+	}
+}
+
+// SetSecretCACertificates merge the ca-certificates secret names into the already existing CA certificates set via annotation.
+func SetSecretCACertificates(anns map[string]string, secretCertificates []string) {
+	if len(secretCertificates) == 0 {
+		return
+	}
+	existingCACerts := anns[AnnotationPrefix+CACertificatesSecretsKey]
+	if existingCACerts == "" {
+		anns[AnnotationPrefix+CACertificatesSecretsKey] = strings.Join(secretCertificates, ",")
+	} else {
+		anns[AnnotationPrefix+CACertificatesSecretsKey] = existingCACerts + "," + strings.Join(secretCertificates, ",")
+	}
+}
+
+// SetHostHeader sets the host-header annotation value.
+func SetHostHeader(anns map[string]string, value string) {
+	anns[AnnotationPrefix+HostHeaderKey] = value
+}
+
+// SetProtocol sets the protocol annotation value.
+func SetProtocol(anns map[string]string, value string) {
+	anns[AnnotationPrefix+ProtocolKey] = value
+}
+
+// SetTLSVerifyDepth sets the tls-verify-depth annotation value.
+func SetTLSVerifyDepth(anns map[string]string, depth int) {
+	anns[AnnotationPrefix+TLSVerifyDepthKey] = strconv.Itoa(depth)
 }

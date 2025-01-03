@@ -5,7 +5,7 @@ import (
 )
 
 //go:generate go run github.com/kong/kubernetes-ingress-controller/v3/hack/generators/controllers/networking
-
+//
 func main() {
 	rootcmd.Execute()
 }

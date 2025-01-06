@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736170427713,
+  "lastUpdate": 1736170782707,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -22248,6 +22248,78 @@ window.BENCHMARK_DATA = {
             "value": 1,
             "unit": "allocs/op",
             "extra": "2835588 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "charly.molter@konghq.com",
+            "name": "Charly Molter",
+            "username": "lahabana"
+          },
+          "committer": {
+            "email": "charly.molter@konghq.com",
+            "name": "Charly Molter",
+            "username": "lahabana"
+          },
+          "distinct": true,
+          "id": "aaed72d569b72ea24d2278cfb1f53ecc6699b473",
+          "message": "chore(ci): use pull_request instead of pull_request_target\n\nSigned-off-by: Charly Molter <charly.molter@konghq.com>",
+          "timestamp": "2025-01-06T14:34:33+01:00",
+          "tree_id": "d66ab2753fa38127f99c4706069edadcd4caf0b2",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/aaed72d569b72ea24d2278cfb1f53ecc6699b473"
+        },
+        "date": 1736170630347,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 69032,
+            "unit": "ns/op\t   11108 B/op\t      12 allocs/op",
+            "extra": "17332 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69032,
+            "unit": "ns/op",
+            "extra": "17332 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11108,
+            "unit": "B/op",
+            "extra": "17332 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17332 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 155,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "7545320 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 155,
+            "unit": "ns/op",
+            "extra": "7545320 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "7545320 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "7545320 times\n4 procs"
           }
         ]
       }

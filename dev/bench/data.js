@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736178591466,
+  "lastUpdate": 1736178842020,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -23136,6 +23136,78 @@ window.BENCHMARK_DATA = {
             "value": 1,
             "unit": "allocs/op",
             "extra": "2724050 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "charly.molter@konghq.com",
+            "name": "Charly Molter",
+            "username": "lahabana"
+          },
+          "committer": {
+            "email": "charly.molter@konghq.com",
+            "name": "Charly Molter",
+            "username": "lahabana"
+          },
+          "distinct": true,
+          "id": "cd7bf02267b7d5fa53ded8236ad512520b1804ad",
+          "message": "ci(github): use pull_request for backport\n\nThis is what is done in main and should have been fixed\nas a part of the backport of #6743\n\nSigned-off-by: Charly Molter <charly.molter@konghq.com>",
+          "timestamp": "2025-01-06T16:48:46+01:00",
+          "tree_id": "e07f5855ff9383905b7f4423a6d737371e1e7d6c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/cd7bf02267b7d5fa53ded8236ad512520b1804ad"
+        },
+        "date": 1736178690817,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 69952,
+            "unit": "ns/op\t   11103 B/op\t      12 allocs/op",
+            "extra": "16244 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69952,
+            "unit": "ns/op",
+            "extra": "16244 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11103,
+            "unit": "B/op",
+            "extra": "16244 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16244 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 141.4,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "7646148 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 141.4,
+            "unit": "ns/op",
+            "extra": "7646148 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "7646148 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "7646148 times\n4 procs"
           }
         ]
       }

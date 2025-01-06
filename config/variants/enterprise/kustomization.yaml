@@ -1,7 +1,0 @@
-resources:
-- ../multi-gw/base
-patchesStrategicMerge:
-- kong-enterprise.yaml
-
-components:
-  - ../../image/enterprise/

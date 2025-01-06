@@ -1,2 +1,0 @@
-**/zz_generated*.go linguist-generated=true
-pkg/clientset/** linguist-generated=true

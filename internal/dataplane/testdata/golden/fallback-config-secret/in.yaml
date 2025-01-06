@@ -1,0 +1,66 @@
+# In this test case we have a broken Secret that is used by KongPlugin and KongClusterPlugin.
+# We expect all resources to be excluded because secrets affect directly (plugins) and indirectly (Ingress) them.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret
+  namespace: default
+  uid: "5adfe8cc-cafc-45c1-9c9f-85f8a0cdbafa"
+  annotations:
+    test.konghq.com/broken: "true"
+type: Opaque
+data:
+  key: YmFyCg==
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: service
+                port:
+                  number: 80
+            path: /ingress
+            pathType: Exact
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: plugin
+  namespace: default
+configFrom:
+  secretKeyRef:
+    name: secret
+    key: key
+plugin: key-auth
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: plugin
+  namespace: default
+configFrom:
+  secretKeyRef:
+    name: secret
+    namespace: default
+    key: key
+plugin: key-auth

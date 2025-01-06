@@ -3,7 +3,7 @@ package admission
 import (
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 // GatewayClientsProvider returns the most recent set of Gateway Admin API clients.
@@ -35,6 +35,46 @@ func (p DefaultAdminAPIServicesProvider) GetPluginsService() (kong.AbstractPlugi
 		return nil, ok
 	}
 	return c.Plugins, true
+}
+
+func (p DefaultAdminAPIServicesProvider) GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.ConsumerGroups, true
+}
+
+func (p DefaultAdminAPIServicesProvider) GetInfoService() (kong.AbstractInfoService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Info, true
+}
+
+func (p DefaultAdminAPIServicesProvider) GetRoutesService() (kong.AbstractRouteService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Routes, true
+}
+
+func (p DefaultAdminAPIServicesProvider) GetVaultsService() (kong.AbstractVaultService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Vaults, true
+}
+
+func (p DefaultAdminAPIServicesProvider) GetSchemasService() (kong.AbstractSchemaService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Schemas, true
 }
 
 func (p DefaultAdminAPIServicesProvider) designatedAdminAPIClient() (*kong.Client, bool) {

@@ -27,7 +27,8 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=ki,categories=kong-ingress-controller
-// +kubebuilder:validation:Optional
+// +kubebuilder:validation:XValidation:rule="!has(self.proxy)", message="'proxy' field is no longer supported, use Service's annotations instead"
+// +kubebuilder:validation:XValidation:rule="!has(self.route)", message="'route' field is no longer supported, use Ingress' annotations instead"
 
 // KongIngress is the Schema for the kongingresses API.
 type KongIngress struct {
@@ -162,7 +163,8 @@ type KongIngressUpstream struct {
 	HostHeader *string `json:"host_header,omitempty" yaml:"host_header,omitempty"`
 
 	// Algorithm is the load balancing algorithm to use.
-	// +kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections
+	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency".
+	// +kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections;latency
 	Algorithm *string `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 
 	// Slots is the number of slots in the load balancer algorithm.
@@ -209,9 +211,6 @@ type KongIngressUpstream struct {
 
 	// HashFallbackURICapture is the "hash_fallback" version of HashOnURICapture.
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty" yaml:"hash_fallback_uri_capture,omitempty"`
-
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
-	// ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
 }
 
 func init() {

@@ -3,29 +3,36 @@ package sendconfig
 import (
 	"context"
 
-	"github.com/kong/deck/dump"
-	"github.com/kong/deck/file"
+	"github.com/go-logr/logr"
+	"github.com/kong/go-database-reconciler/pkg/dump"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
+	"github.com/kong/go-kong/kong/custom"
+	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
+
+// CustomEntitiesByType stores all custom entities by types.
+// The key is the type of the entity,
+// and the corresponding slice stores the sorted list of custom entities with that type.
+type CustomEntitiesByType map[string][]custom.Object
 
 // ContentWithHash encapsulates file.Content along with its precalculated hash.
 type ContentWithHash struct {
-	Content *file.Content
-	Hash    []byte
+	Content        *file.Content
+	CustomEntities CustomEntitiesByType
+	Hash           []byte
 }
 
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.
 type UpdateStrategy interface {
-	// Update applies targetConfig to the data-plane.
-	Update(ctx context.Context, targetContent ContentWithHash) (
-		err error,
-		resourceErrors []ResourceError,
-		resourceErrorsParseErr error,
-	)
+	// Update applies targetConfig to the DataPlane. When the update is successful, it returns the number of
+	// bytes sent to the DataPlane or mo.None when it's impossible to determine the number of bytes sent e.g.
+	// for dbmode (deck) strategy.
+	Update(ctx context.Context, targetContent ContentWithHash) (mo.Option[int], error)
 
 	// MetricsProtocol returns a string describing the update strategy type to be used in metrics.
 	MetricsProtocol() metrics.Protocol
@@ -36,7 +43,7 @@ type UpdateStrategy interface {
 
 type UpdateClient interface {
 	IsKonnect() bool
-	KonnectRuntimeGroup() string
+	KonnectControlPlane() string
 	AdminAPIClient() *kong.Client
 }
 
@@ -57,13 +64,13 @@ type ResourceError struct {
 
 type DefaultUpdateStrategyResolver struct {
 	config Config
-	log    logrus.FieldLogger
+	logger logr.Logger
 }
 
-func NewDefaultUpdateStrategyResolver(config Config, log logrus.FieldLogger) DefaultUpdateStrategyResolver {
+func NewDefaultUpdateStrategyResolver(config Config, logger logr.Logger) DefaultUpdateStrategyResolver {
 	return DefaultUpdateStrategyResolver{
 		config: config,
-		log:    log,
+		logger: logger,
 	}
 }
 
@@ -74,30 +81,48 @@ func NewDefaultUpdateStrategyResolver(config Config, log logrus.FieldLogger) Def
 // with the backoff strategy it provides.
 func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	client UpdateClient,
+	diagnostic *diagnostics.ClientDiagnostic,
 ) UpdateStrategy {
-	updateStrategy := r.resolveUpdateStrategy(client)
+	updateStrategy := r.resolveUpdateStrategy(client, diagnostic)
 
 	if clientWithBackoff, ok := client.(UpdateClientWithBackoff); ok {
-		return NewUpdateStrategyWithBackoff(updateStrategy, clientWithBackoff.BackoffStrategy(), r.log)
+		return NewUpdateStrategyWithBackoff(updateStrategy, clientWithBackoff.BackoffStrategy(), r.logger)
 	}
 
 	return updateStrategy
 }
 
-func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient) UpdateStrategy {
+func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
+	client UpdateClient,
+	diagnostic *diagnostics.ClientDiagnostic,
+) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
 	// config.InMemory that is meant for regular Kong Gateway clients.
 	if client.IsKonnect() {
-		return NewUpdateStrategyDBMode(
+		return NewUpdateStrategyDBModeKonnect(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:         true,
-				KonnectRuntimeGroup: client.KonnectRuntimeGroup(),
+				KonnectControlPlane: client.KonnectControlPlane(),
 			},
 			r.config.Version,
 			r.config.Concurrency,
+			// The DB mode update strategy is used for both DB mode gateways and Konnect-integrated controllers. In the
+			// Konnect case, we don't actually want to collect diffs, and don't actually provide a diagnostic when setting
+			// it up, so we only collect and send diffs if we're talking to a gateway.
+			//
+			// TODO maybe this is wrong? I'm not sure if we actually support (or if not, explicitly prohibit)
+			// configuring a controller to use both DB mode and talk to Konnect, or if we only support DB-less when using
+			// Konnect. If those are mutually exclusive, maybe we can just collect diffs for Konnect mode? If they're
+			// not mutually exclusive, trying to do diagnostics diff updates for both the updates would have both attempt
+			// to store diffs. This is... maybe okay. They should be identical, but that's a load-bearing "should": we know
+			// Konnect can sometimes differ in what it accepts versus the gateway, and we have some Konnect configuration
+			// (consumer exclude, sensitive value mask) where they're _definitely_ different. That same configuration could
+			// make the diff confusing even if it's DB mode only, since it doesn't reflect what we're sending to the gateway
+			// in some cases.
+			nil,
+			r.logger,
 		)
 	}
 
@@ -105,13 +130,20 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 		return NewUpdateStrategyDBMode(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:  r.config.SkipCACertificates,
-				SelectorTags: r.config.FilterTags,
+				SkipCACerts:     r.config.SkipCACertificates,
+				SelectorTags:    r.config.FilterTags,
+				IncludeLicenses: true,
 			},
 			r.config.Version,
 			r.config.Concurrency,
+			diagnostic,
+			r.logger,
 		)
 	}
 
-	return NewUpdateStrategyInMemory(adminAPIClient, r.log)
+	return NewUpdateStrategyInMemory(
+		adminAPIClient,
+		DefaultContentToDBLessConfigConverter{},
+		r.logger,
+	)
 }

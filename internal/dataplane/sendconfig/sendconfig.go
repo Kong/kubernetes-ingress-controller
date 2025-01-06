@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kong/deck/file"
+	"github.com/go-logr/logr"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -23,123 +23,95 @@ import (
 // -----------------------------------------------------------------------------
 
 type UpdateStrategyResolver interface {
-	ResolveUpdateStrategy(client UpdateClient) UpdateStrategy
+	ResolveUpdateStrategy(client UpdateClient, diagnostic *diagnostics.ClientDiagnostic) UpdateStrategy
 }
 
 type AdminAPIClient interface {
 	AdminAPIClient() *kong.Client
 	LastConfigSHA() []byte
 	SetLastConfigSHA([]byte)
+	SetLastCacheStoresHash(store.SnapshotHash)
 	BaseRootURL() string
 	PluginSchemaStore() *util.PluginSchemaStore
 
 	IsKonnect() bool
-	KonnectRuntimeGroup() string
+	KonnectControlPlane() string
 }
 
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(
 	ctx context.Context,
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	client AdminAPIClient,
 	config Config,
 	targetContent *file.Content,
-	promMetrics *metrics.CtrlFuncMetrics,
+	customEntities CustomEntitiesByType,
+	promMetrics metrics.Recorder,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
-) ([]byte, []failures.ResourceFailure, error) {
+	diagnostic *diagnostics.ClientDiagnostic,
+	isFallback bool,
+) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()
-	newSHA, err := deckgen.GenerateSHA(targetContent)
+	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		return oldSHA, []failures.ResourceFailure{}, err
+		return oldSHA, fmt.Errorf("failed to generate SHA for target content: %w", err)
 	}
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
 		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
 		if err != nil {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, fmt.Errorf("failed to detect configuration change: %w", err)
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
-				log.Debug("no configuration change, skipping sync to Konnect")
+				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Konnect")
 			} else {
-				log.Debug("no configuration change, skipping sync to Kong")
+				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Kong")
 			}
-			return oldSHA, []failures.ResourceFailure{}, nil
+			return oldSHA, nil
 		}
 	}
 
-	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
-	log = log.WithField("update_strategy", updateStrategy.Type())
+	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client, diagnostic)
+	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
-	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
-		Content: targetContent,
-		Hash:    newSHA,
+	size, err := updateStrategy.Update(ctx, ContentWithHash{
+		Content:        targetContent,
+		CustomEntities: customEntities,
+		Hash:           newSHA,
 	})
 	duration := time.Since(timeStart)
 
 	metricsProtocol := updateStrategy.MetricsProtocol()
 	if err != nil {
-		// Not pushing metrics in case it's an update skip due to a backoff.
-		if errors.Is(err, ErrUpdateSkippedDueToBackoffStrategy{}) {
-			return nil, []failures.ResourceFailure{}, err
+		// For UpdateError, record the failure and return the error.
+		var updateError UpdateError
+		if errors.As(err, &updateError) {
+			if isFallback {
+				promMetrics.RecordFallbackPushFailure(metricsProtocol, duration, updateError.ConfigSize(), client.BaseRootURL(), len(updateError.ResourceFailures()), updateError.err)
+			} else {
+				promMetrics.RecordPushFailure(metricsProtocol, duration, updateError.ConfigSize(), client.BaseRootURL(), len(updateError.ResourceFailures()), updateError.err)
+			}
+			return nil, updateError
 		}
 
-		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, log)
-		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), err)
-		return nil, resourceFailures, err
+		// Any other error, simply return it and skip metrics recording - we have no details to record.
+		return nil, fmt.Errorf("config update failed: %w", err)
 	}
 
-	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
+	if isFallback {
+		promMetrics.RecordFallbackPushSuccess(metricsProtocol, duration, size, client.BaseRootURL())
+	} else {
+		promMetrics.RecordPushSuccess(metricsProtocol, duration, size, client.BaseRootURL())
+	}
 
 	if client.IsKonnect() {
-		log.Info("successfully synced configuration to Konnect")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Konnect", "duration", duration.Truncate(time.Millisecond).String())
 	} else {
-		log.Info("successfully synced configuration to Kong")
+		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Kong", "duration", duration.Truncate(time.Millisecond).String())
 	}
 
-	return newSHA, nil, nil
-}
-
-// -----------------------------------------------------------------------------
-// Sendconfig - Private Functions
-// -----------------------------------------------------------------------------
-
-// resourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.
-// In case of parseErr being not nil, it just returns a nil slice.
-func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr error, log logrus.FieldLogger) []failures.ResourceFailure {
-	if parseErr != nil {
-		log.WithError(parseErr).Error("failed parsing resource errors")
-		return nil
-	}
-
-	var out []failures.ResourceFailure
-	for _, ee := range resourceErrors {
-		obj := metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       ee.Kind,
-				APIVersion: ee.APIVersion,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ee.Namespace,
-				Name:      ee.Name,
-				UID:       types.UID(ee.UID),
-			},
-		}
-		for field, problem := range ee.Problems {
-			log.Debug(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem))
-			resourceFailure, failureCreateErr := failures.NewResourceFailure(
-				fmt.Sprintf("invalid %s: %s", field, problem),
-				&obj,
-			)
-			if failureCreateErr != nil {
-				log.WithError(failureCreateErr).Error("could create resource failure event")
-			} else {
-				out = append(out, resourceFailure)
-			}
-		}
-	}
-
-	return out
+	return newSHA, nil
 }

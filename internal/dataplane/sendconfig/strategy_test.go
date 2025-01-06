@@ -4,20 +4,21 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 )
 
 type clientMock struct {
 	isKonnect bool
 
-	konnectRuntimeGroupWasCalled bool
+	konnectControlPlaneWasCalled bool
 	adminAPIClientWasCalled      bool
 }
 
@@ -25,8 +26,8 @@ func (c *clientMock) IsKonnect() bool {
 	return c.isKonnect
 }
 
-func (c *clientMock) KonnectRuntimeGroup() string {
-	c.konnectRuntimeGroupWasCalled = true
+func (c *clientMock) KonnectControlPlane() string {
+	c.konnectControlPlaneWasCalled = true
 	return uuid.NewString()
 }
 
@@ -48,19 +49,19 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 		isKonnect                     bool
 		inMemory                      bool
 		expectedStrategyType          string
-		expectKonnectRuntimeGroupCall bool
+		expectKonnectControlPlaneCall bool
 	}{
 		{
 			isKonnect:                     true,
 			inMemory:                      false,
 			expectedStrategyType:          "WithBackoff(DBMode)",
-			expectKonnectRuntimeGroupCall: true,
+			expectKonnectControlPlaneCall: true,
 		},
 		{
 			isKonnect:                     true,
 			inMemory:                      true,
 			expectedStrategyType:          "WithBackoff(DBMode)",
-			expectKonnectRuntimeGroupCall: true,
+			expectKonnectControlPlaneCall: true,
 		},
 		{
 			isKonnect:            false,
@@ -89,12 +90,12 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 
 			resolver := sendconfig.NewDefaultUpdateStrategyResolver(sendconfig.Config{
 				InMemory: tc.inMemory,
-			}, logrus.New())
+			}, zapr.NewLogger(zap.NewNop()))
 
-			strategy := resolver.ResolveUpdateStrategy(updateClient)
+			strategy := resolver.ResolveUpdateStrategy(updateClient, nil)
 			require.Equal(t, tc.expectedStrategyType, strategy.Type())
 			assert.True(t, client.adminAPIClientWasCalled)
-			assert.Equal(t, tc.expectKonnectRuntimeGroupCall, client.konnectRuntimeGroupWasCalled)
+			assert.Equal(t, tc.expectKonnectControlPlaneCall, client.konnectControlPlaneWasCalled)
 		})
 	}
 }

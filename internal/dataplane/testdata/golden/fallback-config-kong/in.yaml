@@ -1,0 +1,113 @@
+# In this test case we have a set of broken Kong resources with all of their possible dependants.
+# We expect empty config because of the broken resources.
+apiVersion: v1
+kind: Service
+metadata:
+  name: service
+  namespace: default
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  name: servicefacade
+  namespace: default
+  uid: "897e9a7f-799d-427e-bdef-f64a7227e2c1"
+  annotations:
+    kubernetes.io/ingress.class: kong
+    test.konghq.com/broken: "true"
+spec:
+  backendRef:
+    name: service
+    port: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer
+  namespace: default
+  uid: "9f17c37c-fdb5-4c6e-b89a-1398793337e8"
+  annotations:
+    kubernetes.io/ingress.class: kong
+    test.konghq.com/broken: "true"
+username: consumer
+consumerGroups:
+  - consumer-group
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongConsumerGroup
+metadata:
+  name: consumer-group
+  namespace: default
+  uid: "8c80b242-75fb-44f2-b70d-ab1995da92d8"
+  annotations:
+    kubernetes.io/ingress.class: kong
+    test.konghq.com/broken: "true"
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: UDPIngress
+metadata:
+  name: udpingress
+  namespace: default
+  uid: "8c80b242-75fb-44f2-b70d-ab1995da92d8"
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+    test.konghq.com/broken: "true"
+spec:
+  rules:
+    - backend:
+        serviceName: service
+        servicePort: 80
+      port: 9999
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: TCPIngress
+metadata:
+  name: tcpingress
+  namespace: default
+  uid: "1aec1466-196d-495a-8201-d8e07b246e19"
+  annotations:
+    kubernetes.io/ingress.class: kong
+    test.konghq.com/broken: "true"
+spec:
+  rules:
+    - port: 9999
+      backend:
+        serviceName: service
+        servicePort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - backend:
+              resource:
+                apiGroup: incubator.ingress-controller.konghq.com
+                kind: KongServiceFacade
+                name: servicefacade
+            path: /ingress
+            pathType: Exact
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongVault
+metadata:
+  name: vault
+  uid: "c69e2d89-0207-4d7b-a467-3ed03c650dbf"
+  annotations:
+    kubernetes.io/ingress.class: kong
+    test.konghq.com/broken: "true"
+spec:
+  backend: env
+  prefix: env
+  description: env vault
+  config:
+    prefix: kong-env

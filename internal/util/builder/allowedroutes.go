@@ -1,15 +1,25 @@
 package builder
 
-import gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-func NewAllowedRoutesFromSameNamespaces() *gatewayv1beta1.AllowedRoutes {
-	return &gatewayv1beta1.AllowedRoutes{
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+)
+
+func NewAllowedRoutesFromSameNamespaces() *gatewayapi.AllowedRoutes {
+	return &gatewayapi.AllowedRoutes{
 		Namespaces: NewRouteNamespaces().FromSame().Build(),
 	}
 }
 
-func NewAllowedRoutesFromAllNamespaces() *gatewayv1beta1.AllowedRoutes {
-	return &gatewayv1beta1.AllowedRoutes{
+func NewAllowedRoutesFromAllNamespaces() *gatewayapi.AllowedRoutes {
+	return &gatewayapi.AllowedRoutes{
 		Namespaces: NewRouteNamespaces().FromAll().Build(),
+	}
+}
+
+func NewAllowedRoutesFromSelectorNamespace(selector *metav1.LabelSelector) *gatewayapi.AllowedRoutes {
+	return &gatewayapi.AllowedRoutes{
+		Namespaces: NewRouteNamespaces().FromSelector(selector).Build(),
 	}
 }

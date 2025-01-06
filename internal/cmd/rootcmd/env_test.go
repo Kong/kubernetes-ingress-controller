@@ -15,7 +15,7 @@ func TestBindEnvVars(t *testing.T) {
 	commandHasRun := false
 	cmd := &cobra.Command{
 		PreRunE: bindEnvVars,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			got1, _ := cmd.Flags().GetString("flag-1")
 			got2, _ := cmd.Flags().GetString("flag-2")
 			got3, _ := cmd.Flags().GetString("flag-3")
@@ -50,7 +50,7 @@ func TestBindEnvVarsSlice(t *testing.T) {
 	t.Run("set by flags", func(t *testing.T) {
 		cmd := &cobra.Command{
 			PreRunE: bindEnvVars,
-			Run:     func(cmd *cobra.Command, args []string) {},
+			Run:     func(_ *cobra.Command, _ []string) {},
 		}
 
 		ss := cmd.Flags().StringSlice("flag-string-slice", []string{"default"}, "No description")
@@ -69,7 +69,7 @@ func TestBindEnvVarsSlice(t *testing.T) {
 	t.Run("set by env", func(t *testing.T) {
 		cmd := &cobra.Command{
 			PreRunE: bindEnvVars,
-			Run:     func(cmd *cobra.Command, args []string) {},
+			Run:     func(_ *cobra.Command, _ []string) {},
 		}
 
 		ss := cmd.Flags().StringSlice("flag-string-slice", []string{"default"}, "No description")
@@ -85,7 +85,7 @@ func TestBindEnvVarsSlice(t *testing.T) {
 func TestBindEnvVarsValidation(t *testing.T) {
 	cmd := &cobra.Command{
 		PreRunE: bindEnvVars,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Flags().Parse(nil)
 		},
 	}

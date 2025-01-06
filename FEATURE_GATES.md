@@ -27,7 +27,7 @@ Please read the [Important Notes](#important-notes) section before using any `Al
 
 An additional **warning** for end-users who are reading this documentation and trying to enable `Alpha` or `Beta` features: it is **very important** to understand that features that are currently in an `Alpha` or `Beta` state may **become `Deprecated` at any time** and **may be removed as part of the next consecutive minor release**. This is especially true for `Alpha` maturity features. In other words, **until a feature becomes GA there are no guarantees that it's going to continue being available**. To avoid disruption to your services engage with the community and read the [CHANGELOG](/CHANGELOG.md) carefully to track progress. Alternatively **do not use features until they have reached a GA status**.
 
-[k8s-keps]:https://github.com/kubernetes/enhancements
+[k8s-kep]:https://github.com/kubernetes/enhancements
 [kic-keps]:https://github.com/Kong/kubernetes-ingress-controller/tree/main/keps
 [releases]:https://github.com/Kong/kubernetes-ingress-controller/releases
 [kong-docs]:https://github.com/Kong/docs.konghq.com
@@ -44,8 +44,17 @@ Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will
 
 ### Feature gates for graduated or deprecated features
 
-| Feature                    | Default | Stage      | Since | Until |
-|----------------------------|---------|------------|-------|-------|
+| Feature          | Default | Stage | Since  | Until |
+|------------------|---------|-------|--------|-------|
+| Gateway          | `false` | Alpha | 2.2.0  | 2.6.0 |
+| Gateway          | `true`  | Beta  | 2.6.0  | 3.0.0 |
+| CombinedRoutes   | `false` | Alpha | 2.4.0  | 3.0.0 |
+| CombinedRoutes   | `true`  | Beta  | 2.8.0  | 3.0.0 |
+| CombinedServices | `false` | Alpha | 2.10.0 | 3.0.0 |
+| CombinedServices | `true`  | Beta  | 2.11.0 | 3.0.0 |
+| ExpressionRoutes | `false` | Alpha | 2.10.0 | 3.0.0 |
+| Knative          | `false` | Alpha | 0.8.0  | 3.0.0 |
+| KongCustomEntity | `true`  | GA    | 3.4.0  | TBD   |
 
 Features that reach GA and over time become stable will be removed from this table, they can be found in the main [KIC CRD Documentation][specs] and [Guides][guides].
 
@@ -54,14 +63,18 @@ Features that reach GA and over time become stable will be removed from this tab
 
 ### Feature gates for Alpha or Beta features
 
-| Feature          | Default | Stage | Since   | Until |
-|------------------|---------|-------|---------|-------|
-| Knative          | `false` | Alpha | 0.8.0   | TBD   |
-| Gateway          | `true`  | Beta  | 2.2.0   | TBD   |
-| CombinedRoutes   | `true`  | Beta  | 2.8.0   | TBD   |
-| GatewayAlpha     | `false` | Alpha | 2.6.0   | TBD   |
-| ExpressionRoutes | `false` | Alpha | 2.10.0  | TBD   |
-| CombinedServices | `false` | Alpha | 2.10.0  | TBD   |
+| Feature                                 | Default | Stage | Since  | Until |
+|-----------------------------------------|---------|-------|--------|-------|
+| GatewayAlpha                            | `false` | Alpha | 2.6.0  | TBD   |
+| FillIDs                                 | `false` | Alpha | 2.10.0 | 3.0.0 |
+| FillIDs                                 | `true`  | Beta  | 3.0.0  | TBD   |
+| RewriteURIs                             | `false` | Alpha | 2.12.0 | TBD   |
+| KongServiceFacade                       | `false` | Alpha | 3.1.0  | TBD   |
+| SanitizeKonnectConfigDumps              | `true`  | Beta  | 3.1.0  | TBD   |
+| FallbackConfiguration                   | `false` | Alpha | 3.2.0  | TBD   |
+| KongCustomEntity                        | `false` | Alpha | 3.2.0  | 3.3.0 |
+| KongCustomEntity                        | `true`  | Beta  | 3.3.0  | 3.4.0 |
+| CombinedServicesFromDifferentHTTPRoutes | `false` | Alpha | 3.4.0  | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in
@@ -161,3 +174,96 @@ services: if two HTTPRoute rules use both serviceA and serviceB in their
 backendRefs, KIC will generate a single Kong service with endpoints from both
 serviceA and serviceB, named for the first rule and match indices with that
 combination of Services.
+
+## Using KongServiceFacade
+
+In KIC 3.1.0 we introduced a new feature called `KongServiceFacade`. Currently, we only
+support `KongServiceFacade` to be used as a backend for `networking.k8s.io/v1` `Ingress`es.
+If you find this might be useful to you in other contexts (e.g. Gateway API's `HTTPRoute`s),
+please let us know in the [#5216](https://github.com/Kong/kubernetes-ingress-controller/issues/5216)
+issue tracking this effort.
+
+### Installation
+
+`KongServiceFacade` feature is currently in `Alpha` maturity and is disabled by default.
+To start using it, you must not only enable the feature gate (`KongServiceFacade=true`),
+but also install the `KongServiceFacade` CRD which is distributed in a separate
+package we named `incubator`. You can install it by running:
+
+```shell
+kubectl apply -k 'https://github.com/Kong/kubernetes-ingress-controller/config/crd/incubator?ref=main'
+```
+
+### Usage
+
+Once the CRD is installed and the feature gate is set to `true`, you can start using it by creating
+`KongServiceFacade` objects and use them as your `netv1.Ingress` backends. For example, to create
+a `KongServiceFacade` that points to a service named `my-service` in the `default` namespace and uses
+its port number `80`, you can run:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  name: my-service-facade
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+spec:
+  backendRef:
+    name: my-service
+    port: 80
+EOF
+```
+
+For a complete CRD reference please see the [incubator-crd-reference] document. 
+
+To use the `KongServiceFacade` as a backend for your `netv1.Ingress`, you can create an `Ingress`
+like the following:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  namespace: default
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      - path: /my-service
+        pathType: Prefix
+        backend:
+          resource:
+            apiGroup: incubator.ingress-controller.konghq.com
+            kind: KongServiceFacade
+            name: my-service-facade
+EOF
+```
+
+Please note the `KongServiceFacade` must be in the same namespace as the `Ingress` that uses it.
+
+An advantage of using `KongServiceFacade` over plain `corev1.Service`s is that you can create multiple
+`KongServiceFacade`s that point to the same `Service` and KIC will always generate one Kong Service per each
+`KongServiceFacade`. That enables you to, e.g., use different `KongPlugin`s for each `KongServiceFacade`
+while still pointing to the same Kubernetes `Service`. A single `KongServiceFacade` may be used in multiple
+`Ingress`es and customization done through the `KongServiceFacade`'s annotations will be honored in all of them
+on a single Kong Service level (no need to duplicate annotations in multiple `Ingress`es).
+
+A recommended, generally available alternative to `KongServiceFacade` exists: you can
+create several Kubernetes `Service`s with the same selector. `KongServiceFacade` should
+be useful if you are unable to use the `Service` alternative. Reasons known at the
+moment of writing are: using certain mesh solutions (Consul Connect) that [impose a
+"single service only" requirement](https://github.com/hashicorp/consul-k8s/issues/68) and (hypothetical) performance implications of
+repetitive kube-proxy reconciliation.
+
+For a complete example of using `KongServiceFacade` for customizing `Service` authentication methods, please
+refer to the [kong-service-facade.yaml] manifest in our examples.
+
+[incubator-crd-reference]: ./docs/incubator-api-reference.md
+[kong-service-facade.yaml]: ./examples/kong-service-facade.yaml

@@ -72,7 +72,7 @@ spec:
           value: /dev/stderr
         # router mode in 3.0.0. use `traditional` here for full compatibility.
         - name: KONG_ROUTER_FLAVOR
-          value: traditional
+          value: expressions
         lifecycle:
           preStop:
             exec:
@@ -99,7 +99,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /status
+            path: /status/ready
             port: 8100
             scheme: HTTP
           initialDelaySeconds: 5

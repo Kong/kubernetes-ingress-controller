@@ -1,0 +1,165 @@
+name: Checks
+run-name: Checks, branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - 'main'
+      - 'release/[0-9]+.[0-9]+.x'
+    tags:
+      - '**'
+  workflow_dispatch: {}
+
+jobs:
+  check-permission:
+    uses: ./.github/workflows/_permission_check.yaml
+    secrets: inherit
+
+  # NOTE: this job checks if we're up to date with base branch. This is useful
+  # because merging a PR which branch was up to date with the base branch does
+  # not require running tests again as the commit is the same.
+  up-to-date:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    needs: check-permission
+    outputs:
+      status: ${{ steps.up-to-date.outputs.status }}
+    # NOTE: we only want to check if the head is up to date with the base branch
+    # when pushing to main or a release branch. In PRs we don't want to do that
+    # as there's no point in doing so.
+    # The pattern matching that's used here is almost the same as in the branch
+    # pattern matching above but due to limited functionality in the 'if' syntax
+    # we have to use the 'startsWith' function. This is 'good enough'.
+    # Setting the condition below on the job level would not work as it would
+    # cause the subsequent jobs to not run.
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        if: github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
+        with:
+          fetch-depth: 0
+      - name: Check if PR is up to date, if it is skip workflows for this ref
+        id: 'up-to-date'
+        uses: Kong/public-shared-actions/pr-previews/up-to-date@v2.8.0
+        if: github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/'))
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  tools:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+      - run: make tools
+
+  linters:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_linters.yaml
+    secrets: inherit
+
+  unit-tests:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_unit_tests.yaml
+    secrets: inherit
+
+  envtest-tests:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_envtest_tests.yaml
+    secrets: inherit
+
+  kongintegration-tests:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_kongintegration_tests.yaml
+    secrets: inherit
+
+  integration-tests:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_integration_tests.yaml
+    secrets: inherit
+    with:
+      log-output-file: /tmp/integration-tests-kic-logs
+
+  conformance-tests:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_conformance_tests.yaml
+    secrets: inherit
+    with:
+      log-output-file: /tmp/conformance-tests-kic-logs
+
+  build-docker-image:
+    needs:
+    - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_docker_build.yaml
+    secrets: inherit
+    with:
+      platforms: linux/amd64, linux/arm64
+
+  # We need this step to fail the workflow if any of the previous steps failed or were cancelled.
+  # It allows to use this particular job as a required check for PRs.
+  # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
+  passed:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    needs:
+      - up-to-date
+      - tools
+      - linters
+      - unit-tests
+      - envtest-tests
+      - kongintegration-tests
+      - integration-tests
+      - conformance-tests
+      - build-docker-image
+    if: always()
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "Some jobs failed or were cancelled."
+          exit 1
+
+  test-reports:
+    needs:
+      - unit-tests
+      - envtest-tests
+      - kongintegration-tests
+      - integration-tests
+      - conformance-tests
+      - up-to-date
+    if: always() && needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_test_reports.yaml
+    secrets: inherit

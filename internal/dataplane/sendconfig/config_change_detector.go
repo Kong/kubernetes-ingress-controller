@@ -5,10 +5,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/kong/deck/file"
+	"github.com/go-logr/logr"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 )
 
 const (
@@ -41,11 +42,11 @@ type StatusClient interface {
 }
 
 type DefaultConfigurationChangeDetector struct {
-	log logrus.FieldLogger
+	logger logr.Logger
 }
 
-func NewDefaultClientConfigurationChangeDetector(log logrus.FieldLogger) *DefaultConfigurationChangeDetector {
-	return &DefaultConfigurationChangeDetector{log: log}
+func NewDefaultConfigurationChangeDetector(logger logr.Logger) *DefaultConfigurationChangeDetector {
+	return &DefaultConfigurationChangeDetector{logger: logger}
 }
 
 func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
@@ -67,7 +68,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	}
 
 	// Check if a Kong instance has no configuration yet (could mean it crashed, was rebooted, etc.).
-	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, d.log)
+	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient)
 	if err != nil {
 		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
 	}
@@ -75,15 +76,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal...
 	if hasNoConfiguration {
 		// ... unless we're trying to push an empty config in such case skip.
-		if cmp.Equal(targetConfig, &file.Content{},
-			cmp.FilterPath(
-				func(p cmp.Path) bool {
-					path := p.String()
-					return path == "FormatVersion" || path == "Info"
-				},
-				cmp.Ignore(),
-			),
-		) {
+		if deckgen.IsContentEmpty(targetConfig) {
 			return false, nil
 		}
 
@@ -97,7 +90,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 // If the config hash reported by Kong is the known empty hash, it's considered crashed.
 // This allows providing configuration to Kong instances that have unexpectedly crashed and
 // lost their configuration.
-func kongHasNoConfiguration(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
+func kongHasNoConfiguration(ctx context.Context, client StatusClient) (bool, error) {
 	status, err := client.Status(ctx)
 	if err != nil {
 		return false, err

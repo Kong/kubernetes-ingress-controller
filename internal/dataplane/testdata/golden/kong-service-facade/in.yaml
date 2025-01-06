@@ -1,0 +1,124 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alpha
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - backend:
+              resource:
+                apiGroup: incubator.ingress-controller.konghq.com
+                kind: KongServiceFacade
+                name: svc-facade-alpha
+            path: /alpha
+            pathType: Exact
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: beta
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - backend:
+              resource:
+                apiGroup: incubator.ingress-controller.konghq.com
+                kind: KongServiceFacade
+                name: svc-facade-beta
+            path: /beta
+            pathType: Exact
+  defaultBackend:
+    resource:
+      apiGroup: incubator.ingress-controller.konghq.com
+      kind: KongServiceFacade
+      name: svc-facade-default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: svc
+  namespace: default
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: discovery.k8s.io/v1
+addressType: IPv4
+kind: EndpointSlice
+metadata:
+  namespace: default
+  labels:
+    kubernetes.io/service-name: svc
+  name: one-n5g6g
+endpoints:
+  - addresses:
+      - 10.244.0.5
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+ports:
+  - name: ""
+    port: 80
+    protocol: TCP
+---
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: auth-alpha
+  name: svc-facade-alpha
+  namespace: default
+spec:
+  backendRef:
+    name: svc
+    port: 80
+---
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: auth-beta
+  name: svc-facade-beta
+  namespace: default
+spec:
+  backendRef:
+    name: svc
+    port: 80
+---
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: svc-facade-default
+  namespace: default
+spec:
+  backendRef:
+    name: svc
+    port: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: auth-alpha
+  namespace: default
+plugin: basic-auth
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: auth-beta
+  namespace: default
+plugin: basic-auth

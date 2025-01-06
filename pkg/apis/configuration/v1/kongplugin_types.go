@@ -28,11 +28,14 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=kp,categories=kong-ingress-controller
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="!(has(self.config) && has(self.configFrom))", message="Using both config and configFrom fields is not allowed."
+// +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches fields is not allowed."
+// +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 
 // KongPlugin is the Schema for the kongplugins API.
 type KongPlugin struct {
@@ -61,9 +64,17 @@ type KongPlugin struct {
 	// Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once.
 	ConfigFrom *ConfigSource `json:"configFrom,omitempty"`
 
+	// ConfigPatches represents JSON patches to the configuration of the plugin.
+	// Each item means a JSON patch to add something in the configuration,
+	// where path is specified in `path` and value is in `valueFrom` referencing
+	// a key in a secret.
+	// When Config is specified, patches will be applied to the configuration in Config.
+	// Otherwise, patches will be applied to an empty object.
+	ConfigPatches []ConfigPatch `json:"configPatches,omitempty"`
+
 	// PluginName is the name of the plugin to which to apply the config.
 	// +kubebuilder:validation:Required
-	PluginName string `json:"plugin,omitempty"`
+	PluginName string `json:"plugin"`
 
 	// RunOn configures the plugin to run on the first or the second or both
 	// nodes in case of a service mesh deployment.
@@ -80,6 +91,13 @@ type KongPlugin struct {
 	// For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]`
 	// will create a rate limiting plugin that limits requests _before_ they are authenticated.
 	Ordering *kong.PluginOrdering `json:"ordering,omitempty"`
+
+	// InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the
+	// same plugin in multiple contexts, for example, on multiple services.
+	InstanceName string `json:"instance_name,omitempty"`
+
+	// Status represents the current status of the KongPlugin resource.
+	Status KongPluginStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -89,6 +107,21 @@ type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongPlugin `json:"items"`
+}
+
+// KongPluginStatus represents the current status of the KongPlugin resource.
+type KongPluginStatus struct {
+	// Conditions describe the current conditions of the KongPluginStatus.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func init() {

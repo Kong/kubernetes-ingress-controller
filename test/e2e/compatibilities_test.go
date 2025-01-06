@@ -1,5 +1,4 @@
 //go:build e2e_tests
-// +build e2e_tests
 
 package e2e
 
@@ -16,30 +15,38 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
-// TestKongRouterCompatibility verifies that KIC behaves consistently with Kong routers
-// `traditional` and `traditional_compatible`.
+// TestKongRouterCompatibility verifies that KIC behaves consistently with all
+// Kong routers:
+// - `expressions`
+// - `traditional`
+// - and `traditional_compatible`.
 func TestKongRouterFlavorCompatibility(t *testing.T) {
 	t.Parallel()
+
 	ctx, env := setupE2ETest(t)
 	cluster := env.Cluster()
 
-	t.Log("deploying kong components with traditional Kong router")
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
-	proxyDeploymentNN := getManifestDeployments(dblessPath).ProxyNN
-	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional")
+	routerFlavors := []string{"expressions", "traditional_compatible", "traditional"}
+	for _, rf := range routerFlavors {
+		t.Run(rf, func(t *testing.T) {
+			deploy := ManifestDeploy{
+				Path: dblessPath,
+				Patches: []ManifestPatch{
+					patchKongRouterFlavorFn(rf),
+				},
+			}
+			deployments := deploy.Run(ctx, t, env)
+			t.Cleanup(func() { deploy.Delete(ctx, t, env) })
+			proxyDeploymentNN := deployments.ProxyNN
 
-	t.Log("running ingress tests to verify that KIC with traditonal Kong router works")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-
-	setGatewayRouterFlavor(ctx, t, cluster, proxyDeploymentNN, "traditional_compatible")
-
-	t.Log("waiting for Kong with traditional_compatible router to start")
-	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional_compatible")
-
-	t.Log("running ingress tests to verify that KIC with traditonal_compatible Kong router works")
-	verifyIngress(ctx, t, env)
+			setGatewayRouterFlavor(ctx, t, cluster, proxyDeploymentNN, rf)
+			t.Logf("waiting for Kong with %s router to start", rf)
+			ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, rf)
+			t.Logf("running ingress tests to verify that KIC with %s Kong router works", rf)
+			deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+			verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+		})
+	}
 }
 
 func setGatewayRouterFlavor(
@@ -49,6 +56,8 @@ func setGatewayRouterFlavor(
 	proxyDeploymentNN k8stypes.NamespacedName,
 	flavor string,
 ) {
+	t.Helper()
+
 	// Since we cannot replace env vars in kustomize, here we update the deployment to set KONG_ROUTER_FLAVOR to traditional_compatible.
 	t.Log("update deployment to modify Kong's router to traditional_compatible")
 	deployments := cluster.Client().AppsV1().Deployments(proxyDeploymentNN.Namespace)
@@ -72,6 +81,8 @@ func ensureGatewayDeployedWithRouterFlavor(
 	proxyDeploymentNN k8stypes.NamespacedName,
 	expectedFlavor string,
 ) {
+	t.Helper()
+
 	labelsForDeployment := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", proxyDeploymentNN.Name),
 	}
@@ -90,8 +101,10 @@ func ensureGatewayDeployedWithRouterFlavor(
 				allPodsMatch = false
 				continue
 			}
-			if getEnvValueInContainer(proxyContainer, "KONG_ROUTER_FLAVOR") != expectedFlavor {
-				t.Logf("KONG_ROUTER_FLAVOR is not set to expected value for Pod %s", pod.Name)
+			if v := getEnvValueInContainer(proxyContainer, "KONG_ROUTER_FLAVOR"); v != expectedFlavor {
+				t.Logf("KONG_ROUTER_FLAVOR is not set to expected value for Pod %s, actual: %s, expected: %s",
+					pod.Name, v, expectedFlavor,
+				)
 				allPodsMatch = false
 			}
 		}

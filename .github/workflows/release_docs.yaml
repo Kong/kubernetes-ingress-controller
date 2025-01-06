@@ -9,6 +9,7 @@ on:
 
 jobs:
   create_docs_pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
       - name: Parse semver string
@@ -19,28 +20,37 @@ jobs:
           version_extractor_regex: 'v(.*)$'
 
       - name: Checkout KIC repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: Checkout docs repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: kong/docs.konghq.com
           path: docs.konghq.com
           fetch-depth: 0
 
-      - name: Generate docs
+      - name: Generate CRDs reference
         run: |
           ./scripts/apidocs-gen/post-process-for-konghq.sh \
-          docs.konghq.com/app/_src/kubernetes-ingress-controller/references/custom-resources-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
+          docs.konghq.com/app/_src/kubernetes-ingress-controller/reference/custom-resources-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
+
+      - name: Generate flags reference
+        run: |
+          ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
+          docs.konghq.com/app/_src/kubernetes-ingress-controller/reference/cli-arguments-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
 
       - name: Detect changes
         id: detect-changes
-        run: echo "HAS_CHANGES=$(cd docs.konghq.com && git status --porcelain)" >> $GITHUB_OUTPUT
+        run: |
+          if [[ $(cd docs.konghq.com && git status --porcelain) ]]; then
+            echo "Changes detected in docs repo"
+            echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes detected in docs repo"
+          fi
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@72b6676b71ab476b77e676928516f6982eef7a41
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5
         with:
           workdir: docs.konghq.com
           gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}
@@ -49,7 +59,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create a PR in docs repo
-        uses: peter-evans/create-pull-request@284f54f989303d2699d373481a0cfa13ad5a6666
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
@@ -64,6 +74,6 @@ jobs:
           delete-branch: true
           draft: true
           labels: |
-            Kubernetes Team
+            team-k8s
             review:autodoc
           body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

@@ -9,24 +9,43 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
-	"github.com/kong/deck/cprint"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
+	"github.com/kong/go-database-reconciler/pkg/cprint"
+	"github.com/samber/lo"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,82 +53,121 @@ import (
 // -----------------------------------------------------------------------------
 
 // SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger, error) {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
+func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
+	zapBase, err := logging.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
-		return nil, logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
+		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}
-
-	if c.LogReduceRedundancy {
-		deprecatedLogger.Info("WARNING: log stifling has been enabled (experimental)")
-		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(output, &logrus.TextFormatter{}, 3, time.Second*30)
-	}
-
-	logger := logrusr.New(deprecatedLogger)
-	ctrl.SetLogger(logger)
+	logger := zapr.NewLoggerWithOptions(zapBase, zapr.LogInfoLevel("v"))
 
 	if c.LogLevel != "trace" && c.LogLevel != "debug" {
 		// disable deck's per-change diff output
 		cprint.DisableOutput = true
 	}
 
-	return deprecatedLogger, logger, nil
+	// Prevents controller-runtime from logging
+	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrllog.SetLogger(logger)
+
+	return logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
-	logger.Info("building the manager runtime scheme and loading apis into the scheme")
-	scheme, err := scheme.Get(featureGates)
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
+	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
+	scheme, err := scheme.Get()
 	if err != nil {
 		return ctrl.Options{}, err
 	}
 
-	// configure the general controller options
-	controllerOpts := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: c.MetricsAddr,
-		Port:               9443,
-		LeaderElection:     leaderElectionEnabled(logger, c, dbmode),
-		LeaderElectionID:   c.LeaderElectionID,
-		SyncPeriod:         &c.SyncPeriod,
+	// configure the general manager options
+	managerOpts := ctrl.Options{
+		Controller: config.Controller{
+			// This is needed because controller-runtime keeps a global list of controller
+			// names and panics if there are duplicates.
+			// This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
+		},
+		GracefulShutdownTimeout: c.GracefulShutdownTimeout,
+		Scheme:                  scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: c.MetricsAddr,
+			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (metricsserver.Filter, error) {
+				switch c.MetricsAccessFilter {
+				case cfgtypes.MetricsAccessFilterOff:
+					return nil
+				case cfgtypes.MetricsAccessFilterRBAC:
+					return filters.WithAuthenticationAndAuthorization
+				default:
+					// This is checked in flags validation so this should never happen.
+					panic("unsupported metrics filter")
+				}
+			}(),
+		},
+		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
+		LeaderElection:   leaderElectionEnabled(logger, c, dbmode),
+		LeaderElectionID: c.LeaderElectionID,
+		Cache: cache.Options{
+			SyncPeriod: &c.SyncPeriod,
+		},
+		Logger:    ctrl.LoggerFrom(ctx),
+		NewClient: newManagerClient,
 	}
 
-	// configure the controller caching options
-	if len(c.WatchNamespaces) == 0 {
-		// if there are no configured watch namespaces, then we're watching ALL namespaces
-		// and we don't have to bother individually caching any particular namespaces
-		controllerOpts.Namespace = corev1.NamespaceAll
-	} else {
-		watchNamespaces := c.WatchNamespaces
+	// If there are no configured watch namespaces, then we're watching ALL namespaces,
+	// and we don't have to bother individually caching any particular namespaces.
+	// This is the default behavior of the controller-runtime manager.
+	// If there are configured watch namespaces, then we're watching only those namespaces.
+	if len(c.WatchNamespaces) > 0 {
+		watchNamespaces := sets.NewString(c.WatchNamespaces...)
 
-		// in all other cases we are a multi-namespace setup and must watch all the
+		// In all other cases we are a multi-namespace setup and must watch all the
 		// c.WatchNamespaces.
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
-		logger.Info("manager set up with multiple namespaces", "namespaces", watchNamespaces)
+		logger.Info("Manager set up with multiple namespaces", "namespaces", watchNamespaces)
 
-		// if publish service has been provided the namespace for it should be
+		// If ingress service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
 		if s, ok := c.PublishService.Get(); ok {
-			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
+			watchNamespaces.Insert(s.Namespace)
 		}
-		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(watchNamespaces)
+
+		watched := make(map[string]cache.Config)
+		for _, n := range watchNamespaces.List() {
+			watched[n] = cache.Config{}
+		}
+		managerOpts.Cache.DefaultNamespaces = watched
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {
-		controllerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
+		managerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
-	return controllerOpts, nil
+	return managerOpts, nil
 }
 
-func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
+const (
+	LeaderElectionEnabled  = "enabled"
+	LeaderElectionDisabled = "disabled"
+)
+
+func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode dpconf.DBMode) bool {
+	if c.LeaderElectionForce == LeaderElectionEnabled {
+		logger.Info("leader election forcibly enabled")
+		return true
+	}
+	if c.LeaderElectionForce == LeaderElectionDisabled {
+		logger.Info("leader election forcibly disabled")
+		return false
+	}
 	if c.Konnect.ConfigSynchronizationEnabled {
 		logger.Info("Konnect config synchronisation enabled, enabling leader election")
 		return true
 	}
 
-	if dbmode == "off" {
+	if dbmode.IsDBLessMode() {
 		if c.KongAdminSvc.IsPresent() {
 			logger.Info("DB-less mode detected with service detection, enabling leader election")
 			return true
@@ -124,10 +182,10 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 
 func setupDataplaneSynchronizer(
 	logger logr.Logger,
-	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
 	proxySyncSeconds float32,
+	initCacheSyncWait time.Duration,
 ) (*dataplane.Synchronizer, error) {
 	if proxySyncSeconds < dataplane.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf(
@@ -138,9 +196,10 @@ func setupDataplaneSynchronizer(
 	}
 
 	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
-		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
+		logger.WithName("dataplane-synchronizer"),
 		dataplaneClient,
 		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
+		dataplane.WithInitCacheSyncDuration(initCacheSyncWait),
 	)
 	if err != nil {
 		return nil, err
@@ -158,32 +217,38 @@ func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
+	referenceIndexers ctrlref.CacheIndexers,
 	managerClient client.Client,
-	deprecatedLogger logrus.FieldLogger,
+	logger logr.Logger,
+	translatorFeatures translator.FeatureFlags,
+	storer store.Storer,
 ) error {
-	logger := deprecatedLogger.WithField("component", "admission-server")
+	admissionLogger := logger.WithName("admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		logger.Info("admission webhook server disabled")
+		logger.Info("Admission webhook server disabled")
 		return nil
 	}
 
 	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			logger,
+			admissionLogger,
 			managerClient,
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
+			translatorFeatures,
+			storer,
 		),
-		Logger: logger,
-	}, logger)
+		ReferenceIndexers: referenceIndexers,
+		Logger:            admissionLogger,
+	}, admissionLogger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.WithError(err).Error("admission webhook server stopped")
+		logger.Error(err, "Admission webhook server stopped")
 	}()
 	return nil
 }
@@ -203,7 +268,7 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	}
 	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP, log)
 	if err != nil {
-		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
+		log.Info("Falling back to a default address finder for UDP", "reason", err.Error())
 		udpAddressFinder = defaultAddressFinder
 	}
 
@@ -233,7 +298,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 		}
 
 		var addrs []string
-		switch svc.Spec.Type { //nolint:exhaustive
+		switch svc.Spec.Type {
 		case corev1.ServiceTypeLoadBalancer:
 			for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
 				if lbaddr.IP != "" {
@@ -260,7 +325,12 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger) ([]*adminapi.Client, error) {
+func (c *Config) adminAPIClients(
+	ctx context.Context,
+	logger logr.Logger,
+	discoverer *adminapi.Discoverer,
+	factory adminapi.ClientFactory,
+) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err
@@ -268,8 +338,12 @@ func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger) ([]*ad
 
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
-	if c.KongAdminSvc.IsPresent() {
-		return c.adminAPIClientFromServiceDiscovery(ctx, logger, httpclient)
+	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
+		kubeClient, err := c.GetKubeClient()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
+		}
+		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -295,16 +369,26 @@ func (e NoAvailableEndpointsError) Error() string {
 	return fmt.Sprintf("no endpoints for service: %q", e.serviceNN)
 }
 
-func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger logr.Logger, httpclient *http.Client) ([]*adminapi.Client, error) {
-	kubeClient, err := c.GetKubeClient()
-	if err != nil {
-		return nil, err
-	}
+type AdminAPIsDiscoverer interface {
+	GetAdminAPIsForService(context.Context, client.Client, k8stypes.NamespacedName) (sets.Set[adminapi.DiscoveredAdminAPI], error)
+}
 
-	kongAdminSvcNN, ok := c.KongAdminSvc.Get()
-	if !ok {
-		return nil, errors.New("kong admin service namespaced name not provided")
-	}
+type AdminAPIClientFactory interface {
+	CreateAdminAPIClient(context.Context, adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
+}
+
+func AdminAPIClientFromServiceDiscovery(
+	ctx context.Context,
+	logger logr.Logger,
+	kongAdminSvcNN k8stypes.NamespacedName,
+	kubeClient client.Client,
+	discoverer AdminAPIsDiscoverer,
+	factory AdminAPIClientFactory,
+	retryOpts ...retry.Option,
+) ([]*adminapi.Client, error) {
+	const (
+		delay = time.Second
+	)
 
 	// Retry this as we may encounter an error of getting 0 addresses,
 	// which can mean that Kong instances meant to be configured by this controller
@@ -313,9 +397,23 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 	// because we have more code that relies on the configuration of Kong
 	// instance and without an address and there's no way to initialize the
 	// configuration validation and sending code.
+	retryOpts = append([]retry.Option{
+		retry.Context(ctx),
+		retry.Attempts(0),
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(delay),
+		retry.OnRetry(func(_ uint, err error) {
+			// log the error if the error is NOT caused by 0 available gateway endpoints.
+			if !errors.As(err, &NoAvailableEndpointsError{}) {
+				logger.Error(err, "Failed to create kong client(s)")
+			}
+			logger.Error(err, "Failed to create kong client(s), retrying...", "delay", delay)
+		}),
+	}, retryOpts...)
+
 	var adminAPIs []adminapi.DiscoveredAdminAPI
-	err = retry.Do(func() error {
-		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN, sets.New(c.KondAdminSvcPortNames...))
+	err := retry.Do(func() error {
+		s, err := discoverer.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN)
 		if err != nil {
 			return retry.Unrecoverable(err)
 		}
@@ -325,16 +423,7 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 		adminAPIs = s.UnsortedList()
 		return nil
 	},
-		retry.Context(ctx),
-		retry.Attempts(0),
-		retry.DelayType(retry.FixedDelay),
-		retry.Delay(time.Second),
-		retry.OnRetry(func(_ uint, err error) {
-			// log the error if the error is NOT caused by 0 available gateway endpoints.
-			if !errors.As(err, &NoAvailableEndpointsError{}) {
-				logger.Error(err, "failed to create kong client(s)")
-			}
-		}),
+		retryOpts...,
 	)
 	if err != nil {
 		return nil, err
@@ -342,13 +431,103 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 
 	clients := make([]*adminapi.Client, 0, len(adminAPIs))
 	for _, adminAPI := range adminAPIs {
-		cl, err := adminapi.NewKongClientForWorkspace(ctx, adminAPI.Address, c.KongWorkspace, httpclient)
+		cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
 		if err != nil {
 			return nil, err
 		}
-		cl.AttachPodReference(adminAPI.PodRef)
 		clients = append(clients, cl)
 	}
 
 	return clients, nil
+}
+
+// setupLicenseGetter sets up a license getter to get Kong license from Konnect or `KongLicense` CRD.
+// If synchoroniztion license from Konnect is enabled, it sets up and returns a Konnect license agent.
+// If controller of `KongLicense` CRD is enabled and sync license with Konnect is disabled,
+// it starts and returns a KongLicense controller.
+func setupLicenseGetter(
+	ctx context.Context,
+	c *Config,
+	setupLog logr.Logger,
+	mgr manager.Manager,
+	statusQueue *status.Queue,
+) (license.Getter, error) {
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
+	// This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
+	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but
+	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
+	// the client and makes it available to all Konnect-related subsystems.
+	if c.Konnect.LicenseSynchronizationEnabled {
+		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating konnect client: %w", err)
+		}
+		setupLog.Info("Starting license agent")
+		agent := license.NewAgent(
+			konnectLicenseAPIClient,
+			ctrl.LoggerFrom(ctx).WithName("license-agent"),
+			license.WithInitialPollingPeriod(c.Konnect.InitialLicensePollingPeriod),
+			license.WithPollingPeriod(c.Konnect.LicensePollingPeriod),
+		)
+		err = mgr.Add(agent)
+		if err != nil {
+			return nil, fmt.Errorf("could not add license agent to manager: %w", err)
+		}
+		return agent, nil
+	}
+	// Enable KongLicense controller if license synchornizition from Konnect is disabled.
+	if c.KongLicenseEnabled && !c.Konnect.LicenseSynchronizationEnabled {
+		setupLog.Info("Starting KongLicense controller")
+		licenseController := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
+			mgr.GetClient(),
+			ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongLicense"),
+			mgr.GetScheme(),
+			ctrllicense.NewLicenseCache(),
+			c.CacheSyncTimeout,
+			statusQueue,
+			ctrllicense.LicenseControllerTypeKIC,
+			mo.Some(c.LeaderElectionID),
+			mo.None[ctrllicense.ValidatorFunc](),
+		)
+		dynamicLicenseController := ctrllicense.WrapKongLicenseReconcilerToDynamicCRDController(
+			ctx, mgr, licenseController,
+		)
+		err := dynamicLicenseController.SetupWithManager(mgr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to start KongLicense controller: %w", err)
+		}
+		return licenseController, nil
+	}
+
+	return nil, nil
+}
+
+// setupKonnectConfigSynchronizer sets up Konnect config sychronizer and adds it to the manager runnables.
+func setupKonnectConfigSynchronizer(
+	ctx context.Context,
+	mgr manager.Manager,
+	configUploadPeriod time.Duration,
+	kongConfig sendconfig.Config,
+	clientsProvider clients.AdminAPIClientsProvider,
+	updateStrategyResolver sendconfig.UpdateStrategyResolver,
+	configStatusNotifier clients.ConfigStatusNotifier,
+	metricsRecorder metrics.Recorder,
+) (*konnect.ConfigSynchronizer, error) {
+	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
+	s := konnect.NewConfigSynchronizer(
+		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
+		kongConfig,
+		configUploadPeriod,
+		clientsProvider.KonnectClient(),
+		updateStrategyResolver,
+		sendconfig.NewDefaultConfigurationChangeDetector(logger),
+		configStatusNotifier,
+		metricsRecorder,
+	)
+	err := mgr.Add(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }

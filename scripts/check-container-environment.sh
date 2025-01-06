@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-KIND_VERSION="v0.14.0"
+KIND_VERSION="v0.20.0"
 
 # ensure docker command is accessible
 if ! command -v docker &> /dev/null

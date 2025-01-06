@@ -46,9 +46,9 @@ kind: Ingress
 metadata:
   name: httpbin-ingress
   annotations:
-    httpbin.ingress.kubernetes.io/rewrite-target: /
-    kubernetes.io/ingress.class: "kong"
+    konghq.com/strip-path: "true"
 spec:
+  ingressClassName: kong
   rules:
   - http:
       paths:

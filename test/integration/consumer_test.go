@@ -1,5 +1,4 @@
 //go:build integration_tests
-// +build integration_tests
 
 package integration
 
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -19,12 +19,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 func TestConsumerCredential(t *testing.T) {
@@ -34,7 +36,7 @@ func TestConsumerCredential(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -48,17 +50,17 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress := generators.NewIngressForService("/test_consumer_credential", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
-	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
+	require.Eventually(t, func() bool {
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -98,9 +100,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -113,11 +115,13 @@ func TestConsumerCredential(t *testing.T) {
 	credential := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "basic-auth",
+			},
 		},
 		StringData: map[string]string{
-			"kongCredType": "basic-auth",
-			"username":     "test_consumer_credential",
-			"password":     "test_consumer_credential",
+			"username": "test_consumer_credential",
+			"password": "test_consumer_credential",
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})
@@ -140,8 +144,25 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("validating that consumer has access")
 	assert.Eventually(t, func() bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/test_consumer_credential", nil)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, "/test_consumer_credential", nil)
 		req.SetBasicAuth("test_consumer_credential", "test_consumer_credential")
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+
+	t.Logf("updating credential to confirm references update store copy")
+	credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Get(ctx, credential.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	credential.StringData = map[string]string{"username": "new_consumer_credential"}
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, credential, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	assert.Eventually(t, func() bool {
+		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPURL.String(), "/test_consumer_credential", nil)
+		req.SetBasicAuth("new_consumer_credential", "test_consumer_credential")
 		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
@@ -152,5 +173,5 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_essentials", ingressWait, waitTick, nil)
 }

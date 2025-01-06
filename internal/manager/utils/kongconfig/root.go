@@ -13,14 +13,15 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
 // The fields are extracted from results of Kong gateway configuration root.
 type KongStartUpOptions struct {
-	DBMode       string
-	RouterFlavor string
+	DBMode       dpconf.DBMode
+	RouterFlavor dpconf.RouterFlavor
 	Version      kong.Version
 }
 
@@ -46,12 +47,12 @@ func ValidateRoots(roots []Root, skipCACerts bool) (*KongStartUpOptions, error) 
 		return nil, err
 	}
 
-	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
+	kongVersion, err := KongVersionFromRoot(uniqs[0])
 	if err != nil {
 		return nil, err
 	}
 
-	kongVersion, err := KongVersionFromRoot(uniqs[0])
+	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +76,7 @@ func extractConfigurationFromRoot(r Root) (map[string]any, error) {
 	return rootConfig, nil
 }
 
-func DBModeFromRoot(r Root) (string, error) {
+func DBModeFromRoot(r Root) (dpconf.DBMode, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -91,10 +92,10 @@ func DBModeFromRoot(r Root) (string, error) {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", dbModeKey, dbMode)
 	}
 
-	return dbModeStr, nil
+	return dpconf.NewDBMode(dbModeStr)
 }
 
-func RouterFlavorFromRoot(r Root) (string, error) {
+func RouterFlavorFromRoot(r Root) (dpconf.RouterFlavor, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -103,13 +104,13 @@ func RouterFlavorFromRoot(r Root) (string, error) {
 	const routerFlavorKey = "router_flavor"
 	routerFlavor, exist := rootConfig[routerFlavorKey]
 	if !exist {
-		return "", fmt.Errorf("no value in root configuration for key %q", routerFlavorKey)
+		return "", fmt.Errorf("missing field %q  from Kong Gateway's configuration root", routerFlavorKey)
 	}
-	routerFlvorStr, ok := routerFlavor.(string)
+	routerFlavorStr, ok := routerFlavor.(string)
 	if !ok {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", routerFlavorKey, routerFlavor)
 	}
-	return routerFlvorStr, nil
+	return dpconf.RouterFlavor(routerFlavorStr), nil
 }
 
 func KongVersionFromRoot(r Root) (kong.Version, error) {
@@ -151,13 +152,7 @@ func (kr Root) Key(skipCACerts bool) string {
 		return ""
 	}
 
-	v := kong.VersionFromInfo(kr)
-	_, err = kong.ParseSemanticVersion(v)
-	if err != nil {
-		return ""
-	}
-
-	return fmt.Sprintf("%s:%s", dbMode, v)
+	return string(dbMode)
 }
 
 func validateRootFunc(skipCACerts bool) func(Root, int) error {
@@ -176,16 +171,14 @@ func getRootKeyFunc(skipCACerts bool) func(Root) string {
 }
 
 // validateDBMode validates the provided dbMode string.
-func validateDBMode(dbMode string, skipCACerts bool) error {
+func validateDBMode(dbMode dpconf.DBMode, skipCACerts bool) error {
 	switch dbMode {
-	case "off", "":
+	case "", dpconf.DBModeOff:
 		if skipCACerts {
 			return fmt.Errorf("--skip-ca-certificates is not available for use with DB-less Kong instances")
 		}
-	case "postgres":
+	case dpconf.DBModePostgres:
 		return nil
-	case "cassandra":
-		return fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
 	default:
 		return fmt.Errorf("%s is not a supported database backend", dbMode)
 	}
@@ -208,8 +201,6 @@ func GetRoots(
 	eg, ctx := errgroup.WithContext(ctx)
 
 	for _, client := range kongClients {
-		client := client
-
 		eg.Go(func() error {
 			return retry.Do(
 				func() error {

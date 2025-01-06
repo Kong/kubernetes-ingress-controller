@@ -48,27 +48,3 @@ spec:
             secretKeyRef:
               name: kong-enterprise-superuser-password
               key: password
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kong-migrations
-  namespace: kong
-spec:
-  template:
-    spec:
-      imagePullSecrets:
-      - name: kong-enterprise-edition-docker
-      containers:
-      - name: kong-migrations
-        env:
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              name: kong-enterprise-license
-              key: license
-        - name: KONG_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: kong-enterprise-superuser-password
-              key: password

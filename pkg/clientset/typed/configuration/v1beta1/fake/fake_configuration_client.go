@@ -19,13 +19,21 @@ limitations under the License.
 package fake
 
 import (
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
 type FakeConfigurationV1beta1 struct {
 	*testing.Fake
+}
+
+func (c *FakeConfigurationV1beta1) KongConsumerGroups(namespace string) v1beta1.KongConsumerGroupInterface {
+	return &FakeKongConsumerGroups{c, namespace}
+}
+
+func (c *FakeConfigurationV1beta1) KongUpstreamPolicies(namespace string) v1beta1.KongUpstreamPolicyInterface {
+	return &FakeKongUpstreamPolicies{c, namespace}
 }
 
 func (c *FakeConfigurationV1beta1) TCPIngresses(namespace string) v1beta1.TCPIngressInterface {

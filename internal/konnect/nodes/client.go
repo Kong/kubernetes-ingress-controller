@@ -9,24 +9,25 @@ import (
 	"io"
 	"net/http"
 	neturl "net/url"
-	"strconv"
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
 // Client is used for sending requests to Konnect Node API.
-// It can be used to register Nodes in Konnect's Runtime Groups.
+// It can be used to register Nodes in Konnect's Control Planes.
 type Client struct {
 	address        string
-	runtimeGroupID string
+	controlPlaneID string
 	httpClient     *http.Client
 }
 
 // KicNodeAPIPathPattern is the path pattern for KIC node operations.
-var KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/kic-nodes"
+var KicNodeAPIPathPattern = "%s/kic/api/control-planes/%s/v1/kic-nodes"
 
 // NewClient creates a Node API Konnect client.
 func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
@@ -44,21 +45,21 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	c := &http.Client{}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
-	c.Transport = transport
+	c.Transport = useragent.NewTransport(transport)
 
 	return &Client{
 		address:        cfg.Address,
-		runtimeGroupID: cfg.RuntimeGroupID,
+		controlPlaneID: cfg.ControlPlaneID,
 		httpClient:     c,
 	}, nil
 }
 
 func (c *Client) kicNodeAPIEndpoint() string {
-	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.runtimeGroupID)
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.controlPlaneID)
 }
 
 func (c *Client) kicNodeAPIEndpointWithNodeID(nodeID string) string {
-	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.runtimeGroupID) + "/" + nodeID
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.controlPlaneID) + "/" + nodeID
 }
 
 func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*CreateNodeResponse, error) {
@@ -72,7 +73,7 @@ func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*Creat
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -107,7 +108,7 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -131,30 +132,30 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 	return resp, nil
 }
 
-// ListAllNodes call ListNodes() repeatedly to get all nodes in a runtime group.
+// ListAllNodes call ListNodes() repeatedly to get all nodes in a control plane.
 func (c *Client) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
 	nodes := []*NodeItem{}
-	pageNum := 0
+	var nextCursor string
 	for {
-		resp, err := c.listNodes(ctx, pageNum)
+		resp, err := c.listNodes(ctx, nextCursor)
 		if err != nil {
 			return nil, err
 		}
 		nodes = append(nodes, resp.Items...)
-		if resp.Page == nil || resp.Page.NextPageNum == 0 {
+		if resp.Page == nil || !resp.Page.HasNextPage {
 			return nodes, nil
 		}
-		// if konnect returns a non-0 NextPageNum, the node are not all listed
-		// and we should start listing from the returned NextPageNum.
-		pageNum = int(resp.Page.NextPageNum)
+		// if konnect returns that there is a next page, the nodes are not all
+		// listed and we should start listing from the returned NextCursor.
+		nextCursor = resp.Page.NextCursor
 	}
 }
 
-func (c *Client) listNodes(ctx context.Context, pageNumber int) (*ListNodeResponse, error) {
+func (c *Client) listNodes(ctx context.Context, nextCursor string) (*ListNodeResponse, error) {
 	url, _ := neturl.Parse(c.kicNodeAPIEndpoint())
-	if pageNumber != 0 {
+	if nextCursor != "" {
 		q := url.Query()
-		q.Set("page.number", strconv.Itoa(pageNumber))
+		q.Set("page.next_cursor", nextCursor)
 		url.RawQuery = q.Encode()
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
@@ -162,7 +163,7 @@ func (c *Client) listNodes(ctx context.Context, pageNumber int) (*ListNodeRespon
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 
-	httpResp, err := c.httpClient.Do(req)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -192,7 +193,7 @@ func (c *Client) DeleteNode(ctx context.Context, nodeID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -211,7 +212,7 @@ func (c *Client) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.httpClient.Do(httpReq)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}

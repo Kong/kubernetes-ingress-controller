@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
+
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ const (
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
 	DefaultSyncSeconds float32 = 3.0
 
-	DefaultInitWaitPeriod = 5 * time.Second
+	DefaultCacheSyncWaitDuration = 5 * time.Second
 )
 
 // -----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ type Synchronizer struct {
 
 	// dataplane client to send updates to the Kong Admin API
 	dataplaneClient Client
-	dbMode          string
+	dbMode          dpconf.DBMode
 
 	// server configuration, flow control, channels and utility attributes
 	stagger         time.Duration
@@ -63,8 +63,8 @@ func WithStagger(period time.Duration) SynchronizerOption {
 	}
 }
 
-// WithInitWaitPeriod returns a SynchronizerOption which sets the initial wait period.
-func WithInitWaitPeriod(period time.Duration) SynchronizerOption {
+// WithInitCacheSyncDuration returns a SynchronizerOption which sets the initial wait period.
+func WithInitCacheSyncDuration(period time.Duration) SynchronizerOption {
 	return func(s *Synchronizer) {
 		s.initWaitPeriod = period
 	}
@@ -74,11 +74,11 @@ func WithInitWaitPeriod(period time.Duration) SynchronizerOption {
 // stagger time for data-plane updates to occur. Note that this starts some
 // background goroutines and the caller is resonsible for marking the provided
 // context.Context as "Done()" to shut down the background routines.
-func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
+func NewSynchronizer(logger logr.Logger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
-		logger:          logrusr.New(logger),
+		logger:          logger,
 		stagger:         time.Duration(DefaultSyncSeconds),
-		initWaitPeriod:  DefaultInitWaitPeriod,
+		initWaitPeriod:  DefaultCacheSyncWaitDuration,
 		dataplaneClient: client,
 		configApplied:   false,
 		dbMode:          client.DBMode(),
@@ -87,8 +87,6 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 	for _, opt := range opts {
 		opt(synchronizer)
 	}
-
-	synchronizer.dbMode = client.DBMode()
 
 	return synchronizer, nil
 }
@@ -104,7 +102,7 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 // To stop the server, the provided context must be Done().
 func (p *Synchronizer) Start(ctx context.Context) error {
 	select {
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2249
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2315
 	// This is a temporary mitigation to allow some time for controllers to
 	// populate their dataplaneClient cache.
 	case <-time.After(p.initWaitPeriod):
@@ -142,7 +140,7 @@ func (p *Synchronizer) IsReady() bool {
 	defer p.lock.RUnlock()
 	// If the proxy is has no database, it is only ready after a successful sync
 	// Otherwise, it has no configuration loaded
-	if p.dbMode == "off" {
+	if p.dbMode.IsDBLessMode() {
 		return p.configApplied
 	}
 	// If the proxy has a database, it is ready immediately
@@ -168,9 +166,9 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			p.logger.Info("context done: shutting down the proxy update server")
+			p.logger.Info("Context done: shutting down the proxy update server")
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
-				p.logger.Error(err, "context completed with error")
+				p.logger.Error(err, "Context completed with error")
 			}
 			p.syncTicker.Stop()
 
@@ -183,7 +181,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 
 		case <-p.syncTicker.C:
 			if err := p.dataplaneClient.Update(ctx); err != nil {
-				p.logger.Error(err, "could not update kong admin")
+				p.logger.Error(err, "Could not update kong admin")
 				continue
 			}
 			initialConfig.Do(p.markConfigApplied)

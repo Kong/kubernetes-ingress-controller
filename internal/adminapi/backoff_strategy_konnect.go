@@ -13,7 +13,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
 )
 
 const (
@@ -26,10 +26,6 @@ type Clock interface {
 	Now() time.Time
 }
 
-type SystemClock struct{}
-
-func (SystemClock) Now() time.Time { return time.Now() }
-
 // KonnectBackoffStrategy keeps track of Konnect config push backoffs.
 //
 // It takes into account:
@@ -38,7 +34,7 @@ func (SystemClock) Now() time.Time { return time.Now() }
 //
 // It's important to note that KonnectBackoffStrategy can use the latter (config hash)
 // because of the nature of the one-directional integration where KIC is the only
-// component responsible for populating configuration of Konnect's Runtime Group.
+// component responsible for populating configuration of Konnect's Control Plane.
 // In case that changes in the future (e.g. manual modifications to parts of the
 // configuration are allowed on Konnect side for some reason), we might have to
 // drop this part of the backoff strategy.
@@ -158,7 +154,7 @@ func (s *KonnectBackoffStrategy) whyCannotUpdate(
 
 	if isTheSameFaultyConfig {
 		reasons = append(reasons, fmt.Sprintf(
-			"config has to be changed: %q hash has already failed to be pushed with a client error",
+			"Config has to be changed: %q hash has already failed to be pushed with a client error",
 			hex.EncodeToString(s.lastFailedConfigHash),
 		))
 	}

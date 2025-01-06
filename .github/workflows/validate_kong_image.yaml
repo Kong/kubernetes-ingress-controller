@@ -14,6 +14,10 @@ on:
         type: string
         required: true
         default: "latest"
+      kong-effective-version:
+        description: Effective semantic version of Kong Gateway Docker image. If not given, the semantic version will be parsed from the image tag.
+        type: string
+        required: false
       e2e-controller-image-repo:
         description: KIC Docker image for E2E tests (repository).
         type: string
@@ -25,12 +29,13 @@ on:
         required: true
         default: "latest"
       issue-number:
-        description: Issue number to post a comment in. If empty, no comment is posted.
+        description: Issue number to comment in, and close in case of success. Can be none.
         type: string
         required: false
 
 jobs:
-  post-comment-in-issue:
+  startup-issue-comment:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ github.event.inputs.issue-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -40,7 +45,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           gh issue comment ${ISSUE_NUMBER} --body \
             'Kong Gateway validation tests were started at ${{ env.URL }} with the following parameters:
@@ -68,8 +73,42 @@ jobs:
     with:
       kong-container-repo: ${{ github.event.inputs.kong-image-repo }}
       kong-container-tag: ${{ github.event.inputs.kong-image-tag }}
+      kong-oss-effective-version: ${{ github.event.inputs.kong-effective-version }}
       # We're passing the same image twice, because the integration tests need to know the image
       # for Enterprise variant of tests separately.
       # That makes this workflow usable only for Enterprise images.
       kong-enterprise-container-repo: ${{ github.event.inputs.kong-image-repo }}
       kong-enterprise-container-tag: ${{ github.event.inputs.kong-image-tag }}
+      kong-enterprise-effective-version: ${{ github.event.inputs.kong-effective-version }}
+      log-output-file:  /tmp/integration-tests-kic-logs
+
+  on-finish-comment-or-close-issue:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    needs:
+    - startup-issue-comment
+    - run-e2e-tests
+    - run-integration-tests
+    if: ${{ always() && github.event.inputs.issue-number != '' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        run: |
+          gh issue close ${ISSUE_NUMBER} --comment \
+            'Kong Gateway validation tests **PASSED** ✅ at ${{ env.URL }} with the following parameters:
+            ```json
+            ${{ toJSON(github.event.inputs) }}
+            ```
+            '
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          gh issue comment ${ISSUE_NUMBER} --body \
+            'Kong Gateway validation tests **FAILED** ❌ at ${{ env.URL }} with the following parameters:
+            ```json
+            ${{ toJSON(github.event.inputs) }}
+            ```
+            '

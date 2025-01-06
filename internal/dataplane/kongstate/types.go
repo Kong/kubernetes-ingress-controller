@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type PortMode int
@@ -12,9 +13,9 @@ const (
 	// PortModeImplicit means that the Ingress does not specify the Kubernetes Service port, and that KIC should expect
 	// the Service to have only one port defined.
 	PortModeImplicit PortMode = iota
-	// PortModeNumber means that the Ingress specifies the Service port by raw port number.
+	// PortModeByNumber means that the Ingress specifies the Service port by raw port number.
 	PortModeByNumber PortMode = iota
-	// PortModeNumber means that the Ingress specifies the Service port by its name field.
+	// PortModeByName means that the Ingress specifies the Service port by its name field.
 	PortModeByName PortMode = iota
 )
 
@@ -42,15 +43,6 @@ func (p *PortDef) CanonicalString() string {
 	return ImplicitPort
 }
 
-type ServiceBackend struct {
-	Name      string
-	Namespace string
-	PortDef   PortDef
-	Weight    *int32
-}
-
-type ServiceBackends []ServiceBackend
-
 // Target is a wrapper around Target object in Kong.
 type Target struct {
 	kong.Target
@@ -62,8 +54,8 @@ type Certificate struct {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
-func (c *Certificate) SanitizedCopy() *Certificate {
-	return &Certificate{
+func (c *Certificate) SanitizedCopy() Certificate {
+	return Certificate{
 		kong.Certificate{
 			ID:        c.ID,
 			Cert:      c.Cert,
@@ -75,7 +67,15 @@ func (c *Certificate) SanitizedCopy() *Certificate {
 	}
 }
 
-// Plugin represetns a plugin Object in Kong.
+// Plugin represents a plugin Object in Kong.
 type Plugin struct {
 	kong.Plugin
+	K8sParent client.Object
+}
+
+func (p Plugin) DeepCopy() Plugin {
+	return Plugin{
+		Plugin:    *p.Plugin.DeepCopy(),
+		K8sParent: p.K8sParent,
+	}
 }

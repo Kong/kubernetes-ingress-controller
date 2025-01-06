@@ -1,5 +1,4 @@
 //go:build integration_tests
-// +build integration_tests
 
 package integration
 
@@ -16,19 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
-func TestKongIngressEssentials(t *testing.T) {
-	skipTestForExpressionRouter(t)
+func TestServiceOverrides(t *testing.T) {
+	skipTestForRouterFlavors(context.Background(), t, expressions)
 	ctx := context.Background()
 
 	t.Parallel()
@@ -36,7 +32,7 @@ func TestKongIngressEssentials(t *testing.T) {
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	testName := "minking"
-	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, 80))
+	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, test.HTTPBinPort))
 	_, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
@@ -46,10 +42,10 @@ func TestKongIngressEssentials(t *testing.T) {
 	}()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
-	c, err := clientset.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service.Annotations = map[string]string{"konghq.com/override": testName}
+	service.Annotations = map[string]string{
+		annotations.AnnotationPrefix + annotations.ReadTimeoutKey: "1000",
+	}
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
@@ -60,9 +56,9 @@ func TestKongIngressEssentials(t *testing.T) {
 
 	t.Logf("routing to service %s via Ingress", service.Name)
 	ingress := generators.NewIngressForService("/test_kongingress_essentials", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 
 	defer func() {
@@ -70,37 +66,11 @@ func TestKongIngressEssentials(t *testing.T) {
 		assert.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	}()
 
-	t.Logf("applying service overrides to Service %s via KongIngress", service.Name)
-	king := &kongv1.KongIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testName,
-			Namespace: ns.Name,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Proxy: &kongv1.KongIngressService{
-			ReadTimeout: kong.Int(1000),
-		},
-	}
-	king, err = c.ConfigurationV1().KongIngresses(ns.Name).Create(ctx, king, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("ensuring that KongIngress %s is cleaned up", king.Name)
-		if err := c.ConfigurationV1().KongIngresses(ns.Name).Delete(ctx, king.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
-
 	t.Log("waiting for routes from Ingress to be operational and that overrides are in place")
-
 	assert.Eventually(t, func() bool {
 		// Even though the HTTP client has a timeout of 10s, it should never be hit,
 		// we expect a 504 from the proxy within 1000ms
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyHTTPURL))
 		if err != nil {
 			return false
 		}
@@ -112,14 +82,14 @@ func TestKongIngressEssentials(t *testing.T) {
 	svc, err := env.Cluster().Client().CoreV1().Services(ns.Name).Get(ctx, service.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
 	anns := svc.GetAnnotations()
-	delete(anns, "konghq.com/override")
+	delete(anns, annotations.AnnotationPrefix+annotations.ReadTimeoutKey)
 	svc.SetAnnotations(anns)
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Update(ctx, svc, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
 	t.Logf("ensuring that Service %s overrides are eventually removed", service.Name)
 	assert.Eventually(t, func() bool {
-		url := fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL)
+		url := fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyHTTPURL)
 		resp, err := helpers.DefaultHTTPClient().Get(url)
 		if err != nil {
 			t.Logf("failed issuing http GET for %q: %v", url, err)

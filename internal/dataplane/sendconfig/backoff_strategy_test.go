@@ -5,12 +5,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
 type mockUpdateStrategy struct {
@@ -22,18 +25,16 @@ func newMockUpdateStrategy(shouldSucceed bool) *mockUpdateStrategy {
 	return &mockUpdateStrategy{shouldSucceed: shouldSucceed}
 }
 
-func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (
-	err error,
-	resourceErrors []sendconfig.ResourceError,
-	resourceErrorsParseErr error,
-) {
+var mockUpdateReturnedConfigSize = mo.Some(22)
+
+func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (n mo.Option[int], err error) {
 	m.wasUpdateCalled = true
 
 	if !m.shouldSucceed {
-		return errors.New("update failure occurred"), nil, nil
+		return mo.None[int](), errors.New("update failure occurred")
 	}
 
-	return nil, nil, nil
+	return mockUpdateReturnedConfigSize, nil
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
@@ -72,7 +73,7 @@ func newMockBackoffStrategy(allowUpdate bool) *mockBackoffStrategy {
 
 func TestUpdateStrategyWithBackoff(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 
 	testCases := []struct {
 		name string
@@ -107,7 +108,7 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			updateShouldBeAllowed: false,
 
 			expectUpdateCalled: false,
-			expectError:        sendconfig.NewErrUpdateSkippedDueToBackoffStrategy("some reason"),
+			expectError:        sendconfig.NewUpdateSkippedDueToBackoffStrategyError("some reason"),
 		},
 	}
 
@@ -116,12 +117,13 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			updateStrategy := newMockUpdateStrategy(tc.updateShouldSucceed)
 			backoffStrategy := newMockBackoffStrategy(tc.updateShouldBeAllowed)
 
-			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, log)
-			err, _, _ := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
+			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, logger)
+			size, err := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
 			if tc.expectError != nil {
 				require.Equal(t, tc.expectError, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, mockUpdateReturnedConfigSize, size)
 			}
 
 			assert.Equal(t, tc.expectUpdateCalled, updateStrategy.wasUpdateCalled)
@@ -129,4 +131,38 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			assert.Equal(t, tc.expectFailureRegistered, backoffStrategy.wasFailureRegistered)
 		})
 	}
+}
+
+func TestUpdateSkippedDueToBackoffStrategyError(t *testing.T) {
+	skippedErr := sendconfig.NewUpdateSkippedDueToBackoffStrategyError("reason")
+
+	t.Run("errors.Is()", func(t *testing.T) {
+		assert.False(t,
+			errors.Is(skippedErr, deckerrors.ConfigConflictError{
+				Err: sendconfig.NewUpdateSkippedDueToBackoffStrategyError("different reason"),
+			}),
+			"shouldn't panic when using errors.Is() with NewUpdateSkippedDueToBackoffStrategyError",
+		)
+
+		assert.False(t, errors.Is(skippedErr, errors.New("")),
+			"empty error doesn't match",
+		)
+		assert.False(t, errors.Is(skippedErr, sendconfig.NewUpdateSkippedDueToBackoffStrategyError("different reason")),
+			"error with different reason shouldn't match",
+		)
+		assert.True(t, errors.Is(skippedErr, skippedErr),
+			"error with the same reason should match",
+		)
+	})
+
+	t.Run("errors.As()", func(t *testing.T) {
+		err := sendconfig.NewUpdateSkippedDueToBackoffStrategyError("reason")
+		assert.True(t, errors.As(skippedErr, &err),
+			"error with the same reason but wrapped should match",
+		)
+		err2 := sendconfig.NewUpdateSkippedDueToBackoffStrategyError("reason 2")
+		assert.True(t, errors.As(skippedErr, &err2),
+			"error with different reason should match",
+		)
+	})
 }

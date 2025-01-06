@@ -18,23 +18,23 @@ on:
 
 jobs:
   coverage:
-    if: ${{ inputs.coverage && !cancelled() }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
+    if: ${{ inputs.coverage && !cancelled() }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: collect test coverage artifacts
         id: download-coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: coverage
+          pattern: coverage-*
           path: coverage
+          merge-multiple: true
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           name: combined-coverage
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -43,24 +43,24 @@ jobs:
           verbose: true
 
   buildpulse-report:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: ${{ inputs.buildpulse && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: download tests report
         id: download-coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: tests-report
+          pattern: tests-report-*
           path: report
+          merge-multiple: true
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: Workshop64/buildpulse-action@43cb4e7429b9a6d8f882d188062573b7c937de14
+        uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: 962416
           repository: 127765544

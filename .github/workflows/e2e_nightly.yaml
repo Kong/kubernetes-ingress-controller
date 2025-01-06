@@ -6,7 +6,15 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  ensure-nightly-image-was-built:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if image built this night exists
+        run: docker pull kong/nightly-ingress-controller:$(date +%Y-%m-%d)
+
   e2e-tests:
+    needs: ensure-nightly-image-was-built
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
@@ -16,6 +24,7 @@ jobs:
       run-istio: true
 
   e2e-tests-unreleased-kong:
+    needs: ensure-nightly-image-was-built
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
@@ -27,12 +36,28 @@ jobs:
       # it reports the next release to be released as semver in the version field.
       # ref: https://github.com/Kong/kubernetes-ingress-controller/issues/4014
       kong-image: kong/kong-gateway-dev:nightly
+      kong-effective-version: "3.4.1"
       all-supported-k8s-versions: false
       run-gke: false
       run-istio: false
 
+  integration-tests-unreleased-kong:
+    uses: ./.github/workflows/_integration_tests.yaml
+    secrets: inherit
+    with:
+      kong-container-repo: kong/kong
+      kong-container-tag: nightly
+      kong-oss-effective-version: "3.4.1"
+      kong-enterprise-container-repo: kong/kong-gateway-dev
+      kong-enterprise-container-tag: nightly
+      kong-enterprise-effective-version: "3.4.1"
+      log-output-file:  /tmp/integration-tests-kic-logs
+
   test-reports:
-    needs: e2e-tests
+    needs:
+      - e2e-tests
+      - e2e-tests-unreleased-kong
+      - integration-tests-unreleased-kong
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit
     with:
@@ -40,17 +65,20 @@ jobs:
 
   notify-on-slack:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     needs:
+      - ensure-nightly-image-was-built
       - e2e-tests
       - e2e-tests-unreleased-kong
       - test-reports
+    if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
     steps:
       - name: Notify on Slack for failures of e2e tests run automatically at night
-        if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
         uses: 8398a7/action-slack@v3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
-          status: ${{ job.status }}
+          # Since notify-on-slack is triggered on failure (if statement), we can hardcode this.
+          status: failure
           fields: repo,message,commit,author,action,eventName,ref,workflow
-          text: 'E2E tests failed for nightly run, please check why.'
+          text: ':red_circle: E2E tests failed for nightly run, please check why.'

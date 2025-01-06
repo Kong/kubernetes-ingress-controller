@@ -3,17 +3,19 @@ package kongstate
 import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )
 
 // Upstream is a wrapper around Upstream object in Kong.
 type Upstream struct {
 	kong.Upstream
 	Targets []Target
-	// Service this upstream is asosciated with.
+	// Service this upstream is associated with.
 	Service Service
 }
 
@@ -39,7 +41,7 @@ func (u *Upstream) overrideByAnnotation(anns map[string]string) {
 
 // overrideByKongIngress modifies the Kong upstream based on KongIngresses
 // associated with the Kubernetes service.
-func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngress) {
+func (u *Upstream) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
 	if u == nil {
 		return
 	}
@@ -90,12 +92,58 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 	if k.HashFallbackURICapture != nil {
 		u.HashFallbackURICapture = kong.String(*k.HashFallbackURICapture)
 	}
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
+}
+
+func (u *Upstream) overrideByKongUpstreamPolicy(policy *kongv1beta1.KongUpstreamPolicy) {
+	if u == nil {
+		return
+	}
+
+	kongUpstreamOverrides := TranslateKongUpstreamPolicy(policy.Spec)
+	if kongUpstreamOverrides.Algorithm != nil {
+		u.Algorithm = kongUpstreamOverrides.Algorithm
+	}
+	if kongUpstreamOverrides.Slots != nil {
+		u.Slots = kongUpstreamOverrides.Slots
+	}
+	if kongUpstreamOverrides.Healthchecks != nil {
+		u.Healthchecks = kongUpstreamOverrides.Healthchecks
+	}
+	if kongUpstreamOverrides.HashOn != nil {
+		u.HashOn = kongUpstreamOverrides.HashOn
+	}
+	if kongUpstreamOverrides.HashFallback != nil {
+		u.HashFallback = kongUpstreamOverrides.HashFallback
+	}
+	if kongUpstreamOverrides.HashOnHeader != nil {
+		u.HashOnHeader = kongUpstreamOverrides.HashOnHeader
+	}
+	if kongUpstreamOverrides.HashFallbackHeader != nil {
+		u.HashFallbackHeader = kongUpstreamOverrides.HashFallbackHeader
+	}
+	if kongUpstreamOverrides.HashOnCookie != nil {
+		u.HashOnCookie = kongUpstreamOverrides.HashOnCookie
+	}
+	if kongUpstreamOverrides.HashOnCookiePath != nil {
+		u.HashOnCookiePath = kongUpstreamOverrides.HashOnCookiePath
+	}
+	if kongUpstreamOverrides.HashOnQueryArg != nil {
+		u.HashOnQueryArg = kongUpstreamOverrides.HashOnQueryArg
+	}
+	if kongUpstreamOverrides.HashFallbackQueryArg != nil {
+		u.HashFallbackQueryArg = kongUpstreamOverrides.HashFallbackQueryArg
+	}
+	if kongUpstreamOverrides.HashOnURICapture != nil {
+		u.HashOnURICapture = kongUpstreamOverrides.HashOnURICapture
+	}
+	if kongUpstreamOverrides.HashFallbackURICapture != nil {
+		u.HashFallbackURICapture = kongUpstreamOverrides.HashFallbackURICapture
+	}
 }
 
 // override sets Upstream fields by KongIngress first, then by k8s Service's annotations.
 func (u *Upstream) override(
-	kongIngress *configurationv1.KongIngress,
+	kongIngress *kongv1.KongIngress,
 	svc *corev1.Service,
 ) {
 	if u == nil {
@@ -108,7 +156,7 @@ func (u *Upstream) override(
 		// configuration with a KongIngress object and if that's the case then
 		// skip it since those should not be affected.
 		gvk := u.Service.Parent.GetObjectKind().GroupVersionKind()
-		if gvk.Group == gatewayv1alpha2.GroupName {
+		if gvk.Group == gatewayv1.GroupName {
 			// No log needed here as there will be one issued already from Kong's
 			// Service override. The reason for this is that there is no other
 			// object in Kubernetes that creates a Kong's Upstream and Kubernetes

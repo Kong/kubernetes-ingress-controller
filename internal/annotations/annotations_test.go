@@ -129,34 +129,6 @@ func TestExtractPath(t *testing.T) {
 	}
 }
 
-func TestExtractKongPluginsFromAnnotations(t *testing.T) {
-	type args struct {
-		anns map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want []string
-	}{
-		{
-			name: "non-empty",
-			args: args{
-				anns: map[string]string{
-					"konghq.com/plugins": "kp-rl, kp-cors",
-				},
-			},
-			want: []string{"kp-rl", "kp-cors"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ExtractKongPluginsFromAnnotations(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ExtractKongPluginsFromAnnotations() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestExtractConfigurationName(t *testing.T) {
 	type args struct {
 		anns map[string]string
@@ -230,6 +202,24 @@ func TestExtractProtocolNames(t *testing.T) {
 				},
 			},
 			want: []string{"foo", "bar"},
+		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/protocols": " foo, bar",
+				},
+			},
+			want: []string{"foo", "bar"},
+		},
+		{
+			name: "non-empty with a single protocol empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/protocols": "foo,",
+				},
+			},
+			want: []string{"foo"},
 		},
 	}
 	for _, tt := range tests {
@@ -525,6 +515,33 @@ func TestExtractMethods(t *testing.T) {
 			},
 			want: []string{"POST", "GET"},
 		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": " POST, GET",
+				},
+			},
+			want: []string{"POST", "GET"},
+		},
+		{
+			name: "non-empty with a single method empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": "POST,",
+				},
+			},
+			want: []string{"POST"},
+		},
+		{
+			name: "lowercase methods",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/methods": "post,Get",
+				},
+			},
+			want: []string{"POST", "GET"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -556,6 +573,24 @@ func TestExtractSNIs(t *testing.T) {
 				},
 			},
 			want: []string{"hrodna.kong.example", "katowice.kong.example"},
+		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": " hrodna.kong.example, katowice.kong.example",
+				},
+			},
+			want: []string{"hrodna.kong.example", "katowice.kong.example"},
+		},
+		{
+			name: "non-empty with a single sni empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "hrodna.kong.example,",
+				},
+			},
+			want: []string{"hrodna.kong.example"},
 		},
 	}
 	for _, tt := range tests {
@@ -674,6 +709,24 @@ func TestExtractHostAliases(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+		{
+			name: "non-empty with spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": " foo.kong.com, bar.kong.com",
+				},
+			},
+			want: []string{"foo.kong.com", "bar.kong.com"},
+		},
+		{
+			name: "non-empty with a single alias empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/host-aliases": "foo.kong.com,",
+				},
+			},
+			want: []string{"foo.kong.com"},
 		},
 	}
 	for _, tt := range tests {
@@ -846,6 +899,15 @@ func TestExtractHeaders(t *testing.T) {
 			want: map[string][]string{},
 		},
 		{
+			name: "empty with custom separator",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers-separator": ";",
+				},
+			},
+			want: map[string][]string{},
+		},
+		{
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
@@ -864,6 +926,15 @@ func TestExtractHeaders(t *testing.T) {
 			want: map[string][]string{},
 		},
 		{
+			name: "separator with no header results in empty header value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers.foo": "foo,",
+				},
+			},
+			want: map[string][]string{"foo": {"foo", ""}},
+		},
+		{
 			name: "no header name",
 			args: args{
 				anns: map[string]string{
@@ -871,6 +942,47 @@ func TestExtractHeaders(t *testing.T) {
 				},
 			},
 			want: map[string][]string{},
+		},
+		{
+			name: "multiple header, multiple values, trailing spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers.x-example":    "foo, bar, baz  ",
+					"konghq.com/headers.x-additional": "foo",
+				},
+			},
+			want: map[string][]string{
+				"x-example":    {"foo", "bar", "baz"},
+				"x-additional": {"foo"},
+			},
+		},
+		{
+			name: "multiple header, multiple values, custom separator",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers-separator":    ";",
+					"konghq.com/headers.x-example":    "foo, bar;baz",
+					"konghq.com/headers.x-additional": "foo",
+				},
+			},
+			want: map[string][]string{
+				"x-example":    {"foo, bar", "baz"},
+				"x-additional": {"foo"},
+			},
+		},
+		{
+			name: "multiple header, multiple values, custom separator, leading & trailing spaces",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers-separator":    ";",
+					"konghq.com/headers.x-example":    " foo, bar;cat,dog ;   baz ",
+					"konghq.com/headers.x-additional": "foo;",
+				},
+			},
+			want: map[string][]string{
+				"x-example":    {"foo, bar", "cat,dog", "baz"},
+				"x-additional": {"foo", ""},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -926,4 +1038,126 @@ func TestExtractPathHandling(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExtractRewriteURI(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  string
+		exist bool
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/rewrite": "/foo/$1",
+				},
+			},
+			want:  "/foo/$1",
+			exist: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, exist := ExtractRewriteURI(tt.args.anns)
+			require.Equal(t, tt.want, got)
+			require.Equal(t, tt.exist, exist)
+		})
+	}
+}
+
+func TestExtractTLSVerify(t *testing.T) {
+	_, ok := ExtractTLSVerify(nil)
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerify(map[string]string{})
+	assert.False(t, ok)
+
+	v, ok := ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "true"})
+	assert.True(t, ok)
+	assert.Equal(t, true, v)
+
+	v, ok = ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "false"})
+	assert.True(t, ok)
+	assert.Equal(t, false, v)
+}
+
+func TestExtractTLSVerifyDepth(t *testing.T) {
+	_, ok := ExtractTLSVerifyDepth(nil)
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerifyDepth(map[string]string{})
+	assert.False(t, ok)
+
+	_, ok = ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "non-integer"})
+	assert.False(t, ok)
+
+	v, ok := ExtractTLSVerifyDepth(map[string]string{AnnotationPrefix + TLSVerifyDepthKey: "1"})
+	assert.True(t, ok)
+	assert.Equal(t, 1, v)
+}
+
+func TestExtractCACertificates(t *testing.T) {
+	v := ExtractCACertificateSecretNames(nil)
+	assert.Empty(t, v)
+
+	v = ExtractCACertificateSecretNames(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractCACertificateSecretNames(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: "foo,bar"})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractCACertificateSecretNames(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: " foo, bar ,baz "})
+	assert.Equal(t, []string{"foo", "bar", "baz"}, v, "expected to trim spaces")
+
+	v = ExtractCACertificateSecretNames(map[string]string{AnnotationPrefix + CACertificatesSecretsKey: "foo, bar,  "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
+}
+
+func TestExtractGatewayPublishService(t *testing.T) {
+	v := ExtractGatewayPublishService(nil)
+	assert.Empty(t, v)
+
+	v = ExtractGatewayPublishService(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: "foo"})
+	assert.Equal(t, []string{"foo"}, v)
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: "foo,bar"})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: " foo, bar "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to trim spaces")
+
+	v = ExtractGatewayPublishService(map[string]string{AnnotationPrefix + GatewayPublishServiceKey: "foo, bar, "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
+}
+
+func TestExtractUserTags(t *testing.T) {
+	v := ExtractUserTags(nil)
+	assert.Empty(t, v)
+
+	v = ExtractUserTags(map[string]string{})
+	assert.Empty(t, v)
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: "foo"})
+	assert.Equal(t, []string{"foo"}, v)
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: "foo,bar"})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to split by comma")
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: " foo, bar "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to trim spaces")
+
+	v = ExtractUserTags(map[string]string{AnnotationPrefix + UserTagKey: "foo, bar, "})
+	assert.Equal(t, []string{"foo", "bar"}, v, "expected to ignore empty values")
 }

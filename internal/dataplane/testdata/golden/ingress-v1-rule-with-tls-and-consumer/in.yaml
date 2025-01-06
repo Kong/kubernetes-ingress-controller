@@ -1,0 +1,97 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: ing-with-tls
+  namespace: bar-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: foo-svc
+            port:
+              number: 80
+        path: /
+        pathType: Exact
+  tls:
+  - hosts:
+    - 1.example.com
+    - 2.example.com
+    secretName: sooper-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: foo-svc
+  namespace: bar-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: consumer
+credentials:
+  - consumer-basic-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: consumer-basic-auth
+  namespace: default
+  labels:
+    konghq.com/credential: basic-auth
+data:
+  username: "Y29uc3VtZXItMQ=="
+  password: "Y29uc3VtZXItMS1wYXNzd29yZA=="
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sooper-secret
+  namespace: bar-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+type: kubernetes.io/tls
+data:
+  tls.key: |
+    LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUNkUUlCQURBTkJna3Foa2lHOXcwQkFRRUZB
+    QVNDQWw4d2dnSmJBZ0VBQW9HQkFMc2krZEtPRWNscUdDMEUKMU9jQ3BHRjNNZlp3MkU1L3VqdWxr
+    RDNBOGpuejBKcHZkcjJyZ1N0OHpTVU1aNFN0NlhRaWJQNVl2cXRnYXB3VgptS0JYS2Z3eEV5SGpy
+    c2lPTi9nYVFFWXdCNTdWRE5OcktIM0cwekVSZ052UDdnb0t2dU9pMGc2anhwZWkza2dOCmFYTzVy
+    bk5aaEpwTDVKV0JjME9leG5udUl1VWhBZ01CQUFFQ2dZQVJwdnoxMVp6cjZPd2E0d2ZLT3IrU3lo
+    R1cKYzVLVDVReUdMOW5wV1ZnQUMzV3orNnV4dkluVXRsTUxtWjN5TUEyRGZQUFhFanY2SW9BcjlR
+    V09xbW8xVERvdQp2cGk3bjA2R2xUOHFPTVdPcGJQb1I3aENDYTRubHN4NDhxOFFRK0tubkNoejBB
+    Z05ZdGxJdTlIMWwxYTIwSHV0Ci9xb0VXN1dlL0dQdGJIYkFBUUpCQVBjN3dWVUd0bUhpRnRYSTJO
+    L2JkUmtlZms2N1RneXRNUVZVMWVISWhuaDgKZ2xBVnB1R05ZY3lYWW9EZm9kL3lNcElKNFRvMkZO
+    Z1JOVmFIV2dmT2hRRUNRUURCeGJJdncrUEtydXJOSWJxcgpzdS9mY0RKWGRLWit3ZnVKSlgya1JR
+    ZU1nYTBuVmNxTFVaVjFSQVBtQ2cwWXYrUU5ob3ZxMW91d0xOc1pLcGU1Cnc4QWhBa0JER2FHNExQ
+    RTFFY0syMVNNZlpwV2FjcTgvT1JETzJmYVRCdHBoeENYUzc2QUNrazNQcTZxZWQzdlIKbEdCL3dt
+    RTlSNWNzVUY5SjRTbkR5VXFERWVjQkFrQXZWV1NlaUdKM20xemQrUlJKWnU5empFdXYwMTNzYnVS
+    TAo3eTJPMkJIcy82eFZoSDV5bzk0M2hBTFR5YmJEU2ZTaVhUQ0drQndWVUEvQlNRZEJLSkVoQWtB
+    L1hTVjJKVGxlCmc1Umh4a3VEWnN0M0s4YXVwd1dLQzRFOXp1ZythcmFRa256ak1oNk1TbDZ1MitS
+    TmlmUnJ6MmtUaFEzSFlqMGcKNUdUeWw3WEpteVkvCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+  tls.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJvVENDQVFvQ0NRQy9WNU9mVFh1N3hEQU5C
+    Z2txaGtpRzl3MEJBUXNGQURBVk1STXdFUVlEVlFRRERBcHIKYjI1bmFIRXVZMjl0TUI0WERUSXpN
+    RFl3TVRFM05UQXdPRm9YRFRJME1EVXpNVEUzTlRBd09Gb3dGVEVUTUJFRwpBMVVFQXd3S2EyOXVa
+    Mmh4TG1OdmJUQ0JuekFOQmdrcWhraUc5dzBCQVFFRkFBT0JqUUF3Z1lrQ2dZRUF1eUw1CjBvNFJ5
+    V29ZTFFUVTV3S2tZWGN4OW5EWVRuKzZPNldRUGNEeU9mUFFtbTkydmF1Qkszek5KUXhuaEszcGRD
+    SnMKL2xpK3EyQnFuQldZb0ZjcC9ERVRJZU91eUk0MytCcEFSakFIbnRVTTAyc29mY2JUTVJHQTI4
+    L3VDZ3ErNDZMUwpEcVBHbDZMZVNBMXBjN211YzFtRW1rdmtsWUZ6UTU3R2VlNGk1U0VDQXdFQUFU
+    QU5CZ2txaGtpRzl3MEJBUXNGCkFBT0JnUUJCdngwYmR5RmRXeGE3NVI5YnJ6OHMxR1lMclZtazd6
+    Q1hzcHZ5OXNEeTFSb2FWN1RuWWRXeHYvSFUKOWZ1bXcrMFJvU3N4eXNRUmMxaVdBOHFKNnkycnEz
+    RzdBM0dIdElQcXNESHJqb1M5czlZdEpvNGlUNElOSjNJbQowZkIwUURyMUY0RjVQNlRaeU11MVdq
+    Z3QyQ2hlcWFaSDZUTGE4RW00RnovUXJmYzFBZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K

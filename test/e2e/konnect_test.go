@@ -5,24 +5,14 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"fmt"
-	"math/big"
-	"net/http"
-	"os"
 	"os/exec"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	gokong "github.com/kong/go-kong/kong"
+	"github.com/hashicorp/go-cleanhttp"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -32,71 +22,69 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
-	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
-	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	testkonnect "github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
 )
 
 const (
-	konnectRuntimeGroupsBaseURL          = "https://us.kic.api.konghq.tech/v2"
-	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/konnect-api/api/runtime_groups/%s/v1"
-	konnectRuntimeGroupAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
+	konnectControlPlaneAdminAPIBaseURL = "https://us.kic.api.konghq.tech"
 
 	konnectNodeRegistrationTimeout = 5 * time.Minute
 	konnectNodeRegistrationCheck   = 30 * time.Second
 )
 
-var konnectAccessToken = os.Getenv("TEST_KONG_KONNECT_ACCESS_TOKEN")
-
 func TestKonnectConfigPush(t *testing.T) {
 	t.Parallel()
-	skipIfMissingRequiredKonnectEnvVariables(t)
+	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestRuntimeGroup(ctx, t)
-	cert, key := createClientCertificate(ctx, t, rgID)
-	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
+	cpID := testkonnect.CreateTestControlPlane(ctx, t)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, cpID)
+	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, cpID)
 
 	deployments := deployAllInOneKonnectManifest(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
-	t.Log("ensuring ingress resources are correctly populated in Konnect Runtime Group's Admin API")
-	konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
-	requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
+	t.Log("ensuring ingress resources are correctly populated in Konnect Control Plane's Admin API")
+	konnectAdminAPIClient := createKonnectAdminAPIClient(t, cpID, cert, key)
+	verifyIngressWithEchoBackendsInAdminAPI(ctx, t, konnectAdminAPIClient.AdminAPIClient(), numberOfEchoBackends)
 
-	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
-	requireKonnectNodesConsistentWithK8s(ctx, t, env, deployments, rgID, cert, key)
-	requireAllProxyReplicasIDsConsistentWithKonnect(ctx, t, env, deployments.ProxyNN, rgID, cert, key)
+	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect control plane")
+	requireKonnectNodesConsistentWithK8s(ctx, t, env, deployments, cpID, cert, key)
+	requireAllProxyReplicasIDsConsistentWithKonnect(ctx, t, env, deployments.ProxyNN, cpID, cert, key)
 }
 
 func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
-	skipIfMissingRequiredKonnectEnvVariables(t)
+	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestRuntimeGroup(ctx, t)
-	cert, key := createClientCertificate(ctx, t, rgID)
+	rgID := testkonnect.CreateTestControlPlane(ctx, t)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
-	manifestFile := "../../deploy/single/all-in-one-dbless-konnect-enterprise.yaml"
-	t.Logf("deploying %s manifest file", manifestFile)
-
-	manifest := getTestManifest(t, manifestFile)
-	deployKong(ctx, t, env, manifest)
+	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
+	ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 
 	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
 
 	t.Log("disabling license management")
 	kubeconfig := getTemporaryKubeconfig(t, env)
-	require.NoError(t, setEnv(kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", ""))
+	require.NoError(t, setEnv(setEnvParams{
+		kubeCfgPath:   kubeconfig,
+		namespace:     namespace,
+		target:        fmt.Sprintf("deployment/%s", controllerDeploymentName),
+		containerName: controllerContainerName,
+		variableName:  "CONTROLLER_KONNECT_LICENSING_ENABLED",
+		value:         "",
+	}))
 
 	t.Log("restarting proxy")
 	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "rollout", "-n", "kong", "restart", "deployment", "proxy-kong")
@@ -110,18 +98,27 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	require.Eventually(t, func() bool {
 		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
+			t.Logf("failed to get license: %v", err)
 			return false
 		}
 		return license.License.Expiration == ""
 	}, adminAPIWait, time.Second)
 
 	t.Log("re-enabling license management")
-	require.NoError(t, setEnv(kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", "true"))
+	require.NoError(t, setEnv(setEnvParams{
+		kubeCfgPath:   kubeconfig,
+		namespace:     namespace,
+		target:        fmt.Sprintf("deployment/%s", controllerDeploymentName),
+		containerName: controllerContainerName,
+		variableName:  "CONTROLLER_KONNECT_LICENSING_ENABLED",
+		value:         "true",
+	}))
 
 	t.Log("confirming that the license is set")
 	assert.Eventually(t, func() bool {
 		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
+			t.Logf("failed to get license: %v", err)
 			return false
 		}
 		return license.License.Expiration != ""
@@ -131,134 +128,34 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Parallel()
-	skipIfMissingRequiredKonnectEnvVariables(t)
-
+	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestRuntimeGroup(ctx, t)
-	cert, key := createClientCertificate(ctx, t, rgID)
+	rgID := testkonnect.CreateTestControlPlane(ctx, t)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 
-	// create a Konnect client secret and config map with a non-existing runtime group ID to simulate misconfiguration
-	notExistingRgID := "not-existing-rg-id"
+	// create a Konnect client secret and config map with a non-existing control plane ID to simulate misconfiguration
+	notExistingRgID := "not-existing-cp-id"
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, notExistingRgID)
 
 	deployAllInOneKonnectManifest(ctx, t, env)
 
 	t.Log("running ingress tests to verify misconfiguration doesn't affect basic ingress functionality")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-}
-
-func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
-	if konnectAccessToken == "" {
-		t.Skip("missing TEST_KONG_KONNECT_ACCESS_TOKEN")
-	}
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
 
 // deployAllInOneKonnectManifest deploys all-in-one-dbless-konnect.yaml manifest, replacing the controller image
 // if specified by environment variables.
 func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env environment.Environment) Deployments {
-	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
+	const manifestFile = "manifests/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
-	manifest := getTestManifest(t, manifestFile)
-	deployKong(ctx, t, env, manifest)
-	return getManifestDeployments(manifestFile)
-}
-
-// createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
-// It also sets up a cleanup function for it to be deleted.
-func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
-	t.Helper()
-
-	rgClient, err := rg.NewClientWithResponses(konnectRuntimeGroupsBaseURL, rg.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
-			return nil
-		}),
-		rg.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
-	)
-	require.NoError(t, err)
-
-	createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
-		Description: lo.ToPtr("This is a description"),
-		Labels:      &rg.Labels{"created_in_tests": "true"},
-		Name:        uuid.NewString(),
-		ClusterType: rg.ClusterTypeKubernetesIngressController,
-	})
-	require.NoError(t, err, "failed to create runtime group")
-	require.Equalf(t, http.StatusCreated, createRgResp.StatusCode(), "failed creating RG: %s", string(createRgResp.Body))
-	require.NotNil(t, createRgResp.JSON201)
-	require.NotNil(t, createRgResp.JSON201.Id)
-	id := *createRgResp.JSON201.Id
-	t.Cleanup(func() {
-		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, id)
-		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", id)
-	})
-
-	t.Logf("created test Konnect Runtime Group: %q", id.String())
-	return id.String()
-}
-
-// createClientCertificate creates a TLS client certificate and POSTs it to Konnect Runtime Group configuration API
-// so that KIC can use the certificates to authenticate against Konnect Admin API.
-func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (certPEM string, keyPEM string) {
-	t.Helper()
-
-	rgConfigClient, err := rgc.NewClientWithResponses(fmt.Sprintf(konnectRuntimeGroupsConfigBaseURLFmt, rgID), rgc.WithRequestEditorFn(
-		func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
-			return nil
-		}),
-		rgc.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
-	)
-	require.NoError(t, err)
-
-	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	require.NoError(t, err)
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Kong Inc."},
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24 * 180),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	require.NoError(t, err)
-
-	out := &bytes.Buffer{}
-	err = pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	require.NoError(t, err)
-	cert := out.String()
-
-	out.Reset()
-	err = pem.Encode(out, pemBlockForKey(t, priv))
-	require.NoError(t, err)
-	key := out.String()
-
-	t.Log("creating client certificate in Konnect")
-	resp, err := rgConfigClient.PostDpClientCertificatesWithResponse(ctx, rgc.PostDpClientCertificatesJSONRequestBody{
-		Cert: cert,
-	})
-	require.NoError(t, err)
-	require.Equalf(t, http.StatusCreated, resp.StatusCode(), "failed creating client certificate: %s", string(resp.Body))
-
-	return cert, key
-}
-
-func pemBlockForKey(t *testing.T, k *ecdsa.PrivateKey) *pem.Block {
-	b, err := x509.MarshalECPrivateKey(k)
-	require.NoError(t, err)
-	return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 }
 
 // createKonnectClientSecretAndConfigMap creates a Secret with client TLS certificate that is used by KIC to communicate
-// with Konnect Admin API. It also creates a ConfigMap that specifies a Runtime Group ID and Konnect Admin API URL.
+// with Konnect Admin API. It also creates a ConfigMap that specifies a Control Plane ID and Konnect Admin API URL.
 // Both Secret and ConfigMap are used by all-in-one-dbless-konnect.yaml manifest and need to be populated before
 // deploying it.
 func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, env environment.Environment, tlsCert, tlsKey, rgID string) {
@@ -291,20 +188,20 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 			Name: "konnect-config",
 		},
 		Data: map[string]string{
-			"CONTROLLER_KONNECT_RUNTIME_GROUP_ID": rgID,
-			"CONTROLLER_KONNECT_ADDRESS":          konnectRuntimeGroupAdminAPIBaseURL,
+			"CONTROLLER_KONNECT_CONTROL_PLANE_ID": rgID,
+			"CONTROLLER_KONNECT_ADDRESS":          konnectControlPlaneAdminAPIBaseURL,
 		},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
-// createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Runtime Group's Admin API.
+// createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Control Plane's Admin API.
 func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi.KonnectClient {
 	t.Helper()
 
-	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(adminapi.KonnectConfig{
-		RuntimeGroupID: rgID,
-		Address:        konnectRuntimeGroupAdminAPIBaseURL,
+	c, err := adminapi.NewKongClientForKonnectControlPlane(adminapi.KonnectConfig{
+		ControlPlaneID: rgID,
+		Address:        konnectControlPlaneAdminAPIBaseURL,
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,
 			Key:  key,
@@ -314,12 +211,12 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 	return c
 }
 
-// createKonnectNodeClient creates a konnect.NodeClient to get nodes in konnect runtime group.
+// createKonnectNodeClient creates a konnect.NodeClient to get nodes in konnect control plane.
 func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *nodes.Client {
 	cfg := adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
-		RuntimeGroupID:               rgID,
-		Address:                      konnectRuntimeGroupAdminAPIBaseURL,
+		ControlPlaneID:               rgID,
+		Address:                      konnectControlPlaneAdminAPIBaseURL,
 		RefreshNodePeriod:            konnect.MinRefreshNodePeriod,
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,
@@ -402,21 +299,21 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	nodeAPIClient := createKonnectNodeClient(t, rg, cert, key)
 
 	getNodeIDFromAdminAPI := func(proxyPod corev1.Pod) string {
-		client := &http.Client{
-			Timeout: time.Second * 30,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
+		client := cleanhttp.DefaultClient()
+		tr := cleanhttp.DefaultTransport()
+		// Anything related to TLS can be ignored, because only availability is being tested here.
+		// Testing communicating over TLS is done as part of actual E2E test.
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, //nolint:gosec
 		}
+		client.Transport = tr
 
 		forwardCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, proxyPod.Name, "8444")
 		address := fmt.Sprintf("https://localhost:%d", localPort)
 
-		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+		kongClient, err := adminapi.NewKongAPIClient(address, client)
 		require.NoError(t, err)
 
 		nodeID, err := adminapi.NewClient(kongClient).NodeID(ctx)
@@ -427,7 +324,6 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	t.Logf("ensuring all %d proxy replicas have consistent IDs assigned in Node API", len(pods))
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -436,7 +332,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 			require.Eventually(t, func() bool {
 				_, err := nodeAPIClient.GetNode(ctx, nodeIDInAdminAPI)
 				if err != nil {
-					t.Logf("failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
+					t.Logf("Failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
 					return false
 				}
 

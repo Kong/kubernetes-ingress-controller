@@ -1,0 +1,90 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: foo-svc.foo-namespace.80.svc
+  id: fe1e2edc-5479-52fe-b0f4-b90d8d5f83ba
+  name: foo-namespace.foo-svc.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - hosts:
+    - example.com
+    https_redirect_status_code: 426
+    id: 3eee2c18-8fcc-5661-8f84-5c89adfa404f
+    name: foo-namespace.foo.foo-svc.example.com.80
+    path_handling: v0
+    paths:
+    - ~/$
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:foo
+    - k8s-namespace:foo-namespace
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:foo-svc
+  - k8s-namespace:foo-namespace
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: default-svc.bar-namespace.80.svc
+  id: 65ebeec1-01a0-5211-85c9-9f688a182c88
+  name: bar-namespace.default-svc.80
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: 01c21dd4-41c1-57b6-a417-66c80b8ad22b
+    name: bar-namespace.ing-with-default-backend
+    path_handling: v0
+    paths:
+    - /
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:ing-with-default-backend
+    - k8s-namespace:bar-namespace
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:default-svc
+  - k8s-namespace:bar-namespace
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: foo-svc.foo-namespace.80.svc
+  tags:
+  - k8s-name:foo-svc
+  - k8s-namespace:foo-namespace
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  name: default-svc.bar-namespace.80.svc
+  tags:
+  - k8s-name:default-svc
+  - k8s-namespace:bar-namespace
+  - k8s-kind:Service
+  - k8s-version:v1

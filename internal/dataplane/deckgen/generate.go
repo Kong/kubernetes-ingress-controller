@@ -6,12 +6,17 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kong/deck/file"
+	"github.com/go-logr/logr"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
+	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
+
+// StubUpstreamName is a name of a stub upstream that is created when the configuration is empty.
+const StubUpstreamName = "kong"
 
 type PluginSchemaStore interface {
 	Schema(ctx context.Context, pluginName string) (map[string]interface{}, error)
@@ -19,22 +24,25 @@ type PluginSchemaStore interface {
 
 // GenerateDeckContentParams is the parameters used to generate deck contents.
 type GenerateDeckContentParams struct {
-	FormatVersion    string
 	SelectorTags     []string
 	ExpressionRoutes bool
 	PluginSchemas    PluginSchemaStore
+
+	// AppendStubEntityWhenConfigEmpty indicates whether to append a stub entity to the configuration when
+	// the configuration is empty. It is used to workaround behavior in Kong where sending an empty configuration
+	// does not make its `GET /status/ready` endpoint return 200s.
+	AppendStubEntityWhenConfigEmpty bool
 }
 
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
 func ToDeckContent(
 	ctx context.Context,
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	k8sState *kongstate.KongState,
 	params GenerateDeckContentParams,
 ) *file.Content {
 	var content file.Content
-	content.FormatVersion = params.FormatVersion
-	var err error
+	content.FormatVersion = versions.DeckFileFormatVersion
 
 	for _, s := range k8sState.Services {
 		service := file.FService{Service: s.Service}
@@ -42,9 +50,8 @@ func ToDeckContent(
 			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
-			err = fillPlugin(ctx, &plugin, params.PluginSchemas)
-			if err != nil {
-				log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+			if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
+				logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -60,9 +67,8 @@ func ToDeckContent(
 				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
-				err = fillPlugin(ctx, &plugin, params.PluginSchemas)
-				if err != nil {
-					log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+				if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
+					logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -84,15 +90,22 @@ func ToDeckContent(
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
-		err = fillPlugin(ctx, &plugin, params.PluginSchemas)
-		if err != nil {
-			log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+		if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
+			logger.Error(err, "Failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
 	sort.SliceStable(content.Plugins, func(i, j int) bool {
 		return strings.Compare(PluginString(content.Plugins[i]),
 			PluginString(content.Plugins[j])) > 0
+	})
+
+	for _, cg := range k8sState.ConsumerGroups {
+		consumerGroup := file.FConsumerGroupObject{ConsumerGroup: cg.ConsumerGroup}
+		content.ConsumerGroups = append(content.ConsumerGroups, consumerGroup)
+	}
+	sort.SliceStable(content.ConsumerGroups, func(i, j int) bool {
+		return strings.Compare(*content.ConsumerGroups[i].Name, *content.ConsumerGroups[j].Name) > 0
 	})
 
 	for _, u := range k8sState.Upstreams {
@@ -129,7 +142,7 @@ func ToDeckContent(
 
 	for _, c := range k8sState.Licenses {
 		content.Licenses = append(content.Licenses,
-			file.FLicense{License: c})
+			file.FLicense{License: c.License})
 	}
 
 	sort.SliceStable(content.Licenses, func(i, j int) bool {
@@ -139,12 +152,17 @@ func ToDeckContent(
 	for _, c := range k8sState.Consumers {
 		consumer := file.FConsumer{Consumer: c.Consumer}
 
-		// if a consumer with no username is provided deck wont be able to process it, but we shouldn't
-		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
-		// stopping all updates to the Kong Admin API.
-		if consumer.Username == nil {
-			log.Errorf("invalid consumer received (username was empty)")
+		// If a consumer with no username and no custom_id is provided deck wont be able to process it,
+		// but we shouldn't fail the rest of the deckgen either or this will result in one bad consumer
+		// being capable of stopping all updates to the Kong Admin API.
+		// This shouldn't happen as we enforce either of those field being present in CRD CEL validation rules.
+		if consumer.Username == nil && consumer.CustomID == nil {
+			logger.Error(nil, "Invalid consumer received (username and custom_id were empty)")
 			continue
+		}
+
+		for _, cg := range c.ConsumerGroups {
+			consumer.Groups = append(consumer.Groups, &cg)
 		}
 
 		for _, p := range c.Plugins {
@@ -174,13 +192,31 @@ func ToDeckContent(
 		}
 		content.Consumers = append(content.Consumers, consumer)
 	}
-	sort.SliceStable(content.Consumers, func(i, j int) bool {
-		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
+	sort.Stable(fConsumerByUsernameAndCustomID(content.Consumers))
+
+	// convert vaults.
+	for _, v := range k8sState.Vaults {
+		vault := file.FVault{
+			Vault: v.Vault,
+		}
+		content.Vaults = append(content.Vaults, vault)
+	}
+	sort.SliceStable(content.Vaults, func(i, j int) bool {
+		return (*content.Vaults[i].Prefix) > (*content.Vaults[j].Prefix)
 	})
+
 	if len(params.SelectorTags) > 0 {
 		content.Info = &file.Info{
 			SelectorTags: params.SelectorTags,
 		}
+	}
+
+	if params.AppendStubEntityWhenConfigEmpty && IsContentEmpty(&content) {
+		content.Upstreams = append(content.Upstreams, file.FUpstream{
+			Upstream: kong.Upstream{
+				Name: lo.ToPtr(StubUpstreamName),
+			},
+		})
 	}
 
 	return &content
@@ -210,7 +246,7 @@ func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas PluginSchemaS
 	}
 	schema, err := schemas.Schema(ctx, *plugin.Name)
 	if err != nil {
-		return fmt.Errorf("error retrieveing schema for plugin %s: %w", *plugin.Name, err)
+		return fmt.Errorf("error retrieving schema for plugin %s: %w", *plugin.Name, err)
 	}
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)

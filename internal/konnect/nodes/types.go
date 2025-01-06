@@ -95,6 +95,7 @@ type ListNodeResponse struct {
 }
 
 type PaginationInfo struct {
-	TotalCount  int32 `json:"total_count,omitempty"`
-	NextPageNum int32 `json:"next_page_num,omitempty"`
+	TotalCount  int32  `json:"total_count,omitempty"`
+	NextCursor  string `json:"next_cursor,omitempty"`
+	HasNextPage bool   `json:"has_next_page,omitempty"`
 }

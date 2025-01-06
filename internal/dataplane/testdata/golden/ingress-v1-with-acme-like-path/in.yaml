@@ -1,0 +1,30 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foo
+  namespace: foo-namespace
+spec:
+  ingressClassName: kong
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: cert-manager-solver-pod
+            port:
+              number: 80
+        path: /.well-known/acme-challenge/yolo
+        pathType: ImplementationSpecific
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: cert-manager-solver-pod
+  namespace: foo-namespace
+spec:
+  ports:
+    - port: 80

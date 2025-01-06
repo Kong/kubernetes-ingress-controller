@@ -1,0 +1,41 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foo
+  namespace: foo-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+spec:
+  ingressClassName: kong
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: foo-svc
+            port:
+              number: 80
+        pathType: ImplementationSpecific
+  - host: example.net
+    http:
+      paths:
+      - backend:
+          service:
+            name: foo-svc
+            port:
+              number: 8000
+        pathType: ImplementationSpecific
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: foo-svc
+  namespace: foo-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+spec:
+  ports:
+    - port: 80
+    - port: 8000

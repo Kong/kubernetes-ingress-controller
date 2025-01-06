@@ -5,12 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kong/deck/file"
+	"github.com/go-logr/zapr"
+	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 )
 
 type konnectAwareClientMock struct {
@@ -131,7 +132,7 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 				},
 				expectedError: tc.statusError,
 			}
-			detector := sendconfig.NewDefaultClientConfigurationChangeDetector(logrus.New())
+			detector := sendconfig.NewDefaultConfigurationChangeDetector(zapr.NewLogger(zap.NewNop()))
 
 			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfig, konnectAwareClient, statusClient)
 			if tc.expectError {

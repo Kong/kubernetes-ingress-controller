@@ -5,32 +5,37 @@ on:
 
 jobs:
   unit-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: setup golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '^1.20'
+          go-version-file: go.mod
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       - name: run unit tests
         run: make test.unit
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           GOTESTSUM_JUNITFILE: unit-tests.xml
 
       - name: collect test coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-unit
           path: coverage.unit.out
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-unit
           path: unit-tests.xml

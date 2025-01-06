@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
@@ -33,11 +33,14 @@ type ServerConfig struct {
 	Key     string
 }
 
-func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
-	log logrus.FieldLogger,
+func MakeTLSServer(
+	ctx context.Context,
+	config *ServerConfig,
+	handler http.Handler,
+	logger logr.Logger,
 ) (*http.Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
-	tlsConfig, err := serverConfigToTLSConfig(ctx, config, log)
+	tlsConfig, err := serverConfigToTLSConfig(ctx, config, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +52,7 @@ func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handl
 	}, nil
 }
 
-func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.FieldLogger) (*tls.Config, error) {
+func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, logger logr.Logger) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {
@@ -88,7 +91,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.F
 
 	go func() {
 		if err := watcher.Start(ctx); err != nil {
-			log.WithError(err).Error("certificate watcher error")
+			logger.Error(err, "Certificate watcher error")
 		}
 	}()
 	return &tls.Config{

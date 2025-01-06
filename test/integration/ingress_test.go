@@ -1,5 +1,4 @@
 //go:build integration_tests
-// +build integration_tests
 
 package integration
 
@@ -13,24 +12,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 var ingressClassMutex = sync.Mutex{}
@@ -49,7 +50,7 @@ func TestIngressEssentials(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -63,9 +64,9 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress := generators.NewIngressForService("/test_ingress_essentials", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
 
@@ -80,9 +81,9 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -98,38 +99,40 @@ func TestIngressEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("removing the ingress.class annotation %q from ingress", consts.IngressClass)
+	ingressClient := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name)
+
+	t.Logf("removing .Spec.IngressClassName %q from ingress", consts.IngressClass)
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+		ingress, err := ingressClient.Get(ctx, ingress.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
-		delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+		ingress.Spec.IngressClassName = nil
+		_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
 		return err
 	})
 	require.NoError(t, err)
 
-	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", consts.IngressClass)
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingress_essentials", ingressWait, waitTick, nil)
+	t.Logf("verifying that removing .Spec.IngressClassName %q from ingress causes routes to disconnect", consts.IngressClass)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingress_essentials", ingressWait, waitTick, nil)
 
-	t.Logf("putting the ingress.class annotation %q back on ingress", consts.IngressClass)
+	t.Logf("putting the .Spec.IngressClassName %q back on ingress", consts.IngressClass)
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+		ingress, err := ingressClient.Get(ctx, ingress.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
-		ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = consts.IngressClass
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+		ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
+		_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
 		return err
 	})
 	require.NoError(t, err)
 
-	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
+	t.Log("waiting for routes from Ingress to be operational after reintroducing .Spec.IngressClassName")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -147,73 +150,15 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingress_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingress_essentials", ingressWait, waitTick, nil)
 }
 
-func TestGRPCIngressEssentials(t *testing.T) {
-	t.Parallel()
-
+func TestIngressDefaultBackend(t *testing.T) {
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("grpcbin", "moul/grpcbin", 9001)
-	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(deployment)
-
-	t.Logf("exposing deployment %s via service", deployment.Name)
-	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	// as of KTF 0.9,0 NewServiceForDeployment doesn't initialize annotations itself, need to do it outside
-	service.ObjectMeta.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.ProtocolKey: "grpc"}
-	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(service)
-
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/", map[string]string{
-		annotations.IngressClassKey:                             consts.IngressClass,
-		annotations.AnnotationPrefix + annotations.ProtocolsKey: "grpc,grpcs",
-		annotations.AnnotationPrefix + annotations.StripPathKey: "false",
-	}, service)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	cleaner.Add(ingress)
-
-	t.Log("waiting for updated ingress status to include IP")
-	require.Eventually(t, func() bool {
-		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), ns.Name, ingress)
-		if err != nil {
-			return false
-		}
-		return len(lbstatus.Ingress) > 0
-	}, statusWait, waitTick)
-
-	// So far this only tests that the ingress is created and receives status information, to confirm the fix for
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/1991
-	// It does not test routing, though the status implementation implies it (we only add status after we confirm
-	// configuration is present in the proxy). This test could be expanded to better confirm routing with a suitable
-	// gRPC test client.
-}
-
-func TestIngressClassNameSpec(t *testing.T) {
-	if clusterVersion.Major < uint64(2) && clusterVersion.Minor < uint64(19) {
-		t.Skip("ingress spec tests can not be properly validated against old clusters")
-	}
-
-	t.Parallel()
-	t.Log("locking IngressClass management")
-	ingressClassMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking IngressClass management")
-		ingressClassMutex.Unlock()
-	})
-
-	ctx := context.Background()
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -226,7 +171,60 @@ func TestIngressClassNameSpec(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/test_ingressclassname_spec/", map[string]string{"konghq.com/strip-path": "true"}, service)
+	ingress := generators.NewIngressForService("/foo", map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
+	ingress.Spec.DefaultBackend = &netv1.IngressBackend{
+		Service: &netv1.IngressServiceBackend{
+			Name: service.Name,
+			Port: netv1.ServiceBackendPort{
+				Number: service.Spec.Ports[0].Port,
+			},
+		},
+	}
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	cleaner.Add(ingress)
+
+	t.Log("matching path")
+	helpers.EventuallyGETPath(t, nil, proxyHTTPURL.String(), "/foo", nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+
+	t.Log("non matching path - use default backend")
+	helpers.EventuallyGETPath(
+		t, nil, proxyHTTPURL.String(), fmt.Sprintf("/status/%d", http.StatusTeapot), nil, http.StatusTeapot, "", nil, ingressWait, waitTick,
+	)
+}
+
+func TestIngressClassNameSpec(t *testing.T) {
+	t.Parallel()
+	t.Log("locking IngressClass management")
+	ingressClassMutex.Lock()
+	t.Cleanup(func() {
+		t.Log("unlocking IngressClass management")
+		ingressClassMutex.Unlock()
+	})
+
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
+	ingress := generators.NewIngressForService("/test_ingressclassname_spec/",
+		map[string]string{"konghq.com/strip-path": "true"},
+		service,
+	)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
@@ -234,20 +232,20 @@ func TestIngressClassNameSpec(t *testing.T) {
 	t.Log("waiting for routes from Ingress to be operational")
 	defer func() {
 		if t.Failed() {
-			resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
+			resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
 			if err != nil {
-				t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+				t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			}
 			t.Logf("TestIngressClassNameSpec failed, current GET %s/test_ingressclassname_spec status code is %d",
-				proxyURL, resp.StatusCode)
+				proxyHTTPURL, resp.StatusCode)
 			resp.Body.Close()
 		}
 	}()
 
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -268,7 +266,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("verifying that removing the IngressClassName %q from ingress causes routes to disconnect", consts.IngressClass)
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 
 	t.Logf("putting the IngressClassName %q back on ingress", consts.IngressClass)
 	err = setIngressClassNameWithRetry(ctx, ns.Name, ingress, kong.String(consts.IngressClass))
@@ -276,9 +274,9 @@ func TestIngressClassNameSpec(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -297,10 +295,10 @@ func TestIngressClassNameSpec(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 }
 
-func TestIngressNamespaces(t *testing.T) {
+func TestIngressServiceUpstream(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -309,31 +307,34 @@ func TestIngressNamespaces(t *testing.T) {
 	t.Logf("using testing namespace %s", ns.Name)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Replicas = lo.ToPtr(int32(3))
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.ObjectMeta.Annotations = map[string]string{}
+	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress := generators.NewIngressForService("/elsewhere", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/elsewhere", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/elsewhere", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -351,17 +352,13 @@ func TestIngressNamespaces(t *testing.T) {
 }
 
 func TestIngressStatusUpdatesExtended(t *testing.T) {
-	if clusterVersion.Major == uint64(1) && clusterVersion.Minor < uint64(19) {
-		t.Skip("status test disabled for old cluster versions")
-	}
-
 	t.Parallel()
 
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -382,11 +379,11 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ingNameWithPeriods,
 				Annotations: map[string]string{
-					annotations.IngressClassKey: consts.IngressClass,
-					"konghq.com/strip-path":     "true",
+					"konghq.com/strip-path": "true",
 				},
 			},
 			Spec: netv1.IngressSpec{
+				IngressClassName: kong.String(consts.IngressClass),
 				Rules: []netv1.IngressRule{
 					{
 						IngressRuleValue: netv1.IngressRuleValue{
@@ -415,11 +412,11 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ingNameExtraForService,
 				Annotations: map[string]string{
-					annotations.IngressClassKey: consts.IngressClass,
-					"konghq.com/strip-path":     "true",
+					"konghq.com/strip-path": "true",
 				},
 			},
 			Spec: netv1.IngressSpec{
+				IngressClassName: kong.String(consts.IngressClass),
 				Rules: []netv1.IngressRule{
 					{
 						IngressRuleValue: netv1.IngressRuleValue{
@@ -483,21 +480,6 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 // parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
-	// the manager runs in a goroutine and may not have pulled the version before this test starts
-	require.Eventually(t, func() bool {
-		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
-	}, time.Minute, time.Second)
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
-
-	// skip the test if the cluster does not support namespaced ingress class parameter (<=1.21).
-	// since 1.21 is End of Life now.
-	namespacedIngressClassParameterMinKubernetesVersion := semver.MustParse("1.22.0")
-	if clusterVersion.LT(namespacedIngressClassParameterMinKubernetesVersion) {
-		t.Skipf("kubernetes cluster version %s does not support namespaced ingress class parameters", clusterVersion.String())
-	}
-
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	t.Cleanup(func() {
@@ -509,7 +491,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -522,11 +504,11 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an IngressClassParameters with legacy regex detection enabled")
-	params := &v1alpha1.IngressClassParameters{
+	params := &kongv1alpha1.IngressClassParameters{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: consts.IngressClass,
 		},
-		Spec: v1alpha1.IngressClassParametersSpec{
+		Spec: kongv1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
 		},
 	}
@@ -540,8 +522,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("adding legacy regex IngressClassParameters to the %q IngressClass", class.Name)
 	class.Spec.Parameters = &netv1.IngressClassParametersReference{
-		APIGroup:  &v1alpha1.GroupVersion.Group,
-		Kind:      v1alpha1.IngressClassParametersKind,
+		APIGroup:  &kongv1alpha1.GroupVersion.Group,
+		Kind:      kongv1alpha1.IngressClassParametersKind,
 		Name:      params.Name,
 		Scope:     kong.String(netv1.IngressClassParametersReferenceScopeNamespace),
 		Namespace: &params.Namespace,
@@ -602,9 +584,9 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	// entirely, which would be bad for other tests.
 	t.Log("waiting for ingress path to become available")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_class_regex_toggle/999", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_class_regex_toggle/999", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -620,15 +602,11 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -732,9 +710,9 @@ func TestIngressRegexPrefix(t *testing.T) {
 
 	t.Log("waiting for ingress path to become available")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix/999", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix/999", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -748,9 +726,9 @@ func TestIngressRegexPrefix(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix_nonstandard/999", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix_nonstandard/999", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -764,9 +742,9 @@ func TestIngressRegexPrefix(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/~/test_ingress_regex_prefix_nonstandard_default", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/~/test_ingress_regex_prefix_nonstandard_default", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -791,7 +769,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -845,9 +823,9 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("waiting for ingress path to become available")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -911,7 +889,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("verifying new configuration is not applied to kong proxy")
 	require.Never(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyHTTPURL))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusOK
@@ -919,9 +897,9 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("verifying routes configured before invalid config is still available")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -974,9 +952,9 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("waiting for ingress path to recover and new path available")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyHTTPURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -997,7 +975,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -1022,12 +1000,11 @@ func TestIngressMatchByHost(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("try to access the ingress by matching host")
-	req := helpers.MustHTTPRequest(t, "GET", proxyURL, "", nil)
-	req.Host = "test.example"
+	req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -1042,29 +1019,35 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req.Host = "foo.example"
-	resp, err := helpers.DefaultHTTPClient().Do(req)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "foo.example", "/", nil)
+	resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
 
-	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
-	require.NoError(t, err)
 	t.Log("change the ingress to wildcard host")
-	for i := range ingress.Spec.Rules {
-		ingress.Spec.Rules[i].Host = "*.example"
-	}
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ingClient := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name)
+		ingress, err := ingClient.Get(ctx, ingress.Name, metav1.GetOptions{})
+		if !assert.NoError(c, err) {
+			return
+		}
+		t.Log("change the ingress to wildcard host")
+		for i := range ingress.Spec.Rules {
+			ingress.Spec.Rules[i].Host = "*.example"
+		}
 
-	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-	require.NoError(t, err)
+		_, err = ingClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		assert.NoError(c, err)
+	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by matching host")
 
-	req.Host = "test0.example"
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "test0.example", "/", nil)
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -1079,93 +1062,165 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req.Host = "test.another"
-	resp, err = helpers.DefaultHTTPClient().Do(req)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.another", "/", nil)
+	resp, err = helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
 }
 
-func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
-	t.Parallel()
-
+func TestIngressRewriteURI(t *testing.T) {
 	ctx := context.Background()
+
+	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
+		t.Skipf("rewrite uri feature is disabled")
+	}
+
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
-	client := env.Cluster().Client()
-
-	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	t.Log("deploying a minimal HTTP Bin container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment.Spec.Template.Spec.Containers[0].Ports[0].Name = "http"
-	deployment, err := client.AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = client.CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-
-	// TODO: create a similar helper to generators.NewIngressForServiceWithClusterVersion()
-	// which will accept a param to parametrize the port name or number.
-	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: service.Name,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-				"konghq.com/strip-path":     "true",
-			},
-		},
-		Spec: netv1.IngressSpec{
-			Rules: []netv1.IngressRule{
-				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Name: service.Spec.Ports[0].Name,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+	t.Logf("creating an Ingress for service %s without rewrite annotation", service.Name)
+	const serviceDomainDirect = "direct.example"
+	ingressDirect := generators.NewIngressForService("/", nil, service)
+	ingressDirect.Name += "-direct"
+	ingressDirect.Spec.IngressClassName = kong.String(consts.IngressClass)
+	for i := range ingressDirect.Spec.Rules {
+		ingressDirect.Spec.Rules[i].Host = serviceDomainDirect
+		ingressDirect.Spec.Rules[i].HTTP.Paths[0].PathType = lo.ToPtr(netv1.PathTypePrefix)
 	}
-	_, err = client.NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	ingressDirect, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressDirect, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(ingress)
+	cleaner.Add(ingressDirect)
 
-	t.Log("waiting for routes from Ingress to be operational")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(proxyURL.String())
+	// There is no programmed condition for Ingress to check. Hence to avoid 503 and 404 that are result of Ingress not being configured yet,
+	// wait for first successful response. After it all subsequent must be successful too.
+	t.Log("wait for the Ingress direct to become available")
+	const path = "image/jpeg"
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainDirect, path, nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+
+	waitForMainTestToFinish, cancelBackgroundTest := context.WithCancel(ctx)
+	backgroundTestError := make(chan error)
+	go func() {
+		t.Log("check constantly in the background that Ingress without rewrite annotation is not affected by Ingress with rewrite annotation")
+		var cntOK, cntAttempts int
+		unexpectedErrs := make(map[string]int)
+		for {
+			select {
+			case <-waitForMainTestToFinish.Done():
+				if cntAttempts == 0 {
+					backgroundTestError <- fmt.Errorf("no requests were made to Ingress without rewrite")
+					return
+				}
+				if ratio := float64(cntOK) / float64(cntAttempts); ratio >= 0.99 {
+					backgroundTestError <- nil
+				} else {
+					backgroundTestError <- fmt.Errorf(
+						"expected >= 99%% of requests to be successful, current rate is %f %%, unexpected status codes: %v",
+						ratio*100, unexpectedErrs,
+					)
+				}
+				return
+			case <-time.After(50 * time.Millisecond):
+			}
+			cntAttempts++
+			resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(helpers.MustHTTPRequest(t, http.MethodGet, serviceDomainDirect, path, nil))
+			if err != nil {
+				t.Logf("WARNING: Ingress without rewrite - http request failed for GET %s/%s to %s: %v", serviceDomainDirect, path, proxyHTTPURL, err)
+				continue
+			}
+			if resp.StatusCode == http.StatusOK {
+				var b bytes.Buffer
+				if _, err := b.ReadFrom(resp.Body); err == nil {
+					if strings.HasPrefix(b.String(), consts.JPEGMagicNumber) {
+						cntOK++
+					} else {
+						t.Log("WARNING: Ingress without rewrite - response body is not a JPEG image")
+						unexpectedErrs["response no JPEG"]++
+					}
+				} else {
+					t.Log("WARNING: Ingress without rewrite - failed to read response body:", err)
+					unexpectedErrs["cannot read response body"]++
+				}
+			} else {
+				t.Log("WARNING: Ingress without rewrite - response status code is:", resp.StatusCode)
+				unexpectedErrs[fmt.Sprintf("status code: %d", resp.StatusCode)]++
+			}
+			resp.Body.Close()
+		}
+	}()
+
+	t.Logf("creating an Ingress for service %s with rewrite annotation", service.Name)
+	const serviceDomainRewrite = "rewrite.example"
+	ingressRewrite := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
+		annotations.AnnotationPrefix + annotations.RewriteURIKey: "/image/$1",
+	}, service)
+	ingressRewrite.Name += "-rewrite"
+	ingressRewrite.Spec.IngressClassName = kong.String(consts.IngressClass)
+	for i := range ingressRewrite.Spec.Rules {
+		ingressRewrite.Spec.Rules[i].Host = serviceDomainRewrite
+		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].PathType = lo.ToPtr(netv1.PathTypeImplementationSpecific)
+	}
+	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressRewrite, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingressRewrite)
+
+	t.Log("try to access the ingress with valid capture group")
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+
+	t.Log("try to access the ingress with invalid capture group, should return 404")
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/", nil, http.StatusNotFound, "", nil, ingressWait, waitTick)
+
+	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	t.Log("update the ingress capture group")
+	for i := range ingressRewrite.Spec.Rules {
+		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].Path = "/~/foo/(\\w+)/(.*)"
+	}
+
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressRewrite, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("try to access the ingress with new valid capture group")
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+
+	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	t.Log("update the ingress rewrite annotation")
+	ingressRewrite.Annotations[annotations.AnnotationPrefix+annotations.RewriteURIKey] = "/image/$2"
+
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressRewrite, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("try to access the ingress with new rewrite annotation")
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/test/png", nil, http.StatusOK, consts.PNGMagicNumber, nil, ingressWait, waitTick)
+
+	cancelBackgroundTest()
+	require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")
+}
+
+// setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value
+// and retries if update conflict happens.
+func setIngressClassNameWithRetry(ctx context.Context, namespace string, ingress *netv1.Ingress, ingressClassName *string) error {
+	ingressClient := env.Cluster().Client().NetworkingV1().Ingresses(namespace)
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ingress, err := ingressClient.Get(ctx, ingress.Name, metav1.GetOptions{})
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
+			return err
 		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
-			// Expected: "<title>httpbin.org</title>"
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
+		ingress.Spec.IngressClassName = ingressClassName
+		_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		return err
+	})
 }

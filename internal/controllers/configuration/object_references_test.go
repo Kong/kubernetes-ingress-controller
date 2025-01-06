@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
@@ -36,9 +36,6 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
 					Name:      "service2",
-					Annotations: map[string]string{
-						"Kong": "3.0",
-					},
 				},
 			},
 			secretNum: 0,
@@ -60,7 +57,6 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			secretNames := listCoreV1ServiceReferredSecrets(tc.service)
 			require.Len(t, secretNames, tc.secretNum)
@@ -122,7 +118,6 @@ func TestListIngressReferredSecrets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			secretNames := listNetV1IngressReferredSecrets(tc.ingress)
 			require.Len(t, secretNames, tc.secretNum)

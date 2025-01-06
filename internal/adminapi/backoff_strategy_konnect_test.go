@@ -10,7 +10,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 )
 
 type mockClock struct {
@@ -81,7 +81,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "should not allow update for the same faulty hash")
-		assert.Equal(t, "config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error", whyNot)
+		assert.Equal(t, "Config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.True(t, canUpdate, "should allow update for another hash")
@@ -95,7 +95,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")
-		assert.Equal(t, "config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error, next attempt allowed in 3s", whyNot)
+		assert.Equal(t, "Config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error, next attempt allowed in 3s", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")

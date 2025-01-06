@@ -3,12 +3,16 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.
@@ -21,15 +25,29 @@ type InstanceIDProvider interface {
 	GetID() uuid.UUID
 }
 
+const (
+	splunkEndpoint                   = "kong-hf.konghq.com:61833"
+	splunkEndpointInsecureSkipVerify = false
+	telemetryPeriod                  = time.Hour
+)
+
+type ReportConfig struct {
+	SplunkEndpoint                   string
+	SplunkEndpointInsecureSkipVerify bool
+	TelemetryPeriod                  time.Duration
+	ReportValues                     ReportValues
+}
+
 // SetupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
 func SetupAnonymousReports(
 	ctx context.Context,
+	logger logr.Logger,
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
-	rv ReportValues,
+	reportCfg ReportConfig,
 	instanceIDProvider InstanceIDProvider,
 ) (func(), error) {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
@@ -51,28 +69,40 @@ func SetupAnonymousReports(
 		return nil, fmt.Errorf("failed to get Kong root config data: %w", err)
 	}
 
-	// gather versioning information from the kong client
-	kongVersion, ok := root["version"].(string)
-	if !ok {
+	// Gather versioning information from the kong client
+	kongVersion := kong.VersionFromInfo(root)
+	if kongVersion == "" {
 		return nil, fmt.Errorf("malformed Kong version found in Kong client root")
 	}
-	cfg, ok := root["configuration"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("malformed Kong configuration found in Kong client root")
+	kongDB, err := kongconfig.DBModeFromRoot(root)
+	if err != nil {
+		return nil, err
 	}
-	kongDB, ok := cfg["database"].(string)
-	if !ok {
-		return nil, fmt.Errorf("malformed database configuration found in Kong client root")
+	routerFlavor, err := kongconfig.RouterFlavorFromRoot(root)
+	if err != nil {
+		return nil, err
 	}
 
 	fixedPayload := Payload{
 		"v":  metadata.Release,
 		"kv": kongVersion,
 		"db": kongDB,
+		"rf": routerFlavor,
 		"id": instanceIDProvider.GetID(), // universal unique identifier for this system
 	}
 
-	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, rv)
+	// Use defaults when not specified.
+	if reportCfg.SplunkEndpoint == "" {
+		reportCfg.SplunkEndpoint = splunkEndpoint
+	}
+	if !reportCfg.SplunkEndpointInsecureSkipVerify {
+		reportCfg.SplunkEndpointInsecureSkipVerify = splunkEndpointInsecureSkipVerify
+	}
+	if reportCfg.TelemetryPeriod == 0 {
+		reportCfg.TelemetryPeriod = telemetryPeriod
+	}
+
+	tMgr, err := CreateManager(logger, kubeCfg, clientsProvider, fixedPayload, reportCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

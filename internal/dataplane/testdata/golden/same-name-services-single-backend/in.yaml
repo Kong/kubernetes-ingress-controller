@@ -1,0 +1,114 @@
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: testing
+  namespace: other
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: default
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test
+  namespace: default
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /test
+    backendRefs:
+    - name: one
+      kind: Service
+      port: 80
+      weight: 50
+      group: ""
+    - name: two
+      namespace: other
+      kind: Service
+      port: 80
+      weight: 50
+      group: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: example
+  name: one
+  namespace: default
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: example
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: example
+  name: two
+  namespace: other
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: example
+  type: ClusterIP
+---
+apiVersion: discovery.k8s.io/v1
+addressType: IPv4
+kind: EndpointSlice
+metadata:
+  namespace: default
+  labels:
+    kubernetes.io/service-name: one
+  name: one-n5g6g
+endpoints:
+- addresses:
+  - 10.244.0.5
+  conditions:
+    ready: true
+    serving: true
+    terminating: false
+ports:
+- name: ""
+  port: 9443
+  protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+addressType: IPv4
+kind: EndpointSlice
+metadata:
+  namespace: other
+  labels:
+    kubernetes.io/service-name: two
+  name: two-n5g6g
+endpoints:
+- addresses:
+  - 10.244.0.4
+  conditions:
+    ready: true
+    serving: true
+    terminating: false
+ports:
+- name: ""
+  port: 9443
+  protocol: TCP

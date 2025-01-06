@@ -1,5 +1,4 @@
-//go:build e2e_tests || istio_tests
-// +build e2e_tests istio_tests
+//go:build e2e_tests || istio_tests || performance_tests
 
 package e2e
 
@@ -36,11 +35,25 @@ const (
   path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
   value: %[3]d`
 
-	addControllerEnvPatch = `- op: add
-  path: "/spec/template/spec/containers/0/env/-"
+	kongRouterFlavorPatch = `- op: add
+  path: /spec/template/spec/containers/0/env/-
   value:
-    name: %s
+    name: KONG_ROUTER_FLAVOR
     value: "%s"`
+
+	kongRouterFlavorPatchDelete = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+      - name: proxy
+        env:
+        - name: KONG_ROUTER_FLAVOR
+          $patch: delete`
 )
 
 // patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
@@ -103,6 +116,45 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
 }
 
+func patchKongRouterFlavorFn(flavor string) func(io.Reader) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      "proxy-kong",
+						Namespace: "kong",
+					},
+				},
+				Patch: kongRouterFlavorPatchDelete,
+			},
+			{
+				Patch: fmt.Sprintf(kongRouterFlavorPatch, flavor),
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      "proxy-kong",
+						Namespace: "kong",
+					},
+				},
+			},
+		},
+	}
+
+	return func(baseManifestReader io.Reader) (io.Reader, error) {
+		return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+	}
+}
+
 // patchLivenessProbes patches the given deployment's liveness probe, replacing the initial delay, period, and failure
 // threshold.
 func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.NamespacedName, failure int, initial, period time.Duration) (io.Reader, error) {
@@ -119,29 +171,6 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 						},
 						Name:      deployment.Name,
 						Namespace: deployment.Namespace,
-					},
-				},
-			},
-		},
-	}
-	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
-}
-
-// addControllerEnv adds an environment variable to ingress-controller container.
-func addControllerEnv(baseManifestReader io.Reader, envName, value string) (io.Reader, error) {
-	kustomization := types.Kustomization{
-		Patches: []types.Patch{
-			{
-				Patch: fmt.Sprintf(addControllerEnvPatch, envName, value),
-				Target: &types.Selector{
-					ResId: resid.ResId{
-						Gvk: resid.Gvk{
-							Group:   "apps",
-							Version: "v1",
-							Kind:    "Deployment",
-						},
-						Name:      controllerDeploymentName,
-						Namespace: "kong",
 					},
 				},
 			},

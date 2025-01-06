@@ -20,31 +20,35 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/selection"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 const (
@@ -53,53 +57,56 @@ const (
 	IngressClassKongController = "ingress-controllers.konghq.com/kong"
 )
 
-// ErrNotFound error is returned when a lookup results in no resource.
-// This type is meant to be used for error handling using `errors.As()`.
-type ErrNotFound struct {
-	Message string
-}
-
-func (e ErrNotFound) Error() string {
-	if e.Message == "" {
-		return "not found"
-	}
-	return e.Message
-}
-
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
+	UpdateCache(cs CacheStores)
+
+	// Core Kubernetes resources.
 	GetSecret(namespace, name string) (*corev1.Secret, error)
+	GetConfigMap(namespace, name string) (*corev1.ConfigMap, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
+	ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error)
+
+	// Kong resources.
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
-	GetIngressClassName() string
-	GetIngressClassV1(name string) (*netv1.IngressClass, error)
+	GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error)
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
-	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
-
-	ListIngressesV1() []*netv1.Ingress
-	ListIngressClassesV1() []*netv1.IngressClass
+	GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error)
+	GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error)
+	GetKongVault(name string) (*kongv1alpha1.KongVault, error)
+	GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error)
 	ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters
-	ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error)
-	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
-	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
-	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
-	ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error)
-	ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error)
-	ListGateways() ([]*gatewayv1beta1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
-	ListKnativeIngresses() ([]*knative.Ingress, error)
-	ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
 	ListKongPlugins() []*kongv1.KongPlugin
 	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
 	ListKongConsumers() []*kongv1.KongConsumer
-	ListCACerts() ([]*corev1.Secret, error)
+	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
+	ListKongVaults() []*kongv1alpha1.KongVault
+	ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity
+
+	// Ingress API resources.
+	GetIngressClassName() string
+	GetIngressClassV1(name string) (*netv1.IngressClass, error)
+	ListIngressesV1() []*netv1.Ingress
+	ListIngressClassesV1() []*netv1.IngressClass
+
+	// Gateway API resources.
+	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
+	ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error)
+	ListUDPRoutes() ([]*gatewayapi.UDPRoute, error)
+	ListTCPRoutes() ([]*gatewayapi.TCPRoute, error)
+	ListTLSRoutes() ([]*gatewayapi.TLSRoute, error)
+	ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error)
+	ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error)
+	ListGateways() ([]*gatewayapi.Gateway, error)
+	ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gatewayapi.BackendTLSPolicy, error)
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -115,312 +122,14 @@ type Store struct {
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, annotation string, handling annotations.ClassMatching) bool
 	isValidIngressV1Class func(ingress *netv1.Ingress, handling annotations.ClassMatching) bool
 
-	logger logrus.FieldLogger
+	logger logr.Logger
 }
 
-var _ Storer = Store{}
-
-// CacheStores stores cache.Store for all Kinds of k8s objects that
-// the Ingress Controller reads.
-type CacheStores struct {
-	// Core Kubernetes Stores
-	IngressV1      cache.Store
-	IngressClassV1 cache.Store
-	Service        cache.Store
-	Secret         cache.Store
-	EndpointSlice  cache.Store
-
-	// Gateway API Stores
-	HTTPRoute      cache.Store
-	UDPRoute       cache.Store
-	TCPRoute       cache.Store
-	TLSRoute       cache.Store
-	GRPCRoute      cache.Store
-	ReferenceGrant cache.Store
-	Gateway        cache.Store
-
-	// Kong Stores
-	Plugin                         cache.Store
-	ClusterPlugin                  cache.Store
-	Consumer                       cache.Store
-	KongIngress                    cache.Store
-	TCPIngress                     cache.Store
-	UDPIngress                     cache.Store
-	IngressClassParametersV1alpha1 cache.Store
-
-	// Knative Stores
-	KnativeIngress cache.Store
-
-	l *sync.RWMutex
-}
-
-// NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores.
-func NewCacheStores() CacheStores {
-	return CacheStores{
-		// Core Kubernetes Stores
-		IngressV1:      cache.NewStore(keyFunc),
-		IngressClassV1: cache.NewStore(clusterResourceKeyFunc),
-		Service:        cache.NewStore(keyFunc),
-		Secret:         cache.NewStore(keyFunc),
-		EndpointSlice:  cache.NewStore(keyFunc),
-		// Gateway API Stores
-		HTTPRoute:      cache.NewStore(keyFunc),
-		UDPRoute:       cache.NewStore(keyFunc),
-		TCPRoute:       cache.NewStore(keyFunc),
-		TLSRoute:       cache.NewStore(keyFunc),
-		GRPCRoute:      cache.NewStore(keyFunc),
-		ReferenceGrant: cache.NewStore(keyFunc),
-		Gateway:        cache.NewStore(keyFunc),
-		// Kong Stores
-		Plugin:                         cache.NewStore(keyFunc),
-		ClusterPlugin:                  cache.NewStore(clusterResourceKeyFunc),
-		Consumer:                       cache.NewStore(keyFunc),
-		KongIngress:                    cache.NewStore(keyFunc),
-		TCPIngress:                     cache.NewStore(keyFunc),
-		UDPIngress:                     cache.NewStore(keyFunc),
-		IngressClassParametersV1alpha1: cache.NewStore(keyFunc),
-		// Knative Stores
-		KnativeIngress: cache.NewStore(keyFunc),
-
-		l: &sync.RWMutex{},
-	}
-}
-
-// NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
-// YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
-func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
-	kobjs := make([]runtime.Object, 0, len(objs))
-	sr := serializer.NewYAMLSerializer(
-		yamlserializer.DefaultMetaFactory,
-		unstructuredscheme.NewUnstructuredCreator(),
-		unstructuredscheme.NewUnstructuredObjectTyper(),
-	)
-	for _, yaml := range objs {
-		kobj, _, decodeErr := sr.Decode(yaml, nil, nil)
-		if err = decodeErr; err != nil {
-			return
-		}
-		kobjs = append(kobjs, kobj)
-	}
-	return NewCacheStoresFromObjs(kobjs...)
-}
-
-// NewCacheStoresFromObjs provides a new CacheStores object given any number of Kubernetes
-// objects that should be pre-populated. This function will sort objects into the appropriate
-// sub-storage (e.g. IngressV1, TCPIngress, e.t.c.) but will produce an error if any of the
-// input objects are erroneous or otherwise unusable as Kubernetes objects.
-func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
-	c := NewCacheStores()
-	for _, obj := range objs {
-		typedObj, err := mkObjFromGVK(obj.GetObjectKind().GroupVersionKind())
-		if err != nil {
-			return c, err
-		}
-
-		if err := convUnstructuredObj(obj, typedObj); err != nil {
-			return c, err
-		}
-
-		if err := c.Add(typedObj); err != nil {
-			return c, err
-		}
-	}
-	return c, nil
-}
-
-// Get checks whether or not there's already some version of the provided object present in the cache.
-func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err error) {
-	c.l.RLock()
-	defer c.l.RUnlock()
-
-	switch obj := obj.(type) {
-	// ----------------------------------------------------------------------------
-	// Kubernetes Core API Support
-	// ----------------------------------------------------------------------------
-	case *netv1.Ingress:
-		return c.IngressV1.Get(obj)
-	case *netv1.IngressClass:
-		return c.IngressClassV1.Get(obj)
-	case *corev1.Service:
-		return c.Service.Get(obj)
-	case *corev1.Secret:
-		return c.Secret.Get(obj)
-	case *discoveryv1.EndpointSlice:
-		return c.EndpointSlice.Get(obj)
-	// ----------------------------------------------------------------------------
-	// Kubernetes Gateway API Support
-	// ----------------------------------------------------------------------------
-	case *gatewayv1beta1.HTTPRoute:
-		return c.HTTPRoute.Get(obj)
-	case *gatewayv1alpha2.UDPRoute:
-		return c.UDPRoute.Get(obj)
-	case *gatewayv1alpha2.TCPRoute:
-		return c.TCPRoute.Get(obj)
-	case *gatewayv1alpha2.TLSRoute:
-		return c.TLSRoute.Get(obj)
-	case *gatewayv1alpha2.GRPCRoute:
-		return c.GRPCRoute.Get(obj)
-	case *gatewayv1beta1.ReferenceGrant:
-		return c.ReferenceGrant.Get(obj)
-	case *gatewayv1beta1.Gateway:
-		return c.Gateway.Get(obj)
-	// ----------------------------------------------------------------------------
-	// Kong API Support
-	// ----------------------------------------------------------------------------
-	case *kongv1.KongPlugin:
-		return c.Plugin.Get(obj)
-	case *kongv1.KongClusterPlugin:
-		return c.ClusterPlugin.Get(obj)
-	case *kongv1.KongConsumer:
-		return c.Consumer.Get(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Get(obj)
-	case *kongv1beta1.TCPIngress:
-		return c.TCPIngress.Get(obj)
-	case *kongv1beta1.UDPIngress:
-		return c.UDPIngress.Get(obj)
-	case *kongv1alpha1.IngressClassParameters:
-		return c.IngressClassParametersV1alpha1.Get(obj)
-	// ----------------------------------------------------------------------------
-	// 3rd Party API Support
-	// ----------------------------------------------------------------------------
-	case *knative.Ingress:
-		return c.KnativeIngress.Get(obj)
-	}
-	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
-}
-
-// Add stores a provided runtime.Object into the CacheStore if it's of a supported type.
-// The CacheStore must be initialized (see NewCacheStores()) or this will panic.
-func (c CacheStores) Add(obj runtime.Object) error {
-	c.l.Lock()
-	defer c.l.Unlock()
-
-	switch obj := obj.(type) {
-	// ----------------------------------------------------------------------------
-	// Kubernetes Core API Support
-	// ----------------------------------------------------------------------------
-	case *netv1.Ingress:
-		return c.IngressV1.Add(obj)
-	case *netv1.IngressClass:
-		return c.IngressClassV1.Add(obj)
-	case *corev1.Service:
-		return c.Service.Add(obj)
-	case *corev1.Secret:
-		return c.Secret.Add(obj)
-	case *discoveryv1.EndpointSlice:
-		return c.EndpointSlice.Add(obj)
-	// ----------------------------------------------------------------------------
-	// Kubernetes Gateway API Support
-	// ----------------------------------------------------------------------------
-	case *gatewayv1beta1.HTTPRoute:
-		return c.HTTPRoute.Add(obj)
-	case *gatewayv1alpha2.UDPRoute:
-		return c.UDPRoute.Add(obj)
-	case *gatewayv1alpha2.TCPRoute:
-		return c.TCPRoute.Add(obj)
-	case *gatewayv1alpha2.TLSRoute:
-		return c.TLSRoute.Add(obj)
-	case *gatewayv1alpha2.GRPCRoute:
-		return c.GRPCRoute.Add(obj)
-	case *gatewayv1beta1.ReferenceGrant:
-		return c.ReferenceGrant.Add(obj)
-	case *gatewayv1beta1.Gateway:
-		return c.Gateway.Add(obj)
-	// ----------------------------------------------------------------------------
-	// Kong API Support
-	// ----------------------------------------------------------------------------
-	case *kongv1.KongPlugin:
-		return c.Plugin.Add(obj)
-	case *kongv1.KongClusterPlugin:
-		return c.ClusterPlugin.Add(obj)
-	case *kongv1.KongConsumer:
-		return c.Consumer.Add(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Add(obj)
-	case *kongv1beta1.TCPIngress:
-		return c.TCPIngress.Add(obj)
-	case *kongv1beta1.UDPIngress:
-		return c.UDPIngress.Add(obj)
-	case *kongv1alpha1.IngressClassParameters:
-		return c.IngressClassParametersV1alpha1.Add(obj)
-	// ----------------------------------------------------------------------------
-	// 3rd Party API Support
-	// ----------------------------------------------------------------------------
-	case *knative.Ingress:
-		return c.KnativeIngress.Add(obj)
-	default:
-		return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
-	}
-}
-
-// Delete removes a provided runtime.Object from the CacheStore if it's of a supported type.
-// The CacheStore must be initialized (see NewCacheStores()) or this will panic.
-func (c CacheStores) Delete(obj runtime.Object) error {
-	c.l.Lock()
-	defer c.l.Unlock()
-
-	switch obj := obj.(type) {
-	// ----------------------------------------------------------------------------
-	// Kubernetes Core API Support
-	// ----------------------------------------------------------------------------
-	case *netv1.Ingress:
-		return c.IngressV1.Delete(obj)
-	case *netv1.IngressClass:
-		return c.IngressClassV1.Delete(obj)
-	case *corev1.Service:
-		return c.Service.Delete(obj)
-	case *corev1.Secret:
-		return c.Secret.Delete(obj)
-	case *discoveryv1.EndpointSlice:
-		return c.EndpointSlice.Delete(obj)
-	// ----------------------------------------------------------------------------
-	// Kubernetes Gateway API Support
-	// ----------------------------------------------------------------------------
-	case *gatewayv1beta1.HTTPRoute:
-		return c.HTTPRoute.Delete(obj)
-	case *gatewayv1alpha2.UDPRoute:
-		return c.UDPRoute.Delete(obj)
-	case *gatewayv1alpha2.TCPRoute:
-		return c.TCPRoute.Delete(obj)
-	case *gatewayv1alpha2.TLSRoute:
-		return c.TLSRoute.Delete(obj)
-	case *gatewayv1alpha2.GRPCRoute:
-		return c.GRPCRoute.Delete(obj)
-	case *gatewayv1beta1.ReferenceGrant:
-		return c.ReferenceGrant.Delete(obj)
-	case *gatewayv1beta1.Gateway:
-		return c.Gateway.Delete(obj)
-	// ----------------------------------------------------------------------------
-	// Kong API Support
-	// ----------------------------------------------------------------------------
-	case *kongv1.KongPlugin:
-		return c.Plugin.Delete(obj)
-	case *kongv1.KongClusterPlugin:
-		return c.ClusterPlugin.Delete(obj)
-	case *kongv1.KongConsumer:
-		return c.Consumer.Delete(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Delete(obj)
-	case *kongv1beta1.TCPIngress:
-		return c.TCPIngress.Delete(obj)
-	case *kongv1beta1.UDPIngress:
-		return c.UDPIngress.Delete(obj)
-	case *kongv1alpha1.IngressClassParameters:
-		return c.IngressClassParametersV1alpha1.Delete(obj)
-	// ----------------------------------------------------------------------------
-	// 3rd Party API Support
-	// ----------------------------------------------------------------------------
-	case *knative.Ingress:
-		return c.KnativeIngress.Delete(obj)
-	default:
-		return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
-	}
-}
+var _ Storer = &Store{}
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
-	return Store{
+func New(cs CacheStores, ingressClass string, logger logr.Logger) *Store {
+	return &Store{
 		stores:                cs,
 		ingressClass:          ingressClass,
 		ingressClassMatching:  annotations.ExactClassMatch,
@@ -428,6 +137,11 @@ func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer 
 		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 		logger:                logger,
 	}
+}
+
+// UpdateCache updates the cache stores in the Store.
+func (s *Store) UpdateCache(cs CacheStores) {
+	s.stores = cs
 }
 
 // GetSecret returns a Secret using the namespace and name as key.
@@ -438,9 +152,22 @@ func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Secret %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("Secret %v not found", key)}
 	}
 	return secret.(*corev1.Secret), nil
+}
+
+// GetConfigMap returns a ConfigMap using the namespace and name as key.
+func (s Store) GetConfigMap(namespace, name string) (*corev1.ConfigMap, error) {
+	key := fmt.Sprintf("%s/%s", namespace, name)
+	configMap, exists, err := s.stores.ConfigMap.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("ConfigMap %s not found", key)}
+	}
+	return configMap.(*corev1.ConfigMap), nil
 }
 
 // GetService returns a Service using the namespace and name as key.
@@ -451,7 +178,7 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Service %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("Service %v not found", key)}
 	}
 	return service.(*corev1.Service), nil
 }
@@ -459,25 +186,29 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
 func (s Store) ListIngressesV1() []*netv1.Ingress {
 	// filter ingress rules
-	var ingresses []*netv1.Ingress
-	for _, item := range s.stores.IngressV1.List() {
+	var (
+		list      = s.stores.IngressV1.List()
+		ingresses = make([]*netv1.Ingress, 0, len(list))
+	)
+	for _, item := range list {
 		ing, ok := item.(*netv1.Ingress)
 		if !ok {
-			s.logger.Warnf("listIngressesV1: dropping object of unexpected type: %#v", item)
+			s.logger.Error(nil, "ListIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
 			continue
 		}
-		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
+		switch {
+		case ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "":
 			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 				continue
 			}
-		} else if ing.Spec.IngressClassName != nil {
+		case ing.Spec.IngressClassName != nil:
 			if !s.isValidIngressV1Class(ing, s.ingressClassMatching) {
 				continue
 			}
-		} else {
+		default:
 			class, err := s.GetIngressClassV1(s.ingressClass)
 			if err != nil {
-				s.logger.Debugf("IngressClass %s not found", s.ingressClass)
+				s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 				continue
 			}
 			if !ctrlutils.IsDefaultIngressClass(class) {
@@ -498,11 +229,14 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 // ListIngressClassesV1 returns the list of Ingresses in the Ingress v1 store.
 func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 	// filter ingress rules
-	var classes []*netv1.IngressClass
-	for _, item := range s.stores.IngressClassV1.List() {
+	var (
+		list    = s.stores.IngressClassV1.List()
+		classes = make([]*netv1.IngressClass, 0, len(list))
+	)
+	for _, item := range list {
 		class, ok := item.(*netv1.IngressClass)
 		if !ok {
-			s.logger.Warnf("listIngressClassesV1: dropping object of unexpected type: %#v", item)
+			s.logger.Error(nil, "ListIngressClassesV1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
 			continue
 		}
 		if class.Spec.Controller != IngressClassKongController {
@@ -520,11 +254,11 @@ func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 
 // ListIngressClassParametersV1Alpha1 returns the list of IngressClassParameters in the Ingress v1alpha1 store.
 func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters {
-	var classParams []*kongv1alpha1.IngressClassParameters
+	var classParams []*kongv1alpha1.IngressClassParameters //nolint:prealloc
 	for _, item := range s.stores.IngressClassParametersV1alpha1.List() {
 		classParam, ok := item.(*kongv1alpha1.IngressClassParameters)
 		if !ok {
-			s.logger.Warnf("listIngressClassParametersV1alpha1: dropping object of unexpected type: %#v", item)
+			s.logger.Error(nil, "ListIngressClassParametersV1alpha1: dropping object of unexpected type", "type", fmt.Sprintf("%T", item))
 			continue
 		}
 		classParams = append(classParams, classParam)
@@ -540,116 +274,108 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 	return classParams
 }
 
-// ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
-func (s Store) ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error) {
-	var httproutes []*gatewayv1beta1.HTTPRoute
-	if err := cache.ListAll(s.stores.HTTPRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			httproute, ok := ob.(*gatewayv1beta1.HTTPRoute)
-			if ok {
-				httproutes = append(httproutes, httproute)
-			}
-		},
-	); err != nil {
+// List lists all objects of given type from the provided cache stores.
+func List[T client.Object](cs CacheStores) ([]T, error) {
+	s, err := GetTypedStore[T](cs)
+	if err != nil {
 		return nil, err
 	}
-	return httproutes, nil
+
+	objs := s.List()
+	ret := make([]T, 0, len(objs))
+	for _, obj := range objs {
+		httproute, ok := obj.(T)
+		if !ok {
+			return nil, fmt.Errorf("%T is not a supported cache object type", obj)
+		}
+		ret = append(ret, httproute)
+	}
+
+	return ret, nil
+}
+
+// GetTypedStore returns a cache.Store for the given type.
+func GetTypedStore[T client.Object](cs CacheStores) (cache.Store, error) {
+	var obj T
+	switch any(obj).(type) {
+	case *gatewayapi.HTTPRoute:
+		return cs.HTTPRoute, nil
+	case *gatewayapi.TCPRoute:
+		return cs.TCPRoute, nil
+	case *gatewayapi.UDPRoute:
+		return cs.UDPRoute, nil
+	case *gatewayapi.TLSRoute:
+		return cs.TLSRoute, nil
+	case *gatewayapi.GRPCRoute:
+		return cs.GRPCRoute, nil
+	case *gatewayapi.ReferenceGrant:
+		return cs.ReferenceGrant, nil
+	case *gatewayapi.Gateway:
+		return cs.Gateway, nil
+	case *gatewayapi.BackendTLSPolicy:
+		return cs.BackendTLSPolicy, nil
+	case *kongv1.KongPlugin:
+		return cs.Plugin, nil
+	default:
+	}
+	return nil, fmt.Errorf("unsupported type %T", obj)
+}
+
+// ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
+func (s Store) ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error) {
+	return List[*gatewayapi.HTTPRoute](s.stores)
 }
 
 // ListUDPRoutes returns the list of UDPRoutes in the UDPRoute cache store.
-func (s Store) ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error) {
-	var udproutes []*gatewayv1alpha2.UDPRoute
-	if err := cache.ListAll(s.stores.UDPRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			udproute, ok := ob.(*gatewayv1alpha2.UDPRoute)
-			if ok {
-				udproutes = append(udproutes, udproute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return udproutes, nil
+func (s Store) ListUDPRoutes() ([]*gatewayapi.UDPRoute, error) {
+	return List[*gatewayapi.UDPRoute](s.stores)
 }
 
 // ListTCPRoutes returns the list of TCPRoutes in the TCPRoute cache store.
-func (s Store) ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error) {
-	var tcproutes []*gatewayv1alpha2.TCPRoute
-	if err := cache.ListAll(s.stores.TCPRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			tcproute, ok := ob.(*gatewayv1alpha2.TCPRoute)
-			if ok {
-				tcproutes = append(tcproutes, tcproute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return tcproutes, nil
+func (s Store) ListTCPRoutes() ([]*gatewayapi.TCPRoute, error) {
+	return List[*gatewayapi.TCPRoute](s.stores)
 }
 
 // ListTLSRoutes returns the list of TLSRoutes in the TLSRoute cache store.
-func (s Store) ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error) {
-	var tlsroutes []*gatewayv1alpha2.TLSRoute
-	if err := cache.ListAll(s.stores.TLSRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			tlsroute, ok := ob.(*gatewayv1alpha2.TLSRoute)
-			if ok {
-				tlsroutes = append(tlsroutes, tlsroute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return tlsroutes, nil
+func (s Store) ListTLSRoutes() ([]*gatewayapi.TLSRoute, error) {
+	return List[*gatewayapi.TLSRoute](s.stores)
 }
 
 // ListGRPCRoutes returns the list of GRPCRoutes in the GRPCRoute cache store.
-func (s Store) ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error) {
-	var grpcroutes []*gatewayv1alpha2.GRPCRoute
-	if err := cache.ListAll(s.stores.GRPCRoute, labels.NewSelector(),
-		func(ob interface{}) {
-			tlsroute, ok := ob.(*gatewayv1alpha2.GRPCRoute)
-			if ok {
-				grpcroutes = append(grpcroutes, tlsroute)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return grpcroutes, nil
+func (s Store) ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error) {
+	return List[*gatewayapi.GRPCRoute](s.stores)
 }
 
 // ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.
-func (s Store) ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error) {
-	var grants []*gatewayv1beta1.ReferenceGrant
-	if err := cache.ListAll(s.stores.ReferenceGrant, labels.NewSelector(),
-		func(ob interface{}) {
-			grant, ok := ob.(*gatewayv1beta1.ReferenceGrant)
-			if ok {
-				grants = append(grants, grant)
-			}
-		},
-	); err != nil {
-		return nil, err
-	}
-	return grants, nil
+func (s Store) ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error) {
+	return List[*gatewayapi.ReferenceGrant](s.stores)
 }
 
 // ListGateways returns the list of Gateways in the Gateway cache store.
-func (s Store) ListGateways() ([]*gatewayv1beta1.Gateway, error) {
-	var gateways []*gatewayv1beta1.Gateway
-	if err := cache.ListAll(s.stores.Gateway, labels.NewSelector(),
-		func(ob interface{}) {
-			gw, ok := ob.(*gatewayv1beta1.Gateway)
-			if ok {
-				gateways = append(gateways, gw)
-			}
-		},
-	); err != nil {
+func (s Store) ListGateways() ([]*gatewayapi.Gateway, error) {
+	return List[*gatewayapi.Gateway](s.stores)
+}
+
+// ListBackendTLSPoliciesByTargetService returns the list of BackendTLSPolicies in the BackendTLSPolicy cache store.
+// The policies are filtered by the target service.
+func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gatewayapi.BackendTLSPolicy, error) {
+	policiesToReturn := []*gatewayapi.BackendTLSPolicy{}
+	policies, err := List[*gatewayapi.BackendTLSPolicy](s.stores)
+	if err != nil {
 		return nil, err
 	}
-	return gateways, nil
+
+	for _, policy := range policies {
+		if lo.ContainsBy(policy.Spec.TargetRefs, func(ref gatewayapi.LocalPolicyTargetReferenceWithSectionName) bool {
+			return (ref.Group == "" || ref.Group == "core") &&
+				ref.Kind == "Service" &&
+				(policy.Namespace == service.Namespace && string(ref.Name) == service.Name)
+		}) {
+			policiesToReturn = append(policiesToReturn, policy)
+		}
+	}
+
+	return policiesToReturn, nil
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from
@@ -695,38 +421,6 @@ func (s Store) ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error) {
 	return ingresses, err
 }
 
-// ListKnativeIngresses returns the list of Knative Ingresses from
-// ingresses.networking.internal.knative.dev group.
-func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
-	var ingresses []*knative.Ingress
-	if s.stores.KnativeIngress == nil {
-		return ingresses, nil
-	}
-
-	err := cache.ListAll(
-		s.stores.KnativeIngress,
-		labels.NewSelector(),
-		func(ob interface{}) {
-			ing, ok := ob.(*knative.Ingress)
-			if ok {
-				handlingClass := s.getIngressClassHandling()
-				if s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassKey, handlingClass) ||
-					s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassDeprecatedKey, handlingClass) {
-					ingresses = append(ingresses, ing)
-				}
-			}
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	sort.SliceStable(ingresses, func(i, j int) bool {
-		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
-			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
-	})
-	return ingresses, nil
-}
-
 // GetEndpointSlicesForService returns all EndpointSlices for service
 // 'namespace/name' inside K8s.
 func (s Store) GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error) {
@@ -748,7 +442,7 @@ func (s Store) GetEndpointSlicesForService(namespace, name string) ([]*discovery
 		return nil, err
 	}
 	if len(endpointSlices) == 0 {
-		return nil, ErrNotFound{fmt.Sprintf("EndpointSlices for Service %s/%s not found", namespace, name)}
+		return nil, NotFoundError{fmt.Sprintf("EndpointSlices for Service %s/%s not found", namespace, name)}
 	}
 	return endpointSlices, nil
 }
@@ -761,7 +455,7 @@ func (s Store) GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongPlugin %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("KongPlugin %v not found", key)}
 	}
 	return p.(*kongv1.KongPlugin), nil
 }
@@ -773,7 +467,7 @@ func (s Store) GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, err
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongClusterPlugin %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("KongClusterPlugin %v not found", name)}
 	}
 	return p.(*kongv1.KongClusterPlugin), nil
 }
@@ -786,7 +480,7 @@ func (s Store) GetKongIngress(namespace, name string) (*kongv1.KongIngress, erro
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongIngress %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("KongIngress %v not found", name)}
 	}
 	return p.(*kongv1.KongIngress), nil
 }
@@ -799,9 +493,22 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongConsumer %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("KongConsumer %v not found", key)}
 	}
 	return p.(*kongv1.KongConsumer), nil
+}
+
+// GetKongConsumerGroup returns the 'name' KongConsumerGroup resource in namespace.
+func (s Store) GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exists, err := s.stores.ConsumerGroup.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongConsumerGroup %v not found", key)}
+	}
+	return p.(*kongv1beta1.KongConsumerGroup), nil
 }
 
 func (s Store) GetIngressClassName() string {
@@ -815,9 +522,33 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("IngressClass %v not found", name)}
 	}
 	return p.(*netv1.IngressClass), nil
+}
+
+func (s Store) GetKongUpstreamPolicy(namespace, name string) (*kongv1beta1.KongUpstreamPolicy, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exists, err := s.stores.KongUpstreamPolicy.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongUpstreamPolicy %v not found", key)}
+	}
+	return p.(*kongv1beta1.KongUpstreamPolicy), nil
+}
+
+func (s Store) GetKongServiceFacade(namespace, name string) (*incubatorv1alpha1.KongServiceFacade, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exists, err := s.stores.KongServiceFacade.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongServiceFacade %v not found", key)}
+	}
+	return p.(*incubatorv1alpha1.KongServiceFacade), nil
 }
 
 // GetIngressClassParametersV1Alpha1 returns IngressClassParameters for provided
@@ -858,22 +589,46 @@ func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClas
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClassParameters %v not found", ingressClass.Spec.Parameters.Name)}
+		return nil, NotFoundError{fmt.Sprintf("IngressClassParameters %v not found", ingressClass.Spec.Parameters.Name)}
 	}
 	return params.(*kongv1alpha1.IngressClassParameters), nil
 }
 
 // GetGateway returns gateway resource having specified namespace and name.
-func (s Store) GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error) {
+func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	obj, exists, err := s.stores.Gateway.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Gateway %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("Gateway %v not found", name)}
 	}
-	return obj.(*gatewayv1beta1.Gateway), nil
+	return obj.(*gatewayapi.Gateway), nil
+}
+
+// GetKongVault returns kongvault resource having specified name.
+func (s Store) GetKongVault(name string) (*kongv1alpha1.KongVault, error) {
+	p, exists, err := s.stores.KongVault.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongVault %v not found", name)}
+	}
+	return p.(*kongv1alpha1.KongVault), nil
+}
+
+func (s Store) GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	e, exists, err := s.stores.KongCustomEntity.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("KongCustomEntity %s/%s not found", namespace, name)}
+	}
+	return e.(*kongv1alpha1.KongCustomEntity), nil
 }
 
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
@@ -890,29 +645,18 @@ func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
 	return consumers
 }
 
-// ListGlobalKongPlugins returns all KongPlugin resources
-// filtered by the ingress.class annotation and with the
-// label global:"true".
-// Support for these global namespaced KongPlugins was removed in 0.10.0
-// This function remains only to provide warnings to users with old configuration.
-func (s Store) ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error) {
-	var plugins []*kongv1.KongPlugin
-	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
-	if err != nil {
-		return nil, err
+// ListKongConsumerGroups returns all KongConsumerGroups filtered by the ingress.class
+// annotation.
+func (s Store) ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup {
+	var consumerGroups []*kongv1beta1.KongConsumerGroup
+	for _, item := range s.stores.ConsumerGroup.List() {
+		c, ok := item.(*kongv1beta1.KongConsumerGroup)
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			consumerGroups = append(consumerGroups, c)
+		}
 	}
-	err = cache.ListAll(s.stores.Plugin,
-		labels.NewSelector().Add(*req),
-		func(ob interface{}) {
-			p, ok := ob.(*kongv1.KongPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
-				plugins = append(plugins, p)
-			}
-		})
-	if err != nil {
-		return nil, err
-	}
-	return plugins, nil
+
+	return consumerGroups
 }
 
 // ListGlobalKongClusterPlugins returns all KongClusterPlugin resources
@@ -953,37 +697,73 @@ func (s Store) ListKongClusterPlugins() []*kongv1.KongClusterPlugin {
 
 // ListKongPlugins lists all KongPlugins.
 func (s Store) ListKongPlugins() []*kongv1.KongPlugin {
-	var plugins []*kongv1.KongPlugin
-	for _, item := range s.stores.Plugin.List() {
-		p, ok := item.(*kongv1.KongPlugin)
-		if ok {
-			plugins = append(plugins, p)
-		}
+	plugins, err := List[*kongv1.KongPlugin](s.stores)
+	if err != nil {
+		s.logger.Error(err, "failed to list KongPlugins")
+		return nil
 	}
 	return plugins
 }
 
-// ListCACerts returns all Secrets containing the label
+// ListCACerts returns all Secrets and ConfigMaps containing the label
 // "konghq.com/ca-cert"="true".
-func (s Store) ListCACerts() ([]*corev1.Secret, error) {
+func (s Store) ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error) {
 	var secrets []*corev1.Secret
+	var configMaps []*corev1.ConfigMap
+
 	req, err := labels.NewRequirement(caCertKey,
 		selection.Equals, []string{"true"})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	err = cache.ListAll(s.stores.Secret,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*corev1.Secret)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			if p, ok := ob.(*corev1.Secret); ok {
 				secrets = append(secrets, p)
 			}
 		})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return secrets, nil
+	err = cache.ListAll(s.stores.ConfigMap,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			if p, ok := ob.(*corev1.ConfigMap); ok {
+				configMaps = append(configMaps, p)
+			}
+		})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return secrets, configMaps, nil
+}
+
+func (s Store) ListKongVaults() []*kongv1alpha1.KongVault {
+	var kongVaults []*kongv1alpha1.KongVault
+	for _, obj := range s.stores.KongVault.List() {
+		kongVault, ok := obj.(*kongv1alpha1.KongVault)
+		if ok && s.isValidIngressClass(&kongVault.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			kongVaults = append(kongVaults, kongVault)
+		}
+	}
+	return kongVaults
+}
+
+func (s Store) ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity {
+	var kongCustomEntities []*kongv1alpha1.KongCustomEntity
+	for _, obj := range s.stores.KongCustomEntity.List() {
+		kongCustomEntity, ok := obj.(*kongv1alpha1.KongCustomEntity)
+		if ok && s.isValidIngressClass(
+			&metav1.ObjectMeta{
+				Annotations: map[string]string{annotations.IngressClassKey: kongCustomEntity.Spec.ControllerName},
+			}, annotations.IngressClassKey, s.getIngressClassHandling(),
+		) {
+			kongCustomEntities = append(kongCustomEntities, kongCustomEntity)
+		}
+	}
+	return kongCustomEntities
 }
 
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or
@@ -991,7 +771,7 @@ func (s Store) ListCACerts() ([]*corev1.Secret, error) {
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	class, err := s.GetIngressClassV1(s.ingressClass)
 	if err != nil {
-		s.logger.Debugf("IngressClass %s not found", s.ingressClass)
+		s.logger.V(logging.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 		return annotations.ExactClassMatch
 	}
 	if ctrlutils.IsDefaultIngressClass(class) {
@@ -1027,12 +807,14 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	case netv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &netv1.Ingress{}, nil
-	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-		return &kongv1beta1.TCPIngress{}, nil
+	case netv1.SchemeGroupVersion.WithKind("IngressClass"):
+		return &netv1.IngressClass{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
+	case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
+		return &corev1.ConfigMap{}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Discovery APIs
 	// ----------------------------------------------------------------------------
@@ -1041,8 +823,22 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoutes"):
-		return &gatewayv1beta1.HTTPRoute{}, nil
+	case gatewayv1.SchemeGroupVersion.WithKind("Gateway"):
+		return &gatewayapi.Gateway{}, nil
+	case gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"):
+		return &gatewayapi.HTTPRoute{}, nil
+	case gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"):
+		return &gatewayapi.GRPCRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"):
+		return &gatewayapi.TCPRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"):
+		return &gatewayapi.UDPRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"):
+		return &gatewayapi.TLSRoute{}, nil
+	case gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"):
+		return &gatewayapi.ReferenceGrant{}, nil
+	case gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"):
+		return &gatewayapi.BackendTLSPolicy{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
@@ -1050,19 +846,28 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1.KongIngress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
 		return &kongv1beta1.UDPIngress{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
+		return &kongv1beta1.TCPIngress{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &kongv1.KongPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
 		return &kongv1.KongClusterPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongConsumer"):
 		return &kongv1.KongConsumer{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"):
+		return &kongv1beta1.KongConsumerGroup{}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
 		return &kongv1alpha1.IngressClassParameters{}, nil
-	// ----------------------------------------------------------------------------
-	// Knative APIs
-	// ----------------------------------------------------------------------------
-	case knative.SchemeGroupVersion.WithKind("Ingress"):
-		return &knative.Ingress{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("KongUpstreamPolicy"):
+		return &kongv1beta1.KongUpstreamPolicy{}, nil
+	case incubatorv1alpha1.SchemeGroupVersion.WithKind("KongServiceFacade"):
+		return &incubatorv1alpha1.KongServiceFacade{}, nil
+	case kongv1alpha1.GroupVersion.WithKind(kongv1alpha1.KongCustomEntityKind):
+		return &kongv1alpha1.KongCustomEntity{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongVault"):
+		return &kongv1alpha1.KongVault{}, nil
+	case kongv1alpha1.GroupVersion.WithKind("KongCustomEntity"):
+		return &kongv1alpha1.KongCustomEntity{}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
 	}

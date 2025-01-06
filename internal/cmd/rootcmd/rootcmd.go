@@ -4,11 +4,12 @@ package rootcmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 )
 
 // Execute is the entry point to the controller manager.
@@ -25,8 +26,8 @@ func Execute() {
 func GetRootCmd(cfg *manager.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		PersistentPreRunE: bindEnvVars,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return Run(cmd.Context(), cfg)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return Run(cmd.Context(), cfg, os.Stderr)
 		},
 		SilenceUsage: true,
 		// We can silence the errors because cobra.CheckErr below will print
@@ -41,7 +42,7 @@ func GetVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Show JSON version information",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			type Version struct {
 				Release string `json:"release"`
 				Repo    string `json:"repo"`

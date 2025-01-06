@@ -1,0 +1,55 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foo
+  namespace: foo-namespace
+spec:
+  ingressClassName: kong
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: foo-svc
+            port:
+              number: 80
+        path: /
+        pathType: Exact
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: ing-with-default-backend
+  namespace: bar-namespace
+spec:
+  defaultBackend:
+    service:
+      name: default-svc
+      port:
+        number: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: foo-svc
+  namespace: foo-namespace
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: default-svc
+  namespace: bar-namespace
+spec:
+  ports:
+    - port: 80

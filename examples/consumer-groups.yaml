@@ -1,0 +1,16 @@
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongConsumerGroup
+metadata:
+  name: cg1
+  annotations:
+    kubernetes.io/ingress.class: kong
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: c1
+  annotations:
+      kubernetes.io/ingress.class: kong
+username: c1
+consumerGroups:
+  - cg1

@@ -4,19 +4,19 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 )
 
-// Get returns the scheme for the manager, enabling all the default schemes and
-// those that were enabled via the feature flags.
-func Get(fg map[string]bool) (*runtime.Scheme, error) {
+// Get returns a scheme aware of all types the manager can interact with.
+func Get() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 
 	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
@@ -27,31 +27,33 @@ func Get(fg map[string]bool) (*runtime.Scheme, error) {
 		return nil, err
 	}
 
-	if err := konghqcomv1.AddToScheme(scheme); err != nil {
+	if err := kongv1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
-	if err := konghqcomv1alpha1.AddToScheme(scheme); err != nil {
+	if err := kongv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
-	if err := configurationv1beta1.AddToScheme(scheme); err != nil {
+	if err := kongv1beta1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := incubatorv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 
-	if v, ok := fg[featuregates.KnativeFeature]; ok && v {
-		if err := knativev1alpha1.AddToScheme(scheme); err != nil {
-			return nil, err
-		}
+	if err := gatewayv1alpha2.Install(scheme); err != nil {
+		return nil, err
 	}
 
-	if v, ok := fg[featuregates.GatewayAlphaFeature]; ok && v {
-		if err := gatewayv1alpha2.Install(scheme); err != nil {
-			return nil, err
-		}
+	if err := gatewayv1alpha3.Install(scheme); err != nil {
+		return nil, err
 	}
-	if v, ok := fg[featuregates.GatewayFeature]; ok && v {
-		if err := gatewayv1beta1.Install(scheme); err != nil {
-			return nil, err
-		}
+
+	if err := gatewayv1beta1.Install(scheme); err != nil {
+		return nil, err
+	}
+
+	if err := gatewayv1.Install(scheme); err != nil {
+		return nil, err
 	}
 
 	return scheme, nil

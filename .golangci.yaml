@@ -1,9 +1,5 @@
 run:
-  timeout: 5m
-  skip-dirs:
-  - pkg/clientset
-  - pkg/apis
-  - config
+  timeout: 10m
   build-tags:
   - integration_tests
   - e2e_tests
@@ -16,15 +12,16 @@ linters:
   - asciicheck
   - bodyclose
   - contextcheck
-  - depguard
+  - copyloopvar
   - dogsled
   - durationcheck
   - errcheck
+  - errname
   - errorlint
   - exhaustive
-  - exportloopref
   - forbidigo
   - gci
+  - gocritic
   - godot
   - gofmt
   - gofumpt
@@ -36,12 +33,12 @@ linters:
   - importas
   - ineffassign
   - loggercheck
-  - megacheck
   - misspell
   - nakedret
   - nilerr
   - nolintlint
   - predeclared
+  - prealloc
   - revive
   - staticcheck
   - tenv
@@ -50,12 +47,22 @@ linters:
   - unparam
   - unused
   - wastedassign
+  - depguard
 linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true
   gci:
     sections:
     - standard
     - default
-    - prefix(github.com/kong/kubernetes-ingress-controller/v2)
+    - prefix(github.com/Kong/sdk-konnect-go)
+    - prefix(github.com/kong/kubernetes-ingress-controller/v3)
+    - prefix(github.com/kong/kubernetes-configuration)
+  govet:
+    enable-all: true # To have checks like e.g. unusedwrite.
+    disable:
+      - fieldalignment
+      - shadow
   importas:
     no-unaliased: true
     alias:
@@ -75,7 +82,7 @@ linters-settings:
     - pkg: k8s.io/apimachinery/pkg/types
       alias: k8stypes
     - pkg: k8s.io/apimachinery/pkg/util/validation
-      alias: utilvalidation      
+      alias: utilvalidation
     - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
       alias: apiextensionsv1
     - pkg: k8s.io/apimachinery/pkg/api/errors
@@ -84,14 +91,39 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
+    - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
+      alias: kong${1}
+    - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
+      alias: incubator${1}
+    - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
+      alias: dpconf
+    - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
+      alias: ctrllicense
+
+    - pkg: github.com/Kong/sdk-konnect-go/models/components
+      alias: sdkkonnectcomp
+    - pkg: github.com/Kong/sdk-konnect-go/models/operations
+      alias: sdkkonnectops
+    - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
+      alias: sdkkonnecterrs
+    - pkg: github.com/Kong/sdk-konnect-go/pkg/metadata
+      alias: sdkkonnectmetadata
   forbidigo:
-    exclude_godoc_examples: false
+    exclude-godoc-examples: false
     forbid:
+      - 'gatewayv1alpha2|gatewayv1alpha3|gatewayv1beta1|gatewayv1(# use internal/gatewayapi aliases instead)?'
       - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
       - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
+      - '(gokong|kong)\.NewClient(# use adminapi.NewKongAPIClient instead )?'
+
   gomodguard:
     blocked:
       modules:
+      - golang.org/x/exp:
+         recommendations:
+          - maps
+          - slices
+          - github.com/samber/lo
       - github.com/ghodss/yaml:
           recommendations:
           - sigs.k8s.io/yaml
@@ -105,12 +137,22 @@ linters-settings:
           recommendations:
           - fmt
           - errors
-  depguard:
-    list-type: denylist
-    include-go-root: false
-    packages-with-error-message:
-      - k8s.io/utils/pointer: "Use github.com/samber/lo ToPtr instead"
-      - golang.org/x/net/context: "use regular context instead"
+      - golang.org/x/net/context:
+          recommendations:
+          - context
+      - k8s.io/utils/pointer:
+          recommendations:
+          - github.com/samber/lo
+      - github.com/sirupsen/logrus:
+          recommendations:
+          - go.uber.org/zap
+      - github.com/bombsimon/logrusr/v4:
+          recommendations:
+          - github.com/go-logr/zapr
+          - github.com/go-logr/logr
+      - github.com/kong/kubernetes-ingress-controller/v2:
+          recommendations:
+          - github.com/kong/kubernetes-ingress-controller/v3
   tenv:
     all: true
   loggercheck:
@@ -118,17 +160,75 @@ linters-settings:
     klog: true
     logr: true
     zap: false
+  prealloc:
+    for-loops: true
+  depguard:
+    rules:
+      deprecated-local-apis:
+        deny:
+          - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset
+            desc: github.com/kong/kubernetes-ingress-controller/v3 clientset is deprecated. Use github.com/kong/kubernetes-configuration/pkg/clientset instead.
+          - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/apis
+            desc: github.com/kong/kubernetes-ingress-controller/v3 apis are deprecated. Use github.com/kong/kubernetes-configuration/api instead.
 issues:
   fix: true
   max-same-issues: 0
+  exclude-use-default: false
+  exclude:
+   # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+   - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+   # EXC0002 golint: Annoying issue about not having a comment. The rare codebase has such comments
+   - (should have( a package)? comment)
+   # EXC0007 gosec: Too many false-positives for parametrized shell calls
+   - Subprocess launch(ed with variable|ing should be audited)
+   # EXC0008 gosec: Duplicated errcheck checks
+   - (G104)
+   # EXC0009 gosec: Too many issues in popular repos
+   - (Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)
+   # EXC0010 gosec: False positive is triggered by 'src, err := ioutil.ReadFile(filename)'
+   - Potential file inclusion via variable
+   # G601 Implicit memory aliasing in for loop
+   # Irrelevant as of Go 1.22
+   - (G601)
+
   exclude-rules:
   # Ignore insecure TLS in tests and hardcoded credentials
   - path: _test\.go
     linters:
       - gosec
-    text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"
+    text: "Potential hardcoded credentials"
+  # Ignore prealloc in tests
+  - path: _test\.go
+    linters:
+      - prealloc
+    text: "Consider pre-allocating"
+  # Ignore prealloc in hack/ directory
+  - path: hack/
+    linters:
+      - prealloc
+    text: "Consider pre-allocating"
   # It's fine to use variable urls in tests.
   - linters:
       - gosec
     text: "Potential HTTP request made with variable url"
-    path: test\.go
+    path: _test\.go
+  # Allow using SchemeGroupVersion, GroupVersion, GroupName, AddToScheme, and Install from gatewayv1alpha2,
+  # gatewayv1beta1 and gatewayv1 as their values are different between versions, and we can't alias them in internal/gatewayapi/aliases.go.
+  - linters:
+      - forbidigo
+    text: "use of `(gatewayv1alpha2|gatewayv1alpha3|gatewayv1beta1|gatewayv1)\\.(SchemeGroupVersion|GroupVersion|GroupName|AddToScheme|Install)"
+  # Allow gatewayv1alpha2, gatewayv1beta1 and gatewayv1 types references in internal/gatewayapi/aliases.go as that
+  # should be the only place where we use them.
+  - linters:
+      - forbidigo
+    text: "use of `(gatewayv1alpha2|gatewayv1alpha3|gatewayv1beta1|gatewayv1)"
+    path: (internal/gatewayapi/aliases.go|pkg/apis/.*/.*\.go)
+  # Allow explicit zero value declarations for integer types
+  - linters:
+      - revive
+    text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
+    path: \.go
+  # Ignore G115: integer overflow conversion
+  - linters:
+      - gosec
+    text: "G115: integer overflow conversion"

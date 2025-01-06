@@ -2,49 +2,51 @@ package kongstate
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 func TestOverrideRoute(t *testing.T) {
-	assert := assert.New(t)
-
-	testTable := []struct {
-		inRoute        Route
-		inKongIngresss configurationv1.KongIngress
-		outRoute       Route
+	testCases := []struct {
+		name          string
+		inRoute       Route
+		inAnnotations map[string]string
+		expectedRoute Route
 	}{
 		{
-			Route{
+			name: "no annotations",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{},
-			Route{
+			inAnnotations: map[string]string{},
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
 		},
 		{
-			Route{
+			name: "override methods",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Methods: kong.StringSlice("GET", "POST"),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.MethodsKey: "GET,POST",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:   kong.StringSlice("foo.com", "bar.com"),
 					Methods: kong.StringSlice("GET", "POST"),
@@ -52,17 +54,16 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override methods case insensitive",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Methods: kong.StringSlice("GET   ", "post"),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.MethodsKey: "GET,post",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:   kong.StringSlice("foo.com", "bar.com"),
 					Methods: kong.StringSlice("GET", "POST"),
@@ -70,34 +71,32 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override methods with invalid method",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Methods: kong.StringSlice("GET", "-1"),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.MethodsKey: "GET,-1",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
 		},
 		{
-			Route{
+			name: "override https redirect status code",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					HTTPSRedirectStatusCode: kong.Int(302),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.HTTPSRedirectCodeKey: "302",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:                   kong.StringSlice("foo.com", "bar.com"),
 					HTTPSRedirectStatusCode: kong.Int(302),
@@ -105,22 +104,21 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override protocols, preserve host, strip path and regex priority",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts:        kong.StringSlice("foo.com", "bar.com"),
 					PreserveHost: kong.Bool(true),
 					StripPath:    kong.Bool(true),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Protocols:     configurationv1.ProtocolSlice("http"),
-					PreserveHost:  kong.Bool(false),
-					StripPath:     kong.Bool(false),
-					RegexPriority: kong.Int(10),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.ProtocolsKey:     "http",
+				annotations.AnnotationPrefix + annotations.PreserveHostKey:  "false",
+				annotations.AnnotationPrefix + annotations.StripPathKey:     "false",
+				annotations.AnnotationPrefix + annotations.RegexPriorityKey: "10",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:         kong.StringSlice("foo.com", "bar.com"),
 					Protocols:     kong.StringSlice("http"),
@@ -131,20 +129,17 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override headers",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts:     kong.StringSlice("foo.com"),
 					Protocols: kong.StringSlice("http", "https"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Headers: map[string][]string{
-						"foo-header": {"bar-value"},
-					},
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.HeadersKey + ".foo-header": "bar-value",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:     kong.StringSlice("foo.com"),
 					Protocols: kong.StringSlice("http", "https"),
@@ -155,17 +150,16 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override protocols",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Protocols: configurationv1.ProtocolSlice("grpc", "grpcs"),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.ProtocolsKey: "grpc,grpcs",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:     kong.StringSlice("foo.com"),
 					Protocols: kong.StringSlice("grpc", "grpcs"),
@@ -174,17 +168,16 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override path handling",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					PathHandling: kong.String("v1"),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.PathHandlingKey: "v1",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:        kong.StringSlice("foo.com"),
 					PathHandling: kong.String("v1"),
@@ -192,18 +185,17 @@ func TestOverrideRoute(t *testing.T) {
 			},
 		},
 		{
-			Route{
+			name: "override request/response buffering",
+			inRoute: Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					RequestBuffering:  kong.Bool(true),
-					ResponseBuffering: kong.Bool(true),
-				},
+			inAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.RequestBuffering:  "true",
+				annotations.AnnotationPrefix + annotations.ResponseBuffering: "true",
 			},
-			Route{
+			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:             kong.StringSlice("foo.com", "bar.com"),
 					RequestBuffering:  kong.Bool(true),
@@ -213,87 +205,110 @@ func TestOverrideRoute(t *testing.T) {
 		},
 	}
 
-	for _, testcase := range testTable {
-		testcase.inRoute.override(logrus.New(), &testcase.inKongIngresss)
-		assert.Equal(testcase.inRoute, testcase.outRoute)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			route := tc.inRoute
+			route.Ingress = util.K8sObjectInfo{
+				Annotations: tc.inAnnotations,
+			}
+			route.overrideByAnnotation(zapr.NewLogger(zap.NewNop()))
+			require.Equal(t, tc.expectedRoute.Route, route.Route)
+		})
 	}
+}
 
-	assert.NotPanics(func() {
+func TestNilRouteOverrideDoesntPanic(t *testing.T) {
+	require.NotPanics(t, func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(zapr.NewLogger(zap.NewNop()))
 	})
 }
 
-func TestOverrideRoutePriority(t *testing.T) {
-	assert := assert.New(t)
-
-	kongIngress := configurationv1.KongIngress{
-		Route: &configurationv1.KongIngressRoute{
-			Protocols: configurationv1.ProtocolSlice("http"),
+func TestOverrideExpressionRoute(t *testing.T) {
+	testCases := []struct {
+		name     string
+		inRoute  Route
+		outRoute Route
+	}{
+		{
+			name: "protocols should be overridden, but hosts, method, headers, snis should not",
+			inRoute: Route{
+				Route: kong.Route{
+					Name:       kong.String("expression-route-1"),
+					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/protocols":    "https",
+						"konghq.com/method":       "GET",
+						"konghq.com/host-aliases": "bar.com",
+						"konghq.com/headers.foo":  "bar",
+						"kohghq.com/snis":         "foo.com,bar.com",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+			outRoute: Route{
+				Route: kong.Route{
+					Name:       kong.String("expression-route-1"),
+					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					Protocols:  kong.StringSlice("https"),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/protocols":    "https",
+						"konghq.com/method":       "GET",
+						"konghq.com/host-aliases": "bar.com",
+						"konghq.com/headers.foo":  "bar",
+						"kohghq.com/snis":         "foo.com,bar.com",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+		},
+		{
+			name: "request_buffering, response_buffering should be overridden, but regex_priority, path_handling should not",
+			inRoute: Route{
+				Route: kong.Route{
+					Name:       kong.String("expression-route-2"),
+					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/request-buffering":  "true",
+						"konghq.com/response-buffering": "true",
+						"konghq.com/regex-priority":     "100",
+						"konghq.com/path-handling":      "v1",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+			outRoute: Route{
+				Route: kong.Route{
+					Name:              kong.String("expression-route-2"),
+					Expression:        kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					RequestBuffering:  kong.Bool(true),
+					ResponseBuffering: kong.Bool(true),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/request-buffering":  "true",
+						"konghq.com/response-buffering": "true",
+						"konghq.com/regex-priority":     "100",
+						"konghq.com/path-handling":      "v1",
+					},
+				},
+				ExpressionRoutes: true,
+			},
 		},
 	}
 
-	ingMeta := util.K8sObjectInfo{
-		Annotations: map[string]string{
-			"konghq.com/protocols": "grpc,grpcs",
-		},
+	for i, tc := range testCases {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
+			tc.inRoute.override(zapr.NewLogger(zap.NewNop()))
+			assert.Equal(t, tc.outRoute, tc.inRoute, "should be the same as expected after overriding")
+		})
 	}
-
-	route := Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-		Ingress: ingMeta,
-	}
-	route.override(logrus.New(), &kongIngress)
-	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
-	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
-}
-
-func TestOverrideRouteByKongIngress(t *testing.T) {
-	assert := assert.New(t)
-	route := Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
-	kongIngress := configurationv1.KongIngress{
-		Route: &configurationv1.KongIngressRoute{
-			Protocols: configurationv1.ProtocolSlice("http"),
-		},
-	}
-
-	route.overrideByKongIngress(logrus.New(), &kongIngress)
-	assert.Equal(route.Protocols, kong.StringSlice("http"))
-	assert.NotPanics(func() {
-		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
-	})
-}
-
-func TestOverrideRouteByAnnotation(t *testing.T) {
-	assert := assert.New(t)
-
-	ingMeta := util.K8sObjectInfo{
-		Annotations: map[string]string{
-			"konghq.com/protocols": "grpc,grpcs",
-		},
-	}
-
-	route := Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-		Ingress: ingMeta,
-	}
-	route.overrideByAnnotation(logrus.New())
-	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
-	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
-
-	assert.NotPanics(func() {
-		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
-	})
 }
 
 func TestNormalizeProtocols(t *testing.T) {
@@ -776,7 +791,7 @@ func TestOverrideRouteMethods(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideMethods(logrus.New(), tt.args.anns)
+			tt.args.route.overrideMethods(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteMethods() got = %v, want %v", tt.args.route, tt.want)
 			}
@@ -827,7 +842,7 @@ func TestOverrideRouteSNIs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideSNIs(logrus.New(), tt.args.anns)
+			tt.args.route.overrideSNIs(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteSNIs() got = %v, want %v", tt.args.route, tt.want)
 			}
@@ -900,7 +915,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideRequestBuffering(logrus.New(), tt.args.anns)
+			tt.args.route.overrideRequestBuffering(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
 				t.Errorf("overrideRequestBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
 			}
@@ -973,7 +988,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideResponseBuffering(logrus.New(), tt.args.anns)
+			tt.args.route.overrideResponseBuffering(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
 				t.Errorf("overrideResponseBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
 			}
@@ -1037,7 +1052,7 @@ func TestOverrideHosts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideHosts(logrus.New(), tt.args.anns)
+			tt.args.route.overrideHosts(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideHosts() got = %v, want %v", tt.args.route, tt.want)
 			}
@@ -1167,7 +1182,7 @@ func TestOverridePathHandling(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overridePathHandling(logrus.New(), tt.args.anns)
+			tt.args.route.overridePathHandling(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overridePathHandling() got = %v, want %v", tt.args.route, tt.want)
 			}

@@ -6,13 +6,26 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+)
+
+const (
+	KindKongPlugin        = "KongPlugin"
+	KindKongClusterPlugin = "KongClusterPlugin"
 )
 
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
@@ -21,36 +34,51 @@ type RequestHandler struct {
 	// Validator validates the entities that the k8s API-server asks
 	// it the server to validate.
 	Validator KongValidator
+	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
+	// referring the validated resource (Secret) to check the changes on
+	// referred Secret will produce invalid configuration of the plugins.
+	ReferenceIndexers ctrlref.CacheIndexers
 
-	Logger logrus.FieldLogger
+	Logger logr.Logger
 }
 
 // ServeHTTP parses AdmissionReview requests and responds back
 // with the validation result of the entity.
 func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
-		h.Logger.Error("received request with empty body")
-		http.Error(w, "admission review object is missing",
+		h.Logger.Error(nil, "Received request with empty body")
+		http.Error(w, "Admission review object is missing",
 			http.StatusBadRequest)
 		return
 	}
 
 	review := admissionv1.AdmissionReview{}
 	if err := json.NewDecoder(r.Body).Decode(&review); err != nil {
-		h.Logger.WithError(err).Error("failed to decode admission review")
+		h.Logger.Error(err, "Failed to decode admission review")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	response, err := h.handleValidation(r.Context(), *review.Request)
 	if err != nil {
-		h.Logger.WithError(err).Error("failed to run validation")
+		h.Logger.Error(err, "Failed to run validation")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	if !response.Allowed {
+		h.Logger.Info(
+			"Object admission request not allowed",
+			"name", review.Request.Name,
+			"kind", review.Request.Kind.Kind,
+			"namespace", review.Request.Namespace,
+			"message", response.Result.Message,
+		)
+	}
+
 	review.Response = response
 
 	if err := json.NewEncoder(w).Encode(&review); err != nil {
-		h.Logger.WithError(err).Error("failed to encode response")
+		h.Logger.Error(err, "Failed to encode response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -58,39 +86,54 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var (
 	consumerGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongconsumers",
 	}
+	consumerGroupGVResource = metav1.GroupVersionResource{
+		Group:    kongv1beta1.SchemeGroupVersion.Group,
+		Version:  kongv1beta1.SchemeGroupVersion.Version,
+		Resource: "kongconsumergroups",
+	}
 	pluginGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongplugins",
 	}
 	clusterPluginGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
 	kongIngressGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongingresses",
+	}
+	kongVaultGVResource = metav1.GroupVersionResource{
+		Group:    kongv1alpha1.SchemeGroupVersion.Group,
+		Version:  kongv1alpha1.SchemeGroupVersion.Version,
+		Resource: "kongvaults",
+	}
+	kongCustomEntityGVResource = metav1.GroupVersionResource{
+		Group:    kongv1alpha1.SchemeGroupVersion.Group,
+		Version:  kongv1alpha1.SchemeGroupVersion.Version,
+		Resource: "kongcustomentities",
 	}
 	secretGVResource = metav1.GroupVersionResource{
 		Group:    corev1.SchemeGroupVersion.Group,
 		Version:  corev1.SchemeGroupVersion.Version,
 		Resource: "secrets",
 	}
-	gatewayGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
-		Resource: "gateways",
+	ingressGVResource = metav1.GroupVersionResource{
+		Group:    netv1.SchemeGroupVersion.Group,
+		Version:  netv1.SchemeGroupVersion.Version,
+		Resource: "ingresses",
 	}
-	httprouteGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
-		Resource: "httproutes",
+	serviceGVResource = metav1.GroupVersionResource{
+		Group:    corev1.SchemeGroupVersion.Group,
+		Version:  corev1.SchemeGroupVersion.Version,
+		Resource: "services",
 	}
 )
 
@@ -102,18 +145,28 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 	switch request.Resource {
 	case consumerGVResource:
 		return h.handleKongConsumer(ctx, request, responseBuilder)
+	case consumerGroupGVResource:
+		return h.handleKongConsumerGroup(ctx, request, responseBuilder)
 	case pluginGVResource:
 		return h.handleKongPlugin(ctx, request, responseBuilder)
 	case clusterPluginGVResource:
 		return h.handleKongClusterPlugin(ctx, request, responseBuilder)
 	case secretGVResource:
 		return h.handleSecret(ctx, request, responseBuilder)
-	case gatewayGVResource:
+	case gatewayapi.V1GatewayGVResource, gatewayapi.V1beta1GatewayGVResource:
 		return h.handleGateway(ctx, request, responseBuilder)
-	case httprouteGVResource:
+	case gatewayapi.V1HTTPRouteGVResource, gatewayapi.V1beta1HTTPRouteGVResource:
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
 	case kongIngressGVResource:
 		return h.handleKongIngress(ctx, request, responseBuilder)
+	case kongVaultGVResource:
+		return h.handleKongVault(ctx, request, responseBuilder)
+	case kongCustomEntityGVResource:
+		return h.handleKongCustomEntity(ctx, request, responseBuilder)
+	case serviceGVResource:
+		return h.handleService(request, responseBuilder)
+	case ingressGVResource:
+		return h.handleIngress(ctx, request, responseBuilder)
 	default:
 		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",
 			request.Resource.Group, request.Resource.Version,
@@ -121,19 +174,21 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 	}
 }
 
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
 func (h RequestHandler) handleKongConsumer(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	consumer := configuration.KongConsumer{}
+	consumer := kongv1.KongConsumer{}
 	deserializer := codecs.UniversalDeserializer()
 	_, _, err := deserializer.Decode(request.Object.Raw, nil, &consumer)
 	if err != nil {
 		return nil, err
 	}
 
-	switch request.Operation { //nolint:exhaustive
+	switch request.Operation {
 	case admissionv1.Create:
 		ok, msg, err := h.Validator.ValidateConsumer(ctx, consumer)
 		if err != nil {
@@ -141,7 +196,7 @@ func (h RequestHandler) handleKongConsumer(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(msg).Build(), nil
 	case admissionv1.Update:
-		var oldConsumer configuration.KongConsumer
+		var oldConsumer kongv1.KongConsumer
 		_, _, err = deserializer.Decode(request.OldObject.Raw, nil, &oldConsumer)
 		if err != nil {
 			return nil, err
@@ -160,43 +215,71 @@ func (h RequestHandler) handleKongConsumer(
 	}
 }
 
-func (h RequestHandler) handleKongPlugin(
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumergroups,versions=v1beta1,name=kongconsumergroups.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleKongConsumerGroup(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	plugin := configuration.KongPlugin{}
-	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
-	if err != nil {
+	var consumerGroup kongv1beta1.KongConsumerGroup
+	if _, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &consumerGroup); err != nil {
 		return nil, err
 	}
-
-	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin)
+	ok, message, err := h.Validator.ValidateConsumerGroup(ctx, consumerGroup)
 	if err != nil {
 		return nil, err
 	}
 
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
+
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongplugins,versions=v1,name=kongplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleKongPlugin(
+	ctx context.Context,
+	request admissionv1.AdmissionRequest,
+	responseBuilder *ResponseBuilder,
+) (*admissionv1.AdmissionResponse, error) {
+	plugin := kongv1.KongPlugin{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
+	if err != nil {
+		return nil, err
+	}
+
+	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+}
+
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongclusterplugins,versions=v1,name=kongclusterplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongClusterPlugin(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	plugin := configuration.KongClusterPlugin{}
+	plugin := kongv1.KongClusterPlugin{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
 	}
 
-	ok, message, err := h.Validator.ValidateClusterPlugin(ctx, plugin)
+	ok, message, err := h.Validator.ValidateClusterPlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
+
+// NOTE this handler _does not_ use a kubebuilder directive, as our Secret handling requires webhook features
+// kubebuilder does not support (objectSelector). Instead, config/webhook/additional_secret_hooks.yaml includes
+// handwritten webhook rules that we patch into the webhook manifest.
+// See https://github.com/kubernetes-sigs/controller-tools/issues/553 for further info.
 
 func (h RequestHandler) handleSecret(
 	ctx context.Context,
@@ -208,34 +291,101 @@ func (h RequestHandler) handleSecret(
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := secret.Data["kongCredType"]; !ok {
-		// secret does not look like a credential resource in Kong
-		return responseBuilder.Allowed(true).Build(), nil
-	}
 
-	// secrets are only validated on update because they must be referenced by a
-	// managed consumer in order for us to validate them, and because credentials
-	// validation also happens at the consumer side of the reference so a
-	// credentials secret can not be referenced without being validated.
-
-	switch request.Operation { //nolint:exhaustive
-	case admissionv1.Update:
-		ok, message, err := h.Validator.ValidateCredential(ctx, secret)
-		if err != nil {
-			return nil, err
+	switch request.Operation {
+	case admissionv1.Update, admissionv1.Create:
+		// credential secrets
+		if credType, err := util.ExtractKongCredentialType(&secret); err == nil && credType != "" {
+			ok, message := h.Validator.ValidateCredential(ctx, secret)
+			if !ok {
+				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+			}
 		}
-		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/5876
+		// This catch-all block handles Secrets referenced by KongPlugin and KongClusterPlugin configuration. As of 3.2,
+		// these Secrets should use a "konghq.com/validate: plugin" label, but the original unfiltered behavior is still
+		// supported. It is slated for removal in 4.0. Once it is removed (or if we add additional Secret validation cases
+		// other than "plugin") this needs to change to a case that only applies if the valdiate label is present with the
+		// "plugin" value, probably using a 'switch validate := secret.Labels[labels.ValidateLabel]; labels.ValidateType(validate)'
+		// statement.
+		ok, count, message, err := h.checkReferrersOfSecret(ctx, &secret)
+		if count > 0 {
+			if secret.Labels[labels.ValidateLabel] != string(labels.PluginValidate) {
+				h.Logger.Info("Warning: Secret used in Kong(Cluster)Plugin, but missing 'konghq.com/validate: plugin' label."+
+					"This label will be required in a future release", "namespace", secret.Namespace, "name", secret.Name)
+			}
+		}
+		if err != nil {
+			return responseBuilder.Allowed(false).WithMessage(fmt.Sprintf("failed to validate other objects referencing the secret: %v", err)).Build(), err
+		}
+		if !ok {
+			return responseBuilder.Allowed(false).WithMessage(message).Build(), nil
+		}
+
+		// no reference found in the blanket block, this is some random unrelated Secret and KIC should ignore it.
+		return responseBuilder.Allowed(true).Build(), nil
+
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
 }
+
+// checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret
+// and rejects the secret if it generates invalid configurations for any of the referrers.
+func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, int, string, error) {
+	referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(secret)
+	if err != nil {
+		return false, 0, "", fmt.Errorf("failed to list referrers of secret: %w", err)
+	}
+
+	count := 0
+	for _, obj := range referrers {
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
+			count++
+			plugin := obj.(*kongv1.KongPlugin)
+			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
+			if err != nil {
+				return false, count, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
+					plugin.Namespace, plugin.Name, err,
+				)
+			}
+			if !ok {
+				return false, count,
+					fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
+						plugin.Namespace, plugin.Name, message,
+					), nil
+			}
+		}
+		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
+			count++
+			plugin := obj.(*kongv1.KongClusterPlugin)
+			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
+			if err != nil {
+				return false, count, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
+					plugin.Name, err,
+				)
+			}
+			if !ok {
+				return false, count,
+					fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
+						plugin.Name, message,
+					), nil
+			}
+		}
+	}
+	return true, count, "", nil
+}
+
+// +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=gateways,versions=v1;v1beta1,name=gateways.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleGateway(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	gateway := gatewayv1beta1.Gateway{}
+	gateway := gatewayapi.Gateway{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &gateway)
 	if err != nil {
 		return nil, err
@@ -248,12 +398,14 @@ func (h RequestHandler) handleGateway(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
+// +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=httproutes,versions=v1;v1beta1,name=httproutes.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
 func (h RequestHandler) handleHTTPRoute(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	httproute := gatewayv1beta1.HTTPRoute{}
+	httproute := gatewayapi.HTTPRoute{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &httproute)
 	if err != nil {
 		return nil, err
@@ -262,12 +414,19 @@ func (h RequestHandler) handleHTTPRoute(
 	if err != nil {
 		return nil, err
 	}
-
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
+const (
+	proxyWarning    = "Support for 'proxy' was removed in 3.0. It will have no effect. Use Service's annotations instead."
+	routeWarning    = "Support for 'route' was removed in 3.0. It will have no effect. Use Ingress' annotations instead."
+	upstreamWarning = "'upstream' is DEPRECATED and will be removed in a future version. Use a KongUpstreamPolicy resource instead."
+)
+
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongingresses,versions=v1,name=kongingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
 func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
-	kongIngress := configuration.KongIngress{}
+	kongIngress := kongv1.KongIngress{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongIngress)
 	if err != nil {
 		return nil, err
@@ -276,15 +435,92 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	// KongIngress is always allowed.
 	responseBuilder = responseBuilder.Allowed(true)
 
+	// Proxy and Route fields are now disallowed to be set with the use of CEL rules in the CRD definition.
+	// We still warn about them here only just in case someone doesn't install new CRDs with CEL rules.
 	if kongIngress.Proxy != nil {
-		const warning = "'proxy' is DEPRECATED. Use Service's annotations instead."
-		responseBuilder = responseBuilder.WithWarning(warning)
+		responseBuilder = responseBuilder.WithWarning(proxyWarning)
+	}
+	if kongIngress.Route != nil {
+		responseBuilder = responseBuilder.WithWarning(routeWarning)
 	}
 
-	if kongIngress.Route != nil {
-		const warning = "'route' is DEPRECATED. Use Ingress' annotations instead."
-		responseBuilder = responseBuilder.WithWarning(warning)
+	if kongIngress.Upstream != nil {
+		responseBuilder = responseBuilder.WithWarning(upstreamWarning)
 	}
 
 	return responseBuilder.Build(), nil
+}
+
+const (
+	serviceWarning = "%s is deprecated and will be removed in a future release. Use Service annotations " +
+		"for the 'proxy' section and %s with a KongUpstreamPolicy resource instead."
+)
+
+// +kubebuilder:webhook:verbs=create;update,groups=core,resources=services,versions=v1,name=services.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleService(request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	service := corev1.Service{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &service)
+	if err != nil {
+		return nil, err
+	}
+
+	if annotations.ExtractConfigurationName(service.Annotations) != "" {
+		warning := fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
+			kongv1beta1.KongUpstreamPolicyAnnotationKey)
+
+		responseBuilder = responseBuilder.WithWarning(warning)
+	}
+
+	return responseBuilder.Allowed(true).Build(), nil
+}
+
+// +kubebuilder:webhook:verbs=create;update,groups=networking.k8s.io,resources=ingresses,versions=v1,name=ingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	ingress := netv1.Ingress{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &ingress)
+	if err != nil {
+		return nil, err
+	}
+	ok, message, err := h.Validator.ValidateIngress(ctx, ingress)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+}
+
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongvaults,versions=v1alpha1,name=kongvaults.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	kongVault := kongv1alpha1.KongVault{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongVault)
+	if err != nil {
+		return nil, err
+	}
+	ok, message, err := h.Validator.ValidateVault(ctx, kongVault)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
+}
+
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
+func (h RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	kongCustomEntity := kongv1alpha1.KongCustomEntity{}
+
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongCustomEntity)
+	if err != nil {
+		return nil, err
+	}
+
+	ok, message, err := h.Validator.ValidateCustomEntity(ctx, kongCustomEntity)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }

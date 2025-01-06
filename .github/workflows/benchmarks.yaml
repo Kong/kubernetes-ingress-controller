@@ -1,0 +1,58 @@
+name: Go Benchmarks
+on:
+  push:
+    branches:
+    - 'main'
+  pull_request:
+    branches:
+    - '**'
+    types:
+    - labeled
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  benchmark:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    name: Run Go benchmarks
+    if: |
+      contains(github.event.*.labels.*.name, 'ci/run-benchmarks') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
+    - name: Run benchmark
+      run: make bench | tee bench.out
+
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        name: Go Benchmark
+        tool: 'go'
+        output-file-path: bench.out
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+        # Show alert with commit comment on detecting possible performance regression
+        alert-threshold: '200%'
+        alert-comment-cc-users: '@Kong/k8s-maintainers'
+        comment-always: false
+        comment-on-alert: true
+        max-items-in-chart: 50
+
+        # Enable Job Summary for PRs
+        summary-always: true
+        fail-on-alert: true

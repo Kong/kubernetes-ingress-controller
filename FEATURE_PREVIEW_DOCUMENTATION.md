@@ -9,7 +9,3 @@ As features mature to `BETA` or `GA` state this documentation will be grown and 
 [fg]:/FEATURE_GATES.md
 [fg-alpha]:/FEATURE_GATES.md#feature-gates-for-alpha-or-beta-features
 [kong-docs]:https://github.com/Kong/docs.konghq.com
-
-## Feature Preview: Gateway APIs
-
-The documentation for this `alpha` feature is available in the standard Kong documentation: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/using-gateway-api/

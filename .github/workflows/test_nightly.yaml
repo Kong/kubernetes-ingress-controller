@@ -1,4 +1,13 @@
 name: tests-nightly
+run-name: |
+  e2e tests (targeted), branch:${{ github.ref_name }},
+  triggered by @${{ github.actor }}
+
+concurrency:
+  # Limit the concurrency of tests in this workflow to run only 1 workflow for ref (branch).
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   pull_request:
@@ -6,24 +15,48 @@ on:
       - labeled
   workflow_dispatch: {}
 
+env:
+  kong-gateway-enterprise-registry: kong/kong-gateway-dev
+  kong-gateway-enterprise-tag: latest
+  kong-gateway-enterprise-effective-version: "3.4.1"
+  kong-gateway-oss-registry: kong/kong
+  kong-gateway-oss-tag: latest-ubuntu
+  kong-gateway-oss-effective-version: "3.4.1"
+
 jobs:
+  post-comment-in-pr:
+    if: (contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch') && github.event.pull_request.number != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      # URL is the current workflow's run URL.
+      # Sadly this is not readily available in github's context.
+      URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          MSG="Integration (targeted) tests with KIND-based cluster and latest images were started at ${URL}"
+          gh pr comment ${PR_NUMBER} --body "${MSG}"
+          # Remove the 'ci/run-nightly' label from the PR to prevent the `test_nightly.yaml`
+          # workflow from running again.
+          gh pr edit ${PR_NUMBER} --remove-label ci/run-nightly
+
   integration-tests-enterprise-postgres-nightly:
-    if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
+    if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
 
     - uses: Kong/kong-license@master
       id: license
       with:
-        password: ${{ secrets.PULP_PASSWORD }}
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
     - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      uses: actions/checkout@v4
 
     - name: setup golang
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '^1.20'
 
@@ -32,36 +65,79 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        TEST_KONG_IMAGE: "kong/kong-gateway-internal"
-        TEST_KONG_TAG: "master-alpine"
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
+
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
-        path: coverage.nightlyenterprisepostgres.out
+        name: coverage-integration-tests-enterprise-postgres-nightly
+        path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-enterprise-postgres-nightly
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
+  integration-tests-enterprise-dbless-nightly:
+    if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+    - name: checkout repository
+      uses: actions/checkout@v4
+
+    - name: setup golang
+      uses: actions/setup-go@v5
+      with:
+        go-version: '^1.20'
+
+    - name: run integration tests
+      run: make test.integration.enterprise.dbless
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
+        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-integration-tests-enterprise-dbless-nightly
+        path: coverage.enterprisedbless.out
+
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: diagnostics-integration-tests-enterprise-dbless-nightly
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   integration-tests-postgres-nightly:
-    if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
+    if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      uses: actions/checkout@v4
 
     - name: setup golang
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '^1.20'
 
@@ -69,35 +145,34 @@ jobs:
       run: make test.integration.postgres
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TEST_KONG_IMAGE: "kong/kong"
-        TEST_KONG_TAG: "master-alpine"
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
-        path: coverage.nightlypostgres.out
+        name: coverage-integration-tests-postgres-nightly
+        path: coverage.postgres.out
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-postgres-nightly
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
   integration-tests-dbless-nightly:
-    if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
+    if: contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
 
     - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      uses: actions/checkout@v4
 
     - name: setup golang
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '^1.20'
 
@@ -105,18 +180,19 @@ jobs:
       run: make test.integration.dbless
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TEST_KONG_IMAGE: "kong/kong"
-        TEST_KONG_TAG: "master-alpine"
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
-        path: coverage.nightlydbless.out
+        name: coverage-integration-tests-dbless-nightly
+        path: coverage.dbless.out
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-dbless-nightly
         path: /tmp/ktf-diag*

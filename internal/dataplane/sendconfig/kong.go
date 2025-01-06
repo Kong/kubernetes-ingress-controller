@@ -1,14 +1,7 @@
 package sendconfig
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/blang/semver/v4"
-	"github.com/go-logr/logr"
-	"golang.org/x/sync/errgroup"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
 // Config gathers parameters that are needed for sending configuration to Kong Admin APIs.
@@ -38,38 +31,14 @@ type Config struct {
 	// ExpressionRoutes indicates whether to use Kong's expression routes.
 	ExpressionRoutes bool
 
-	// DeckFileFormatVersion indicates the version of the Kong configuration format to use when using DB-mode.
-	DeckFileFormatVersion string
-}
+	// SanitizeKonnectConfigDumps indicates whether to sanitize Konnect config dumps.
+	SanitizeKonnectConfigDumps bool
 
-// Init sets up variables that need external calls.
-func (c *Config) Init(
-	ctx context.Context,
-	logger logr.Logger,
-	kongClients []*adminapi.Client,
-) {
-	if err := tagsFilteringEnabled(ctx, kongClients); err != nil {
-		logger.Error(err, "tag filtering disabled")
-		c.FilterTags = nil
-	} else {
-		logger.Info("tag filtering enabled", "tags", c.FilterTags)
-	}
-}
+	// FallbackConfiguration indicates whether to generate fallback configuration in the case of entity
+	// errors returned by the Kong Admin API.
+	FallbackConfiguration bool
 
-func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) error {
-	var errg errgroup.Group
-	for _, cl := range kongClients {
-		cl := cl
-		errg.Go(func() error {
-			ok, err := cl.AdminAPIClient().Tags.Exists(ctx)
-			if err != nil {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.BaseRootURL(), err)
-			}
-			if !ok {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.BaseRootURL())
-			}
-			return nil
-		})
-	}
-	return errg.Wait()
+	// UseLastValidConfigForFallback indicates whether to use the last valid config cache to backfill broken objects
+	// when recovering from a config push failure.
+	UseLastValidConfigForFallback bool
 }

@@ -11,7 +11,12 @@ on:
         type: string
         # TODO: Consider changing to "kong:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.2"
+        default: "<from_test_dependencies.yaml>"
+        required: false
+      kong-oss-effective-version:
+        # specifies effective semver of Kong gateway OSS when tag is not a valid semver (like 'nightly').
+        type: string
+        default: ""
         required: false
       kong-enterprise-container-repo:
         type: string
@@ -21,114 +26,213 @@ on:
         type: string
         # TODO: Consider changing to "kong/kong-gateway:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.2"
+        default: "<from_test_dependencies.yaml>"
+        required: false
+      kong-enterprise-effective-version:
+        # specifies effective semver of Kong gateway enterprise when tag is not a valid semver (like 'nightly').
+        type: string
+        default: ""
+        required: false
+      log-output-file:
+        # specifies the file for KIC manager's logs to output to.
+        type: string
+        default: ""
         required: false
 
 jobs:
+  dependencies-versions:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.set-versions.outputs.kind }}
+      kong-ee: ${{ steps.set-versions.outputs.kong-ee }}
+      kong-oss: ${{ steps.set-versions.outputs.kong-oss }}
+      helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - id: set-versions
+        name: Set versions
+        run: |
+          (
+            echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )"
+            echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )"
+            echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )"
+            echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )"
+          ) >> $GITHUB_OUTPUT
+
   integration-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    needs: dependencies-versions
     env:
-      KONG_CLUSTER_VERSION: 'v1.27.1'
-      TEST_KONG_ROUTER_FLAVOR: 'traditional'
+      KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
+      TEST_KONG_ROUTER_FLAVOR: 'expressions'
+      TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
     strategy:
       fail-fast: false
+      # DB modes override to traditional or traditional_compatible only pending upstream gateway changes
+      # to expression mode when used with a database https://github.com/Kong/kubernetes-ingress-controller/issues/4966
       matrix:
         include:
           - name: dbless
             test: dbless
           - name: postgres
             test: postgres
-          - name: feature-gates
-            test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
-          - name: dbless-knative
-            test: dbless.knative
-          - name: postgres-knative
-            test: postgres.knative
+            router-flavor: 'traditional_compatible'
           - name: enterprise-postgres
             test: enterprise.postgres
+            enterprise: true
+            router-flavor: 'traditional_compatible'
+          - name: enterprise-dbless
+            test: enterprise.dbless
             enterprise: true
           - name: dbless-traditional-compatible
             test: dbless
             router-flavor: 'traditional_compatible'
-          - name: postgres-traditional-compatible
+          - name: postgres-traditional
             test: postgres
+            router-flavor: 'traditional'
+          - name: dbless-traditional
+            test: dbless
+            router-flavor: "traditional"
+          - name: dbless-gateway-alpha
+            test: dbless
+            feature_gates: "GatewayAlpha=true"
+          - name: postgres-gateway-alpha
+            test: postgres
+            feature_gates: "GatewayAlpha=true"
             router-flavor: 'traditional_compatible'
-          - name: dbless-expression-router
+          - name: dbless-rewrite-uris
             test: dbless
-            feature_gates: "ExpressionRoutes=true,GatewayAlpha=true"
-            router-flavor: "expressions"
-          # TODO: remove this once CombinedServices is enabled by default.
-          # https://github.com/Kong/kubernetes-ingress-controller/issues/3979
-          - name: dbless-combined-services
+            feature_gates: "GatewayAlpha=true,RewriteURIs=true"
+          - name: postgres-rewrite-uris
+            test: postgres
+            feature_gates: "GatewayAlpha=true,RewriteURIs=true"
+            router-flavor: 'traditional_compatible'
+          - name: dbless-invalid-config
             test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedServices=true"
+            run_invalid_config: "true"
+            # This should use the default router flavor (via TEST_KONG_ROUTER_FLAVOR)
+            # Remove the override here when
+            # https://github.com/Kong/kubernetes-ingress-controller/issues/5127 is resolved.
+            router-flavor: 'traditional'
+            go_test_flags: -run=TestIngressRecoverFromInvalidPath
+          - name: postgres-fallback-config
+            test: postgres
+            feature_gates: "GatewayAlpha=true,FallbackConfiguration=true"
+          - name: dbless-fallback-config
+            test: dbless
+            feature_gates: "GatewayAlpha=true,FallbackConfiguration=true"
+          # Experimental tests, in the future all integration tests will be migrated to them.
+          # Set enterprise to 'true' to enable isolated integration test cases requiring enterprise features.
+          - name: isolated-dbless
+            test: isolated.dbless
+            router-flavor: traditional
+            feature_gates: "GatewayAlpha=true"
+            enterprise: true
+          - name: isolated-postgres
+            test: isolated.postgres
+            router-flavor: traditional
+            feature_gates: "GatewayAlpha=true"
+            enterprise: true
+          - name: isolated-dbless-expression-router
+            router-flavor: expressions
+            test: isolated.dbless
+            feature_gates: "GatewayAlpha=true"
+            enterprise: true
 
     steps:
       - uses: Kong/kong-license@master
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: Set image of Kong
         id: set_kong_image
         run: |
+          kong_ee_tag="${{ inputs.kong-enterprise-container-tag }}"
+          if [ "${{ inputs.kong-enterprise-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+            kong_ee_tag=${{ needs.dependencies-versions.outputs.kong-ee }}
+          fi
+          kong_oss_tag="${{ inputs.kong-container-tag }}"
+          if [ "${{ inputs.kong-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+              kong_oss_tag=${{ needs.dependencies-versions.outputs.kong-oss }}
+          fi
+
           if [ "${{ matrix.enterprise }}" == "true" ]; then
-            echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${{ inputs.kong-enterprise-container-tag }}" >> $GITHUB_ENV
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_ee_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}"
+              echo "TEST_KONG_ENTERPRISE=true"
+            ) >> $GITHUB_ENV
           else
-            echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${{ inputs.kong-container-tag }}" >> $GITHUB_ENV
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_oss_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}"
+            ) >> $GITHUB_ENV
           fi
 
       - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: setup golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '^1.20'
+          go-version-file: go.mod
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          JUNIT_REPORT: "integration-tests-${{ matrix.name }}.xml"
-          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
-
-      - name: run ${{ matrix.name }} - invalid config
-        run: make test.integration.${{ matrix.test }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          JUNIT_REPORT: "integration-tests-invalid-config-${{ matrix.name }}.xml"
-          GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
-          TEST_RUN_INVALID_CONFIG_CASES: "true"
+          JUNIT_REPORT: integration-tests-${{ matrix.name }}.xml
+          # Use Github's "ternary operator" to fallback to default router flavor
+          # defined in env.TEST_KONG_ROUTER_FLAVOR
+          # Ref: https://docs.github.com/en/actions/learn-github-actions/expressions#example
+          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor != '' && matrix.router-flavor || env.TEST_KONG_ROUTER_FLAVOR }}
+          TEST_RUN_INVALID_CONFIG_CASES: ${{ matrix.run_invalid_config }}
+          TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
+          GOTESTFLAGS: "${{ matrix.go_test_flags }}"
 
       - name: collect test coverage
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-integration-${{ matrix.name }}
           path: coverage.*.out
 
       - name: upload diagnostics
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
+      # upload logs when test failed
+      - name: upload KIC logs
+        if: ${{ failure() && inputs.log-output-file != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-tests-kic-logs-${{ matrix.name }}
+          path: ${{ inputs.log-output-file }}
+          if-no-files-found: ignore
+
       - name: collect test report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-integration-${{ matrix.name }}
           path: integration-tests-${{ matrix.name }}.xml

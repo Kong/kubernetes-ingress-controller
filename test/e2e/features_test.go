@@ -1,5 +1,4 @@
 //go:build e2e_tests
-// +build e2e_tests
 
 package e2e
 
@@ -7,9 +6,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -21,23 +20,26 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 // -----------------------------------------------------------------------------
@@ -47,11 +49,6 @@ import (
 // tests due to environment requirements (e.g. needing to mount volumes) or
 // conflicts with the integration configuration.
 // -----------------------------------------------------------------------------
-
-// TLSPair is a PEM certificate+key pair.
-type TLSPair struct {
-	Key, Cert string
-}
 
 const (
 	// webhookKINDConfig is a KIND configuration used for TestWebhookUpdate. KIND, when running in GitHub Actions, is
@@ -72,69 +69,17 @@ nodes:
 `
 	validationWebhookName = "kong-validation-webhook"
 	kongNamespace         = "kong"
-	admissionScriptPath   = "../../hack/deploy-admission-controller.sh"
 )
-
-// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
-// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'.
-var tlsPairs = []TLSPair{
-	{
-		Cert: `-----BEGIN CERTIFICATE-----
-MIICTDCCAdKgAwIBAgIUOe9HN8v1eedsZXur5uXAwJkOSG4wCgYIKoZIzj0EAwIw
-XTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
-dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNZmlyc3QuZXhhbXBsZTAe
-Fw0yMjA2MTAxOTIzNDhaFw0zMjAyMDgxOTIzNDhaMF0xCzAJBgNVBAYTAkFVMRMw
-EQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0
-eSBMdGQxFjAUBgNVBAMMDWZpcnN0LmV4YW1wbGUwdjAQBgcqhkjOPQIBBgUrgQQA
-IgNiAAR2pbLcSQhX4gD6IyPJiRN7lxZ8aPbi6qyPyjvoTJc6DPjMuJuJgkdSC8wy
-e1XFsI295WGl5gbqJsXQyJOqU6pHg6mjTEeyRxN9HbfEpH+Zp7GZ2KuTTGzi3wnh
-CPqzic6jUzBRMB0GA1UdDgQWBBTPOtLEjQvk5/iy4/dhxIWWEoSJbTAfBgNVHSME
-GDAWgBTPOtLEjQvk5/iy4/dhxIWWEoSJbTAPBgNVHRMBAf8EBTADAQH/MAoGCCqG
-SM49BAMCA2gAMGUCMQC7rKXFcTAfoTSw5m2/ALseXru/xZC5t3Y7yQ+zSaneFMvQ
-KvXcO0/RGYeqLmS58C4CMGoJva3Ad5LaZ7qgMkahhLdopePb0U/GAQqIsWhHfjOT
-Il2dwxMvntBECtd0uXeKHQ==
------END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAA9OHUgH4O/xF0/qyQ
-t3ZSX0/6IDilnyM1ayoUSUOfNcELUd2UZVAuZgP10f6cMUWhZANiAAR2pbLcSQhX
-4gD6IyPJiRN7lxZ8aPbi6qyPyjvoTJc6DPjMuJuJgkdSC8wye1XFsI295WGl5gbq
-JsXQyJOqU6pHg6mjTEeyRxN9HbfEpH+Zp7GZ2KuTTGzi3wnhCPqzic4=
------END PRIVATE KEY-----`,
-	},
-	{
-		Cert: `-----BEGIN CERTIFICATE-----
-MIICTzCCAdSgAwIBAgIUOOTCdVckt76c9OSeGHyf+OrLU+YwCgYIKoZIzj0EAwIw
-XjELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
-dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEXMBUGA1UEAwwOc2Vjb25kLmV4YW1wbGUw
-HhcNMjIwMjEwMTkyNTMwWhcNMzIwMjA4MTkyNTMwWjBeMQswCQYDVQQGEwJBVTET
-MBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQ
-dHkgTHRkMRcwFQYDVQQDDA5zZWNvbmQuZXhhbXBsZTB2MBAGByqGSM49AgEGBSuB
-BAAiA2IABHCTYbqp3P2v5aDuhkO+1rVNAidb0UcnCdtyoZx0+Oqz35Auq/GNaLvZ
-RYsyW6SHVGaRWhPh3jQ8zFnc28TCGwmAMnzYPs5RHYbvBm2BSP9YWPXhc6h+lkma
-HNNCu1tu56NTMFEwHQYDVR0OBBYEFEG94gMq4SvGtTs48Nw5BzVnPK69MB8GA1Ud
-IwQYMBaAFEG94gMq4SvGtTs48Nw5BzVnPK69MA8GA1UdEwEB/wQFMAMBAf8wCgYI
-KoZIzj0EAwIDaQAwZgIxAPRJkWfSdIQMr2R77RgCicR+adD/mMxZra2SoL7qSMyq
-3iXLIXauNP9ar3tt1uZE8wIxAM4C6G4uoQ0dydhcgQVhlgB6GaqO18AEDYPzQjir
-dV2Bs8EBkYBx87PmZ+e/S7g9Ug==
------END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBVtvjDBFke/k2Skezl
-h63g1q5IHCQM7wr1T43m5ACKZQt0ZDE1jfm1BYKk1omNpeChZANiAARwk2G6qdz9
-r+Wg7oZDvta1TQInW9FHJwnbcqGcdPjqs9+QLqvxjWi72UWLMlukh1RmkVoT4d40
-PMxZ3NvEwhsJgDJ82D7OUR2G7wZtgUj/WFj14XOofpZJmhzTQrtbbuc=
------END PRIVATE KEY-----`,
-	},
-}
 
 // TestWebhookUpdate checks that the webhook updates the certificate indicated by --admission-webhook-cert-file when
 // the mounted Secret updates. This requires E2E because we can't mount Secrets with the locally-run integration
 // test controller instance.
 func TestWebhookUpdate(t *testing.T) {
-	// on KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
+	// On KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
 	// support this: the configuration is specific to KIND but should not be used by default, and the scaffolding isn't
 	// flexible enough to support tests building their own clusters or passing additional builder functions. this still
 	// uses the setup style from before getEnvironmentBuilder/GKE support as such, and just skips if it's attempting
-	// to run on GKE
+	// to run on GKE.
 	runOnlyOnKindClusters(t)
 
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
@@ -143,18 +88,10 @@ func TestWebhookUpdate(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	configFile, err := os.CreateTemp(os.TempDir(), "webhook-kind-config-")
-	require.NoError(t, err)
-	defer os.Remove(configFile.Name())
-	defer configFile.Close()
-	written, err := configFile.Write([]byte(webhookKINDConfig))
-	require.NoError(t, err)
-	require.Equal(t, len(webhookKINDConfig), written)
-
 	clusterBuilder := kind.NewBuilder()
-	clusterBuilder.WithConfig(configFile.Name())
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+	clusterBuilder.WithConfigReader(strings.NewReader(webhookKINDConfig))
+	if testenv.ClusterVersion() != "" {
+		clusterVersion, err := semver.ParseTolerant(testenv.ClusterVersion())
 		require.NoError(t, err)
 		t.Logf("k8s cluster version is set to %v", clusterVersion)
 		clusterBuilder.WithClusterVersion(clusterVersion)
@@ -163,9 +100,11 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if shouldLoadImages() {
-		if b, err := loadimage.NewBuilder().WithImage(controllerImageOverride); err == nil {
+	if testenv.ClusterLoadImages() == "true" {
+		if b, err := loadimage.NewBuilder().WithImage(testenv.ControllerImageTag()); err == nil {
 			addons = append(addons, b.Build())
+		} else {
+			require.NoError(t, err)
 		}
 	}
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
@@ -180,28 +119,40 @@ func TestWebhookUpdate(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
+	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
+	certPool := x509.NewCertPool()
+	const firstCertificateHostName = "first.example"
+	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName(firstCertificateHostName),
+		certificate.WithDNSNames(firstCertificateHostName),
+	)
+	require.True(t, certPool.AppendCertsFromPEM(firstCertificateCrt))
 	firstCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "admission-cert",
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[0].Cert),
-			"tls.key": []byte(tlsPairs[0].Key),
+			"tls.crt": firstCertificateCrt,
+			"tls.key": firstCertificateKey,
 		},
 	}
 
+	const secondCertificateHostName = "second.example"
+	secondCertificateCrt, secondCertificateKey := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName(secondCertificateHostName),
+		certificate.WithDNSNames(secondCertificateHostName),
+	)
+	require.True(t, certPool.AppendCertsFromPEM(secondCertificateCrt))
 	secondCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "admission-cert",
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[1].Cert),
-			"tls.key": []byte(tlsPairs[1].Key),
+			"tls.crt": secondCertificateCrt,
+			"tls.key": secondCertificateKey,
 		},
 	}
 
@@ -258,35 +209,26 @@ func TestWebhookUpdate(t *testing.T) {
 		deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
+	checkCertificate := func(hostname string) {
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			_, err := tls.Dial("tcp", admissionAddress+":443", &tls.Config{
+				MinVersion: tls.VersionTLS12,
+				RootCAs:    certPool,
+				ServerName: hostname,
+			})
+			assert.NoError(c, err)
+		}, 1*time.Minute, time.Second)
+	}
+
 	t.Log("checking initial certificate")
-	require.Eventually(t, func() bool {
-		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
-		if err != nil {
-			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
-			return false
-		}
-		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
-		t.Logf("subject common name of certificate: %s", certCommonName)
-		return certCommonName == "first.example"
-	}, time.Minute*2, time.Second)
+	checkCertificate(firstCertificateHostName)
 
 	t.Log("changing certificate")
 	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Update(ctx, secondCertificate, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("checking second certificate")
-	require.Eventually(t, func() bool {
-		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
-		if err != nil {
-			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
-			return false
-		}
-		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
-		t.Logf("subject common name of certificate: %s", certCommonName)
-		return certCommonName == "second.example"
-	}, time.Minute*10, time.Second)
+	checkCertificate(secondCertificateHostName)
 }
 
 // TestDeployAllInOneDBLESSGateway tests the Gateway feature flag and the admission controller with no user-provided
@@ -297,9 +239,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
-	deployments := getManifestDeployments(dblessPath)
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 	controllerDeploymentNN := deployments.ControllerNN
 	controllerDeploymentListOptions := metav1.ListOptions{
 		LabelSelector: "app=" + controllerDeploymentNN.Name,
@@ -309,8 +249,13 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	controllerDeployment := deployments.GetController(ctx, t, env)
 	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
 		if container.Name == controllerContainerName {
-			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(controllerDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
+			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(
+				controllerDeployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{
+					Name:  "CONTROLLER_FEATURE_GATES",
+					Value: fmt.Sprintf("%s=true", featuregates.GatewayAlphaFeature),
+				},
+			)
 		}
 	}
 
@@ -323,10 +268,11 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedMsg := "Required CustomResourceDefinitions are not installed, setting up a watch for them in case they are installed afterward"
+		t.Logf("checking logs of #%d pods", len(pods.Items))
 		for _, pod := range pods.Items {
 			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
 			if err != nil {
-				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
+				t.Logf("Failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false
 			}
 			if !strings.Contains(logs, expectedMsg) {
@@ -334,7 +280,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			}
 		}
 		return true
-	}, time.Minute, 5*time.Second)
+	}, time.Minute, 3*time.Second)
 
 	t.Logf("deploying Gateway APIs CRDs in standard channel from %s", consts.GatewayStandardCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayStandardCRDsKustomizeURL))
@@ -347,33 +293,33 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
-		gatewayv1beta1.Listener{
+		gatewayapi.Listener{
 			Name:     "badhttp",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(9999),
+			Protocol: gatewayapi.HTTPProtocolType,
+			Port:     gatewayapi.PortNumber(9999),
 		},
-		gatewayv1beta1.Listener{
+		gatewayapi.Listener{
 			Name:     "badudp",
-			Protocol: gatewayv1beta1.UDPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
+			Protocol: gatewayapi.UDPProtocolType,
+			Port:     gatewayapi.PortNumber(80),
 		},
 	)
 
 	t.Log("verifying that unsupported listeners indicate correct status")
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Update(ctx, gw, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
-		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+		gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 		var http, udp bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badhttp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
-					util.ConditionReason(gatewayv1beta1.ListenerReasonPortUnavailable),
+					util.ConditionType(gatewayapi.ListenerConditionAccepted),
+					util.ConditionReason(gatewayapi.ListenerReasonPortUnavailable),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -382,8 +328,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
-					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayapi.ListenerConditionAccepted),
+					util.ConditionReason(gatewayapi.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -393,8 +339,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badudp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
-					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayapi.ListenerConditionAccepted),
+					util.ConditionReason(gatewayapi.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -405,7 +351,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		return http == udp == true
 	}, time.Minute*2, time.Second*5)
 
-	gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
+	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
@@ -416,7 +362,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
 		if container.Name == proxyContainerName {
 			proxyDeployment.Spec.Template.Spec.Containers[i].Env = append(proxyDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListnerPort)})
+				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListenerPort)})
 		}
 	}
 	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, proxyDeployment, metav1.UpdateOptions{})
@@ -428,8 +374,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	proxyService.Spec.Ports = append(proxyService.Spec.Ports, corev1.ServicePort{
 		Name:       "stream-tcp",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       tcpListnerPort,
-		TargetPort: intstr.FromInt(tcpListnerPort),
+		Port:       tcpListenerPort,
+		TargetPort: intstr.FromInt(tcpListenerPort),
 	})
 	_, err = env.Cluster().Client().CoreV1().Services(namespace).Update(ctx, proxyService, metav1.UpdateOptions{})
 	require.NoError(t, err)
@@ -449,12 +395,11 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
+	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	// ensure that Gateways with no addresses come online and start ingesting routes
 	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
@@ -496,12 +441,11 @@ func TestDefaultIngressClass(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
-	kongDeployment := getManifestDeployments(dblessPath).ControllerNN
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
+	kongDeployment := deployments.ControllerNN
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -513,7 +457,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	ingress := generators.NewIngressForService("/abbosiysaltanati", map[string]string{
-		"konghq.com/strip-path": "true",
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 
@@ -553,7 +497,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	}, ingressWait, time.Second)
 
 	t.Log("getting kong proxy IP after LB provisioning")
-	proxyURL = "http://" + getKongProxyIP(ctx, t, env)
+	proxyURLForDefaultIngress := "http://" + getKongProxyIP(ctx, t, env)
 
 	t.Log("creating classless global KongClusterPlugin")
 	kongclusterplugin := &kongv1.KongClusterPlugin{
@@ -575,9 +519,9 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURLForDefaultIngress))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURLForDefaultIngress, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -594,110 +538,4 @@ func TestDefaultIngressClass(t *testing.T) {
 		}
 		return false
 	}, ingressWait, time.Second)
-}
-
-// TestMissingCRDsDontCrashTheController ensures that in case of missing CRDs installation in the cluster, specific
-// controllers are disabled, this fact is properly logged, and the controller doesn't crash.
-func TestMissingCRDsDontCrashTheController(t *testing.T) {
-	t.Parallel()
-	ctx, env := setupE2ETest(t)
-
-	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
-
-	manifest = stripCRDs(t, manifest)
-
-	// reducing controllers' cache synchronisation timeout in order to trigger the possible process crash quicker
-	cacheSyncTimeout := time.Second
-	var err error
-	manifest, err = addControllerEnv(manifest, "CONTROLLER_CACHE_SYNC_TIMEOUT", cacheSyncTimeout.String())
-	require.NoError(t, err)
-
-	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(dblessPath).ControllerNN
-
-	t.Log("ensuring pod's ready and controller didn't crash")
-	require.Never(t, func() bool {
-		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-		})
-		if err != nil || len(pods.Items) == 0 {
-			return true
-		}
-
-		pod := pods.Items[0]
-		if !containerDidntCrash(pod, controllerContainerName) {
-			t.Log("controller crashed")
-			return true
-		}
-
-		if !isPodReady(pod) {
-			t.Log("pod is not ready")
-			return true
-		}
-
-		return false
-	}, cacheSyncTimeout+time.Second*5, time.Second)
-
-	t.Log("waiting for pod to output required logs")
-	require.Eventually(t, func() bool {
-		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-		})
-		if err != nil || len(pods.Items) == 0 {
-			return false
-		}
-
-		podName := pods.Items[0].Name
-		logs, err := getPodLogs(ctx, t, env, deployment.Namespace, podName)
-		if err != nil {
-			return false
-		}
-
-		gvrs := []schema.GroupVersionResource{
-			{
-				Group:    kongv1beta1.GroupVersion.Group,
-				Version:  kongv1beta1.GroupVersion.Version,
-				Resource: "udpingresses",
-			},
-			{
-				Group:    kongv1beta1.GroupVersion.Group,
-				Version:  kongv1beta1.GroupVersion.Version,
-				Resource: "tcpingresses",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongingresses",
-			},
-			{
-				Group:    kongv1alpha1.GroupVersion.Group,
-				Version:  kongv1alpha1.GroupVersion.Version,
-				Resource: "ingressclassparameterses",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongplugins",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongconsumers",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongclusterplugins",
-			},
-		}
-
-		for _, gvr := range gvrs {
-			if !strings.Contains(logs, fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gvr.GroupVersion(), gvr.Resource)) {
-				return false
-			}
-		}
-
-		return true
-	}, time.Minute, time.Second)
 }

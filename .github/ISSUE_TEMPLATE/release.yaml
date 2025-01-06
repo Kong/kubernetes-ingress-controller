@@ -16,37 +16,13 @@ body:
   validations:
     required: true
 - type: checkboxes
-  id: release_tests
-  attributes:
-    label: "**For all releases** Github Workflow Test Matrix Checkup"
-    options:
-      - label: Check the testing workflow ([.github/workflows/test.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/test.yaml)) and ensure that all matrix versions ([.github/workflows/e2e.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/e2e.yaml) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
-      - label: Kubernetes (via [KIND](https://hub.docker.com/r/kindest/node/tags) and the latest image available when creating a new rapid channel cluster from the GKE new cluster wizard)
-      - label: Istio (via [Istio's releases page](https://github.com/istio/istio/releases))
-- type: checkboxes
-  id: gateway_version
-  attributes:
-    label: "Bump Kong Gateway version in manifests"
-    options:
-      - label: "Note: it might be possible that the latest Gateway version is not compatible with KIC and code changes are required. In such case, a decision whether to release with no compliance with the latest Gateway version should be made on a team level."
-      - label: Check the latest minor Kong Gateway release in [Kong releases](https://github.com/Kong/kong/releases).
-      - label: Make sure the image tag in `config/image/enterprise/kustomization.yaml`, `config/image/oss/kustomization.yaml`, and `config/variants/enterprise/kustomization.yaml` is updated accordingly.
-      - label: Run `make manifests` to regenerate manifests using the modified kustomizations and open a PR with the changes (similarly to [this PR](https://github.com/Kong/kubernetes-ingress-controller/pull/3288)).
-- type: checkboxes
-  id: release_branch
-  attributes:
-    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
-    options:
-      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
-      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main"
-- type: checkboxes
   id: prepare_release_branch
   attributes:
     label: "**For all releases** Create `prepare-release/x.y.z` Branch"
     options:
       - label: "Ensure that you have up to date copy of `main`: `git checkout main; git pull` or a targeted release branch e.g. `release/2.7.x`: `git checkout release/2.7.x; git pull`"
       - label: "Create the `prepare-release` branch for the version (e.g. `prepare-release/2.7.1`): `git branch -m prepare-release/2.7.1`"
-      - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end. If there were any RC releases before this version, fold their changes into the final release entry.
+      - label: Review carefully CHANGELOG.md. Manually reorder entries for relevance, common topic, adjust description, etc. - make it clear and easy to follow for users. Optionally headline notable changes (emojis are allowed). Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the GitHub compare link at the end. If there were any RC releases before this version, fold their changes into the final release entry.
       - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
       - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
       - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
@@ -60,40 +36,62 @@ body:
       - label: Check the [latest E2E nightly test run](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_nightly.yaml) to confirm that E2E tests are succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml) or use `ci/run-e2e` label on the PR preparing the release.
       - label: Open a PR from your branch to `main`. Set a `backport release/X.Y.Z` label.
       - label: If this is a patch release, ensure that the release branch (e.g. `release/2.9.x`) compared against the latest patch for this minor release (e.g. `v2.9.0`) includes the expected changes that the release should include (e.g. by checking [https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0..release/2.9.x](https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0..release/2.9.x)).
-      - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), approve and merge the automatic backport PR and [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml) on the release branch. Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
+      - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), approve and merge the automatic backport PR and [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml) on the `main` branch for major or minor release, for patch use the release branch. Your tag must use `vX.Y.Z` format. Set `latest` to true if this is be the latest release. That should be the case if a new major.minor release is done or a patch release is done on the latest minor version.
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
+      - label: The release workflow ([.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml)) will update the `latest` branch - if the released version was set to be `latest` - to the just released tag.
+- type: checkboxes
+  id: release_branch
+  attributes:
+    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
+    options:
+      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
+      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main. It should be done after the release workflow has run successfully."
 - type: checkboxes
   id: release_documents
   attributes:
     label: "**For major/minor releases only** Update Release documents"
     options:
-      - label: Trigger [release_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release_docs.yaml) workflow. Note that you will need to update the new version's navigation manifest (e.g. [for 2.7](https://github.com/Kong/docs.konghq.com/blob/main/app/_data/docs_nav_kic_2.7.x.yml) to use the new file after.
+      - label: Trigger [release_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release_docs.yaml) workflow. Note that you will need to update the new version's navigation manifest (e.g. [for 2.7](https://github.com/Kong/docs.konghq.com/blob/main/app/_data/docs_nav_kic_2.7.x.yml) to use the new files (CRDs and CLI arguments references) after.
       - label: Ensure a draft PR is created in [docs.konghq.com](https://github.com/Kong/docs.konghq.com/pulls) repository.
+      - label: If you are adding a new CRD, add a new description file under `app/_includes/md/kic/crd-ref/`. This is a brief description injected into the CRD reference page.
       - label: Update articles in the new version as needed.
-      - label: Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
+      - label: Update `reference/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
       - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml` and update the `release` field to `NEWVERSION`. Add entries for any new articles.
       - label: Make sure that `app/_data/docs_nav_kic_NEWVERSION.yml` links to the latest generated `custom-resources-X.X.X.md`.
-      - label: Add a section to `app/_data/kong_versions.yml` for your version.
-      - label: "Add entries in support policy documents: `app/_includes/md/support-policy.md` and `app/_src/kubernetes-ingress-controller/support-policy.md`."
+      - label: Add a section to `app/_data/kong_versions.yml` for your version and move the `latest` field to version that's being released.
+      - label: "Add entries in support policy documents: `app/_src/kubernetes-ingress-controller/support-policy.md` and `app/_includes/md/kic/support.md`."
       - label: Mark the PR ready for review.
-      - label: Inform and ping the @team-k8s via slack of impending release with a link to the release PR.
+      - label: Inform and ping the @Kong/team-k8s via slack of impending release with a link to the release PR.
+      - label: Ensure that [KGO](https://github.com/Kong/gateway-operator) works with the released version of KIC. Update and release it if needed.
+- type: checkboxes
+  id: release_charts
+  attributes:
+    label: "**For major/minor releases only** Bump charts' dependencies"
+    options:
+      - label: Synchronize `config/crd/bases` with [`kong/kong` charts CRDs][https://github.com/Kong/charts/blob/6c1421bf2f4/charts/kong/crds/custom-resource-definitions.yaml]
+      - label: Update RBAC policy rules (`kong.kubernetesRBACRules` template) in [`kong/kong`'s `charts/kong/templates`][https://github.com/Kong/charts/blob/0b1f635f180220f86d17f5b1b4dd60fc0dc35aae/charts/kong/templates/_helpers.tpl#L1292].
+      - label: Bump the KIC version in the [`kong/kong` Helm chart](https://github.com/Kong/charts/blob/main/charts/kong/values.yaml#L528).
+      - label: Release new version of the `kong/kong` Helm chart.
+      - label: After `kong/kong` is released, bump the dependency on `kong/kong` chart in the [`kong/ingress` Helm chart](https://github.com/Kong/charts/blob/main/charts/ingress/Chart.yaml#L15) and release a new version of the chart.
+- type: textarea
+  id: conformance_tests_report
+  attributes:
+    label: Conformance tests report
+    value: Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/conformance_tests_report.yaml), verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. Update the KIC version in the README's Gateway API conformance badge.
+- type: textarea
+  id: post_release_testing
+  attributes:
+    label: Post release testing
+    value: Appoint volunteer(s) to perform end-to-end testing of newly released features by following official documentation. Testing should cover following all the newly added or modified guides/tutorials, etc.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:
     label: Release Troubleshooting
     value: The [Release Troubleshooting guide](https://github.com/Kong/kubernetes-ingress-controller/blob/main/RELEASE.md#release-troubleshooting) covers strategies for dealing with a release that has failed.
-- type: textarea
-  id: release_trouble_shooting
-  attributes:
-    label: Manual Docker image build
-    value: If the "Build and push development images" Github action is not appropriate for your release, or is not operating properly, you can build and push Docker images manually
 - type: checkboxes
-  id: release_manual_docker_build
+  id: post_release
   attributes:
-    label: Steps
+    label: "**For major/minor releases only** Do post release steps"
     options:
-      - label: Check out your release tag.
-      - label: Run `make container`. Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
-      - label: Add additional tags for your container (e.g. `docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2.0; docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2`)
-      - label: Create a temporary token for the `kongbot` user (see 1Password) and log in using it.
-      - label: Push each of your tags (e.g. `docker push kong/kubernetes-ingress-controller:1.2.0-alpine`)
+      - label: Schedule a retro meeting. Invite the team (team-kubernetes@konghq.com) and a Product Manager. Remember to link to [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys) in the invite description.
+      - label: Update [`konnect-ui-apps`](https://github.com/Kong/konnect-ui-apps/) with latest KIC version (see [konnect-ui-apps#4939](https://github.com/Kong/konnect-ui-apps/pull/4939) as an example). Remove this when [#6738](https://github.com/Kong/kubernetes-ingress-controller/issues/6738) is resolved.

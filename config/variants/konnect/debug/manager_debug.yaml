@@ -21,12 +21,13 @@ spec:
             - exec
             - /manager-debug
             - --
-          args:
-            - --feature-gates=GatewayAlpha=true
-            - --anonymous-reports=false
           env:
             - name: CONTROLLER_LOG_LEVEL
               value: debug
+            - name: CONTROLLER_FEATURE_GATES
+              value: GatewayAlpha=true,KongServiceFacade=true,RewriteURIs=true,FallbackConfiguration=true,KongCustomEntity=true
+            - name: CONTROLLER_ANONYMOUS_REPORTS
+              value: "false"
             - name: CONTROLLER_KONNECT_ADDRESS
               value: https://us.kic.api.konghq.tech
           image: kic-placeholder:placeholder

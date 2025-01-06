@@ -6,8 +6,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 )
 
 type fakeGatewayClientsProvider struct {
@@ -27,6 +27,12 @@ func TestDefaultAdminAPIServicesProvider(t *testing.T) {
 
 		_, ok = p.GetPluginsService()
 		require.False(t, ok)
+
+		_, ok = p.GetConsumerGroupsService()
+		require.False(t, ok)
+
+		_, ok = p.GetInfoService()
+		require.False(t, ok)
 	})
 
 	t.Run("when clients available should return first one", func(t *testing.T) {
@@ -45,5 +51,9 @@ func TestDefaultAdminAPIServicesProvider(t *testing.T) {
 		pluginsSvc, ok := p.GetPluginsService()
 		require.True(t, ok)
 		require.Equal(t, firstClient.AdminAPIClient().Plugins, pluginsSvc)
+
+		consumerGroupsSvc, ok := p.GetConsumerGroupsService()
+		require.True(t, ok)
+		require.Equal(t, firstClient.AdminAPIClient().ConsumerGroups, consumerGroupsSvc)
 	})
 }

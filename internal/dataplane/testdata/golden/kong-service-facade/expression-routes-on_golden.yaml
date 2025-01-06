@@ -1,0 +1,146 @@
+_format_version: "3.0"
+plugins:
+- name: basic-auth
+  service: default.svc-facade-beta.svc.facade
+  tags:
+  - k8s-name:auth-beta
+  - k8s-namespace:default
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+- name: basic-auth
+  service: default.svc-facade-alpha.svc.facade
+  tags:
+  - k8s-name:auth-alpha
+  - k8s-namespace:default
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+services:
+- connect_timeout: 60000
+  host: default.svc-facade-default.svc.facade
+  id: 3f003a09-c285-52aa-a944-c6e156c71e36
+  name: default.svc-facade-default.svc.facade
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path ^= "/") && ((net.protocol == "http") || (net.protocol ==
+      "https"))
+    https_redirect_status_code: 426
+    id: 95255daa-88f8-504b-9098-9300d404c741
+    name: default.beta
+    preserve_host: true
+    priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:beta
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:svc-facade-default
+  - k8s-namespace:default
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.ingress-controller.konghq.com
+  - k8s-version:v1alpha1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: default.svc-facade-beta.svc.facade
+  id: 0487ced6-2552-5ccb-905d-db086a449a6c
+  name: default.svc-facade-beta.svc.facade
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: http.path == "/beta"
+    https_redirect_status_code: 426
+    id: fc5d0d89-6201-5ef9-8785-e58fe257141a
+    name: default.beta..svc-facade-beta.svc.facade
+    preserve_host: true
+    priority: 54975581454341
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:beta
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:svc-facade-beta
+  - k8s-namespace:default
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.ingress-controller.konghq.com
+  - k8s-version:v1alpha1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: default.svc-facade-alpha.svc.facade
+  id: 08c15f88-4777-5a1c-8d1c-28c8f5b252a3
+  name: default.svc-facade-alpha.svc.facade
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: http.path == "/alpha"
+    https_redirect_status_code: 426
+    id: 801503ef-c5b4-572a-854d-c2082ce92711
+    name: default.alpha..svc-facade-alpha.svc.facade
+    preserve_host: true
+    priority: 54975581454342
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:alpha
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:svc-facade-alpha
+  - k8s-namespace:default
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.ingress-controller.konghq.com
+  - k8s-version:v1alpha1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: default.svc-facade-default.svc.facade
+  tags:
+  - k8s-name:svc-facade-default
+  - k8s-namespace:default
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.ingress-controller.konghq.com
+  - k8s-version:v1alpha1
+  targets:
+  - target: 10.244.0.5:80
+- algorithm: round-robin
+  name: default.svc-facade-beta.svc.facade
+  tags:
+  - k8s-name:svc-facade-beta
+  - k8s-namespace:default
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.ingress-controller.konghq.com
+  - k8s-version:v1alpha1
+  targets:
+  - target: 10.244.0.5:80
+- algorithm: round-robin
+  name: default.svc-facade-alpha.svc.facade
+  tags:
+  - k8s-name:svc-facade-alpha
+  - k8s-namespace:default
+  - k8s-kind:KongServiceFacade
+  - k8s-group:incubator.ingress-controller.konghq.com
+  - k8s-version:v1alpha1
+  targets:
+  - target: 10.244.0.5:80

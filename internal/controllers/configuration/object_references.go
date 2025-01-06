@@ -3,23 +3,25 @@ package configuration
 import (
 	"context"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 )
 
 // updateReferredObjects updates reference records where the referrer is the object in parameter obj.
 // currently it only updates reference records to secrets, since we wanted to limit cache size of secrets:
 // https://github.com/Kong/kubernetes-ingress-controller/issues/2868
 func updateReferredObjects(
-	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient *dataplane.KongClient, obj client.Object,
+	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient controllers.DataPlane, obj client.Object,
 ) error {
 	referredSecretNameMap := make(map[k8stypes.NamespacedName]struct{})
 	var referredSecretList []k8stypes.NamespacedName
@@ -44,7 +46,14 @@ func updateReferredObjects(
 	for _, nsName := range referredSecretList {
 		referredSecretNameMap[nsName] = struct{}{}
 	}
-	return ctrlref.UpdateReferencesToSecret(ctx, client, refIndexers, dataplaneClient, obj, referredSecretNameMap)
+	return ctrlref.UpdateReferencesToSecretOrConfigMap(
+		ctx,
+		client,
+		refIndexers,
+		dataplaneClient,
+		obj,
+		referredSecretNameMap,
+		&corev1.Secret{})
 }
 
 func listCoreV1ServiceReferredSecrets(service *corev1.Service) []k8stypes.NamespacedName {
@@ -81,7 +90,7 @@ func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []k8stypes.Namespac
 }
 
 func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, 1)
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
 			Namespace: plugin.Namespace,
@@ -89,11 +98,20 @@ func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.Namespa
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	return referredSecretNames
+
+	for _, patch := range plugin.ConfigPatches {
+		nsName := k8stypes.NamespacedName{
+			Namespace: plugin.Namespace,
+			Name:      patch.ValueFrom.SecretValue.Secret,
+		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+
+	return lo.Uniq(referredSecretNames)
 }
 
 func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, 1)
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
 			Namespace: plugin.ConfigFrom.SecretValue.Namespace,
@@ -101,7 +119,16 @@ func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	return referredSecretNames
+
+	for _, patch := range plugin.ConfigPatches {
+		nsName := k8stypes.NamespacedName{
+			Namespace: patch.ValueFrom.SecretValue.Namespace,
+			Name:      patch.ValueFrom.SecretValue.Secret,
+		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+
+	return lo.Uniq(referredSecretNames)
 }
 
 func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []k8stypes.NamespacedName {

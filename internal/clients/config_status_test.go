@@ -5,23 +5,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 )
 
 func TestChannelConfigNotifier(t *testing.T) {
-	logger := testr.New(t)
-	n := clients.NewChannelConfigNotifier(logger)
+	n := clients.NewChannelConfigNotifier(logr.Discard())
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	ch := n.SubscribeConfigStatus()
+	ch := n.SubscribeGatewayConfigStatus()
 
 	// Call NotifyConfigStatus 5 times to make sure that the method is non-blocking.
 	for i := 0; i < 5; i++ {
-		n.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
+		n.NotifyGatewayConfigStatus(ctx, clients.GatewayConfigApplyStatus{})
 	}
 
 	for i := 0; i < 5; i++ {
@@ -91,11 +90,13 @@ func TestCalculateConfigStatus(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := clients.CalculateConfigStatus(clients.CalculateConfigStatusInput{
-				GatewaysFailed:              tc.gatewayFailure,
-				KonnectFailed:               tc.konnectFailure,
+			result := clients.CalculateConfigStatus(clients.GatewayConfigApplyStatus{
+				ApplyConfigFailed:           tc.gatewayFailure,
 				TranslationFailuresOccurred: tc.translationFailures,
-			})
+			}, clients.KonnectConfigUploadStatus{
+				Failed: tc.konnectFailure,
+			},
+			)
 			require.Equal(t, tc.expectedConfigStatus, result)
 		})
 	}

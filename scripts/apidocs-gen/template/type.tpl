@@ -1,12 +1,17 @@
 {{- define "type" -}}
-{{- $type := . -}}
+{{- $type := $.type -}}
+{{- $isKind := $.isKind -}}
 {{- if markdownShouldRenderType $type -}}
 
+{{- if $isKind -}}
 ### {{ $type.Name }}
+{{ else -}}
+#### {{ $type.Name }}
+{{ end -}}
 
 {{ if $type.IsAlias }}_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType  }}`{{ end }}
 
-{{ $type.Doc }}
+{{ $type.Doc | replace "\n\n" "<br /><br />" }}
 
 {{ if $type.GVK -}}
 <!-- {{ snakecase $type.Name }} description placeholder -->
@@ -21,7 +26,9 @@
 {{ end -}}
 
 {{ range $type.Members -}}
+{{- if not (index .Markers "apireference:kic:exclude") -}}
 | `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+{{ end -}}
 {{ end -}}
 
 {{ end }}

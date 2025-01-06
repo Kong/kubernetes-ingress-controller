@@ -1,5 +1,4 @@
 //go:build integration_tests
-// +build integration_tests
 
 package integration
 
@@ -18,17 +17,12 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -79,7 +73,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -92,14 +86,12 @@ func TestIngressRegexMatchPath(t *testing.T) {
 	cleaner.Add(service)
 
 	for i, tc := range testCases {
-		index := i
-		tc := tc
-		t.Run(fmt.Sprintf("case-%d: %s", index, tc.pathRegex), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case-%d: %s", i, tc.pathRegex), func(t *testing.T) {
 			t.Log("create an ingress")
 			ingress := &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns.Name,
-					Name:      "ingress-regex-path-" + strconv.Itoa(index),
+					Name:      "ingress-regex-path-" + strconv.Itoa(i),
 					Annotations: map[string]string{
 						"konghq.com/strip-path": "true",
 					},
@@ -137,21 +129,17 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected to match")
 			for _, path := range tc.matchPaths {
-				helpers.EventuallyGETPath(t, proxyURL, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+				helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, path, nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, path, ingressWait, waitTick, nil)
+				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, path, ingressWait, waitTick, nil)
 			}
 		})
 	}
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -176,7 +164,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -189,14 +177,12 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 	cleaner.Add(service)
 
 	for i, tc := range testCases {
-		index := i
-		tc := tc
-		t.Run(fmt.Sprintf("case-%d: %s", index, tc.headerRegex), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case-%d: %s", i, tc.headerRegex), func(t *testing.T) {
 			t.Log("create an ingress")
 			ingress := &netv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns.Name,
-					Name:      "ingress-regex-header-" + strconv.Itoa(index),
+					Name:      "ingress-regex-header-" + strconv.Itoa(i),
 					Annotations: map[string]string{
 						"konghq.com/strip-path":                                 "true",
 						"konghq.com/headers." + strings.ToLower(matchHeaderKey): headerRegexPrefix + tc.headerRegex,
@@ -237,8 +223,10 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 			for _, header := range tc.matchHeaders {
 				helpers.EventuallyGETPath(
 					t,
-					proxyURL,
+					proxyHTTPURL,
+					proxyHTTPURL.Host,
 					"/",
+					nil,
 					http.StatusOK,
 					"<title>httpbin.org</title>",
 					map[string]string{matchHeaderKey: header},
@@ -251,7 +239,8 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 			for _, header := range tc.notMatchHeaders {
 				helpers.EventuallyExpectHTTP404WithNoRoute(
 					t,
-					proxyURL,
+					proxyHTTPURL,
+					proxyHTTPURL.Host,
 					"/",
 					ingressWait,
 					waitTick,

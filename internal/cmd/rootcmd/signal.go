@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 )
 
 var (

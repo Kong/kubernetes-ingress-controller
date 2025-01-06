@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"net/http"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/incubator/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -35,6 +36,7 @@ type Interface interface {
 	ConfigurationV1() configurationv1.ConfigurationV1Interface
 	ConfigurationV1beta1() configurationv1beta1.ConfigurationV1beta1Interface
 	ConfigurationV1alpha1() configurationv1alpha1.ConfigurationV1alpha1Interface
+	IncubatorV1alpha1() incubatorv1alpha1.IncubatorV1alpha1Interface
 }
 
 // Clientset contains the clients for groups.
@@ -43,6 +45,7 @@ type Clientset struct {
 	configurationV1       *configurationv1.ConfigurationV1Client
 	configurationV1beta1  *configurationv1beta1.ConfigurationV1beta1Client
 	configurationV1alpha1 *configurationv1alpha1.ConfigurationV1alpha1Client
+	incubatorV1alpha1     *incubatorv1alpha1.IncubatorV1alpha1Client
 }
 
 // ConfigurationV1 retrieves the ConfigurationV1Client
@@ -58,6 +61,11 @@ func (c *Clientset) ConfigurationV1beta1() configurationv1beta1.ConfigurationV1b
 // ConfigurationV1alpha1 retrieves the ConfigurationV1alpha1Client
 func (c *Clientset) ConfigurationV1alpha1() configurationv1alpha1.ConfigurationV1alpha1Interface {
 	return c.configurationV1alpha1
+}
+
+// IncubatorV1alpha1 retrieves the IncubatorV1alpha1Client
+func (c *Clientset) IncubatorV1alpha1() incubatorv1alpha1.IncubatorV1alpha1Interface {
+	return c.incubatorV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -116,6 +124,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.incubatorV1alpha1, err = incubatorv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
@@ -140,6 +152,7 @@ func New(c rest.Interface) *Clientset {
 	cs.configurationV1 = configurationv1.New(c)
 	cs.configurationV1beta1 = configurationv1beta1.New(c)
 	cs.configurationV1alpha1 = configurationv1alpha1.New(c)
+	cs.incubatorV1alpha1 = incubatorv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

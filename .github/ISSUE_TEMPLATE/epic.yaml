@@ -1,0 +1,46 @@
+name: ☔ Epic
+description: Use this template to propose a new feature or enhancement that requires multiple changes across the project.
+labels: [ epic ]
+title: ☔
+body:
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: Please search to see if an issue already exists for the bug you encountered.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: textarea
+    attributes:
+      label: Problem Statement
+      description: Without specifying a solution, describe what the project is missing today.
+      placeholder: |
+        The rotating project logo has a fixed size and color.
+        There is no way to make it larger and more shiny.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Supporting documentation
+      description: |
+        Link to supporting documentation, such as design documents, user stories, or other relevant information.
+      placeholder: |
+        User stories:
+        - As a user, I want to control the size of the rotating logo using a CLI flag.
+        - As a user, I want to control the color of the rotating logo using a CLI flag.
+        [Design document](https://example.com/design)
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Acceptance Criteria
+      value: |
+        ### Implementation
+        - [ ] Design
+        - [ ] Code
+        
+        ### Docs 
+        - [ ] Guide and required documentation
+        - [ ] User-acceptance testing (someone not involved in the project tries the guide and the feature)
+    validations:
+      required: true

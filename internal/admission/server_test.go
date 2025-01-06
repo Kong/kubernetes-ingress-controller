@@ -9,15 +9,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/lithammer/dedent"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -30,34 +35,59 @@ type KongFakeValidator struct {
 
 func (v KongFakeValidator) ValidateConsumer(
 	_ context.Context,
-	_ configuration.KongConsumer,
+	_ kongv1.KongConsumer,
+) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateConsumerGroup(
+	_ context.Context,
+	_ kongv1beta1.KongConsumerGroup,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidatePlugin(
 	_ context.Context,
-	_ configuration.KongPlugin,
+	_ kongv1.KongPlugin,
+	_ []*corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidateClusterPlugin(
 	_ context.Context,
-	_ configuration.KongClusterPlugin,
+	_ kongv1.KongClusterPlugin,
+	_ []*corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateCredential(_ context.Context, _ corev1.Secret) (bool, string, error) {
+func (v KongFakeValidator) ValidateCredential(context.Context, corev1.Secret) (bool, string) {
+	return v.Result, v.Message
+}
+
+func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayapi.Gateway) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayv1beta1.Gateway) (bool, string, error) {
+func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayapi.HTTPRoute) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayv1beta1.HTTPRoute) (bool, string, error) {
+func (v KongFakeValidator) ValidateIngress(_ context.Context, _ netv1.Ingress) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateVault(_ context.Context, _ kongv1alpha1.KongVault) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateCustomEntity(_ context.Context, _ kongv1alpha1.KongCustomEntity) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateService(_ context.Context, _ corev1.Service) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
@@ -66,7 +96,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	res := httptest.NewRecorder()
 	server := RequestHandler{
 		Validator: KongFakeValidator{},
-		Logger:    logrus.New(),
+		Logger:    zapr.NewLogger(zap.NewNop()),
 	}
 	handler := http.HandlerFunc(server.ServeHTTP)
 
@@ -74,7 +104,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	assert.Nil(err)
 	handler.ServeHTTP(res, req)
 	assert.Equal(400, res.Code)
-	assert.Equal("admission review object is missing\n",
+	assert.Equal("Admission review object is missing\n",
 		res.Body.String())
 }
 
@@ -337,7 +367,7 @@ func TestValidationWebhook(t *testing.T) {
 				res := httptest.NewRecorder()
 				server := RequestHandler{
 					Validator: tt.validator,
-					Logger:    logrus.New(),
+					Logger:    zapr.NewLogger(zap.NewNop()),
 				}
 				handler := http.HandlerFunc(server.ServeHTTP)
 

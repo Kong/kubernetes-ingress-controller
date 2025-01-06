@@ -1,0 +1,126 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: httproute.default.httproute-testing.3
+  id: efb4a7d7-791f-504e-b005-0bd38bf1435e
+  name: httproute.default.httproute-testing.3
+  port: 8080
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/nginx") || (http.path ^= "/nginx/")
+    https_redirect_status_code: 426
+    id: b4887f46-40a4-568c-a6e4-5bd2f6897c97
+    name: httproute.default.httproute-testing._.3.0
+    preserve_host: true
+    priority: 35184414035967
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:nginx
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httproute.default.httproute-testing.1
+  id: 672dc964-a7f8-5a80-a518-96fc39500cc8
+  name: httproute.default.httproute-testing.1
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/content") || (http.path ^= "/content/")
+    https_redirect_status_code: 426
+    id: 73ae1362-1f15-50ab-b106-def677ce7d23
+    name: httproute.default.httproute-testing._.2.0
+    preserve_host: true
+    priority: 35184430813183
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:content
+  - expression: (http.path == "/echo") || (http.path ^= "/echo/")
+    https_redirect_status_code: 426
+    id: 88d36cfe-fbb0-5d7a-93c1-df18d1db3a12
+    name: httproute.default.httproute-testing._.1.0
+    preserve_host: true
+    priority: 35184405647359
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:echo
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httproute.default.httproute-testing.0
+  id: 4e3cb785-a8d0-5866-aa05-117f7c64f24d
+  name: httproute.default.httproute-testing.0
+  port: 8080
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/httproute-testing") || (http.path ^= "/httproute-testing/")
+    https_redirect_status_code: 426
+    id: 91833860-2041-5eea-abf8-a1e85b7c64cf
+    name: httproute.default.httproute-testing._.0.0
+    preserve_host: true
+    priority: 35184514699263
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:httproute-testing
+  tags:
+  - k8s-name:httproute-testing
+  - k8s-namespace:default
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: httproute.default.httproute-testing.3
+  tags:
+  - k8s-name:nginx
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  name: httproute.default.httproute-testing.1
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  name: httproute.default.httproute-testing.0
+  tags:
+  - k8s-name:httproute-testing
+  - k8s-namespace:default
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1

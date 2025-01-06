@@ -7,9 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )
 
 func ingressWithClass(class string) *netv1.Ingress {
@@ -29,19 +28,6 @@ func ingressWithClassAnnotation(class string) *netv1.Ingress {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				annotations.IngressClassKey: class,
-			},
-		},
-	}
-}
-
-func knativeIngressWithClassAnnotation(class string) *knative.Ingress {
-	if len(class) == 0 {
-		return &knative.Ingress{}
-	}
-	return &knative.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				annotations.KnativeIngressClassKey: class,
 			},
 		},
 	}
@@ -84,13 +70,6 @@ func TestMatchesIngressClass(t *testing.T) {
 	for idx, tt := range cases {
 		t.Run(fmt.Sprintf("ingressWithClassAnnotation test case %d", idx), func(t *testing.T) {
 			got := MatchesIngressClass(ingressWithClassAnnotation(tt.class), tt.controllerClass, tt.isDefault)
-			require.Equal(t, tt.want, got)
-		})
-	}
-
-	for idx, tt := range cases {
-		t.Run(fmt.Sprintf("knativeIngressWithClassAnnotation test case %d", idx), func(t *testing.T) {
-			got := MatchesIngressClass(knativeIngressWithClassAnnotation(tt.class), tt.controllerClass, tt.isDefault)
 			require.Equal(t, tt.want, got)
 		})
 	}

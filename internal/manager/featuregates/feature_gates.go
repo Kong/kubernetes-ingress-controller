@@ -11,31 +11,35 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// KnativeFeature is the name of the feature-gate for enabling/disabling Knative.
-	KnativeFeature = "Knative"
-
-	// GatewayFeature is the name of the feature-gate for enabling/disabling GatewayFeature APIs.
-	GatewayFeature = "Gateway"
-
 	// GatewayAlphaFeature is the name of the feature-gate for enabling or
 	// disabling the Alpha maturity APIs and relevant features for Gateway API.
 	GatewayAlphaFeature = "GatewayAlpha"
 
-	// CombinedRoutesFeature is the name of the feature-gate for the newer object
-	// translation logic that will combine routes for kong services when translating
-	// objects like Ingress instead of creating a route per path.
-	CombinedRoutesFeature = "CombinedRoutes"
+	// FillIDsFeature is the name of the feature-gate that makes KIC fill in the ID fields of Kong entities (Services,
+	// Routes, and Consumers). It ensures that IDs remain stable across restarts of the controller.
+	FillIDsFeature = "FillIDs"
 
-	// ExpressionRoutesFeature is the name of the feature-gate for enabling KIC to translate
-	// supported kubernetes objects into expression based routes in kong configrurations
-	// when controlled kong gateway uses expression based router by configuring `router_flavor` to `expressions`.
-	// Note: this feature is experimental and some resources and features may not be supported.
-	// See: https://docs.konghq.com/gateway/latest/key-concepts/routes/expressions/ about expression based routes in Kong 3.0+.
-	ExpressionRoutesFeature = "ExpressionRoutes"
+	// RewriteURIsFeature is the name of the feature-gate for enabling/disabling konghq.com/rewrite annotation.
+	RewriteURIsFeature = "RewriteURIs"
 
-	// CombinedServicesFeature is the name of the feature-gate that makes KIC create a single Kong Service when
-	// a Kubernetes Service is referenced by multiple netv1.Ingresses. It's effective only when CombinedRoutesFeature is enabled.
-	CombinedServicesFeature = "CombinedServices"
+	// KongServiceFacade is the name of the feature-gate for enabling KongServiceFacade CR reconciliation.
+	KongServiceFacade = "KongServiceFacade"
+
+	// SanitizeKonnectConfigDumps is the name of the feature-gate that enables sanitization of Konnect config dumps.
+	SanitizeKonnectConfigDumps = "SanitizeKonnectConfigDumps"
+
+	// FallbackConfiguration is the name of the feature-gate that enables generating fallback configuration in the case
+	// of entity errors returned by the Kong Admin API.
+	FallbackConfiguration = "FallbackConfiguration"
+
+	// KongCustomEntity is the name of the feature-gate for enabling KongCustomEntity CR reconciliation
+	// for configuring custom Kong entities that KIC does not support yet.
+	// Requires feature gate `FillIDs` to be enabled.
+	KongCustomEntity = "KongCustomEntity"
+
+	// CombinedServicesFromDifferentHTTPRoutes is the name of the feature gate that enables combining rules sharing the same backendRefs
+	// from different HTTPRoutes in the same namespace into one Kong gateway service to reduce total number of Kong gateway services.
+	CombinedServicesFromDifferentHTTPRoutes = "CombinedServicesFromDifferentHTTPRoutes"
 
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
@@ -50,12 +54,17 @@ func New(setupLog logr.Logger, featureGates map[string]bool) (FeatureGates, erro
 
 	// override the default settings
 	for feature, enabled := range featureGates {
-		setupLog.Info("found configuration option for gated feature", "feature", feature, "enabled", enabled)
+		setupLog.Info("Found configuration option for gated feature", "feature", feature, "enabled", enabled)
 		_, ok := ctrlMap[feature]
 		if !ok {
 			return ctrlMap, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, DocsURL)
 		}
 		ctrlMap[feature] = enabled
+	}
+
+	// KongCustomEntity requires FillIDs to be enabled, because custom entities requires stable IDs to fill in its "foreign" fields.
+	if ctrlMap.Enabled(KongCustomEntity) && !ctrlMap.Enabled(FillIDsFeature) {
+		return nil, fmt.Errorf("%s is required if %s is enabled", FillIDsFeature, KongCustomEntity)
 	}
 
 	return ctrlMap, nil
@@ -70,13 +79,15 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // manager configuration options if present.
 //
 // NOTE: if you're adding a new feature gate, it needs to be added here.
-func GetFeatureGatesDefaults() map[string]bool {
+func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
-		KnativeFeature:          false,
-		GatewayFeature:          true,
-		GatewayAlphaFeature:     false,
-		CombinedRoutesFeature:   true,
-		ExpressionRoutesFeature: false,
-		CombinedServicesFeature: false,
+		GatewayAlphaFeature:                     false,
+		FillIDsFeature:                          true,
+		RewriteURIsFeature:                      false,
+		KongServiceFacade:                       false,
+		SanitizeKonnectConfigDumps:              true,
+		FallbackConfiguration:                   false,
+		KongCustomEntity:                        true,
+		CombinedServicesFromDifferentHTTPRoutes: false,
 	}
 }

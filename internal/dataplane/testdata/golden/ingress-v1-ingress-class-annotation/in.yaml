@@ -1,0 +1,28 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foo
+  namespace: foo-namespace
+  annotations:
+    kubernetes.io/ingress.class: kong
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: foo-svc
+            port:
+              number: 80
+        pathType: ImplementationSpecific
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: foo-svc
+  namespace: foo-namespace
+spec:
+  ports:
+    - port: 80

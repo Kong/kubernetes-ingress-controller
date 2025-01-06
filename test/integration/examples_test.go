@@ -1,185 +1,25 @@
 //go:build integration_tests
-// +build integration_tests
 
 package integration
 
 import (
-	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 const examplesDIR = "../../examples"
 
-func TestHTTPRouteExample(t *testing.T) {
-	var (
-		httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
-		ctx                       = context.Background()
-	)
-
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("configuring test and setting up API clients")
-	gwc, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Logf("applying yaml manifest %s", httprouteExampleManifests)
-	b, err := os.ReadFile(httprouteExampleManifests)
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
-	cleaner.AddManifest(string(b))
-
-	t.Logf("verifying that the Gateway receives listen addresses")
-	var gatewayAddr string
-	require.Eventually(t, func() bool {
-		obj, err := gwc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, "kong", metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		for _, addr := range obj.Status.Addresses {
-			if addr.Type != nil && *addr.Type == gatewayv1beta1.IPAddressType {
-				gatewayAddr = addr.Value
-				return true
-			}
-		}
-
-		return false
-	}, gatewayUpdateWaitTime, waitTick)
-
-	t.Logf("verifying that the HTTPRoute becomes routable")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
-
-	t.Logf("verifying that the backendRefs are being loadbalanced")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>Welcome to nginx!</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
-}
-
-func TestUDPRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
-	t.Log("locking UDP port")
-	udpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking UDP port")
-		udpMutex.Unlock()
-	})
-
-	var (
-		ctx                      = context.Background()
-		udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
-	)
-
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
-	b, err := os.ReadFile(udpRouteExampleManifests)
-	// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
-	// destination service port. Once parentRef port functionality is stable, we should remove this
-	s := string(b)
-	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), s))
-	cleaner.AddManifest(s)
-
-	t.Logf("configuring test and setting up API clients")
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: time.Second * 5,
-			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), 9999))
-		},
-	}
-
-	t.Logf("verifying that the UDPRoute becomes routable")
-	require.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kernel.org")
-		if err != nil {
-			t.Logf("failed resolving kernel.org: %v", err)
-			return false
-		}
-		return true
-	}, ingressWait, waitTick)
-}
-
-func TestTCPRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
-	t.Log("locking TCP port")
-	tcpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking TCP port")
-		tcpMutex.Unlock()
-	})
-
-	var (
-		ctx                      = context.Background()
-		tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
-	)
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
-	b, err := os.ReadFile(tcprouteExampleManifests)
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
-	cleaner.AddManifest(string(b))
-
-	t.Log("verifying that TCPRoute becomes routable")
-	require.Eventually(t, func() bool {
-		responds, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
-		return err == nil && responds
-	}, ingressWait, waitTick)
-}
-
 func TestTLSRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -198,125 +38,18 @@ func TestTLSRouteExample(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
 	cleaner.AddManifest(string(b))
+	// Copy pasted cert from gateway-tlsroute.yaml to use it in certPool for checking validity.
+	const caForCert = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVGekNDQXYrZ0F3SUJBZ0lVZTFvWnRWQVBOM1V2bXRkSHo5OFpYcDd2a3Znd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2dZZ3hDekFKQmdOVkJBWVRBbFZUTVJNd0VRWURWUVFJREFwRFlXeHBabTl5Ym1saE1SWXdGQVlEVlFRSApEQTFUWVc0Z1JuSmhibU5wYzJOdk1SSXdFQVlEVlFRS0RBbExiMjVuSUVsdVl5NHhHREFXQmdOVkJBc01EMVJsCllXMGdTM1ZpWlhKdVpYUmxjekVlTUJ3R0ExVUVBd3dWZEd4emNtOTFkR1V1YTI5dVp5NWxlR0Z0Y0d4bE1DQVgKRFRJME1EY3dOVEUwTlRjek5sb1lEekl4TWpRd05qRXhNVFExTnpNMldqQ0JpREVMTUFrR0ExVUVCaE1DVlZNeApFekFSQmdOVkJBZ01Da05oYkdsbWIzSnVhV0V4RmpBVUJnTlZCQWNNRFZOaGJpQkdjbUZ1WTJselkyOHhFakFRCkJnTlZCQW9NQ1V0dmJtY2dTVzVqTGpFWU1CWUdBMVVFQ3d3UFZHVmhiU0JMZFdKbGNtNWxkR1Z6TVI0d0hBWUQKVlFRRERCVjBiSE55YjNWMFpTNXJiMjVuTG1WNFlXMXdiR1V3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQgpEd0F3Z2dFS0FvSUJBUURleklnV1E4L1crYUx4VERPanZvOGY5OVpGYVBoOWQrTkFYQ1NmSTFLcS9TdVdrMnJyClcxKyt2QzA4MERWTnc4dmx3Z0VRUUlhV3c2bVh6V2hQNmppdHIvemxSVGg4TWFwSFMvTXhXbjN0WnFKZ3ZVdVoKMkFnMTBXUE14UHV4UUlaU2FucU95M0RNeDJDcGlMQ1c0SVBERlRhQm5XT1hOeFg4bEMvQit6QlZYYzBIYVdUUwpqUFViUUZONGVGcEFtcHlxak1Dak53Y1VSd3BBVSs0cXpDeVZ2ZU5VU0RLWHpoN04rUDlPRkFiVjNqL0IyOXpqCk9sVFZKNTUvZ2VUeGJqZVZCa0ZDZXAvQkh4UEY4MnhtWUJOQnJ2WVU5dFkyc0JCZmh6OGFUNFJaMmx5NXJxVnYKRnZ4TDF1R3ZmU29CeUdoVTVFWDg0NmZVYm5uc2xJSDdBKzdOQWdNQkFBR2pkVEJ6TUIwR0ExVWREZ1FXQkJTdwp2c2VNR08wN1JXMXpxVWNsOFZEeXY2M25HakFmQmdOVkhTTUVHREFXZ0JTd3ZzZU1HTzA3UlcxenFVY2w4VkR5CnY2M25HakFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQ0FHQTFVZEVRUVpNQmVDRlhSc2MzSnZkWFJsTG10dmJtY3UKWlhoaGJYQnNaVEFOQmdrcWhraUc5dzBCQVFzRkFBT0NBUUVBa3JJQWp6Ulhadm51bjAvMGc2NHNnK0laaDZXLwo0UWFsYklwWlh0Z2JrKzE3d1FVN0hrTFNaS2tmL2IwZHlTR1RpLzBDMUdYK1lxRTlKb2NtWjdjUWI2Y0RheDl3CjBUeFZ1NVRxYWVTQVlLZktGZlExcjB5VzhjYVc3TFhoYVZ3Lzh2YTVQMWRzdnkwNUs0K3dydCtBK1NudFRxL2EKYzV2T0ZQcmk3ZlBMWEZ5SVE5eXhVZXdSYnphdUY2SEE5eDY4bWt3WUVvSTUxMnM1SjBtUVByUGhPN1VhRnFwVApQL3NqdXdHNk1qR0t1MzU2VXJKTGlFV1NkZmtiTkU0bGFLa3Z2U0paMjh3MXVGemsrOUl5QWpiRzQ3RXl3dTVICjJ0ZzZzV3VTa29xT2hwc3JTMjBteFlkVHU0dVpWZXdlR1FjbmZXUGNjNlRQME8vQzZCZGpRVFB3Nmc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+	certPool := x509.NewCertPool()
+	decodedCert, err := base64.StdEncoding.DecodeString(caForCert)
+	assert.NoError(t, err)
+	assert.True(t, certPool.AppendCertsFromPEM(decodedCert))
 
 	t.Log("verifying that TLSRoute becomes routable")
-	require.Eventually(t, func() bool {
-		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
-			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", false)
-		return err == nil && responded
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		err := tlsEchoResponds(
+			proxyTLSURL, "tlsroute-example-manifest", "tlsroute.kong.example", certPool, true,
+		)
+		assert.NoError(c, err)
 	}, ingressWait, waitTick)
-}
-
-func TestGRPCRouteExample(t *testing.T) {
-	var (
-		grpcrouteExampleManifests = fmt.Sprintf("%s/gateway-grpcroute.yaml", examplesDIR)
-		ctx                       = context.Background()
-	)
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", grpcrouteExampleManifests)
-	b, err := os.ReadFile(grpcrouteExampleManifests)
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
-	cleaner.AddManifest(string(b))
-
-	t.Log("verifying that GRPCRoute becomes routable")
-	require.Eventually(t, func() bool {
-		err := grpcEchoResponds(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort), "example.com", "kong")
-		if err != nil {
-			t.Log(err)
-		}
-		return err == nil
-	}, ingressWait, waitTick)
-}
-
-func TestIngressExample(t *testing.T) {
-	var (
-		ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
-		ctx                     = context.Background()
-	)
-
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", ingressExampleManifests)
-	b, err := os.ReadFile(ingressExampleManifests)
-	require.NoError(t, err)
-	manifests := replaceIngressClassInManifests(string(b))
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
-	cleaner.AddManifest(string(b))
-
-	t.Log("waiting for ingress resource to have an address")
-	var ingAddr string
-	require.Eventually(t, func() bool {
-		ing, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Get(ctx, "httpbin-ingress", metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		for _, lbing := range ing.Status.LoadBalancer.Ingress {
-			if lbing.IP != "" {
-				ingAddr = lbing.IP
-				return true
-			}
-		}
-
-		return false
-	}, ingressWait, waitTick)
-
-	t.Logf("verifying that the Ingress resource becomes routable")
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/", ingAddr))
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
-		}
-		return false
-	}, ingressWait, waitTick)
-}
-
-func TestUDPIngressExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
-	t.Log("locking UDP port")
-	udpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking UDP port")
-		udpMutex.Unlock()
-	})
-
-	var (
-		udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
-		ctx                        = context.Background()
-	)
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", udpingressExampleManifests)
-	b, err := os.ReadFile(udpingressExampleManifests)
-	require.NoError(t, err)
-	manifests := replaceIngressClassInManifests(string(b))
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
-	cleaner.AddManifest(string(b))
-
-	t.Log("building a DNS query to request of CoreDNS")
-	query := new(dns.Msg)
-	query.Id = dns.Id()
-	query.Question = make([]dns.Question, 1)
-	query.Question[0] = dns.Question{Name: "kernel.org.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
-
-	t.Log("verifying that the UDPIngress resource becomes routable")
-	dnsUDPClient := new(dns.Client)
-	assert.Eventually(t, func() bool {
-		_, _, err := dnsUDPClient.Exchange(query, fmt.Sprintf("%s:9999", proxyUDPURL.Hostname()))
-		return err == nil
-	}, ingressWait, waitTick)
-}
-
-func replaceIngressClassInManifests(manifests string) string {
-	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, consts.IngressClass))
 }

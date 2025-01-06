@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1"
+	v1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
@@ -30,6 +30,18 @@ type FakeConfigurationV1alpha1 struct {
 
 func (c *FakeConfigurationV1alpha1) IngressClassParameterses(namespace string) v1alpha1.IngressClassParametersInterface {
 	return &FakeIngressClassParameterses{c, namespace}
+}
+
+func (c *FakeConfigurationV1alpha1) KongCustomEntities(namespace string) v1alpha1.KongCustomEntityInterface {
+	return &FakeKongCustomEntities{c, namespace}
+}
+
+func (c *FakeConfigurationV1alpha1) KongLicenses() v1alpha1.KongLicenseInterface {
+	return &FakeKongLicenses{c}
+}
+
+func (c *FakeConfigurationV1alpha1) KongVaults() v1alpha1.KongVaultInterface {
+	return &FakeKongVaults{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

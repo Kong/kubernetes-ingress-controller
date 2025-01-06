@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -12,15 +13,16 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // KongAdminAPIServiceReconciler reconciles Kong Admin API Service Endpointslices
@@ -29,17 +31,15 @@ type KongAdminAPIServiceReconciler struct {
 	client.Client
 
 	// ServiceNN is the service NamespacedName to watch EndpointSlices for.
-	ServiceNN k8stypes.NamespacedName
-	// PortNames is the set of port names that Admin API Service ports will be
-	// matched against.
-	PortNames        sets.Set[string]
+	ServiceNN        k8stypes.NamespacedName
 	Log              logr.Logger
 	CacheSyncTimeout time.Duration
 	// EndpointsNotifier is used to notify about Admin API endpoints changes.
 	// We're going to call this only with endpoints when they change.
 	EndpointsNotifier EndpointsNotifier
 
-	Cache DiscoveredAdminAPIsCache
+	Cache               DiscoveredAdminAPIsCache
+	AdminAPIsDiscoverer AdminAPIsDiscoverer
 }
 
 type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
@@ -48,28 +48,44 @@ type EndpointsNotifier interface {
 	Notify(adminAPIs []adminapi.DiscoveredAdminAPI)
 }
 
+type AdminAPIsDiscoverer interface {
+	AdminAPIsFromEndpointSlice(discoveryv1.EndpointSlice) (
+		sets.Set[adminapi.DiscoveredAdminAPI],
+		error,
+	)
+}
+
+var _ controllers.Reconciler = &KongAdminAPIServiceReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongAdminAPIEndpoints", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
 	if r.Cache == nil {
 		r.Cache = make(DiscoveredAdminAPIsCache)
 	}
 
-	return c.Watch(
-		&source.Kind{Type: &discoveryv1.EndpointSlice{}},
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice),
-	)
+	return ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongAdminAPIEndpoints").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+			// In order to get up to date Admin API endpoints in all KIC replicas, we need to
+			// not require leader election so that AdminAPI controller runs in all replicas
+			// and notifies about the changes regardless of the leader election status.
+			NeedLeaderElection: lo.ToPtr(false),
+		}).
+		Watches(&discoveryv1.EndpointSlice{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice)),
+		).
+		Complete(r)
+}
+
+// SetLogger sets the logger.
+func (r *KongAdminAPIServiceReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 func (r *KongAdminAPIServiceReconciler) shouldReconcileEndpointSlice(obj client.Object) bool {
@@ -107,10 +123,10 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		return ctrl.Result{}, err
 	}
-	r.Log.Info("reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+	r.Log.Info("Reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 	if !endpoints.DeletionTimestamp.IsZero() {
-		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
+		r.Log.V(logging.DebugLevel).Info("EndpointSlice is being deleted",
 			"type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name,
 		)
 
@@ -127,7 +143,13 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	if !ok {
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
-		r.Cache[req.NamespacedName] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
+		var err error
+		r.Cache[req.NamespacedName], err = r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf(
+				"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
+			)
+		}
 		r.notify()
 		return ctrl.Result{}, nil
 	}
@@ -135,7 +157,12 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	// We do have an entry for this EndpointSlice.
 	// If the address set is the same, do nothing.
 	// If the address set has changed, update the cache and send a notification.
-	addresses := adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
+	addresses, err := r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf(
+			"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
+		)
+	}
 	if cached.Equal(addresses) {
 		// No change, don't notify
 		return ctrl.Result{}, nil
@@ -149,8 +176,9 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 
 func (r *KongAdminAPIServiceReconciler) notify() {
 	discovered := flattenDiscoveredAdminAPIs(r.Cache)
-	r.Log.V(util.DebugLevel).
-		Info("notifying about newly detected Admin APIs", "admin_apis", discovered)
+	addresses := lo.Map(discovered, func(d adminapi.DiscoveredAdminAPI, _ int) string { return d.Address })
+	r.Log.V(logging.DebugLevel).
+		Info("Notifying about newly detected Admin APIs", "admin_apis", addresses)
 	r.EndpointsNotifier.Notify(discovered)
 }
 

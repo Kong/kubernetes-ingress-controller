@@ -28,6 +28,15 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
+const (
+	// openShiftVersionPodNamespace is a namespace expected to contain pods whose environment includes OpenShift version
+	// information.
+	openShiftVersionPodNamespace = "openshift-apiserver-operator"
+	// openShiftVersionPodApp is a value for the "app" label to select pods whose environment includes OpenShift version
+	// information.
+	openShiftVersionPodApp = "openshift-apiserver-operator"
+)
+
 type mockGatewaysCounter int
 
 func (m mockGatewaysCounter) GatewayClientsCount() int {
@@ -41,8 +50,7 @@ func TestCreateManager(t *testing.T) {
 			"kv": "3.1.1",
 		}
 		featureGates = map[string]bool{
-			"gateway": true,
-			"knative": false,
+			"gatewayalpha": true,
 		}
 		publishService = k8stypes.NamespacedName{
 			Namespace: "kong",
@@ -111,8 +119,7 @@ func TestCreateManager(t *testing.T) {
 						"signal=test-signal;"+
 						"db=off;"+
 						"feature-gateway-service-discovery=true;"+
-						"feature-gateway=true;"+
-						"feature-knative=false;"+
+						"feature-gatewayalpha=true;"+
 						"feature-konnect-sync=true;"+
 						"hn=%s;"+
 						"kv=3.1.1;"+
@@ -122,8 +129,9 @@ func TestCreateManager(t *testing.T) {
 						"k8s_provider=UNKNOWN;"+
 						"k8sv=v1.24.5;"+
 						"k8sv_semver=v1.24.5;"+
+						"openshift_version=4.13.0;"+
 						"k8s_nodes_count=4;"+
-						"k8s_pods_count=10;"+
+						"k8s_pods_count=11;"+
 						"k8s_services_count=18;"+
 						"kinm=c3,l2,l3,l4;"+
 						"mdep=i3,k3,km3,l3,t3;"+
@@ -170,7 +178,6 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 	k8sclient := testk8sclient.NewSimpleClientset()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -573,6 +580,38 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
+				},
+			},
+		},
+
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: openShiftVersionPodNamespace,
+			},
+			Spec: corev1.NamespaceSpec{},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: openShiftVersionPodNamespace,
+				Name:      openShiftVersionPodApp + "-85c4c6dbb7-zbrkm",
+				Labels: map[string]string{
+					"app": openShiftVersionPodApp,
+				},
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "worker",
+						Env: []corev1.EnvVar{
+							{
+								// this is hardcoded here. the upstream const in telemetry lives inside an internal package and
+								// doesn't make sense to stick elsewhere. this is, however, only in a test, and it will be obvious if
+								// we break it. not ideal, but only requires some additional busywork to fix if we change upstream.
+								Name:  "OPERATOR_IMAGE_VERSION",
+								Value: "4.13.0",
+							},
+						},
+					},
 				},
 			},
 		},

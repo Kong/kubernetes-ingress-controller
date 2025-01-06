@@ -33,8 +33,9 @@ e2e-tests
 *.out
 *.out.*
 
-# for this repo only
+# For this repo only
 kong-ingress-controller
+kong-kubernetes-ingress-controller.yaml
 
 # ignore vendor tree
 vendor
@@ -69,7 +70,7 @@ railgun
 *~
 
 # Delve Debugger Output
-__debug_bin
+__debug_bin*
 
 # tmp files
 client-gen-tmp/*

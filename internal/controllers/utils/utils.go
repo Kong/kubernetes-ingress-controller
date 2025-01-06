@@ -8,7 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )
 
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
@@ -24,8 +26,6 @@ func IsDefaultIngressClass(obj client.Object) bool {
 // MatchesIngressClass indicates whether or not an object belongs to a given ingress class.
 func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDefault bool) bool {
 	objectIngressClass := obj.GetAnnotations()[annotations.IngressClassKey]
-	objectKnativeClass := obj.GetAnnotations()[annotations.KnativeIngressClassKey]
-	objectKnativeClassAlt := obj.GetAnnotations()[annotations.KnativeIngressClassDeprecatedKey]
 	if isDefault && IsIngressClassEmpty(obj) {
 		return true
 	}
@@ -34,17 +34,13 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 			return true
 		}
 	}
-
-	switch controllerIngressClass {
-	case objectIngressClass:
-		return true
-	case objectKnativeClass:
-		return true
-	case objectKnativeClassAlt:
-		return true
+	// For KongCustomEntities, we check whether the `spec.ControllerName` matches.
+	if customEntity, isKongCustomEntity := obj.(*kongv1alpha1.KongCustomEntity); isKongCustomEntity {
+		if customEntity.Spec.ControllerName == controllerIngressClass {
+			return true
+		}
 	}
-
-	return false
+	return objectIngressClass == controllerIngressClass
 }
 
 // GeneratePredicateFuncsForIngressClassFilter builds a controller-runtime reconciliation predicate function which filters out objects
@@ -76,18 +72,12 @@ func IsIngressClassEmpty(obj client.Object) bool {
 		if _, ok := obj.GetAnnotations()[annotations.IngressClassKey]; ok {
 			return false
 		}
-		if _, ok := obj.GetAnnotations()[annotations.KnativeIngressClassKey]; ok {
-			return false
-		}
-		if _, ok := obj.GetAnnotations()[annotations.KnativeIngressClassDeprecatedKey]; ok {
-			return false
-		}
 		return true
 	}
 }
 
 // CRDExists returns false if CRD does not exist.
 func CRDExists(restMapper meta.RESTMapper, gvr schema.GroupVersionResource) bool {
-	_, err := restMapper.KindFor(gvr)
-	return !meta.IsNoMatchError(err)
+	_, err := restMapper.KindsFor(gvr)
+	return err == nil
 }

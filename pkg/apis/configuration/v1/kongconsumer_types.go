@@ -26,9 +26,10 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=kc,categories=kong-ingress-controller
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.username`,description="Username of a Kong Consumer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="has(self.username) || has(self.custom_id)", message="Need to provide either username or custom_id"
 
 // KongConsumer is the Schema for the kongconsumers API.
 type KongConsumer struct {
@@ -44,7 +45,16 @@ type KongConsumer struct {
 
 	// Credentials are references to secrets containing a credential to be
 	// provisioned in Kong.
+	// +listType=set
 	Credentials []string `json:"credentials,omitempty"`
+
+	// ConsumerGroups are references to consumer groups (that consumer wants to be part of)
+	// provisioned in Kong.
+	// +listType=set
+	ConsumerGroups []string `json:"consumerGroups,omitempty"`
+
+	// Status represents the current status of the KongConsumer resource.
+	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -54,6 +64,21 @@ type KongConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongConsumer `json:"items"`
+}
+
+// KongConsumerStatus represents the current status of the KongConsumer resource.
+type KongConsumerStatus struct {
+	// Conditions describe the current conditions of the KongConsumer.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func init() {

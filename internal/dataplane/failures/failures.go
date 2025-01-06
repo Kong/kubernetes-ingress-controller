@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 const (
@@ -41,9 +43,6 @@ func NewResourceFailure(reason string, causingObjects ...client.Object) (Resourc
 		if obj.GetName() == "" {
 			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no name", gvk.String())
 		}
-		if obj.GetNamespace() == "" {
-			return ResourceFailure{}, fmt.Errorf("one of causing objects (%s) has no namespace", gvk.String())
-		}
 	}
 
 	return ResourceFailure{
@@ -65,21 +64,18 @@ func (p ResourceFailure) Message() string {
 // ResourceFailuresCollector collects resource failures across different stages of resource processing.
 type ResourceFailuresCollector struct {
 	failures []ResourceFailure
-	logger   logrus.FieldLogger
+	logger   logr.Logger
 }
 
-func NewResourceFailuresCollector(logger logrus.FieldLogger) (*ResourceFailuresCollector, error) {
-	if logger == nil {
-		return nil, errors.New("missing logger")
-	}
-	return &ResourceFailuresCollector{logger: logger}, nil
+func NewResourceFailuresCollector(logger logr.Logger) *ResourceFailuresCollector {
+	return &ResourceFailuresCollector{logger: logger}
 }
 
 // PushResourceFailure adds a resource processing failure to the collector and logs it.
 func (c *ResourceFailuresCollector) PushResourceFailure(reason string, causingObjects ...client.Object) {
 	resourceFailure, err := NewResourceFailure(reason, causingObjects...)
 	if err != nil {
-		c.logger.WithField("resource_failure_reason", reason).Warningf("failed to create resource failure: %s", err)
+		c.logger.Error(err, "Failed to create resource failure", "resource_failure_reason", reason)
 		return
 	}
 
@@ -90,11 +86,11 @@ func (c *ResourceFailuresCollector) PushResourceFailure(reason string, causingOb
 // logResourceFailure logs an error with a resource processing failure message for each causing object.
 func (c *ResourceFailuresCollector) logResourceFailure(reason string, causingObjects ...client.Object) {
 	for _, obj := range causingObjects {
-		c.logger.WithFields(logrus.Fields{
-			"name":      obj.GetName(),
-			"namespace": obj.GetNamespace(),
-			"GVK":       obj.GetObjectKind().GroupVersionKind().String(),
-		}).Errorf("resource processing failed: %s", reason)
+		c.logger.V(logging.DebugLevel).Info("resource processing failed",
+			"reason", reason,
+			"name", obj.GetName(),
+			"namespace", obj.GetNamespace(),
+			"GVK", obj.GetObjectKind().GroupVersionKind().String())
 	}
 }
 

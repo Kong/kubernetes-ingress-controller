@@ -7,22 +7,38 @@ on:
 
 jobs:
   gcloud:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     environment: gcloud
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
+        uses: actions/checkout@v4
       - name: setup golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '^1.20'
-
+          go-version-file: go.mod
       - name: cleanup orphaned test clusters
-        run: go run hack/cleanup_gke_clusters.go
+        run: go run ./hack/cleanup gke
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+  konnect:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: cleanup orphaned test clusters
+        run: go run ./hack/cleanup konnect
+        env:
+          # Ref: https://github.com/Kong/sdk-konnect-go/issues/20
+          KONG_CUSTOM_DOMAIN: konghq.tech
+          # NOTE: This token has to align with the domain above until the linked
+          # issue is resolved.
+          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}

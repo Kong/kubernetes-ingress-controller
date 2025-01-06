@@ -13,6 +13,5 @@ type ListLicenseResponse struct {
 type Item struct {
 	License   string `json:"payload,omitempty"`
 	UpdatedAt uint64 `json:"updated_at,omitempty"`
-	CreatedAt uint64 `json:"created_at,omitempty"`
 	ID        string `json:"id,omitempty"`
 }

@@ -21,13 +21,15 @@ package v1beta1
 import (
 	"net/http"
 
-	v1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
+	v1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
 type ConfigurationV1beta1Interface interface {
 	RESTClient() rest.Interface
+	KongConsumerGroupsGetter
+	KongUpstreamPoliciesGetter
 	TCPIngressesGetter
 	UDPIngressesGetter
 }
@@ -35,6 +37,14 @@ type ConfigurationV1beta1Interface interface {
 // ConfigurationV1beta1Client is used to interact with features provided by the configuration.konghq.com group.
 type ConfigurationV1beta1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ConfigurationV1beta1Client) KongConsumerGroups(namespace string) KongConsumerGroupInterface {
+	return newKongConsumerGroups(c, namespace)
+}
+
+func (c *ConfigurationV1beta1Client) KongUpstreamPolicies(namespace string) KongUpstreamPolicyInterface {
+	return newKongUpstreamPolicies(c, namespace)
 }
 
 func (c *ConfigurationV1beta1Client) TCPIngresses(namespace string) TCPIngressInterface {

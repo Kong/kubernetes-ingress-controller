@@ -5,9 +5,12 @@ metadata:
   name: kong-ingress-gateway
 rules:
 - apiGroups:
-  - gateway.networking.k8s.io
+  - ""
   resources:
-  - gatewayclasses
+  - configmaps
+  - namespaces
+  - secrets
+  - services
   verbs:
   - get
   - list
@@ -15,7 +18,34 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies
+  - gatewayclasses
+  - grpcroutes
+  - httproutes
+  - referencegrants
+  - tcproutes
+  - tlsroutes
+  - udproutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
   - gatewayclasses/status
+  - gateways/status
+  - httproutes/status
+  - tcproutes/status
+  - tlsroutes/status
+  - udproutes/status
   verbs:
   - get
   - update
@@ -31,21 +61,6 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - gateways/status
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - grpcroutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - grpcroutes/status
   verbs:
   - get
@@ -54,74 +69,6 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - httproutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - httproutes/status
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - referencegrants
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - referencegrants/status
   verbs:
   - get
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tcproutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tcproutes/status
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tlsroutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tlsroutes/status
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - udproutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - udproutes/status
-  verbs:
-  - get
-  - update

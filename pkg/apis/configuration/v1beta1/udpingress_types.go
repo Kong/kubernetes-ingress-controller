@@ -40,7 +40,6 @@ type UDPIngressList struct {
 // +kubebuilder:resource:categories=kong-ingress-controller
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
@@ -63,6 +62,5 @@ type UDPIngressSpec struct {
 // UDPIngressStatus defines the observed state of UDPIngress.
 type UDPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
-	// +optional
 	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`
 }

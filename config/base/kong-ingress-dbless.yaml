@@ -72,7 +72,7 @@ spec:
           value: /dev/stderr
         # router mode in 3.0.0. use `traditional` here for full compatibility.
         - name: KONG_ROUTER_FLAVOR
-          value: traditional
+          value: expressions
         lifecycle:
           preStop:
             exec:
@@ -133,6 +133,9 @@ spec:
           protocol: TCP
         - name: cmetrics
           containerPort: 10255
+          protocol: TCP
+        - name: diagnostics
+          containerPort: 10256
           protocol: TCP
         livenessProbe:
           httpGet:

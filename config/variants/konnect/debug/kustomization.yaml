@@ -4,8 +4,8 @@ kind: Kustomization
 resources:
 - ../base
 
-patchesStrategicMerge:
-  - manager_debug.yaml
+patches:
+- path: manager_debug.yaml
 
 generatorOptions:
   disableNameSuffixHash: true

@@ -27,7 +27,6 @@ import (
 // +kubebuilder:resource:categories=kong-ingress-controller
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
@@ -60,7 +59,6 @@ type TCPIngressSpec struct {
 	// used for HTTP Ingress rules as well. Once can define the mapping in
 	// this resource or the original Ingress resource, both have the same
 	// effect.
-	// +optional
 	TLS []IngressTLS `json:"tls,omitempty"`
 }
 
@@ -70,17 +68,14 @@ type IngressTLS struct {
 	// this list must match the name/s used in the tlsSecret. Defaults to the
 	// wildcard host setting for the loadbalancer controller fulfilling this
 	// Ingress, if left unspecified.
-	// +optional
 	Hosts []string `json:"hosts,omitempty"`
 	// SecretName is the name of the secret used to terminate SSL traffic.
-	// +optional
 	SecretName string `json:"secretName,omitempty"`
 }
 
 // TCPIngressStatus defines the observed state of TCPIngress.
 type TCPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
-	// +optional
 	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`
 }
 

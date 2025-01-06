@@ -1,28 +1,73 @@
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"sigs.k8s.io/yaml"
+
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
+
+// -----------------------------------------------------------------------------
+// Dependency manifest reader
+// -----------------------------------------------------------------------------
+
+const dependencyFilePath = "../../.github/test_dependencies.yaml"
+
+// GetDependencyVersion returns the version of a dependency specified by the dependency tracker file given a YAML path.
+func GetDependencyVersion(path string) (string, error) {
+	source, err := os.Open(dependencyFilePath)
+	if err != nil {
+		return "", fmt.Errorf("could not open %s: %w", dependencyFilePath, err)
+	}
+	defer source.Close()
+	info, err := source.Stat()
+	if err != nil {
+		return "", fmt.Errorf("could not stat %s: %w", dependencyFilePath, err)
+	}
+
+	raw := make([]byte, info.Size())
+	_, err = source.Read(raw)
+	if err != nil {
+		return "", fmt.Errorf("could not read %s: %w", dependencyFilePath, err)
+	}
+	deps, err := yaml.YAMLToJSON(raw)
+	if err != nil {
+		return "", fmt.Errorf("could not parse %s: %w", dependencyFilePath, err)
+	}
+	found := gjson.GetBytes(deps, path)
+	if !found.Exists() {
+		return "", fmt.Errorf("path %s not found in %s", path, dependencyFilePath)
+	}
+	return found.String(), nil
+}
 
 // -----------------------------------------------------------------------------
 // Testing Helpers for Environment Variables Overrides
 // -----------------------------------------------------------------------------
 
+type DBModeDatabase string
+
+const (
+	DBModeOff      DBModeDatabase = "off"
+	DBModePostgres DBModeDatabase = "postgres"
+)
+
 // DBMode indicates the database backend of the test cluster ("off" and "postgres" are supported).
-func DBMode() string {
-	dbmode := os.Getenv("TEST_DATABASE_MODE")
-	if dbmode != "" && dbmode != "off" && dbmode != "postgres" {
+func DBMode() DBModeDatabase {
+	switch dbmode := os.Getenv("TEST_DATABASE_MODE"); dbmode {
+	case "", "off":
+		return DBModeOff
+	case "postgres":
+		return DBModePostgres
+	default:
 		// TODO
 		os.Exit(1)
+		return ""
 	}
-
-	if dbmode == "" {
-		// if none explicitly set, the default is off
-		return "off"
-	}
-
-	return dbmode
 }
 
 // KongImage is the Kong image to use in lieu of the default.
@@ -35,18 +80,66 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
+// KongImageTag is the combined Kong image and tag if both are set, or empty string if not.
+func KongImageTag() string {
+	if KongImage() != "" && KongTag() != "" {
+		return fmt.Sprintf("%s:%s", KongImage(), KongTag())
+	}
+	return ""
+}
+
+// ControllerImage is the Kong image to use in lieu of the default.
+func ControllerImage() string {
+	return os.Getenv("TEST_CONTROLLER_IMAGE")
+}
+
+// ControllerTag is the Kong image tag to use in tests.
+func ControllerTag() string {
+	return os.Getenv("TEST_CONTROLLER_TAG")
+}
+
+// ControllerImageTag is the combined Controller image and tag if both are set, or empty string if not.
+func ControllerImageTag() string {
+	if ControllerImage() != "" && ControllerTag() != "" {
+		return fmt.Sprintf("%s:%s", ControllerImage(), ControllerTag())
+	}
+	return ""
+}
+
+// KongEffectiveVersion is the effective semver of kong gateway.
+// When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
+func KongEffectiveVersion() string {
+	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
+}
+
+const helmChartDependencyPath = "integration.helm.kong"
+
+// KongHelmChartVersion is the 'kong' helm chart version to use in tests.
+func KongHelmChartVersion() string {
+	var err error
+	v := os.Getenv("TEST_KONG_HELM_CHART_VERSION")
+	if v == "" {
+		v, err = GetDependencyVersion(helmChartDependencyPath)
+		if err != nil {
+			fmt.Println(fmt.Printf("WARN: could not get kong/kong chart dependency version: %s", err))
+			fmt.Println("WARN: will use whatever kong/kong chart version is installed locally")
+		}
+	}
+	return v
+}
+
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
 // - `traditional`
 // - `traditional_compatible`.
 // - `expressions` (experimental, only for testing expression route related tests).
-func KongRouterFlavor() string {
+func KongRouterFlavor() dpconf.RouterFlavor {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 	if rf != "" && rf != "traditional" && rf != "traditional_compatible" && rf != "expressions" {
 		// TODO
 		os.Exit(1)
 	}
 
-	return rf
+	return dpconf.RouterFlavor(rf)
 }
 
 // KongPullUsername is the Docker username to use for the Kong image pull secret.
@@ -64,10 +157,47 @@ func KongEnterpriseEnabled() bool {
 	return os.Getenv("TEST_KONG_ENTERPRISE") == "true"
 }
 
-// ClusterVersion indicates the version of Kubernetes to use for the tests
-// (if the cluster was not provided by the caller).
+// ClusterVersion indicates the Kubernetes cluster version to use when
+// generating a testing environment (if the cluster was not provided by the
+// caller). and allows the caller to provide a specific version.
+//
+// If no version is provided the default version for the cluster provisioner in
+// the testing framework will be used.
 func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
+}
+
+// GKEClusterReleaseChannel indicates the GKE cluster release channel to use when
+// creating a GKE cluster in tests.
+func GKEClusterReleaseChannel() string {
+	return os.Getenv("TEST_GKE_CLUSTER_RELEASE_CHANNEL")
+}
+
+// ClusterProvider indicates the Kubernetes cluster provider.
+func ClusterProvider() string {
+	return os.Getenv("KONG_CLUSTER_PROVIDER")
+}
+
+// ClusterLoadImages loads images into test clusters when set.
+func ClusterLoadImages() string {
+	return os.Getenv("TEST_KONG_LOAD_IMAGES")
+}
+
+// See: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+
+// GithubServerURL returns a Github server URL from a Github Actions environment.
+func GithubServerURL() string {
+	return os.Getenv("GITHUB_SERVER_URL")
+}
+
+// GithubRepo returns a Github repository from a Github Actions environment.
+func GithubRepo() string {
+	return os.Getenv("GITHUB_REPOSITORY")
+}
+
+// GithubRunID returns a Github run ID from a Github Actions environment.
+func GithubRunID() string {
+	return os.Getenv("GITHUB_RUN_ID")
 }
 
 // ControllerFeatureGates contains the feature gates that should be enabled
@@ -76,7 +206,7 @@ func ClusterVersion() string {
 func ControllerFeatureGates() string {
 	featureGates := os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 	if featureGates == "" {
-		featureGates = getFeatureGates()
+		featureGates = GetFeatureGates()
 	}
 	return featureGates
 }
@@ -113,4 +243,16 @@ func EnvironmentReadyTimeout() time.Duration {
 		timeout = DefaultEnvironmentReadyTimeout
 	}
 	return timeout
+}
+
+// IsCI indicates whether or not the tests are running in a CI environment.
+func IsCI() bool {
+	// It's a common convention that e.g. GitHub, GitLab, and other CI providers
+	// set the CI environment variable.
+	return os.Getenv("CI") == "true"
+}
+
+// KongLicenseData returns the Kong license data to use in tests.
+func KongLicenseData() string {
+	return os.Getenv("KONG_LICENSE_DATA")
 }

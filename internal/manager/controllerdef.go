@@ -1,28 +1,26 @@
 package manager
 
 import (
-	"fmt"
+	"context"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/crds"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	konghqcomv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -59,25 +57,18 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 func setupControllers(
+	ctx context.Context,
 	mgr manager.Manager,
-	dataplaneClient *dataplane.KongClient,
+	dataplaneClient controllers.DataPlane,
+	referenceIndexers ctrlref.CacheIndexers,
 	dataplaneAddressFinder *dataplane.AddressFinder,
 	udpDataplaneAddressFinder *dataplane.AddressFinder,
 	kubernetesStatusQueue *status.Queue,
 	c *Config,
-	featureGates map[string]bool,
+	featureGates featuregates.FeatureGates,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
-) ([]ControllerDef, error) {
-	restMapper := mgr.GetClient().RESTMapper()
-
-	// Choose the best API version of Ingress to inform which ingress controller to enable.
-	ingressConditions, err := NewIngressControllersConditions(c, restMapper)
-	if err != nil {
-		return nil, fmt.Errorf("ingress version picker failed: %w", err)
-	}
-
-	referenceIndexers := ctrlref.NewCacheIndexers()
-
+	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
+) []ControllerDef {
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Kong Gateway Admin API Service discovery
@@ -85,32 +76,32 @@ func setupControllers(
 		{
 			Enabled: c.KongAdminSvc.IsPresent(),
 			Controller: &configuration.KongAdminAPIServiceReconciler{
-				Client:            mgr.GetClient(),
-				ServiceNN:         c.KongAdminSvc.OrEmpty(),
-				PortNames:         sets.New(c.KondAdminSvcPortNames...),
-				Log:               ctrl.Log.WithName("controllers").WithName("KongAdminAPIService"),
-				CacheSyncTimeout:  c.CacheSyncTimeout,
-				EndpointsNotifier: kongAdminAPIEndpointsNotifier,
+				Client:              mgr.GetClient(),
+				ServiceNN:           c.KongAdminSvc.OrEmpty(),
+				Log:                 ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongAdminAPIService"),
+				CacheSyncTimeout:    c.CacheSyncTimeout,
+				EndpointsNotifier:   kongAdminAPIEndpointsNotifier,
+				AdminAPIsDiscoverer: adminAPIsDiscoverer,
 			},
 		},
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: ingressConditions.IngressClassNetV1Enabled(),
+			Enabled: c.IngressClassNetV1Enabled,
 			Controller: &configuration.NetV1IngressClassReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("IngressClass").WithName("netv1"),
 				DataplaneClient:  dataplaneClient,
 				Scheme:           mgr.GetScheme(),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: ingressConditions.IngressNetV1Enabled(),
+			Enabled: c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
 				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Ingress").WithName("netv1"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
@@ -125,7 +116,7 @@ func setupControllers(
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client:            mgr.GetClient(),
-				Log:               ctrl.Log.WithName("controllers").WithName("Service"),
+				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Service"),
 				Scheme:            mgr.GetScheme(),
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
@@ -136,7 +127,7 @@ func setupControllers(
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("EndpointSlice"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
@@ -146,28 +137,34 @@ func setupControllers(
 			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
 				Client:            mgr.GetClient(),
-				Log:               ctrl.Log.WithName("controllers").WithName("Secrets"),
+				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Secrets"),
 				Scheme:            mgr.GetScheme(),
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				ReferenceIndexers: referenceIndexers,
+				LabelSelector:     c.SecretLabelSelector,
+			},
+		},
+		{
+			Enabled: true,
+			Controller: &configuration.CoreV1ConfigMapReconciler{
+				Client:            mgr.GetClient(),
+				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("configmaps"),
+				Scheme:            mgr.GetScheme(),
+				DataplaneClient:   dataplaneClient,
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				ReferenceIndexers: referenceIndexers,
+				LabelSelector:     c.ConfigMapLabelSelector,
 			},
 		},
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.UDPIngressEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1beta1.GroupVersion.Group,
-					Version:  konghqcomv1beta1.GroupVersion.Version,
-					Resource: "udpingresses",
-				},
-				restMapper,
-			),
+			Enabled: c.UDPIngressEnabled,
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("UDPIngress"),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPIngress"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
@@ -178,17 +175,10 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.TCPIngressEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1beta1.GroupVersion.Group,
-					Version:  konghqcomv1beta1.GroupVersion.Version,
-					Resource: "tcpingresses",
-				},
-				restMapper,
-			),
+			Enabled: c.TCPIngressEnabled,
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
 				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("TCPIngress"),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPIngress"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
@@ -200,176 +190,195 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongIngressEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
-					Resource: "kongingresses",
-				},
-				restMapper,
-			),
+			Enabled: c.KongIngressEnabled,
 			Controller: &configuration.KongV1KongIngressReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongIngress"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.IngressClassParametersEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1alpha1.GroupVersion.Group,
-					Version:  konghqcomv1alpha1.GroupVersion.Version,
-					Resource: "ingressclassparameterses",
-				},
-				restMapper,
-			),
+			Enabled: c.IngressClassParametersEnabled,
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("IngressClassParameters"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.KongPluginEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
-					Resource: "kongplugins",
-				},
-				restMapper,
-			),
+			Enabled: c.KongPluginEnabled,
 			Controller: &configuration.KongV1KongPluginReconciler{
 				Client:            mgr.GetClient(),
-				Log:               ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongPlugin"),
 				Scheme:            mgr.GetScheme(),
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				ReferenceIndexers: referenceIndexers,
+				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+				// StatusQueue:       kubernetesStatusQueue,
 			},
 		},
 		{
-			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
-					Resource: "kongconsumers",
-				},
-				restMapper,
-			),
+			Enabled: c.KongConsumerEnabled,
 			Controller: &configuration.KongV1KongConsumerReconciler{
 				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("KongConsumer"),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongConsumer"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
 				ReferenceIndexers:          referenceIndexers,
+				StatusQueue:                kubernetesStatusQueue,
 			},
 		},
 		{
-			Enabled: c.KongClusterPluginEnabled && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
-					Resource: "kongclusterplugins",
-				},
-				restMapper,
-			),
+			Enabled: c.KongConsumerEnabled,
+			Controller: &configuration.KongV1Beta1KongConsumerGroupReconciler{
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongConsumerGroup"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
+				StatusQueue:                kubernetesStatusQueue,
+			},
+		},
+		{
+			Enabled: c.KongClusterPluginEnabled,
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
 				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
 				ReferenceIndexers:          referenceIndexers,
+				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+				// StatusQueue:       kubernetesStatusQueue,
 			},
 		},
-		// ---------------------------------------------------------------------------
-		// Other Controllers
-		// ---------------------------------------------------------------------------
+		// KongUpstreamPolicy controller.
+		// When HTTPRoute exists, the controller is enabled to watch HTTPRoutes to set ancestor status of KongUpstreamPolicies.
 		{
-			// knative is a special case because it existed before we added feature gates functionality
-			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
-			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: (featureGates[featuregates.KnativeFeature] || c.KnativeIngressEnabled) && ShouldEnableCRDController(
-				schema.GroupVersionResource{
-					Group:    knativev1alpha1.SchemeGroupVersion.Group,
-					Version:  knativev1alpha1.SchemeGroupVersion.Version,
-					Resource: "ingresses",
-				},
-				restMapper,
-			),
-			Controller: &knative.Knativev1alpha1IngressReconciler{
+			Enabled: c.KongUpstreamPolicyEnabled,
+			Controller: &configuration.KongUpstreamPolicyReconciler{
+				Client:                   mgr.GetClient(),
+				Log:                      ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
+				Scheme:                   mgr.GetScheme(),
+				DataplaneClient:          dataplaneClient,
+				CacheSyncTimeout:         c.CacheSyncTimeout,
+				KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+				StatusQueue:              kubernetesStatusQueue,
+				HTTPRouteEnabled: utils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
+					Resource: "httproutes",
+				}),
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+			},
+		},
+		{
+			Enabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+			Controller: &configuration.IncubatorV1Alpha1KongServiceFacadeReconciler{
 				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongServiceFacade"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
-				DataplaneAddressFinder:     dataplaneAddressFinder,
+			},
+		},
+		{
+			Enabled: c.KongVaultEnabled,
+			Controller: &configuration.KongV1Alpha1KongVaultReconciler{
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongVault"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
-				ReferenceIndexers:          referenceIndexers,
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				StatusQueue:                kubernetesStatusQueue,
+			},
+		},
+		{
+			Enabled: featureGates.Enabled(featuregates.KongCustomEntity) && c.KongCustomEntityEnabled,
+			Controller: &configuration.KongV1Alpha1KongCustomEntityReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongCustomEntity"),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				IngressClassName: c.IngressClassName,
+				// KongCustomEntities do not accept entities without `kubernetes.io/ingress.class` annotation
+				// even the controlled ingress class is the default to avoid putting resources not managed in,.
+				DisableIngressClassLookups: true,
+				StatusQueue:                kubernetesStatusQueue,
 			},
 		},
 		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Beta APIs
+		// Gateway API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[featuregates.GatewayFeature],
+			Enabled: c.GatewayAPIGatewayController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/Gateway"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/Gateway"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs:     baseGatewayCRDs(),
 				Controller: &gateway.GatewayReconciler{
 					Client:               mgr.GetClient(),
-					Log:                  ctrl.Log.WithName("controllers").WithName("Gateway"),
+					Log:                  ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Gateway"),
 					Scheme:               mgr.GetScheme(),
 					DataplaneClient:      dataplaneClient,
 					PublishServiceRef:    c.PublishService.OrEmpty(),
 					PublishServiceUDPRef: c.PublishServiceUDP,
+					AddressOverrides:     c.PublishStatusAddress,
+					AddressOverridesUDP:  c.PublishStatusAddressUDP,
 					WatchNamespaces:      c.WatchNamespaces,
 					CacheSyncTimeout:     c.CacheSyncTimeout,
 					ReferenceIndexers:    referenceIndexers,
+					GatewayNN:            controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayFeature],
+			Enabled: c.GatewayAPIHTTPRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/HTTPRoute"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/HTTPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "httproutes",
 				}),
 				Controller: &gateway.HTTPRouteReconciler{
 					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("HTTPRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},
-		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Alpha APIs
-		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: c.GatewayAPIReferenceGrantController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/ReferenceGrant"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
@@ -378,7 +387,7 @@ func setupControllers(
 				}),
 				Controller: &gateway.ReferenceGrantReconciler{
 					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("ReferenceGrant"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,
@@ -386,10 +395,35 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: c.GatewayAPIGRPCRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/UDPRoute"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/GRPCRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
+					Resource: "grpcroutes",
+				}),
+				Controller: &gateway.GRPCRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("GRPCRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+				},
+			},
+		},
+		// ---------------------------------------------------------------------------
+		// Gateway API Controllers - Alpha APIs
+		// ---------------------------------------------------------------------------
+		{
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/UDPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
@@ -398,18 +432,20 @@ func setupControllers(
 				}),
 				Controller: &gateway.UDPRouteReconciler{
 					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("UDPRoute"),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/TCPRoute"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TCPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
@@ -418,18 +454,20 @@ func setupControllers(
 				}),
 				Controller: &gateway.TCPRouteReconciler{
 					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("TCPRoute"),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/TLSRoute"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
@@ -438,49 +476,61 @@ func setupControllers(
 				}),
 				Controller: &gateway.TLSRouteReconciler{
 					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("TLSRoute"),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature) &&
+				c.GatewayAPIGatewayController &&
+				c.GatewayAPIHTTPRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/GRPCRoute"),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/BackendTLSPolicy"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.GroupVersion.Group,
-					Version:  gatewayv1alpha2.GroupVersion.Version,
-					Resource: "grpcroutes",
-				}),
-				Controller: &gateway.GRPCRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.Log.WithName("controllers").WithName("GRPCRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(
+					baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "httproutes",
+					},
+					schema.GroupVersionResource{
+						Group:    gatewayv1alpha3.GroupVersion.Group,
+						Version:  gatewayv1alpha3.GroupVersion.Version,
+						Resource: "backendtlspolicies",
+					}),
+				Controller: &gateway.BackendTLSPolicyReconciler{
+					Client:            mgr.GetClient(),
+					Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("BackendTLSPolicy"),
+					DataplaneClient:   dataplaneClient,
+					ReferenceIndexers: referenceIndexers,
+					CacheSyncTimeout:  c.CacheSyncTimeout,
+					GatewayNN:         controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
 				},
 			},
 		},
 	}
 
-	return controllers, nil
+	return controllers
 }
 
 // baseGatewayCRDs returns a slice of base CRDs required for running all the Gateway API controllers.
 func baseGatewayCRDs() []schema.GroupVersionResource {
 	return []schema.GroupVersionResource{
 		{
-			Group:    gatewayv1beta1.GroupVersion.Group,
-			Version:  gatewayv1beta1.GroupVersion.Version,
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "gateways",
 		},
 		{
-			Group:    gatewayv1beta1.GroupVersion.Group,
-			Version:  gatewayv1beta1.GroupVersion.Version,
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "gatewayclasses",
 		},
 	}

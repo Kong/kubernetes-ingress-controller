@@ -1,27 +1,26 @@
-//go:build e2e_tests || istio_tests
-// +build e2e_tests istio_tests
+//go:build e2e_tests || istio_tests || performance_tests
 
 package e2e
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/phayes/freeport"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,13 +28,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/yaml"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 const (
 	// adminPasswordSecretName is the name of the secret which will house the admin
 	// API admin password.
 	adminPasswordSecretName = "kong-enterprise-superuser-password"
+
+	dblessPath = "manifests/all-in-one-dbless.yaml"
 )
 
 func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
@@ -105,8 +108,10 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
 // In case of any failure while patching, the base manifest is returned.
-func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
+// If skipTestPatches is true, no patches are applied (useful when untouched manifest is needed, e.g. in upgrade tests).
+func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool, testPatches ...ManifestPatch) io.Reader {
 	t.Helper()
+	t.Logf("getting test manifest from %v", baseManifestPath)
 
 	var (
 		manifestsReader io.Reader
@@ -115,57 +120,102 @@ func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
 	manifestsReader, err = os.Open(baseManifestPath)
 	require.NoError(t, err)
 
-	manifestsReader, err = patchControllerImageFromEnv(t, manifestsReader)
-	if err != nil {
-		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
+	if !skipTestPatches {
+		t.Logf("applying test patches to manifest %v", baseManifestPath)
+
+		manifestsReader, err = patchControllerImageFromEnv(t, manifestsReader)
+		if err != nil {
+			t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
+		if err != nil {
+			t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
+		if err != nil {
+			t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		deployments := getManifestDeployments(baseManifestPath)
+		manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
+		if err != nil {
+			t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
+		if err != nil {
+			t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
 	}
 
-	manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
-	if err != nil {
-		t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
+	for _, patch := range testPatches {
+		manifestsReader, err = patch(manifestsReader)
+		if err != nil {
+			t.Logf("failed patching manifest, using default manifest %v, err: %v", baseManifestPath, err)
+		}
 	}
 
-	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
-	if err != nil {
-		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	deployments := getManifestDeployments(baseManifestPath)
-	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
-	if err != nil {
-		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
-	if err != nil {
-		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	t.Logf("generated modified manifest at %v", baseManifestPath)
 	return manifestsReader
 }
 
-// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with `kongImageOverride`
-// if it's set.
+// extractVersionFromImage extracts semver of image from image tag. If tag is not given,
+// or is not in a semver format, it returns an error.
+// for example: kong/kubernetes-ingress-controller:2.9.3 => semver.Version{Major:2,Minor:9,Patch:3}.
+//
+//lint:ignore U1000 retained for future use
+func extractVersionFromImage(imageName string) (semver.Version, error) {
+	split := strings.Split(imageName, ":")
+	if len(split) < 2 {
+		return semver.Version{}, fmt.Errorf("could not parse override image '%s', expected <repo>:<tag> format", imageName)
+	}
+	// parse version from image tag, like kong/kubernetes-ingress-controller:2.9.3 => 2.9.3
+	tag := split[len(split)-1]
+	v, err := semver.ParseTolerant(tag)
+	if err != nil {
+		return semver.Version{}, fmt.Errorf("failed to parse version from image tag %s: %w", tag, err)
+	}
+	return v, nil
+}
+
+// skipTestIfControllerVersionBelow skips the test case if version of override KIC image is
+// below the minVersion.
+// if the override KIC image is not set, it assumes that the latest image is used, so it never skips
+// the test if override image is not given.
+//
+//lint:ignore U1000 retained for future use
+func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
+	if testenv.ControllerImageTag() == "" {
+		return
+	}
+	v, err := extractVersionFromImage(testenv.ControllerImageTag())
+	// assume using latest version if failed to extract version from image tag.
+	if err != nil {
+		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
+		return
+	}
+	if v.LE(minVersion) {
+		t.Skipf("skipped the test because version of KIC %s is below the minimum version %s",
+			v.String(), minVersion.String())
+	}
+}
+
+// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with env overrides.
 func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if kongImageOverride != "" {
-		t.Logf("replace kong image with %s", kongImageOverride)
-		split := strings.Split(kongImageOverride, ":")
-		if len(split) < 2 {
-			return nil, fmt.Errorf("invalid image name '%s', expected <repo>:<tag> format", kongImageOverride)
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err := patchKongImage(manifestsReader, repo, tag)
+	if testenv.KongImageTag() != "" {
+		t.Logf("replace kong image with %s", testenv.KongImageTag())
+		manifestsReader, err := patchKongImage(manifestsReader, testenv.KongImage(), testenv.KongTag())
 		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v'", kongImageOverride)
+			return nil, fmt.Errorf("failed patching override image '%v'", testenv.KongImageTag())
 		}
 		return manifestsReader, nil
 	}
@@ -174,23 +224,15 @@ func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reade
 	return manifestsReader, nil
 }
 
-// patchControllerImageFromEnv will optionally replace a default controller image in manifests with `controllerImageOverride`
+// patchControllerImageFromEnv will optionally replace a default controller image in manifests with env override
 // if it's set.
 func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if controllerImageOverride != "" {
-		t.Logf("replace controller image with %s", controllerImageOverride)
-		split := strings.Split(controllerImageOverride, ":")
-		if len(split) < 2 {
-			return nil, fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", controllerImageOverride)
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		var err error
-		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
+	if testenv.ControllerImageTag() != "" {
+		manifestReader, err := patchControllerImage(manifestReader, testenv.ControllerImage(), testenv.ControllerTag())
 		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v': %w", controllerImageOverride, err)
+			return nil, fmt.Errorf("failed patching override image '%v': %w", testenv.ControllerImageTag(), err)
 		}
 		return manifestReader, nil
 	}
@@ -199,41 +241,20 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 	return manifestReader, nil
 }
 
-func getCurrentGitTag(path string) (semver.Version, error) {
-	cmd := exec.Command("git", "describe", "--tags")
-	cmd.Dir = path
-	tagBytes, err := cmd.Output()
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("%q command failed: %w", cmd.String(), err)
+// getKongVersionFromOverrideTag parses Kong version from env effective version or override tag. The effective version
+// takes precedence.
+//
+//lint:ignore U1000 retained for future use
+func getKongVersionFromOverrideTag() (kong.Version, error) {
+	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
+		return kong.ParseSemanticVersion(kongEffectiveVersion)
 	}
-	tag, err := semver.ParseTolerant(string(tagBytes))
-	if err != nil {
-		return semver.Version{}, err
-	}
-	return tag, nil
-}
 
-func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) {
-	var tags []semver.Version
-	cmd := exec.Command("git", "tag")
-	cmd.Dir = path
-	tagsBytes, err := cmd.Output()
-	if err != nil {
-		return semver.Version{}, err
+	if testenv.KongImageTag() == "" {
+		return kong.Version{}, errors.New("No Kong tag provided")
 	}
-	foo := strings.Split(string(tagsBytes), "\n")
-	for _, tag := range foo {
-		ver, err := semver.ParseTolerant(tag)
-		if err == nil {
-			tags = append(tags, ver)
-		}
-	}
-	sort.Slice(tags, func(i, j int) bool { return tags[i].LT(tags[j]) })
-	curIndex := sort.Search(len(tags), func(i int) bool { return tags[i].EQ(cur) })
-	if curIndex == 0 {
-		return tags[curIndex], nil
-	}
-	return tags[curIndex-1], nil
+
+	return kong.ParseSemanticVersion(testenv.KongTag())
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
@@ -249,7 +270,6 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	//nolint: exhaustive
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
@@ -333,8 +353,7 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, targetPort string) int {
 	t.Helper()
 
-	localPort, err := freeport.GetFreePort()
-	require.NoError(t, err)
+	localPort := helpers.GetFreePort(t)
 
 	kubeconfig := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace, name, fmt.Sprintf("%d:%s", localPort, targetPort))
@@ -364,13 +383,13 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 func httpGetResponseContains(t *testing.T, url string, client *http.Client, substring string) bool {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		t.Logf("failed to create request: %v", err)
+		t.Logf("Failed to create request: %v", err)
 		return false
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Logf("failed to get response: %v", err)
+		t.Logf("Failed to get response: %v", err)
 		return false
 	}
 
@@ -403,48 +422,12 @@ func getPodLogs(
 	return string(out), nil
 }
 
-// stripCRDs removes every CustomResourceDefinition from the manifest.
-func stripCRDs(t *testing.T, manifest io.Reader) io.Reader {
-	const sep = "---\n"
-
-	in, err := io.ReadAll(manifest)
-	require.NoError(t, err)
-
-	var filteredObjs [][]byte
-	for _, objYaml := range bytes.Split(in, []byte(sep)) {
-		var obj struct {
-			Kind string `yaml:"kind"`
-		}
-		err = yaml.Unmarshal(objYaml, &obj)
-		require.NoError(t, err)
-
-		if obj.Kind == "CustomResourceDefinition" {
-			continue
-		}
-
-		filteredObjs = append(filteredObjs, objYaml)
-	}
-
-	outBytes := bytes.Join(filteredObjs, []byte(sep))
-	return bytes.NewReader(outBytes)
-}
-
 // containerDidntCrash evaluates whether a container with a given containerName did not restart.
 // In case name=containerName is not found in pod's containers, returns false.
 func containerDidntCrash(pod corev1.Pod, containerName string) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Name == containerName {
 			return containerStatus.RestartCount == 0
-		}
-	}
-	return false
-}
-
-// isPodReady evaluates whether a pod is in Ready state.
-func isPodReady(pod corev1.Pod) bool {
-	for _, condition := range pod.Status.Conditions {
-		if condition.Type == corev1.PodReady {
-			return condition.Status == corev1.ConditionTrue
 		}
 	}
 	return false
@@ -462,14 +445,32 @@ func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env
 	}
 }
 
-func setEnv(kubecfg, namespace, target, variable, value string) error {
+type setEnvParams struct {
+	kubeCfgPath   string
+	namespace     string
+	target        string // e.g. deployment/name or pod/name
+	containerName string
+	variableName  string
+	value         string
+}
+
+func setEnv(p setEnvParams) error {
 	var envvar string
-	if value == "" {
-		envvar = fmt.Sprintf("%s-", variable)
+	if p.value == "" {
+		envvar = fmt.Sprintf("%s-", p.variableName)
 	} else {
-		envvar = fmt.Sprintf("%s=%s", variable, value)
+		envvar = fmt.Sprintf("%s=%s", p.variableName, p.value)
 	}
-	cmd := exec.Command("kubectl", "--kubeconfig", kubecfg, "set", "env", "-n", namespace, target, envvar)
+	//nolint:gosec
+	cmd := exec.Command(
+		"kubectl",
+		"--kubeconfig", p.kubeCfgPath,
+		"set", "env",
+		"-n", p.namespace,
+		"-c", p.containerName,
+		p.target,
+		envvar,
+	)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
@@ -478,4 +479,15 @@ func setEnv(kubecfg, namespace, target, variable, value string) error {
 		return fmt.Errorf("updating envvar failed: STDOUT(%s) STDERR(%s): %w", stdout, stderr, err)
 	}
 	return nil
+}
+
+// dumpToTempFile dumps the contents of the reader to a temporary file and returns the path to the file.
+func dumpToTempFile(t *testing.T, reader io.Reader) string {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "")
+	require.NoError(t, err)
+	defer file.Close()
+	_, err = io.Copy(file, reader)
+	require.NoError(t, err)
+	return file.Name()
 }

@@ -1,0 +1,12 @@
+# This is a kustomize Component which deploys KIC's admission webhook configuration
+# with a static certificate and key for ease of use.
+# This is not meant to be used in production!
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+- ./validating_webhook_configuration.yaml
+- ./manager_webhook_secret.yaml
+
+patches:
+- path: manager_webhook_listen_patch.yaml

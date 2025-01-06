@@ -12,16 +12,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 const (
-	testKicVersion  = "2.9.0"
-	testKongVersion = "3.2.0.0"
-	testHostname    = "ingress-0"
+	testKicVersion = "2.9.0"
+	testHostname   = "ingress-0"
 )
+
+// testKongVersion matches enterprise version format.
+var testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
 
 type mockGatewayInstanceGetter struct {
 	gatewayInstances []konnect.GatewayInstance
@@ -66,12 +70,16 @@ func (m *mockManagerInstanceIDProvider) GetID() uuid.UUID {
 }
 
 type mockConfigStatusQueue struct {
-	ch chan clients.ConfigStatus
+	gatewayStatusCh chan clients.GatewayConfigApplyStatus
+	konnetStatusCh  chan clients.KonnectConfigUploadStatus
+	ch              chan clients.ConfigStatus
 }
 
 func newMockConfigStatusNotifier() *mockConfigStatusQueue {
 	return &mockConfigStatusQueue{
-		ch: make(chan clients.ConfigStatus),
+		gatewayStatusCh: make(chan clients.GatewayConfigApplyStatus),
+		konnetStatusCh:  make(chan clients.KonnectConfigUploadStatus),
+		ch:              make(chan clients.ConfigStatus),
 	}
 }
 
@@ -79,8 +87,20 @@ func (m mockConfigStatusQueue) SubscribeConfigStatus() chan clients.ConfigStatus
 	return m.ch
 }
 
-func (m mockConfigStatusQueue) Notify(status clients.ConfigStatus) {
-	m.ch <- status
+func (m mockConfigStatusQueue) SubscribeGatewayConfigStatus() chan clients.GatewayConfigApplyStatus {
+	return m.gatewayStatusCh
+}
+
+func (m mockConfigStatusQueue) SubscribeKonnectConfigStatus() chan clients.KonnectConfigUploadStatus {
+	return m.konnetStatusCh
+}
+
+func (m mockConfigStatusQueue) NotifyGatewayConfigStatus(status clients.GatewayConfigApplyStatus) {
+	m.gatewayStatusCh <- status
+}
+
+func (m mockConfigStatusQueue) NotifyKonnectConfigStatus(status clients.KonnectConfigUploadStatus) {
+	m.konnetStatusCh <- status
 }
 
 func TestNodeAgentUpdateNodes(t *testing.T) {
@@ -96,8 +116,8 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 		name                  string
 		initialNodesInNodeAPI []*nodes.NodeItem
 		// When configStatus is non-nil, notify the status to node agent in the test case.
-		configStatus     *clients.ConfigStatus
-		gatewayInstances []konnect.GatewayInstance
+		gatewayConfigStatus *clients.GatewayConfigApplyStatus
+		gatewayInstances    []konnect.GatewayInstance
 
 		containNodes    []*nodes.NodeItem
 		notContainNodes []*nodes.NodeItem
@@ -107,7 +127,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			name: "create kic node",
 			// no existing nodes
 			initialNodesInNodeAPI: nil,
-			configStatus:          lo.ToPtr(clients.ConfigStatusOK),
+			gatewayConfigStatus:   lo.ToPtr(clients.GatewayConfigApplyStatus{}),
 			containNodes: []*nodes.NodeItem{
 				{
 					Hostname: testHostname,
@@ -130,7 +150,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					Version:  testKicVersion,
 				},
 			},
-			configStatus: lo.ToPtr(clients.ConfigStatusTranslationErrorHappened),
+			gatewayConfigStatus: lo.ToPtr(clients.GatewayConfigApplyStatus{TranslationFailuresOccurred: true}),
 			containNodes: []*nodes.NodeItem{
 				{
 					Hostname: testHostname,
@@ -254,7 +274,6 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			nodeClient := newMockNodeClient(tc.initialNodesInNodeAPI)
 			configStatusQueue := newMockConfigStatusNotifier()
@@ -274,15 +293,15 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 
 			runAgent(t, nodeAgent)
 
-			if tc.configStatus != nil {
-				configStatusQueue.Notify(*tc.configStatus)
+			if tc.gatewayConfigStatus != nil {
+				configStatusQueue.NotifyGatewayConfigStatus(*tc.gatewayConfigStatus)
 			}
 
 			require.Eventually(t, func() bool {
 				// Notify gateway clients changes.
 				gatewayClientsChangesNotifier.Notify()
 
-				// Check number of nodes in RG.
+				// Check number of nodes in CP.
 				ns := nodeClient.MustAllNodes()
 				if len(ns) != tc.numNodes {
 					t.Logf("expected %d nodes, got %d", tc.numNodes, len(ns))
@@ -388,38 +407,67 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 	runAgent(t, nodeAgent)
 
 	testCases := []struct {
-		notifiedConfigStatus    clients.ConfigStatus
-		expectedControllerState nodes.IngressControllerState
+		expectedConfigStaus         clients.ConfigStatus
+		notifiedGatewayConfigStatus clients.GatewayConfigApplyStatus
+		notifiedKonnectConfigStatus clients.KonnectConfigUploadStatus
+		expectedControllerState     nodes.IngressControllerState
 	}{
 		{
-			notifiedConfigStatus:    clients.ConfigStatusOK,
-			expectedControllerState: nodes.IngressControllerStateOperational,
+			expectedConfigStaus:         clients.ConfigStatusOK,
+			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{},
+			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{},
+			expectedControllerState:     nodes.IngressControllerStateOperational,
 		},
 		{
-			notifiedConfigStatus:    clients.ConfigStatusTranslationErrorHappened,
-			expectedControllerState: nodes.IngressControllerStatePartialConfigFail,
+			expectedConfigStaus: clients.ConfigStatusTranslationErrorHappened,
+			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
+				TranslationFailuresOccurred: true,
+			},
+			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{},
+			expectedControllerState:     nodes.IngressControllerStatePartialConfigFail,
 		},
 		{
-			notifiedConfigStatus:    clients.ConfigStatusApplyFailed,
-			expectedControllerState: nodes.IngressControllerStateInoperable,
+			expectedConfigStaus: clients.ConfigStatusApplyFailed,
+			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
+				ApplyConfigFailed: true,
+			},
+			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{},
+			expectedControllerState:     nodes.IngressControllerStateInoperable,
 		},
 		{
-			notifiedConfigStatus:    clients.ConfigStatusOKKonnectApplyFailed,
+			expectedConfigStaus:         clients.ConfigStatusOKKonnectApplyFailed,
+			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{},
+			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{
+				Failed: true,
+			},
 			expectedControllerState: nodes.IngressControllerStateOperationalKonnectOutOfSync,
 		},
 		{
-			notifiedConfigStatus:    clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
+			expectedConfigStaus: clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
+			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
+				TranslationFailuresOccurred: true,
+			},
+			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{
+				Failed: true,
+			},
 			expectedControllerState: nodes.IngressControllerStatePartialConfigFailKonnectOutOfSync,
 		},
 		{
-			notifiedConfigStatus:    clients.ConfigStatusApplyFailedKonnectApplyFailed,
+			expectedConfigStaus: clients.ConfigStatusApplyFailedKonnectApplyFailed,
+			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
+				ApplyConfigFailed: true,
+			},
+			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{
+				Failed: true,
+			},
 			expectedControllerState: nodes.IngressControllerStateInoperableKonnectOutOfSync,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprint(tc.notifiedConfigStatus), func(t *testing.T) {
-			configStatusQueue.Notify(tc.notifiedConfigStatus)
+		t.Run(fmt.Sprint(tc.expectedConfigStaus), func(t *testing.T) {
+			configStatusQueue.NotifyGatewayConfigStatus(tc.notifiedGatewayConfigStatus)
+			configStatusQueue.NotifyKonnectConfigStatus(tc.notifiedKonnectConfigStatus)
 
 			require.Eventually(t, func() bool {
 				controllerNode, ok := lo.Find(nodeClient.MustAllNodes(), func(n *nodes.NodeItem) bool {
@@ -439,6 +487,129 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 			}, time.Second, time.Millisecond)
 		})
 	}
+}
+
+func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T) {
+	nodeClient := newMockNodeClient(nil)
+	configStatusQueue := newMockConfigStatusNotifier()
+	gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
+
+	nodeAgent := konnect.NewNodeAgent(
+		testHostname,
+		testKicVersion,
+		konnect.DefaultRefreshNodePeriod,
+		logr.Discard(),
+		nodeClient,
+		configStatusQueue,
+		newMockGatewayInstanceGetter(nil),
+		gatewayClientsChangesNotifier,
+		newMockManagerInstanceIDProvider(uuid.New()),
+	)
+
+	runAgent(t, nodeAgent)
+
+	// We'll use these two to toggle between when we want to trigger an update.
+	statusOne := clients.GatewayConfigApplyStatus{}
+	statusTwo := clients.GatewayConfigApplyStatus{TranslationFailuresOccurred: true}
+
+	nodesUpdatesCountEventuallyEquals := func(count int) {
+		require.Eventually(t, func() bool {
+			return nodeClient.NodesUpdatesCount() == count
+		}, time.Second, time.Millisecond)
+	}
+
+	// Notify the first status and wait for the node to be updated.
+	configStatusQueue.NotifyGatewayConfigStatus(statusOne)
+	nodesUpdatesCountEventuallyEquals(1)
+
+	// Notify the same status again and ensure that the node wasn't updated.
+	configStatusQueue.NotifyGatewayConfigStatus(statusOne)
+	nodesUpdatesCountEventuallyEquals(1)
+
+	// Notify the second status and ensure that the node was updated.
+	configStatusQueue.NotifyGatewayConfigStatus(statusTwo)
+	nodesUpdatesCountEventuallyEquals(2)
+
+	// Notify the same status again and ensure that the node wasn't updated.
+	configStatusQueue.NotifyGatewayConfigStatus(statusTwo)
+	nodesUpdatesCountEventuallyEquals(2)
+}
+
+func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
+	const halfOfRefreshPeriod = konnect.DefaultRefreshNodePeriod / 2
+
+	t.Run("config status notification", func(t *testing.T) {
+		nodeClient := newMockNodeClient(nil)
+		configStatusQueue := newMockConfigStatusNotifier()
+		gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
+
+		ticker := mocks.NewTicker()
+		nodeAgent := konnect.NewNodeAgent(
+			testHostname,
+			testKicVersion,
+			konnect.DefaultRefreshNodePeriod,
+			logr.Discard(),
+			nodeClient,
+			configStatusQueue,
+			newMockGatewayInstanceGetter(nil),
+			gatewayClientsChangesNotifier,
+			newMockManagerInstanceIDProvider(uuid.New()),
+			konnect.WithRefreshTicker(ticker),
+		)
+
+		runAgent(t, nodeAgent)
+
+		t.Log("wait for initial nodes update")
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 1 }, time.Second, time.Microsecond)
+
+		t.Log("trigger update with config status notification")
+		configStatusQueue.NotifyGatewayConfigStatus(clients.GatewayConfigApplyStatus{ApplyConfigFailed: true})
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
+
+		t.Log("let another half of the period pass - no update should be triggered yet because of the notification")
+		ticker.Add(halfOfRefreshPeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
+
+		t.Log("trigger update with ticker")
+		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() > 2 }, time.Second, time.Microsecond)
+	})
+
+	t.Run("gateway clients changes notification", func(t *testing.T) {
+		nodeClient := newMockNodeClient(nil)
+		configStatusQueue := newMockConfigStatusNotifier()
+		gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
+
+		ticker := mocks.NewTicker()
+		nodeAgent := konnect.NewNodeAgent(
+			testHostname,
+			testKicVersion,
+			konnect.DefaultRefreshNodePeriod,
+			logr.Discard(),
+			nodeClient,
+			configStatusQueue,
+			newMockGatewayInstanceGetter(nil),
+			gatewayClientsChangesNotifier,
+			newMockManagerInstanceIDProvider(uuid.New()),
+			konnect.WithRefreshTicker(ticker),
+		)
+
+		runAgent(t, nodeAgent)
+
+		t.Log("wait for initial nodes update")
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 1 }, time.Second, time.Microsecond)
+		t.Log("trigger update with gateway clients change notification")
+		gatewayClientsChangesNotifier.Notify()
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
+
+		t.Log("let another half of the period pass - no update should be triggered yet because of the notification")
+		ticker.Add(halfOfRefreshPeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
+
+		t.Log("trigger update with ticker")
+		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 3 }, time.Second, time.Microsecond)
+	})
 }
 
 // runAgent runs the agent in a goroutine and cancels the context after the test is done, ensuring that the agent

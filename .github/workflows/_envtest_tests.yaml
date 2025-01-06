@@ -1,0 +1,46 @@
+name: envtest tests
+
+on:
+  workflow_call: {}
+
+jobs:
+  envtest-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: run envtest tests
+        run: make test.envtest.pretty
+        env:
+          GOTESTSUM_JUNITFILE: envtest-tests.xml
+          TEST_KONG_ENTERPRISE: "true"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+
+      - name: collect test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-envtest
+          path: coverage.envtest.out
+
+      - name: collect test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-report-envtest
+          path: envtest-tests.xml

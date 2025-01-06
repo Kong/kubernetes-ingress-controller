@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kong
+
+resources:
+- ../../postgres
+- gateway_admin_service.yaml
+- gateway_deployment.yaml
+
+components:
+- ../../../image/oss
+
+patches:
+- path: manager_multi_gateway_patch.yaml
+- path: gateway_service_patch.yaml
+- path: ./remove_proxy_container.yaml
+  target:
+    group: apps
+    kind: Deployment
+    name: ingress-kong
+    version: v1

@@ -1,5 +1,4 @@
 //go:build e2e_tests
-// +build e2e_tests
 
 package e2e
 
@@ -13,17 +12,19 @@ import (
 	"testing"
 	"time"
 
-	gokong "github.com/kong/go-kong/kong"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -36,74 +37,10 @@ import (
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-const (
-	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
-	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
-	dblessURL        = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
-)
-
-func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
-	t.Log("configuring all-in-one-dbless-legacy.yaml manifest test")
-	t.Parallel()
-	ctx, env := setupE2ETest(t)
-
-	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessLegacyPath)
-	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(dblessLegacyPath).ControllerNN
-	forDeployment := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-	}
-	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(podList.Items))
-	pod := podList.Items[0]
-
-	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-
-	t.Log("killing Kong process to simulate a crash and container restart")
-	killKong(ctx, t, env, &pod)
-
-	t.Log("confirming that routes are restored after crash")
-	verifyIngress(ctx, t, env)
-}
-
-func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
-	curTag, err := getCurrentGitTag("")
-	require.NoError(t, err)
-	preTag, err := getPreviousGitTag("", curTag)
-	require.NoError(t, err)
-	if curTag.Patch != 0 || len(curTag.Pre) > 0 {
-		t.Skipf("%v not a new minor version, skipping upgrade test", curTag)
-	}
-	oldManifest, err := http.Get(fmt.Sprintf(dblessURL, preTag.Major, preTag.Minor))
-	require.NoError(t, err)
-	defer oldManifest.Body.Close()
-
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
-	t.Parallel()
-	ctx, env := setupE2ETest(t)
-
-	t.Logf("deploying previous version %s kong manifest", preTag)
-	deployKong(ctx, t, env, oldManifest.Body)
-
-	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-
-	t.Logf("deploying current version %s kong manifest", curTag)
-
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
-	verifyIngress(ctx, t, env)
-}
-
-const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
-
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
-	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
+	const entDBLESSPath = "manifests/all-in-one-dbless-k4k8s-enterprise.yaml"
+
+	t.Logf("configuring %s manifest test", entDBLESSPath)
 	if os.Getenv(kong.LicenseDataEnvVar) == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
@@ -121,22 +58,23 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, entDBLESSPath)
-	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
-	deployments := getManifestDeployments(entDBLESSPath)
+	deployments := ManifestDeploy{
+		Path:              entDBLESSPath,
+		AdditionalSecrets: []*corev1.Secret{licenseSecret, adminPasswordSecretYAML},
+	}.Run(ctx, t, env)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("verifying enterprise mode was enabled properly")
 	verifyEnterprise(ctx, t, env, adminPassword)
 }
 
-const postgresPath = "../../deploy/single/all-in-one-postgres.yaml"
+const postgresPath = "manifests/all-in-one-postgres.yaml"
 
 func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
@@ -144,15 +82,14 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, postgresPath)
-	deployKong(ctx, t, env, manifest)
+	ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
 
 func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
@@ -161,16 +98,15 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, postgresPath)
-	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(postgresPath).ControllerNN
+	deployments := ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
+	deployment := deployments.ControllerNN
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("verifying that kong pods deployed properly and gathering a sample pod")
 	forDeployment := metav1.ListOptions{
@@ -280,7 +216,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	}, 2*time.Minute, time.Second)
 }
 
-const entPostgresPath = "../../deploy/single/all-in-one-postgres-enterprise.yaml"
+const entPostgresPath = "manifests/all-in-one-postgres-enterprise.yaml"
 
 func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres-enterprise.yaml manifest test")
@@ -301,16 +237,17 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, entPostgresPath)
-	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
-	deployments := getManifestDeployments(entPostgresPath)
+	deployments := ManifestDeploy{
+		Path:              entPostgresPath,
+		AdditionalSecrets: []*corev1.Secret{licenseSecret, adminPasswordSecret},
+	}.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
@@ -320,43 +257,81 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	verifyEnterpriseWithPostgres(ctx, t, env, adminPassword)
 }
 
-func TestDeployAllInOneDBLESS(t *testing.T) {
+func TestDeployAllInOnePostgresGatewayDiscovery(t *testing.T) {
 	t.Parallel()
 
-	const (
-		manifestFileName = "all-in-one-dbless.yaml"
-		manifestFilePath = "../../deploy/single/" + manifestFileName
-	)
+	const manifestFilePath = "manifests/all-in-one-postgres-multiple-gateways.yaml"
 
-	t.Logf("configuring %s manifest test", manifestFileName)
+	t.Logf("configuring %s manifest test", manifestFilePath)
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, manifestFilePath)
-	deployKong(ctx, t, env, manifest)
-	deployments := getManifestDeployments(manifestFilePath)
+	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+}
 
-	t.Log("scale proxy to 0 replicas")
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+func TestDeployAllInOneDBLESS(t *testing.T) {
+	t.Parallel()
 
-	t.Log("wait for 10 seconds to let controller reconcile")
-	<-time.After(10 * time.Second)
+	const manifestFilePath = "manifests/all-in-one-dbless.yaml"
 
-	t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
-	expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
-	readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
-	require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
-		"controller replicas count should not change after scaling proxy to 0")
-	ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
+	t.Logf("configuring %s manifest test", manifestFilePath)
+	ctx, env := setupE2ETest(t)
+
+	t.Log("deploying kong components")
+	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Log("scale proxy to 1 replica")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 1)
+
+	t.Log("misconfigure the ingress")
+	reconfigureExistingIngress(ctx, t, env, ingress, func(_ *netv1.Ingress) {
+		ingress.Spec.Rules[0].HTTP.Paths[0].Path = badEchoPath
+	})
+
+	t.Log("scale proxy to 2 replicas and verify that the new replica gets the old good configuration")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 2)
+	// Verify all the proxy replicas have the last good configuration.
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Log("restart the controller")
+	deployments.RestartController(ctx, t, env)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), namespace, controllerDeploymentName)
+
+	t.Log("scale proxy to 3 replicas and verify that the new replica gets the old good configuration")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
+	// Verify all the proxy replicas have the last good configuration.
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Run("scaling to 0 doesn't crash the controller", func(t *testing.T) {
+		t.Skip("skipping until https://github.com/Kong/kubernetes-ingress-controller/issues/6769 is solved")
+
+		t.Log("scale proxy to 0 replicas")
+		scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+
+		t.Log("wait for 10 seconds to let controller reconcile")
+		<-time.After(10 * time.Second)
+
+		t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
+		expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
+		readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
+		require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
+			"controller replicas count should not change after scaling proxy to 0")
+		ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
+	})
 }
 
 func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN k8stypes.NamespacedName) {
@@ -364,33 +339,32 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 	require.NoError(t, err)
 
 	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
+	client := cleanhttp.DefaultClient()
+	tr := cleanhttp.DefaultTransport()
+	// Anything related to TLS can be ignored, because only availability is being tested here.
+	// Testing communicating over TLS is done as part of actual E2E test.
+	tr.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true, //nolint:gosec
+	}
+	client.Transport = tr
+
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			client := &http.Client{
-				Timeout: time.Second * 30,
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true,
-					},
-				},
-			}
 
 			forwardCtx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, pod.Name, "8444")
 			address := fmt.Sprintf("https://localhost:%d", localPort)
 
-			kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+			kongClient, err := adminapi.NewKongAPIClient(address, client)
 			require.NoError(t, err)
 
-			requireIngressConfiguredInAdminAPIEventually(ctx, t, kongClient)
+			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)
 			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 		}()
 	}
-
 	wg.Wait()
 }

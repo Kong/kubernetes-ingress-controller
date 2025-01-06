@@ -19,13 +19,15 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1"
-	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1/fake"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1"
-	fakeconfigurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1alpha1/fake"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1"
-	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/typed/configuration/v1beta1/fake"
+	clientset "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1"
+	fakeconfigurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1/fake"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1"
+	fakeconfigurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1alpha1/fake"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1"
+	fakeconfigurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/configuration/v1beta1/fake"
+	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/incubator/v1alpha1"
+	fakeincubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/typed/incubator/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -35,8 +37,12 @@ import (
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
 // It's backed by a very simple object tracker that processes creates, updates and deletions as-is,
-// without applying any validations and/or defaults. It shouldn't be considered a replacement
+// without applying any field management, validations and/or defaults. It shouldn't be considered a replacement
 // for a real clientset and is mostly useful in simple unit tests.
+//
+// DEPRECATED: NewClientset replaces this with support for field management, which significantly improves
+// server side apply testing. NewClientset is only available when apply configurations are generated (e.g.
+// via --with-applyconfig).
 func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 	o := testing.NewObjectTracker(scheme, codecs.UniversalDecoder())
 	for _, obj := range objects {
@@ -96,4 +102,9 @@ func (c *Clientset) ConfigurationV1beta1() configurationv1beta1.ConfigurationV1b
 // ConfigurationV1alpha1 retrieves the ConfigurationV1alpha1Client
 func (c *Clientset) ConfigurationV1alpha1() configurationv1alpha1.ConfigurationV1alpha1Interface {
 	return &fakeconfigurationv1alpha1.FakeConfigurationV1alpha1{Fake: &c.Fake}
+}
+
+// IncubatorV1alpha1 retrieves the IncubatorV1alpha1Client
+func (c *Clientset) IncubatorV1alpha1() incubatorv1alpha1.IncubatorV1alpha1Interface {
+	return &fakeincubatorv1alpha1.FakeIncubatorV1alpha1{Fake: &c.Fake}
 }

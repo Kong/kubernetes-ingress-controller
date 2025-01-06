@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
 // Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and
@@ -22,9 +25,12 @@ type Client struct {
 	adminAPIClient      *kong.Client
 	pluginSchemaStore   *util.PluginSchemaStore
 	isKonnect           bool
-	konnectRuntimeGroup string
-	lastConfigSHA       []byte
+	konnectControlPlane string
 
+	lastCacheStoresHash store.SnapshotHash
+
+	lastConfigSHALock sync.RWMutex
+	lastConfigSHA     []byte
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
 }
@@ -49,24 +55,30 @@ func NewTestClient(address string) (*Client, error) {
 
 type KonnectClient struct {
 	Client
-	backoffStrategy UpdateBackoffStrategy
+	consumersSyncDisabled bool
+	backoffStrategy       UpdateBackoffStrategy
 }
 
-// NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
-func NewKonnectClient(c *kong.Client, runtimeGroup string) *KonnectClient {
+// NewKonnectClient creates an Admin API client that is to be used with a Konnect Control Plane Admin API.
+func NewKonnectClient(c *kong.Client, controlPlane string, consumersSyncDisabled bool) *KonnectClient {
 	return &KonnectClient{
 		Client: Client{
 			adminAPIClient:      c,
 			isKonnect:           true,
-			konnectRuntimeGroup: runtimeGroup,
+			konnectControlPlane: controlPlane,
 			pluginSchemaStore:   util.NewPluginSchemaStore(c),
 		},
-		backoffStrategy: NewKonnectBackoffStrategy(SystemClock{}),
+		backoffStrategy:       NewKonnectBackoffStrategy(clock.System{}),
+		consumersSyncDisabled: consumersSyncDisabled,
 	}
 }
 
 func (c *KonnectClient) BackoffStrategy() UpdateBackoffStrategy {
 	return c.backoffStrategy
+}
+
+func (c *KonnectClient) ConsumersSyncDisabled() bool {
+	return c.consumersSyncDisabled
 }
 
 // AdminAPIClient returns an underlying go-kong's Admin API client.
@@ -92,6 +104,12 @@ func (c *Client) NodeID(ctx context.Context) (string, error) {
 	}
 
 	return nodeID, nil
+}
+
+// IsReady returns nil if the Admin API is ready to serve requests.
+func (c *Client) IsReady(ctx context.Context) error {
+	_, err := c.adminAPIClient.Status(ctx)
+	return err
 }
 
 // GetKongVersion returns version of the kong gateway.
@@ -132,28 +150,42 @@ func (c *Client) PluginSchemaStore() *util.PluginSchemaStore {
 	return c.pluginSchemaStore
 }
 
-// IsKonnect tells if a client is used for communication with Konnect Runtime Group Admin API.
+// IsKonnect tells if a client is used for communication with Konnect Control Plane Admin API.
 func (c *Client) IsKonnect() bool {
 	return c.isKonnect
 }
 
-// KonnectRuntimeGroup gets a unique identifier of a Konnect's Runtime Group that config should
+// KonnectControlPlane gets a unique identifier of a Konnect's Control Plane that config should
 // be synchronised with. Empty in case of non-Konnect clients.
-func (c *Client) KonnectRuntimeGroup() string {
+func (c *Client) KonnectControlPlane() string {
 	if !c.isKonnect {
 		return ""
 	}
 
-	return c.konnectRuntimeGroup
+	return c.konnectControlPlane
+}
+
+// SetLastCacheStoresHash overrides last cache stores hash.
+func (c *Client) SetLastCacheStoresHash(s store.SnapshotHash) {
+	c.lastCacheStoresHash = s
+}
+
+// LastCacheStoresHash returns a checksum of the last successful cache stores push.
+func (c *Client) LastCacheStoresHash() store.SnapshotHash {
+	return c.lastCacheStoresHash
 }
 
 // SetLastConfigSHA overrides last config SHA.
 func (c *Client) SetLastConfigSHA(s []byte) {
+	c.lastConfigSHALock.Lock()
+	defer c.lastConfigSHALock.Unlock()
 	c.lastConfigSHA = s
 }
 
 // LastConfigSHA returns a checksum of the last successful configuration push.
 func (c *Client) LastConfigSHA() []byte {
+	c.lastConfigSHALock.RLock()
+	defer c.lastConfigSHALock.RUnlock()
 	return c.lastConfigSHA
 }
 
@@ -185,10 +217,15 @@ func NewClientFactoryForWorkspace(workspace string, httpClientOpts HTTPClientOpt
 	}
 }
 
-func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, address string) (*Client, error) {
+func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI DiscoveredAdminAPI) (*Client, error) {
 	httpclient, err := MakeHTTPClient(&cf.httpClientOpts, cf.adminToken)
 	if err != nil {
 		return nil, err
 	}
-	return NewKongClientForWorkspace(ctx, address, cf.workspace, httpclient)
+	cl, err := NewKongClientForWorkspace(ctx, discoveredAdminAPI.Address, cf.workspace, httpclient)
+	if err != nil {
+		return nil, err
+	}
+	cl.AttachPodReference(discoveredAdminAPI.PodRef)
+	return cl, nil
 }

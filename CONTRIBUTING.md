@@ -1,11 +1,8 @@
 # Contributing Guidelines
 
-Thank you for showing interest in contributing to
-Kong Ingress Controller.
+Thank you for showing interest in contributing to Kong Ingress Controller.
 
-Following guide will help you navigate
-the repository and get your PRs
-merged in faster.
+Following guide will help you navigate the repository and get your PRs merged in faster.
 
 ## Finding work
 
@@ -27,10 +24,19 @@ make without coding:
 - Providing your feedback on the proposed features and designs
 - Reviewing Pull Requests
 
-If you wish to contribute code (features or bug fixes) please keep in mind the following:
+If you wish to contribute code (features or bug fixes) please open pull requests with `main` as the base branch or `release/X.Y.x` if the fix shouldn't be targeted at newer versions.
 
-- bug fix pull requests should be opened against `main` as the base branch
-- feature pull requests should be opened with `next` as the base branch
+## Working with Pull Requests
+
+When you finish your work and want your contributions to be included, please submit a pull request
+and include necessary information about the pull request in its description following our
+[pull request template](https://github.com/Kong/kubernetes-ingress-controller/blob/a5cfca4a97927c2878fce593929a8e48442f3127/.github/PULL_REQUEST_TEMPLATE.md).
+A clear title and description is helpful to encourage your pull request to be reviewed and merged.
+
+If your pull request is still in progress, but you want to get early reviews before
+it is ready to be merged, please add `do not merge` or `work in progress` labels to the
+pull request. If your pull request is not ready to be reviewed yet, please convert it to `Draft`.
+`Draft` pull requests will not be reviewed until they are converted to `Open` status.
 
 ## Stale issue and pull request policy
 
@@ -53,7 +59,7 @@ For a GitHub issue describing a problem/feature request:
 
     1. ensure that all PRs reference the issue they are solving. Keep in mind that the _fixes_/_resolves_ directive only works for PRs merged to the default branch of the repository.
 
-    1. close the issue as soon as all the PRs have been merged to **`main` or `next`**. If it's obvious from PRs that the issue has been resolved, a closing comment on the issue is purely optional.
+    1. close the issue as soon as all the PRs have been merged to **`main`**. If it's obvious from PRs that the issue has been resolved, a closing comment on the issue is purely optional.
 
 - **Other resolutions/rejections**. if resolution happens for any other reason (_resolved without code_, _user's question answered_, _won't fix_, _infeasible_, _not useful_, _alternative approach chosen_, _problem will go away in $FUTURE-VERSION_)
 
@@ -61,9 +67,10 @@ For a GitHub issue describing a problem/feature request:
 
 For a closed issue, one can verify which released versions contain the fix/enhancement by navigating into the merge commit of each attached PR, where GitHub lists tags/branches that contain the merge commit.
 Thus:
+
 - if the list includes a release tag: the fix/enhancement is included in that release tag.
-- if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
-- if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
+- if the list includes `release/X.Y.x` but no release tags: the fix/enhancement will come in the nearest patch release.
+- if the list includes `main` : the fix/enhancement will come in the next minor release.
 
 # Enhancements
 
@@ -121,7 +128,6 @@ Make sure you're [generally familiar with Kubernetes Controllers as a concept, a
 
 [ctrl]:https://kubernetes.io/docs/concepts/architecture/controller/
 [kapi]:https://kubernetes.io/docs/concepts/overview/kubernetes-api/
-[kubebuilder]:https://kubebuilder.io/
 [kbquick]:https://kubebuilder.io/quick-start.html
 [kbctrl]:https://kubebuilder.io/cronjob-tutorial/controller-overview.html
 
@@ -155,6 +161,7 @@ go run -tags gcp ./internal/cmd/main.go \
 ```
 
 If you are using Kind we can leverage [extraPortMapping config](https://kind.sigs.k8s.io/docs/user/ingress/)
+
 ```shell
 cat <<EOF | kind create cluster --config=-
 kind: Cluster
@@ -182,20 +189,20 @@ kubectl patch -n kong deploy ingress-kong -p '{"spec": {"template": {"spec": {"c
 
 ## Building
 
-Build is performed via Makefile. Depending on your
+Build is performed via [`Makefile`](./Makefile). Depending on your
 requirements you can build a raw server binary, a local container image,
 or push an image to a remote repository.
 
 ### Build a raw server binary
 
 ```console
-$ make build
+make build
 ```
 
 ### Build a local container image
 
 ```console
-$ TAG=DEV REGISTRY=docker.example.com/registry make container
+TAG=DEV REGISTRY=docker.example.com/registry make container
 ```
 
 Note: this will use the Docker daemon
@@ -215,7 +222,7 @@ in your Deployment specs.
 ### Push the container image to a remote repository
 
 ```console
-$ docker push docker.example.com/registry/kong-ingress-controller:DEV
+docker push docker.example.com/registry/kong-ingress-controller:DEV
 ```
 
 Note: replace `docker.example.com/registry` with your registry URL.
@@ -225,51 +232,26 @@ Note: replace `docker.example.com/registry` with your registry URL.
 There are several ways to deploy Kong Ingress Controller onto a cluster.
 Please check the [deployment guide](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/overview/).
 
+## Linting
+
+You can lint the codebase by running:
+
+```console
+make lint
+```
+
+passing the above is required by CI.
+
 ## Testing
 
-You can run the unit tests by running:
-
-```console
-$ make test
-```
-
-For integration tests run:
-
-```console
-$ make test.integration
-```
-
-And for E2E tests run:
-
-```console
-$ make test.e2e
-```
-
-Note that the `integration` and `e2e` tests require a local container runtime
-and will utilize a sizable amount of system resources as one or many local
-Kubernetes clusters will be spun up in containers and tested against.
+Please see [TESTING.md](./TESTING.md) for a detailed description of testing KIC.
 
 ## Releasing
 
-Makefile will produce a release binary, as shown above. To publish this
-to a wider Kubernetes user base, push the image to a container registry.
-Our images are hosted on
-[Bintray](https://bintray.com/kong/kubernetes-ingress-controller).
+See [RELEASE.md](./RELEASE.md).
 
-An example release might look like:
+## Contributor Badge
 
-```shell
-$ export TAG=42
-$ make release
-```
+If your Pull Request to Kong/kubernetes-ingress-controller was accepted, and it fixes a bug, adds functionality, or makes it significantly easier to use or understand KIC, congratulations! You are eligible to receive a digital Contributor Badge! Go ahead and fill out the [Contributors Submissions form](https://goo.gl/forms/5w6mxLaE4tz2YM0L2).
 
-Please follow these guidelines to cut a release:
-
-- Update the [release](https://help.github.com/articles/creating-releases/)
-  page with a link to changelog.
-- Cut a release branch, if appropriate.
-  All major feature work is done in HEAD. Specific bug fixes are
-  cherry-picked into a release branch.
-- If you're not confident about the stability of the code,
-  [tag](https://help.github.com/articles/working-with-tags/) it as alpha or beta.
-  Typically, a release branch should have stable code.
+*Badges expire after 1 year, at which point you may submit a new contribution to renew the badge.* 

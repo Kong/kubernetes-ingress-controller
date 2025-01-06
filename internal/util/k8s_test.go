@@ -18,16 +18,18 @@ package util
 
 import (
 	"context"
+	"slices"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 func TestParseNameNS(t *testing.T) {
@@ -183,33 +185,25 @@ func TestGetPodDetails(t *testing.T) {
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", "")
 	_, err1 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err1 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.Error(t, err1)
 
 	// POD_NAME not exist
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
 	_, err2 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err2 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.Error(t, err2)
 
 	// POD_NAMESPACE not exist
 	t.Setenv("POD_NAME", "testpod")
 	t.Setenv("POD_NAMESPACE", "")
 	_, err3 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err3 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.Error(t, err3)
 
-	// POD not exist
+	// POD exists
 	t.Setenv("POD_NAME", "testpod")
 	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
 	_, err4 := GetPodDetails(ctx, testclient.NewSimpleClientset())
-	if err4 == nil {
-		t.Errorf("expected an error but returned nil")
-	}
+	assert.NoError(t, err4)
 
 	// success to get PodInfo
 	fkClient := testclient.NewSimpleClientset(
@@ -238,14 +232,8 @@ func TestGetPodDetails(t *testing.T) {
 		}}})
 
 	epi, err5 := GetPodDetails(ctx, fkClient)
-	if err5 != nil {
-		t.Errorf("expected a PodInfo but returned error")
-		return
-	}
-
-	if epi == nil {
-		t.Errorf("expected a PodInfo but returned nil")
-	}
+	assert.NoError(t, err5)
+	assert.NotNil(t, epi)
 }
 
 func TestGenerateTagsForObject(t *testing.T) {
@@ -255,16 +243,16 @@ func TestGenerateTagsForObject(t *testing.T) {
 		lo.ToPtr(K8sKindTagPrefix + "HTTPRoute"),
 		lo.ToPtr(K8sUIDTagPrefix + "buryani"),
 		lo.ToPtr(K8sGroupTagPrefix + "gateway.networking.k8s.io"),
-		lo.ToPtr(K8sVersionTagPrefix + "v1beta1"),
+		lo.ToPtr(K8sVersionTagPrefix + "v1"),
 		lo.ToPtr("temir-jol"),
 		lo.ToPtr("snaryad-soqqısı"),
 	}
 
 	// In memory kubernetes objects do not have GVK filled in.
 	// Relevant kubernetes issue: https://github.com/kubernetes/kubernetes/issues/80609
-	testObj := &gatewayv1beta1.HTTPRoute{
+	testObj := &gatewayapi.HTTPRoute{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1beta1",
+			APIVersion: "gateway.networking.k8s.io/v1",
 			Kind:       "HTTPRoute",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -277,8 +265,21 @@ func TestGenerateTagsForObject(t *testing.T) {
 		},
 	}
 
-	tags := GenerateTagsForObject(testObj)
-	if diff := cmp.Diff(expectedTagSet, tags); diff != "" {
-		t.Fatalf("generated tags are not as expected, diff:\n%s", diff)
-	}
+	t.Run("generated tags based on the object", func(t *testing.T) {
+		tags := GenerateTagsForObject(testObj)
+		require.ElementsMatch(t, expectedTagSet, tags, "generated tags are not as expected")
+	})
+
+	t.Run("generated tags based on the object with additional tags k8s-named-route-rule", func(t *testing.T) {
+		expectedTagSetWithAdditional := slices.Concat(
+			expectedTagSet,
+			[]*string{
+				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "test"),
+				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "echo"),
+			},
+		)
+
+		tags := GenerateTagsForObject(testObj, AdditionalTagsK8sNamedRouteRule("test", "", " ", "echo")...)
+		require.ElementsMatch(t, expectedTagSetWithAdditional, tags, "generated tags are not as expected")
+	})
 }

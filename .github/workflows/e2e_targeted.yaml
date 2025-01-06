@@ -33,6 +33,7 @@ on:
 
 jobs:
   post-comment-in-pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
     if: ${{ github.event.inputs.pr-number != '' }}
     runs-on: ubuntu-latest
     env:
@@ -41,11 +42,16 @@ jobs:
       # Sadly this is not readily available in github's context.
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.inputs.pr-number }}
+      RUN_GKE: ${{ inputs.run-gke }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
-          gh pr comment ${PR_NUMBER} --body \
-            "E2E (targeted) tests were started at ${URL}"
+          if [ "${RUN_GKE}" == "true" ]; then
+            MSG="E2E (targeted) tests with KIND-based and GKE-based clusters were started at ${URL}"
+          else
+            MSG="E2E (targeted) tests with KIND-based clusters were started at ${URL}"
+          fi
+          gh pr comment ${PR_NUMBER} --body "${MSG}"
       # Remove the 'ci/run-e2e' label from the PR to prevent the `e2e_trigger_via_label.yaml`
       # workflow from running the `e2e_targeted.yaml` again.
       - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
@@ -58,6 +64,7 @@ jobs:
   # We need to pick an image to use for the tests. If the input specified one, we use that. Otherwise, we use the one
   # built by the previous job.
   choose-image:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs: build-image

@@ -6,11 +6,12 @@ on:
 
 jobs:
   fossa-scan:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     environment: "FOSSA"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: fossas/fossa-action@v1
+      - uses: actions/checkout@v4
+      - uses: fossas/fossa-action@v1.4.0
         with:
           api-key: ${{secrets.fossaApiKey}}
           branch: main

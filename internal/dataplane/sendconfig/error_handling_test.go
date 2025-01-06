@@ -3,12 +3,13 @@ package sendconfig
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestParseFlatEntityErrors(t *testing.T) {
-	log := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 	tests := []struct {
 		name    string
 		body    []byte
@@ -35,7 +36,7 @@ func TestParseFlatEntityErrors(t *testing.T) {
 					APIVersion: "v1",
 					UID:        "e7e5c93e-4d56-4cc3-8f4f-ff1fcbe95eb2",
 					Problems: map[string]string{
-						"":     "failed conditional validation given value of field protocol",
+						"service:67338dc2-31fd-47b6-85a9-9c11d347d090.httpbin.httpbin.80": "failed conditional validation given value of field protocol",
 						"path": "value must be null",
 					},
 				},
@@ -147,10 +148,16 @@ func TestParseFlatEntityErrors(t *testing.T) {
   "code": 14
 }`),
 		},
+		{
+			name:    "empty response body",
+			body:    nil,
+			want:    nil,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseFlatEntityErrors(tt.body, log)
+			got, err := parseFlatEntityErrors(tt.body, logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseFlatEntityErrors() error = %v, wantErr %v", err, tt.wantErr)
 				return

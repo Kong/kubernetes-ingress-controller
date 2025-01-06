@@ -1,5 +1,4 @@
 //go:build istio_tests
-// +build istio_tests
 
 package e2e
 
@@ -15,22 +14,25 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	kongaddon "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 var (
@@ -45,6 +47,9 @@ var (
 	//
 	// See: https://docs.konghq.com/hub/kong-inc/rate-limiting/
 	perHourRateLimit = 3
+	// workloadEndpointIstioVersionCutoff is the lowest version that supports Kiali API /namespaces/<ns>/workloads/<workload>
+	// that returns the metrics of a workload.
+	workloadEndpointIstioVersionCutoff = semver.MustParse("1.18.0")
 )
 
 // TestIstioWithKongIngressGateway verifies integration of Kong Gateway as an Ingress
@@ -61,16 +66,17 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	require.NoError(t, err, "failed to configure logger")
 	if logOutput != "" {
 		t.Logf("INFO: writing manager logs to %s", logOutput)
 	}
 
 	t.Log("configuring cluster addons for the testing environment")
-	kongBuilder := kong.NewBuilder().
+	kongBuilder := kongaddon.NewBuilder().
 		WithControllerDisabled().
-		WithProxyAdminServiceTypeLoadBalancer()
+		WithProxyAdminServiceTypeLoadBalancer().
+		WithNamespace(consts.ControllerNamespace)
 	kongAddon := kongBuilder.Build()
 
 	t.Log("configuring istio cluster addon for the testing environment")
@@ -109,8 +115,12 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		return ready
 	}, time.Minute, time.Second)
 
+	t.Log("Preparing the environment to run the controller manager")
+	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 	t.Log("starting the controller manager")
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, deprecatedLogger, logger, env.Cluster(), "--log-level=debug"))
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, []string{"--log-level=debug"})
+	require.NoError(t, err)
+	t.Cleanup(func() { cancel() })
 
 	t.Log("creating a new mesh-enabled namespace for testing http traffic")
 	namespace := &corev1.Namespace{
@@ -125,7 +135,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating a mesh enabled http deployment")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -137,13 +147,13 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 
 	t.Logf("creating an ingress resource for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := generators.NewIngressForService("/httpbin", map[string]string{
-		annotations.IngressClassKey: ingressClass,
-		"konghq.com/strip-path":     "true",
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace.Name, ingress))
 
 	t.Log("retrieving the kong proxy URL")
-	proxyURL, err := kongAddon.ProxyURL(ctx, env.Cluster())
+	proxyURL, err := kongAddon.ProxyHTTPURL(ctx, env.Cluster())
 	require.NoError(t, err)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -319,6 +329,21 @@ func verifyStatusForURL(getURL string, statusCode int) error {
 
 // getKialiWorkloadHealth produces the health metrics of a workload given the namespace and name of that workload.
 func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
+	istioVersion, err := semver.Parse(istioVersionStr)
+	require.NoError(t, err, "failed to parse istio version")
+	if istioVersion.GTE(workloadEndpointIstioVersionCutoff) {
+		return getKialiWorkloadHealthIstioByWorkloadEndpoint(t, kialiAPIUrl, namespace, workloadName), nil
+	}
+	return getKialiWorkloadHealthByHealthEndpoint(t, kialiAPIUrl, namespace, workloadName)
+}
+
+// getKialiWorkloadHealthByHealthEndpoint gets health metrics of ALL workloads from /namespaces/<ns>/health?type=workload API.
+// Used in istio 1.17 and prior. Istio 1.22 does not have this API.
+func getKialiWorkloadHealthByHealthEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
 	// generate the URL for the namespace health metrics
 	kialiHealthURL := fmt.Sprintf("%s/namespaces/%s/health", kialiAPIUrl, namespace)
 	req, err := http.NewRequest("GET", kialiHealthURL, nil)
@@ -358,6 +383,24 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 	return &health, nil
 }
 
+// getKialiWorkloadHealthIstioByWorkloadEndpoint gets metrics of workload by /namespaces/<ns>/workloads/<workload> API.
+// Used in Istio 1.18 and later. Istio 1.17 does not have this API.
+func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) *workloadHealth {
+	t.Helper()
+
+	kialiWorkloadURL := fmt.Sprintf("%s/namespaces/%s/workloads/%s", kialiAPIUrl, namespace, workloadName)
+	resp, err := helpers.DefaultHTTPClient().Get(kialiWorkloadURL)
+	require.NoErrorf(t, err, "failed to call Kiali workload API %s", kialiWorkloadURL)
+	defer resp.Body.Close()
+	// Verify the workload response.
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "Got code %d from Kiali workload API %s", resp.StatusCode, kialiWorkloadURL)
+	b, err := io.ReadAll(resp.Body)
+	require.NoError(t, err, "failed to read from response from Kiali workload API")
+	status := workloadStatus{}
+	require.NoError(t, json.Unmarshal(b, &status), "failed to parse JSON from Kiali workload API")
+	return &status.Health
+}
+
 // -----------------------------------------------------------------------------
 // Private Testing Types - Kiali API Responses
 // -----------------------------------------------------------------------------
@@ -381,4 +424,9 @@ type requests struct {
 
 type workloadHealth struct {
 	Requests requests `json:"requests"`
+}
+
+type workloadStatus struct {
+	Name   string         `json:"name"`
+	Health workloadHealth `json:"health"`
 }

@@ -6,5 +6,6 @@ namespace: kong
 resources:
 - ../base/
 
-patchesStrategicMerge:
-- manager.yaml
+components:
+- ../../../components/manager_dev_webhook
+- ../../../components/manager_dev_patch

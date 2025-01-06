@@ -1,9 +1,13 @@
 package store
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,7 +15,10 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 func TestCacheStoresGet(t *testing.T) {
@@ -39,10 +46,8 @@ kind: Ingress
 metadata:
   name: httpbin-ingress
   namespace: default
-  annotations:
-    httpbin.ingress.kubernetes.io/rewrite-target: /
-    kubernetes.io/ingress.class: "kong"
 spec:
+  ingressClassName: kong
   rules:
   - http:
       paths:
@@ -73,15 +78,22 @@ spec:
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
+	var got interface{}
 	t.Log("ensuring that we can Get() the objects back out of the cache store")
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-deployment"}}
 	ing := &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-ingress"}}
-	_, exists, err = cs.Get(svc)
+	got, exists, err = cs.Get(svc)
 	assert.NoError(t, err)
 	assert.True(t, exists)
-	_, exists, err = cs.Get(ing)
+	gotSvc, ok := got.(*corev1.Service)
+	require.True(t, ok)
+	require.NotEmpty(t, gotSvc.TypeMeta.Kind)
+	got, exists, err = cs.Get(ing)
 	assert.NoError(t, err)
 	assert.True(t, exists)
+	gotIng, ok := got.(*netv1.Ingress)
+	require.True(t, ok)
+	require.NotEmpty(t, gotIng.TypeMeta.Kind)
 }
 
 func TestGetIngressClassHandling(t *testing.T) {
@@ -136,9 +148,93 @@ func TestGetIngressClassHandling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := NewFakeStore(tt.objs)
 			require.NoError(t, err)
-			if got := s.(Store).getIngressClassHandling(); got != tt.want {
+			if got := s.(*Store).getIngressClassHandling(); got != tt.want {
 				t.Errorf("s.getIngressClassHandling() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestStore_Getters(t *testing.T) {
+	t.Run("GetKongUpstreamPolicy", func(t *testing.T) {
+		cacheStores := NewCacheStores()
+		s := New(cacheStores, annotations.DefaultIngressClass, logr.Discard())
+
+		_, err := s.GetKongUpstreamPolicy("default", "kong-upstream-policy")
+		require.ErrorAs(t, err, &NotFoundError{})
+
+		upstreamPolicy := &kongv1beta1.KongUpstreamPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kong-upstream-policy",
+				Namespace: "default",
+			},
+			Spec: kongv1beta1.KongUpstreamPolicySpec{
+				Algorithm: lo.ToPtr("least-connections"),
+			},
+		}
+		err = cacheStores.Add(upstreamPolicy)
+		require.NoError(t, err)
+
+		storedObj, err := s.GetKongUpstreamPolicy("default", "kong-upstream-policy")
+		require.NoError(t, err)
+		require.Equal(t, upstreamPolicy, storedObj)
+	})
+}
+
+func benchmarkListHTTPRoutes(b *testing.B, count int) {
+	// Create a new cache store
+	cs := NewCacheStores()
+	c := New(cs, "kong", logr.Discard())
+
+	// Add some HTTPRoutes to the cache store
+	for i := 0; i < count; i++ {
+		route := &gatewayapi.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("route-%d", i),
+				Namespace: "default",
+			},
+			Spec: gatewayapi.HTTPRouteSpec{
+				Rules: []gatewayapi.HTTPRouteRule{
+					{
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/test1"),
+								},
+								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+							},
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/test2"),
+								},
+								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+							},
+						},
+					},
+				},
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{},
+			},
+		}
+
+		require.NoError(b, cs.HTTPRoute.Add(route))
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := c.ListHTTPRoutes()
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkListHTTPRoutes(b *testing.B) {
+	counts := []int{1000, 10000, 100000, 1000000}
+	for _, count := range counts {
+		b.Run(strconv.Itoa(count), func(b *testing.B) {
+			b.ResetTimer()
+			benchmarkListHTTPRoutes(b, count)
+			b.ReportAllocs()
 		})
 	}
 }

@@ -1,51 +1,113 @@
 package helpers
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
+// GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
+func GetKongRootConfig(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
+	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating specific HTTP client for Kong API URL: %q: %w", proxyAdminURL, err)
+	}
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
+	}
+	return kc.Root(ctx)
+}
+
 // GetKongVersion returns kong version using the provided Admin API URL.
-func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (semver.Version, error) {
+func GetKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
 	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
-		version, err := kong.ParseSemanticVersion(override)
-		if err != nil {
-			return semver.Version{}, err
+		if _, err := kong.ParseSemanticVersion(override); err != nil {
+			return kong.Version{}, err
 		}
-		return semver.Version{Major: version.Major(), Minor: version.Minor(), Patch: version.Patch()}, nil
+		return kong.NewVersion(override)
+	}
+	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
+	if err != nil {
+		return kong.Version{}, err
+	}
+	return kongconfig.KongVersionFromRoot(jsonResp)
+}
+
+// ValidateMinimalSupportedKongVersion returns version of Kong Gateway running at the provided Admin API URL.
+// In case the version is below the minimal supported version versions.KICv3VersionCutoff (3.4.1), it returns an error.
+func ValidateMinimalSupportedKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
+	kongVersion, err := GetKongVersion(ctx, proxyAdminURL, kongTestPassword)
+	if err != nil {
+		return kong.Version{}, err
+	}
+	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
+	if kongSemVersion.LT(versions.KICv3VersionCutoff) {
+		return kong.Version{}, TooOldKongGatewayError{
+			actualVersion:   kongSemVersion,
+			expectedVersion: versions.KICv3VersionCutoff,
+		}
+	}
+	return kongVersion, nil
+}
+
+type TooOldKongGatewayError struct {
+	actualVersion   semver.Version
+	expectedVersion semver.Version
+}
+
+func (e TooOldKongGatewayError) Error() string {
+	return fmt.Sprintf(
+		"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
+		e.actualVersion, e.expectedVersion,
+	)
+}
+
+// GetKongDBMode returns kong dbmode using the provided Admin API URL.
+func GetKongDBMode(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (dpconf.DBMode, error) {
+	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
+	if err != nil {
+		return "", err
+	}
+	dbMode, err := kongconfig.DBModeFromRoot(jsonResp)
+	if err != nil {
+		return "", fmt.Errorf("%w (for URL: %s)", err, proxyAdminURL)
+	}
+	return dbMode, nil
+}
+
+// GetKongRouterFlavor gets router flavor of Kong using the provided Admin API URL.
+func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (dpconf.RouterFlavor, error) {
+	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
+	if err != nil {
+		return "", err
+	}
+	routerFlavor, err := kongconfig.RouterFlavorFromRoot(jsonResp)
+	if err != nil {
+		return "", fmt.Errorf("%w (for URL: %s)", err, proxyAdminURL)
+	}
+	return routerFlavor, nil
+}
+
+// GetKongLicenses fetches all licenses applied to Kong gateway.
+func GetKongLicenses(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) ([]*kong.License, error) {
+	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
+	if err != nil {
+		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), httpClient)
 	if err != nil {
-		return semver.Version{}, fmt.Errorf("failed creating request for %s: %w", proxyAdminURL, err)
+		return nil, err
 	}
-	req.Header.Set("kong-admin-token", kongTestPassword)
-	resp, err := DefaultHTTPClient().Do(req)
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("failed issuing HTTP request for %s: %w", proxyAdminURL, err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("failed reading response body from %s: %w", proxyAdminURL, err)
-	}
-	var jsonResp map[string]interface{}
-	err = json.Unmarshal(body, &jsonResp)
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("failed parsing response body from %s: %w", proxyAdminURL, err)
-	}
-
-	m := kong.VersionFromInfo(jsonResp)
-	version, err := kong.ParseSemanticVersion(m)
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("failed parsing kong (URL: %s) semver from body: %s: %w", proxyAdminURL, m, err)
-	}
-	return semver.Version{Major: version.Major(), Minor: version.Minor(), Patch: version.Patch()}, nil
+	return kc.Licenses.ListAll(ctx)
 }

@@ -1,113 +1,144 @@
 //go:build conformance_tests
-// +build conformance_tests
 
 package conformance
 
 import (
-	"fmt"
+	"os"
+	"path"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/gateway-api/conformance"
+	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
+	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
-const (
-	showDebug                  = true
-	shouldCleanup              = true
-	enableAllSupportedFeatures = true
-)
+var skippedTestsForTraditionalRoutes = []string{
+	// core conformance
+	tests.HTTPRouteHeaderMatching.ShortName,
+	// NOTE: Skipped tests.GRPCRouteHeaderMatching.ShortName and
+	// tests.GRPCExactMethodMatching.ShortName because in traditional mode,
+	// when wanting to proxy different gRPC services and route requests based on Header or Method,
+	// it is necessary to create separate catch-all routes for them.
+	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
+	// ref: https://github.com/Kong/kubernetes-ingress-controller/issues/6144
+	tests.GRPCRouteHeaderMatching.ShortName,
+	tests.GRPCExactMethodMatching.ShortName,
+}
 
-var conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
+var skippedTestsForExpressionRoutes = []string{
+	// When processing this scenario, the Kong's expressions router requires `priority`
+	// to be specified for routes.
+	// We cannot provide that for routes that are part of the conformance suite.
+	tests.GRPCRouteListenerHostnameMatching.ShortName,
+}
+
+var traditionalRoutesSupportedFeatures = []features.FeatureName{
+	// core features
+	features.SupportGateway,
+	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
+	// extended features
+	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// Temporarily disabled and tracking through the following issue.
+	// suite.SupportHTTPRouteBackendTimeout,
+}
+
+var expressionRoutesSupportedFeatures = []features.FeatureName{
+	// core features
+	features.SupportGateway,
+	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
+	// extended features
+	features.SupportHTTPRouteQueryParamMatching,
+	features.SupportHTTPRouteMethodMatching,
+	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// Temporarily disabled and tracking through the following issue.
+	// features.SupportHTTPRouteBackendTimeout,
+}
 
 func TestGatewayConformance(t *testing.T) {
-	t.Log("configuring environment for gateway conformance tests")
-	client, err := client.New(env.Cluster().Config(), client.Options{})
+	k8sClient, gatewayClassName := prepareEnvForGatewayConformanceTests(t)
+
+	// Conformance tests are run for both available router flavours:
+	// traditional_compatible and expressions.
+	var (
+		skippedTests      []string
+		supportedFeatures []features.FeatureName
+		mode              string
+	)
+	switch rf := testenv.KongRouterFlavor(); rf {
+	case dpconf.RouterFlavorTraditionalCompatible:
+		skippedTests = skippedTestsForTraditionalRoutes
+		supportedFeatures = traditionalRoutesSupportedFeatures
+		mode = string(dpconf.RouterFlavorTraditionalCompatible)
+	case dpconf.RouterFlavorExpressions:
+		skippedTests = skippedTestsForExpressionRoutes
+		supportedFeatures = expressionRoutesSupportedFeatures
+		mode = string(dpconf.RouterFlavorExpressions)
+	default:
+		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
+	}
+
+	opts := conformance.DefaultOptions(t)
+	opts.GatewayClassName = gatewayClassName
+	opts.Debug = true
+	opts.Mode = mode
+	opts.CleanupBaseResources = !testenv.IsCI()
+	opts.BaseManifests = conformanceTestsBaseManifests
+	opts.SupportedFeatures = sets.New(supportedFeatures...)
+	opts.SkipTests = skippedTests
+	opts.ConformanceProfiles = sets.New(
+		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
+	)
+	opts.Implementation = conformancev1.Implementation{
+		Organization: metadata.Organization,
+		Project:      metadata.ProjectName,
+		URL:          metadata.ProjectURL,
+		Version:      metadata.Release,
+		Contact: []string{
+			path.Join(metadata.ProjectURL, "/issues/new/choose"),
+		},
+	}
+	cSuite, err := suite.NewConformanceTestSuite(opts)
 	require.NoError(t, err)
-	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
-	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
-
-	t.Log("starting the controller manager")
-	args := []string{
-		fmt.Sprintf("--ingress-class=%s", ingressClass),
-		fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
-		fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
-		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
-		"--profiling",
-		"--dump-config",
-		"--log-level=trace",
-		"--debug-log-reduce-redundancy",
-		fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates),
-		"--anonymous-reports=false",
-	}
-
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))
-
-	t.Log("creating GatewayClass for gateway conformance tests")
-	gatewayClass := &gatewayv1beta1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
-			},
-		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-	}
-	require.NoError(t, client.Create(ctx, gatewayClass))
-	t.Cleanup(func() { assert.NoError(t, client.Delete(ctx, gatewayClass)) })
 
 	t.Log("starting the gateway conformance test suite")
-	cSuite := suite.New(suite.Options{
-		Client:                     client,
-		GatewayClassName:           gatewayClass.Name,
-		Debug:                      showDebug,
-		CleanupBaseResources:       shouldCleanup,
-		EnableAllSupportedFeatures: enableAllSupportedFeatures,
-		BaseManifests:              conformanceTestsBaseManifests,
-		SkipTests: []string{
-			// this test is currently fixed but cannot be re-enabled yet due to an upstream issue
-			// https://github.com/kubernetes-sigs/gateway-api/pull/1745
-			tests.GatewaySecretReferenceGrantSpecific.ShortName,
+	cSuite.Setup(t, tests.ConformanceTests)
 
-			// standard conformance
-			tests.HTTPRouteHeaderMatching.ShortName,
+	go patchGatewayClassToPassTestGatewayClassObservedGenerationBump(ctx, t, k8sClient)
 
-			// extended conformance
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
-			tests.GatewayClassObservedGenerationBump.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
-			tests.TLSRouteSimpleSameNamespace.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
-			tests.HTTPRouteQueryParamMatching.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
-			tests.HTTPRouteRedirectPort.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
-			tests.HTTPRouteRedirectScheme.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3683
-			tests.HTTPRouteResponseHeaderModifier.ShortName,
+	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
+	// single test only, e.g.:
+	//
+	// cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
+	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
+	// single test only, e.g.:
+	//
+	// require.NoError(t, cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRewritePath}))
+	require.NoError(t, cSuite.Run(t, tests.ConformanceTests))
 
-			// experimental conformance
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
-			tests.HTTPRouteRedirectPath.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
-			tests.HTTPRouteRewriteHost.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
-			tests.HTTPRouteRewritePath.ShortName,
-		},
-	})
-	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
+	const reportFileName = "kong-kubernetes-ingress-controller.yaml"
+	t.Log("saving the gateway conformance test report to file:", reportFileName)
+	report, err := cSuite.Report()
+	require.NoError(t, err)
+	rawReport, err := yaml.Marshal(report)
+	require.NoError(t, err)
+	// Save report in root of the repository, file name is in .gitignore.
+	require.NoError(t, os.WriteFile("../../"+reportFileName, rawReport, 0o600))
 }

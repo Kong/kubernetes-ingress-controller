@@ -13,16 +13,16 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // KongAdminAPIServiceReconciler reconciles Kong Admin API Service Endpointslices
@@ -59,26 +59,28 @@ var _ controllers.Reconciler = &KongAdminAPIServiceReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("KongAdminAPIEndpoints", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
 	if r.Cache == nil {
 		r.Cache = make(DiscoveredAdminAPIsCache)
 	}
 
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice),
-	)
+	return ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("KongAdminAPIEndpoints").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+			// In order to get up to date Admin API endpoints in all KIC replicas, we need to
+			// not require leader election so that AdminAPI controller runs in all replicas
+			// and notifies about the changes regardless of the leader election status.
+			NeedLeaderElection: lo.ToPtr(false),
+		}).
+		Watches(&discoveryv1.EndpointSlice{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice)),
+		).
+		Complete(r)
 }
 
 // SetLogger sets the logger.
@@ -124,7 +126,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	r.Log.Info("Reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 	if !endpoints.DeletionTimestamp.IsZero() {
-		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
+		r.Log.V(logging.DebugLevel).Info("EndpointSlice is being deleted",
 			"type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name,
 		)
 
@@ -175,7 +177,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *KongAdminAPIServiceReconciler) notify() {
 	discovered := flattenDiscoveredAdminAPIs(r.Cache)
 	addresses := lo.Map(discovered, func(d adminapi.DiscoveredAdminAPI, _ int) string { return d.Address })
-	r.Log.V(util.DebugLevel).
+	r.Log.V(logging.DebugLevel).
 		Info("Notifying about newly detected Admin APIs", "admin_apis", addresses)
 	r.EndpointsNotifier.Notify(discovered)
 }

@@ -1,0 +1,142 @@
+# This example demonstrates how to use KongCustomEntity custom resource to
+# specify custom Kong entities.
+# The example requires KIC to set `KongCustomEntity` and `FillIDs` feature gates enabled.
+# The example will use `degraphql_routes` entity and `degraphql` plugin for
+# demonstration. Since `degraphql` plugin can be only used with Kong gateway
+# enterprise, the demo can be only used with Kong gateway enterprise installed.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hasura
+    hasuraService: custom
+  name: hasura
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hasura
+  template:
+    metadata:
+      labels:
+        app: hasura
+    spec:
+      containers:
+      - image: hasura/graphql-engine:v2.38.0
+        imagePullPolicy: IfNotPresent
+        name: hasura
+        env:
+        - name: HASURA_GRAPHQL_DATABASE_URL
+          value: postgres://user:password@localhost:5432/hasura_data
+        ## enable the console served by server
+        - name: HASURA_GRAPHQL_ENABLE_CONSOLE
+          value: "true"
+        ## enable debugging mode. It is recommended to disable this in production
+        - name: HASURA_GRAPHQL_DEV_MODE
+          value: "true"
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        resources: {}
+      - image: postgres:15
+        name: postgres
+        env:
+        - name: POSTGRES_USER
+          value: "user"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        - name: POSTGRES_DB
+          value: "hasura_data"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hasura
+  name: hasura
+  namespace: default
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  selector:
+    app: hasura
+---
+# This is the ingress that exposes the console of hasura server. 
+# You can access http://${PROXY_IP}/console to open hasura's console to configure data.
+# See: https://hasura.io/docs/latest/getting-started/docker-simple/#step-2-connect-a-database from step 2 and over.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hasura-ingress-console
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hasura
+            port:
+              number: 80
+---
+# This is the ingress to expose graqhql services. 
+# Because we attached the `degraphql` plugin to the ingress, regular route matching is not available.
+# So we cannot access the console, then we used two ingresses for console and graphQL service.
+# You could use `curl -H"Host:graphql.service.example" http://${PROXY_IP}/...` to test function of degraphql plugin.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hasura-ingress-graphql
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: "degraphql-example"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: "graphql.service.example"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hasura
+            port:
+              number: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  namespace: default
+  name: degraphql-example
+plugin: degraphql
+config:
+  graphql_server_path: /v1/graphql
+---
+# This route serves endpoint `/contacts` which extracts column `name` of all rows in `contacts` table in your `hasura_data` DB.
+# You can use other query in the `query` field for fetching other data.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  namespace: default
+  name: degraphql-route-example
+spec:
+  controllerName: kong
+  type: degraphql_routes
+  parentRef:
+    group: "configuration.konghq.com"
+    kind: "KongPlugin"
+    name: "degraphql-example"
+  fields:
+    uri: "/contacts"
+    query: "query{ contacts { name } }"
+

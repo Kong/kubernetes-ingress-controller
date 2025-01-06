@@ -34,3 +34,11 @@ func ControllerManagerOptAdditionalWatchNamespace(ns string) ControllerManagerOp
 		return args
 	}
 }
+
+// ControllerManagerOptFlagUseLastValidConfigForFallback sets --use-last-valid-config-for-fallback
+// controller manager flag.
+func ControllerManagerOptFlagUseLastValidConfigForFallback() ControllerManagerOpt {
+	return func(args []string) []string {
+		return append(args, "--use-last-valid-config-for-fallback")
+	}
+}

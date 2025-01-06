@@ -35,7 +35,6 @@ func TestHostMatcherFromHosts(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			matcher := hostMatcherFromHosts(tc.hosts)
 			require.Equal(t, tc.expression, matcher.Expression())

@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
@@ -61,6 +62,13 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	adminPod = CreatePod(ctx, t, client, ns.Name)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Controller: config.Controller{
+			// This is needed because controller-runtime keeps a global list of controller
+			// names and panics if there are duplicates.
+			// This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
+		},
 		Logger: zapr.NewLogger(zap.NewNop()),
 		Scheme: client.Scheme(),
 		Metrics: metricsserver.Options{

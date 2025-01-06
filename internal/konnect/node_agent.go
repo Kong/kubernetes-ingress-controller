@@ -13,7 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 )
 
@@ -69,6 +69,8 @@ type NodeAgent struct {
 	refreshPeriod time.Duration
 	refreshTicker Ticker
 
+	gatewayConfigStatus    clients.GatewayConfigApplyStatus
+	konnectConfigStatus    clients.KonnectConfigUploadStatus
 	configStatus           atomic.Value
 	configStatusSubscriber clients.ConfigStatusSubscriber
 
@@ -162,7 +164,7 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 			a.logger.Info("Update node loop stopped", "message", err.Error())
 			return
 		case <-a.refreshTicker.Channel():
-			a.logger.V(util.DebugLevel).Info("Updating nodes on tick")
+			a.logger.V(logging.DebugLevel).Info("Updating nodes on tick")
 			err := a.updateNodes(ctx)
 			if err != nil {
 				a.logger.Error(err, "Failed to update nodes")
@@ -181,7 +183,8 @@ func sortNodesByLastPing(nodes []*nodes.NodeItem) {
 
 // subscribeConfigStatus subscribes and updates KIC status on translating and applying configurations to kong gateway.
 func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
-	ch := a.configStatusSubscriber.SubscribeConfigStatus()
+	gatewayStatusCh := a.configStatusSubscriber.SubscribeGatewayConfigStatus()
+	konnectStatusCh := a.configStatusSubscriber.SubscribeKonnectConfigStatus()
 	chDone := ctx.Done()
 
 	for {
@@ -189,18 +192,32 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 		case <-chDone:
 			a.logger.Info("Subscribe loop stopped", "message", ctx.Err().Error())
 			return
-		case configStatus := <-ch:
-			if configStatus == a.configStatus.Load() {
-				a.logger.V(util.DebugLevel).Info("Config status not changed, skipping update")
-				continue
+		case gatewayConfigStatus := <-gatewayStatusCh:
+			if a.gatewayConfigStatus != gatewayConfigStatus {
+				a.logger.V(logging.DebugLevel).Info("Gateway config status changed")
+				a.gatewayConfigStatus = gatewayConfigStatus
+				a.maybeUpdateConfigStatus(ctx)
 			}
-
-			a.logger.V(util.DebugLevel).Info("Config status changed, updating nodes")
-			a.configStatus.Store(configStatus)
-			if err := a.updateNodes(ctx); err != nil {
-				a.logger.Error(err, "Failed to update nodes after config status changed")
+		case konnectConfigStatus := <-konnectStatusCh:
+			if a.konnectConfigStatus != konnectConfigStatus {
+				a.logger.V(logging.DebugLevel).Info("Konnect config status changed")
+				a.konnectConfigStatus = konnectConfigStatus
+				a.maybeUpdateConfigStatus(ctx)
 			}
 		}
+	}
+}
+
+func (a *NodeAgent) maybeUpdateConfigStatus(ctx context.Context) {
+	configStatus := clients.CalculateConfigStatus(a.gatewayConfigStatus, a.konnectConfigStatus)
+	if configStatus == a.configStatus.Load() {
+		a.logger.V(logging.DebugLevel).Info("Config status not changed, skipping update")
+		return
+	}
+	a.logger.V(logging.DebugLevel).Info("Config status changed, updating nodes")
+	a.configStatus.Store(configStatus)
+	if err := a.updateNodes(ctx); err != nil {
+		a.logger.Error(err, "Failed to update nodes after config status changed")
 	}
 }
 
@@ -217,7 +234,7 @@ func (a *NodeAgent) subscribeToGatewayClientsChanges(ctx context.Context) {
 			a.logger.Info("Subscribe gateway clients changes loop stopped", "message", ctx.Err().Error())
 			return
 		case <-gatewayClientsChangedCh:
-			a.logger.V(util.DebugLevel).Info("Gateway clients changed, updating nodes")
+			a.logger.V(logging.DebugLevel).Info("Gateway clients changed, updating nodes")
 			if err := a.updateNodes(ctx); err != nil {
 				a.logger.Error(err, "Failed to update nodes after gateway clients changed")
 			}
@@ -238,7 +255,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 			nodesWithSameName = append(nodesWithSameName, node)
 		} else {
 			// delete the nodes with different name of the current node, since only on KIC node is allowed in the control plane.
-			a.logger.V(util.DebugLevel).Info("Remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+			a.logger.V(logging.DebugLevel).Info("Remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 			err := a.nodeClient.DeleteNode(ctx, node.ID)
 			if err != nil {
 				a.logger.Error(err, "Failed to delete KIC node", "node_id", node.ID, "hostname", node.Hostname)
@@ -271,7 +288,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 
 	// create a new node if there is no existing node with same name as the current KIC node.
 	if len(nodesWithSameName) == 0 {
-		a.logger.V(util.DebugLevel).Info("No nodes found for KIC pod, should create one", "hostname", a.hostname)
+		a.logger.V(logging.DebugLevel).Info("No nodes found for KIC pod, should create one", "hostname", a.hostname)
 		createNodeReq := &nodes.CreateNodeRequest{
 			ID:       a.managerInstanceIDProvider.GetID().String(),
 			Hostname: a.hostname,
@@ -282,7 +299,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 		}
 		resp, err := a.nodeClient.CreateNode(ctx, createNodeReq)
 		if err != nil {
-			return fmt.Errorf("Failed to create KIC node, hostname %s: %w", a.hostname, err)
+			return fmt.Errorf("failed to create KIC node, hostname %s: %w", a.hostname, err)
 		}
 		a.logger.Info("Created KIC node", "node_id", resp.Item.ID, "hostname", a.hostname)
 		return nil
@@ -302,7 +319,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 		a.logger.Error(err, "Failed to update node for KIC")
 		return err
 	}
-	a.logger.V(util.DebugLevel).Info("Updated last ping time of node for KIC", "node_id", latestNode.ID, "hostname", a.hostname)
+	a.logger.V(logging.DebugLevel).Info("Updated last ping time of node for KIC", "node_id", latestNode.ID, "hostname", a.hostname)
 
 	// treat more nodes with the same name as outdated, and remove them.
 	for i := 1; i < len(nodesWithSameName); i++ {
@@ -312,7 +329,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 			a.logger.Error(err, "Failed to delete outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 			continue
 		}
-		a.logger.V(util.DebugLevel).Info("Removed outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+		a.logger.V(logging.DebugLevel).Info("Removed outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 	}
 	return nil
 }
@@ -371,7 +388,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 			a.logger.Error(err, "Failed to update kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 			continue
 		}
-		a.logger.V(util.DebugLevel).Info("Updated kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
+		a.logger.V(logging.DebugLevel).Info("Updated kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 		// succeeded to update node, remove the other outdated nodes.
 		for i := 1; i < len(ns); i++ {
 			node := ns[i]
@@ -380,7 +397,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 				a.logger.Error(err, "Failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 				continue
 			}
-			a.logger.V(util.DebugLevel).Info("Removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+			a.logger.V(logging.DebugLevel).Info("Removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 		}
 
 	}
@@ -394,7 +411,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 					a.logger.Error(err, "Failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 					continue
 				}
-				a.logger.V(util.DebugLevel).Info("Removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+				a.logger.V(logging.DebugLevel).Info("Removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 			}
 		}
 	}

@@ -2,18 +2,19 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -21,11 +22,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
@@ -47,71 +47,69 @@ type GRPCRouteReconciler struct {
 	// If it is false, referencing backend in different namespace will be rejected.
 	EnableReferenceGrant bool
 	CacheSyncTimeout     time.Duration
+
+	// If GatewayNN is set,
+	// only resources managed by the specified Gateway are reconciled.
+	GatewayNN controllers.OptionalNamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("grpcroute-controller", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
-	// if a GatewayClass updates then we need to enqueue the linked GRPCRoutes to
-	// ensure that any route objects that may have been orphaned by that change get
-	// removed from data-plane configurations, and any routes that are now supported
-	// due to that change get added to data-plane configurations.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGRPCRoutesForGatewayClass),
-		predicate.Funcs{
-			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
-			CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
-		},
-	); err != nil {
-		return err
-	}
-
-	// if a Gateway updates then we need to enqueue the linked GRPCRoutes to
-	// ensure that any route objects that may have been orphaned by that change get
-	// removed from data-plane configurations, and any routes that are now supported
-	// due to that change get added to data-plane configurations.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGRPCRoutesForGateway),
-	); err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("grpcroute-controller").
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		// if a GatewayClass updates then we need to enqueue the linked GRPCRoutes to
+		// ensure that any route objects that may have been orphaned by that change get
+		// removed from data-plane configurations, and any routes that are now supported
+		// due to that change get added to data-plane configurations.
+		Watches(&gatewayapi.GatewayClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listGRPCRoutesForGatewayClass),
+			builder.WithPredicates(predicate.Funcs{
+				GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
+				CreateFunc:  func(e event.CreateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+				UpdateFunc:  func(e event.UpdateEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+				DeleteFunc:  func(e event.DeleteEvent) bool { return isGatewayClassEventInClass(r.Log, e) },
+			}),
+		).
+		// if a Gateway updates then we need to enqueue the linked GRPCRoutes to
+		// ensure that any route objects that may have been orphaned by that change get
+		// removed from data-plane configurations, and any routes that are now supported
+		// due to that change get added to data-plane configurations.
+		Watches(&gatewayapi.Gateway{},
+			handler.EnqueueRequestsFromMapFunc(r.listGRPCRoutesForGateway),
+		)
 
 	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   gatewayv1alpha2.GroupVersion.Group,
-				Version: gatewayv1alpha2.GroupVersion.Version,
-				Kind:    "GRPCRoute",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
+					Kind:    "GRPCRoute",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
 	}
 
-	// because of the additional burden of having to manage reference data-plane
-	// configurations for GRPCRoute objects in the underlying Kong Gateway, we
-	// simply reconcile ALL GRPCRoute objects. This allows us to drop the backend
-	// data-plane config for an GRPCRoute if it somehow becomes disconnected from
-	// a supported Gateway and GatewayClass.
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GRPCRoute{}),
-		&handler.EnqueueRequestForObject{},
-	)
+	// We enqueue only routes that are:
+	// - attached during creation or deletion
+	// - have been attached or detached to a reconciled Gateway.
+	// This allows us to drop the backend data-plane config for a route if
+	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
+	return blder.
+		For(&gatewayapi.GRPCRoute{},
+			builder.WithPredicates(
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+			),
+		).
+		Complete(r)
 }
 
 // -----------------------------------------------------------------------------
@@ -143,6 +141,12 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(ctx context.Context,
 	gateways := make(map[string]map[string]struct{})
 	for _, gateway := range gatewayList.Items {
 		if string(gateway.Spec.GatewayClassName) == gwc.Name {
+			// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+			if !r.GatewayNN.Matches(&gateway) {
+				continue
+			}
+
 			_, ok := gateways[gateway.Namespace]
 			if !ok {
 				gateways[gateway.Namespace] = make(map[string]struct{})
@@ -217,6 +221,12 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj 
 		return nil
 	}
 
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if !r.GatewayNN.Matches(gw) {
+		return nil
+	}
+
 	// map all GRPCRoute objects
 	grpcrouteList := gatewayapi.GRPCRouteList{}
 	if err := r.Client.List(ctx, &grpcrouteList); err != nil {
@@ -256,7 +266,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1Alpha2GRPCRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1GRPCRoute", req.NamespacedName)
 
 	grpcroute := new(gatewayapi.GRPCRoute)
 	if err := r.Get(ctx, req.NamespacedName, grpcroute); err != nil {
@@ -293,23 +303,15 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we need to pull the Gateway parent objects for the grpcroute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, grpcroute, "Retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, grpcroute)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, grpcroute, r.GatewayNN)
 	if err != nil {
-		if err.Error() == unsupportedGW {
-			debug(log, grpcroute, "Unsupported route found, processing to verify whether it was ever supported")
+		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously
 			// supported by this controller. As such we ensure that no supported Gateway
 			// references exist in the object status any longer.
-			statusUpdated, err := r.ensureGatewayReferenceStatusRemoved(ctx, grpcroute)
-			if err != nil {
+			if _, err := ensureGatewayReferenceStatusRemoved(ctx, r.Client, log, grpcroute); err != nil {
 				// some failure happened so we need to retry to avoid orphaned statuses
 				return ctrl.Result{}, err
-			}
-			if statusUpdated {
-				// the status did in fact needed to be updated, so no need to requeue
-				// as the status update will trigger a requeue.
-				debug(log, grpcroute, "Unsupported route was previously supported, status was updated")
-				return ctrl.Result{}, nil
 			}
 
 			// if the route doesn't have a supported Gateway+GatewayClass associated with
@@ -420,79 +422,17 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // GRPCRouteReconciler - Status Helpers
 // -----------------------------------------------------------------------------
 
-// grpcrouteParentKind indicates the only object KIND that this GRPCRoute
-// implementation supports for route object parent references.
-var grpcrouteParentKind = "Gateway"
-
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given GRPCRoute and ensures that the status
 // for the GRPCRoute is updated appropriately.
 func (r *GRPCRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, grpcroute *gatewayapi.GRPCRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(grpcroute, grpcroute.Status.Parents)
+	parentStatuses, statusChangesWereMade := parentStatusesForRoute(
+		grpcroute,
+		grpcroute.Status.Parents,
+		gateways...,
+	)
 
-	// overlay the parent ref statuses for all new gateway references
-	statusChangesWereMade := false
-	for _, gateway := range gateways {
-		gateway := gateway
-		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayapi.RouteParentStatus{
-			ParentRef: gatewayapi.ParentReference{
-				Group:     (*gatewayapi.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      util.StringToGatewayAPIKindPtr(grpcrouteParentKind),
-				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayapi.ObjectName(gateway.gateway.Name),
-			},
-			ControllerName: GetControllerName(),
-			Conditions: []metav1.Condition{{
-				Type:               string(gatewayapi.RouteConditionAccepted),
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: grpcroute.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.RouteReasonAccepted),
-			}},
-		}
-
-		if gateway.listenerName != "" {
-			sectionName := gatewayapi.SectionName(gateway.listenerName)
-			gatewayParentStatus.ParentRef.SectionName = &sectionName
-		}
-
-		// if the reference already exists and doesn't require any changes
-		// then just leave it alone.
-		parentRefKey := gateway.gateway.Namespace + "/" + gateway.gateway.Name
-		if existingGatewayParentStatus, exists := parentStatuses[parentRefKey]; exists {
-			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
-			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
-				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
-				lo.ContainsBy(existingGatewayParentStatus.Conditions, func(condition metav1.Condition) bool {
-					return sameCondition(gatewayParentStatus.Conditions[0], condition)
-				}) {
-				continue
-			}
-		}
-
-		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[parentRefKey] = gatewayParentStatus
-		statusChangesWereMade = true
-	}
-
-	// initialize "programmed" condition to Unknown.
-	// do not update the condition If a "Programmed" condition is already present.
-	programmedConditionChanged := false
-	programmedConditionUnknown := metav1.Condition{
-		Type:               ConditionTypeProgrammed,
-		Status:             metav1.ConditionUnknown,
-		Reason:             string(ConditionReasonProgrammedUnknown),
-		ObservedGeneration: grpcroute.Generation,
-		LastTransitionTime: metav1.Now(),
-	}
-	for _, parentStatus := range parentStatuses {
-		if !parentStatusHasProgrammedCondition(parentStatus) {
-			programmedConditionChanged = true
-			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
-		}
-	}
+	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(grpcroute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
 	if !statusChangesWereMade && !programmedConditionChanged {
@@ -506,34 +446,6 @@ func (r *GRPCRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, grpcroute); err != nil {
-		return false, err
-	}
-
-	// the status needed an update and it was updated successfully
-	return true, nil
-}
-
-// ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
-// implementation to prune status references to Gateways supported by this controller
-// in the provided GRPCRoute object.
-func (r *GRPCRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, grpcroute *gatewayapi.GRPCRoute) (bool, error) {
-	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
-	for _, status := range grpcroute.Status.Parents {
-		if status.ControllerName != GetControllerName() {
-			newStatuses = append(newStatuses, status)
-		}
-	}
-
-	// if the new list of statuses is the same length as the old
-	// nothing has changed and we're all done.
-	if len(newStatuses) == len(grpcroute.Status.Parents) {
-		return false, nil
-	}
-
-	// update the object status in the API
-	grpcroute.Status.Parents = newStatuses
 	if err := r.Status().Update(ctx, grpcroute); err != nil {
 		return false, err
 	}

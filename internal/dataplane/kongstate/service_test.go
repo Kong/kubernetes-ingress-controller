@@ -168,11 +168,76 @@ func TestOverrideService(t *testing.T) {
 				annotations.AnnotationPrefix + annotations.WriteTimeoutKey:   "100",
 			},
 		},
+		{
+			name: "tls-verify override to false",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey: "false",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host:      kong.String("foo.com"),
+					TLSVerify: kong.Bool(false),
+				},
+			},
+		},
+		{
+			name: "tls-verify override to true",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey: "true",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host:      kong.String("foo.com"),
+					TLSVerify: kong.Bool(true),
+				},
+			},
+		},
+		{
+			name: "tls-verify override to unexpected value",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyKey: "unexpected",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+		},
+		{
+			name: "tls-verify-depth override",
+			inService: Service{
+				Service: kong.Service{
+					Host: kong.String("foo.com"),
+				},
+			},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey: "10",
+			},
+			expectedService: Service{
+				Service: kong.Service{
+					Host:           kong.String("foo.com"),
+					TLSVerifyDepth: kong.Int(10),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			service := tc.inService
 			for _, k8sSvc := range service.K8sServices {
@@ -186,7 +251,7 @@ func TestOverrideService(t *testing.T) {
 func TestNilServiceOverrideDoesntPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		var nilService *Service
-		nilService.override()
+		nilService.override() //nolint:errcheck
 	})
 }
 
@@ -527,6 +592,6 @@ func TestServiceOverride_DeterministicOrderWhenMoreThan1KubernetesService(t *tes
 
 	// We expect default/service-3 to be the last one to be processed effectively overriding the previous annotations.
 	const expectedRetries = 3
-	service.override()
+	require.NoError(t, service.override())
 	require.Equal(t, expectedRetries, *service.Service.Retries)
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -21,16 +21,13 @@ import (
 )
 
 func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-	translator := mustNewTranslator(t, fakestore)
-	translator.featureFlags.ExpressionRoutes = true
-	grpcRouteTypeMeta := metav1.TypeMeta{Kind: "GRPCRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
+	grpcRouteTypeMeta := gatewayapi.GRPCRouteTypeMeta
 
 	testCases := []struct {
 		name                 string
 		grpcRoutes           []*gatewayapi.GRPCRoute
 		expectedKongServices []kongstate.Service
+		services             []*corev1.Service
 		// service name -> routes
 		expectedKongRoutes map[string][]kongstate.Route
 	}{
@@ -85,16 +82,30 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("grpcroute.default.grpcroute-1.foo.com.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 				{
@@ -102,10 +113,10 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("grpcroute.default.grpcroute-1.foo.com.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service2").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 				{
@@ -113,10 +124,10 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("grpcroute.default.grpcroute-1._.bar.com.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 				{
@@ -124,10 +135,10 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("grpcroute.default.grpcroute-1._.bar.com.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service2").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 			},
@@ -234,16 +245,30 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("grpcroute.default.grpcroute-1.foo.com.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 				{
@@ -251,10 +276,10 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("grpcroute.default.grpcroute-2._.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service2").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 			},
@@ -340,16 +365,30 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service0",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("grpcroute.default.grpcroute-1._.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service2").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(),
 					},
 				},
 				{
@@ -357,10 +396,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("grpcroute.default.grpcroute-no-hostnames-no-matches._.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service0",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
+						builder.NewKongstateServiceBackend("service0").WithPortNumber(80).MustBuild(),
 					},
 				},
 			},
@@ -386,10 +422,16 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
+
+			fakestore, err := store.NewFakeStore(store.FakeObjects{
+				GRPCRoutes: tc.grpcRoutes,
+				Services:   tc.services,
+			})
+			require.NoError(t, err)
+			translator := mustNewTranslator(t, fakestore)
+			translator.featureFlags.ExpressionRoutes = true
 			translator.failuresCollector = failureCollector
 
 			result := newIngressRules()
@@ -419,6 +461,5 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			translationFailures := failureCollector.PopResourceFailures()
 			require.Empty(t, translationFailures)
 		})
-
 	}
 }

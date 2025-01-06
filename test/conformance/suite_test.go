@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -75,10 +77,14 @@ func TestMain(m *testing.M) {
 	// In order to pass conformance tests, the expression router is required.
 	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
-	if testenv.ExpressionRoutesEnabled() {
+	if testenv.KongRouterFlavor() == dpconf.RouterFlavorExpressions {
 		fmt.Println("INFO: expression routes enabled")
-		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
+		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", string(dpconf.RouterFlavorExpressions))
 	}
+
+	// The test cases for GRPCRoute in the current GatewayAPI all use the h2c protocol.
+	// In order to pass conformance tests, the proxy must listen http2 and http on the same port.
+	kongBuilder.WithProxyEnvVar("PROXY_LISTEN", `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`)
 
 	// Pin the Helm chart version.
 	kongBuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
@@ -115,9 +121,10 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	t.Log("configuring environment for gateway conformance tests")
 	client, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
-	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
-	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
-	require.NoError(t, gatewayv1.AddToScheme(client.Scheme()))
+	require.NoError(t, gatewayv1alpha2.Install(client.Scheme()))
+	require.NoError(t, gatewayv1beta1.Install(client.Scheme()))
+	require.NoError(t, gatewayv1.Install(client.Scheme()))
+	require.NoError(t, apiextensionsv1.AddToScheme(client.Scheme()))
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
 
@@ -137,7 +144,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		featureGateFlag,
 		"--anonymous-reports=false",
 	}
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args...)
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args)
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 
@@ -165,7 +172,6 @@ func ensureConformanceTestsNamespacesAreNotPresent(ctx context.Context, client *
 	g.SetLimit(3) //nolint:gomnd
 
 	for _, namespace := range []string{"gateway-conformance-infra", "gateway-conformance-web-backend", "gateway-conformance-app-backend"} {
-		namespace := namespace
 		g.Go(func() error {
 			return ensureNamespaceDeleted(ctx, namespace, client)
 		})

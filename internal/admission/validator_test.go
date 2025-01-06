@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -19,16 +20,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	managerscheme "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
 
 type fakePluginSvc struct {
@@ -61,6 +66,8 @@ type fakeServicesProvider struct {
 	consumerGroupSvc kong.AbstractConsumerGroupService
 	infoSvc          kong.AbstractInfoService
 	routeSvc         kong.AbstractRouteService
+	vaultSvc         kong.AbstractVaultService
+	schemaSvc        kong.AbstractSchemaService
 }
 
 func (f fakeServicesProvider) GetConsumersService() (kong.AbstractConsumerService, bool) {
@@ -98,6 +105,20 @@ func (f fakeServicesProvider) GetRoutesService() (kong.AbstractRouteService, boo
 	return nil, false
 }
 
+func (f fakeServicesProvider) GetVaultsService() (kong.AbstractVaultService, bool) {
+	if f.vaultSvc != nil {
+		return f.vaultSvc, true
+	}
+	return nil, false
+}
+
+func (f fakeServicesProvider) GetSchemasService() (kong.AbstractSchemaService, bool) {
+	if f.schemaSvc != nil {
+		return f.schemaSvc, true
+	}
+	return nil, false
+}
+
 func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{
 		Secrets: []*corev1.Secret{
@@ -114,7 +135,8 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongPlugin
+		plugin          kongv1.KongPlugin
+		overrideSecrets []*corev1.Secret
 	}
 	tests := []struct {
 		name        string
@@ -239,6 +261,34 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			wantMessage: ErrTextPluginConfigValidationFailed,
 			wantErr:     true,
 		},
+		{
+			name:      "validate from override secret which generates valid configuration",
+			PluginSvc: &fakePluginSvc{valid: true},
+			args: args{
+				plugin: kongv1.KongPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
+							Key:    "valid-conf",
+							Secret: "another-conf-secret",
+						},
+					},
+				},
+				overrideSecrets: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "",
+							Name:      "another-conf-secret",
+						},
+						Data: map[string][]byte{
+							"valid-conf":   []byte(`{"foo":"bar"}`),
+							"invalid-conf": []byte(`{"foo":"baz}`),
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -249,7 +299,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
+			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin, tt.args.overrideSecrets)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidatePlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,
@@ -284,7 +334,8 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongClusterPlugin
+		plugin          kongv1.KongClusterPlugin
+		overrideSecrets []*corev1.Secret
 	}
 	tests := []struct {
 		name        string
@@ -413,6 +464,35 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			wantErr:     true,
 		},
 		{
+			name:      "validate from override secret which generates valid configuration",
+			PluginSvc: &fakePluginSvc{valid: true},
+			args: args{
+				plugin: kongv1.KongClusterPlugin{
+					PluginName: "key-auth",
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
+							Namespace: "default",
+							Key:       "valid-conf",
+							Secret:    "another-conf-secret",
+						},
+					},
+				},
+				overrideSecrets: []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "another-conf-secret",
+						},
+						Data: map[string][]byte{
+							"valid-conf":   []byte(`{"foo":"bar"}`),
+							"invalid-conf": []byte(`{"foo":"baz}`),
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
 			name:      "no gateway was available at the time of validation",
 			PluginSvc: nil, // no plugin service is available as there's no gateways
 			args: args{
@@ -433,7 +513,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 				ingressClassMatcher: fakeClassMatcher,
 			}
 
-			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin)
+			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin, tt.args.overrideSecrets)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidateClusterPlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,
@@ -498,6 +578,102 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.False(t, valid)
 		require.Equal(t, ErrTextConsumerExists, errText)
 	})
+
+	t.Run("passes when many plugins of the same type are attached", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{})
+		require.NoError(t, err)
+		const cfgNamespace = "default"
+		scheme := runtime.NewScheme()
+		require.NoError(t, kongv1.AddToScheme(scheme))
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin1",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "foo",
+			},
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin2",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "bar",
+			},
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin3",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "foo",
+			},
+		).Build()
+		validator := KongHTTPValidator{
+			SecretGetter:  s,
+			ManagerClient: fakeClient,
+			AdminAPIServicesProvider: fakeServicesProvider{
+				consumerSvc: fakeConsumersSvc{},
+			},
+			ingressClassMatcher: fakeClassMatcher,
+		}
+
+		valid, _, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+				},
+				Namespace: cfgNamespace,
+			},
+			Username: "username",
+		})
+		require.NoError(t, err)
+		require.True(t, valid)
+	})
+
+	t.Run("pass when different valid plugins and one no existing are attached", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{})
+		require.NoError(t, err)
+		const cfgNamespace = "default"
+		scheme := runtime.NewScheme()
+		require.NoError(t, kongv1.AddToScheme(scheme))
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin1",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "foo",
+			},
+			&kongv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plugin2",
+					Namespace: cfgNamespace,
+				},
+				PluginName: "bar",
+			},
+		).Build()
+		validator := KongHTTPValidator{
+			SecretGetter:  s,
+			ManagerClient: fakeClient,
+			AdminAPIServicesProvider: fakeServicesProvider{
+				consumerSvc: fakeConsumersSvc{},
+			},
+			ingressClassMatcher: fakeClassMatcher,
+		}
+
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+				},
+				Namespace: cfgNamespace,
+			},
+			Username: "username",
+		})
+		require.NoError(t, err)
+		require.True(t, valid)
+		require.Empty(t, errText)
+	})
 }
 
 type fakeConsumerGroupSvc struct {
@@ -531,13 +707,14 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 		cg kongv1beta1.KongConsumerGroup
 	}
 	tests := []struct {
-		name             string
-		ConsumerGroupSvc kong.AbstractConsumerGroupService
-		InfoSvc          kong.AbstractInfoService
-		args             args
-		wantOK           bool
-		wantMessage      string
-		wantErr          bool
+		name                 string
+		ConsumerGroupSvc     kong.AbstractConsumerGroupService
+		InfoSvc              kong.AbstractInfoService
+		ManagerClientObjects []client.Object
+		args                 args
+		wantOK               bool
+		wantMessage          string
+		wantErr              bool
 	}{
 		{
 			name:             "Enterprise version",
@@ -545,6 +722,77 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise Kong Gateway and KongConsumerGroup with multiple plugins of the same type attached passes",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
+			ManagerClientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin3",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+			},
+			args: args{
+				cg: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name:             "Enterprise Kong Gateway and KongConsumerGroup with plugins of the different types and non-existing one attached",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
+			ManagerClientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+			},
+			args: args{
+				cg: kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
+						},
+					},
+				},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -617,10 +865,14 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kongv1.AddToScheme(scheme))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				SecretGetter: store,
+				ManagerClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.ManagerClientObjects...).Build(),
+				SecretGetter:  store,
 				AdminAPIServicesProvider: fakeServicesProvider{
 					infoSvc:          tt.InfoSvc,
 					consumerGroupSvc: tt.ConsumerGroupSvc,
@@ -686,9 +938,15 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 		{
 			name: "valid key-auth credential with no consumers gets accepted",
 			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
 				Data: map[string][]byte{
-					"kongCredType": []byte("key-auth"),
-					"key":          []byte("my-key"),
+					"key": []byte("my-key"),
 				},
 			},
 			wantOK: true,
@@ -719,8 +977,14 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 		{
 			name: "invalid key-auth credential with no consumers gets rejected",
 			secret: corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "key-auth",
+					},
+				},
 				Data: map[string][]byte{
-					"kongCredType": []byte("key-auth"),
 					// missing key
 				},
 			},
@@ -730,7 +994,6 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, testk8sclient.AddToScheme(scheme))
@@ -764,12 +1027,11 @@ func (f fakeConsumerGetter) ListAllConsumers(context.Context) ([]kongv1.KongCons
 
 func TestValidator_ValidateIngress(t *testing.T) {
 	const testSvcFacadeName = "svc-facade"
-	s := lo.Must(managerscheme.Get())
-	b := fake.NewClientBuilder().WithScheme(s)
 
 	testCases := []struct {
 		name                          string
 		storerObjects                 store.FakeObjects
+		clientObjects                 []client.Object
 		kongRouteValidationShouldFail bool
 		translatorFeatures            translator.FeatureFlags
 		ingress                       *netv1.Ingress
@@ -792,7 +1054,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				).
 				Build(),
 			kongRouteValidationShouldFail: true, // Despite the route validation failing, the ingress class is not kong, so it's ok.
-			storerObjects:                 store.FakeObjects{},
 			wantOK:                        true,
 		},
 		{
@@ -810,8 +1071,82 @@ func TestValidator_ValidateIngress(t *testing.T) {
 					}),
 				).
 				Build(),
-			storerObjects: store.FakeObjects{},
-			wantOK:        true,
+			wantOK: true,
+		},
+		{
+			name: "valid Ingress passes when many plugins of the same type are attached",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithKongPlugins("plugin1", "plugin2", "plugin3").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			clientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "default",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin3",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "valid Ingress with different valid plugins and one no existing are attached passes",
+			ingress: builder.NewIngress("ingress", "kong").
+				WithNamespace("default").
+				WithKongPlugins("plugin1", "plugin2", "plugin3").
+				WithRules(
+					newHTTPIngressRule(netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "svc",
+							Port: netv1.ServiceBackendPort{
+								Number: 8080,
+							},
+						},
+					}),
+				).
+				Build(),
+			clientObjects: []client.Object{
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					PluginName: "foo",
+				},
+				&kongv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+					PluginName: "bar",
+				},
+			},
+			wantOK: true,
 		},
 		{
 			name: "invalid with Service backend",
@@ -829,7 +1164,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				).
 				Build(),
 			kongRouteValidationShouldFail: true,
-			storerObjects:                 store.FakeObjects{},
 			wantOK:                        false,
 			wantMessage:                   "Ingress failed schema validation: something is wrong with the route",
 		},
@@ -915,7 +1249,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{
-				ManagerClient: b.Build(),
+				ManagerClient: fake.NewClientBuilder().WithScheme(lo.Must(managerscheme.Get())).WithObjects(tc.clientObjects...).Build(),
 				Storer:        storer,
 				AdminAPIServicesProvider: fakeServicesProvider{
 					routeSvc: &fakeRouteSvc{
@@ -926,7 +1260,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				ingressClassMatcher: func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool {
 					return false // Always return false, we'll use Spec.IngressClassName matcher.
 				},
-				ingressV1ClassMatcher: func(ingress *netv1.Ingress, matching annotations.ClassMatching) bool {
+				ingressV1ClassMatcher: func(ingress *netv1.Ingress, _ annotations.ClassMatching) bool {
 					return *ingress.Spec.IngressClassName == annotations.DefaultIngressClass
 				},
 				Logger: logr.Discard(),
@@ -963,6 +1297,276 @@ type fakeRouteSvc struct {
 func (f *fakeRouteSvc) Validate(context.Context, *kong.Route) (bool, string, error) {
 	if f.shouldFail {
 		return false, "something is wrong with the route", nil
+	}
+	return true, "", nil
+}
+
+func TestValidator_ValidateVault(t *testing.T) {
+	testCases := []struct {
+		name            string
+		kongVault       kongv1alpha1.KongVault
+		storerObjects   store.FakeObjects
+		validateSvcFail bool
+		expectedOK      bool
+		expectedMessage string
+		expectedError   string
+	}{
+		{
+			name: "valid vault",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-1",
+				},
+			},
+			expectedOK: true,
+		},
+		{
+			name: "vault with invalid(malformed) configuration",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-1",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{{}`),
+					},
+				},
+			},
+			expectedOK:      false,
+			expectedMessage: "failed to unmarshal vault configuration",
+		},
+		{
+			name: "vault with duplicate prefix",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-dupe",
+				},
+			},
+			storerObjects: store.FakeObjects{
+				KongVaults: []*kongv1alpha1.KongVault{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "vault-0",
+							Annotations: map[string]string{
+								annotations.IngressClassKey: annotations.DefaultIngressClass,
+							},
+						},
+						Spec: kongv1alpha1.KongVaultSpec{
+							Backend: "env",
+							Prefix:  "env-dupe",
+						},
+					},
+				},
+			},
+			validateSvcFail: false,
+			expectedOK:      false,
+			expectedMessage: "spec.prefix \"env-dupe\" is duplicate with existing KongVault",
+		},
+		{
+			name: "vault with failure in validating service",
+			kongVault: kongv1alpha1.KongVault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vault-1",
+				},
+				Spec: kongv1alpha1.KongVaultSpec{
+					Backend: "env",
+					Prefix:  "env-1",
+				},
+			},
+			validateSvcFail: true,
+			expectedOK:      false,
+			expectedMessage: "something is wrong with the vault",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
+			validator := KongHTTPValidator{
+				AdminAPIServicesProvider: fakeServicesProvider{
+					vaultSvc: &fakeVaultSvc{
+						shouldFail: tc.validateSvcFail,
+					},
+				},
+				Storer:              storer,
+				ingressClassMatcher: fakeClassMatcher,
+				Logger:              logr.Discard(),
+			}
+			ok, msg, err := validator.ValidateVault(context.Background(), tc.kongVault)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedOK, ok)
+			assert.Contains(t, msg, tc.expectedMessage)
+		})
+	}
+}
+
+type fakeVaultSvc struct {
+	kong.AbstractVaultService
+	shouldFail bool
+}
+
+func (s fakeVaultSvc) Validate(_ context.Context, _ *kong.Vault) (bool, string, error) {
+	if s.shouldFail {
+		return false, "something is wrong with the vault", nil
+	}
+	return true, "", nil
+}
+
+func TestValidator_ValidateCustomEntity(t *testing.T) {
+	testCases := []struct {
+		name            string
+		entity          kongv1alpha1.KongCustomEntity
+		fields          map[string]kongstate.EntityField
+		entityTypeExist bool
+		validateSvcFail bool
+		expectedOK      bool
+		expectedMessage string
+	}{
+		{
+			name: "entity with non-exist type should fail the validation",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "entity_non_exist",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "non_exist",
+					Fields:     apiextensionsv1.JSON{Raw: []byte("{}")},
+				},
+			},
+			entityTypeExist: false,
+			expectedOK:      false,
+			expectedMessage: "entity type does not exist",
+		},
+		{
+			name: "valid entity",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "valid_entity",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "entity_type_ok",
+					Fields:     apiextensionsv1.JSON{Raw: []byte(`{"foo":"bar"}`)},
+				},
+			},
+			fields: map[string]kongstate.EntityField{
+				"foo": {
+					Name: "foo",
+					Type: kongstate.EntityFieldTypeString,
+				},
+			},
+			entityTypeExist: true,
+			expectedOK:      true,
+		},
+		{
+			name: "valid entity with foreign key",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "entity_with_foreign",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "entity_type_with_foreign",
+					Fields:     apiextensionsv1.JSON{Raw: []byte(`{"foo":"bar"}`)},
+				},
+			},
+			fields: map[string]kongstate.EntityField{
+				"foo": {
+					Name: "foo",
+					Type: kongstate.EntityFieldTypeString,
+				},
+				"baz": {
+					Name:      "baz",
+					Type:      kongstate.EntityFieldTypeForeign,
+					Required:  true,
+					Reference: "service",
+				},
+			},
+			entityTypeExist: true,
+			expectedOK:      true,
+		},
+		{
+			name: "validate service fail",
+			entity: kongv1alpha1.KongCustomEntity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "validate_service_fail",
+				},
+				Spec: kongv1alpha1.KongCustomEntitySpec{
+					EntityType: "entity_type_ok",
+					Fields:     apiextensionsv1.JSON{Raw: []byte(`{"foo":"bar"}`)},
+				},
+			},
+			fields: map[string]kongstate.EntityField{
+				"foo": {
+					Name: "foo",
+					Type: kongstate.EntityFieldTypeString,
+				},
+			},
+			entityTypeExist: true,
+			validateSvcFail: true,
+			expectedOK:      false,
+			expectedMessage: "something is wrong in the entity",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fieldList := make([]interface{}, 0, len(tc.fields))
+			for _, field := range tc.fields {
+				fieldList = append(fieldList, map[string]interface{}{
+					field.Name: map[string]interface{}{
+						"type":      string(field.Type),
+						"required":  field.Required,
+						"reference": field.Reference,
+					},
+				})
+			}
+
+			validator := KongHTTPValidator{
+				AdminAPIServicesProvider: fakeServicesProvider{
+					schemaSvc: fakeSchemaSvc{
+						entityTypeExist: tc.entityTypeExist,
+						schema: map[string]interface{}{
+							"fields": fieldList,
+						},
+						shouldFail: tc.validateSvcFail,
+					},
+				},
+				ingressClassMatcher: fakeClassMatcher,
+			}
+			ok, msg, err := validator.ValidateCustomEntity(context.Background(), tc.entity)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedOK, ok)
+			assert.Contains(t, msg, tc.expectedMessage)
+		})
+	}
+}
+
+type fakeSchemaSvc struct {
+	schema          map[string]interface{}
+	entityTypeExist bool
+	shouldFail      bool
+}
+
+var _ kong.AbstractSchemaService = fakeSchemaSvc{}
+
+func (s fakeSchemaSvc) Get(_ context.Context, _ string) (kong.Schema, error) {
+	if !s.entityTypeExist {
+		return nil, errors.New("entity type does not exist")
+	}
+	return s.schema, nil
+}
+
+func (s fakeSchemaSvc) Validate(_ context.Context, _ kong.EntityType, _ interface{}) (bool, string, error) {
+	if s.shouldFail {
+		return false, "something is wrong in the entity", nil
 	}
 	return true, "", nil
 }

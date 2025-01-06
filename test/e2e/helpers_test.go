@@ -1,4 +1,4 @@
-//go:build e2e_tests || istio_tests
+//go:build e2e_tests || istio_tests || performance_tests
 
 package e2e
 
@@ -18,9 +18,9 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
-	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -42,6 +42,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	conststest "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -69,7 +70,7 @@ const (
 	namespace        = "kong"
 	adminServiceName = "kong-admin-lb"
 
-	tcpListenerPort = 8888
+	tcpListenerPort = ktfkong.DefaultTCPServicePort
 
 	// controllerDeploymentName is the name of the controller deployment in all manifests variants.
 	controllerDeploymentName = "ingress-kong"
@@ -104,6 +105,9 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 	env, err := builder.WithAddons(addons...).Build(ctx)
 	require.NoError(t, err)
 	logClusterInfo(t, env.Cluster())
+
+	t.Logf("deploying KIC Incubator CRDs from %s (since they are not packaged with base CRDs)", conststest.IncubatorCRDKustomizeDir)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), conststest.IncubatorCRDKustomizeDir))
 
 	t.Cleanup(func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -228,6 +232,9 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
 		clusterBuilder.WithClusterVersion(k8sVersion)
 	}
+	if ch := testenv.GKEClusterReleaseChannel(); ch != "" {
+		clusterBuilder.WithReleaseChannel(gke.ReleaseChannel(ch))
+	}
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }
@@ -283,8 +290,8 @@ func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.
 	t.Log("waiting for controller to be ready")
 	deployments := getManifestDeployments(d.Path)
 
-	waitForDeploymentRollout(ctx, t, env, deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
-	waitForDeploymentRollout(ctx, t, env, deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
 
 	return deployments
 }
@@ -310,52 +317,6 @@ func (d ManifestDeploy) Delete(ctx context.Context, t *testing.T, env environmen
 	cmd.Stdin = manifest
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
-}
-
-func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environments.Environment, namespace, name string) {
-	require.Eventuallyf(t, func() bool {
-		deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		if err := allUpdatedReplicasRolledOutAndReady(deployment); err != nil {
-			t.Logf("%s/%s deployment not ready: %s", namespace, name, err)
-			return false
-		}
-
-		return true
-	}, kongComponentWait, time.Second, "deployment %s/%s didn't roll out in time", namespace, name)
-}
-
-// allUpdatedReplicasRolledOutAndReady ensures that all updated replicas are rolled out and ready. It is to make sure
-// that the deployment rollout is finished and all the new replicas are ready to serve traffic before we proceed with
-// the test. It returns an error with a reason if the deployment is not ready yet.
-func allUpdatedReplicasRolledOutAndReady(d *appsv1.Deployment) error {
-	if newReplicasRolledOut := d.Spec.Replicas != nil && d.Status.UpdatedReplicas < *d.Spec.Replicas; newReplicasRolledOut {
-		return fmt.Errorf(
-			"%d out of %d new replicas have been updated",
-			d.Status.UpdatedReplicas,
-			*d.Spec.Replicas,
-		)
-	}
-
-	if oldReplicasPendingTermination := d.Status.Replicas > d.Status.UpdatedReplicas; oldReplicasPendingTermination {
-		return fmt.Errorf(
-			"%d old replicas pending termination",
-			d.Status.Replicas-d.Status.UpdatedReplicas,
-		)
-	}
-
-	if rolloutFinished := d.Status.AvailableReplicas == d.Status.UpdatedReplicas; !rolloutFinished {
-		return fmt.Errorf(
-			"%d of %d updated replicas are available",
-			d.Status.AvailableReplicas,
-			d.Status.UpdatedReplicas,
-		)
-	}
-
-	return nil
 }
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.
@@ -454,6 +415,13 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	for i := range service.Spec.Ports {
+		// Set Service's appProtocol to http so that Kuma load-balances requests on HTTP-level instead of TCP.
+		// TCP load-balancing proved to cause issues with not distributing load evenly in short time spans like in this test.
+		// Ref: https://github.com/Kong/kubernetes-ingress-controller/issues/5498
+		service.Spec.Ports[i].AppProtocol = lo.ToPtr("http")
+	}
+
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -559,31 +527,48 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 	t.Helper()
 
 	require.Eventually(t, func() bool {
-		d, err := dump.Get(ctx, kongClient, dump.Config{})
+		start := time.Now()
+		defer func() {
+			t.Logf("Fetched config from %q, started at %s, duration %v", kongClient.BaseRootURL(), start.Format(time.RFC3339), time.Since(start))
+		}()
+
+		services, err := kongClient.Services.ListAll(ctx)
 		if err != nil {
-			t.Logf("failed dumping config: %s", err)
+			t.Logf("failed to list services: %v", err)
 			return false
 		}
-		if len(d.Services) != 1 {
-			t.Log("still no service found...")
+		if len(services) != 1 || services[0].ID == nil {
+			t.Logf("%d services found, expected 1", len(services))
 			return false
 		}
-		if len(d.Routes) != 1 {
-			t.Log("still no route found...")
+
+		routes, _, err := kongClient.Routes.ListForService(ctx, services[0].ID, &kong.ListOpt{})
+		if err != nil {
+			t.Logf("failed to list routes for service %s: %v", *services[0].ID, err)
 			return false
 		}
-		if d.Services[0].ID == nil ||
-			d.Routes[0].Service.ID == nil ||
-			*d.Services[0].ID != *d.Routes[0].Service.ID {
-			t.Log("still no matching service found...")
+		if len(routes) != 1 {
+			t.Logf("%d routes found under service %s, expected 1", len(routes), *services[0].ID)
 			return false
 		}
-		if len(d.Targets) != noReplicas {
-			t.Log("still no target found...")
+
+		upstreams, err := kongClient.Upstreams.ListAll(ctx)
+		if err != nil {
+			t.Logf("failed to list upstreams: %v", err)
 			return false
 		}
-		if len(d.Upstreams) != 1 {
-			t.Log("still no upstream found...")
+		if len(upstreams) != 1 || upstreams[0].ID == nil {
+			t.Logf("%d upstreams found, expected 1", len(upstreams))
+			return false
+		}
+
+		targets, err := kongClient.Targets.ListAll(ctx, upstreams[0].ID)
+		if err != nil {
+			t.Logf("failed to list targets for upstream %s: %v", *upstreams[0].ID, err)
+			return false
+		}
+		if len(targets) != noReplicas {
+			t.Logf("%d targets found, expected %d", len(targets), noReplicas)
 			return false
 		}
 		return true
@@ -712,13 +697,15 @@ func getLicenseFromAdminAPI(ctx context.Context, env environments.Environment, a
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return license, err
+		return license, fmt.Errorf("failed to read response body: %w; body: %s", err, body)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return license, nil
+		return license, fmt.Errorf("unexpected status code: %d; body: %s", resp.StatusCode, body)
 	}
-	err = json.Unmarshal(body, &license)
-	return license, err
+	if err = json.Unmarshal(body, &license); err != nil {
+		return licenseOutput{}, fmt.Errorf("could not unmarshal license response: %w; body: %s", err, body)
+	}
+	return license, nil
 }
 
 func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environment) {
@@ -919,6 +906,6 @@ func (d Deployments) Restart(ctx context.Context, t *testing.T, env environments
 	})
 	require.NoError(t, err, "failed to delete proxy pods")
 
-	waitForDeploymentRollout(ctx, t, env, d.ControllerNN.Namespace, d.ControllerNN.Name)
-	waitForDeploymentRollout(ctx, t, env, d.ProxyNN.Namespace, d.ProxyNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), d.ControllerNN.Namespace, d.ControllerNN.Name)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), d.ProxyNN.Namespace, d.ProxyNN.Name)
 }

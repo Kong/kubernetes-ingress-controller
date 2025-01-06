@@ -14,6 +14,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
@@ -40,6 +41,17 @@ func (e KongGatewayUnsupportedVersionError) Error() string {
 	return fmt.Sprintf("Kong Gateway version is not supported: %s", e.msg)
 }
 
+// NewKongAPIClient returns a Kong API client for a given root API URL.
+// It ensures that proper User-Agent is set. Do not use kong.NewClient directly.
+func NewKongAPIClient(adminURL string, httpClient *http.Client) (*kong.Client, error) {
+	client, err := kong.NewClient(kong.String(adminURL), httpClient) //nolint:forbidigo
+	if err != nil {
+		return nil, fmt.Errorf("creating Kong client: %w", err)
+	}
+	client.UserAgent = metadata.UserAgent()
+	return client, nil
+}
+
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
 // It ensures that the client is ready to be used by performing a status check, returns KongClientNotReadyError if not
 // or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is not >= 3.4.1.
@@ -48,37 +60,41 @@ func NewKongClientForWorkspace(
 	ctx context.Context, adminURL string, wsName string, httpClient *http.Client,
 ) (*Client, error) {
 	// Create the base client, and if no workspace was provided then return that.
-	client, err := kong.NewClient(kong.String(adminURL), httpClient)
+	client, err := NewKongAPIClient(adminURL, httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
-	if wsName == "" {
-		return NewClient(client), nil
-	}
-
 	// Ensure that the client is ready to be used by performing a status check.
 	if _, err := client.Status(ctx); err != nil {
 		return nil, KongClientNotReadyError{Err: err}
 	}
 
-	// If a workspace was provided, verify whether or not it exists.
-	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
-	if err != nil {
-		return nil, fmt.Errorf("looking up workspace: %w", err)
+	if wsName != "" {
+		// If a workspace was provided, verify whether or not it exists.
+		exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
+		if err != nil {
+			return nil, fmt.Errorf("looking up workspace: %w", err)
+		}
+
+		// If the provided workspace does not exist, for convenience we create it.
+		if !exists {
+			workspace := kong.Workspace{
+				Name: kong.String(wsName),
+			}
+			if _, err := client.Workspaces.Create(ctx, &workspace); err != nil {
+				return nil, fmt.Errorf("creating workspace: %w", err)
+			}
+		}
+		// Ensure that we set the workspace appropriately.
+		client.SetWorkspace(wsName)
+
+		// Now that we have set the workspace, ensure that the client is ready
+		// to be used with said workspace.
+		if _, err := client.Status(ctx); err != nil {
+			return nil, KongClientNotReadyError{Err: err}
+		}
 	}
 
-	// If the provided workspace does not exist, for convenience we create it.
-	if !exists {
-		workspace := kong.Workspace{
-			Name: kong.String(wsName),
-		}
-		if _, err := client.Workspaces.Create(ctx, &workspace); err != nil {
-			return nil, fmt.Errorf("creating workspace: %w", err)
-		}
-	}
-
-	// Ensure that we set the workspace appropriately.
-	client.SetWorkspace(wsName)
 	cl := NewClient(client)
 
 	fetchedKongVersion, err := cl.GetKongVersion(ctx)
@@ -87,7 +103,7 @@ func NewKongClientForWorkspace(
 	}
 	kongVersion, err := kong.NewVersion(fetchedKongVersion)
 	if err != nil {
-		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("getting Kong version: %v", err)}
+		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("invalid Kong version: %v", err)}
 	}
 	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
 	if kongSemVersion.LT(versions.KICv3VersionCutoff) {

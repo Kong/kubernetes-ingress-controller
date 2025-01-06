@@ -209,3 +209,32 @@ func NewPredicateHTTPQuery(key string, op BinaryOperator, value string) Predicat
 		value: StringLiteral(value),
 	}
 }
+
+func NewPredicateHTTPPathSingleSegment(index int, op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: HTTPPathSingleSegmentField{
+			Index: index,
+		},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}
+
+func NewPredicateHTTPPathSegmentInterval(start, end int, op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: HTTPPathSegmentIntervalField{
+			Start: start,
+			End:   end,
+		},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}
+
+func NewPredicateHTTPPathSegmentLength(op BinaryOperator, value int) Predicate {
+	return Predicate{
+		field: FieldHTTPPathSegmentsLen,
+		op:    op,
+		value: IntLiteral(value),
+	}
+}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -48,7 +47,7 @@ func commonHTTPRouteValidationTestCases(
 			},
 		},
 		{
-			Name: "a httproute linked to a non-existent gateway fails validation",
+			Name: "a httproute linked to a non-existent gateway passes validation",
 			Route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
@@ -62,7 +61,6 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErrSubstring: `fake-gateway not found`,
 		},
 		{
 			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",
@@ -150,7 +148,7 @@ func invalidRegexInPathTestCase(
 
 func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, expressions)
+	skipTestForRouterFlavors(context.Background(), t, expressions)
 
 	ctx := context.Background()
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
@@ -164,7 +162,7 @@ func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 
 func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
+	skipTestForRouterFlavors(context.Background(), t, traditional, traditionalCompatible)
 
 	ctx := context.Background()
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
@@ -212,23 +210,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 ) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
-	const webhookName = "kong-validations-gateway"
-	ensureAdmissionRegistration(
-		ctx,
-		t,
-		namespace,
-		webhookName,
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1beta1"},
-					Resources:   []string{"httproutes"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
+	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-gateway", ns.Name)
 
 	t.Log("creating a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -257,9 +239,6 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGateway)
 	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
-
-	t.Log("waiting for webhook service to be connective")
-	ensureWebhookServiceIsConnective(ctx, t, webhookName)
 
 	return namespace, gatewayClient, managedGateway, unmanagedGateway
 }

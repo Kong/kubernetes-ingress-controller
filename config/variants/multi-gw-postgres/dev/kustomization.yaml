@@ -29,12 +29,13 @@ patches:
         spec:
           containers:
           - name: ingress-controller
-            args:
-              - --feature-gates=GatewayAlpha=true
-              - --anonymous-reports=false
             env:
             - name: CONTROLLER_LOG_LEVEL
               value: debug
             - name: CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES
               value: admin-tls
+            - name: CONTROLLER_FEATURE_GATES
+              value: GatewayAlpha=true,KongServiceFacade=true,RewriteURIs=true,FallbackConfiguration=true,KongCustomEntity=true
+            - name: CONTROLLER_ANONYMOUS_REPORTS
+              value: "false"
             image: kic-placeholder:placeholder

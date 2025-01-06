@@ -1,7 +1,17 @@
 // Package metadata includes metadata variables for logging and reporting.
 package metadata
 
-import "strings"
+import (
+	"strings"
+
+	sdkkonnectmetadata "github.com/Kong/sdk-konnect-go/pkg/metadata"
+)
+
+func init() {
+	// NOTE: We do it this way because speakeasy does not provide a way to set the
+	// user-agent for the SDK instance.
+	sdkkonnectmetadata.SetUserAgent(UserAgent())
+}
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Versioning Information
@@ -38,4 +48,8 @@ func projectNameFromRepo(repo string) string {
 		return NotSet
 	}
 	return projectName
+}
+
+func UserAgent() string {
+	return "kong-ingress-controller/" + Release
 }

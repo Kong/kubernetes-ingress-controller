@@ -7,6 +7,8 @@ import (
 
 	"github.com/tidwall/gjson"
 	"sigs.k8s.io/yaml"
+
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -105,7 +107,6 @@ func ControllerImageTag() string {
 }
 
 // KongEffectiveVersion is the effective semver of kong gateway.
-// KongEffectiveVersion is the effective semver of kong gateway.
 // When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
 func KongEffectiveVersion() string {
 	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
@@ -131,14 +132,14 @@ func KongHelmChartVersion() string {
 // - `traditional`
 // - `traditional_compatible`.
 // - `expressions` (experimental, only for testing expression route related tests).
-func KongRouterFlavor() string {
+func KongRouterFlavor() dpconf.RouterFlavor {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 	if rf != "" && rf != "traditional" && rf != "traditional_compatible" && rf != "expressions" {
 		// TODO
 		os.Exit(1)
 	}
 
-	return rf
+	return dpconf.RouterFlavor(rf)
 }
 
 // KongPullUsername is the Docker username to use for the Kong image pull secret.
@@ -164,6 +165,12 @@ func KongEnterpriseEnabled() bool {
 // the testing framework will be used.
 func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
+}
+
+// GKEClusterReleaseChannel indicates the GKE cluster release channel to use when
+// creating a GKE cluster in tests.
+func GKEClusterReleaseChannel() string {
+	return os.Getenv("TEST_GKE_CLUSTER_RELEASE_CHANNEL")
 }
 
 // ClusterProvider indicates the Kubernetes cluster provider.
@@ -199,16 +206,9 @@ func GithubRunID() string {
 func ControllerFeatureGates() string {
 	featureGates := os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 	if featureGates == "" {
-		featureGates = getFeatureGates()
+		featureGates = GetFeatureGates()
 	}
 	return featureGates
-}
-
-// ExpressionRoutesEnabled indicates whether or not to enable expression routes
-// for the Kong Gateway and the controller.
-// If none specified, we fall back to default value - traditional_compatible.
-func ExpressionRoutesEnabled() bool {
-	return os.Getenv("KONG_TEST_EXPRESSION_ROUTES") == "true"
 }
 
 // -----------------------------------------------------------------------------
@@ -250,4 +250,9 @@ func IsCI() bool {
 	// It's a common convention that e.g. GitHub, GitLab, and other CI providers
 	// set the CI environment variable.
 	return os.Getenv("CI") == "true"
+}
+
+// KongLicenseData returns the Kong license data to use in tests.
+func KongLicenseData() string {
+	return os.Getenv("KONG_LICENSE_DATA")
 }

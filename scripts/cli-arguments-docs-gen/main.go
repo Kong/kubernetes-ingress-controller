@@ -74,6 +74,8 @@ func getTypeForHuman(flag *pflag.Flag) string {
 		return "bools"
 	case "mapStringBool":
 		return "list of string=bool"
+	case "types.MetricsAccessFilter":
+		return "string"
 	// The below are types that are human readable out-of-the-box, in case of missing one extend the list.
 	case "bool", "string", "int", "uint", "duration", "dns-strategy", "namespaced-name":
 		return typ

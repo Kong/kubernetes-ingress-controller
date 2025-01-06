@@ -1,0 +1,27 @@
+name: trigger performance test (targeted) on label
+
+on:
+  pull_request:
+    types:
+    - labeled
+
+jobs:
+  trigger-performance-tests-targeted:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    if: contains(github.event.*.labels.*.name, 'ci/run-performance')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      WORKFLOW: .github/workflows/performance_targeted.yaml
+      BRANCH: ${{ github.event.pull_request.head.ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Do not run e2e tests on GKE-based clusters for specific PR, because currently
+    # there is no way to use an image built from PR's code for those tests.
+    # https://github.com/Kong/kubernetes-testing-framework/issues/587
+    - run: |
+        gh workflow run ${WORKFLOW} --ref ${BRANCH} \
+          -f pr-number=${PR_NUMBER}

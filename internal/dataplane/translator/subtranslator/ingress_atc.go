@@ -39,11 +39,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	)
 
 	route := &kongstate.Route{
-		Ingress: util.K8sObjectInfo{
-			Namespace:   m.parentIngress.GetNamespace(),
-			Name:        m.parentIngress.GetName(),
-			Annotations: m.parentIngress.GetAnnotations(),
-		},
+		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
 			Name:              kong.String(routeName),
 			StripPath:         kong.Bool(false),

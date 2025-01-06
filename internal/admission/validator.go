@@ -7,11 +7,17 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/gateway"
@@ -21,18 +27,19 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer) (bool, string, error)
 	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
-	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
-	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
+	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
+	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
+	ValidateVault(ctx context.Context, vault kongv1alpha1.KongVault) (bool, string, error)
+	ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string)
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
@@ -47,11 +54,50 @@ type AdminAPIServicesProvider interface {
 	GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool)
 	GetInfoService() (kong.AbstractInfoService, bool)
 	GetRoutesService() (kong.AbstractRouteService, bool)
+	GetVaultsService() (kong.AbstractVaultService, bool)
+	GetSchemasService() (kong.AbstractSchemaService, bool)
 }
 
 // ConsumerGetter is an interface for retrieving KongConsumers.
 type ConsumerGetter interface {
 	ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error)
+}
+
+// SecretGetterWithOverride returns the override secrets in the list if the namespace and name matches,
+// or use the nested secretGetter to fetch the secret otherwise.
+// Used for validating changes of secrets to override existing the one in cache with the one to be updated.
+type SecretGetterWithOverride struct {
+	overrideSecrets map[k8stypes.NamespacedName]*corev1.Secret
+	secretGetter    kongstate.SecretGetter
+}
+
+var _ kongstate.SecretGetter = &SecretGetterWithOverride{}
+
+func (s *SecretGetterWithOverride) GetSecret(namespace, name string) (*corev1.Secret, error) {
+	nsName := k8stypes.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}
+	overrideSecret, ok := s.overrideSecrets[nsName]
+	if ok {
+		return overrideSecret, nil
+	}
+
+	return s.secretGetter.GetSecret(namespace, name)
+}
+
+// NewSecretGetterWithOverride returns a secret getter with given override secrets.
+func NewSecretGetterWithOverride(s kongstate.SecretGetter, overrideSecrets []*corev1.Secret) *SecretGetterWithOverride {
+	overrideSecretMap := lo.SliceToMap(overrideSecrets, func(secret *corev1.Secret) (k8stypes.NamespacedName, *corev1.Secret) {
+		return k8stypes.NamespacedName{
+			Namespace: secret.Namespace,
+			Name:      secret.Name,
+		}, secret.DeepCopy()
+	})
+	return &SecretGetterWithOverride{
+		overrideSecrets: overrideSecretMap,
+		secretGetter:    s,
+	}
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -193,16 +239,14 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	}
 	info, err := infoSvc.Get(ctx)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("Failed to fetch Kong info", "error", err)
+		validator.Logger.V(logging.DebugLevel).Info("Failed to fetch Kong info", "error", err)
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Info("Failed to parse Kong version", "error", err)
-	} else {
-		if !version.IsKongGatewayEnterprise() {
-			return false, ErrTextConsumerGroupUnsupported, nil
-		}
+		validator.Logger.V(logging.DebugLevel).Info("Failed to parse Kong version", "error", err)
+	} else if !version.IsKongGatewayEnterprise() {
+		return false, ErrTextConsumerGroupUnsupported, nil
 	}
 
 	cgs, ok := validator.AdminAPIServicesProvider.GetConsumerGroupsService()
@@ -232,8 +276,11 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 // else it returns false with the error message. If an error happens during
 // validation, error is returned.
 func (validator KongHTTPValidator) ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string) {
-	// If the secret doesn't specify a credential type (either by label or the secret's key) it's not a credentials secret.
-	if _, s := util.ExtractKongCredentialType(&secret); s == util.CredentialTypeAbsent {
+	// If the secret doesn't specify a credential type it's not a credentials secret. We shouldn't actually reach this
+	// codepath in practice because such secrets will be filtered out by the webhook secrets objectSelector and ignored.
+	// However, installs could potentially use an outdated webhook definition. Prior to 3.2 we only filtered in code and
+	// used a blanket selector.
+	if _, err := util.ExtractKongCredentialType(&secret); err != nil {
 		return true, ""
 	}
 
@@ -284,13 +331,16 @@ func (validator KongHTTPValidator) ValidateCredential(ctx context.Context, secre
 func (validator KongHTTPValidator) ValidatePlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongPlugin,
+	overrideSecrets []*corev1.Secret,
 ) (bool, string, error) {
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error
 
+	secretGetter := NewSecretGetterWithOverride(validator.SecretGetter, overrideSecrets)
+
 	plugin.Config, err = kongstate.RawConfigurationWithPatchesToConfiguration(
-		validator.SecretGetter,
+		secretGetter,
 		k8sPlugin.Namespace,
 		k8sPlugin.Config,
 		k8sPlugin.ConfigPatches,
@@ -299,7 +349,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		return false, fmt.Sprintf("%s: %s", ErrTextPluginConfigInvalid, err), nil
 	}
 	if k8sPlugin.ConfigFrom != nil {
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(secretGetter, k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
@@ -328,13 +378,15 @@ func (validator KongHTTPValidator) ValidatePlugin(
 func (validator KongHTTPValidator) ValidateClusterPlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongClusterPlugin,
+	overrideSecrets []*corev1.Secret,
 ) (bool, string, error) {
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error
 
+	secretGetter := NewSecretGetterWithOverride(validator.SecretGetter, overrideSecrets)
 	plugin.Config, err = kongstate.RawConfigurationWithNamespacedPatchesToConfiguration(
-		validator.SecretGetter,
+		secretGetter,
 		k8sPlugin.Config,
 		k8sPlugin.ConfigPatches,
 	)
@@ -343,7 +395,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	}
 
 	if k8sPlugin.ConfigFrom != nil {
-		config, err := kongstate.NamespacedSecretToConfiguration(validator.SecretGetter, k8sPlugin.ConfigFrom.SecretValue)
+		config, err := kongstate.NamespacedSecretToConfiguration(secretGetter, k8sPlugin.ConfigFrom.SecretValue)
 		if err != nil {
 			return false, fmt.Sprintf("%s: %s", ErrTextPluginSecretConfigUnretrievable, err), nil
 		}
@@ -392,58 +444,12 @@ func (validator KongHTTPValidator) ValidateGateway(
 func (validator KongHTTPValidator) ValidateHTTPRoute(
 	ctx context.Context, httproute gatewayapi.HTTPRoute,
 ) (bool, string, error) {
-	// in order to be sure whether or not an HTTPRoute resource is managed by this
-	// controller we disallow references to Gateway resources that do not exist.
-	var managedGateways []*gatewayapi.Gateway
-	for _, parentRef := range httproute.Spec.ParentRefs {
-		// determine the namespace of the gateway referenced via parentRef. If no
-		// explicit namespace is provided, assume the namespace of the route.
-		namespace := httproute.Namespace
-		if parentRef.Namespace != nil {
-			namespace = string(*parentRef.Namespace)
-		}
-
-		// gather the Gateway resource referenced by parentRef and fail validation
-		// if there is no such Gateway resource.
-		gateway := gatewayapi.Gateway{}
-		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      string(parentRef.Name),
-		}, &gateway); err != nil {
-			if apierrors.IsNotFound(err) {
-				return false, fmt.Sprintf("referenced gateway %s/%s not found", namespace, parentRef.Name), nil
-			}
-			return false, "", err
-		}
-
-		// pull the referenced GatewayClass object from the Gateway
-		gatewayClass := gatewayapi.GatewayClass{}
-		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
-			if apierrors.IsNotFound(err) {
-				return false, fmt.Sprintf("referenced gatewayclass %s not found", gateway.Spec.GatewayClassName), nil
-			}
-			return false, "", err
-		}
-
-		// determine ultimately whether the Gateway is managed by this controller implementation
-		if gatewayClass.Spec.ControllerName == gatewaycontroller.GetControllerName() {
-			managedGateways = append(managedGateways, &gateway)
-		}
-	}
-
-	// if there are no managed Gateways this is not a supported HTTPRoute
-	if len(managedGateways) == 0 {
-		return true, "", nil
-	}
-
-	// Now that we know whether or not the HTTPRoute is linked to a managed
-	// Gateway we can run it through full validation.
 	var routeValidator routeValidator = noOpRoutesValidator{}
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
 	return gatewayvalidation.ValidateHTTPRoute(
-		ctx, routeValidator, validator.TranslatorFeatures, &httproute, managedGateways...,
+		ctx, routeValidator, validator.TranslatorFeatures, &httproute, validator.ManagerClient,
 	)
 }
 
@@ -473,6 +479,41 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 	return true, "", nil
 }
 
+func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault kongv1alpha1.KongVault) (bool, string, error) {
+	// Ignore KongVaults that are being managed by another controller.
+	if !validator.ingressClassMatcher(&k8sKongVault.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
+		return true, "", nil
+	}
+	config, err := kongstate.RawConfigToConfiguration(k8sKongVault.Spec.Config.Raw)
+	if err != nil {
+		return false, fmt.Sprintf(ErrTextVaultConfigUnmarshalFailed, err), nil
+	}
+
+	// list existing KongVaults and reject if the spec.prefix is duplicate with another `KongVault`.
+	existingKongVaults := validator.Storer.ListKongVaults()
+	dupeVault, hasDupe := lo.Find(existingKongVaults, func(v *kongv1alpha1.KongVault) bool {
+		return v.Spec.Prefix == k8sKongVault.Spec.Prefix && v.Name != k8sKongVault.Name
+	})
+	if hasDupe {
+		return false, fmt.Sprintf("spec.prefix %q is duplicate with existing KongVault %q",
+			k8sKongVault.Spec.Prefix, dupeVault.Name), nil
+	}
+
+	kongVault := kong.Vault{
+		Name:   kong.String(k8sKongVault.Spec.Backend),
+		Prefix: kong.String(k8sKongVault.Spec.Prefix),
+		Config: config,
+	}
+	if len(k8sKongVault.Spec.Description) > 0 {
+		kongVault.Description = kong.String(k8sKongVault.Spec.Description)
+	}
+	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
+	if err != nil || errText != "" {
+		return false, errText, err
+	}
+	return true, "", nil
+}
+
 // -----------------------------------------------------------------------------
 // KongHTTPValidator - Private Methods
 // -----------------------------------------------------------------------------
@@ -487,9 +528,7 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	// Reduce the consumer set to consumers managed by this controller.
 	managedConsumers := make([]*kongv1.KongConsumer, 0)
 	for _, consumer := range consumers {
-		consumer := consumer
-		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey,
-			annotations.ExactClassMatch) {
+		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 			// ignore consumers (and subsequently secrets) that are managed by other controllers
 			continue
 		}
@@ -535,6 +574,21 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	return "", nil
 }
 
+func (validator KongHTTPValidator) validateVaultAgainstGatewaySchema(ctx context.Context, vault kong.Vault) (string, error) {
+	vaultService, hasClient := validator.AdminAPIServicesProvider.GetVaultsService()
+	if !hasClient {
+		return "", nil
+	}
+	isValid, msg, err := vaultService.Validate(ctx, &vault)
+	if err != nil {
+		return ErrTextVaultUnableToValidate, err
+	}
+	if !isValid {
+		return fmt.Sprintf(ErrTextVaultConfigValidationResultInvalid, msg), nil
+	}
+	return "", nil
+}
+
 type managerClientSecretGetter struct {
 	managerClient client.Client
 }
@@ -559,4 +613,56 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]k
 		return nil, err
 	}
 	return consumers.Items, nil
+}
+
+func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error) {
+	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", kongv1alpha1.KongCustomEntityKind)
+	// If the spec.contollerName does not match the ingress class name,
+	// and the ingress class annotation does not match the ingress class name either,
+	// ignore it as it is not controlled by the controller.
+	if (!validator.ingressClassMatcher(&entity.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch)) &&
+		(!validator.ingressClassMatcher(&metav1.ObjectMeta{
+			Annotations: map[string]string{
+				annotations.IngressClassKey: entity.Spec.ControllerName,
+			},
+		}, annotations.IngressClassKey, annotations.ExactClassMatch)) {
+		return true, "", nil
+	}
+
+	fields, err := kongstate.RawConfigToConfiguration(entity.Spec.Fields.Raw)
+	if err != nil {
+		return false, fmt.Sprintf(ErrTextCustomEntityFieldsUnmarshalFailed, err), nil
+	}
+
+	schemaService, hasClient := validator.AdminAPIServicesProvider.GetSchemasService()
+	// Skip validation on Kong gateway if we do not have available client.
+	if !hasClient {
+		logger.V(logging.DebugLevel).Info("Skipped because no schema service available")
+		return true, "", nil
+	}
+
+	// Retrieve the schema of the entity from Kong gateway.
+	entityType := entity.Spec.EntityType
+	schema, err := schemaService.Get(ctx, entityType)
+	if err != nil {
+		logger.V(logging.DebugLevel).Info("Failed to get schema of entity", "entity_type", entityType, "error", err)
+		return false, fmt.Sprintf(ErrTextCustomEntityGetSchemaFailed, entityType, err), nil
+	}
+
+	// Extract field definitions from the response of getting the schema of the entity.
+	s := kongstate.ExtractEntityFieldDefinitions(schema)
+	// Fill in fields that are "foreign" and required if there are such fields.
+	for fieldName, field := range s.Fields {
+		// Fill in an arbitrary UUID if the entity requires a reference to a foreign key.
+		// This format of foreign reference in entities should satisfy most of foreign fields in entities(services/routes/consumers/...).
+		// The admission webhook needs a placeholder value because the actual value isn't present in the KongCustomEntity spec.
+		// It will be derived from the resource(s) used by the parent KongPlugin during translation.
+		if field.Required && field.Type == kongstate.EntityFieldTypeForeign {
+			fields[fieldName] = map[string]interface{}{
+				"id": util.DefaultUUIDGenerator{}.NewString(),
+			}
+		}
+	}
+	// validate the custom entity against Kong gateway.
+	return schemaService.Validate(ctx, kong.EntityType(entity.Spec.EntityType), fields)
 }

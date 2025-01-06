@@ -18,10 +18,10 @@ import (
 )
 
 func TestHealthCheckServer(t *testing.T) {
-	passChecker := func(req *http.Request) error {
+	passChecker := func(_ *http.Request) error {
 		return nil
 	}
-	failChecker := func(req *http.Request) error {
+	failChecker := func(_ *http.Request) error {
 		return errors.New("you shall not pass")
 	}
 
@@ -55,7 +55,6 @@ func TestHealthCheckServer(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			h := &healthCheckServer{}
 			h.setHealthzCheck(tc.healthzChecker)

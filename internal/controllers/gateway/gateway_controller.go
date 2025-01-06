@@ -3,7 +3,9 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"net"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,12 +20,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -31,7 +33,7 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,10 +56,19 @@ type GatewayReconciler struct { //nolint:revive
 	PublishServiceRef    k8stypes.NamespacedName
 	PublishServiceUDPRef mo.Option[k8stypes.NamespacedName]
 
+	// AddressOverrides are addresses to use in Gateway status instead of the PublishServiceRef addresses.
+	AddressOverrides []string
+	// AddressOverridesUDP are addresses to use in Gateway status instead of the PublishServiceUDPRef addresses.
+	AddressOverridesUDP []string
+
 	// If enableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	// It's resolved on SetupWithManager call.
 	enableReferenceGrant bool
+
+	// If GatewayNN is set,
+	// only resources managed by the specified Gateway are reconciled.
+	GatewayNN controllers.OptionalNamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -78,67 +89,50 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Resource: "referencegrants",
 	})
 
-	// generate the controller object and attach it to the manager and link the reconciler object
-	c, err := controller.New("gateway-controller", mgr, controller.Options{
-		Reconciler: r,
-		LogConstructor: func(_ *reconcile.Request) logr.Logger {
-			return r.Log
-		},
-		CacheSyncTimeout: r.CacheSyncTimeout,
-	})
-	if err != nil {
-		return err
-	}
-
-	// watch Gateway objects, filtering out any Gateways which are not configured with
-	// a supported GatewayClass controller name.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass),
-	); err != nil {
-		return err
-	}
-
-	// watch for updates to gatewayclasses, if any gateway classes change, enqueue
-	// reconciliation for all supported gateway objects which reference it.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
-		predicate.NewPredicateFuncs(r.gatewayClassMatchesController),
-	); err != nil {
-		return err
-	}
-
-	// if an update to the gateway service occurs, we need to make sure to trigger
-	// reconciliation on all Gateway objects referenced by it (in the most common
-	// deployments this will be a single Gateway).
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
-		predicate.NewPredicateFuncs(r.isGatewayService),
-	); err != nil {
-		return err
-	}
-
-	// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
-	// reconciliation on the gateway, as we need to update the number of attachedRoutes.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
-	); err != nil {
-		return err
-	}
+	blder := ctrl.NewControllerManagedBy(mgr).
+		// set the controller name
+		Named("gateway-controller").
+		// set the controller options
+		WithOptions(controller.Options{
+			LogConstructor: func(_ *reconcile.Request) logr.Logger {
+				return r.Log
+			},
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
+		// watch Gateway objects, filtering out any Gateways which are not configured with
+		// a supported GatewayClass controller name.
+		For(&gatewayapi.Gateway{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass)),
+		).
+		// watch for updates to gatewayclasses, if any gateway classes change, enqueue
+		// reconciliation for all supported gateway objects which reference it.
+		Watches(&gatewayapi.GatewayClass{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController)),
+		).
+		// if an update to the gateway service occurs, we need to make sure to trigger
+		// reconciliation on all Gateway objects referenced by it (in the most common
+		// deployments this will be a single Gateway).
+		Watches(&corev1.Service{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.isGatewayService)),
+		).
+		// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
+		// reconciliation on the gateway, as we need to update the number of attachedRoutes.
+		Watches(&gatewayapi.HTTPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
+		)
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.enableReferenceGrant {
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
+		blder.Watches(&gatewayapi.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
-		); err != nil {
-			return err
-		}
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
+		)
+	}
+
+	if err := blder.Complete(r); err != nil {
+		return err
 	}
 
 	// start the required gatewayclass controller as well
@@ -173,12 +167,19 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		)
 		return false
 	}
+
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if !r.GatewayNN.Matches(gateway) {
+		return false
+	}
+
 	gatewayClass := &gatewayapi.GatewayClass{}
 	if err := r.Client.Get(context.Background(), client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
-	return isGatewayClassControlledAndUnmanaged(gatewayClass)
+	return isGatewayClassControlled(gatewayClass)
 }
 
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
@@ -193,13 +194,27 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 		)
 		return false
 	}
-	return isGatewayClassControlledAndUnmanaged(gatewayClass)
+	return isGatewayClassControlled(gatewayClass)
 }
 
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
 // by a gatewayclass to enqueue them for reconciliation. This is generally used when a GatewayClass
 // is updated to ensure that idle gateways are initialized when their gatewayclass becomes available.
 func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gatewayClass client.Object) []reconcile.Request {
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
+		gw := gatewayapi.Gateway{}
+		if err := r.Client.Get(ctx, gatewayToReconcile, &gw); err != nil {
+			r.Log.Error(err, "Failed to get gateways for gatewayclass in watch",
+				"gatewayclass", gatewayClass.GetName(), "gateway", gatewayToReconcile.String(),
+			)
+			return nil
+		}
+
+		return reconcileGatewaysIfClassMatches(gatewayClass, []gatewayapi.Gateway{gw})
+	}
+
 	gateways := &gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
@@ -220,11 +235,26 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 		)
 		return nil
 	}
-	gateways := &gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
-		return nil
+
+	var gateways gatewayapi.GatewayList
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
+		gw := gatewayapi.Gateway{}
+		if err := r.Client.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
+			r.Log.Error(err, "Failed to get gateway for referencegrant in watch",
+				"referencegrant", client.ObjectKeyFromObject(grant), "gateway", gatewayToReconcileNN.String(),
+			)
+			return nil
+		}
+		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
+	} else {
+		if err := r.Client.List(ctx, &gateways); err != nil {
+			r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
+			return nil
+		}
 	}
+
 	recs := []reconcile.Request{}
 	for _, gateway := range gateways.Items {
 		for _, from := range grant.Spec.From {
@@ -248,18 +278,32 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
 func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc client.Object) (recs []reconcile.Request) {
-	gateways := &gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
-		r.Log.Error(err, "Failed to list gateways for service in watch predicates", "service", svc)
-		return
+	var gateways gatewayapi.GatewayList
+	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
+		gw := gatewayapi.Gateway{}
+		if err := r.Client.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
+			r.Log.Error(err, "Failed to get gateway for service in watch",
+				"service", client.ObjectKeyFromObject(svc), "gateway", gatewayToReconcileNN.String(),
+			)
+			return nil
+		}
+		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
+	} else {
+		if err := r.Client.List(ctx, &gateways); err != nil {
+			r.Log.Error(err, "Failed to list gateways for service in watch", "service", svc.GetName())
+			return nil
+		}
 	}
+
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayapi.GatewayClass{}
 		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
-			return
+			continue
 		}
-		if isGatewayClassControlledAndUnmanaged(gatewayClass) {
+		if isGatewayClassControlled(gatewayClass) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: k8stypes.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -268,7 +312,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 			})
 		}
 	}
-	return
+	return recs
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
@@ -283,7 +327,11 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj clie
 		return nil
 	}
 	recs := []reconcile.Request{}
-	for _, gateway := range routeAcceptedByGateways(httpRoute.Namespace, httpRoute.Status.Parents) {
+	for _, gateway := range routeAcceptedByGateways(httpRoute) {
+		if !r.GatewayNN.MatchesNN(gateway) {
+			continue
+		}
+
 		recs = append(recs, reconcile.Request{
 			NamespacedName: gateway,
 		})
@@ -327,6 +375,15 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Gateway", req.NamespacedName)
 
+	if nn, isSet := r.GatewayNN.Get(); isSet && !r.GatewayNN.MatchesNN(req.NamespacedName) {
+		r.Log.V(logging.DebugLevel).Info(
+			"The request does not match the specified Gateway and will be skipped.",
+			"gateway", nn,
+			"request", req.String(),
+		)
+		return ctrl.Result{}, nil
+	}
+
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
 	gateway := new(gatewayapi.Gateway)
@@ -342,7 +399,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "Reconciliation triggered but gateway does not exist, deleting it in dataplane")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 		}
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{}, err
 	}
 
 	debug(log, gateway, "Processing gateway")
@@ -391,37 +448,43 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	// ensure that the GatewayClass matches the ControllerName and is unmanaged.
+	// ensure that the GatewayClass matches the ControllerName.
 	// This check has already been performed by predicates, but we need to ensure this condition
 	// as the reconciliation loop may be triggered by objects in which predicates we
-	// cannot check the ControllerName and the unmanaged mode (e.g., ReferenceGrants).
-	if !isGatewayClassControlledAndUnmanaged(gwc) {
+	// cannot check the ControllerName (e.g., ReferenceGrants).
+	if !isGatewayClassControlled(gwc) {
 		return reconcile.Result{}, nil
 	}
 
-	// reconciliation assumes unmanaged mode, in the future we may have a slot here for
-	// other gateway management modes.
-	result, err := r.reconcileUnmanagedGateway(ctx, log, gateway)
-	// reconcileUnmanagedGateway has side effects and modifies the referenced gateway object. dataplane updates must
-	// happen afterwards
-	if err == nil {
-		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
-			debug(log, gateway, "Failed to update object in data-plane, requeueing")
-			return result, err
-		}
-
-		referredSecretNames := listSecretNamesReferredByGateway(gateway)
-		if err := ctrlref.UpdateReferencesToSecret(
-			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
-			gateway, referredSecretNames); err != nil {
-			if apierrors.IsNotFound(err) {
-				result.Requeue = true
-				return result, nil
-			}
+	if isGatewayClassUnmanaged(gwc.Annotations) {
+		// The Gateway has to be reconciled by KIC only if it is unmanaged.
+		if result, err := r.reconcileUnmanagedGateway(ctx, log, gateway); err != nil {
 			return result, err
 		}
 	}
-	return result, err
+
+	// If the Gateway has been accepted (by KIC or the managing controller), the dataplane update must be performed.
+	if isGatewayAccepted(gateway) {
+		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
+			debug(log, gateway, "Failed to update object in data-plane, requeueing")
+			return ctrl.Result{}, err
+		}
+
+		referredSecretNames := listSecretNamesReferredByGateway(gateway)
+		if err := ctrlref.UpdateReferencesToSecretOrConfigMap(
+			ctx,
+			r.Client,
+			r.ReferenceIndexers,
+			r.DataplaneClient,
+			gateway,
+			referredSecretNames,
+			&corev1.Secret{}); err != nil {
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+	}
+	return ctrl.Result{}, nil
 }
 
 // reconcileUnmanagedGateway reconciles a Gateway that is configured for unmanaged mode,
@@ -448,7 +511,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			gateway.Annotations = map[string]string{}
 		}
 		annotations.UpdateGatewayPublishService(gateway.Annotations, services)
-		return ctrl.Result{}, r.Update(ctx, gateway)
+
+		err := r.Update(ctx, gateway)
+		return handleUpdateError(err, log, gateway)
 	}
 
 	serviceRefs := annotations.ExtractGatewayPublishService(gateway.Annotations)
@@ -457,11 +522,18 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "Gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
 	var gatewayServices []*corev1.Service
 	for _, ref := range serviceRefs {
-		r.Log.V(util.DebugLevel).Info("Determining service for ref", "ref", ref)
+		r.Log.V(logging.DebugLevel).Info("Determining service for ref", "ref", ref)
 		svc, err := r.determineServiceForGateway(ctx, ref)
 		if err != nil {
-			log.Error(err, "Could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
-			return ctrl.Result{Requeue: true}, err
+			const annotation = annotations.AnnotationPrefix + annotations.GatewayPublishServiceKey
+			log.Error(
+				err,
+				fmt.Sprintf("One of publish services defined in Gateway's %q annotation didn't match controller manager's configuration", annotation),
+				"namespace", gateway.Namespace,
+				"name", gateway.Name,
+				"service", ref,
+			)
+			return ctrl.Result{}, err
 		}
 		if svc != nil {
 			gatewayServices = append(gatewayServices, svc)
@@ -470,7 +542,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
-	if !isGatewayScheduled(gateway) {
+	if !isGatewayAccepted(gateway) {
 		info(log, gateway, "Marking gateway as accepted")
 		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayapi.GatewayConditionAccepted),
@@ -489,7 +561,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			Reason:             string(gatewayapi.GatewayReasonPending),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+
+		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return handleUpdateError(err, log, gateway)
 	}
 
 	// When deployed on Kubernetes Kong can not be relied on for the address data needed for Gateway because
@@ -499,7 +573,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's metadata.
 	debug(log, gateway, "Determining listener configurations from publish services")
-	var combinedAddresses []gatewayapi.GatewayAddress
+	var combinedAddresses []gatewayapi.GatewayStatusAddress
 	var combinedListeners []gatewayapi.Listener
 	for _, svc := range gatewayServices {
 		kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
@@ -515,17 +589,23 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		combinedListeners = append(combinedListeners, kongListeners...)
 	}
 
-	if !reflect.DeepEqual(gateway.Spec.Addresses, combinedAddresses) {
-		debug(log, gateway, "Updating addresses to match Kong proxy Services")
-		gateway.Spec.Addresses = combinedAddresses
-		if err := r.Update(ctx, gateway); err != nil {
-			if apierrors.IsConflict(err) {
-				// if there's a conflict that's normal just requeue to retry, no need to make noise.
-				return ctrl.Result{Requeue: true}, nil
+	// This handles PublishStatusAddress(UDP) override config support, which allows users to set an arbitrary string to
+	// use in place of the proxy Service addresses, usually because there's another proxy in front of Kong and the
+	// addresses associated with the proxy Service aren't actually where you want to direct external clients.
+	if len(r.AddressOverrides)+len(r.AddressOverridesUDP) > 0 {
+		combinedOverrideAddresses := slices.Concat(r.AddressOverrides, r.AddressOverridesUDP)
+		overrides := make([]gatewayapi.GatewayStatusAddress, len(combinedOverrideAddresses))
+		for i, stringAddr := range combinedOverrideAddresses {
+			addr := gatewayapi.GatewayStatusAddress{
+				Value: stringAddr,
+				Type:  lo.ToPtr(gatewayapi.HostnameAddressType),
 			}
-			return ctrl.Result{}, err
+			if ip := net.ParseIP(stringAddr); ip != nil {
+				addr.Type = lo.ToPtr(gatewayapi.IPAddressType)
+			}
+			overrides[i] = addr
 		}
-		return ctrl.Result{}, nil // dont requeue here because spec update will trigger new reconciliation
+		combinedAddresses = overrides
 	}
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
@@ -546,17 +626,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is
 	// a given and we can simply update spec to status.
 	debug(log, gateway, "Updating the gateway status if necessary")
-	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses)
-	if err != nil {
-		if apierrors.IsConflict(err) {
-			// if there's a conflict that's normal just requeue to retry, no need to make noise.
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	if isChanged {
-		debug(log, gateway, "Gateway status updated")
-		return ctrl.Result{}, nil
+	res, err := r.updateAddressesAndListenersStatus(ctx, log, gateway, listenerStatuses, combinedAddresses)
+	if err != nil || !res.IsZero() {
+		return res, err
 	}
 
 	info(log, gateway, "Gateway provisioning complete")
@@ -605,17 +677,27 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
 		name = r.PublishServiceUDPRef.MustGet()
 	default:
-		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s or %s",
-			ref, r.PublishServiceRef.String(), r.PublishServiceUDPRef.OrEmpty())
+		configuredServiceRefs := []string{fmt.Sprintf("%q", r.PublishServiceRef)}
+		if udpRef, ok := r.PublishServiceUDPRef.Get(); ok {
+			configuredServiceRefs = append(configuredServiceRefs, fmt.Sprintf("%q [udp]", udpRef))
+		}
+		return nil, fmt.Errorf("publish service reference %q from Gateway's annotations did not match configured controller manager's publish services (%s)",
+			ref, strings.Join(configuredServiceRefs, ", "))
 	}
 
 	// retrieve the service for the kong gateway
 	svc := &corev1.Service{}
 	if name.Name == "" && name.Namespace == "" {
-		r.Log.V(util.DebugLevel).Info("Service not configured, discarding it", "ref", ref)
+		r.Log.V(logging.DebugLevel).Info("Service not configured, discarding it", "ref", ref)
 		return nil, nil
 	}
-	return svc, r.Client.Get(ctx, name, svc)
+	if err := r.Client.Get(ctx, name, svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("publish service %q couldn't be found: %w", name, err)
+		}
+		return nil, fmt.Errorf("publish service %q couldn't be retrieved: %w", name, err)
+	}
+	return svc, nil
 }
 
 // determineL4ListenersFromService generates L4 addresses and listeners for a
@@ -624,7 +706,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	log logr.Logger,
 	svc *corev1.Service,
 ) (
-	[]gatewayapi.GatewayAddress,
+	[]gatewayapi.GatewayStatusAddress,
 	[]gatewayapi.Listener,
 	error,
 ) {
@@ -639,7 +721,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	gatewayHostAddrType := gatewayapi.HostnameAddressType
 
 	// for all service types we're going to capture the ClusterIP
-	addresses := make([]gatewayapi.GatewayAddress, 0, len(svc.Spec.ClusterIPs))
+	addresses := make([]gatewayapi.GatewayStatusAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayapi.Listener, 0, len(svc.Spec.Ports))
 	protocolToRouteGroupKind := map[corev1.Protocol]gatewayapi.RouteGroupKind{
 		corev1.ProtocolTCP: {Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("TCPRoute")},
@@ -674,13 +756,13 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		// are often the most common address used for traffic.
 		for _, ingress := range svc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
-				addresses = append([]gatewayapi.GatewayAddress{{
+				addresses = append([]gatewayapi.GatewayStatusAddress{{
 					Type:  &gatewayIPAddrType,
 					Value: ingress.IP,
 				}}, addresses...)
 			}
 			if ingress.Hostname != "" {
-				addresses = append([]gatewayapi.GatewayAddress{{
+				addresses = append([]gatewayapi.GatewayStatusAddress{{
 					Type:  &gatewayHostAddrType,
 					Value: ingress.Hostname,
 				}}, addresses...)
@@ -774,16 +856,14 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 // If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Programmed condition is posted.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
+	log logr.Logger,
 	gateway *gatewayapi.Gateway,
 	listenerStatuses []gatewayapi.ListenerStatus,
-) (bool, error) {
+	addresses []gatewayapi.GatewayStatusAddress,
+) (ctrl.Result, error) {
 	if !isGatewayProgrammed(gateway) {
-		saddrs := make([]gatewayapi.GatewayStatusAddress, 0, len(gateway.Spec.Addresses))
-		for _, addr := range gateway.Spec.Addresses {
-			saddrs = append(saddrs, gatewayapi.GatewayStatusAddress(addr))
-		}
 		gateway.Status.Listeners = listenerStatuses
-		gateway.Status.Addresses = saddrs
+		gateway.Status.Addresses = addresses
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayapi.GatewayConditionProgrammed),
 			Status:             metav1.ConditionTrue,
@@ -792,11 +872,17 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Reason:             string(gatewayapi.GatewayReasonProgrammed),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+
+		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return handleUpdateError(err, r.Log, gateway)
 	}
 	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {
 		gateway.Status.Listeners = listenerStatuses
-		return true, r.Status().Update(ctx, gateway)
+
+		err := r.Status().Update(ctx, gateway)
+		return handleUpdateError(err, r.Log, gateway)
 	}
-	return false, nil
+
+	info(log, gateway, "Gateway status updated")
+	return ctrl.Result{}, nil
 }

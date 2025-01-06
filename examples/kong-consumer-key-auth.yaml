@@ -13,8 +13,8 @@ kind: KongConsumer
 metadata:
   name: consumer1
   annotations:
-      kubernetes.io/ingress.class: kong
-# username: consumer1
+    kubernetes.io/ingress.class: kong
+username: consumer1
 credentials:
 - consumer1-auth
 ---

@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 const someValidResourceFailureReason = "some valid message"
@@ -58,7 +58,7 @@ func TestResourceFailure(t *testing.T) {
 		noNamespace := validCausingObject()
 		noNamespace.Namespace = ""
 		_, err = NewResourceFailure(someValidResourceFailureReason, noNamespace)
-		assert.Error(t, err, "expected an empty namespace object to be rejected")
+		assert.NoError(t, err, "expected an empty namespace object to also be accepted")
 	})
 }
 
@@ -71,7 +71,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 	})
 
 	t.Run("pushes, logs and pops resource failures", func(t *testing.T) {
-		core, logs := observer.New(zap.InfoLevel)
+		core, logs := observer.New(zap.DebugLevel)
 		logger := zapr.NewLogger(zap.New(core))
 
 		collector := NewResourceFailuresCollector(logger)
@@ -80,8 +80,8 @@ func TestResourceFailuresCollector(t *testing.T) {
 		collector.PushResourceFailure(someValidResourceFailureReason, someResourceFailureCausingObjects()...)
 
 		numberOfCausingObjects := len(someResourceFailureCausingObjects())
-		require.Equal(t, logs.Len(), numberOfCausingObjects*2, "expecting one log entry per causing object")
-		assertErrorLogs(t, logs)
+		require.Equal(t, numberOfCausingObjects*2, logs.Len(), "expecting one log entry per causing object")
+		assertDebugLogs(t, logs)
 
 		collectedErrors := collector.PopResourceFailures()
 		require.Len(t, collectedErrors, 2)
@@ -104,9 +104,9 @@ func TestResourceFailuresCollector(t *testing.T) {
 	})
 }
 
-func assertErrorLogs(t *testing.T, logs *observer.ObservedLogs) {
+func assertDebugLogs(t *testing.T, logs *observer.ObservedLogs) {
 	for i := range logs.All() {
-		assert.Equalf(t, zapcore.ErrorLevel, logs.All()[i].Entry.Level, "%d-nth log entry expected to have ErrorLevel", i)
+		assert.Equalf(t, zapcore.DebugLevel, logs.All()[i].Entry.Level, "%d-nth log entry expected to have DebugLevel", i)
 	}
 }
 

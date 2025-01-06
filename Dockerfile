@@ -1,6 +1,9 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.21.5 as builder
+FROM --platform=$BUILDPLATFORM golang:1.23.4 AS builder
+
+ARG GOPATH
+ARG GOCACHE
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -18,10 +21,12 @@ WORKDIR /workspace
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
+COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile .
@@ -35,6 +40,7 @@ ARG REPO_INFO
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on \
@@ -43,7 +49,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 ### FIPS 140-2 binary
 # Build the manager binary
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
-FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.10b7 as builder-fips
+FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.10b7 AS builder-fips
 
 ARG TARGETPLATFORM
 ARG TARGETOS

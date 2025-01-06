@@ -1,11 +1,12 @@
 name: PRs labels check
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, ready_for_review, labeled, unlabeled, synchronize]
 
 jobs:
   label:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
       - uses: pmalek/verify-pr-label-action@v1.4.5

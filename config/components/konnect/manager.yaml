@@ -27,18 +27,3 @@ spec:
               secretKeyRef:
                 name: konnect-client-tls
                 key: tls.key
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: proxy-kong
-  namespace: kong
-spec:
-  template:
-    spec:
-      containers:
-        - name: proxy
-          env:
-            - name: KONG_ROUTER_FLAVOR
-              value: traditional_compatible
-

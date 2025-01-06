@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -34,6 +35,23 @@ func KongWithRouterFlavor(flavor string) KongOpt {
 	}
 }
 
+func KongWithDBMode(networkName string) KongOpt {
+	return func(req *testcontainers.ContainerRequest) {
+		KongWithNetwork(networkName)(req)
+		req.Env["KONG_DATABASE"] = "postgres"
+		req.Env["KONG_PG_DATABASE"] = postgresDatabase
+		req.Env["KONG_PG_USER"] = postgresUser
+		req.Env["KONG_PG_PASSWORD"] = postgresPassword
+		req.Env["KONG_PG_HOST"] = postgresContainerNetworkAlias
+	}
+}
+
+func KongWithNetwork(networkName string) KongOpt {
+	return func(req *testcontainers.ContainerRequest) {
+		req.Networks = []string{networkName}
+	}
+}
+
 // Kong represents a docker container running Kong.
 type Kong struct {
 	container testcontainers.Container
@@ -53,6 +71,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
 			"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongProxyPort),
 			"KONG_ROUTER_FLAVOR": defaultRouterFlavor,
+			"KONG_LICENSE_DATA":  os.Getenv("KONG_LICENSE_DATA"),
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(kongAdminPort),
@@ -62,17 +81,33 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	for _, opt := range opts {
 		opt(&req)
 	}
-	kongC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
+
+	kongC, err := retry.DoWithData(
+		func() (testcontainers.Container, error) {
+			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+				ContainerRequest: req,
+				Started:          true,
+			})
+		},
+		retry.Context(ctx),
+		retry.Attempts(100),
+		retry.Delay(10*time.Millisecond),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+		retry.OnRetry(func(_ uint, err error) {
+			t.Logf("failed creating Kong container: %v", err)
+		}),
+	)
 	require.NoError(t, err)
 
 	kong := Kong{
 		container: kongC,
 	}
-	t.Cleanup(func() {
-		assert.NoError(t, kongC.Terminate(ctx))
+	t.Cleanup(func() { //nolint:contextcheck
+		// If the container is already terminated, we don't need to terminate it again.
+		if kongC.IsRunning() {
+			assert.NoError(t, kongC.Terminate(context.Background()))
+		}
 	})
 
 	adminURL, err := url.Parse(kong.AdminURL(ctx, t))
@@ -103,7 +138,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 			retry.Delay(tickTime),
 			retry.DelayType(retry.FixedDelay),
 			retry.LastErrorOnly(true),
-			retry.OnRetry(func(n uint, err error) {
+			retry.OnRetry(func(_ uint, err error) {
 				t.Logf("failed validating Kong version: %v", err)
 			}),
 			retry.RetryIf(func(err error) bool {
@@ -129,13 +164,20 @@ func (c Kong) ProxyURL(ctx context.Context, t *testing.T) string {
 	return fmt.Sprintf("http://localhost:%s", port.Port())
 }
 
+func (c Kong) Terminate(ctx context.Context) error {
+	return c.container.Terminate(ctx)
+}
+
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and
 // TEST_KONG_TAG are set, it will return the image and tag specified by them. Otherwise, it will return
-// the default image (kong:latest).
+// the default image (kong:latest or kong/kong-gateway if EE tests enabled).
 func kongImageUnderTest() string {
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		return fmt.Sprintf("%s:%s", testenv.KongImage(), testenv.KongTag())
 	}
 
+	if testenv.KongEnterpriseEnabled() {
+		return "kong/kong-gateway:latest"
+	}
 	return "kong:latest"
 }

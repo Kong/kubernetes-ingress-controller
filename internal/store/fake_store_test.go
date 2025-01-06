@@ -12,76 +12,13 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 )
-
-func TestKeyFunc(t *testing.T) {
-	type args struct {
-		obj interface{}
-	}
-
-	type F struct {
-		Name      string
-		Namespace string
-	}
-	type B struct {
-		F
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		{
-			want: "Bar/Foo",
-			args: args{
-				obj: &F{
-					Name:      "Foo",
-					Namespace: "Bar",
-				},
-			},
-		},
-		{
-			want: "Bar/Fu",
-			args: args{
-				obj: B{
-					F: F{
-						Name:      "Fu",
-						Namespace: "Bar",
-					},
-				},
-			},
-		},
-		{
-			want: "default/foo",
-			args: args{
-				obj: netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-					},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := keyFunc(tt.args.obj)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("keyFunc() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("keyFunc() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestFakeStoreEmpty(t *testing.T) {
 	assert := assert.New(t)
@@ -594,17 +531,31 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
+				Name:      "foo-secret",
 				Namespace: "default",
 			},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
+	configMaps := []*corev1.ConfigMap{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-configmap",
+				Namespace: "default",
+			},
+		},
+	}
+	store, err := NewFakeStore(
+		FakeObjects{
+			Secrets:    secrets,
+			ConfigMaps: configMaps,
+		},
+	)
 	require.Nil(err)
 	require.NotNil(store)
-	certs, err := store.ListCACerts()
+	secretCerts, configMapCerts, err := store.ListCACerts()
 	assert.Nil(err)
-	assert.Len(certs, 0)
+	assert.Len(secretCerts, 0, "expect no secrets as CA certificates")
+	assert.Len(configMapCerts, 0, "expect no configmaps as CA certificates")
 
 	secrets = []*corev1.Secret{
 		{
@@ -635,9 +586,51 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{Secrets: secrets})
 	require.Nil(err)
 	require.NotNil(store)
-	certs, err = store.ListCACerts()
+	secretCerts, configMapCerts, err = store.ListCACerts()
 	assert.Nil(err)
-	assert.Len(certs, 2, "expect two secrets as CA certificates")
+	assert.Len(secretCerts, 2, "expect two secrets as CA certificates")
+	assert.Len(configMapCerts, 0, "expect 0 configmap as CA certificates")
+
+	secrets = []*corev1.Secret{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+		},
+	}
+	configMaps = []*corev1.ConfigMap{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-configmap",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+		},
+	}
+	store, err = NewFakeStore(
+		FakeObjects{
+			Secrets:    secrets,
+			ConfigMaps: configMaps,
+		},
+	)
+	require.Nil(err)
+	require.NotNil(store)
+	secretCerts, configMapCerts, err = store.ListCACerts()
+	assert.Nil(err)
+	assert.Len(secretCerts, 1, "expect 1 secret as CA certificates")
+	assert.Len(configMapCerts, 1, "expect 1 configmap as CA certificates")
 }
 
 func TestFakeStoreHTTPRoute(t *testing.T) {

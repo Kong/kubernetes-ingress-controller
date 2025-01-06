@@ -22,7 +22,7 @@ import (
 func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
 	log := logr.Discard()
 	adminAPISvcNN := k8stypes.NamespacedName{Name: "admin-api", Namespace: "kong"}
-	kubeClient := fake.NewClientBuilder().Build()
+	kubeClient := fake.NewFakeClient()
 	genericErr := errors.New("some generic error")
 	someDiscoveredAPI := func(address string) adminapi.DiscoveredAdminAPI {
 		return adminapi.DiscoveredAdminAPI{

@@ -89,7 +89,7 @@ func (a *AddressFinder) GetLoadBalancerAddresses(ctx context.Context) ([]netv1.I
 // (https://pkg.go.dev/k8s.io/api/networking/v1#IngressLoadBalancerIngress), or an error if one of the given strings
 // is neither a valid IP nor a valid hostname.
 func getAddressHelper(addrs []string) ([]netv1.IngressLoadBalancerIngress, error) {
-	var loadBalancerAddresses []netv1.IngressLoadBalancerIngress
+	var loadBalancerAddresses []netv1.IngressLoadBalancerIngress //nolint:prealloc
 	for _, addr := range addrs {
 		ing := netv1.IngressLoadBalancerIngress{}
 		if net.ParseIP(addr) != nil {

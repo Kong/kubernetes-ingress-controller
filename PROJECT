@@ -11,14 +11,14 @@ resources:
   domain: konghq.com
   group: configuration
   kind: KongIngress
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1
   version: v1
 - api:
     crdVersion: v1
   domain: konghq.com
   group: configuration
   kind: KongClusterPlugin
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1
   version: v1
 - api:
     crdVersion: v1
@@ -26,7 +26,7 @@ resources:
   domain: konghq.com
   group: configuration
   kind: KongPlugin
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1
   version: v1
 - api:
     crdVersion: v1
@@ -34,7 +34,7 @@ resources:
   domain: konghq.com
   group: configuration
   kind: KongConsumer
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1
   version: v1
 - api:
     crdVersion: v1beta1
@@ -42,7 +42,7 @@ resources:
   domain: konghq.com
   group: configuration
   kind: KongConsumerGroup
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
@@ -50,7 +50,7 @@ resources:
   domain: konghq.com
   group: configuration
   kind: TCPIngress
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
@@ -58,7 +58,7 @@ resources:
   domain: konghq.com
   group: configuration
   kind: UDPIngress
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
@@ -66,7 +66,7 @@ resources:
   domain: konghq.com
   group: configuration
   kind: IngressClassParameters
-  path: github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1
+  path: github.com/kong/kubernetes-configuration/api/configuration/v1alpha1
   plural: ingressclassparameterses
   version: v1alpha1
 - api:

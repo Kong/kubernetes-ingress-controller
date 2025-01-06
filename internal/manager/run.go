@@ -22,23 +22,27 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -49,7 +53,7 @@ import (
 func Run(
 	ctx context.Context,
 	c *Config,
-	diagnostic util.ConfigDumpDiagnostic,
+	diagnostic diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
@@ -63,7 +67,6 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
-
 	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := c.GetKubeconfig()
 	if err != nil {
@@ -115,15 +118,17 @@ func Run(
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:            kongSemVersion,
-		InMemory:           dbMode.IsDBLessMode(),
-		Concurrency:        c.Concurrency,
-		FilterTags:         c.FilterTags,
-		SkipCACertificates: c.SkipCACertificates,
-		EnableReverseSync:  c.EnableReverseSync,
-		ExpressionRoutes:   dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		Version:                       kongSemVersion,
+		InMemory:                      dbMode.IsDBLessMode(),
+		Concurrency:                   c.Concurrency,
+		FilterTags:                    c.FilterTags,
+		SkipCACertificates:            c.SkipCACertificates,
+		EnableReverseSync:             c.EnableReverseSync,
+		ExpressionRoutes:              dpconf.ShouldEnableExpressionRoutes(routerFlavor),
+		SanitizeKonnectConfigDumps:    featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
+		FallbackConfiguration:         featureGates.Enabled(featuregates.FallbackConfiguration),
+		UseLastValidConfigForFallback: c.UseLastValidConfigForFallback,
 	}
-	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("Configuring and building the controller manager")
 	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)
@@ -143,15 +148,15 @@ func Run(
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
 	if c.EmitKubernetesEvents {
-		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + KongClientEventRecorderComponentName)
-		eventRecorder = mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + consts.KongClientEventRecorderComponentName)
+		eventRecorder = mgr.GetEventRecorderFor(consts.KongClientEventRecorderComponentName)
 	} else {
 		setupLog.Info("Emitting Kubernetes events disabled, discarding all events")
 		// Create an empty record.FakeRecorder with no Events channel to discard all events.
 		eventRecorder = &record.FakeRecorder{}
 	}
 
-	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
+	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, c.GatewayDiscoveryReadinessCheckTimeout, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		logger,
@@ -162,37 +167,41 @@ func Run(
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
 	clientsManager = clientsManager.WithDBMode(dbMode)
+	clientsManager = clientsManager.WithReconciliationInterval(c.GatewayDiscoveryReadinessCheckInterval)
 
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")
 		clientsManager.Run()
 	}
 
+	supportRedirectPlugin := kongSemVersion.GTE(versions.KongRedirectPluginCutoff)
 	translatorFeatureFlags := translator.NewFeatureFlags(
 		featureGates,
 		routerFlavor,
 		c.UpdateStatus,
+		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
+		supportRedirectPlugin,
 	)
 
+	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
-	configTranslator, err := translator.NewTranslator(
-		logger,
-		storer,
-		translatorFeatureFlags,
-	)
+
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager), c.ClusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to create translator: %w", err)
 	}
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
 		return err
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
-	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs)
+	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
+	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
+	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -205,7 +214,9 @@ func Run(
 		configurationChangeDetector,
 		kongConfigFetcher,
 		configTranslator,
-		cache,
+		&cache,
+		fallbackConfigGenerator,
+		metricsRecorder,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -237,6 +248,7 @@ func Run(
 		ctx,
 		mgr,
 		dataplaneClient,
+		referenceIndexers,
 		dataplaneAddressFinder,
 		udpDataplaneAddressFinder,
 		kubernetesStatusQueue,
@@ -271,42 +283,58 @@ func Run(
 		// connection.
 		go setupKonnectAdminAPIClientWithClientsMgr(ctx, c.Konnect, clientsManager, setupLog)
 
+		// Set channel to send config status.
+		configStatusNotifier := clients.NewChannelConfigNotifier(logger)
+		dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
+
+		// Setup Konnect config synchronizer.
+		konnectConfigSynchronizer, err := setupKonnectConfigSynchronizer(
+			ctx,
+			mgr,
+			c.Konnect.UploadConfigPeriod,
+			kongConfig,
+			clientsManager,
+			updateStrategyResolver,
+			configStatusNotifier,
+			metricsRecorder,
+		)
+		if err != nil {
+			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")
+		}
+		dataplaneClient.SetKonnectConfigSynchronizer(konnectConfigSynchronizer)
+
 		// Setup Konnect NodeAgent with manager.
 		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
 			konnectNodesAPIClient,
-			dataplaneClient,
+			configStatusNotifier,
 			clientsManager,
 			setupLog,
 			instanceIDProvider,
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
+
 	}
 
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
-	// This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
-	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but
-	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
-	// the client and makes it available to all Konnect-related subsystems.
-	if c.Konnect.LicenseSynchronizationEnabled {
-		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect)
-		if err != nil {
-			return fmt.Errorf("failed creating konnect client: %w", err)
-		}
-		setupLog.Info("Starting license agent")
-		agent := license.NewAgent(
-			konnectLicenseAPIClient,
-			ctrl.LoggerFrom(ctx).WithName("license-agent"),
-			license.WithInitialPollingPeriod(c.Konnect.InitialLicensePollingPeriod),
-			license.WithPollingPeriod(c.Konnect.LicensePollingPeriod),
-		)
-		err = mgr.Add(agent)
-		if err != nil {
-			return fmt.Errorf("could not add license agent to manager: %w", err)
-		}
-		configTranslator.InjectLicenseGetter(agent)
+	// Setup and inject license getter.
+	licenseGetter, err := setupLicenseGetter(
+		ctx,
+		c,
+		setupLog,
+		mgr,
+		kubernetesStatusQueue,
+	)
+	if err != nil {
+		setupLog.Error(err, "Failed to create a license getter from configuration")
+		return err
+	}
+	if licenseGetter != nil {
+		setupLog.Info("Inject license getter to config translator",
+			"license_getter_type", fmt.Sprintf("%T", licenseGetter))
+		configTranslator.InjectLicenseGetter(licenseGetter)
+		kongConfigFetcher.InjectLicenseGetter(licenseGetter)
 	}
 
 	if c.AnonymousReports {
@@ -378,7 +406,7 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 		retry.DelayType(retry.FixedDelay),
 		retry.Attempts(0), // We're using a context with timeout, so we don't need to limit the number of attempts.
 		retry.LastErrorOnly(true),
-		retry.OnRetry(func(n uint, err error) {
+		retry.OnRetry(func(_ uint, err error) {
 			logger.Info("Retrying Kubernetes API readiness check after error", "error", err.Error())
 		}),
 	)
@@ -390,7 +418,7 @@ func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
 	konnectNodeAPIClient *nodes.Client,
-	dataplaneClient *dataplane.KongClient,
+	configStatusSubscriber clients.ConfigStatusSubscriber,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 	instanceIDProvider *InstanceIDProvider,
@@ -406,17 +434,13 @@ func setupKonnectNodeAgentWithMgr(
 	}
 	version := metadata.Release
 
-	// Set channel to send config status.
-	configStatusNotifier := clients.NewChannelConfigNotifier(logger)
-	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
-
 	agent := konnect.NewNodeAgent(
 		hostname,
 		version,
 		c.Konnect.RefreshNodePeriod,
 		logger,
 		konnectNodeAPIClient,
-		configStatusNotifier,
+		configStatusSubscriber,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
 		instanceIDProvider,

@@ -14,8 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 )
 
 func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
@@ -41,21 +43,24 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "key-auth-cred",
 				Namespace: ns.Name,
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
 			},
 			Data: map[string][]byte{
-				"kongCredType": []byte("key-auth"),
-				"key":          []byte("whatever"),
-				"ttl":          []byte("1024"),
+				"key": []byte("whatever"),
+				"ttl": []byte("1024"),
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "empty-cred",
 				Namespace: ns.Name,
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
 			},
-			Data: map[string][]byte{
-				"kongCredType": []byte("key-auth"),
-			},
+			Data: map[string][]byte{},
 		},
 	}
 	for _, secret := range secrets {

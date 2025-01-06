@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -123,7 +124,7 @@ func ObjectReferenceIndexerReferent(obj interface{}) ([]string, error) {
 
 // SetObjectReference adds or updates a reference record between referrer and referent in reference cache.
 func (c CacheIndexers) SetObjectReference(referrer client.Object, referent client.Object) error {
-	c.logger.V(util.DebugLevel).Info("Set reference relation",
+	c.logger.V(logging.DebugLevel).Info("Set reference relation",
 		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
 		"referrer_namespace", referrer.GetNamespace(),
 		"referrer_name", referrer.GetName(),
@@ -140,7 +141,7 @@ func (c CacheIndexers) SetObjectReference(referrer client.Object, referent clien
 
 // DeleteObjectReference deletes the reference record between referrer and referent from reference cache.
 func (c CacheIndexers) DeleteObjectReference(referrer client.Object, referent client.Object) error {
-	c.logger.V(util.DebugLevel).Info("Delete reference relation",
+	c.logger.V(logging.DebugLevel).Info("Delete reference relation",
 		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
 		"referrer_namespace", referrer.GetNamespace(),
 		"referrer_name", referrer.GetName(),
@@ -192,6 +193,27 @@ func (c CacheIndexers) ListReferencesByReferrer(referrer client.Object) ([]*Obje
 	return returnRefList, nil
 }
 
+// ListReferencesByReferent lists all reference records referring to the same referent.
+func (c CacheIndexers) ListReferencesByReferent(referent client.Object) ([]*ObjectReference, error) {
+	referentKey, err := objectKeyFunc(referent)
+	if err != nil {
+		return nil, err
+	}
+	refList, err := c.indexer.ByIndex(IndexNameReferent, referentKey)
+	if err != nil {
+		return nil, err
+	}
+	returnRefList := make([]*ObjectReference, 0, len(refList))
+	for _, ref := range refList {
+		retRef, ok := ref.(*ObjectReference)
+		if !ok {
+			return nil, ErrTypeNotObjectReference
+		}
+		returnRefList = append(returnRefList, retRef)
+	}
+	return returnRefList, nil
+}
+
 // DeleteReferencesByReferrer deletes all reference records where referrer has the same key
 // (GroupVersionKind+NamespacedName, that means the same k8s object).
 // called when a k8s object deleted in cluster, or when we do not care about it anymore.
@@ -223,7 +245,7 @@ func (c CacheIndexers) DeleteObjectIfNotReferred(obj client.Object, dataplaneCli
 		return err
 	}
 	if !referred {
-		c.logger.V(util.DebugLevel).Info("Delete object from cache because it is no longer referred",
+		c.logger.V(logging.DebugLevel).Info("Delete object from cache because it is no longer referred",
 			"kind", obj.GetObjectKind(),
 			"namespace", obj.GetNamespace(),
 			"name", obj.GetName(),
@@ -242,6 +264,19 @@ func (c CacheIndexers) ListReferredObjects(referrer client.Object) ([]client.Obj
 	objs := []client.Object{}
 	for _, ref := range refs {
 		objs = append(objs, ref.Referent)
+	}
+	return objs, nil
+}
+
+// ListReferrerObjectsByReferent lists all objects that refers to the same referent.
+func (c CacheIndexers) ListReferrerObjectsByReferent(referent client.Object) ([]client.Object, error) {
+	refs, err := c.ListReferencesByReferent(referent)
+	if err != nil {
+		return nil, err
+	}
+	objs := []client.Object{}
+	for _, ref := range refs {
+		objs = append(objs, ref.Referrer)
 	}
 	return objs, nil
 }

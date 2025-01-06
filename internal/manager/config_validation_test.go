@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 )
 
 func TestConfigValidatedVars(t *testing.T) {
@@ -93,6 +97,41 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedValue: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
 			},
 		},
+		"--gateway-to-reconcile": {
+			{
+				Input: "namespace/gatewayname",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.GatewayToReconcile
+				},
+				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "gatewayname"}),
+			},
+			{
+				Input:                 "namespace/",
+				ExpectedErrorContains: "name cannot be empty",
+			},
+			{
+				Input:                 "/name",
+				ExpectedErrorContains: "namespace cannot be empty",
+			},
+		},
+		"--secret-label-selector": {
+			{
+				Input: "konghq.com/label-for-caching",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.SecretLabelSelector
+				},
+				ExpectedValue: "konghq.com/label-for-caching",
+			},
+		},
+		"--configmap-label-selector": {
+			{
+				Input: "konghq.com/label-for-caching",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.ConfigMapLabelSelector
+				},
+				ExpectedValue: "konghq.com/label-for-caching",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {
@@ -138,7 +177,9 @@ func TestConfigValidate(t *testing.T) {
 						Cert: "not-empty-cert",
 						Key:  "not-empty-key",
 					},
+					UploadConfigPeriod: konnect.DefaultConfigUploadPeriod,
 				},
+				GatewayDiscoveryReadinessCheckInterval: clients.DefaultReadinessReconciliationInterval,
 			}
 		}
 
@@ -199,6 +240,12 @@ func TestConfigValidate(t *testing.T) {
 			c := validEnabled()
 			c.KongAdminSvc = manager.OptionalNamespacedName{}
 			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
+		})
+
+		t.Run("enabled with too small upload config period is rejected", func(t *testing.T) {
+			c := validEnabled()
+			c.Konnect.UploadConfigPeriod = time.Second
+			require.ErrorContains(t, c.Validate(), "cannot set upload config period to be smaller than 10s")
 		})
 	})
 
@@ -282,6 +329,57 @@ func TestConfigValidate(t *testing.T) {
 			c := validWithTokenPath()
 			c.KongAdminToken = "non-empty-token"
 			require.ErrorContains(t, c.Validate(), "both admin token and admin token file specified, only one allowed")
+		})
+	})
+
+	t.Run("--use-last-valid-config-for-fallback", func(t *testing.T) {
+		t.Run("enabled without feature gate is rejected", func(t *testing.T) {
+			c := manager.Config{
+				UseLastValidConfigForFallback: true,
+			}
+			require.ErrorContains(t, c.Validate(), "--use-last-valid-config-for-fallback or CONTROLLER_USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with FallbackConfiguration feature gate enabled")
+		})
+		t.Run("enabled with feature gate is accepted", func(t *testing.T) {
+			c := manager.Config{
+				UseLastValidConfigForFallback: true,
+				FeatureGates: map[string]bool{
+					featuregates.FallbackConfiguration: true,
+				},
+			}
+			require.NoError(t, c.Validate())
+		})
+	})
+
+	t.Run("gateway discovery", func(t *testing.T) {
+		validEnabled := func() *manager.Config {
+			return &manager.Config{
+				KongAdminSvc:                           mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
+				GatewayDiscoveryReadinessCheckInterval: clients.DefaultReadinessReconciliationInterval,
+				GatewayDiscoveryReadinessCheckTimeout:  clients.DefaultReadinessCheckTimeout,
+			}
+		}
+
+		t.Run("disabled should not check other fields to set", func(t *testing.T) {
+			c := &manager.Config{}
+			require.NoError(t, c.Validate())
+		})
+
+		t.Run("enabled with valid configuration should pass", func(t *testing.T) {
+			c := validEnabled()
+			require.NoError(t, c.Validate())
+		})
+
+		t.Run("too small reconciliation interval should not pass", func(t *testing.T) {
+			c := validEnabled()
+			c.GatewayDiscoveryReadinessCheckInterval = 2 * time.Second
+			c.GatewayDiscoveryReadinessCheckTimeout = time.Second
+			require.ErrorContains(t, c.Validate(), "Readiness check reconciliation interval cannot be less than 3s")
+		})
+
+		t.Run("readiness check timeout must be less than reconciliation interval", func(t *testing.T) {
+			c := validEnabled()
+			c.GatewayDiscoveryReadinessCheckTimeout = clients.DefaultReadinessReconciliationInterval
+			require.ErrorContains(t, c.Validate(), "Readiness check timeout must be less than readiness check recociliation interval")
 		})
 	})
 }

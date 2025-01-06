@@ -1,0 +1,166 @@
+# Service A, Consumer 1 in Namespace Foo, Service B in Namespace Bar (KongPlugin)
+# With the original behavior, KIC provided no means for the Service in Bar to use the KongPlugin in Foo.
+# With the modified behavior, the Service in Bar can use namespace:plugin_name to request another
+# namespace's plugin. Functionally, the Service in Bar behaves the same as a Service in Foo for the
+# purpose of plugin binding, i.e. the Service in Bar can create a multi-entity plugin with the KongConsumer
+# in Foo same as the Service in Foo can, if it has permission. Permissions are ReferenceGrants to
+# the KongPlugin:
+# - In namespace Foo, grant from Bar:Services to KongPlugins.
+# These grants may optionally use the standard ReferenceGrant specific target syntax to limit which
+# plugins external resources can bind to. Because this KongPlugin inherently has access to only
+# resources in its namespace, permissions to it are a clearer indication of access to those resources
+# than the ambiguous KongClusterPlugin situation, and we do not need bidirectional permissions.
+
+# Service A in Foo, Service B in Bar, Consumer in Baz
+# This doesn't differ much for KongPlugins either, in that you simply need an additional grant from
+# both other resource namespaces. You do need to choose whether the plugin resides in the KongConsumer
+# namespace or the Service namespaces. Functionally this doesn't change much other than the permission
+# configuration, though it may make sense to choose one or the other based other resources in the from
+# namespace. Note that you can still vary configuration if you choose the consumer namespace, you just
+# need multiple KongPlugins to do so.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: one
+  namespace: pwuh
+  labels:
+    app: httpbin
+  annotations:
+    konghq.com/plugins: test
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: httpbin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: two
+  namespace: fwuh
+  labels:
+    app: httpbin
+  annotations:
+    konghq.com/plugins: pwuh:test
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: httpbin
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: admin
+  namespace: pwuh
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: test
+username: admin
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: test
+  namespace: pwuh
+plugin: udp-log
+config:
+  host: example.com
+  port: 80
+---
+kind: ReferenceGrant
+metadata:
+  name: example
+  namespace: pwuh
+spec:
+  from:
+  - group: ""
+    kind: Service
+    namespace: fwuh
+  to:
+  - group: "configuration.konghq.com"
+    kind: KongPlugin
+    name: test # Optional, to limit external resources to a specific KongPlugin only.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: pwuh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      containers:
+      - image: docker.io/kennethreitz/httpbin
+        name: httpbin
+        ports:
+        - containerPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: httpbin
+  namespace: pwuh
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      - path: /one
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: one
+            port:
+              number: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: fwuh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      containers:
+      - image: docker.io/kennethreitz/httpbin
+        name: httpbin
+        ports:
+        - containerPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: httpbin
+  namespace: fwuh
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      - path: /two
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: two
+            port:
+              number: 80

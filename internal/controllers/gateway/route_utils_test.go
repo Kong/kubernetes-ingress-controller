@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -19,10 +20,12 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/kubernetes-configuration/pkg/clientset/scheme"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/scheme"
 )
 
 func init() {
@@ -42,15 +45,15 @@ func TestFilterHostnames(t *testing.T) {
 			Listeners: []gatewayapi.Listener{
 				{
 					Name:     "listener-1",
-					Hostname: util.StringToGatewayAPIHostnamePtr("very.specific.com"),
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("very.specific.com"),
 				},
 				{
 					Name:     "listener-2",
-					Hostname: util.StringToGatewayAPIHostnamePtr("*.wildcard.io"),
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.wildcard.io"),
 				},
 				{
 					Name:     "listener-3",
-					Hostname: util.StringToGatewayAPIHostnamePtr("*.anotherwildcard.io"),
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.anotherwildcard.io"),
 				},
 				{
 					Name: "listener-4",
@@ -78,16 +81,16 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
-						util.StringToGatewayAPIHostname("*.nonmatchingwildcard.io"),
-						util.StringToGatewayAPIHostname("very.specific.com"),
+						"*.anotherwildcard.io",
+						"*.nonmatchingwildcard.io",
+						"very.specific.com",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("very.specific.com"),
+						"very.specific.com",
 					},
 				},
 			},
@@ -103,15 +106,15 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("non.matching.com"),
-						util.StringToGatewayAPIHostname("*.specific.com"),
+						"non.matching.com",
+						"*.specific.com",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("very.specific.com"),
+						"very.specific.com",
 					},
 				},
 			},
@@ -127,20 +130,20 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("non.matching.com"),
-						util.StringToGatewayAPIHostname("wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.wildcard.io"),
-						util.StringToGatewayAPIHostname("bar.wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
+						"non.matching.com",
+						"wildcard.io",
+						"foo.wildcard.io",
+						"bar.wildcard.io",
+						"foo.bar.wildcard.io",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("foo.wildcard.io"),
-						util.StringToGatewayAPIHostname("bar.wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
+						"foo.wildcard.io",
+						"bar.wildcard.io",
+						"foo.bar.wildcard.io",
 					},
 				},
 			},
@@ -156,14 +159,14 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+						"*.anotherwildcard.io",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+						"*.anotherwildcard.io",
 					},
 				},
 			},
@@ -197,8 +200,8 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("specific.but.wrong.com"),
-						util.StringToGatewayAPIHostname("wildcard.io"),
+						"specific.but.wrong.com",
+						"wildcard.io",
 					},
 				},
 			},
@@ -531,10 +534,47 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					},
 				},
 			},
+			{
+				name:  "HTTPRoute does not get accepted if Listener doesn't match route's protocol",
+				route: basicHTTPRoute(),
+				objects: []client.Object{
+					func() *gatewayapi.Gateway {
+						gw := gatewayWithHTTP80Ready()
+						// Using matching Listener name, but wrong protocol.
+						gw.Spec.Listeners = builder.NewListener("http").WithPort(80).UDP().IntoSlice()
+						return gw
+					}(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					},
+				},
+			},
+			{
+				name:  "HTTPRoute does not get accepted if Listener doesn't match route's section name",
+				route: basicHTTPRoute(),
+				objects: []client.Object{
+					func() *gatewayapi.Gateway {
+						gw := gatewayWithHTTP80Ready()
+						// Using Listener's name not matching Route's section name.
+						gw.Spec.Listeners = builder.NewListener("not-http").WithPort(80).HTTP().IntoSlice()
+						return gw
+					}(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+					},
+				},
+			},
 		}
 
 		for _, tt := range tests {
-			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				fakeClient := fakeclient.
 					NewClientBuilder().
@@ -542,7 +582,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.NewOptionalNamespacedName(mo.None[k8stypes.NamespacedName]()))
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -805,7 +845,6 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				fakeClient := fakeclient.
 					NewClientBuilder().
@@ -813,7 +852,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1040,7 +1079,6 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				fakeClient := fakeclient.
 					NewClientBuilder().
@@ -1048,7 +1086,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1262,7 +1300,6 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				fakeClient := fakeclient.
 					NewClientBuilder().
@@ -1270,7 +1307,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route)
+				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -1300,8 +1337,139 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			WithScheme(scheme.Scheme).
 			Build()
 
-		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute)
+		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute, controllers.OptionalNamespacedName{})
 		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
+	})
+
+	t.Run("single Gateway", func(t *testing.T) {
+		namedGateway := func(name string) *gatewayapi.Gateway {
+			return &gatewayapi.Gateway{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "test-namespace",
+					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
+				},
+				Spec: gatewayapi.GatewaySpec{
+					GatewayClassName: "test-gatewayclass",
+					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
+				},
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
+						{
+							Name: "http",
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Status: metav1.ConditionTrue,
+								},
+							},
+							SupportedKinds: supportedRouteGroupKinds,
+						},
+					},
+				},
+			}
+		}
+
+		basicHTTPRoute := func(gateway string) *gatewayapi.HTTPRoute {
+			return &gatewayapi.HTTPRoute{
+				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: "test-namespace",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Group: &goodGroup,
+								Kind:  &goodKind,
+								Name:  gatewayapi.ObjectName(gateway),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							BackendRefs: []gatewayapi.HTTPBackendRef{
+								builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+							},
+						},
+					},
+				},
+			}
+		}
+
+		tests := []struct {
+			name        string
+			route       *gatewayapi.HTTPRoute
+			expected    []expected
+			expectedErr error
+			objects     []client.Object
+		}{
+			{
+				name:  "HTTPRoute with bound Gateway parent is accepted",
+				route: basicHTTPRoute("good-gateway"),
+				objects: []client.Object{
+					namedGateway("good-gateway"),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					},
+				},
+			},
+			{
+				name:  "HTTPRoute with other parent Gateway finds no matching Gateways",
+				route: basicHTTPRoute("good-gateway"),
+				objects: []client.Object{
+					namedGateway("bad-gateway"),
+					gatewayClass,
+					namespace,
+				},
+				expected:    []expected{},
+				expectedErr: ErrNoSupportedGateway,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				fakeClient := fakeclient.
+					NewClientBuilder().
+					WithScheme(scheme.Scheme).
+					WithObjects(tt.objects...).
+					Build()
+
+				got, err := getSupportedGatewayForRoute(
+					context.Background(),
+					logr.Discard(),
+					fakeClient,
+					tt.route,
+					controllers.NewOptionalNamespacedName(
+						mo.Some(
+							k8stypes.NamespacedName{
+								Namespace: namespace.Name,
+								Name:      "good-gateway",
+							},
+						),
+					),
+				)
+				if tt.expectedErr != nil {
+					require.Equal(t, tt.expectedErr, err)
+				} else {
+					require.NoError(t, err)
+				}
+				require.Len(t, got, len(tt.expected))
+
+				for i := range got {
+					assert.Equalf(t, "test-namespace", got[i].gateway.Namespace, "gateway namespace #%d", i)
+					assert.Equalf(t, "good-gateway", got[i].gateway.Name, "gateway name #%d", i)
+					assert.Equalf(t, tt.expected[i].listenerName, got[i].listenerName, "listenerName #%d", i)
+					assert.Equalf(t, tt.expected[i].condition, got[i].condition, "condition #%d", i)
+				}
+			})
+		}
 	})
 }
 
@@ -1871,8 +2039,6 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 		}
 
 		for _, tc := range tests {
-			tc := tc
-
 			t.Run(tc.name, func(t *testing.T) {
 				var (
 					ctx       = context.Background()

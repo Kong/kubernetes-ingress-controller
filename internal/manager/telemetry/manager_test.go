@@ -178,7 +178,6 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 	k8sclient := testk8sclient.NewSimpleClientset()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

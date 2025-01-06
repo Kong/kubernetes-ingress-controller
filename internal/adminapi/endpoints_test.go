@@ -490,8 +490,6 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(fmt.Sprintf("dnsstrategy_%s/%s", tt.dnsStrategy, tt.name), func(t *testing.T) {
 			discoverer, err := NewDiscoverer(tt.portNames, tt.dnsStrategy)
 			require.NoError(t, err)
@@ -702,7 +700,6 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(fmt.Sprintf("dnsstrategy_%s/%s", tt.dnsStrategy, tt.name), func(t *testing.T) {
 			require.NoError(t, tt.dnsStrategy.Validate())
 

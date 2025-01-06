@@ -22,12 +22,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
@@ -104,7 +106,7 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 
 	// Reducing the cache sync timeout to speed up the test.
 	cfg.CacheSyncTimeout = time.Millisecond * 500
-	err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
+	err := manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
 	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 
@@ -184,7 +186,6 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				for i, invalidHashOn := range generateInvalidHashOns() {
-					invalidHashOn := invalidHashOn
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 							HashOn: &invalidHashOn,
@@ -202,7 +203,6 @@ func TestCRDValidations(t *testing.T) {
 					return hashOn.Cookie != nil
 				})
 				for i, invalidHashOn := range invalidHashOns {
-					invalidHashOn := invalidHashOn
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
 							HashOnFallback: &invalidHashOn,
@@ -764,10 +764,64 @@ func TestCRDValidations(t *testing.T) {
 					"Using both configFrom and configPatches fields is not allowed.")
 			},
 		},
+		{
+			name: "KongVault - changing spec.prefix is not allowed",
+			scenario: func(ctx context.Context, t *testing.T, _ string) {
+				vault := &kongv1alpha1.KongVault{
+					Spec: kongv1alpha1.KongVaultSpec{
+						Backend: "env",
+						Prefix:  "env-0",
+					},
+				}
+				require.NoError(t, createKongVault(ctx, ctrlClient, vault))
+				vault.Spec.Prefix = "env-1"
+				assert.ErrorContains(t, updateKongVault(ctx, ctrlClient, vault),
+					"The spec.prefix field is immutable")
+			},
+		},
+		{
+			name: "KongConsumer - duplicate credentials are not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:    "u1",
+					Credentials: []string{"c1", "c1", "c2"},
+				}
+				assert.ErrorContains(t, createKongConsumer(ctx, ctrlClient, ns, consumer), `Duplicate value: "c1"`)
+			},
+		},
+		{
+			name: "KongConsumer - unique credentials are allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:    "u1",
+					Credentials: []string{"c1", "c2"},
+				}
+				assert.NoError(t, createKongConsumer(ctx, ctrlClient, ns, consumer))
+			},
+		},
+		{
+			name: "KongConsumer - duplicate consumer groups are not allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:       "u1",
+					ConsumerGroups: []string{"cg1", "cg1", "cg2"},
+				}
+				assert.ErrorContains(t, createKongConsumer(ctx, ctrlClient, ns, consumer), `Duplicate value: "cg1"`)
+			},
+		},
+		{
+			name: "KongConsumer - unique consumer groups are allowed",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				consumer := &kongv1.KongConsumer{
+					Username:       "u1",
+					ConsumerGroups: []string{"cg1", "cg2"},
+				}
+				assert.NoError(t, createKongConsumer(ctx, ctrlClient, ns, consumer))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ns := CreateNamespace(ctx, t, ctrlClient)
 			tc.scenario(ctx, t, ns.Name)
@@ -934,4 +988,20 @@ func updateKongClusterPlugin(ctx context.Context, client client.Client, ns strin
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Update(ctx, plugin)
+}
+
+func createKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
+	vault.GenerateName = "test-"
+	return c.Create(ctx, vault)
+}
+
+func updateKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
+	vault.GenerateName = "test-"
+	return c.Update(ctx, vault)
+}
+
+func createKongConsumer(ctx context.Context, c client.Client, ns string, consumer *kongv1.KongConsumer) error {
+	consumer.GenerateName = "test-"
+	consumer.Namespace = ns
+	return c.Create(ctx, consumer)
 }

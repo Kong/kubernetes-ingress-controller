@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -30,7 +30,7 @@ import (
 )
 
 func TestHTTPSRedirect(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
+	RunWhenKongExpressionRouter(context.Background(), t)
 	ctx := context.Background()
 
 	t.Parallel()
@@ -61,13 +61,13 @@ func TestHTTPSRedirect(t *testing.T) {
 
 	t.Log("waiting for Ingress to be operational and properly redirect")
 	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 		Timeout: time.Second * 3,
 	}
 	assert.Eventually(t, func() bool {
-		resp, err := client.Get(fmt.Sprintf("%s/test_https_redirect", proxyURL))
+		resp, err := client.Get(fmt.Sprintf("%s/test_https_redirect", proxyHTTPURL))
 		if err != nil {
 			return false
 		}
@@ -82,24 +82,24 @@ func TestHTTPSIngress(t *testing.T) {
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
+	certPool := x509.NewCertPool()
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
 	}
 	testTransport := http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == "foo.example:443" {
-				addr = fmt.Sprintf("%s:443", proxyURL.Hostname())
-			}
-			if addr == "bar.example:443" {
-				addr = fmt.Sprintf("%s:443", proxyURL.Hostname())
-			}
-			if addr == "baz.example:443" {
-				addr = fmt.Sprintf("%s:443", proxyURL.Hostname())
+			switch addr {
+			case "foo.example:443", "bar.example:443", "baz.example:443":
+				addr = proxyHTTPSURL.Host
+			default:
 			}
 			return dialer.DialContext(ctx, network, addr)
 		},
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			RootCAs:    certPool,
+		},
 	}
 	httpcStatic := http.Client{
 		Timeout:   httpcTimeout,
@@ -132,21 +132,22 @@ func TestHTTPSIngress(t *testing.T) {
 	t.Log("configuring ingress tls spec")
 	ingress1.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}
 	ingress1.ObjectMeta.Name = "ingress1"
-	ingress2.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example"}}}
+	ingress2.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example", "baz.example"}}}
 	ingress2.ObjectMeta.Name = "ingress2"
 
 	t.Log("configuring secrets")
-	fooExampleTLSCert, fooExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+	fooExampleTLSCert, fooExampleTLSKey := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("secure-foo-bar", "foo.example"),
 	)
-	barExampleTLSCert, barExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
-		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("foo.com", "bar.example"),
+	require.True(t, certPool.AppendCertsFromPEM(fooExampleTLSCert))
+	barExampleTLSCert, barExampleTLSKey := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("foo.com", "bar.example", "baz.example"),
 	)
+	require.True(t, certPool.AppendCertsFromPEM(barExampleTLSCert))
 
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 				Name:      "secret1",
 				Namespace: ns.Name,
 			},
@@ -157,7 +158,6 @@ func TestHTTPSIngress(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e5"),
 				Name:      "secret2",
 				Namespace: ns.Name,
 			},
@@ -253,14 +253,11 @@ func TestHTTPSIngress(t *testing.T) {
 		return false
 	}, ingressWait, waitTick, true)
 
-	// This should work currently. generators.NewIngressForService() only creates path rules by default, so while we don't
-	// do anything for baz.example other than add fake DNS for it, the /bar still routes it through ingress2's route.
-	// We're going to break it later, but need to confirm it does work first.
 	t.Log("confirm Ingress path routes available on other hostnames")
 	assert.Eventually(t, func() bool {
 		resp, err := httpcStatic.Get("https://baz.example:443/bar")
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://bar.example:443/baz: %v", err)
+			t.Logf("WARNING: error while waiting for https://baz.example:443/bar: %v", err)
 			return false
 		}
 		defer resp.Body.Close()

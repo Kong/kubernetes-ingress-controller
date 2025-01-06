@@ -11,39 +11,41 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 )
 
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
-// If both are not found, an error is returned.
+// If both don't exist pluginFound is set to false.
 func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
-	*kongv1.KongPlugin,
-	*kongv1.KongClusterPlugin,
-	error,
+	kp *kongv1.KongPlugin,
+	kcp *kongv1.KongClusterPlugin,
+	pluginFound bool,
+	err error,
 ) {
 	plugin, pluginErr := s.GetKongPlugin(namespace, name)
 	if pluginErr != nil {
 		if !errors.As(pluginErr, &store.NotFoundError{}) {
-			return nil, nil, fmt.Errorf("failed fetching KongPlugin: %w", pluginErr)
+			return nil, nil, false, fmt.Errorf("failed fetching KongPlugin: %w", pluginErr)
 		}
 
 		// If KongPlugin is not found, try to fetch KongClusterPlugin.
 		clusterPlugin, err := s.GetKongClusterPlugin(name)
 		if err != nil {
 			if !errors.As(err, &store.NotFoundError{}) {
-				return nil, nil, fmt.Errorf("failed fetching KongClusterPlugin: %w", err)
+				return nil, nil, false, fmt.Errorf("failed fetching KongClusterPlugin: %w", err)
 			}
 
 			// Both KongPlugin and KongClusterPlugin are not found.
-			return nil, nil, fmt.Errorf("no KongPlugin or KongClusterPlugin was found for %s/%s", namespace, name)
+			return nil, nil, false, nil
 		}
 
-		return nil, clusterPlugin, nil
+		return nil, clusterPlugin, true, nil
 	}
 
-	return plugin, nil, nil
+	return plugin, nil, true, nil
 }
 
 func kongPluginFromK8SClusterPlugin(
@@ -69,7 +71,7 @@ func kongPluginFromK8SClusterPlugin(
 		var err error
 		config, err = NamespacedSecretToConfiguration(
 			s,
-			(*k8sPlugin.ConfigFrom).SecretValue)
+			k8sPlugin.ConfigFrom.SecretValue)
 		if err != nil {
 			return Plugin{},
 				fmt.Errorf("error parsing config for KongClusterPlugin %s: %w",
@@ -123,7 +125,7 @@ func kongPluginFromK8SPlugin(
 	if k8sPlugin.ConfigFrom != nil {
 		var err error
 		config, err = SecretToConfiguration(s,
-			(*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+			k8sPlugin.ConfigFrom.SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return Plugin{},
 				fmt.Errorf("error parsing config for KongPlugin '%s/%s': %w",
@@ -223,7 +225,7 @@ func RawConfigurationWithPatchesToConfiguration(
 			return kong.Configuration{}, err
 		}
 	}
-	return rawConfigToConfiguration(raw)
+	return RawConfigToConfiguration(raw)
 }
 
 // RawConfigurationWithNamespacedPatchesToConfiguration converts config and add patches from configPatches of KongClusterPlugin.
@@ -253,21 +255,7 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 			return kong.Configuration{}, err
 		}
 	}
-	return rawConfigToConfiguration(raw)
-}
-
-// rawConfigToConfiguration decodes raw JSON to the format of Kong configuration.
-// it is run after all patches applied to the initial config.
-func rawConfigToConfiguration(raw []byte) (kong.Configuration, error) {
-	if len(raw) == 0 {
-		return kong.Configuration{}, nil
-	}
-	var kongConfig kong.Configuration
-	err := json.Unmarshal(raw, &kongConfig)
-	if err != nil {
-		return kong.Configuration{}, err
-	}
-	return kongConfig, nil
+	return RawConfigToConfiguration(raw)
 }
 
 // NamespacedSecretToConfiguration fetches specified value from given namespace, secret and key,
@@ -354,4 +342,15 @@ func (p plugin) toKongPlugin() kong.Plugin {
 		result.InstanceName = kong.String(p.InstanceName)
 	}
 	return result
+}
+
+type RelatedEntitiesRef struct {
+	Services  []*Service
+	Routes    []*Route
+	Consumers []*Consumer
+}
+
+type PluginRelatedEntitiesRefs struct {
+	RelatedEntities      map[string]RelatedEntitiesRef
+	RouteAttachedService map[string]*Service
 }

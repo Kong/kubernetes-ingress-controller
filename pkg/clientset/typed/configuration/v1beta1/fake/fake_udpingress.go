@@ -41,22 +41,24 @@ var udpingressesKind = v1beta1.SchemeGroupVersion.WithKind("UDPIngress")
 
 // Get takes name of the uDPIngress, and returns the corresponding uDPIngress object, and an error if there is any.
 func (c *FakeUDPIngresses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.UDPIngress, err error) {
+	emptyResult := &v1beta1.UDPIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(udpingressesResource, c.ns, name), &v1beta1.UDPIngress{})
+		Invokes(testing.NewGetActionWithOptions(udpingressesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.UDPIngress), err
 }
 
 // List takes label and field selectors, and returns the list of UDPIngresses that match those selectors.
 func (c *FakeUDPIngresses) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.UDPIngressList, err error) {
+	emptyResult := &v1beta1.UDPIngressList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(udpingressesResource, udpingressesKind, c.ns, opts), &v1beta1.UDPIngressList{})
+		Invokes(testing.NewListActionWithOptions(udpingressesResource, udpingressesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeUDPIngresses) List(ctx context.Context, opts v1.ListOptions) (resul
 // Watch returns a watch.Interface that watches the requested uDPIngresses.
 func (c *FakeUDPIngresses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(udpingressesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(udpingressesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a uDPIngress and creates it.  Returns the server's representation of the uDPIngress, and an error, if there is any.
 func (c *FakeUDPIngresses) Create(ctx context.Context, uDPIngress *v1beta1.UDPIngress, opts v1.CreateOptions) (result *v1beta1.UDPIngress, err error) {
+	emptyResult := &v1beta1.UDPIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(udpingressesResource, c.ns, uDPIngress), &v1beta1.UDPIngress{})
+		Invokes(testing.NewCreateActionWithOptions(udpingressesResource, c.ns, uDPIngress, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.UDPIngress), err
 }
 
 // Update takes the representation of a uDPIngress and updates it. Returns the server's representation of the uDPIngress, and an error, if there is any.
 func (c *FakeUDPIngresses) Update(ctx context.Context, uDPIngress *v1beta1.UDPIngress, opts v1.UpdateOptions) (result *v1beta1.UDPIngress, err error) {
+	emptyResult := &v1beta1.UDPIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(udpingressesResource, c.ns, uDPIngress), &v1beta1.UDPIngress{})
+		Invokes(testing.NewUpdateActionWithOptions(udpingressesResource, c.ns, uDPIngress, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.UDPIngress), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeUDPIngresses) UpdateStatus(ctx context.Context, uDPIngress *v1beta1.UDPIngress, opts v1.UpdateOptions) (*v1beta1.UDPIngress, error) {
+func (c *FakeUDPIngresses) UpdateStatus(ctx context.Context, uDPIngress *v1beta1.UDPIngress, opts v1.UpdateOptions) (result *v1beta1.UDPIngress, err error) {
+	emptyResult := &v1beta1.UDPIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(udpingressesResource, "status", c.ns, uDPIngress), &v1beta1.UDPIngress{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(udpingressesResource, "status", c.ns, uDPIngress, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.UDPIngress), err
 }
@@ -123,7 +128,7 @@ func (c *FakeUDPIngresses) Delete(ctx context.Context, name string, opts v1.Dele
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeUDPIngresses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(udpingressesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(udpingressesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.UDPIngressList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeUDPIngresses) DeleteCollection(ctx context.Context, opts v1.DeleteO
 
 // Patch applies the patch and returns the patched uDPIngress.
 func (c *FakeUDPIngresses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.UDPIngress, err error) {
+	emptyResult := &v1beta1.UDPIngress{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(udpingressesResource, c.ns, name, pt, data, subresources...), &v1beta1.UDPIngress{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(udpingressesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.UDPIngress), err
 }

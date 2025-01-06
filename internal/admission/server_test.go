@@ -18,9 +18,11 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -48,6 +50,7 @@ func (v KongFakeValidator) ValidateConsumerGroup(
 func (v KongFakeValidator) ValidatePlugin(
 	_ context.Context,
 	_ kongv1.KongPlugin,
+	_ []*corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
@@ -55,6 +58,7 @@ func (v KongFakeValidator) ValidatePlugin(
 func (v KongFakeValidator) ValidateClusterPlugin(
 	_ context.Context,
 	_ kongv1.KongClusterPlugin,
+	_ []*corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
@@ -72,6 +76,18 @@ func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayapi.HTT
 }
 
 func (v KongFakeValidator) ValidateIngress(_ context.Context, _ netv1.Ingress) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateVault(_ context.Context, _ kongv1alpha1.KongVault) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateCustomEntity(_ context.Context, _ kongv1alpha1.KongCustomEntity) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateService(_ context.Context, _ corev1.Service) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
@@ -345,7 +361,6 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 		} {
-			tt := tt
 			t.Run(fmt.Sprintf("%s/%s", apiVersion, tt.name), func(t *testing.T) {
 				// arrange
 				assert := assert.New(t)

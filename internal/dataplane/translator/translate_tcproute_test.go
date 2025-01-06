@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -26,6 +27,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 		name                 string
 		gateways             []*gatewayapi.Gateway
 		tcpRoutes            []*gatewayapi.TCPRoute
+		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
@@ -77,16 +79,21 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
+						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).MustBuild(),
 					},
 				},
 			},
@@ -153,20 +160,30 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(443)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
 					},
 				},
 			},
@@ -280,20 +297,42 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service3",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service4",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(443)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
 					},
 				},
 				{
@@ -301,14 +340,8 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tcproute.default.tcproute-2.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service3",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
-						{
-							Name:    "service4",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8443)},
-						},
+						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
+						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).MustBuild(),
 					},
 				},
 			},
@@ -340,11 +373,11 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore, err := store.NewFakeStore(store.FakeObjects{
 				Gateways:  tc.gateways,
 				TCPRoutes: tc.tcpRoutes,
+				Services:  tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakeStore)

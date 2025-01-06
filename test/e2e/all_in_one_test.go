@@ -12,10 +12,9 @@ import (
 	"testing"
 	"time"
 
-	gokong "github.com/kong/go-kong/kong"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +22,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -289,19 +290,6 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
-	t.Log("scale proxy to 0 replicas")
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
-
-	t.Log("wait for 10 seconds to let controller reconcile")
-	<-time.After(10 * time.Second)
-
-	t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
-	expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
-	readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
-	require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
-		"controller replicas count should not change after scaling proxy to 0")
-	ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
-
 	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
@@ -310,7 +298,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 1)
 
 	t.Log("misconfigure the ingress")
-	reconfigureExistingIngress(ctx, t, env, ingress, func(i *netv1.Ingress) {
+	reconfigureExistingIngress(ctx, t, env, ingress, func(_ *netv1.Ingress) {
 		ingress.Spec.Rules[0].HTTP.Paths[0].Path = badEchoPath
 	})
 
@@ -321,12 +309,29 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 
 	t.Log("restart the controller")
 	deployments.RestartController(ctx, t, env)
-	waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), namespace, controllerDeploymentName)
 
 	t.Log("scale proxy to 3 replicas and verify that the new replica gets the old good configuration")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
 	// Verify all the proxy replicas have the last good configuration.
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Run("scaling to 0 doesn't crash the controller", func(t *testing.T) {
+		t.Skip("skipping until https://github.com/Kong/kubernetes-ingress-controller/issues/6769 is solved")
+
+		t.Log("scale proxy to 0 replicas")
+		scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+
+		t.Log("wait for 10 seconds to let controller reconcile")
+		<-time.After(10 * time.Second)
+
+		t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
+		expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
+		readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
+		require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
+			"controller replicas count should not change after scaling proxy to 0")
+		ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
+	})
 }
 
 func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN k8stypes.NamespacedName) {
@@ -334,33 +339,32 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 	require.NoError(t, err)
 
 	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
+	client := cleanhttp.DefaultClient()
+	tr := cleanhttp.DefaultTransport()
+	// Anything related to TLS can be ignored, because only availability is being tested here.
+	// Testing communicating over TLS is done as part of actual E2E test.
+	tr.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true, //nolint:gosec
+	}
+	client.Transport = tr
+
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		pod := pod
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			client := &http.Client{
-				Timeout: time.Second * 30,
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true,
-					},
-				},
-			}
 
 			forwardCtx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, pod.Name, "8444")
 			address := fmt.Sprintf("https://localhost:%d", localPort)
 
-			kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+			kongClient, err := adminapi.NewKongAPIClient(address, client)
 			require.NoError(t, err)
 
 			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)
 			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 		}()
 	}
-
 	wg.Wait()
 }

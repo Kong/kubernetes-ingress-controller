@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -60,6 +62,8 @@ func TestMain(m *testing.M) {
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
 	}
+	// add env for vaults.
+	kongbuilder.WithProxyEnvVar("vault_test_add_header_1", "h1:v1")
 
 	// Pin the Helm chart version.
 	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
@@ -123,9 +127,15 @@ func TestMain(m *testing.M) {
 	helpers.ExitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
 
 	fmt.Println("INFO: collecting urls from the kong proxy deployment")
-	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())
+	proxyHTTPURL, err = kongAddon.ProxyHTTPURL(ctx, env.Cluster())
+	helpers.ExitOnErr(ctx, err)
+	proxyHTTPSURL, err = kongAddon.ProxyHTTPSURL(ctx, env.Cluster())
 	helpers.ExitOnErr(ctx, err)
 	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
+	helpers.ExitOnErr(ctx, err)
+	proxyTCPURL, err = kongAddon.ProxyTCPURL(ctx, env.Cluster())
+	helpers.ExitOnErr(ctx, err)
+	proxyTLSURL, err = kongAddon.ProxyTLSURL(ctx, env.Cluster())
 	helpers.ExitOnErr(ctx, err)
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
 	helpers.ExitOnErr(ctx, err)
@@ -172,13 +182,19 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
+			"--dump-sensitive-config",
 			"--log-level=trace", // not used, as controller logger is configured separately
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
+			// Leader election is irrelevant for single-instance tests. We should effectively always be the leader. However,
+			// controller-runtime operates an internal leadership deadline and will abort if it cannot update leadership
+			// within a certain number of seconds. Pausing certain segments manager in a debugger can exceed this deadline,
+			// so elections are disabled in integration tests for convenience.
+			fmt.Sprintf("--force-leader-election=%s", manager.LeaderElectionDisabled),
 		}
-		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs...)
+		allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
+		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs)
 		defer cancel()
 		helpers.ExitOnErr(ctx, err)
 	}

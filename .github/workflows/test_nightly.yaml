@@ -50,13 +50,10 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        password: ${{ secrets.PULP_PASSWORD }}
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -76,14 +73,14 @@ jobs:
 
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-integration-tests-enterprise-postgres-nightly
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-enterprise-postgres-nightly
         path: /tmp/ktf-diag*
@@ -97,13 +94,10 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        password: ${{ secrets.PULP_PASSWORD }}
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -122,14 +116,14 @@ jobs:
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-integration-tests-enterprise-dbless-nightly
         path: coverage.enterprisedbless.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-enterprise-dbless-nightly
         path: /tmp/ktf-diag*
@@ -141,8 +135,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -158,14 +150,14 @@ jobs:
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-integration-tests-postgres-nightly
         path: coverage.postgres.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-postgres-nightly
         path: /tmp/ktf-diag*
@@ -178,8 +170,6 @@ jobs:
 
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -195,14 +185,14 @@ jobs:
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-integration-tests-dbless-nightly
         path: coverage.dbless.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-integration-tests-dbless-nightly
         path: /tmp/ktf-diag*

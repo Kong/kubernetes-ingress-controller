@@ -19,6 +19,7 @@ type Matcher interface {
 var (
 	_ Matcher = &OrMatcher{}
 	_ Matcher = &AndMatcher{}
+	_ Matcher = &NotMatcher{}
 )
 
 // OrMatcher is a group of Matchers joined by logical ORs.
@@ -41,8 +42,7 @@ func (m *OrMatcher) Expression() string {
 		return m.subMatchers[0].Expression()
 	}
 
-	var grouped []string
-
+	grouped := make([]string, 0, len(m.subMatchers))
 	for _, m := range m.subMatchers {
 		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
 	}
@@ -91,8 +91,7 @@ func (m *AndMatcher) Expression() string {
 		return m.subMatchers[0].Expression()
 	}
 
-	var grouped []string
-
+	grouped := make([]string, 0, len(m.subMatchers))
 	for _, m := range m.subMatchers {
 		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
 	}
@@ -120,4 +119,27 @@ func And(matchers ...Matcher) *AndMatcher {
 	return &AndMatcher{
 		subMatchers: actual,
 	}
+}
+
+// NotMatcher is a matcher which negates the internal submatcher.
+type NotMatcher struct {
+	subMatcher Matcher
+}
+
+// Not returns a matcher that negates the matcher in the parameter.
+func Not(m Matcher) Matcher {
+	return &NotMatcher{
+		subMatcher: m,
+	}
+}
+
+func (m *NotMatcher) IsEmpty() bool {
+	return m == nil || m.subMatcher.IsEmpty()
+}
+
+func (m *NotMatcher) Expression() string {
+	if m == nil || m.IsEmpty() {
+		return ""
+	}
+	return fmt.Sprintf("!(%s)", m.subMatcher.Expression())
 }

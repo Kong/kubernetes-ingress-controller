@@ -9,6 +9,7 @@ on:
 
 jobs:
   create_docs_pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
       - name: Parse semver string
@@ -20,8 +21,6 @@ jobs:
 
       - name: Checkout KIC repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Checkout docs repository
         uses: actions/checkout@v4
@@ -43,7 +42,7 @@ jobs:
       - name: Detect changes
         id: detect-changes
         run: |
-          if [[ `cd docs.konghq.com && git status --porcelain` ]]; then
+          if [[ $(cd docs.konghq.com && git status --porcelain) ]]; then
             echo "Changes detected in docs repo"
             echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
           else
@@ -51,7 +50,7 @@ jobs:
           fi
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5
         with:
           workdir: docs.konghq.com
           gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}
@@ -60,7 +59,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create a PR in docs repo
-        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
@@ -75,6 +74,6 @@ jobs:
           delete-branch: true
           draft: true
           labels: |
-            Kubernetes Team
+            team-k8s
             review:autodoc
           body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

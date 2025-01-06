@@ -4,6 +4,7 @@ package isolated
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"testing"
@@ -21,10 +22,11 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
@@ -35,6 +37,12 @@ import (
 
 func TestIngressGRPC(t *testing.T) {
 	const testHostname = "grpcs-over-ingress.example"
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName(testHostname),
+		certificate.WithDNSNames(testHostname),
+	)
+	certPool := x509.NewCertPool()
+	assert.True(t, certPool.AppendCertsFromPEM(tlsRouteExampleTLSCert))
 
 	f := features.
 		New("essentials").
@@ -45,13 +53,12 @@ func TestIngressGRPC(t *testing.T) {
 				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
 			}),
 		)).
-		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
 
-			t.Log("configuring secret")
-			tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(testHostname))
+			t.Log("configuring certificate secret")
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "secret-test",
@@ -72,23 +79,19 @@ func TestIngressGRPC(t *testing.T) {
 				gRPC  kongProtocolAnnotation = "grpc"
 				gRPCS kongProtocolAnnotation = "grpcs"
 			)
-			const (
-				gRPCBinPort  int32 = 9000
-				gRPCSBinPort int32 = 9001
-			)
 			t.Log("deploying a minimal gRPC container deployment to test Ingress routes")
 			container := generators.NewContainer("grpcbin", test.GRPCBinImage, 0)
 			// Overwrite ports to specify gRPC over HTTP (9000) and gRPC over HTTPS (9001).
-			container.Ports = []corev1.ContainerPort{{ContainerPort: gRPCBinPort, Name: string(gRPC)}, {ContainerPort: gRPCSBinPort, Name: string(gRPCS)}}
+			container.Ports = []corev1.ContainerPort{{ContainerPort: test.GRPCBinPort, Name: string(gRPC)}, {ContainerPort: test.GRPCSBinPort, Name: string(gRPCS)}}
 			deployment := generators.NewDeploymentForContainer(container)
 			deployment, err = cluster.Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(deployment)
 
 			exposeWithService := func(p kongProtocolAnnotation) *corev1.Service {
-				grpcBinPort := gRPCBinPort
+				grpcBinPort := test.GRPCBinPort
 				if p == gRPCS {
-					grpcBinPort = gRPCSBinPort
+					grpcBinPort = test.GRPCSBinPort
 				}
 				kongProtocol := string(p)
 				t.Logf("exposing deployment gRPC (%s) port %s via service", kongProtocol, deployment.Name)
@@ -122,7 +125,7 @@ func TestIngressGRPC(t *testing.T) {
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPCS.Name,
 											Port: netv1.ServiceBackendPort{
-												Number: gRPCSBinPort,
+												Number: test.GRPCSBinPort,
 											},
 										},
 									},
@@ -142,7 +145,7 @@ func TestIngressGRPC(t *testing.T) {
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPC.Name,
 											Port: netv1.ServiceBackendPort{
-												Number: gRPCBinPort,
+												Number: test.GRPCBinPort,
 											},
 										},
 									},
@@ -153,13 +156,19 @@ func TestIngressGRPC(t *testing.T) {
 				},
 			).Build()
 			ingress.Annotations[annotations.AnnotationPrefix+annotations.ProtocolsKey] = fmt.Sprintf("%s,%s", gRPC, gRPCS)
+			ingress.Spec.TLS = []netv1.IngressTLS{
+				{
+					Hosts:      []string{testHostname},
+					SecretName: secret.Name,
+				},
+			}
 			assert.NoError(t, clusters.DeployIngress(ctx, cluster, namespace, ingress))
 			cleaner.Add(ingress)
 			ctx = SetInCtxForT(ctx, t, ingress)
 
 			return ctx
 		}).
-		Assess("checking whether Ingress status is updated and gRPC traffic is properly routed", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("checking whether Ingress status is updated and gRPC traffic is properly routed", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("waiting for updated ingress status to include IP")
 			assert.Eventually(t, func() bool {
 				cluster := GetClusterFromCtx(ctx)
@@ -174,21 +183,20 @@ func TestIngressGRPC(t *testing.T) {
 			}, consts.StatusWait, consts.WaitTick)
 
 			verifyEchoResponds := func(hostname string) {
-				// Kong Gateway uses different ports for HTTP and HTTPS traffic.
+				t.Helper()
+				// Kong Gateway uses different ports for HTTP and HTTPS traffic,
+				// but in typical setup both ports are exposed on the same IP address.
 				proxyPort := ktfkong.DefaultProxyTLSServicePort
-				tlsEnabled := true
+				certPoolToUse := certPool
 				if hostname == "" {
 					proxyPort = ktfkong.DefaultProxyHTTPPort
-					tlsEnabled = false
+					certPoolToUse = nil
 				}
-				assert.Eventually(t, func() bool {
-					if err := grpcEchoResponds(
-						ctx, fmt.Sprintf("%s:%d", GetProxyURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", tlsEnabled,
-					); err != nil {
-						t.Log(err)
-						return false
-					}
-					return true
+				assert.EventuallyWithT(t, func(c *assert.CollectT) {
+					err := grpcEchoResponds(
+						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", certPoolToUse,
+					)
+					assert.NoError(c, err)
 				}, consts.IngressWait, consts.WaitTick)
 			}
 			t.Log("verifying service connectivity via HTTPS (gRPCS)")
@@ -214,13 +222,13 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
-		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 			kongClients, err := clientset.NewForConfig(cluster.Config())
 			require.NoError(t, err)
 			return SetInCtxForT(ctx, t, kongClients)
 		}).
-		WithSetup("deploying KongServiceFacade exposed via Ingress", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		WithSetup("deploying KongServiceFacade exposed via Ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -351,8 +359,8 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-			proxyURL := GetProxyURLFromCtx(ctx)
+		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			proxyURL := GetHTTPURLFromCtx(ctx)
 			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)
 				helpers.EventuallyGETPath(
@@ -360,6 +368,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 					proxyURL,
 					proxyURL.Host,
 					path,
+					nil,
 					http.StatusOK,
 					expectedMagicNumber,
 					nil,

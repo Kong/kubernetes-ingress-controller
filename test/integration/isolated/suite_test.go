@@ -5,7 +5,9 @@ package isolated
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -18,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/klient/conf"
@@ -25,6 +28,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -123,7 +127,7 @@ func TestMain(m *testing.M) {
 	tenv.BeforeEachFeature(
 		// TODO: Prevent a data race by using a mutex explicitly when first creating the client.
 		// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/4848
-		func(ctx context.Context, c *envconf.Config, t *testing.T, f features.Feature) (context.Context, error) {
+		func(ctx context.Context, c *envconf.Config, _ *testing.T, _ features.Feature) (context.Context, error) {
 			l.Lock()
 			defer l.Unlock()
 			_, err = c.NewClient()
@@ -146,8 +150,9 @@ func TestMain(m *testing.M) {
 }
 
 type featureSetupCfg struct {
-	controllerManagerOpts []helpers.ControllerManagerOpt
-	kongProxyEnvVars      map[string]string
+	controllerManagerOpts         []helpers.ControllerManagerOpt
+	controllerManagerFeatureGates map[string]string
+	kongProxyEnvVars              map[string]string
 }
 
 type featureSetupOpt func(*featureSetupCfg)
@@ -161,6 +166,12 @@ func withControllerManagerOpts(opts ...helpers.ControllerManagerOpt) featureSetu
 func withKongProxyEnvVars(envVars map[string]string) featureSetupOpt {
 	return func(o *featureSetupCfg) {
 		o.kongProxyEnvVars = envVars
+	}
+}
+
+func withControllerManagerFeatureGates(gates map[string]string) featureSetupOpt {
+	return func(o *featureSetupCfg) {
+		o.controllerManagerFeatureGates = gates
 	}
 }
 
@@ -229,7 +240,9 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 
 		cleaner := clusters.NewCleaner(cluster)
 		t.Cleanup(func() {
-			if err := cleaner.Cleanup(ctx); err != nil {
+			helpers.DumpDiagnosticsIfFailed(ctx, t, cluster)
+			t.Logf("Start cleanup for test %s", t.Name())
+			if err := cleaner.Cleanup(context.Background()); err != nil { //nolint:contextcheck
 				fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
 			}
 		})
@@ -251,21 +264,48 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		if !assert.NoError(t, err) {
 			return ctx
 		}
+
+		ctrlDiagURL, err := url.Parse("http://localhost:10256")
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetDiagURLInCtx(ctx, ctrlDiagURL)
+
 		proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
 		ctx = SetAdminURLInCtx(ctx, proxyAdminURL)
+
 		proxyUDPURL, err := kongAddon.ProxyUDPURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
 		ctx = SetUDPURLInCtx(ctx, proxyUDPURL)
-		proxyURL, err := kongAddon.ProxyURL(ctx, cluster)
+
+		proxyTCPURL, err := kongAddon.ProxyTCPURL(ctx, cluster)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
-		ctx = SetProxyURLInCtx(ctx, proxyURL)
+		ctx = SetTCPURLInCtx(ctx, proxyTCPURL)
+
+		proxyTLSURL, err := kongAddon.ProxyTLSURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetTLSURLInCtx(ctx, proxyTLSURL)
+
+		proxyHTTPURL, err := kongAddon.ProxyHTTPURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetHTTPURLInCtx(ctx, proxyHTTPURL)
+
+		proxyHTTPSURL, err := kongAddon.ProxyHTTPSURL(ctx, cluster)
+		if !assert.NoError(t, err) {
+			return ctx
+		}
+		ctx = SetHTTPSURLInCtx(ctx, proxyHTTPSURL)
 
 		if !assert.NoError(t, retry.Do(
 			func() error {
@@ -290,6 +330,9 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		t.Logf("configuring feature gates")
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4849
 		featureGates := consts.DefaultFeatureGates
+		for gate, value := range setupCfg.controllerManagerFeatureGates {
+			featureGates += "," + fmt.Sprintf("%s=%s", gate, value)
+		}
 		t.Logf("feature gates enabled: %s", featureGates)
 
 		t.Logf("starting the controller manager")
@@ -305,16 +348,28 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			fmt.Sprintf("--admission-webhook-key=%s", key),
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--anonymous-reports=false",
+			"--log-level=trace",
+			"--dump-config=true",
+			"--dump-sensitive-config=true",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
-			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
+			// Use fixed election namespace `kong` because RBAC roles for leader election are in the namespace,
+			// so we create resources for leader election in the namespace to make sure that KIC can operate these resources.
+			fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
 			fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 		}
-		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
+		allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
 		for _, opt := range setupCfg.controllerManagerOpts {
 			allControllerArgs = opt(allControllerArgs)
 		}
 
-		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, allControllerArgs...)
+		gracefulShutdownWithoutTimeoutOpt := func(c *manager.Config) {
+			// Set the GracefulShutdownTimeout to -1 to keep graceful shutdown enabled but disable the timeout.
+			// This prevents the errors:
+			// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
+			c.GracefulShutdownTimeout = lo.ToPtr(time.Duration(-1))
+		}
+
+		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, allControllerArgs, gracefulShutdownWithoutTimeoutOpt)
 		t.Cleanup(func() { cancel() })
 		if !assert.NoError(t, err, "failed deploying controller manager") {
 			return ctx

@@ -11,14 +11,13 @@ on:
 
 jobs:
   dependencies-versions:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
       helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - id: set-versions
         name: Set versions
@@ -26,6 +25,7 @@ jobs:
           echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
 
   conformance-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     needs: dependencies-versions
@@ -35,32 +35,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - name: conformance-tests-traditional-compatible-router
-          expression_routes: "false"
-        - name: "conformance-tests-expressions-router"
-          expression_routes: "true"
+        - name: traditional-compatible-router
+          router-flavor: traditional_compatible
+        - name: expressions-router
+          router-flavor: expressions
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - run: echo "JUNIT_REPORT=conformance-tests-${{ matrix.name }}.xml" >> $GITHUB_ENV
+
       - name: run conformance tests
         run: make test.conformance
         env:
-          JUNIT_REPORT: "conformance-tests.xml"
-          KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
+          JUNIT_REPORT: ${{ env.JUNIT_REPORT }}
+          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
-      
+
       # upload logs when test failed
-      - name: upload KIC logs 
+      - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with: 
           name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
@@ -68,7 +74,19 @@ jobs:
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
-          path: conformance-tests.xml
+          name: test-report-conformance-${{ matrix.name }}
+          path: ${{ env.JUNIT_REPORT }}
+
+  merge-junit-test-reports:
+    runs-on: ubuntu-latest
+    needs:
+    - conformance-tests
+    steps:
+      - name: Merge Junit test reports
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: test-report-conformance
+          pattern: test-report-conformance-*
+          delete-merged: true

@@ -29,6 +29,7 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
 - name: dev
   manifests:
     kustomize:
@@ -44,6 +45,7 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
 - name: multi_gw
   manifests:
     kustomize:
@@ -59,6 +61,23 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
+- name: multi_gw_enterprise
+  manifests:
+    kustomize:
+      paths:
+      - config/variants/multi-gw/enterprise
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile
+        target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
 - name: multi_gw_postgres
   manifests:
     kustomize:
@@ -74,6 +93,7 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
 - name: debug_multi_gw
   manifests:
     kustomize:
@@ -89,6 +109,7 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+          GOCACHE: "{{ .GOCACHE }}"
 - name: debug-konnect
   manifests:
     kustomize:
@@ -104,3 +125,4 @@ profiles:
             TAG: ${{ .TAG }}
             COMMIT: ${{ .COMMIT }}
             REPO_INFO: ${{ .REPO_INFO }}
+            GOCACHE: "{{ .GOCACHE }}"

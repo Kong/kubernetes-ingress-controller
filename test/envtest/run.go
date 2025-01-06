@@ -3,6 +3,7 @@ package envtest
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -10,20 +11,25 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 const (
 	// PublishServiceName is the name of the publish service used in Gateway API tests.
 	PublishServiceName = "publish-svc"
+
+	// ManagerStartupWaitTime is the time to wait for the manager to start.
+	ManagerStartupWaitTime = 5 * time.Second
+
+	// ManagerStartupWaitInterval is the interval to wait for the manager to start.
+	ManagerStartupWaitInterval = time.Millisecond
 )
 
 // ConfigForEnvConfig prepares a manager.Config for use in tests
@@ -52,8 +58,7 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.ProxySyncSeconds = 0.1
 	cfg.InitCacheSyncDuration = 0
 
-	p := helpers.GetFreePort(t)
-	cfg.MetricsAddr = fmt.Sprintf("localhost:%d", p)
+	cfg.MetricsAddr = "0"
 
 	// And other settings which are irrelevant here.
 	cfg.Konnect.ConfigSynchronizationEnabled = false
@@ -70,6 +75,9 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.GatewayAPIGatewayController = false
 	cfg.GatewayAPIHTTPRouteController = false
 	cfg.GatewayAPIReferenceGrantController = false
+
+	// Disable leader election, which doesn't work outside the cluster and is irrelevant for single-instance tests.
+	cfg.LeaderElectionForce = manager.LeaderElectionDisabled
 
 	return cfg
 }
@@ -88,9 +96,21 @@ func WithGatewayAPIControllers() func(cfg *manager.Config) {
 	}
 }
 
+func WithGatewayToReconcile(gatewayNN string) func(cfg *manager.Config) {
+	parts := strings.SplitN(gatewayNN, "/", 3)
+	if len(parts) != 2 {
+		panic("the expected format if namespace/name")
+	}
+	return func(cfg *manager.Config) {
+		cfg.GatewayToReconcile = mo.Some(k8stypes.NamespacedName{
+			Namespace: parts[0],
+			Name:      parts[1],
+		})
+	}
+}
+
 func WithPublishService(namespace string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.PublishStatusAddress = []string{"127.0.0.1"}
 		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
 			Name:      PublishServiceName,
 			Namespace: namespace,
@@ -98,9 +118,10 @@ func WithPublishService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
-func WithPublishStatusAddress(address string) func(cfg *manager.Config) {
+func WithPublishStatusAddress(addresses []string, udps []string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.PublishStatusAddress = []string{address}
+		cfg.PublishStatusAddress = addresses
+		cfg.PublishStatusAddressUDP = udps
 	}
 }
 
@@ -147,6 +168,26 @@ func WithKongServiceFacadeFeatureEnabled() func(cfg *manager.Config) {
 	}
 }
 
+func WithKongAdminURLs(urls ...string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.KongAdminURLs = urls
+	}
+}
+
+func WithAdmissionWebhookEnabled(key, cert []byte, addr string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.AdmissionServer.ListenAddr = addr
+		cfg.AdmissionServer.Key = string(key)
+		cfg.AdmissionServer.Cert = string(cert)
+	}
+}
+
+func WithMetricsAddr(addr string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.MetricsAddr = addr
+	}
+}
+
 // AdminAPIOptFns wraps a variadic list of mocks.AdminAPIHandlerOpt and returns
 // a slice containing all of them.
 // The purpose of this is func is to make the call sites a bit less verbose.
@@ -167,7 +208,7 @@ func RunManager(
 	envcfg *rest.Config,
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
 	modifyCfgFns ...func(cfg *manager.Config),
-) (manager.Config, observerLogs) {
+) (manager.Config, LogsObserver) {
 	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
 
 	for _, modifyCfgFn := range modifyCfgFns {
@@ -183,14 +224,10 @@ func RunManager(
 	go func() {
 		defer wg.Done()
 
-		var configDumps util.ConfigDumpDiagnostic
-		if cfg.EnableConfigDumps {
-			diag, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
-			require.NoError(t, err)
-			configDumps = diag.ConfigDumps
-		}
+		diagServer, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
+		require.NoError(t, err)
 
-		require.NoError(t, manager.Run(ctx, &cfg, configDumps, logger))
+		require.NoError(t, manager.Run(ctx, &cfg, diagServer.ConfigDumps(), logger))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()
@@ -198,4 +235,19 @@ func RunManager(
 	})
 
 	return cfg, logs
+}
+
+// WaitForManagerStart waits for the manager to start. The indication of the manager starting is
+// the "Starting manager" log entry that is emitted just before the manager starts.
+// Note: We cannot rely here on the manager's readiness probe because it returns 200 OK as soon as it
+// starts listening which happens before the manager actually starts.
+func WaitForManagerStart(t *testing.T, logsObserver LogsObserver) {
+	t.Helper()
+	t.Log("Waiting for manager to start...")
+	require.Eventually(t, func() bool {
+		const expectedLog = "Starting manager"
+		return lo.ContainsBy(logsObserver.All(), func(item observer.LoggedEntry) bool {
+			return strings.Contains(item.Message, expectedLog)
+		})
+	}, ManagerStartupWaitTime, ManagerStartupWaitInterval)
 }

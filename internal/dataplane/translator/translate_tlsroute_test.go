@@ -25,6 +25,7 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		tcpRoutes            []*gatewayapi.TLSRoute
+		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
@@ -54,20 +55,33 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			// After https://github.com/Kong/kubernetes-ingress-controller/pull/5392
+			// is merged the backendRef will be checked for existence in the store
+			// so we need to add them here.
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("tlsroute.default.tlsroute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(443)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
 					},
 				},
 			},
@@ -116,20 +130,45 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
+			// After https://github.com/Kong/kubernetes-ingress-controller/pull/5392
+			// is merged the backendRef will be checked for existence in the store
+			// so we need to add them here.
+			services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service1",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service2",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service3",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service4",
+					},
+				},
+			},
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
 						Name: kong.String("tlsroute.default.tlsroute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service1",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
-						},
-						{
-							Name:    "service2",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(443)},
-						},
+						builder.NewKongstateServiceBackend("service1").
+							WithNamespace("default").
+							WithPortNumber(80).
+							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
 					},
 				},
 				{
@@ -137,14 +176,8 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 						Name: kong.String("tlsroute.default.tlsroute-1.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
-						{
-							Name:    "service3",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8080)},
-						},
-						{
-							Name:    "service4",
-							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(8443)},
-						},
+						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
+						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).MustBuild(),
 					},
 				},
 			},
@@ -176,9 +209,11 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			fakestore, err := store.NewFakeStore(store.FakeObjects{TLSRoutes: tc.tcpRoutes})
+			fakestore, err := store.NewFakeStore(store.FakeObjects{
+				TLSRoutes: tc.tcpRoutes,
+				Services:  tc.services,
+			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)
 			translator.featureFlags.ExpressionRoutes = true

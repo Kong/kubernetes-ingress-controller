@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -80,10 +79,12 @@ func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIn
 
 func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, expressions)
+	skipTestForRouterFlavors(context.Background(), t, expressions)
 
 	ctx := context.Background()
-	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)
+	ns, _ := helpers.Setup(ctx, t, env)
+	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
+
 	testCases := append(
 		commonIngressValidationTestCases(),
 		invalidRegexInIngressPathTestCase(`invalid regex: '/foo[[['`),
@@ -95,15 +96,17 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 			WantCreateErrSubstring: `should start with: / (fixed path) or ~/ (regex path)`,
 		},
 	)
-	testIngressValidationWebhook(ctx, t, namespace, testCases)
+	testIngressValidationWebhook(ctx, t, ns.Name, testCases)
 }
 
 func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
+	skipTestForRouterFlavors(context.Background(), t, traditional, traditionalCompatible)
 
 	ctx := context.Background()
-	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)
+	ns, _ := helpers.Setup(ctx, t, env)
+	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
+
 	testCases := append(
 		commonIngressValidationTestCases(),
 		invalidRegexInIngressPathTestCase("regex parse error:\n    ^/foo[[[\n           ^\nerror: unclosed character class"),
@@ -122,33 +125,7 @@ func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 			WantCreateErrSubstring: "regex parse error:\n    ^foo[[[\n          ^\nerror: unclosed character class",
 		},
 	)
-	testIngressValidationWebhook(ctx, t, namespace, testCases)
-}
-
-// setUpEnvForTestingIngressValidationWebhook sets up the environment for testing Ingress validation webhook,
-// it sets it only for objects applied to namespace specified as argument.
-func setUpEnvForTestingIngressValidationWebhook(ctx context.Context, t *testing.T) (namespace string) {
-	ns, _ := helpers.Setup(ctx, t, env)
-	namespace = ns.Name
-	const webhookName = "kong-validations-ingress"
-	ensureAdmissionRegistration(
-		ctx,
-		t,
-		namespace,
-		webhookName,
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"networking.k8s.io"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"ingresses"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
-	ensureWebhookServiceIsConnective(ctx, t, webhookName)
-	return namespace
+	testIngressValidationWebhook(ctx, t, ns.Name, testCases)
 }
 
 // testIngressValidationWebhook tries to create the given Ingress (passed in testCaseIngressValidation) and asserts expected results.

@@ -10,18 +10,22 @@ import (
 	"github.com/samber/lo"
 )
 
-var (
-	kongRBACsKustomize         = initKongRBACsKustomizePath()
-	kongGatewayRBACsKustomize  = initKongGatewayRBACsKustomizePath()
-	kongCRDsRBACsKustomize     = initKongCRDsRBACsKustomizePath()
-	kongCRDsKustomize          = initCRDsKustomizePath()
-	kongIncubatorCRDsKustomize = initIncubatorCRDsKustomizePath()
+const (
+	kubernetesConfigurationModulePath = "github.com/kong/kubernetes-configuration"
 )
 
-func initIncubatorCRDsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/incubator")
-	ensureDirExists(dir)
-	return dir
+var (
+	kongRBACsKustomize        = initKongRBACsKustomizePath()
+	kongGatewayRBACsKustomize = initKongGatewayRBACsKustomizePath()
+	kongCRDsRBACsKustomize    = initKongCRDsRBACsKustomizePath()
+
+	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersion(kubernetesConfigurationModulePath))
+	kongCRDsKustomize                    = initKongConfigurationCRDs()
+	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
+)
+
+func initKongIncubatorCRDsKustomizePath() string {
+	return fmt.Sprintf("%s/config/crd/ingress-controller-incubator?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
 }
 
 func initKongRBACsKustomizePath() string {
@@ -42,10 +46,8 @@ func initKongCRDsRBACsKustomizePath() string {
 	return dir
 }
 
-func initCRDsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/")
-	ensureDirExists(dir)
-	return dir
+func initKongConfigurationCRDs() string {
+	return fmt.Sprintf("%s/config/crd/ingress-controller?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
 }
 
 func ensureDirExists(dir string) {

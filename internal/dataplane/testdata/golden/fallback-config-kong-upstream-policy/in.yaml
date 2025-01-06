@@ -1,0 +1,96 @@
+# In this test case we have a broken KongUpstreamPolicy resource that is referenced by a Service and a KongServiceFacade
+# that are used by an Ingress.
+# We expect empty config as the KongUpstreamPolicy is broken and affects all the resources.
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: policy
+  namespace: default
+  uid: "46a5031a-6b32-49d4-be98-877265ed08f3"
+  annotations:
+    test.konghq.com/broken: "true"
+spec:
+  algorithm: consistent-hashing
+  slots: 100
+  hashOn:
+    header: session-id
+  hashOnFallback:
+    input: consumer
+  healthchecks:
+    active:
+      type: http
+      httpPath: /status
+      httpsSni: example.com
+      httpsVerifyCertificate: false
+      concurrency: 20
+      timeout: 15
+      headers:
+        X-Health-Check:
+          - kong
+          - dataplane
+      healthy:
+        httpStatuses: [200, 302]
+        interval: 5
+        successes: 5
+      unhealthy:
+        httpStatuses: [400, 500]
+        httpFailures: 5
+        timeouts: 5
+        interval: 10
+    passive:
+      type: tcp
+      healthy:
+        successes: 5
+      unhealthy:
+        tcpFailures: 5
+        timeouts: 10
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: default
+spec:
+  ingressClassName: kong
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: service
+                port:
+                  number: 80
+            path: /ingress
+            pathType: Exact
+          - backend:
+              resource:
+                apiGroup: incubator.ingress-controller.konghq.com
+                kind: KongServiceFacade
+                name: servicefacade
+            path: /ingress-facade
+            pathType: Exact
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service
+  namespace: default
+  annotations:
+    konghq.com/upstream-policy: policy
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/upstream-policy: policy
+  name: servicefacade
+  namespace: default
+spec:
+  backendRef:
+    name: service
+    port: 80

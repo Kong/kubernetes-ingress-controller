@@ -9,6 +9,17 @@ body:
     options:
     - label: I have searched the existing issues
       required: true
+- type: checkboxes
+  attributes:
+    label: Does this enhancement require public documentation?
+    description: |
+      Please make sure that Acceptance Criteria section includes for updating our public documentation
+      ([docs.konghq.com](https://github.com/kong/docs.konghq.com), README.md, etc.) with the new feature or enhancement.
+      If the scope of the change is too large to be documented in the Acceptance Criteria, please create a separate
+      issue and link it in the AC.
+    options:
+      - label: I have added an Acceptance Criteria item for adding and/or adjusting public documentation (if applicable)
+        required: true
 - type: textarea
   attributes:
     label: Problem Statement

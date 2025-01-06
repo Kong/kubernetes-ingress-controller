@@ -12,17 +12,18 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
-type observerLogs interface {
+type LogsObserver interface {
+	// All returns all the logs that have been observed so far.
 	All() []observer.LoggedEntry
 }
 
 // CreateTestLogger creates a logger for use in tests.
 // It returns the logger - which is also added to the context - and the observer
 // which can be used to dump logs if the test fails.
-func CreateTestLogger(ctx context.Context) (context.Context, logr.Logger, observerLogs) {
+func CreateTestLogger(ctx context.Context) (context.Context, logr.Logger, LogsObserver) {
 	core, logs := observer.New(zap.DebugLevel)
 	logger := zapr.NewLogger(zap.New(core))
 	ctx = ctrl.LoggerInto(ctx, logger)
@@ -33,14 +34,14 @@ func CreateTestLogger(ctx context.Context) (context.Context, logr.Logger, observ
 }
 
 // DumpLogsIfTestFailed dumps the provided logs the if the test failed.
-func DumpLogsIfTestFailed(t *testing.T, logs observerLogs) {
+func DumpLogsIfTestFailed(t *testing.T, logs LogsObserver) {
 	t.Helper()
 
 	if !t.Failed() {
 		return
 	}
 
-	encoder, err := util.GetZapEncoding("text")
+	encoder, err := logging.GetZapEncoding("text")
 	require.NoError(t, err)
 
 	t.Logf("Test %s failed: dumping controller logs\n", t.Name())

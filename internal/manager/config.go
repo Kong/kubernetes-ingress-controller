@@ -16,11 +16,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
@@ -31,6 +33,9 @@ type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
 
 // Type override to be used with OptionalNamespacedName variables to override their type name printed in the help text.
 var nnTypeNameOverride = flags.WithTypeNameOverride[OptionalNamespacedName]("namespaced-name")
+
+// ConfigOpt is a function that modifies a Config.
+type ConfigOpt func(*Config)
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config
@@ -53,39 +58,47 @@ type Config struct {
 	KongWorkspace                     string
 	AnonymousReports                  bool
 	EnableReverseSync                 bool
+	UseLastValidConfigForFallback     bool
 	SyncPeriod                        time.Duration
 	SkipCACertificates                bool
 	CacheSyncTimeout                  time.Duration
 	GracefulShutdownTimeout           *time.Duration
 
 	// Kong Proxy configurations
-	APIServerHost               string
-	APIServerQPS                int
-	APIServerBurst              int
-	APIServerCAData             []byte
-	APIServerCertData           []byte
-	APIServerKeyData            []byte
-	MetricsAddr                 string
-	ProbeAddr                   string
-	KongAdminURLs               []string
-	KongAdminSvc                OptionalNamespacedName
-	GatewayDiscoveryDNSStrategy cfgtypes.DNSStrategy
-	KongAdminSvcPortNames       []string
-	ProxySyncSeconds            float32
-	InitCacheSyncDuration       time.Duration
-	ProxyTimeoutSeconds         float32
+	APIServerHost                          string
+	APIServerQPS                           int
+	APIServerBurst                         int
+	APIServerCAData                        []byte
+	APIServerCertData                      []byte
+	APIServerKeyData                       []byte
+	MetricsAddr                            string
+	MetricsAccessFilter                    cfgtypes.MetricsAccessFilter
+	ProbeAddr                              string
+	KongAdminURLs                          []string
+	KongAdminSvc                           OptionalNamespacedName
+	GatewayDiscoveryDNSStrategy            cfgtypes.DNSStrategy
+	GatewayDiscoveryReadinessCheckInterval time.Duration
+	GatewayDiscoveryReadinessCheckTimeout  time.Duration
+	KongAdminSvcPortNames                  []string
+	ProxySyncSeconds                       float32
+	InitCacheSyncDuration                  time.Duration
+	ProxyTimeoutSeconds                    float32
+
+	// Gateway discovery configurations
 
 	// Kubernetes configurations
 	KubeconfigPath           string
 	IngressClassName         string
 	LeaderElectionNamespace  string
 	LeaderElectionID         string
+	LeaderElectionForce      string
 	Concurrency              int
 	FilterTags               []string
 	WatchNamespaces          []string
 	GatewayAPIControllerName string
 	Impersonate              string
 	EmitKubernetesEvents     bool
+	ClusterDomain            string
 
 	// Ingress status
 	PublishServiceUDP       OptionalNamespacedName
@@ -109,11 +122,24 @@ type Config struct {
 	ServiceEnabled                bool
 	KongUpstreamPolicyEnabled     bool
 	KongServiceFacadeEnabled      bool
+	KongVaultEnabled              bool
+	KongLicenseEnabled            bool
+	KongCustomEntityEnabled       bool
 
 	// Gateway API toggling.
 	GatewayAPIGatewayController        bool
 	GatewayAPIHTTPRouteController      bool
 	GatewayAPIReferenceGrantController bool
+	GatewayAPIGRPCRouteController      bool
+
+	// GatewayToReconcile specifies the Gateway to be reconciled.
+	GatewayToReconcile OptionalNamespacedName
+
+	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
+	SecretLabelSelector string
+
+	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
+	ConfigMapLabelSelector string
 
 	// Admission Webhook server config
 	AdmissionServer admission.ServerConfig
@@ -169,6 +195,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong.`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
+	// TODO: When FallbackConfiguration graduates we should remove the feature gate mention from the help text.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/6170
+	flagSet.BoolVar(&c.UseLastValidConfigForFallback, "use-last-valid-config-for-fallback", false, fmt.Sprintf(`When recovering from config push failures, use the last valid configuration cache to backfill broken objects. It can only be used with the %s feature gate enabled.`, featuregates.FallbackConfiguration))
 	// Default has to be explicitly passed to generate the proper docs. See https://github.com/kubernetes-sigs/controller-runtime/blob/f1c5dd3851ce3df8b4b7830d9b6eae6271f6932d/pkg/cache/cache.go#L146-L151.
 	flagSet.DurationVar(&c.SyncPeriod, "sync-period", 10*time.Hour, `Determine the minimum frequency at which watched resources are reconciled. Set to 0 to use default from controller-runtime.`)
 	flagSet.BoolVar(&c.SkipCACertificates, "skip-ca-certificates", false, `Disable syncing CA certificate syncing (for use with multi-workspace environments).`)
@@ -189,13 +218,18 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		"Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery.")
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayDiscoveryDNSStrategy, dnsStrategyFromFlagValue, flags.WithDefault(cfgtypes.IPDNSStrategy), flags.WithTypeNameOverride[cfgtypes.DNSStrategy]("dns-strategy")),
 		"gateway-discovery-dns-strategy", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")
+	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckInterval, "gateway-discovery-readiness-check-interval", clients.DefaultReadinessReconciliationInterval,
+		"Interval of readiness checks on gateway admin API clients for discovery.")
+	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckTimeout, "gateway-discovery-readiness-check-timeout", clients.DefaultReadinessCheckTimeout,
+		"Timeout of readiness checks on gateway admin clients.")
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second.")
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second.")
-	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
-	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
+	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", consts.MetricsPort), "The address the metric endpoint binds to.")
+	flagSet.Var(flags.NewValidatedValue(&c.MetricsAccessFilter, metricsAccessFilterFromFlagValue, flags.WithDefault(cfgtypes.MetricsAccessFilterOff)), "metrics-access-filter", "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac).")
+	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", consts.HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.")
 	flagSet.DurationVar(&c.InitCacheSyncDuration, "init-cache-sync-duration", dataplane.DefaultCacheSyncWaitDuration, `The initial delay to wait for Kubernetes object caches to be synced before the initial configuration.`)
@@ -208,6 +242,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster.`)
+	flagSet.StringVar(&c.LeaderElectionForce, "force-leader-election", "", `Set to "enabled" or "disabled" to force a leader election behavior. Behavior is normally determined automatically from other settings.`)
+	_ = flagSet.MarkHidden("force-leader-election")
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"},
 		"Tag(s) in comma-separated format (or specify this flag multiple times). They are used to manage and filter entities in Kong. "+
 			"This setting will be silently ignored if the Kong instance has no tags support.")
@@ -215,6 +251,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
 		`Namespace(s) in comma-separated format (or specify this flag multiple times) to watch for Kubernetes resources. Defaults to all namespaces.`)
 	flagSet.BoolVar(&c.EmitKubernetesEvents, "emit-kubernetes-events", true, `Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.`)
+	flagSet.StringVar(&c.ClusterDomain, "cluster-domain", consts.DefaultClusterDomain, `The cluster domain. This is used e.g. in generating addresses for upstream services.`)
 
 	// Ingress status
 	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
@@ -248,7 +285,17 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.GatewayAPIGatewayController, "enable-controller-gwapi-gateway", true, "Enable the Gateway API Gateway controller.")
 	flagSet.BoolVar(&c.GatewayAPIHTTPRouteController, "enable-controller-gwapi-httproute", true, "Enable the Gateway API HTTPRoute controller.")
 	flagSet.BoolVar(&c.GatewayAPIReferenceGrantController, "enable-controller-gwapi-reference-grant", true, "Enable the Gateway API ReferenceGrant controller.")
+	flagSet.BoolVar(&c.GatewayAPIGRPCRouteController, "enable-controller-gwapi-grpcroute", true, "Enable the Gateway API GRPCRoute controller.")
+	flagSet.Var(flags.NewValidatedValue(&c.GatewayToReconcile, namespacedNameFromFlagValue, nnTypeNameOverride), "gateway-to-reconcile",
+		`Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway.`)
+	flagSet.StringVar(&c.SecretLabelSelector, "secret-label-selector", "",
+		`Limits the secrets ingested to those having this label set to "true". If not specified, all secrets are ingested.`)
+	flagSet.StringVar(&c.ConfigMapLabelSelector, "configmap-label-selector", consts.DefaultConfigMapSelector,
+		`Limits the configmaps ingested to those having this label set to "true".`)
 	flagSet.BoolVar(&c.KongServiceFacadeEnabled, "enable-controller-kong-service-facade", true, "Enable the KongServiceFacade controller.")
+	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
+	flagSet.BoolVar(&c.KongLicenseEnabled, "enable-controller-kong-license", true, "Enable the KongLicense controller.")
+	flagSet.BoolVar(&c.KongCustomEntityEnabled, "enable-controller-kong-custom-entity", true, "Enable the KongCustomEntity controller.")
 
 	// Admission Webhook server config
 	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
@@ -265,10 +312,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Admission server PEM private key value. Mutually exclusive with --admission-webhook-key-file.`)
 
 	// Diagnostics
-	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/.", DiagnosticsPort))
-	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config.", DiagnosticsPort))
+	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/.", consts.DiagnosticsPort))
+	flagSet.BoolVar(&c.EnableConfigDumps, "dump-config", false, fmt.Sprintf("Enable config dumps via web interface host:%v/debug/config.", consts.DiagnosticsPort))
 	flagSet.BoolVar(&c.DumpSensitiveConfig, "dump-sensitive-config", false, "Include credentials and TLS secrets in configs exposed with --dump-config flag.")
-	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
+	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", consts.DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
 	_ = flagSet.MarkHidden("diagnostic-server-port")
 
 	// Feature Gates (see FEATURE_GATES.md).
@@ -289,7 +336,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.Konnect.TLSClient.CertFile, "konnect-tls-client-cert-file", "", "Konnect TLS client certificate file path.")
 	flagSet.StringVar(&c.Konnect.TLSClient.Key, "konnect-tls-client-key", "", "Konnect TLS client key.")
 	flagSet.StringVar(&c.Konnect.TLSClient.KeyFile, "konnect-tls-client-key-file", "", "Konnect TLS client key file path.")
+	flagSet.DurationVar(&c.Konnect.UploadConfigPeriod, "konnect-upload-config-period", konnect.DefaultConfigUploadPeriod, "Period of uploading Kong configuration.")
 	flagSet.DurationVar(&c.Konnect.RefreshNodePeriod, "konnect-refresh-node-period", konnect.DefaultRefreshNodePeriod, "Period of uploading status of KIC and controlled Kong instances.")
+	flagSet.BoolVar(&c.Konnect.ConsumersSyncDisabled, "konnect-disable-consumers-sync", false, "Disable synchronization of consumers with Konnect.")
 
 	// Deprecated flags.
 	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
@@ -334,7 +383,7 @@ func (c *Config) GetKubeconfig() (*rest.Config, error) {
 		config.Impersonate.UserName = c.Impersonate
 	}
 
-	config.UserAgent = "kong-ingress-controller/" + metadata.Release
+	config.UserAgent = metadata.UserAgent()
 
 	return config, err
 }

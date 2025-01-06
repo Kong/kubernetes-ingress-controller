@@ -5,9 +5,21 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-var redactedString = kong.String("REDACTED")
+// redactedString is used to redact sensitive values in the KongState.
+// It uses a vault URI to pass Konnect Admin API validations (e.g. when a TLS key is expected, it's only possible
+// to pass a valid key or a vault URI).
+var redactedString = kong.String("{vault://redacted-value}")
+
+// randRedactedString is used to redact sensitive values in the KongState when the value must be random to avoid
+// collisions.
+func randRedactedString(uuidGenerator util.UUIDGenerator) *string {
+	s := fmt.Sprintf("{vault://%s}", uuidGenerator.NewString())
+	return &s
+}
 
 // KeyAuth represents a key-auth credential.
 type KeyAuth struct {
@@ -149,13 +161,13 @@ func NewMTLSAuth(config interface{}) (*MTLSAuth, error) {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
-func (c *KeyAuth) SanitizedCopy() *KeyAuth {
+func (c *KeyAuth) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KeyAuth {
 	return &KeyAuth{
-		kong.KeyAuth{
+		KeyAuth: kong.KeyAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
-			Key:       redactedString,
+			Key:       randRedactedString(uuidGenerator),
 			Tags:      c.Tags,
 		},
 	}
@@ -164,7 +176,7 @@ func (c *KeyAuth) SanitizedCopy() *KeyAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *HMACAuth) SanitizedCopy() *HMACAuth {
 	return &HMACAuth{
-		kong.HMACAuth{
+		HMACAuth: kong.HMACAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
@@ -178,7 +190,7 @@ func (c *HMACAuth) SanitizedCopy() *HMACAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *JWTAuth) SanitizedCopy() *JWTAuth {
 	return &JWTAuth{
-		kong.JWTAuth{
+		JWTAuth: kong.JWTAuth{
 			// Consumer field omitted
 			CreatedAt:    c.CreatedAt,
 			ID:           c.ID,
@@ -194,7 +206,7 @@ func (c *JWTAuth) SanitizedCopy() *JWTAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *BasicAuth) SanitizedCopy() *BasicAuth {
 	return &BasicAuth{
-		kong.BasicAuth{
+		BasicAuth: kong.BasicAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
@@ -208,7 +220,7 @@ func (c *BasicAuth) SanitizedCopy() *BasicAuth {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 	return &Oauth2Credential{
-		kong.Oauth2Credential{
+		Oauth2Credential: kong.Oauth2Credential{
 			// Consumer field omitted
 			CreatedAt:    c.CreatedAt,
 			ID:           c.ID,

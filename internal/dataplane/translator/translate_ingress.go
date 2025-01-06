@@ -8,6 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -113,7 +114,7 @@ func getDefaultBackendService(
 		}
 
 		// Otherwise, the default backend is defined as a Kubernetes Service.
-		return translateIngressDefaultBackendService(ingress, route)
+		return translateIngressDefaultBackendService(ingress, route, failuresCollector)
 	}
 
 	return kongstate.Service{}, false
@@ -151,6 +152,21 @@ func translateIngressDefaultBackendResource(
 		return kongstate.Service{}, false
 	}
 
+	serviceBackend, err := kongstate.NewServiceBackendForServiceFacade(
+		k8stypes.NamespacedName{
+			Namespace: facade.Namespace,
+			Name:      facade.Name,
+		},
+		subtranslator.PortDefFromPortNumber(facade.Spec.Backend.Port),
+	)
+	if err != nil {
+		failuresCollector.PushResourceFailure(
+			fmt.Sprintf("default backend: could not create ServiceBackend for KongServiceFacade %q: %s", resource.Name, err),
+			&ingress,
+		)
+		return kongstate.Service{}, false
+	}
+
 	serviceName := fmt.Sprintf("%s.%s.svc.facade", ingress.Namespace, resource.Name)
 	return kongstate.Service{
 		Service: kong.Service{
@@ -166,18 +182,17 @@ func translateIngressDefaultBackendResource(
 			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
 		Namespace: ingress.Namespace,
-		Backends: []kongstate.ServiceBackend{{
-			Type:      kongstate.ServiceBackendTypeKongServiceFacade,
-			Name:      resource.Name,
-			Namespace: ingress.Namespace,
-			PortDef:   subtranslator.PortDefFromPortNumber(facade.Spec.Backend.Port),
-		}},
-		Parent: facade,
-		Routes: []kongstate.Route{*route},
+		Backends:  []kongstate.ServiceBackend{serviceBackend},
+		Parent:    facade,
+		Routes:    []kongstate.Route{*route},
 	}, true
 }
 
-func translateIngressDefaultBackendService(ingress netv1.Ingress, route *kongstate.Route) (kongstate.Service, bool) {
+func translateIngressDefaultBackendService(
+	ingress netv1.Ingress,
+	route *kongstate.Route,
+	failuresCollector *failures.ResourceFailuresCollector,
+) (kongstate.Service, bool) {
 	defaultBackend := ingress.Spec.DefaultBackend
 	port := subtranslator.PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
 	serviceName := fmt.Sprintf(
@@ -186,6 +201,18 @@ func translateIngressDefaultBackendService(ingress netv1.Ingress, route *kongsta
 		defaultBackend.Service.Name,
 		port.CanonicalString(),
 	)
+	serviceBackend, err := kongstate.NewServiceBackendForService(
+		k8stypes.NamespacedName{
+			Namespace: ingress.Namespace,
+			Name:      defaultBackend.Service.Name,
+		},
+		port,
+	)
+	if err != nil {
+		failuresCollector.PushResourceFailure(fmt.Sprintf("failed to create ServiceBackend for default backend: %s", err), &ingress)
+		return kongstate.Service{}, false
+	}
+
 	return kongstate.Service{
 		Service: kong.Service{
 			Name: kong.String(serviceName),
@@ -205,10 +232,9 @@ func translateIngressDefaultBackendService(ingress netv1.Ingress, route *kongsta
 			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
 		Namespace: ingress.Namespace,
-		Backends: []kongstate.ServiceBackend{{
-			Name:    defaultBackend.Service.Name,
-			PortDef: port,
-		}},
+		Backends: []kongstate.ServiceBackend{
+			serviceBackend,
+		},
 		Parent: &ingress,
 		Routes: []kongstate.Route{*route},
 	}, true

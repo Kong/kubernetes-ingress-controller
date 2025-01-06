@@ -19,6 +19,9 @@ func init() {
 // to the same Kubernetes Service, but will have different configuration (e.g. different
 // set of plugins, different load balancing algorithm, etc.).
 //
+// KongServiceFacade requires `kubernetes.io/ingress.class` annotation with a value
+// matching the ingressClass of the Kong Ingress Controller (`kong` by default) to be reconciled.
+//
 // +genclient
 // +kubebuilder:object:root=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

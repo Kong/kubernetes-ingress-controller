@@ -42,7 +42,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  name: kong
+  name: example-tcproute
   annotations:
     konghq.com/gatewayclass-unmanaged: "true"
 spec:
@@ -51,9 +51,9 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: kong
+  name: example-tcproute
 spec:
-  gatewayClassName: kong
+  gatewayClassName: example-tcproute
   listeners:
   - name: http
     protocol: HTTP
@@ -68,7 +68,7 @@ metadata:
   name: tcpecho
 spec:
   parentRefs:
-  - name: kong
+  - name: example-tcproute
   rules:
   - backendRefs:
     - name: tcpecho

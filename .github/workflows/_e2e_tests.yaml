@@ -34,13 +34,12 @@ on:
 
 jobs:
   setup-e2e-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - id: setup_golang
         name: setup golang
@@ -71,16 +70,14 @@ jobs:
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
 
   dependencies-versions:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
       kind: ${{ steps.set-versions.outputs.kind }}
       gke: ${{ steps.set-versions.outputs.gke }}
       istio: ${{ steps.set-versions.outputs.istio }}
     steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
       - id: set-versions
         name: Set versions
@@ -95,6 +92,7 @@ jobs:
           echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml | jq -c)" >> $GITHUB_OUTPUT
 
   kind:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs:
@@ -108,7 +106,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kic-image
           path: /tmp
@@ -121,8 +119,6 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -132,14 +128,12 @@ jobs:
       - uses: Kong/kong-license@master
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: split image and tag
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -164,9 +158,17 @@ jobs:
         if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
         run: docker pull ${{ inputs.kong-image }}
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - run: echo "GOTESTSUM_JUNITFILE=e2e-kind-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml" >> $GITHUB_ENV
+
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           E2E_TEST_RUN: ${{ matrix.test }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
@@ -177,23 +179,35 @@ jobs:
           TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
+          GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
+
+      - name: Set KONG_IMAGE_ARTIFACT
+        if: ${{ always() }}
+        run: |
+          if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
+            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
+          fi
+          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
+            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          fi
+          echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          name: diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
-          path: "*-tests.xml"
+          name: tests-report-e2e-kind-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
+          path: ${{ env.GOTESTSUM_JUNITFILE }}
 
   gke:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     if: ${{ inputs.run-gke }}
     environment: "gcloud"
     runs-on: ubuntu-latest
@@ -208,8 +222,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -220,13 +232,12 @@ jobs:
         continue-on-error: true
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: check availability of KIC image
         id: check_kic_image
         if: ${{ inputs.kic-image != '' }}
-        # We have to check whether the image passed in inputs is available in the docker hub. 
+        # We have to check whether the image passed in inputs is available in the docker hub.
         # If it's not, we'll fall back to a nightly image later.
         run: (docker manifest inspect ${{ inputs.kic-image }} && echo "kic_image=${{ inputs.kic-image }}" >> $GITHUB_OUTPUT) || true
 
@@ -234,7 +245,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -246,7 +256,7 @@ jobs:
             export kic_image_repo=$(echo ${{ steps.check_kic_image.outputs.kic_image }} | awk '{split($0,a,":"); print a[1]}')
             export kic_image_tag=$(echo ${{ steps.check_kic_image.outputs.kic_image }} | awk '{split($0,a,":"); print a[2]}')
             echo "kic-image=$kic_image_repo" >> $GITHUB_OUTPUT
-            echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT  
+            echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT
           else
             # See the https://github.com/Kong/kubernetes-testing-framework/issues/587 TODO below.
             # If we add local image GKE support, we can get rid of this fallback.
@@ -254,9 +264,17 @@ jobs:
             echo "kic-tag=nightly" >> $GITHUB_OUTPUT
           fi
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - run: echo "GOTESTSUM_JUNITFILE=e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml" >> $GITHUB_ENV
+
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           # NOTE: The limitation of the GKE setup is that we cannot run tests against a local image,
           # therefore we need to use the nightly one.
           # TODO: Once we have a way to load images into GKE, we can use the local image.
@@ -271,26 +289,45 @@ jobs:
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           KONG_CLUSTER_PROVIDER: gke
           E2E_TEST_RUN: ${{ matrix.test }}
-          GOTESTSUM_JUNITFILE: "e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml"
+          GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+          TEST_GKE_CLUSTER_RELEASE_CHANNEL: "rapid"
+
+      - name: Set KONG_IMAGE_ARTIFACT
+        if: ${{ always() }}
+        run: |
+          if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
+            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
+          fi
+          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
+            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          fi
+          echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: "diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # only allows to have 1 artifact with the same name and we run this workflow
+          # in parallel for different kong images (specifically for nightly).
+          name: diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
-          path: "*-tests.xml"
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # only allows to have 1 artifact with the same name and we run this workflow
+          # in parallel for different kong images (specifically for nightly).
+          name: tests-report-e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
+          path: ${{ env.GOTESTSUM_JUNITFILE }}
 
   istio:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: ${{ inputs.run-istio }}
     runs-on: ubuntu-latest
     needs: dependencies-versions
@@ -301,7 +338,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kic-image
           path: /tmp
@@ -314,8 +351,6 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
@@ -325,14 +360,12 @@ jobs:
       - uses: Kong/kong-license@master
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: split image and tag
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -347,10 +380,17 @@ jobs:
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      - run: echo "GOTESTSUM_JUNITFILE=e2e-istio-${{ matrix.kind }}-${{ matrix.istio }}-tests.xml" >> $GITHUB_ENV
 
       - name: run Istio tests
         run: make test.istio
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
           TEST_CONTROLLER_TAG: ${{ steps.split.outputs.kic-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
@@ -361,18 +401,35 @@ jobs:
           ISTIO_VERSION: ${{ matrix.istio }}
           NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
           # multiple kind clusters within a single job, so only 1 is allowed at a time.
-          GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
+          GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
+
+      - name: Set KONG_IMAGE_ARTIFACT
+        if: ${{ always() }}
+        run: |
+          if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
+            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
+          fi
+          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
+            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          fi
+          echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: diagnostics-e2e-tests
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # only allows to have 1 artifact with the same name and we run this workflow
+          # in parallel for different kong images (specifically for nightly).
+          name: diagnostics-e2e-tests-istio-${{ matrix.kind }}-${{ matrix.istio }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
-          path: "*-tests.xml"
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # only allows to have 1 artifact with the same name and we run this workflow
+          # in parallel for different kong images (specifically for nightly).
+          name: tests-report-e2e-istio-k8s-${{ matrix.kind }}-istio-${{ matrix.istio }}-${{ env.KONG_IMAGE_ARTIFACT }}
+          path: ${{ env.GOTESTSUM_JUNITFILE }}

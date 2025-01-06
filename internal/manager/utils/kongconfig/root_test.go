@@ -36,7 +36,6 @@ func TestValidateRoots(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			var root Root
 			require.NoError(t, json.Unmarshal([]byte(tc.configStr), &root))

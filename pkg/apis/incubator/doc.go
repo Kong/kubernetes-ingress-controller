@@ -5,4 +5,7 @@
 // CRDs in this group are not going to graduate to beta or GA in scope of the group.
 // They're unlikely to be promoted to the `configuration.konghq.com` group, but if they do,
 // this will be the way for them to be promoted to beta or GA.
+//
+// Deprecated: API types were migrated to github.com/kong/kubernetes-configuration/api. This package will be removed in
+// the future.
 package incubator

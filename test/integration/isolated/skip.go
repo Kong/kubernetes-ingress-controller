@@ -14,8 +14,22 @@ import (
 
 func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 	flavor := testenv.KongRouterFlavor()
-	if flavor != string(dpconf.RouterFlavorExpressions) {
+	if flavor != dpconf.RouterFlavorExpressions {
 		t.Skipf("skiping, %q router flavor specified via TEST_KONG_ROUTER_FLAVOR env but %q is required", flavor, "expressions")
+	}
+	return ctx
+}
+
+func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+	if !testenv.KongEnterpriseEnabled() {
+		t.Skip("skipping, Kong enterprise is required")
+	}
+	return ctx
+}
+
+func SkipIfDBBacked(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+	if testenv.DBMode() != testenv.DBModeOff {
+		t.Skip("skipping, DBLess mode is required")
 	}
 	return ctx
 }

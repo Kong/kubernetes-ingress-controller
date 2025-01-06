@@ -14,6 +14,8 @@ import (
 	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
@@ -44,7 +46,7 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	c := &http.Client{}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
-	c.Transport = transport
+	c.Transport = useragent.NewTransport(transport)
 
 	return &Client{
 		address:        cfg.Address,
@@ -85,7 +87,7 @@ func (c *Client) listLicenses(ctx context.Context) (*ListLicenseResponse, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	httpResp, err := c.httpClient.Do(req)
+	httpResp, err := tracing.DoRequest(ctx, c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response: %w", err)
 	}

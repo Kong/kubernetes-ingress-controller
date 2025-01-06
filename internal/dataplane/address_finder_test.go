@@ -25,7 +25,7 @@ func TestAddressFinder(t *testing.T) {
 	t.Log("generating a fake AddressGetter")
 	defaultAddrs := []string{"127.0.0.1", "127.0.0.2"}
 	overrideAddrs := []string{"192.168.1.1", "192.168.1.2", "192.168.1.3"}
-	fakeGetter := func(ctx context.Context) ([]string, error) { return defaultAddrs, nil }
+	fakeGetter := func(_ context.Context) ([]string, error) { return defaultAddrs, nil }
 
 	t.Log("verifying getting a list of addresses from the finder after a getter function is provided")
 	finder.SetGetter(fakeGetter)

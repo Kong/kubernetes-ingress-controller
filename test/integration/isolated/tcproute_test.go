@@ -5,7 +5,6 @@ package isolated
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"syscall"
 	"testing"
@@ -46,19 +45,6 @@ func TestTCPRouteEssentials(t *testing.T) {
 	gatewayClassName := uuid.NewString()
 	gatewayName := uuid.NewString()
 
-	// Helpers used in this test.
-	requireNoResponse := func(tcpGatewayURL string) {
-		assert.Eventually(t, func() bool {
-			err := test.TCPEchoResponds(tcpGatewayURL, "irrelevant")
-			return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
-		}, consts.IngressWait, consts.WaitTick)
-	}
-	requireResponse := func(tcpGatewayURL, expectedMsg string) {
-		assert.Eventually(t, func() bool {
-			return test.TCPEchoResponds(tcpGatewayURL, expectedMsg) == nil
-		}, consts.IngressWait, consts.WaitTick)
-	}
-
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
@@ -92,7 +78,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner.Add(gateway)
 
 			t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
-			container1 := generators.NewContainer("tcpecho-1", test.EchoImage, test.EchoTCPPort)
+			container1 := generators.NewContainer(service1Name, test.EchoImage, test.EchoTCPPort)
 			// App go-echo sends a "Running on Pod <UUID>." immediately on connecting.
 			container1.Env = []corev1.EnvVar{
 				{
@@ -106,7 +92,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner.Add(deployment1)
 
 			t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
-			container2 := generators.NewContainer("tcpecho-2", test.EchoImage, test.EchoTCPPort)
+			container2 := generators.NewContainer(service2Name, test.EchoImage, test.EchoTCPPort)
 			// App go-echo sends a "Running on Pod <UUID>." immediately on connecting.
 			container2.Env = []corev1.EnvVar{
 				{
@@ -178,7 +164,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("basic test - route status and connectivity", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("basic test - route status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
@@ -192,18 +178,17 @@ func TestTCPRouteEssentials(t *testing.T) {
 			)
 
 			t.Log("verifying that the tcpecho is responding properly")
-			tcpGatewayURL := fmt.Sprintf("%s:%d", GetProxyURLFromCtx(ctx).Hostname(), ktfkong.DefaultTCPServicePort)
-			ctx = SetInCtxForT(ctx, t, tcpGatewayURL)
-			requireResponse(tcpGatewayURL, test1UUID)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			return ctx
 		}).
-		Assess("verify behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("verifying behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("removing the parentrefs from the TCPRoute")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			tcpGatewayURL := GetFromCtxForT[string](ctx, t)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			oldParentRefs := tcpRoute.Spec.ParentRefs
 			assert.Eventually(t, func() bool {
@@ -221,12 +206,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 			t.Log("verifying that the tcpecho is no longer responding")
 			defer func() {
 				if t.Failed() {
-					err := test.TCPEchoResponds(tcpGatewayURL, test1UUID)
+					err := test.EchoResponds(test.ProtocolTCP, tcpGatewayURL, test1UUID)
 					t.Logf("no longer responding check failure state: eof=%v, reset=%v, err=%v",
 						errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
 				}
 			}()
-			requireNoResponse(tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the parentRefs back")
 			assert.Eventually(t, func() bool {
@@ -242,15 +227,15 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-			requireResponse(tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			return ctx
 		}).
-		Assess("verify behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("verifying behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
-			tcpGatewayURL := GetFromCtxForT[string](ctx, t)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("deleting the GatewayClass")
 			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -260,7 +245,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
-			requireNoResponse(tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
 			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -271,7 +256,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
-			requireResponse(tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("deleting the Gateway")
 			assert.NoError(t, gatewayClient.GatewayV1().Gateways(namespace).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
@@ -281,7 +266,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
-			requireNoResponse(tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the Gateway back")
 			_, err = helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
@@ -299,7 +284,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
-			requireResponse(tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("deleting both GatewayClass and Gateway rapidly")
 			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
@@ -310,7 +295,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
-			requireNoResponse(tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
 			_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -332,15 +317,15 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
-			requireResponse(tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			return ctx
 		}).
-		Assess("verify behavior with many backends", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("verifying behavior with many backends", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
-			tcpGatewayURL := GetFromCtxForT[string](ctx, t)
+			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("adding an additional backendRef to the TCPRoute")
 			assert.Eventually(t, func() bool {
@@ -366,8 +351,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 			}, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the TCPRoute is now load-balanced between two services")
-			requireResponse(tcpGatewayURL, test1UUID)
-			requireResponse(tcpGatewayURL, test2UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test2UUID)
 
 			t.Log("testing port matching")
 			t.Log("putting the Gateway back")
@@ -385,7 +370,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Log("verifying that the TCPRoute responds before specifying a port not existent in Gateway")
-			requireResponse(tcpGatewayURL, test1UUID)
+			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
 			assert.Eventually(t, func() bool {
@@ -401,7 +386,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
-			requireNoResponse(tcpGatewayURL)
+			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 			return ctx
 		}).
 		Teardown(featureTeardown())

@@ -134,6 +134,9 @@ spec:
         - name: cmetrics
           containerPort: 10255
           protocol: TCP
+        - name: diagnostics
+          containerPort: 10256
+          protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz

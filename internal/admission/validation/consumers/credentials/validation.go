@@ -3,6 +3,7 @@ package credentials
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -18,12 +19,11 @@ import (
 // ValidateCredentials performs basic validation on a credential secret given
 // the Kubernetes secret which contains credentials data.
 func ValidateCredentials(secret *corev1.Secret) error {
-	credentialType, credentialSource := util.ExtractKongCredentialType(secret)
-
-	if credentialSource == util.CredentialTypeAbsent {
+	credentialType, err := util.ExtractKongCredentialType(secret)
+	if err != nil {
 		// this shouldn't occur, since we check this earlier in the admission controller's handleSecret function, but
 		// checking here also in case a refactor removes that
-		return fmt.Errorf("secret has no credential type, add a %s label", labels.LabelPrefix+labels.CredentialKey)
+		return fmt.Errorf("secret has no credential type, add a %s label", labels.CredentialTypeLabel)
 	}
 
 	// verify that the credential type provided is valid
@@ -31,10 +31,27 @@ func ValidateCredentials(secret *corev1.Secret) error {
 		return fmt.Errorf("invalid credential type %s", credentialType)
 	}
 
+	// Check if we're dealing with a JWT credential with an HMAC algorithm.
+	// In this case, the rsa_public_key field is not required.
+	algo, hasAlgo := secret.Data["algorithm"]
+	ignoreMissingRSAPublicKey := credentialType == "jwt" && hasAlgo && algoIsHMAC(string(algo))
+
+	ignoreMissingSecretKey := credentialType == "jwt" && hasAlgo && !algoIsHMAC(string(algo))
+
 	// verify that all required fields are present
 	var missingFields []string
 	var missingDataFields []string
 	for _, field := range CredTypeToFields[credentialType] {
+		// Ignore missing rsa_public_key for jwt credentials with HMAC algorithm
+		if field == "rsa_public_key" && ignoreMissingRSAPublicKey {
+			continue
+		}
+
+		// Ignore missing secret for jwt credentials with non HMAC algorithm
+		if field == "secret" && ignoreMissingSecretKey {
+			continue
+		}
+
 		// verify whether the required field is missing
 		requiredData, ok := secret.Data[field]
 		if !ok {
@@ -59,24 +76,6 @@ func ValidateCredentials(secret *corev1.Secret) error {
 	}
 
 	return nil
-}
-
-// IsKeyUniqueConstrained indicates whether or not a given key and its type there
-// are unique constraints in place.
-func IsKeyUniqueConstrained(keyType, key string) (constrained bool) {
-	constrainedKeys, credTypeHasConstraints := uniqueKeyConstraints[keyType]
-	if !credTypeHasConstraints {
-		return
-	}
-
-	for _, constrainedKey := range constrainedKeys {
-		if key == constrainedKey {
-			constrained = true
-			return
-		}
-	}
-
-	return
 }
 
 // -----------------------------------------------------------------------------
@@ -112,12 +111,9 @@ type Index map[string]map[string]map[string]struct{}
 // and will validate it for both normal structure validation and for
 // unique key constraint violations.
 func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret) error {
-	credentialType, credentialSource := util.ExtractKongCredentialType(secret)
-	if credentialSource == util.CredentialTypeAbsent {
-		return fmt.Errorf(
-			"secret has no credential type, add a %s label",
-			labels.LabelPrefix+labels.CredentialKey,
-		)
+	credentialType, err := util.ExtractKongCredentialType(secret)
+	if err != nil {
+		return fmt.Errorf("secret has no credential type, add a %s label", labels.CredentialTypeLabel)
 	}
 
 	// the additional key/values are optional, but must be validated
@@ -170,4 +166,8 @@ func (cs Index) add(newCred Credential) error {
 	cs[newCred.Type][newCred.Key][newCred.Value] = struct{}{}
 
 	return nil
+}
+
+func algoIsHMAC(algo string) bool {
+	return slices.Contains([]string{"HS256", "HS384", "HS512"}, algo)
 }

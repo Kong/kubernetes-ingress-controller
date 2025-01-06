@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ingress-kong
+  name: ingress-kong
+  namespace: kong
+spec:
+  selector:
+    matchLabels:
+      app: ingress-kong
+  template:
+    metadata:
+      labels:
+        app: ingress-kong
+    spec:
+      containers:
+      - name: ingress-controller
+        env:
+        - name: CONTROLLER_DUMP_CONFIG
+          value: "true"
+        - name: CONTROLLER_LOG_LEVEL
+          value: debug
+        - name: CONTROLLER_FEATURE_GATES
+          value: GatewayAlpha=true,KongServiceFacade=true,FallbackConfiguration=true
+        - name: CONTROLLER_ANONYMOUS_REPORTS
+          value: "false"
+        image: kic-placeholder:placeholder

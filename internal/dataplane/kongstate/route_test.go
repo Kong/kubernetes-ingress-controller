@@ -304,9 +304,7 @@ func TestOverrideExpressionRoute(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		indexStr := strconv.Itoa(i)
-		tc := tc
-		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			tc.inRoute.override(zapr.NewLogger(zap.NewNop()))
 			assert.Equal(t, tc.outRoute, tc.inRoute, "should be the same as expected after overriding")
 		})
@@ -513,7 +511,6 @@ func TestOverrideRouteStripPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.route.overrideStripPath(tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
@@ -917,7 +914,6 @@ func TestOverrideRequestBuffering(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.route.overrideRequestBuffering(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
@@ -991,7 +987,6 @@ func TestOverrideResponseBuffering(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.route.overrideResponseBuffering(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {

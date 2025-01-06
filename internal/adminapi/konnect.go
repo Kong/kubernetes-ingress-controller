@@ -11,8 +11,8 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
@@ -23,12 +23,14 @@ type KonnectConfig struct {
 	ConfigSynchronizationEnabled bool
 	ControlPlaneID               string
 	Address                      string
+	UploadConfigPeriod           time.Duration
 	RefreshNodePeriod            time.Duration
 	TLSClient                    TLSClientConfig
 
 	LicenseSynchronizationEnabled bool
 	InitialLicensePollingPeriod   time.Duration
 	LicensePollingPeriod          time.Duration
+	ConsumersSyncDisabled         bool
 }
 
 func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error) {
@@ -42,7 +44,7 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}
 	if clientCertificate == nil {
-		return nil, fmt.Errorf("client ceritficate is missing")
+		return nil, fmt.Errorf("client certificate is missing")
 	}
 
 	tlsConfig := tls.Config{
@@ -51,8 +53,8 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
-	client, err := kong.NewClient(
-		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID)),
+	client, err := NewKongAPIClient(
+		fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID),
 		&http.Client{
 			Transport: transport,
 		},
@@ -60,10 +62,11 @@ func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error
 	if err != nil {
 		return nil, err
 	}
-	// Konnect supports tags, we don't need to verify that.
-	client.Tags = tagsStub{}
 
-	return NewKonnectClient(client, c.ControlPlaneID), nil
+	// Set the Doer to KonnectHTTPDoer to decorate the HTTP client Do method with tracing information.
+	client.SetDoer(KonnectHTTPDoer())
+
+	return NewKonnectClient(client, c.ControlPlaneID, c.ConsumersSyncDisabled), nil
 }
 
 // EnsureKonnectConnection ensures that the client is able to connect to Konnect.
@@ -99,10 +102,15 @@ func EnsureKonnectConnection(ctx context.Context, client *kong.Client, logger lo
 	return nil
 }
 
-// tagsStub replaces a default Tags service in the go-kong's Client for Konnect clients.
-// It will always tell tags are supported, which is true for Konnect Control Plane Admin API.
-type tagsStub struct{}
-
-func (t tagsStub) Exists(context.Context) (bool, error) {
-	return true, nil
+// KonnectHTTPDoer is a Doer implementation to be used with Konnect Admin API client. It decorates the HTTP client Do
+// method with extracting tracing information from the response headers and logging it for correlation with traces in
+// DataDog.
+func KonnectHTTPDoer() kong.Doer {
+	return func(ctx context.Context, client *http.Client, req *http.Request) (*http.Response, error) {
+		resp, err := tracing.DoRequest(ctx, client, req)
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
+	}
 }

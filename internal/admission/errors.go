@@ -9,11 +9,16 @@ const (
 	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise"
 	ErrTextConsumerGroupUnlicensed            = "consumer group support requires a valid Kong Enterprise license"
 	ErrTextConsumerGroupUnexpected            = "unexpected error during checking support for consumer group"
-	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API" //nolint:revive,gosec
+	ErrTextCustomEntityFieldsUnmarshalFailed  = "failed to unmarshal fields of custom entity: %v"
+	ErrTextCustomEntityGetSchemaFailed        = "failed to get schema of Kong entity type '%s': %v"
+	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API" //nolint:gosec
 	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
 	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"
 	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
 	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
+	ErrTextVaultConfigUnmarshalFailed         = "failed to unmarshal vault configuration: %v"
+	ErrTextVaultUnableToValidate              = "unable to validate vault on Kong gateway"
+	ErrTextVaultConfigValidationResultInvalid = "vault configuration in invalid: %s"
 )
 
 const (

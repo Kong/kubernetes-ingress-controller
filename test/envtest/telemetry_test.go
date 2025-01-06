@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +28,9 @@ import (
 	"k8s.io/client-go/rest"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
@@ -37,7 +38,7 @@ func TestTelemetry(t *testing.T) {
 	t.Parallel()
 
 	t.Log("configuring TLS listener - server for telemetry data")
-	cert := certificate.MustGenerateSelfSignedCert()
+	cert := certificate.MustGenerateCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.
@@ -67,7 +68,7 @@ func TestTelemetry(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
+		err = manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 
@@ -205,7 +206,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			)
 			require.NoError(t, err)
 
-			_, err = gcl.GatewayV1alpha2().GRPCRoutes(namespace).Create(
+			_, err = gcl.GatewayV1().GRPCRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.GRPCRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
@@ -355,12 +356,16 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		"<14>"+
 			"signal=kic-ping;"+
 			"db=off;"+
+			"feature-combinedservicesfromdifferenthttproutes=false;"+
+			"feature-fallbackconfiguration=false;"+
 			"feature-fillids=true;"+
 			"feature-gateway-service-discovery=false;"+
 			"feature-gatewayalpha=false;"+
+			"feature-kongcustomentity=true;"+
 			"feature-kongservicefacade=false;"+
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
+			"feature-sanitizekonnectconfigdumps=true;"+
 			"hn=%s;"+
 			"kv=3.4.1;"+
 			"rf=traditional;"+
@@ -386,7 +391,11 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		k8sVersion.GitVersion,
 		"v"+semver.String(),
 	)
-	return report == expectedReport
+	if diff := cmp.Diff(expectedReport, report); diff != "" {
+		t.Logf("telemetry report mismatch (-want +got):\n%s", diff)
+		return false
+	}
+	return true
 }
 
 // removeStanzaFromReport removes stanza from report. Report contains stanzas like:
@@ -394,7 +403,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 // Pass e.g. "uptime" to remove the whole uptime=9; from the report.
 func removeStanzaFromReport(report string, stanza string) (string, error) {
 	const idStanzaEnd = ";"
-	stanza = stanza + "="
+	stanza += "="
 	start := strings.Index(report, stanza)
 	if start == -1 {
 		return "", fmt.Errorf("stanza %q not found in report: %s", stanza, report)

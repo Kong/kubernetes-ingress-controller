@@ -5,6 +5,12 @@ import (
 )
 
 const (
+	// TLSVerifyDepthKey is the key used to store the tls verify depth.
+	// This is used in the BackendTLSPolicy options.
+	TLSVerifyDepthKey AnnotationKey = "tls-verify-depth"
+)
+
+const (
 	V1Group = Group(gatewayv1.GroupName)
 )
 

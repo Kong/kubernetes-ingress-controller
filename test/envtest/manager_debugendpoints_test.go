@@ -63,7 +63,6 @@ func TestDebugEndpoints(t *testing.T) {
 	}
 
 	for _, u := range urls {
-		u := u
 		t.Run(u.name, func(t *testing.T) {
 			url := fmt.Sprintf("http://localhost:%d/%s", u.port, u.name)
 			eventuallHTTPGet(t, http.DefaultClient, url, waitTime, tickTime)

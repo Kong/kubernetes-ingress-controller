@@ -1,0 +1,197 @@
+# In this test case we have a set of broken KongClusterPlugins attached to all possible KongClusterPlugin's dependants.
+# We expect empty config because of the broken plugins affecting all of its dependants.
+# `test.konghq.com/broken` annotations can be removed from the plugins to generate the actual config.
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: plugin
+  uid: "6faea5d6-ce95-439e-b223-421a0a142e3f"
+  annotations:
+    test.konghq.com/broken: "true"
+config:
+  header_name: kong-id
+plugin: correlation-id
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: plugin-consumer-group
+  uid: "439e6c3b-08e7-49ff-abc9-d17a00b06ed8"
+  annotations:
+    test.konghq.com/broken: "true"
+config:
+  header_name: kong-id
+plugin: correlation-id
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  ports:
+    - port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  ingressClassName: kong
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: service
+                port:
+                  number: 80
+            path: /ingress-service
+            pathType: Exact
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute
+  namespace: default
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: plugin
+spec:
+  parentRefs:
+    - name: kong
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /httproute
+      backendRefs:
+        - name: service
+          kind: Service
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcproute
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  parentRefs:
+    - name: kong
+  rules:
+    - backendRefs:
+        - name: service
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: udproute
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  parentRefs:
+    - name: kong
+  rules:
+    - backendRefs:
+        - name: service
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tlsroute
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  parentRefs:
+    - name: kong
+  hostnames:
+    - tlsroute.kong.example
+  rules:
+    - backendRefs:
+        - name: service
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpcroute
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+spec:
+  parentRefs:
+    - name: kong
+  hostnames:
+    - "example.com"
+  rules:
+    - backendRefs:
+        - name: service
+          port: 80
+      matches:
+        - method:
+            service: "grpcbin.GRPCBin"
+            method: "DummyUnary"
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: consumer
+  namespace: default
+  annotations:
+    konghq.com/plugins: plugin
+    kubernetes.io/ingress.class: kong
+username: consumer
+consumerGroups:
+  - consumer-group
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongConsumerGroup
+metadata:
+  name: consumer-group
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: plugin-consumer-group
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: UDPIngress
+metadata:
+  name: udpingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+    konghq.com/plugins: plugin
+spec:
+  rules:
+    - backend:
+        serviceName: service
+        servicePort: 80
+      port: 9999
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: TCPIngress
+metadata:
+  name: tcpingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: plugin
+spec:
+  rules:
+    - port: 9999
+      backend:
+        serviceName: service
+        servicePort: 80

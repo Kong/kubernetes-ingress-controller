@@ -59,6 +59,7 @@ webhooks:
     - kongplugins
     - kongclusterplugins
     - kongingresses
+    - kongvaults
   - apiGroups:
     - ''
     apiVersions:

@@ -27,6 +27,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
+// configDumpResponse mirrors the diagnostics.configDumpResponse struct, which isn't published.
+// It's replicated here since some envtests use the config dump endpoints as a hack to extract the config for
+// inspection.
+
+type configDumpResponse struct {
+	ConfigHash string       `json:"hash"`
+	Config     file.Content `json:"config"`
+}
+
 func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	t.Parallel()
 
@@ -156,14 +165,17 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 		defer resp.Body.Close()
 
 		var (
-			config file.Content
-			buff   bytes.Buffer
+			configDump configDumpResponse
+			config     file.Content
+			buff       bytes.Buffer
 		)
 
-		if err := gojson.NewDecoder(io.TeeReader(resp.Body, &buff)).Decode(&config); err != nil {
+		if err := gojson.NewDecoder(io.TeeReader(resp.Body, &buff)).Decode(&configDump); err != nil {
 			t.Logf("WARNING: error while decoding config: %+v, response: %s", err, buff.String())
 			return false
 		}
+
+		config = configDump.Config
 
 		if len(config.Services) != 1 {
 			t.Logf("WARNING: expected 1 service in config: %+v", config)

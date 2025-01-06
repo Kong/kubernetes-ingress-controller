@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"strings"
+
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -63,6 +65,12 @@ func (b *IngressBuilder) WithAnnotations(annotations map[string]string) *Ingress
 		b.ingress.Annotations[k] = v
 	}
 	return b
+}
+
+func (b *IngressBuilder) WithKongPlugins(names ...string) *IngressBuilder {
+	return b.WithAnnotations(map[string]string{
+		annotations.AnnotationPrefix + annotations.PluginsKey: strings.Join(names, ","),
+	})
 }
 
 func (b *IngressBuilder) WithDefaultBackend(backend *netv1.IngressBackend) *IngressBuilder {

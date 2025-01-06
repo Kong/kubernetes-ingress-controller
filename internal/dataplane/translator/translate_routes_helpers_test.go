@@ -116,7 +116,6 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, tc.gwPorts, 0, tc.routeRule)
 			require.NoError(t, err)
@@ -229,7 +228,6 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, tc.gwPorts, 0, tc.routeRule)
 			require.NoError(t, err)
@@ -317,7 +315,6 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// TLSRoute matches based on hostname with Gateway listener thus passing gwPorts is pointless.
 			kongRoutes, err := generateKongRoutesFromRouteRule(tc.route, nil, 0, tc.routeRule)

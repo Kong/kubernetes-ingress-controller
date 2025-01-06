@@ -6,6 +6,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 
+	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -52,10 +53,10 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	}
 
 	flavor := testenv.KongRouterFlavor()
-	if flavor == "" {
-		flavor = "traditional"
+	if len(flavor) == 0 {
+		flavor = dpconf.RouterFlavorTraditional
 	}
-	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", flavor)
+	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", string(flavor))
 
 	kongbuilder.WithControllerDisabled()
 	kongbuilder.WithProxyAdminServiceTypeLoadBalancer()

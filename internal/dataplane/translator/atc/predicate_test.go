@@ -38,14 +38,14 @@ func TestNewPredicate(t *testing.T) {
 		},
 		{
 			name:          "unmatched types (LHS integer RHS string)",
-			lhs:           FieldNetPort,
+			lhs:           FieldNetDstPort,
 			op:            OpEqual,
 			rhs:           StringLiteral("/"),
 			expectedError: ErrTypeNotMatch,
 		},
 		{
 			name:          "invalid operator (contains for integer)",
-			lhs:           FieldNetPort,
+			lhs:           FieldNetDstPort,
 			op:            OpContains,
 			rhs:           IntLiteral(10),
 			expectedError: ErrOperatorInvalid,
@@ -60,7 +60,6 @@ func TestNewPredicate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			predicate, err := NewPredicate(tc.lhs, tc.op, tc.rhs)
 			if tc.expectedError == nil {

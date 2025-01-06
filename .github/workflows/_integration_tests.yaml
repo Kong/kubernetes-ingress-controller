@@ -41,6 +41,7 @@ on:
 
 jobs:
   dependencies-versions:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
       kind: ${{ steps.set-versions.outputs.kind }}
@@ -50,18 +51,19 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - id: set-versions
         name: Set versions
         run: |
-          echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          (
+            echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )"
+            echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )"
+            echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )"
+            echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )"
+          ) >> $GITHUB_OUTPUT
 
   integration-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     needs: dependencies-versions
@@ -118,20 +120,34 @@ jobs:
             # https://github.com/Kong/kubernetes-ingress-controller/issues/5127 is resolved.
             router-flavor: 'traditional'
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
+          - name: postgres-fallback-config
+            test: postgres
+            feature_gates: "GatewayAlpha=true,FallbackConfiguration=true"
+          - name: dbless-fallback-config
+            test: dbless
+            feature_gates: "GatewayAlpha=true,FallbackConfiguration=true"
           # Experimental tests, in the future all integration tests will be migrated to them.
+          # Set enterprise to 'true' to enable isolated integration test cases requiring enterprise features.
           - name: isolated-dbless
             test: isolated.dbless
+            router-flavor: traditional
             feature_gates: "GatewayAlpha=true"
+            enterprise: true
+          - name: isolated-postgres
+            test: isolated.postgres
+            router-flavor: traditional
+            feature_gates: "GatewayAlpha=true"
+            enterprise: true
           - name: isolated-dbless-expression-router
             router-flavor: expressions
             test: isolated.dbless
             feature_gates: "GatewayAlpha=true"
+            enterprise: true
 
     steps:
       - uses: Kong/kong-license@master
         id: license
         with:
-          password: ${{ secrets.PULP_PASSWORD }}
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: Set image of Kong
@@ -147,28 +163,37 @@ jobs:
           fi
 
           if [ "${{ matrix.enterprise }}" == "true" ]; then
-            echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${kong_ee_tag}" >> $GITHUB_ENV
-            echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}" >> $GITHUB_ENV
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_ee_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}"
+              echo "TEST_KONG_ENTERPRISE=true"
+            ) >> $GITHUB_ENV
           else
-            echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${kong_oss_tag}" >> $GITHUB_ENV
-            echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}" >> $GITHUB_ENV
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_oss_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}"
+            ) >> $GITHUB_ENV
           fi
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: run ${{ matrix.name }}
         run: make test.integration.${{ matrix.test }}
         env:
+          MISE_VERBOSE: 1
+          MISE_DEBUG: 1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
@@ -183,31 +208,31 @@ jobs:
 
       - name: collect test coverage
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-integration-${{ matrix.name }}
           path: coverage.*.out
 
       - name: upload diagnostics
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
-      
+
       # upload logs when test failed
-      - name: upload KIC logs 
+      - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
-        with: 
+        uses: actions/upload-artifact@v4
+        with:
           name: integration-tests-kic-logs-${{ matrix.name }}
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 
       - name: collect test report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: tests-report
+          name: tests-report-integration-${{ matrix.name }}
           path: integration-tests-${{ matrix.name }}.xml

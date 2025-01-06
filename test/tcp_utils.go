@@ -7,20 +7,27 @@ import (
 	"time"
 )
 
-// TCPEchoResponds takes a TCP address URL and a Pod name and checks if
+type Protocol string
+
+const (
+	ProtocolTCP Protocol = "tcp"
+	ProtocolUDP Protocol = "udp"
+)
+
+// EchoResponds takes a TCP or UDP address URL and a Pod name and checks if
 // a go-echo instance is running on that Pod at that address. It sends
 // a message and checks if returned one matches. It returns an error with
 // an explanation if it is not (typical network related errors like
 // io.EOF or syscall.ECONNRESET are returned directly).
-func TCPEchoResponds(url string, podName string) error {
+func EchoResponds(protocol Protocol, url string, podName string) error {
 	dialer := net.Dialer{Timeout: RequestTimeout}
-	conn, err := dialer.Dial("tcp", url)
+	conn, err := dialer.Dial(string(protocol), url)
 	if err != nil {
 		return err
 	}
 
 	header := []byte(fmt.Sprintf("Running on Pod %s.", podName))
-	message := []byte("testing tcproute")
+	message := []byte(fmt.Sprintf("testing %sroute", protocol))
 
 	wrote, err := conn.Write(message)
 	if err != nil {

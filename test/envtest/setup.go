@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"syscall"
 	"testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
@@ -127,7 +127,7 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
 
-	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
+	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIPackageVersion, "config", "crd", "experimental")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
 		Paths:              []string{gatewayCRDPath},
@@ -139,14 +139,13 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
 
-	// extract project root path.
-	_, thisFilePath, _, _ := runtime.Caller(0) //nolint:dogsled
-	projectRoot := filepath.Join(filepath.Dir(thisFilePath), "..", "..")
-	// install Kong CRDs from config/crd/bases.
-	kongCRDPath := filepath.Join(projectRoot, "config", "crd", "bases")
-	kongIncubatorCRDPath := filepath.Join(projectRoot, "config", "crd", "incubator")
-	t.Logf("install Kong CRDs from manifests in %s", kongCRDPath)
-	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
+	kconfVersion, err := testutils.DependencyModuleVersion("github.com/kong/kubernetes-configuration")
+	require.NoError(t, err)
+	kconfBasePath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration@"+kconfVersion)
+	kongCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller")
+	kongIncubatorCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller-incubator")
+
+	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
 		Paths:              []string{kongCRDPath, kongIncubatorCRDPath},
 		ErrorIfPathMissing: true,
@@ -169,7 +168,7 @@ func deployIngressClass(ctx context.Context, t *testing.T, name string, client c
 }
 
 // deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
-func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) gatewayapi.Gateway {
+func deployGatewayUsingGatewayClass(ctx context.Context, t *testing.T, client ctrlclient.Client, gwc gatewayapi.GatewayClass) gatewayapi.Gateway {
 	ns := CreateNamespace(ctx, t, client)
 
 	publishSvc := corev1.Service{
@@ -188,29 +187,15 @@ func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) 
 	require.NoError(t, client.Create(ctx, &publishSvc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
 
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
-		},
-	}
-
-	require.NoError(t, client.Create(ctx, &gwc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-
 	gw := gatewayapi.Gateway{
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
 				{
-					Name:     "http",
-					Protocol: gatewayapi.HTTPProtocolType,
-					Port:     gatewayapi.PortNumber(8000),
+					Name:          "http",
+					Protocol:      gatewayapi.HTTPProtocolType,
+					Port:          gatewayapi.PortNumber(8000),
+					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},
 		},
@@ -223,4 +208,24 @@ func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) 
 	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
 
 	return gw
+}
+
+func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) (gatewayapi.Gateway, gatewayapi.GatewayClass) {
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+
+	gw := deployGatewayUsingGatewayClass(ctx, t, client, gwc)
+
+	return gw, gwc
 }

@@ -8,14 +8,23 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong/custom"
 )
 
 // GenerateSHA generates a SHA256 checksum of targetContent, with the purpose
 // of change detection.
-func GenerateSHA(targetContent *file.Content) ([]byte, error) {
+func GenerateSHA(targetContent *file.Content, customEntities map[string][]custom.Object) ([]byte, error) {
 	jsonConfig, err := gojson.Marshal(targetContent)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
+	}
+	// Calculate SHA including the custom entities.
+	if len(customEntities) > 0 {
+		jsonCustomEntities, err := gojson.Marshal(customEntities)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling Kong custom entities to JSON: %w", err)
+		}
+		jsonConfig = append(jsonConfig, jsonCustomEntities...)
 	}
 
 	shaSum := sha256.Sum256(jsonConfig)
@@ -34,16 +43,22 @@ func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	if kongCert.Cert != nil {
 		res.Cert = kong.String(*kongCert.Cert)
 	}
-	res.SNIs = getSNIs(kongCert.SNIs)
+	res.SNIs = getCertsSNIs(kongCert)
 	return res
 }
 
-func getSNIs(names []*string) []kong.SNI {
-	var snis []kong.SNI
-	for _, name := range names {
-		snis = append(snis, kong.SNI{
-			Name: kong.String(*name),
-		})
+func getCertsSNIs(kongCert kong.Certificate) []kong.SNI {
+	snis := make([]kong.SNI, 0, len(kongCert.SNIs))
+	for _, sni := range kongCert.SNIs {
+		kongSNI := kong.SNI{
+			Name: sni,
+		}
+		if kongCert.ID != nil {
+			kongSNI.Certificate = &kong.Certificate{
+				ID: kongCert.ID,
+			}
+		}
+		snis = append(snis, kongSNI)
 	}
 	return snis
 }

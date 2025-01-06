@@ -9,11 +9,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
 )
 
 // updateReferredObjects updates reference records where the referrer is the object in parameter obj.
@@ -45,7 +46,14 @@ func updateReferredObjects(
 	for _, nsName := range referredSecretList {
 		referredSecretNameMap[nsName] = struct{}{}
 	}
-	return ctrlref.UpdateReferencesToSecret(ctx, client, refIndexers, dataplaneClient, obj, referredSecretNameMap)
+	return ctrlref.UpdateReferencesToSecretOrConfigMap(
+		ctx,
+		client,
+		refIndexers,
+		dataplaneClient,
+		obj,
+		referredSecretNameMap,
+		&corev1.Secret{})
 }
 
 func listCoreV1ServiceReferredSecrets(service *corev1.Service) []k8stypes.NamespacedName {
@@ -103,7 +111,7 @@ func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.Namespa
 }
 
 func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, 1)
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
 			Namespace: plugin.ConfigFrom.SecretValue.Namespace,
@@ -114,7 +122,7 @@ func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8
 
 	for _, patch := range plugin.ConfigPatches {
 		nsName := k8stypes.NamespacedName{
-			Namespace: plugin.Namespace,
+			Namespace: patch.ValueFrom.SecretValue.Namespace,
 			Name:      patch.ValueFrom.SecretValue.Secret,
 		}
 		referredSecretNames = append(referredSecretNames, nsName)

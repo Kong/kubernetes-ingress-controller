@@ -24,10 +24,11 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -46,6 +47,9 @@ var (
 	//
 	// See: https://docs.konghq.com/hub/kong-inc/rate-limiting/
 	perHourRateLimit = 3
+	// workloadEndpointIstioVersionCutoff is the lowest version that supports Kiali API /namespaces/<ns>/workloads/<workload>
+	// that returns the metrics of a workload.
+	workloadEndpointIstioVersionCutoff = semver.MustParse("1.18.0")
 )
 
 // TestIstioWithKongIngressGateway verifies integration of Kong Gateway as an Ingress
@@ -114,7 +118,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("Preparing the environment to run the controller manager")
 	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 	t.Log("starting the controller manager")
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, "--log-level=debug")
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, []string{"--log-level=debug"})
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 
@@ -149,7 +153,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace.Name, ingress))
 
 	t.Log("retrieving the kong proxy URL")
-	proxyURL, err := kongAddon.ProxyURL(ctx, env.Cluster())
+	proxyURL, err := kongAddon.ProxyHTTPURL(ctx, env.Cluster())
 	require.NoError(t, err)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -325,6 +329,21 @@ func verifyStatusForURL(getURL string, statusCode int) error {
 
 // getKialiWorkloadHealth produces the health metrics of a workload given the namespace and name of that workload.
 func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
+	istioVersion, err := semver.Parse(istioVersionStr)
+	require.NoError(t, err, "failed to parse istio version")
+	if istioVersion.GTE(workloadEndpointIstioVersionCutoff) {
+		return getKialiWorkloadHealthIstioByWorkloadEndpoint(t, kialiAPIUrl, namespace, workloadName), nil
+	}
+	return getKialiWorkloadHealthByHealthEndpoint(t, kialiAPIUrl, namespace, workloadName)
+}
+
+// getKialiWorkloadHealthByHealthEndpoint gets health metrics of ALL workloads from /namespaces/<ns>/health?type=workload API.
+// Used in istio 1.17 and prior. Istio 1.22 does not have this API.
+func getKialiWorkloadHealthByHealthEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) (*workloadHealth, error) {
+	t.Helper()
+
 	// generate the URL for the namespace health metrics
 	kialiHealthURL := fmt.Sprintf("%s/namespaces/%s/health", kialiAPIUrl, namespace)
 	req, err := http.NewRequest("GET", kialiHealthURL, nil)
@@ -364,6 +383,24 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 	return &health, nil
 }
 
+// getKialiWorkloadHealthIstioByWorkloadEndpoint gets metrics of workload by /namespaces/<ns>/workloads/<workload> API.
+// Used in Istio 1.18 and later. Istio 1.17 does not have this API.
+func getKialiWorkloadHealthIstioByWorkloadEndpoint(t *testing.T, kialiAPIUrl string, namespace, workloadName string) *workloadHealth {
+	t.Helper()
+
+	kialiWorkloadURL := fmt.Sprintf("%s/namespaces/%s/workloads/%s", kialiAPIUrl, namespace, workloadName)
+	resp, err := helpers.DefaultHTTPClient().Get(kialiWorkloadURL)
+	require.NoErrorf(t, err, "failed to call Kiali workload API %s", kialiWorkloadURL)
+	defer resp.Body.Close()
+	// Verify the workload response.
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "Got code %d from Kiali workload API %s", resp.StatusCode, kialiWorkloadURL)
+	b, err := io.ReadAll(resp.Body)
+	require.NoError(t, err, "failed to read from response from Kiali workload API")
+	status := workloadStatus{}
+	require.NoError(t, json.Unmarshal(b, &status), "failed to parse JSON from Kiali workload API")
+	return &status.Health
+}
+
 // -----------------------------------------------------------------------------
 // Private Testing Types - Kiali API Responses
 // -----------------------------------------------------------------------------
@@ -387,4 +424,9 @@ type requests struct {
 
 type workloadHealth struct {
 	Requests requests `json:"requests"`
+}
+
+type workloadStatus struct {
+	Name   string         `json:"name"`
+	Health workloadHealth `json:"health"`
 }

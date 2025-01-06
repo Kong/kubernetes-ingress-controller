@@ -17,7 +17,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
@@ -26,17 +28,16 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	unsupportedGW = "no supported Gateway found for route"
-)
-
-const (
 	ConditionTypeProgrammed                                            = "Programmed"
 	ConditionReasonProgrammedUnknown   gatewayapi.RouteConditionReason = "Unknown"
 	ConditionReasonConfiguredInGateway gatewayapi.RouteConditionReason = "ConfiguredInGateway"
 	ConditionReasonTranslationError    gatewayapi.RouteConditionReason = "TranslationError"
 )
 
-var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
+var (
+	ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
+	ErrNoSupportedGateway         = fmt.Errorf("no supported gateway found for route")
+)
 
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.
@@ -125,7 +126,11 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 // Gateway APIs route object (e.g. HTTPRoute, TCPRoute, e.t.c.) from the provided cached
 // client if they match this controller. If there are no gateways present for this route
 // OR the present gateways are references to missing objects, this will return a unsupportedGW error.
-func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logger logr.Logger, mgrc client.Client, route T) ([]supportedGatewayWithCondition, error) {
+//
+// There is a parameter `specifiedGW` here, which is used to specific the gateway.
+func getSupportedGatewayForRoute[T gatewayapi.RouteT](
+	ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName,
+) ([]supportedGatewayWithCondition, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(route)
 	if err != nil {
@@ -144,6 +149,18 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 			namespace = string(*parentRef.Namespace)
 		}
 		name := string(parentRef.Name)
+
+		// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
+		if gatewayToReconcile, ok := specifiedGW.Get(); ok {
+			parentNamespace := route.GetNamespace()
+			if parentRef.Namespace != nil {
+				parentNamespace = string(*parentRef.Namespace)
+			}
+			if !(parentNamespace == gatewayToReconcile.Namespace && string(parentRef.Name) == gatewayToReconcile.Name) {
+				continue
+			}
+		}
 
 		// pull the Gateway object from the cached client
 		gateway := gatewayapi.Gateway{}
@@ -207,7 +224,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 					listener.Name, route.GetName(), gateway.Name, err,
 				)
 			} else if !ok {
-				listenerLogger.V(util.DebugLevel).Info("Route does not match listener's allowed routes")
+				listenerLogger.V(logging.DebugLevel).Info("Route does not match listener's allowed routes")
 				continue
 			}
 			allowedByAllowedRoutes = true
@@ -216,14 +233,14 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 			// - Check if a listener status exists with a matching type (via SupportedKinds).
 			// - Check if it matches the requested listener by name (if specified).
 			if err := existsMatchingListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
-				listenerLogger.V(util.DebugLevel).Info("Listener does not support this route", "reason", err.Error())
+				listenerLogger.V(logging.DebugLevel).Info("Listener does not support this route", "reason", err.Error())
 				continue
 			} else { //nolint:revive
 				allowedBySupportedKinds = true
 			}
 
 			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
-				listenerLogger.V(util.DebugLevel).Info("Listener is not ready", "reason", err.Error())
+				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
 				continue
 			} else { //nolint:revive
 				listenerReady = true
@@ -232,7 +249,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 			// Check if listener name matches.
 			if parentRef.SectionName != nil {
 				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
-					listenerLogger.V(util.DebugLevel).Info(
+					listenerLogger.V(logging.DebugLevel).Info(
 						"Listener name does not match parentRef.SectionName",
 						"parentRef_sectionName", parentRef.SectionName,
 					)
@@ -246,7 +263,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 				if *parentRef.Port != listener.Port {
 					// This ParentRef has a port specified and it's different
 					// than current listener's port.
-					listenerLogger.V(util.DebugLevel).Info(
+					listenerLogger.V(logging.DebugLevel).Info(
 						"Listener port does not match parentRef.Port",
 						"listener_port", listener.Port, "parentRef_port", parentRef.Port,
 					)
@@ -257,7 +274,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 
 			// Check if listener protocol matches
 			if !routeTypeMatchesListenerType(route, listener) {
-				listenerLogger.V(util.DebugLevel).Info(
+				listenerLogger.V(logging.DebugLevel).Info(
 					"Route's type does not match listener's type",
 					"route_name", route.GetName(),
 				)
@@ -270,7 +287,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 			} else {
 				condFalse := metav1.ConditionFalse
 				matchingHostname = &condFalse
-				listenerLogger.V(util.DebugLevel).Info("Route's hostname does not match listener's hostname")
+				listenerLogger.V(logging.DebugLevel).Info("Route's hostname does not match listener's hostname")
 				continue
 			}
 
@@ -298,22 +315,22 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 
 			// This will also catch a case of not matching listener/section name.
 			reason := gatewayapi.RouteReasonNoMatchingParent
-
-			if matchingHostname != nil && *matchingHostname == metav1.ConditionFalse {
+			switch {
+			case matchingHostname != nil && *matchingHostname == metav1.ConditionFalse:
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
-			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
+			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			} else if !listenerReady {
+			case !listenerReady:
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
-			} else if (parentRef.Port != nil) && !portMatched {
+			case parentRef.Port != nil && !portMatched:
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			} else if !allowedByAllowedRoutes || !allowedBySupportedKinds {
+			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
@@ -336,7 +353,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, logge
 	}
 
 	if len(gateways) == 0 {
-		return nil, fmt.Errorf(unsupportedGW)
+		return nil, ErrNoSupportedGateway
 	}
 
 	return gateways, nil
@@ -507,9 +524,8 @@ func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatew
 			switch any(route).(type) {
 			case *gatewayapi.HTTPRoute:
 				gvk = schema.GroupVersionKind{
-					Group:   gatewayv1.GroupVersion.Group,
-					Version: gatewayv1.GroupVersion.Version,
-					Kind:    "HTTPRoute",
+					Group: gatewayv1.GroupVersion.Group,
+					Kind:  "HTTPRoute",
 				}
 			default:
 				gvk = route.GetObjectKind().GroupVersionKind()
@@ -708,126 +724,6 @@ func isHTTPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef 
 	return false
 }
 
-// sameCondition returns true if the conditions in parameter has the same type, status, reason and message.
-func sameCondition(a, b metav1.Condition) bool {
-	return a.Type == b.Type &&
-		a.Status == b.Status &&
-		a.Reason == b.Reason &&
-		a.Message == b.Message &&
-		a.ObservedGeneration == b.ObservedGeneration
-}
-
-func setRouteParentStatusCondition(parentStatus *gatewayapi.RouteParentStatus, newCondition metav1.Condition) bool {
-	var conditionFound, changed bool
-	for i, condition := range parentStatus.Conditions {
-		if condition.Type == newCondition.Type {
-			conditionFound = true
-			if !sameCondition(condition, newCondition) {
-				parentStatus.Conditions[i] = newCondition
-				changed = true
-			}
-		}
-	}
-
-	if !conditionFound {
-		parentStatus.Conditions = append(parentStatus.Conditions, newCondition)
-		changed = true
-	}
-	return changed
-}
-
-func parentStatusHasProgrammedCondition(parentStatus *gatewayapi.RouteParentStatus) bool {
-	for _, condition := range parentStatus.Conditions {
-		if condition.Type == ConditionTypeProgrammed {
-			return true
-		}
-	}
-	return false
-}
-
-// ensureParentsProgrammedCondition ensures that provided route's parent statuses
-// have Programmed condition set properly. It returns a boolean flag indicating
-// whether an update to the provided route has been performed.
-//
-// Use the condition argument to specify the Reason, Status and Message.
-// Type will be set to Programmed whereas ObservedGeneration and LastTransitionTime
-// will be set accordingly based on the route's generation and current time.
-func ensureParentsProgrammedCondition[
-	routeT gatewayapi.RouteT,
-](
-	ctx context.Context,
-	client client.SubResourceWriter,
-	route routeT,
-	routeParentStatuses []gatewayapi.RouteParentStatus,
-	gateways []supportedGatewayWithCondition,
-	condition metav1.Condition,
-) (bool, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(route, routeParentStatuses)
-
-	condition.Type = ConditionTypeProgrammed
-	condition.ObservedGeneration = route.GetGeneration()
-	condition.LastTransitionTime = metav1.Now()
-
-	statusChanged := false
-	for _, g := range gateways {
-		gateway := g.gateway
-
-		parentRefKey := routeParentStatusKey(route, g)
-		parentStatus, ok := parentStatuses[parentRefKey]
-		if ok {
-			// update existing parent in status.
-			changed := setRouteParentStatusCondition(parentStatus, condition)
-			if changed {
-				parentStatuses[parentRefKey] = parentStatus
-				setRouteParentInStatusForParent(route, *parentStatus, g)
-			}
-			statusChanged = statusChanged || changed
-		} else {
-			// add a new parent if the parent is not found in status.
-			newParentStatus := gatewayapi.RouteParentStatus{
-				ParentRef: gatewayapi.ParentReference{
-					Namespace: lo.ToPtr(gatewayapi.Namespace(gateway.Namespace)),
-					Name:      gatewayapi.ObjectName(gateway.Name),
-					Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-					Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-					SectionName: func() *gatewayapi.SectionName {
-						// We don't need to check whether the listener matches route's spec
-						// because that should already be done via getSupportedGatewayForRoute
-						// at this point.
-						if g.listenerName != "" {
-							return lo.ToPtr(gatewayapi.SectionName(g.listenerName))
-						}
-						return nil
-					}(),
-
-					// TODO: set port after gateway port matching implemented:
-					// https://github.com/Kong/kubernetes-ingress-controller/issues/3016
-				},
-				ControllerName: GetControllerName(),
-				Conditions: []metav1.Condition{
-					condition,
-				},
-			}
-			setRouteParentInStatusForParent(route, newParentStatus, g)
-
-			routeParentStatuses = append(routeParentStatuses, newParentStatus)
-			parentStatuses[parentRefKey] = &newParentStatus
-			statusChanged = true
-		}
-	}
-
-	// update status if needed.
-	if statusChanged {
-		if err := client.Update(ctx, route); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	// no need to update if no status is changed.
-	return false, nil
-}
-
 // setRouteParentInStatusForParent checks if the provided route Status, contains
 // status for the provided parent and if it does it sets it to the provided
 // RouteStatusParent. If it does not then it appends the provided RouteStatusParent
@@ -969,4 +865,65 @@ func isRouteAcceptedByListener[T gatewayapi.RouteT](ctx context.Context,
 	}
 
 	return true, nil
+}
+
+// ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
+// implementation to prune status references to Gateways supported by this controller
+// in the provided route.
+func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
+	ctx context.Context, cl client.Client, log logr.Logger, route routeT,
+) (bool, error) {
+	debug(log, route, "Unsupported route found, processing to verify whether it was ever supported")
+	kind := route.GetObjectKind().GroupVersionKind().Kind
+	parents := getRouteStatusParents(route)
+
+	// Drop all status references to supported Gateway objects.
+	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
+	for _, status := range parents {
+		if status.ControllerName != GetControllerName() {
+			newStatuses = append(newStatuses, status)
+		} else {
+			parentRefNN := string(status.ParentRef.Name)
+			if status.ParentRef.Namespace != nil {
+				parentRefNN = fmt.Sprintf("%s/%s", *status.ParentRef.Namespace, parentRefNN)
+			}
+			debug(log, route, "Removing parentRef from route status", "parentRef", parentRefNN, "kind", kind)
+		}
+	}
+
+	// If the new list of statuses is the same length as the old
+	// nothing has changed and we're all done.
+	if len(newStatuses) == len(parents) {
+		return false, nil
+	}
+
+	// If the route doesn't have a supported Gateway+GatewayClass associated with
+	// it it's possible it became orphaned after becoming queued. In either case
+	// ensure that it's removed from the proxy cache to avoid orphaned data-plane
+	// configurations.
+	setRouteStatusParents(route, newStatuses)
+	if err := cl.Status().Update(ctx, route); err != nil {
+		return false, fmt.Errorf("failed to remove Gateway parentRef from %s status: %w", kind, err)
+	}
+
+	debug(log, route, "Unsupported route was previously supported, status was updated")
+	// The status needed to be updated and it was updated successfully.
+	return true, nil
+}
+
+func getRouteParentRefs[T gatewayapi.RouteT](route T) []gatewayapi.ParentReference {
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.TCPRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.UDPRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.TLSRoute:
+		return r.Spec.ParentRefs
+	case *gatewayapi.GRPCRoute:
+		return r.Spec.ParentRefs
+	default:
+		return nil
+	}
 }

@@ -1,0 +1,125 @@
+name: performance tests (targeted)
+run-name: performance tests (targeted), branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+
+concurrency:
+  # Limit the concurrency of e2e tests to run only 1 workflow for ref (branch).
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      controller-image:
+        description: KIC Docker image to test with. If empty, builds an image from the dispatch branch.
+        type: string
+        required: false
+      res-number-for-perf:
+        description: The number of resource for performance tests
+        type: string
+        required: false
+      pr-number:
+        description: PR number to post a comment in. If empty, no comment is posted.
+        type: string
+        required: false
+
+jobs:
+  post-comment-in-pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    if: ${{ github.event.inputs.pr-number != '' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      # URL is the current workflow's run URL.
+      # Sadly this is not readily available in github's context.
+      URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      PR_NUMBER: ${{ github.event.inputs.pr-number }}
+      RES_NUM: ${{ inputs.res-number-for-perf }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          MSG="performance (targeted) tests with KIND-based clusters were started at ${URL} the number of test resources is ${RES_NUM}"
+          gh pr comment ${PR_NUMBER} --body "${MSG}"
+      # Remove the 'ci/run-performance' label from the PR to prevent the `performance_trigger_via_label.yaml`
+      # workflow from running the `performance_targeted.yaml` again.
+      - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-performance
+
+  build-image:
+    if: ${{ inputs.controller-image == '' }}
+    uses: ./.github/workflows/_docker_build.yaml
+    secrets: inherit
+
+  # We need to pick an image to use for the tests. If the input specified one, we use that. Otherwise, we use the one
+  # built by the previous job.
+  choose-image:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: build-image
+    outputs:
+      image: ${{ steps.choose.outputs.image }}
+    steps:
+      - name: Choose image
+        id: choose
+        run: |
+          if [ "${{ inputs.controller-image }}" == "" ]; then
+            echo "image=${{ needs.build-image.outputs.image }}" >> $GITHUB_OUTPUT
+          else
+            echo "image=${{ inputs.controller-image }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Print image
+        run: echo "Using ${{ steps.choose.outputs.image }}"
+
+  run:
+    needs: choose-image
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/_performance_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: ${{ needs.choose-image.outputs.image }}
+      load-local-image: ${{ inputs.controller-image == '' }}
+      res-number-for-perf: ${{ inputs.res-number-for-perf }}
+
+  test-reports:
+    needs: run
+    uses: ./.github/workflows/_test_reports.yaml
+    secrets: inherit
+    with:
+      coverage: false
+
+  performance-reports:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    needs: run
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+          bundler-cache: true
+      - name: install uplot
+        run: |
+          gem install youplot
+
+      - name: download performance test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: performance-tests-results-*
+          path: perf-results
+          merge-multiple: true
+
+      - name: drawing
+        run: |
+          cat perf-results/all_resource_apply*.txt >> result_of_all_resource_apply
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to apply to cluster" result_of_all_resource_apply
+
+          cat perf-results/all_resource_take_effect*.txt >> result_of_all_resource_take_effect
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for all routes to take effect." result_of_all_resource_take_effect
+
+          cat perf-results/one_resource_update*.txt >> result_of_one_resource_update
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress." result_of_one_resource_update
+
+          cat perf-results/one_resource_take_effect*.txt >> result_of_one_resource_take_effect
+          uplot bar -d " " --title="Performance test for KIC" --ylabel="number of resources" --xlabel="time(ms) cost for update one ingress to take effect." result_of_one_resource_take_effect

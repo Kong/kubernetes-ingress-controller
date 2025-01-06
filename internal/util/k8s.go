@@ -148,16 +148,40 @@ func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayapi.Group, gatewayAP
 }
 
 const (
-	K8sNamespaceTagPrefix = "k8s-namespace:"
-	K8sNameTagPrefix      = "k8s-name:"
-	K8sUIDTagPrefix       = "k8s-uid:"
-	K8sKindTagPrefix      = "k8s-kind:"
-	K8sGroupTagPrefix     = "k8s-group:"
-	K8sVersionTagPrefix   = "k8s-version:"
+	K8sNamespaceTagPrefix      = "k8s-namespace:"
+	K8sNameTagPrefix           = "k8s-name:"
+	K8sUIDTagPrefix            = "k8s-uid:"
+	K8sKindTagPrefix           = "k8s-kind:"
+	K8sGroupTagPrefix          = "k8s-group:"
+	K8sVersionTagPrefix        = "k8s-version:"
+	K8sNamedRouteRuleTagPrefix = "k8s-named-route-rule:"
 )
 
+type KongTag struct {
+	Prefix string
+	Value  string
+}
+
+func (kt KongTag) String() string {
+	return kt.Prefix + kt.Value
+}
+
+// AdditionalTagsK8sNamedRouteRule returns a slice of KongTag with the given named route rules.
+// It filters out empty strings.
+func AdditionalTagsK8sNamedRouteRule(optionalNamedRouteRules ...string) []KongTag {
+	optionalNamedRouteRules = lo.Filter(optionalNamedRouteRules, func(s string, _ int) bool {
+		return strings.TrimSpace(s) != ""
+	})
+	return lo.Map(optionalNamedRouteRules, func(s string, _ int) KongTag {
+		return KongTag{
+			Prefix: K8sNamedRouteRuleTagPrefix,
+			Value:  s,
+		}
+	})
+}
+
 // GenerateTagsForObject returns a subset of an object's metadata as a slice of prefixed string pointers.
-func GenerateTagsForObject(obj client.Object) []*string {
+func GenerateTagsForObject(obj client.Object, additionalTags ...KongTag) []*string {
 	if obj == nil {
 		// this should never happen in practice, but it happen in some unit tests
 		// in those cases, the nil object has no tags
@@ -182,6 +206,9 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	}
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
+	}
+	for _, tag := range additionalTags {
+		tags = append(tags, tag.String())
 	}
 
 	tags = append(tags,

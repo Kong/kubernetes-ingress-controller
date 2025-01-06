@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongfake "github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset/fake"
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongfake "github.com/kong/kubernetes-configuration/pkg/clientset/fake"
 )
 
 func TestClientset(t *testing.T) {

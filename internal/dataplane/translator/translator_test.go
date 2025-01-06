@@ -23,15 +23,19 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
@@ -625,7 +629,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 
 func TestCACertificate(t *testing.T) {
 	assert := assert.New(t)
-	caCert1, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	caCert1, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	t.Run("valid CACertificate is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -666,7 +670,7 @@ func TestCACertificate(t *testing.T) {
 		}, state.CACertificates[0])
 	})
 
-	caCert2, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	caCert2, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	t.Run("multiple CACertificates are processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -718,7 +722,7 @@ func TestCACertificate(t *testing.T) {
 		assert.Len(state.CACertificates, 2)
 	})
 
-	expiredCACert, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
+	expiredCACert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
 	t.Run("invalid CACertificates are ignored", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
@@ -829,7 +833,6 @@ func TestCACertificate(t *testing.T) {
 }
 
 func TestServiceClientCertificate(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("valid client-cert annotation", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -858,6 +861,17 @@ func TestServiceClientCertificate(t *testing.T) {
 												},
 											},
 										},
+										{
+											Path: "/bar",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "bar-svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -872,12 +886,23 @@ func TestServiceClientCertificate(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"tls.crt": crt,
+					"tls.key": key,
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       k8stypes.UID("ffaabbcc-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret2",
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
@@ -893,6 +918,17 @@ func TestServiceClientCertificate(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "https",
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "secret2",
+						"konghq.com/protocol":    "https",
 					},
 				},
 			},
@@ -908,14 +944,16 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates),
+		assert.Equal(t, 1, len(state.Certificates),
 			"expected one certificates to be rendered")
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Certificates[0].ID)
 
-		assert.Equal(1, len(state.Services))
-		assert.Equal("7428fb98-180b-4702-a91f-61351a33c6e4",
+		assert.Equal(t, 2, len(state.Services))
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[0].ClientCertificate.ID)
+		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
+			*state.Services[1].ClientCertificate.ID)
 	})
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
@@ -968,6 +1006,7 @@ func TestServiceClientCertificate(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "https",
 					},
 				},
 			},
@@ -982,11 +1021,103 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(0, len(state.Certificates),
+		assert.Equal(t, 0, len(state.Certificates),
 			"expected no certificates to be rendered")
 
-		assert.Equal(1, len(state.Services))
-		assert.Nil(state.Services[0].ClientCertificate)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
+	})
+	t.Run("valid cert+secret but incompatible protocol", func(t *testing.T) {
+		ingresses := []*netv1.Ingress{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "foo-svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					TLS: []netv1.IngressTLS{
+						{
+							SecretName: "secret1",
+							Hosts:      []string{"foo.com"},
+						},
+					},
+				},
+			},
+		}
+		crt, key := certificate.MustGenerateCertPEMFormat()
+		secrets := []*corev1.Secret{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "secret1",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"tls.crt": crt,
+					"tls.key": key,
+				},
+			},
+		}
+		services := []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo-svc",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "secret1",
+						"konghq.com/protocol":    "http",
+					},
+				},
+			},
+		}
+		for _, service := range services {
+			scheme, err := scheme.Get()
+			require.NoError(t, err)
+			err = util.PopulateTypeMeta(service, scheme)
+			require.NoError(t, err)
+		}
+		store, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: ingresses,
+			Secrets:     secrets,
+			Services:    services,
+		})
+		require.NoError(t, err)
+		p := mustNewTranslator(t, store)
+		result := p.BuildKongConfig()
+
+		require.Len(t, result.TranslationFailures, 1)
+		failure := result.TranslationFailures[0]
+		assert.Contains(t, failure.Message(), "Client certificate requested for incompatible service protocol 'http'")
+
+		state := result.KongState
+		require.NotNil(t, state)
+		assert.Equal(t, 1, len(state.Services))
+		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 }
 
@@ -2623,7 +2754,7 @@ func TestTranslatorSecret(t *testing.T) {
 			"expected no certificates to be rendered with empty secret")
 	})
 
-	crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt, key := certificate.MustGenerateCertPEMFormat()
 	t.Run("duplicate certificates order by time", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -2985,7 +3116,7 @@ func TestTranslatorSNI(t *testing.T) {
 				},
 			},
 		}
-		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -3633,8 +3764,9 @@ func TestGetEndpoints(t *testing.T) {
 		port              *corev1.ServicePort
 		proto             corev1.Protocol
 		fn                func(string, string) ([]*discoveryv1.EndpointSlice, error)
-		result            []util.Endpoint
 		isServiceUpstream bool
+		clusterDomain     string
+		result            []util.Endpoint
 	}{
 		{
 			name:  "no service should return 0 endpoints",
@@ -3766,6 +3898,44 @@ func TestGetEndpoints(t *testing.T) {
 				},
 			},
 			isServiceUpstream: true,
+		},
+		{
+			name: "a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint properly mapping to provided custom domain",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+							Port:       2080,
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+				Port:       2080,
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{}, nil
+			},
+			clusterDomain: "acme.com",
+			result: []util.Endpoint{
+				{
+					Address: "foo.bar.svc.acme.com",
+					Port:    "2080",
+				},
+			},
 		},
 		{
 			name: "should return no endpoints when there is an error searching for endpoints",
@@ -3993,8 +4163,11 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn,
-				testCase.isServiceUpstream)
+			clusterDomain := consts.DefaultClusterDomain
+			if testCase.clusterDomain != "" {
+				clusterDomain = testCase.clusterDomain
+			}
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream, clusterDomain)
 			require.Equal(t, testCase.result, result)
 		})
 	}
@@ -4268,9 +4441,9 @@ func TestPickPort(t *testing.T) {
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
 
-	crt1, key1 := certificate.MustGenerateSelfSignedCertPEMFormat()
-	crt2, key2 := certificate.MustGenerateSelfSignedCertPEMFormat()
-	crt3, key3 := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt1, key1 := certificate.MustGenerateCertPEMFormat()
+	crt2, key2 := certificate.MustGenerateCertPEMFormat()
+	crt3, key3 := certificate.MustGenerateCertPEMFormat()
 	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -4576,11 +4749,12 @@ func TestNewFeatureFlags(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		featureGates     map[string]bool
-		routerFlavor     dpconf.RouterFlavor
-		updateStatusFlag bool
-
-		expectedFeatureFlags FeatureFlags
+		featureGates          map[string]bool
+		routerFlavor          dpconf.RouterFlavor
+		updateStatusFlag      bool
+		enterpriseEdition     bool
+		supportRedirectPlugin bool
+		expectedFeatureFlags  FeatureFlags
 	}{
 		{
 			name:         "traditional compatible router and update status enabled",
@@ -4599,11 +4773,22 @@ func TestNewFeatureFlags(t *testing.T) {
 				ExpressionRoutes: true,
 			},
 		},
+		{
+			name: "ServiceFacade enabled and enterprise edition",
+			featureGates: map[string]bool{
+				featuregates.KongServiceFacade: true,
+			},
+			enterpriseEdition: true,
+			expectedFeatureFlags: FeatureFlags{
+				EnterpriseEdition: true,
+				KongServiceFacade: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag)
+			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition, tc.supportRedirectPlugin)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 		})
@@ -4621,7 +4806,7 @@ func (m *mockLicenseGetter) GetLicense() mo.Option[kong.License] {
 func TestTranslator_License(t *testing.T) {
 	s, _ := store.NewFakeStore(store.FakeObjects{})
 	p := mustNewTranslator(t, s)
-
+	p.featureFlags.EnterpriseEdition = true
 	t.Run("no license is populated by default", func(t *testing.T) {
 		result := p.BuildKongConfig()
 		require.Empty(t, result.KongState.Licenses)
@@ -4646,6 +4831,19 @@ func TestTranslator_License(t *testing.T) {
 		license := result.KongState.Licenses[0]
 		require.Equal(t, "license-id", *license.ID)
 		require.Equal(t, "license-payload", *license.Payload)
+	})
+
+	t.Run("no license is populated when license getter returns a license but enterprise edition is false", func(t *testing.T) {
+		p.featureFlags.EnterpriseEdition = false
+		licenseGetterWithLicense := &mockLicenseGetter{
+			license: mo.Some(kong.License{
+				ID:      lo.ToPtr("license-id"),
+				Payload: lo.ToPtr("license-payload"),
+			}),
+		}
+		p.InjectLicenseGetter(licenseGetterWithLicense)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.KongState.Licenses)
 	})
 }
 
@@ -4792,6 +4990,93 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 				{Name: "consumer", Namespace: "bar"},
 			},
 		},
+		{
+			name: "Ingress using Services and KongServiceFacades annotated with KongUpstreamPolicy",
+			objectsInStore: store.FakeObjects{
+				KongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "upstream-policy1",
+							Namespace: "bar",
+						},
+					},
+				},
+				Services: []*corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "bar",
+							Annotations: map[string]string{
+								kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							Ports: []corev1.ServicePort{
+								{
+									Port: 80,
+								},
+							},
+						},
+					},
+				},
+				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service-facade1",
+							Namespace: "bar",
+							Annotations: map[string]string{
+								kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
+							},
+						},
+						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
+							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
+								Name: "service1",
+								Port: 80,
+							},
+						},
+					},
+				},
+				IngressesV1: []*netv1.Ingress{
+					builder.NewIngress("ingress1", "kong").
+						WithNamespace("bar").
+						WithRules(netv1.IngressRule{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/service",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "service1",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+										{
+											Path: "/service-facade",
+											Backend: netv1.IngressBackend{
+												Resource: &corev1.TypedLocalObjectReference{
+													Name:     "service-facade1",
+													Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												},
+											},
+										},
+									},
+								},
+							},
+						}).
+						Build(),
+				},
+			},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
+				{Name: "ingress1", Namespace: "bar"},
+				{Name: "service1", Namespace: "bar"},
+				{Name: "service-facade1", Namespace: "bar"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4811,14 +5096,23 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 	}
 }
 
+type fakeSchemaServiceProvier struct{}
+
+func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
+	return UnavailableSchemaService{}
+}
+
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
-	p, err := NewTranslator(zapr.NewLogger(zap.NewNop()), storer,
+	logger := zapr.NewLogger(zap.NewNop())
+	p, err := NewTranslator(logger, storer, "",
 		FeatureFlags{
 			// We'll assume these are true for all tests.
 			FillIDs:                           true,
 			ReportConfiguredKubernetesObjects: true,
 			KongServiceFacade:                 true,
 		},
+		fakeSchemaServiceProvier{},
+		consts.DefaultClusterDomain,
 	)
 	require.NoError(t, err)
 	return p
@@ -4864,4 +5158,232 @@ func TestTargetsForEndpoints(t *testing.T) {
 	targets := targetsForEndpoints(input)
 
 	require.Equal(t, wantTargets, targets)
+}
+
+func TestUpdateTargetMap(t *testing.T) {
+	testCases := []struct {
+		name        string
+		newTarget   kongstate.Target
+		currentMap  map[string]kongstate.Target
+		expectedMap map[string]kongstate.Target
+	}{
+		{
+			name: "empty map",
+			newTarget: kongstate.Target{
+				Target: kong.Target{
+					Target: lo.ToPtr("1.1.1.1"),
+					Weight: lo.ToPtr(10),
+				},
+			},
+			currentMap: map[string]kongstate.Target{},
+			expectedMap: map[string]kongstate.Target{
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+		},
+		{
+			name: "other target in map",
+			newTarget: kongstate.Target{
+				Target: kong.Target{
+					Target: lo.ToPtr("1.1.1.1"),
+					Weight: lo.ToPtr(10),
+				},
+			},
+			currentMap: map[string]kongstate.Target{
+				"2.2.2.2": {
+					Target: kong.Target{
+						Target: lo.ToPtr("2.2.2.2"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+			expectedMap: map[string]kongstate.Target{
+				"2.2.2.2": {
+					Target: kong.Target{
+						Target: lo.ToPtr("2.2.2.2"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+		},
+		{
+			name: "like target in map",
+			newTarget: kongstate.Target{
+				Target: kong.Target{
+					Target: lo.ToPtr("1.1.1.1"),
+					Weight: lo.ToPtr(10),
+				},
+			},
+			currentMap: map[string]kongstate.Target{
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(10),
+					},
+				},
+			},
+			expectedMap: map[string]kongstate.Target{
+				"1.1.1.1": {
+					Target: kong.Target{
+						Target: lo.ToPtr("1.1.1.1"),
+						Weight: lo.ToPtr(20),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := updateTargetMap(tc.currentMap, tc.newTarget)
+			require.Equal(t, tc.expectedMap, result)
+		})
+	}
+}
+
+func TestTranslator_UpdateStore(t *testing.T) {
+	originalStore, err := store.NewFakeStore(store.FakeObjects{})
+	require.NoError(t, err)
+	translator := mustNewTranslator(t, originalStore)
+
+	originalBuildConfigResult := translator.BuildKongConfig()
+
+	newStore, err := store.NewCacheStoresFromObjs(
+		&kongv1.KongConsumer{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongConsumer",
+				APIVersion: kongv1.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "consumer1",
+				Namespace: "bar",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Username: "consumer1",
+		},
+	)
+	require.NoError(t, err)
+	translator.UpdateCache(newStore)
+
+	newBuildConfigResult := translator.BuildKongConfig()
+	require.NotEqual(t, originalBuildConfigResult.KongState, newBuildConfigResult.KongState, "KongState should be different after updating the store")
+	require.Len(t, newBuildConfigResult.KongState.Consumers, 1, "expected 1 consumer in the KongState")
+}
+
+func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
+	cert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue()) // Translator validates the certificate.
+	s, err := store.NewFakeStore(store.FakeObjects{
+		Services: []*corev1.Service{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Service",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "svc",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey:        "2",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca",
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "http",
+							Port: 80,
+						},
+					},
+				},
+			},
+		},
+		Secrets: []*corev1.Secret{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ca",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"cert": cert,
+					"id":   []byte("ca-cert-id"),
+				},
+			},
+		},
+		IngressesV1: []*netv1.Ingress{
+			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: netv1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress",
+					Namespace: "ns",
+				},
+				Spec: netv1.IngressSpec{
+					IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+					Rules: []netv1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path:     "/path",
+											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	p := mustNewTranslator(t, s)
+
+	result := p.BuildKongConfig()
+	require.Empty(t, result.TranslationFailures, "expected no translation failures")
+
+	require.Len(t, result.KongState.Services, 1)
+	svc := result.KongState.Services[0]
+	require.NotNil(t, svc)
+	assert.Equal(t, svc.TLSVerify, lo.ToPtr(true))
+	assert.Equal(t, svc.TLSVerifyDepth, lo.ToPtr(2))
+
+	require.Len(t, svc.CACertificates, 1)
+	assert.Equal(t, "ca-cert-id", *svc.CACertificates[0])
 }

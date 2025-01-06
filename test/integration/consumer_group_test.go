@@ -12,6 +12,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,10 +20,12 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1beta1"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -36,11 +39,16 @@ func TestConsumerGroup(t *testing.T) {
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
-	d, s, i, p := deployMinimalSvcWithKeyAuth(ctx, t, ns.Name)
-	cleaner.Add(d)
-	cleaner.Add(s)
-	cleaner.Add(i)
-	cleaner.Add(p)
+	// path is the basic path used for most of the test
+	path := "/test-consumer-group/basic"
+	// multiPath is the path used to test consumer group + route plugins
+	multiPath := "/test-consumer-group/multi"
+
+	deployment, service, ingress, keyauthPlugin := deployMinimalSvcWithKeyAuth(ctx, t, ns.Name, path)
+	cleaner.Add(deployment)
+	cleaner.Add(service)
+	cleaner.Add(ingress)
+	cleaner.Add(keyauthPlugin)
 
 	addedHeader := header{
 		K: "X-Test-Header",
@@ -89,6 +97,15 @@ func TestConsumerGroup(t *testing.T) {
 		ctx, t, ns.Name, "test-consumer-group-2", pluginRateLimit.Name,
 	)
 	cleaner.Add(rateLimitGroup)
+	// 3 has consumers but no plugins
+	nothingGroup := configureConsumerGroupWithPlugins(
+		ctx, t, ns.Name, "test-consumer-group-3",
+	)
+	cleaner.Add(nothingGroup)
+	addHeaderRouteGroup := configureConsumerGroupWithPlugins(
+		ctx, t, ns.Name, "test-consumer-group-4", pluginRespTrans.Name,
+	)
+	cleaner.Add(addHeaderRouteGroup)
 
 	rateLimitHeader := header{
 		K: "RateLimit-Limit",
@@ -130,10 +147,10 @@ func TestConsumerGroup(t *testing.T) {
 	t.Log("checking if consumer has plugin configured correctly based on consumer group membership")
 	for _, consumer := range consumers {
 		require.Eventually(t, func() bool {
-			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, "/", map[string]string{
+			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 				"apikey": consumer.Name,
 			})
-			resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
+			resp, err := helpers.DefaultHTTPClient().Do(req)
 			if err != nil {
 				t.Logf("WARNING: consumer %q failed to make a request: %v", consumer.Name, err)
 				return false
@@ -158,10 +175,77 @@ func TestConsumerGroup(t *testing.T) {
 			return true
 		}, ingressWait, waitTick)
 	}
+
+	t.Log("checking plugins attached to a consumer group and route only apply when request matches both")
+	four, fourSecret := configureConsumerWithAPIKey(ctx, t, ns.Name, "test-consumer-4", "test-consumer-group-4")
+	cleaner.Add(four)
+	cleaner.Add(fourSecret)
+
+	multiIngress := generators.NewIngressForService(multiPath, map[string]string{
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+		annotations.AnnotationPrefix + annotations.PluginsKey:   strings.Join([]string{keyauthPlugin.Name, pluginRespTrans.Name}, ","),
+	}, service)
+	multiIngress.Spec.IngressClassName = kong.String(consts.IngressClass)
+	multiIngress.Name = "multi"
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, multiIngress))
+	cleaner.Add(multiIngress)
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		// this should see the header, it uses a consumer in the group on the associated route
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+			"apikey": four.Name,
+		})
+		resp, err := helpers.DefaultHTTPClient().Do(req)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer resp.Body.Close()
+		if !assert.Equal(c, resp.StatusCode, http.StatusOK) {
+			return
+		}
+		hv := resp.Header.Get(addedHeader.K)
+		if !assert.Equal(c, addedHeader.V, hv) {
+			return
+		}
+
+		// this should not see the header, it uses a consumer in the group on another route
+		clearReq := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+			"apikey": four.Name,
+		})
+		clearResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(clearReq)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer clearResp.Body.Close()
+		if !assert.Equal(c, clearResp.StatusCode, http.StatusOK) {
+			return
+		}
+		hv = clearResp.Header.Get(addedHeader.K)
+		if !assert.NotEqual(c, addedHeader.V, hv) {
+			return
+		}
+
+		// this should not see the header, it uses a consumer outside the group on the associated route
+		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+			"apikey": "test-consumer-3",
+		})
+		emptyResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(empty)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer emptyResp.Body.Close()
+		if !assert.Equal(c, emptyResp.StatusCode, http.StatusOK) {
+			return
+		}
+		hv = emptyResp.Header.Get(addedHeader.K)
+		if !assert.NotEqual(c, addedHeader.V, hv) {
+			return
+		}
+	}, ingressWait, waitTick)
 }
 
 func deployMinimalSvcWithKeyAuth(
-	ctx context.Context, t *testing.T, namespace string,
+	ctx context.Context, t *testing.T, namespace, path string,
 ) (*appsv1.Deployment, *corev1.Service, *netv1.Ingress, *kongv1.KongPlugin) {
 	const pluginKeyAuthName = "key-auth"
 	t.Logf("configuring plugin %q (to give consumers an identity)", pluginKeyAuthName)
@@ -194,7 +278,7 @@ func deployMinimalSvcWithKeyAuth(
 	require.NoError(t, err)
 
 	t.Logf("creating an ingress for service %q with plugin %q attached", service.Name, pluginKeyAuthName)
-	ingress := generators.NewIngressForService("/", map[string]string{
+	ingress := generators.NewIngressForService(path, map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.PluginsKey:   pluginKeyAuthName,
 	}, service)
@@ -271,10 +355,12 @@ func configureConsumerWithAPIKey(
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
+				},
 			},
 			StringData: map[string]string{
-				"key":          name,
-				"kongCredType": "key-auth",
+				"key": name,
 			},
 		},
 		metav1.CreateOptions{},

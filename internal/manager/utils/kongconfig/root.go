@@ -201,8 +201,6 @@ func GetRoots(
 	eg, ctx := errgroup.WithContext(ctx)
 
 	for _, client := range kongClients {
-		client := client
-
 		eg.Go(func() error {
 			return retry.Do(
 				func() error {

@@ -36,6 +36,10 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		}
 	}
 
+	for _, cg := range rawstate.ConsumerGroups {
+		kongState.ConsumerGroups = append(kongState.ConsumerGroups, kongstate.ConsumerGroup{ConsumerGroup: sanitizeConsumerGroup(*cg.ConsumerGroup)})
+	}
+
 	targets := make(map[string][]*kong.Target)
 	for _, u := range rawstate.Targets {
 		if u.Upstream != nil && u.Upstream.ID != nil {
@@ -70,6 +74,8 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		}
 		kongState.Upstreams = append(kongState.Upstreams, sanitizeUpstream(newUpstream))
 	}
+
+	kongState.Vaults = rawVaultsToVaults(rawstate.Vaults)
 
 	kongState.CACertificates = rawCACertificatesToCACertificates(rawstate.CACertificates)
 	kongState.Certificates = rawCertificatesToCertificates(rawstate.Certificates)
@@ -164,6 +170,15 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		}
 	}
 
+	for _, entity := range rawstate.CustomEntities {
+		entityType := entity.Type()
+		obj := entity.Object()
+		ksEntity := kongstate.CustomEntity{
+			Object: obj,
+		}
+		kongState.AddCustomEntity(string(entityType), kongstate.EntitySchema{}, ksEntity)
+	}
+
 	return kongState
 }
 
@@ -217,6 +232,20 @@ func rawCACertificatesToCACertificates(caCertificates []*kong.CACertificate) []k
 	return certs
 }
 
+func rawVaultsToVaults(rawVaults []*kong.Vault) []kongstate.Vault {
+	if len(rawVaults) == 0 {
+		return nil
+	}
+	vaults := []kongstate.Vault{}
+
+	for _, v := range rawVaults {
+		vaults = append(vaults, kongstate.Vault{
+			Vault: sanitizeVault(*v),
+		})
+	}
+	return vaults
+}
+
 // -----------------------------------------------------------------------------
 // Sanitization functions
 // -----------------------------------------------------------------------------
@@ -267,10 +296,22 @@ func sanitizeCACertificate(caCertificate kong.CACertificate) kong.CACertificate 
 	return caCertificate
 }
 
+func sanitizeVault(v kong.Vault) kong.Vault {
+	v.ID = nil
+	v.CreatedAt = nil
+	return v
+}
+
 func sanitizeConsumer(consumer kong.Consumer) kong.Consumer {
 	consumer.ID = nil
 	consumer.CreatedAt = nil
 	return consumer
+}
+
+func sanitizeConsumerGroup(consumerGroup kong.ConsumerGroup) kong.ConsumerGroup {
+	consumerGroup.ID = nil
+	consumerGroup.CreatedAt = nil
+	return consumerGroup
 }
 
 type authT interface {

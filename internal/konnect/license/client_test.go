@@ -10,21 +10,25 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 )
 
 type mockKonnectLicenseServer struct {
 	response   []byte
 	statusCode int
+	t          *testing.T
 }
 
-func newMockKonnectLicenseServer(response []byte, statusCode int) *mockKonnectLicenseServer {
+func newMockKonnectLicenseServer(t *testing.T, response []byte, statusCode int) *mockKonnectLicenseServer {
 	return &mockKonnectLicenseServer{
+		t:          t,
 		response:   response,
 		statusCode: statusCode,
 	}
 }
 
-func (m *mockKonnectLicenseServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+func (m *mockKonnectLicenseServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
 	w.WriteHeader(m.statusCode)
 	_, _ = w.Write(m.response)
 }
@@ -150,7 +154,7 @@ func TestLicenseClient(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			server := newMockKonnectLicenseServer(tc.response, tc.status)
+			server := newMockKonnectLicenseServer(t, tc.response, tc.status)
 			ts := httptest.NewServer(server)
 			defer ts.Close()
 

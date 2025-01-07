@@ -21,7 +21,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
       with:
         install: false
 
@@ -29,7 +29,7 @@ jobs:
       run: make bench | tee bench.out
 
     - name: Store benchmark result
-      uses: benchmark-action/github-action-benchmark@v1
+      uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
       with:
         name: Go Benchmark
         tool: 'go'

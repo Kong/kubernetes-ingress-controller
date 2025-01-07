@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736249422161,
+  "lastUpdate": 1736251087321,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -19824,6 +19824,102 @@ window.BENCHMARK_DATA = {
             "value": 1,
             "unit": "allocs/op",
             "extra": "1529832 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "distinct": true,
+          "id": "fdff9ce55e7edfbc7091ccedea9967bd6715f496",
+          "message": "chore(ci): use pull_request instead of pull_request_target (#6743)",
+          "timestamp": "2025-01-07T12:53:12+01:00",
+          "tree_id": "f824873f55c26c923215ec7dca740069deb137c5",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/fdff9ce55e7edfbc7091ccedea9967bd6715f496"
+        },
+        "date": 1736250934675,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 136.8,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "8346481 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 136.8,
+            "unit": "ns/op",
+            "extra": "8346481 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "8346481 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "8346481 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups",
+            "value": 289,
+            "unit": "ns/op\t     512 B/op\t       1 allocs/op",
+            "extra": "4365553 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups - ns/op",
+            "value": 289,
+            "unit": "ns/op",
+            "extra": "4365553 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups - B/op",
+            "value": 512,
+            "unit": "B/op",
+            "extra": "4365553 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups - allocs/op",
+            "value": 1,
+            "unit": "allocs/op",
+            "extra": "4365553 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers",
+            "value": 442.5,
+            "unit": "ns/op\t     768 B/op\t       1 allocs/op",
+            "extra": "2260022 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers - ns/op",
+            "value": 442.5,
+            "unit": "ns/op",
+            "extra": "2260022 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers - B/op",
+            "value": 768,
+            "unit": "B/op",
+            "extra": "2260022 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers - allocs/op",
+            "value": 1,
+            "unit": "allocs/op",
+            "extra": "2260022 times\n4 procs"
           }
         ]
       }

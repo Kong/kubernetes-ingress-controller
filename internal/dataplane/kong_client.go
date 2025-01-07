@@ -517,7 +517,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		return gatewaysSyncErr
 	}
 
-	// Send configuration to Konnect only when successfully applied configuration to gateways.
+	// Send configuration to Konnect only when successfully applied configuration to Kong Gateways run in cluster.
 	c.maybeUpdateKonnectKongState(parsingResult.KongState, isFallback)
 	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
 	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)

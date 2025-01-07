@@ -99,7 +99,7 @@ func NewConfigSynchronizer(p ConfigSynchronizerParams) *ConfigSynchronizer {
 
 var _ manager.LeaderElectionRunnable = &ConfigSynchronizer{}
 
-// Start starts the loop to receive configuration and uplaod configuration to Konnect.
+// Start starts the loop to receive configuration and upload configuration to Konnect.
 func (s *ConfigSynchronizer) Start(ctx context.Context) error {
 	s.logger.Info("Starting Konnect configuration synchronizer")
 
@@ -218,8 +218,7 @@ func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context
 	}
 
 	// Upload the configuration to Konnect.
-	err := s.uploadConfig(ctx, s.konnectAdminClient, targetCfg)
-	if err != nil {
+	if err := s.uploadConfig(ctx, s.konnectAdminClient, targetCfg); err != nil {
 		s.logger.Error(err, "Failed to upload configuration to Konnect")
 		logKonnectErrors(s.logger, err)
 	}

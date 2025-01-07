@@ -45,15 +45,15 @@ func TestFilterHostnames(t *testing.T) {
 			Listeners: []gatewayapi.Listener{
 				{
 					Name:     "listener-1",
-					Hostname: util.StringToGatewayAPIHostnamePtr("very.specific.com"),
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("very.specific.com"),
 				},
 				{
 					Name:     "listener-2",
-					Hostname: util.StringToGatewayAPIHostnamePtr("*.wildcard.io"),
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.wildcard.io"),
 				},
 				{
 					Name:     "listener-3",
-					Hostname: util.StringToGatewayAPIHostnamePtr("*.anotherwildcard.io"),
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.anotherwildcard.io"),
 				},
 				{
 					Name: "listener-4",
@@ -81,16 +81,16 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
-						util.StringToGatewayAPIHostname("*.nonmatchingwildcard.io"),
-						util.StringToGatewayAPIHostname("very.specific.com"),
+						"*.anotherwildcard.io",
+						"*.nonmatchingwildcard.io",
+						"very.specific.com",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("very.specific.com"),
+						"very.specific.com",
 					},
 				},
 			},
@@ -106,15 +106,15 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("non.matching.com"),
-						util.StringToGatewayAPIHostname("*.specific.com"),
+						"non.matching.com",
+						"*.specific.com",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("very.specific.com"),
+						"very.specific.com",
 					},
 				},
 			},
@@ -130,20 +130,20 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("non.matching.com"),
-						util.StringToGatewayAPIHostname("wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.wildcard.io"),
-						util.StringToGatewayAPIHostname("bar.wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
+						"non.matching.com",
+						"wildcard.io",
+						"foo.wildcard.io",
+						"bar.wildcard.io",
+						"foo.bar.wildcard.io",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("foo.wildcard.io"),
-						util.StringToGatewayAPIHostname("bar.wildcard.io"),
-						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
+						"foo.wildcard.io",
+						"bar.wildcard.io",
+						"foo.bar.wildcard.io",
 					},
 				},
 			},
@@ -159,14 +159,14 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+						"*.anotherwildcard.io",
 					},
 				},
 			},
 			expectedHTTPRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+						"*.anotherwildcard.io",
 					},
 				},
 			},
@@ -200,8 +200,8 @@ func TestFilterHostnames(t *testing.T) {
 			httpRoute: &gatewayapi.HTTPRoute{
 				Spec: gatewayapi.HTTPRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
-						util.StringToGatewayAPIHostname("specific.but.wrong.com"),
-						util.StringToGatewayAPIHostname("wildcard.io"),
+						"specific.but.wrong.com",
+						"wildcard.io",
 					},
 				},
 			},

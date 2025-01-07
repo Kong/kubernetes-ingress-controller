@@ -35,7 +35,7 @@ type UpdateStrategyDBMode struct {
 	isKonnect         bool
 	logger            logr.Logger
 	resourceErrors    []ResourceError
-	resourceErrorLock *sync.Mutex
+	resourceErrorLock sync.Mutex
 }
 
 // UpdateStrategyDBModeOpt is a functional option for UpdateStrategyDBMode.
@@ -57,13 +57,11 @@ func NewUpdateStrategyDBMode(
 	opts ...UpdateStrategyDBModeOpt,
 ) *UpdateStrategyDBMode {
 	s := &UpdateStrategyDBMode{
-		client:            client,
-		dumpConfig:        dumpConfig,
-		version:           version,
-		concurrency:       concurrency,
-		logger:            logger,
-		resourceErrors:    []ResourceError{},
-		resourceErrorLock: &sync.Mutex{},
+		client:      client,
+		dumpConfig:  dumpConfig,
+		version:     version,
+		concurrency: concurrency,
+		logger:      logger,
 	}
 	for _, opt := range opts {
 		opt(s)

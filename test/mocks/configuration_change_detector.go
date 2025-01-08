@@ -14,7 +14,7 @@ type ConfigurationChangeDetector struct {
 }
 
 func (m ConfigurationChangeDetector) HasConfigurationChanged(
-	context.Context, []byte, []byte, *file.Content, sendconfig.KonnectAwareClient, sendconfig.StatusClient,
+	context.Context, []byte, []byte, *file.Content, sendconfig.StatusClient,
 ) (bool, error) {
 	return m.ConfigurationChanged, nil
 }

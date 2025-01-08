@@ -199,7 +199,7 @@ func Run(
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
-	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
+	configurationChangeDetector := sendconfig.NewKongGatewayConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
 	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()

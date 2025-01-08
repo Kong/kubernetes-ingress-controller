@@ -34,7 +34,7 @@ jobs:
           path: coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
         with:
           name: combined-coverage
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: buildpulse/buildpulse-action@v0.11.0
+        uses: buildpulse/buildpulse-action@d0d30f53585cf16b2e01811a5a753fd47968654a # v0.11.0
         with:
           account: 962416
           repository: 127765544

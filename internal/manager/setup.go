@@ -503,7 +503,7 @@ func setupLicenseGetter(
 	return nil, nil
 }
 
-// setupKonnectConfigSynchronizerWithMgr sets up Konnect config sychronizer and adds it to the manager runnables.
+// setupKonnectConfigSynchronizerWithMgr sets up Konnect config synchronizer and adds it to the manager runnables.
 func setupKonnectConfigSynchronizerWithMgr(
 	ctx context.Context,
 	mgr manager.Manager,
@@ -520,11 +520,9 @@ func setupKonnectConfigSynchronizerWithMgr(
 			ConfigUploadTicker:     clock.NewTickerWithDuration(cfg.Konnect.UploadConfigPeriod),
 			KonnectClientFactory:   adminapi.NewKonnectClientFactory(cfg.Konnect, ctrl.LoggerFrom(ctx).WithName("konnect-client-factory")),
 			UpdateStrategyResolver: updateStrategyResolver,
-			ConfigChangeDetector: sendconfig.NewDefaultConfigurationChangeDetector(
-				ctrl.LoggerFrom(ctx).WithName("konnect-config-change-detector"),
-			),
-			ConfigStatusNotifier: configStatusNotifier,
-			MetricsRecorder:      metricsRecorder,
+			ConfigChangeDetector:   sendconfig.NewKonnectConfigurationChangeDetector(),
+			ConfigStatusNotifier:   configStatusNotifier,
+			MetricsRecorder:        metricsRecorder,
 		},
 	)
 	err := mgr.Add(s)

@@ -60,7 +60,7 @@ func PerformUpdate(
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
-		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
+		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client.AdminAPIClient())
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect configuration change: %w", err)
 		}

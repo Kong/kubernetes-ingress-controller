@@ -18,53 +18,40 @@ const (
 )
 
 type ConfigurationChangeDetector interface {
-	// HasConfigurationChanged verifies whether configuration has changed by comparing
-	// old and new config's SHAs.
-	// In case the SHAs are equal, it still can return true if a client is considered
-	// crashed or just booted up based on its status.
-	// In case the status indicates an empty config and the desired config is also empty
-	// this will return false to prevent continuously sending empty configuration to Gateway.
 	HasConfigurationChanged(
 		ctx context.Context,
 		oldSHA, newSHA []byte,
 		targetConfig *file.Content,
-		client KonnectAwareClient,
 		statusClient StatusClient,
 	) (bool, error)
-}
-
-type KonnectAwareClient interface {
-	IsKonnect() bool
 }
 
 type StatusClient interface {
 	Status(context.Context) (*kong.Status, error)
 }
 
-type DefaultConfigurationChangeDetector struct {
+// KongGatewayConfigurationChangeDetector detects changes in Kong Gateway configuration. Besides comparing SHA hashes,
+// it also checks if the Kong Gateway has no configuration yet or if the configuration to be pushed is empty.
+type KongGatewayConfigurationChangeDetector struct {
 	logger logr.Logger
 }
 
-func NewDefaultConfigurationChangeDetector(logger logr.Logger) *DefaultConfigurationChangeDetector {
-	return &DefaultConfigurationChangeDetector{logger: logger}
+func NewKongGatewayConfigurationChangeDetector(logger logr.Logger) *KongGatewayConfigurationChangeDetector {
+	return &KongGatewayConfigurationChangeDetector{logger: logger}
 }
 
-func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
+// HasConfigurationChanged verifies whether configuration has changed by comparing
+// old and new config's SHAs. In case the SHAs are equal, it still can return true if a client is considered  crashed or
+// just booted up based on its status. In case the status indicates an empty config and the desired config is also empty
+// this will return false to prevent continuously sending empty configuration to Gateway.
+func (d *KongGatewayConfigurationChangeDetector) HasConfigurationChanged(
 	ctx context.Context,
 	oldSHA, newSHA []byte,
 	targetConfig *file.Content,
-	client KonnectAwareClient,
 	statusClient StatusClient,
 ) (bool, error) {
 	if !bytes.Equal(oldSHA, newSHA) {
 		return true, nil
-	}
-
-	// In case of Konnect, we skip further steps that are meant to detect Kong instances crash/reset
-	// that are not relevant for Konnect.
-	// We're sure that if oldSHA and newSHA are equal, we are safe to skip the update.
-	if client.IsKonnect() {
-		return false, nil
 	}
 
 	// Check if a Kong instance has no configuration yet (could mean it crashed, was rebooted, etc.).
@@ -86,10 +73,9 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	return false, nil
 }
 
-// kongHasNoConfiguration checks Kong's status endpoint and read its config hash.
-// If the config hash reported by Kong is the known empty hash, it's considered crashed.
-// This allows providing configuration to Kong instances that have unexpectedly crashed and
-// lost their configuration.
+// kongHasNoConfiguration checks Kong's status endpoint and read its config hash. If the config hash reported by Kong is
+// the known empty hash, it's considered crashed. This allows providing configuration to Kong instances that have
+// unexpectedly crashed and lost their configuration.
 func kongHasNoConfiguration(ctx context.Context, client StatusClient) (bool, error) {
 	status, err := client.Status(ctx)
 	if err != nil {
@@ -101,4 +87,21 @@ func kongHasNoConfiguration(ctx context.Context, client StatusClient) (bool, err
 	}
 
 	return false, nil
+}
+
+// KonnectConfigurationChangeDetector detects changes in Konnect configuration by comparing SHA hashes only.
+type KonnectConfigurationChangeDetector struct{}
+
+func NewKonnectConfigurationChangeDetector() *KonnectConfigurationChangeDetector {
+	return &KonnectConfigurationChangeDetector{}
+}
+
+// HasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
+func (d *KonnectConfigurationChangeDetector) HasConfigurationChanged(
+	_ context.Context,
+	oldSHA, newSHA []byte,
+	_ *file.Content,
+	_ StatusClient,
+) (bool, error) {
+	return !bytes.Equal(oldSHA, newSHA), nil
 }

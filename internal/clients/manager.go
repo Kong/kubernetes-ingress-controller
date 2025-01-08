@@ -31,7 +31,6 @@ type ClientFactory interface {
 // AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
 // we should configure.
 type AdminAPIClientsProvider interface {
-	KonnectClient() *adminapi.KonnectClient
 	GatewayClients() []*adminapi.Client
 	GatewayClientsToConfigure() []*adminapi.Client
 }
@@ -74,10 +73,6 @@ type AdminAPIClientsManager struct {
 
 	// readinessReconciliationTicker is used to run readiness reconciliation loop.
 	readinessReconciliationTicker Ticker
-
-	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
-	// This client is used to synchronise configuration with Konnect's Control Plane Admin API.
-	konnectClient *adminapi.KonnectClient
 
 	// lock prevents concurrent access to the manager's fields.
 	lock sync.RWMutex
@@ -175,20 +170,6 @@ func (c *AdminAPIClientsManager) Notify(discoveredAPIs []adminapi.DiscoveredAdmi
 	case <-c.ctx.Done():
 	case c.discoveredAdminAPIsNotifyChan <- discoveredAPIs:
 	}
-}
-
-// SetKonnectClient sets a client that will be used to communicate with Konnect Control Plane Admin API.
-// If called multiple times, it will override the client.
-func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.KonnectClient) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.konnectClient = client
-}
-
-func (c *AdminAPIClientsManager) KonnectClient() *adminapi.KonnectClient {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	return c.konnectClient
 }
 
 // GatewayClients returns a copy of current client's slice. Konnect client won't be included.

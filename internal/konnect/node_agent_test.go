@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
@@ -363,7 +362,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 	agentReturned := make(chan struct{})
 	go func() {
 		err := nodeAgent.Start(ctx)
-		assert.NoError(t, err, "expected no error even when the context is cancelled")
+		require.ErrorIs(t, err, context.Canceled)
 		close(agentReturned)
 	}()
 
@@ -621,7 +620,7 @@ func runAgent(t *testing.T, nodeAgent *konnect.NodeAgent) {
 	agentReturned := make(chan struct{})
 	go func() {
 		err := nodeAgent.Start(ctx)
-		require.NoError(t, err, "expected no error even when the context is cancelled")
+		require.ErrorIs(t, err, context.Canceled)
 		close(agentReturned)
 	}()
 

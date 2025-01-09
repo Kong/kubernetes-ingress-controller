@@ -16,7 +16,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
         with:
           install: false
 
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
         with:
           install: false
 

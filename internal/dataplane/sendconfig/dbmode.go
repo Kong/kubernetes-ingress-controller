@@ -35,7 +35,17 @@ type UpdateStrategyDBMode struct {
 	isKonnect         bool
 	logger            logr.Logger
 	resourceErrors    []ResourceError
-	resourceErrorLock *sync.Mutex
+	resourceErrorLock sync.Mutex
+}
+
+// UpdateStrategyDBModeOpt is a functional option for UpdateStrategyDBMode.
+type UpdateStrategyDBModeOpt func(*UpdateStrategyDBMode)
+
+// WithDiagnostic sets the diagnostic server to send diffs to.
+func WithDiagnostic(diagnostic *diagnostics.ClientDiagnostic) UpdateStrategyDBModeOpt {
+	return func(s *UpdateStrategyDBMode) {
+		s.diagnostic = diagnostic
+	}
 }
 
 func NewUpdateStrategyDBMode(
@@ -43,19 +53,20 @@ func NewUpdateStrategyDBMode(
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
-	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
+	opts ...UpdateStrategyDBModeOpt,
 ) *UpdateStrategyDBMode {
-	return &UpdateStrategyDBMode{
-		client:            client,
-		dumpConfig:        dumpConfig,
-		version:           version,
-		concurrency:       concurrency,
-		diagnostic:        diagnostic,
-		logger:            logger,
-		resourceErrors:    []ResourceError{},
-		resourceErrorLock: &sync.Mutex{},
+	s := &UpdateStrategyDBMode{
+		client:      client,
+		dumpConfig:  dumpConfig,
+		version:     version,
+		concurrency: concurrency,
+		logger:      logger,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func NewUpdateStrategyDBModeKonnect(
@@ -63,10 +74,9 @@ func NewUpdateStrategyDBModeKonnect(
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
-	diagnostic *diagnostics.ClientDiagnostic,
 	logger logr.Logger,
 ) *UpdateStrategyDBMode {
-	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, diagnostic, logger)
+	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency, logger)
 	s.isKonnect = true
 	return s
 }

@@ -143,7 +143,7 @@ func (a *NodeAgent) Start(ctx context.Context) error {
 
 	// We're waiting here as that's the manager.Runnable interface requirement to block until the context is done.
 	<-ctx.Done()
-	return nil
+	return ctx.Err()
 }
 
 // NeedLeaderElection implements LeaderElectionRunnable interface to ensure that the node agent is run only when

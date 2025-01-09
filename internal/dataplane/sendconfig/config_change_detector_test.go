@@ -14,14 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 )
 
-type konnectAwareClientMock struct {
-	expected bool
-}
-
-func (c konnectAwareClientMock) IsKonnect() bool {
-	return c.expected
-}
-
 type statusClientMock struct {
 	expectedValue *kong.Status
 	expectedError error
@@ -105,15 +97,6 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			expectedResult: false,
 		},
 		{
-			name:           "oldSHA == newSHA, status would signal crash, but it's konnect",
-			oldSHA:         testSHAs[0],
-			newSHA:         testSHAs[0],
-			targetConfig:   createConfigContent(),
-			statusSHA:      sendconfig.WellKnownInitialHash,
-			isKonnect:      true,
-			expectedResult: false,
-		},
-		{
 			name:         "oldSHA == newSHA, status returns error",
 			oldSHA:       testSHAs[0],
 			newSHA:       testSHAs[0],
@@ -125,21 +108,59 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			konnectAwareClient := konnectAwareClientMock{expected: tc.isKonnect}
 			statusClient := statusClientMock{
 				expectedValue: &kong.Status{
 					ConfigurationHash: tc.statusSHA,
 				},
 				expectedError: tc.statusError,
 			}
-			detector := sendconfig.NewDefaultConfigurationChangeDetector(zapr.NewLogger(zap.NewNop()))
+			detector := sendconfig.NewKongGatewayConfigurationChangeDetector(zapr.NewLogger(zap.NewNop()))
 
-			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfig, konnectAwareClient, statusClient)
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfig, statusClient)
 			if tc.expectError {
 				require.Error(t, err)
 				return
 			}
 
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestKonnectConfigurationChangeDetector(t *testing.T) {
+	ctx := context.Background()
+	testSHAs := [][]byte{
+		[]byte("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
+		[]byte("82e35a63ceba37e9646434c5dd412ea577147f1e4a41ccde1614253187e3dbf9"),
+	}
+
+	testCases := []struct {
+		name           string
+		oldSHA, newSHA []byte
+		expectedResult bool
+		expectError    bool
+	}{
+		{
+			name:           "oldSHA != newSHA",
+			oldSHA:         testSHAs[0],
+			newSHA:         testSHAs[1],
+			expectedResult: true,
+		},
+		{
+			name:           "oldSHA == newSHA",
+			oldSHA:         testSHAs[0],
+			newSHA:         testSHAs[0],
+			expectedResult: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			detector := sendconfig.NewKonnectConfigurationChangeDetector()
+
+			// Passing nil for content and status client explicitly, as they are not used in this detector.
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, nil, nil)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedResult, result)
 		})

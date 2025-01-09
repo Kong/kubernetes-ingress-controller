@@ -22,7 +22,7 @@ go 1.23.2
 replace github.com/kong/go-kong => github.com/kong/go-kong v0.60.0
 
 require (
-	cloud.google.com/go/container v1.42.0
+	cloud.google.com/go/container v1.42.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/blang/semver/v4 v4.0.0
@@ -54,7 +54,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/zap v1.27.0
-	google.golang.org/api v0.214.0
+	google.golang.org/api v0.215.0
 	k8s.io/api v0.32.0
 	k8s.io/apiextensions-apiserver v0.32.0
 	k8s.io/apimachinery v0.32.0
@@ -94,7 +94,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect
-	github.com/Kong/sdk-konnect-go v0.1.15
+	github.com/Kong/sdk-konnect-go v0.1.18
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
@@ -138,7 +138,7 @@ require (
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
-	github.com/googleapis/gax-go/v2 v2.14.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -226,10 +226,10 @@ require (
 	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241118233622-e639e219e697 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 	google.golang.org/grpc v1.69.2
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

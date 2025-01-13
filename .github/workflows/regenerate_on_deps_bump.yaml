@@ -29,7 +29,7 @@ jobs:
       - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
         with:
           install: false
-      
+
       - name: go mod tidy
         run: go mod tidy
 
@@ -40,7 +40,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@users.noreply.github.com"
-          git add ./test/e2e/manifests ./config/crd
+          git add go.mod go.sum ./test/e2e/manifests ./config/crd
           git status
           git diff-index --quiet HEAD || \
           git commit -m "chore: regenerate" && \

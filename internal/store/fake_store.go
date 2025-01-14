@@ -276,6 +276,15 @@ func NewFakeStore(
 	return s, nil
 }
 
+// NewFakeStoreEmpty creates a store with no objects.
+func NewFakeStoreEmpty() Storer {
+	s, err := NewFakeStore(FakeObjects{})
+	if err != nil {
+		panic("NewEmptyFakeStore returns error - bug in the code: " + err.Error())
+	}
+	return s
+}
+
 // MarshalToYAML marshals the contents of every object in the store as YAML, separated by "---".
 // This is useful for debugging.
 func (objects FakeObjects) MarshalToYAML() ([]byte, error) {

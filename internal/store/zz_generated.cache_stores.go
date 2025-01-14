@@ -27,6 +27,7 @@ type CacheStores struct {
 	IngressClassV1                 cache.Store
 	Service                        cache.Store
 	Secret                         cache.Store
+	ConfigMap                      cache.Store
 	EndpointSlice                  cache.Store
 	HTTPRoute                      cache.Store
 	UDPRoute                       cache.Store
@@ -59,6 +60,7 @@ func NewCacheStores() CacheStores {
 		IngressClassV1:                 cache.NewStore(clusterWideKeyFunc),
 		Service:                        cache.NewStore(namespacedKeyFunc),
 		Secret:                         cache.NewStore(namespacedKeyFunc),
+		ConfigMap:                      cache.NewStore(namespacedKeyFunc),
 		EndpointSlice:                  cache.NewStore(namespacedKeyFunc),
 		HTTPRoute:                      cache.NewStore(namespacedKeyFunc),
 		UDPRoute:                       cache.NewStore(namespacedKeyFunc),
@@ -99,6 +101,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.Service.Get(obj)
 	case *corev1.Secret:
 		return c.Secret.Get(obj)
+	case *corev1.ConfigMap:
+		return c.ConfigMap.Get(obj)
 	case *discoveryv1.EndpointSlice:
 		return c.EndpointSlice.Get(obj)
 	case *gatewayapi.HTTPRoute:
@@ -160,6 +164,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Service.Add(obj)
 	case *corev1.Secret:
 		return c.Secret.Add(obj)
+	case *corev1.ConfigMap:
+		return c.ConfigMap.Add(obj)
 	case *discoveryv1.EndpointSlice:
 		return c.EndpointSlice.Add(obj)
 	case *gatewayapi.HTTPRoute:
@@ -221,6 +227,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Service.Delete(obj)
 	case *corev1.Secret:
 		return c.Secret.Delete(obj)
+	case *corev1.ConfigMap:
+		return c.ConfigMap.Delete(obj)
 	case *discoveryv1.EndpointSlice:
 		return c.EndpointSlice.Delete(obj)
 	case *gatewayapi.HTTPRoute:
@@ -274,6 +282,7 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.IngressClassV1,
 		c.Service,
 		c.Secret,
+		c.ConfigMap,
 		c.EndpointSlice,
 		c.HTTPRoute,
 		c.UDPRoute,
@@ -305,6 +314,7 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&netv1.IngressClass{},
 		&corev1.Service{},
 		&corev1.Secret{},
+		&corev1.ConfigMap{},
 		&discoveryv1.EndpointSlice{},
 		&gatewayapi.HTTPRoute{},
 		&gatewayapi.UDPRoute{},

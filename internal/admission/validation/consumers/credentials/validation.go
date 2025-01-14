@@ -36,12 +36,19 @@ func ValidateCredentials(secret *corev1.Secret) error {
 	algo, hasAlgo := secret.Data["algorithm"]
 	ignoreMissingRSAPublicKey := credentialType == "jwt" && hasAlgo && algoIsHMAC(string(algo))
 
+	ignoreMissingSecretKey := credentialType == "jwt" && hasAlgo && !algoIsHMAC(string(algo))
+
 	// verify that all required fields are present
 	var missingFields []string
 	var missingDataFields []string
 	for _, field := range CredTypeToFields[credentialType] {
 		// Ignore missing rsa_public_key for jwt credentials with HMAC algorithm
 		if field == "rsa_public_key" && ignoreMissingRSAPublicKey {
+			continue
+		}
+
+		// Ignore missing secret for jwt credentials with non HMAC algorithm
+		if field == "secret" && ignoreMissingSecretKey {
 			continue
 		}
 

@@ -81,10 +81,23 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	for _, opt := range opts {
 		opt(&req)
 	}
-	kongC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
+
+	kongC, err := retry.DoWithData(
+		func() (testcontainers.Container, error) {
+			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+				ContainerRequest: req,
+				Started:          true,
+			})
+		},
+		retry.Context(ctx),
+		retry.Attempts(100),
+		retry.Delay(10*time.Millisecond),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+		retry.OnRetry(func(_ uint, err error) {
+			t.Logf("failed creating Kong container: %v", err)
+		}),
+	)
 	require.NoError(t, err)
 
 	kong := Kong{

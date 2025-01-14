@@ -11,12 +11,13 @@ import (
 	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
 )
 
 // EntityFieldType represents type of a Kong entity field.
@@ -143,10 +144,12 @@ type CustomEntity struct {
 	ForeignEntityIDs map[kong.EntityType]string
 }
 
-// SchemaGetter is the interface to fetch the schema of a Kong entity by its type.
+// SchemaService is the interface to fetch the schema of a Kong entity by its type.
 // Used for fetching schema of custom entity for filling "foreign" field referring to other entities.
-type SchemaGetter interface {
+// It can also validate an entity against its schema.
+type SchemaService interface {
 	Get(ctx context.Context, entityType string) (kong.Schema, error)
+	Validate(ctx context.Context, entityType kong.EntityType, entity interface{}) (bool, string, error)
 }
 
 type entityForeignFieldValue struct {
@@ -157,10 +160,11 @@ type entityForeignFieldValue struct {
 
 // FillCustomEntities fills custom entities in KongState.
 func (ks *KongState) FillCustomEntities(
+	ctx context.Context,
 	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
-	schemaGetter SchemaGetter,
+	schemaService SchemaService,
 	workspace string,
 ) {
 	entities := s.ListKongCustomEntities()
@@ -174,7 +178,7 @@ func (ks *KongState) FillCustomEntities(
 	}
 	// Fetch relations between plugins and services/routes/consumers and store the pointer to translated Kong entities.
 	// Used for fetching entity referred by a custom entity and fill the ID of referred entity.
-	pluginRels := ks.getPluginRelatedEntitiesRef(s, logger)
+	pluginRels := ks.getPluginRelatedEntitiesRef(s, logger, failuresCollector)
 
 	for _, entity := range entities {
 		// reject the custom entity if its type is in "known" entity types that are already processed.
@@ -186,11 +190,25 @@ func (ks *KongState) FillCustomEntities(
 			continue
 		}
 		// Fetch the entity schema.
-		schema, err := ks.fetchEntitySchema(schemaGetter, entity.Spec.EntityType)
+		schema, err := ks.fetchEntitySchema(ctx, schemaService, entity.Spec.EntityType)
 		if err != nil {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("failed to fetch entity schema for entity type %s: %v", entity.Spec.EntityType, err),
 				entity,
+			)
+			continue
+		}
+
+		valid, msg, err := schemaService.Validate(ctx, kong.EntityType(entity.Spec.EntityType), entity.Spec.Fields)
+		if err != nil {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("failed validating entity %s: %v", client.ObjectKeyFromObject(entity), err), entity,
+			)
+			continue
+		}
+		if !valid {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("entity %s failed validation: %s", client.ObjectKeyFromObject(entity), msg), entity,
 			)
 			continue
 		}
@@ -238,13 +256,13 @@ func (ks *KongState) CustomEntityTypes() []string {
 
 // fetchEntitySchema fetches schema of an entity by its type and stores the schema in its custom entity collection
 // as a cache to avoid excessive calling of Kong admin APIs.
-func (ks *KongState) fetchEntitySchema(schemaGetter SchemaGetter, entityType string) (EntitySchema, error) {
+func (ks *KongState) fetchEntitySchema(ctx context.Context, schemaService SchemaService, entityType string) (EntitySchema, error) {
 	collection, ok := ks.CustomEntities[entityType]
 	if ok {
 		return collection.Schema, nil
 	}
 	// Use `context.Background()` here because `BuildKongConfig` does not provide a context.
-	schema, err := schemaGetter.Get(context.Background(), entityType)
+	schema, err := schemaService.Get(ctx, entityType)
 	if err != nil {
 		return EntitySchema{}, err
 	}
@@ -302,6 +320,11 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 		return "", false, nil
 	}
 
+	var (
+		namespace = k8sEntity.Namespace
+		name      = parentRef.Name
+	)
+
 	// Extract the plugin key to get the plugin relations.
 	parentRefNamespace := lo.FromPtrOr(parentRef.Namespace, "")
 	// if the namespace in parentRef is not same as the namespace of KCE itself, check if the reference is allowed by ReferenceGrant.
@@ -310,14 +333,25 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 			Namespace: parentRefNamespace,
 			Name:      parentRef.Name,
 		}
-		paretRefNamespace, err := extractReferredPluginNamespace(logger, cacheStore, k8sEntity, nn)
+		paretRefNamespace, err := extractReferredPluginNamespaceIfAllowed(logger, cacheStore, k8sEntity, nn)
 		if err != nil {
 			return "", false, err
 		}
-		return paretRefNamespace + ":" + parentRef.Name, true, nil
+		namespace = paretRefNamespace
 	}
 
-	return k8sEntity.Namespace + ":" + parentRef.Name, true, nil
+	var err error
+	switch *parentRef.Kind {
+	case "KongPlugin":
+		_, err = cacheStore.GetKongPlugin(namespace, name)
+	case "KongClusterPlugin":
+		_, err = cacheStore.GetKongClusterPlugin(name)
+	}
+	if err != nil {
+		return "", false, err
+	}
+
+	return namespace + ":" + name, true, nil
 }
 
 func findCustomEntityForeignFields(
@@ -336,13 +370,13 @@ func findCustomEntityForeignFields(
 		return nil, nil
 	}
 	// Get the relations with other entities of the plugin.
-	rels, ok := pluginRelEntities.RelatedEntities[pluginKey]
+	relations, ok := pluginRelEntities.RelatedEntities[pluginKey]
 	if !ok {
 		return nil, nil
 	}
 
 	var (
-		foreignRelations      util.ForeignRelations
+		foreignRelations      rels.ForeignRelations
 		foreignServiceFields  []string
 		foreignRouteFields    []string
 		foreignConsumerFields []string
@@ -356,22 +390,22 @@ func findCustomEntityForeignFields(
 		switch field.Reference {
 		case string(kong.EntityTypeServices):
 			foreignServiceFields = append(foreignServiceFields, fieldName)
-			foreignRelations.Service = getServiceIDFromPluginRels(logger, rels, pluginRelEntities.RouteAttachedService, workspace)
+			foreignRelations.Service = getServiceIDFromPluginRels(logger, relations, pluginRelEntities.RouteAttachedService, workspace)
 		case string(kong.EntityTypeRoutes):
 			foreignRouteFields = append(foreignRouteFields, fieldName)
-			foreignRelations.Route = lo.FilterMap(rels.Routes, func(r *Route, _ int) (string, bool) {
+			foreignRelations.Route = lo.FilterMap(relations.Routes, func(r *Route, _ int) (rels.FR, bool) {
 				if err := r.FillID(workspace); err != nil {
-					return "", false
+					return rels.FR{}, false
 				}
-				return *r.ID, true
+				return rels.FR{Identifier: *r.ID, Referer: k8sEntity}, true
 			})
 		case string(kong.EntityTypeConsumers):
 			foreignConsumerFields = append(foreignConsumerFields, fieldName)
-			foreignRelations.Consumer = lo.FilterMap(rels.Consumers, func(c *Consumer, _ int) (string, bool) {
+			foreignRelations.Consumer = lo.FilterMap(relations.Consumers, func(c *Consumer, _ int) (rels.FR, bool) {
 				if err := c.FillID(workspace); err != nil {
-					return "", false
+					return rels.FR{}, false
 				}
-				return *c.ID, true
+				return rels.FR{Identifier: *c.ID, Referer: k8sEntity}, true
 			})
 		} // end of switch
 	}
@@ -385,21 +419,21 @@ func findCustomEntityForeignFields(
 			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
 				fieldName:         fieldName,
 				foreignEntityType: kong.EntityTypeServices,
-				foreignEntityID:   combination.Service,
+				foreignEntityID:   combination.Service.Identifier,
 			})
 		}
 		for _, fieldName := range foreignRouteFields {
 			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
 				fieldName:         fieldName,
 				foreignEntityType: kong.EntityTypeRoutes,
-				foreignEntityID:   combination.Route,
+				foreignEntityID:   combination.Route.Identifier,
 			})
 		}
 		for _, fieldName := range foreignConsumerFields {
 			foreignFieldValues = append(foreignFieldValues, entityForeignFieldValue{
 				fieldName:         fieldName,
 				foreignEntityType: kong.EntityTypeConsumers,
-				foreignEntityID:   combination.Consumer,
+				foreignEntityID:   combination.Consumer.Identifier,
 			})
 		}
 		ret = append(ret, foreignFieldValues)

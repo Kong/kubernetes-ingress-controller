@@ -246,7 +246,7 @@ func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas PluginSchemaS
 	}
 	schema, err := schemas.Schema(ctx, *plugin.Name)
 	if err != nil {
-		return fmt.Errorf("error retrieveing schema for plugin %s: %w", *plugin.Name, err)
+		return fmt.Errorf("error retrieving schema for plugin %s: %w", *plugin.Name, err)
 	}
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)

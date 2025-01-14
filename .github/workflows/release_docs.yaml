@@ -7,23 +7,29 @@ on:
         description: 'The version to release (e.g. v1.2.3)'
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   create_docs_pr:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
       - name: Checkout KIC repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Checkout docs repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: kong/docs.konghq.com
           path: docs.konghq.com
@@ -42,7 +48,7 @@ jobs:
       - name: Detect changes
         id: detect-changes
         run: |
-          if [[ `cd docs.konghq.com && git status --porcelain` ]]; then
+          if [[ $(cd docs.konghq.com && git status --porcelain) ]]; then
             echo "Changes detected in docs repo"
             echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
           else
@@ -59,7 +65,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create a PR in docs repo
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
@@ -74,6 +80,6 @@ jobs:
           delete-branch: true
           draft: true
           labels: |
-            Kubernetes Team
+            team-k8s
             review:autodoc
           body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

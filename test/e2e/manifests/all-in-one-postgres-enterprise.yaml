@@ -10,6 +10,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -67,6 +68,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -373,6 +375,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongconsumergroups.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -620,6 +623,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongconsumers.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -894,6 +898,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongcustomentities.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -960,10 +965,16 @@ spec:
                   to the entity(service/route/consumer) where the plugin is attached.
                 properties:
                   group:
+                    description: Group defines the API group of the referred object.
                     type: string
                   kind:
+                    description: Kind defines the kind of the referred object.
+                    enum:
+                    - KongPlugin
+                    - KongClusterPlugin
                     type: string
                   name:
+                    description: Name defines the name of the referred object.
                     type: string
                   namespace:
                     description: Empty namespace means the same namespace of the owning
@@ -981,6 +992,9 @@ spec:
             - fields
             - type
             type: object
+            x-kubernetes-validations:
+            - message: The type field cannot be one of the known Kong entity types
+              rule: '!(self.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
           status:
             description: Status stores the reconciling status of the resource.
             properties:
@@ -1065,8 +1079,6 @@ spec:
         x-kubernetes-validations:
         - message: The spec.type field is immutable
           rule: self.spec.type == oldSelf.spec.type
-        - message: The spec.type field cannot be known Kong entity types
-          rule: '!(self.spec.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
     served: true
     storage: true
     subresources:
@@ -1077,6 +1089,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1468,6 +1481,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: konglicenses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1666,6 +1680,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1966,6 +1981,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller-incubator
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongservicefacades.incubator.ingress-controller.konghq.com
 spec:
   group: incubator.ingress-controller.konghq.com
@@ -2119,6 +2135,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   labels:
     gateway.networking.k8s.io/policy: direct
   name: kongupstreampolicies.configuration.konghq.com
@@ -2805,6 +2822,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: kongvaults.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -3091,6 +3109,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: tcpingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -3253,6 +3272,8 @@ spec:
                             Ports is a list of records of service ports
                             If used, every port defined in the service should have an entry in it
                           items:
+                            description: PortStatus represents the error condition
+                              of a service port
                             properties:
                               error:
                                 description: |-
@@ -3298,6 +3319,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.5
   name: udpingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -3424,6 +3446,8 @@ spec:
                             Ports is a list of records of service ports
                             If used, every port defined in the service should have an entry in it
                           items:
+                            description: PortStatus represents the error condition
+                              of a service port
                             properties:
                               error:
                                 description: |-
@@ -3516,18 +3540,19 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
-  - ""
-  resources:
+  - configmaps
   - nodes
   - secrets
   verbs:
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -3653,7 +3678,9 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - namespaces
+  - secrets
   - services
   verbs:
   - get
@@ -3663,15 +3690,6 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - backendtlspolicies
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - gatewayclasses
   - grpcroutes
   - httproutes
@@ -3683,6 +3701,13 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies/status
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
@@ -3918,7 +3943,7 @@ spec:
           value: /dev/stderr
         - name: KONG_PROXY_ERROR_LOG
           value: /dev/stderr
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         lifecycle:
           preStop:
             exec:
@@ -3985,7 +4010,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:3.3
+        image: kong/kubernetes-ingress-controller:3.4
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -4040,7 +4065,7 @@ spec:
           value: postgres
         - name: KONG_PG_PASSWORD
           value: kong
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
@@ -4139,7 +4164,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         name: kong-migrations
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
@@ -4154,7 +4179,7 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        image: kong/kong-gateway:3.8
+        image: kong/kong-gateway:3.9
         name: wait-for-postgres
       restartPolicy: OnFailure
 ---

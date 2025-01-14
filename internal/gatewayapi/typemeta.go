@@ -12,28 +12,13 @@ var V1GatewayTypeMeta = metav1.TypeMeta{
 	Kind:       "Gateway",
 }
 
-var V1beta1GatewayTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1beta1.GroupVersion.String(),
-	Kind:       "Gateway",
-}
-
 var V1GatewayClassTypeMeta = metav1.TypeMeta{
 	APIVersion: gatewayv1.GroupVersion.String(),
 	Kind:       "GatewayClass",
 }
 
-var V1beta1GatewayClassTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1beta1.GroupVersion.String(),
-	Kind:       "GatewayClass",
-}
-
 var V1HTTPRouteTypeMeta = metav1.TypeMeta{
 	APIVersion: gatewayv1.GroupVersion.String(),
-	Kind:       "HTTPRoute",
-}
-
-var V1beta1HTTPRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1beta1.GroupVersion.String(),
 	Kind:       "HTTPRoute",
 }
 

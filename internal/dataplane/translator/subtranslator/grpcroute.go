@@ -2,6 +2,7 @@ package subtranslator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -55,7 +56,7 @@ func GenerateKongRoutesFromGRPCRouteRule(
 
 	// Gather the K8s object information and hostnames from the GRPCRoute.
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
-	tags := util.GenerateTagsForObject(grpcroute)
+	tags := generateTagsForGRPCRoute(grpcroute)
 	grpcProtocols := kong.StringSlice("grpc", "grpcs")
 	rule := grpcroute.Spec.Rules[ruleNumber]
 	// Kong Route expects to have for gRPC, at least one of Hosts, Headers or Paths fields set.
@@ -196,4 +197,12 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
 		return lo.ToPtr(string(h))
 	})
+}
+
+func generateTagsForGRPCRoute(grpcroute *gatewayapi.GRPCRoute) []*string {
+	ruleNames := lo.FilterMap(grpcroute.Spec.Rules, func(r gatewayapi.GRPCRouteRule, _ int) (string, bool) {
+		name := strings.TrimSpace(string(lo.FromPtrOr(r.Name, "")))
+		return name, len(name) > 0
+	})
+	return util.GenerateTagsForObject(grpcroute, util.AdditionalTagsK8sNamedRouteRule(ruleNames...)...)
 }

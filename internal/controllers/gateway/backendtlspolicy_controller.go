@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -31,11 +31,13 @@ import (
 type BackendTLSPolicyReconciler struct {
 	client.Client
 
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
-	DataplaneClient  controllers.DataPlane
-	CacheSyncTimeout time.Duration
-	StatusQueue      *status.Queue
+	Log               logr.Logger
+	DataplaneClient   controllers.DataPlane
+	CacheSyncTimeout  time.Duration
+	ReferenceIndexers ctrlref.CacheIndexers
+	// If GatewayNN is set,
+	// only resources managed by the specified Gateway are reconciled.
+	GatewayNN controllers.OptionalNamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -52,6 +54,8 @@ func (r *BackendTLSPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		}).
 		For(&gatewayapi.BackendTLSPolicy{}).
+		Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForConfigMaps)).
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForSecrets)).
 		Watches(&corev1.Service{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForServices)).
 		Watches(&gatewayapi.HTTPRoute{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForHTTPRoutes)).
 		Watches(&gatewayapi.Gateway{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForGateways)).
@@ -63,6 +67,12 @@ func (r *BackendTLSPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 const (
+	// backendTLSPolicyValidationCARefConfigMapIndexKey is the index key for BackendTLSPolicy objects by their validation CA configmap reference.
+	// The value is the name of the configmap.
+	backendTLSPolicyValidationCARefConfigMapIndexKey = "backendtlspolicy-validation-cacertificateref-configmap"
+	// backendTLSPolicyValidationCARefSecretIndexKey is the index key for BackendTLSPolicy objects by their validation CA secret reference.
+	// The value is the name of the secret.
+	backendTLSPolicyValidationCARefSecretIndexKey = "backendtlspolicy-validation-cacertificateref-secret"
 	// backendTLSPolicyTargetRefIndexKey is the index key for BackendTLSPolicy objects by their target service reference.
 	// The value is the name of the service.
 	backendTLSPolicyTargetRefIndexKey = "backendtlspolicy-targetref"
@@ -88,6 +98,40 @@ func indexBackendTLSPolicyOnTargetRef(obj client.Object) []string {
 		}
 	}
 	return services
+}
+
+// indexBackendTLSPolicyOnValidationCACertificateConfigMapRef indexes BackendTLSPolicy objects
+// by their validation CA Certificate configmap reference.
+func indexBackendTLSPolicyOnValidationCACertificateConfigMapRef(obj client.Object) []string {
+	policy, ok := obj.(*gatewayapi.BackendTLSPolicy)
+	if !ok {
+		return []string{}
+	}
+
+	configmaps := []string{}
+	for _, cacertref := range policy.Spec.Validation.CACertificateRefs {
+		if (cacertref.Group == "" || cacertref.Group == "core") && cacertref.Kind == ctrlref.KindConfigMap {
+			configmaps = append(configmaps, string(cacertref.Name))
+		}
+	}
+	return configmaps
+}
+
+// indexBackendTLSPolicyOnValidationCACertificateSecretRef indexes BackendTLSPolicy objects
+// by their validation CA Certificate secret reference.
+func indexBackendTLSPolicyOnValidationCACertificateSecretRef(obj client.Object) []string {
+	policy, ok := obj.(*gatewayapi.BackendTLSPolicy)
+	if !ok {
+		return []string{}
+	}
+
+	secrets := []string{}
+	for _, cacertref := range policy.Spec.Validation.CACertificateRefs {
+		if (cacertref.Group == "" || cacertref.Group == "core") && cacertref.Kind == ctrlref.KindSecret {
+			secrets = append(secrets, string(cacertref.Name))
+		}
+	}
+	return secrets
 }
 
 // indexHTTPRouteOnParentRef indexes HTTPRoute objects by their parent Gateway references.
@@ -148,6 +192,24 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
+		&gatewayapi.BackendTLSPolicy{},
+		backendTLSPolicyValidationCARefConfigMapIndexKey,
+		indexBackendTLSPolicyOnValidationCACertificateConfigMapRef,
+	); err != nil {
+		return fmt.Errorf("failed to index backendTLSPolicies on validation CA configmap reference: %w", err)
+	}
+
+	if err := mgr.GetCache().IndexField(
+		context.Background(),
+		&gatewayapi.BackendTLSPolicy{},
+		backendTLSPolicyValidationCARefSecretIndexKey,
+		indexBackendTLSPolicyOnValidationCACertificateSecretRef,
+	); err != nil {
+		return fmt.Errorf("failed to index backendTLSPolicies on validation CA secret reference: %w", err)
+	}
+
+	if err := mgr.GetCache().IndexField(
+		context.Background(),
 		&gatewayapi.HTTPRoute{},
 		httpRouteParentRefIndexKey,
 		indexHTTPRouteOnParentRef,
@@ -170,6 +232,54 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 // BackendTLSPolicy Controller - Event Handlers
 // -----------------------------------------------------------------------------
+
+// listBackendTLSPoliciesForConfigMaps returns the list of BackendTLSPolicies that targets the given ConfigMap.
+func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForConfigMaps(ctx context.Context, obj client.Object) []reconcile.Request {
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "ConfigMap", "found", reflect.TypeOf(obj))
+		return nil
+	}
+	policies := gatewayapi.BackendTLSPolicyList{}
+	if err := r.List(ctx, &policies,
+		client.InNamespace(cm.Namespace),
+		client.MatchingFields{backendTLSPolicyValidationCARefConfigMapIndexKey: cm.Name},
+	); err != nil {
+		r.Log.Error(err, "Failed to list BackendTLSPolicies for ConfigMap", "configmap", cm)
+		return nil
+	}
+	requests := make([]reconcile.Request, 0, len(policies.Items))
+	for _, policy := range policies.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKeyFromObject(&policy),
+		})
+	}
+	return requests
+}
+
+// listBackendTLSPoliciesForConfigMaps returns the list of BackendTLSPolicies that targets the given ConfigMap.
+func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForSecrets(ctx context.Context, obj client.Object) []reconcile.Request {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Secret", "found", reflect.TypeOf(obj))
+		return nil
+	}
+	policies := gatewayapi.BackendTLSPolicyList{}
+	if err := r.List(ctx, &policies,
+		client.InNamespace(secret.Namespace),
+		client.MatchingFields{backendTLSPolicyValidationCARefSecretIndexKey: secret.Name},
+	); err != nil {
+		r.Log.Error(err, "Failed to list BackendTLSPolicies for Secret", "Secret", secret)
+		return nil
+	}
+	requests := make([]reconcile.Request, 0, len(policies.Items))
+	for _, policy := range policies.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKeyFromObject(&policy),
+		})
+	}
+	return requests
+}
 
 // listBackendTLSPoliciesForServices returns the list of BackendTLSPolicies that targets the given Service.
 func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForServices(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -226,6 +336,11 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
+
+	if !r.GatewayNN.Matches(gateway) {
+		return nil
+	}
+
 	httpRoutes := &gatewayapi.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
 		client.MatchingFields{httpRouteParentRefIndexKey: gateway.Namespace + "/" + gateway.Name},
@@ -257,8 +372,9 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 // -----------------------------------------------------------------------------
 
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes;gateways;gatewayclasses,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies,verbs=get;list;watch;patch;update
-// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies/status,verbs=patch;update
+// +kubebuilder:rbac:groups="",resources=services;configmaps;secrets,verbs=get;list;watch
 
 // Reconcile processes the watched objects.
 func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -269,7 +385,6 @@ func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if apierrors.IsNotFound(err) {
 			backendTLSPolicy.Namespace = req.Namespace
 			backendTLSPolicy.Name = req.Name
-
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(backendTLSPolicy)
 		}
 		return ctrl.Result{}, err
@@ -282,13 +397,56 @@ func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	// If there are valid ancestors for the given policy, push the policy to the dataplane cache.
 	if len(ancestors) > 0 {
-		if err := r.DataplaneClient.UpdateObject(backendTLSPolicy); err != nil {
+		acceptedCondition, err := r.validateBackendTLSPolicy(ctx, *backendTLSPolicy)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if err := r.setPolicyStatus(ctx, *backendTLSPolicy, ancestors); err != nil {
+		// If the policy is accepted, update the policy in the dataplane.
+		if acceptedCondition.Status == metav1.ConditionTrue {
+			if err := r.DataplaneClient.UpdateObject(backendTLSPolicy); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			// Update references to ConfigMaps in the dataplane cache.
+			referredConfigMapNames := listCaCertNamespacedNamesReferredByBackendTLSPolicy(backendTLSPolicy, ctrlref.KindConfigMap)
+			if err := ctrlref.UpdateReferencesToSecretOrConfigMap(
+				ctx,
+				r.Client,
+				r.ReferenceIndexers,
+				r.DataplaneClient,
+				backendTLSPolicy,
+				referredConfigMapNames,
+				&corev1.ConfigMap{}); err != nil {
+				if apierrors.IsNotFound(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
+
+			// Update references to Secrets in the dataplane cache.
+			referredSecretNames := listCaCertNamespacedNamesReferredByBackendTLSPolicy(backendTLSPolicy, ctrlref.KindSecret)
+			if err := ctrlref.UpdateReferencesToSecretOrConfigMap(
+				ctx,
+				r.Client,
+				r.ReferenceIndexers,
+				r.DataplaneClient,
+				backendTLSPolicy,
+				referredSecretNames,
+				&corev1.Secret{}); err != nil {
+				if apierrors.IsNotFound(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
+
+		} else {
+			// In case the policy is not accepted, ensure it gets deleted from the dataplane cache
+			if err := r.DataplaneClient.DeleteObject(backendTLSPolicy); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		if err := r.setPolicyStatus(ctx, *backendTLSPolicy, ancestors, *acceptedCondition); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

@@ -6,6 +6,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 const (
@@ -84,7 +86,8 @@ func (c *ResourceFailuresCollector) PushResourceFailure(reason string, causingOb
 // logResourceFailure logs an error with a resource processing failure message for each causing object.
 func (c *ResourceFailuresCollector) logResourceFailure(reason string, causingObjects ...client.Object) {
 	for _, obj := range causingObjects {
-		c.logger.Error(fmt.Errorf("resource processing failed"), reason,
+		c.logger.V(logging.DebugLevel).Info("resource processing failed",
+			"reason", reason,
 			"name", obj.GetName(),
 			"namespace", obj.GetNamespace(),
 			"GVK", obj.GetObjectKind().GroupVersionKind().String())

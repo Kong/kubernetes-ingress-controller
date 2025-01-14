@@ -5,11 +5,17 @@ on:
       - closed
       - labeled
 
+permissions:
+  contents: read
+
 jobs:
   backport:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Backport
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     # Only react to merged PRs for security reasons.
     # See https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target.
     if: >
@@ -22,6 +28,6 @@ jobs:
         )
       )
     steps:
-      - uses: tibdex/backport@v2
+      - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2.0.4
         with:
           github_token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

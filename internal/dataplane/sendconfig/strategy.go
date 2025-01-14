@@ -11,6 +11,7 @@ import (
 	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 )
 
@@ -80,8 +81,9 @@ func NewDefaultUpdateStrategyResolver(config Config, logger logr.Logger) Default
 // with the backoff strategy it provides.
 func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	client UpdateClient,
+	diagnostic *diagnostics.ClientDiagnostic,
 ) UpdateStrategy {
-	updateStrategy := r.resolveUpdateStrategy(client)
+	updateStrategy := r.resolveUpdateStrategy(client, diagnostic)
 
 	if clientWithBackoff, ok := client.(UpdateClientWithBackoff); ok {
 		return NewUpdateStrategyWithBackoff(updateStrategy, clientWithBackoff.BackoffStrategy(), r.logger)
@@ -90,7 +92,10 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	return updateStrategy
 }
 
-func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient) UpdateStrategy {
+func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
+	client UpdateClient,
+	diagnostic *diagnostics.ClientDiagnostic,
+) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
@@ -118,6 +123,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			r.config.Version,
 			r.config.Concurrency,
 			r.logger,
+			WithDiagnostic(diagnostic),
 		)
 	}
 

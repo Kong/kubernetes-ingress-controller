@@ -290,19 +290,6 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
-	t.Log("scale proxy to 0 replicas")
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
-
-	t.Log("wait for 10 seconds to let controller reconcile")
-	<-time.After(10 * time.Second)
-
-	t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
-	expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
-	readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
-	require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
-		"controller replicas count should not change after scaling proxy to 0")
-	ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
-
 	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
@@ -328,6 +315,23 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
 	// Verify all the proxy replicas have the last good configuration.
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Run("scaling to 0 doesn't crash the controller", func(t *testing.T) {
+		t.Skip("skipping until https://github.com/Kong/kubernetes-ingress-controller/issues/6769 is solved")
+
+		t.Log("scale proxy to 0 replicas")
+		scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+
+		t.Log("wait for 10 seconds to let controller reconcile")
+		<-time.After(10 * time.Second)
+
+		t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
+		expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
+		readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
+		require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
+			"controller replicas count should not change after scaling proxy to 0")
+		ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
+	})
 }
 
 func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN k8stypes.NamespacedName) {

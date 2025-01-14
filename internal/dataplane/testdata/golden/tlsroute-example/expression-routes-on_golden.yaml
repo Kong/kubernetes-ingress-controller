@@ -1,9 +1,9 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: tcproute..echo-plaintext.0
-  id: ed5f9dd7-123c-503e-aa23-2ed6dba68fc9
-  name: tcproute..echo-plaintext.0
+  host: tlsroute.tls-namespace.echo-tls.0
+  id: 2a2aad7c-6331-5bcf-bd7c-d9516639f65d
+  name: tlsroute.tls-namespace.echo-tls.0
   plugins:
   - config:
       message: no existing backendRef provided
@@ -13,17 +13,20 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - https_redirect_status_code: 426
-    id: 2b120f42-e8ea-5efd-8436-e8c5e7336862
-    name: tcproute..echo-plaintext.0.0
-    path_handling: v0
+  - expression: tls.sni == "tls9443.kong.example"
+    https_redirect_status_code: 426
+    id: 6e4ceb64-9f9c-5920-bde9-f65031f6f574
+    name: tlsroute.tls-namespace.echo-tls.0.0
+    priority: 1
     protocols:
-    - tcp
+    - tls
     tags:
-    - k8s-name:echo-plaintext
-    - k8s-kind:TCPRoute
+    - k8s-name:echo-tls
+    - k8s-namespace:tls-namespace
+    - k8s-kind:TLSRoute
     - k8s-group:gateway.networking.k8s.io
     - k8s-version:v1alpha2
+    - k8s-named-route-rule:rule-echo
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN
@@ -34,7 +37,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: tcproute..echo-plaintext.0
+  name: tlsroute.tls-namespace.echo-tls.0
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

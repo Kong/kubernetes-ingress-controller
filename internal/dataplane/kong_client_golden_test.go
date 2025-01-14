@@ -300,17 +300,18 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	kongClient, err := NewKongClient(
 		logger,
 		timeout,
-		diagnostics.ConfigDumpDiagnostic{},
+		diagnostics.ClientDiagnostic{},
 		cfg,
 		mocks.NewEventRecorder(),
 		dpconf.DBModeOff, // Test will run in DB-less mode only for now. In the future, we may want to test DB mode as well.
 		clientsProvider,
 		updateStrategyResolver,
-		sendconfig.NewDefaultConfigurationChangeDetector(logger),
+		sendconfig.NewKongGatewayConfigurationChangeDetector(logger),
 		lastValidConfigFetcher,
 		p,
 		&cacheStores,
 		fallbackConfigGenerator,
+		mocks.MetricsRecorder{},
 	)
 	require.NoError(t, err)
 

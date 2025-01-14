@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,8 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sclient "k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/fields"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
@@ -198,54 +200,64 @@ func TestCustomEntityExample(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("should apply last valid configuration with custom entities", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+		Assess("entities not passing schema validation are excluded from config and produce KongConfigurationTranslationFailed events", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
 			c, err := clientset.NewForConfig(conf.Client().RESTConfig())
 			require.NoError(t, err)
 			kceClient := c.ConfigurationV1alpha1().KongCustomEntities("default")
 			customEntity, err := kceClient.Get(ctx, "degraphql-route-example", metav1.GetOptions{})
 			require.NoError(t, err)
-			t.Logf("update the custom entity to build invalid Kong configuration")
+			t.Logf("update the custom entity with invalid field, failing validation and thus being excluded from config")
 			customEntity.Spec.Fields = apiextensionsv1.JSON{
 				Raw: []byte(`{"uri":"/contacts","query":"aaaa","foo":"bar"}`),
 			}
 			_, err = kceClient.Update(ctx, customEntity, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
-			t.Log("Deleting existing pod and wait for pod re-create and check if last valid config is applied")
-			kongNamespace := GetNamespaceForT(ctx, t)
-			k8sClient, err := k8sclient.NewForConfig(conf.Client().RESTConfig())
+			cl, err := client.NewWithWatch(conf.Client().RESTConfig(), client.Options{})
 			require.NoError(t, err)
-			podList, err := k8sClient.CoreV1().Pods(kongNamespace).List(ctx, metav1.ListOptions{
-				LabelSelector: "app.kubernetes.io/name=kong",
+
+			var events corev1.EventList
+			fs := fields.SelectorFromSet(fields.Set{
+				"involvedObject.kind":      "KongCustomEntity",
+				"involvedObject.name":      "degraphql-route-example",
+				"involvedObject.namespace": "default",
+				"reason":                   "KongConfigurationTranslationFailed",
+			})
+			w, err := cl.Watch(ctx, &events, &client.ListOptions{
+				Namespace:     "default",
+				FieldSelector: fs,
 			})
 			require.NoError(t, err)
-			require.Len(t, podList.Items, 1)
-			existingPod := podList.Items[0]
-			t.Logf("Deleting existing Kong gateway pod %s/%s", kongNamespace, existingPod.Name)
-			require.NoError(t,
-				k8sClient.CoreV1().Pods(kongNamespace).Delete(ctx, existingPod.Name, metav1.DeleteOptions{}),
-			)
-			t.Logf("Waiting for new Kong gateway pod to be re-created")
-			require.Eventually(t, func() bool {
-				podList, err := k8sClient.CoreV1().Pods(kongNamespace).List(ctx, metav1.ListOptions{
-					LabelSelector: "app.kubernetes.io/name=kong",
-				})
-				require.NoError(t, err)
-				if len(podList.Items) != 1 {
-					return false
-				}
-				newPod := podList.Items[0]
-				if newPod.Name != existingPod.Name && newPod.Status.Phase == corev1.PodRunning {
-					t.Logf("Recreated new pod %s/%s", kongNamespace, newPod.Name)
-					return true
-				}
-				return false
-			}, consts.StatusWait, consts.WaitTick)
+			defer w.Stop()
 
-			t.Log("verifying degraphQL plugin and degraphql_routes entity still works with last valid config")
+			timer := time.NewTimer(consts.StatusWait)
+			defer timer.Stop()
+		forLoop:
+			for {
+				select {
+				case e := <-w.ResultChan():
+					event := e.Object.(*corev1.Event)
+					// Just perform the assertions and break out of the loop. There shouldn't be more than one event at this point.
+					assert.Contains(t, event.Message, "entity default/degraphql-route-example failed validation:")
+					assert.Contains(t, event.Message, "schema violation")
+					assert.Equal(t, "KongConfigurationTranslationFailed", event.Reason)
+					break forLoop
+
+				case <-timer.C:
+					t.Logf("timeout waiting for KongConfigurationTranslationFailed Event")
+					t.Fail()
+					return ctx
+				case <-ctx.Done():
+					t.Logf("timeout waiting for KongConfigurationTranslationFailed Event")
+					t.Fail()
+					return ctx
+				}
+			}
+
+			t.Log("verifying degraphQL plugin was excluded from the configuration as it was failing schema validation")
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusNotFound, `{"message":"Not Found"}`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).

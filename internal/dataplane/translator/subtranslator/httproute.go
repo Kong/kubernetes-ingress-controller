@@ -25,33 +25,21 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// KongServiceTranslation is a translation of a single HTTPRoute into metadata
-// that can be used to instantiate Kong routes and services.
-// Routes from this object should route traffic to BackendRefs from this object.
-type KongServiceTranslation struct {
-	Name        string
-	BackendRefs []gatewayapi.HTTPBackendRef
-	KongRoutes  []KongRouteTranslation
-}
-
-// KongRouteTranslation is a translation of a single HTTPRoute rule into metadata
-// that can be used to instantiate Kong routes.
-type KongRouteTranslation struct {
-	Name string
-	// OptionalNamedRouteRules represents list of RouteName - an optional name
-	// of the particular route that can be defined in the K8s HTTPRoute,
-	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
-	OptionalNamedRouteRules []string
-	Matches                 []gatewayapi.HTTPRouteMatch
-	Filters                 []gatewayapi.HTTPRouteFilter
-}
-
 // HTTPRoutesTranslationResult is the result of translating HTTPRoutes to Kong gateway services.
 // It includes the kongstate services indexed by the Kong gateway service name
-// and translation errors happened on each HTTPRoute to genereate TranslationFailure events.
+// and translation errors happened on each HTTPRoute to generate TranslationFailure events.
 type HTTPRoutesTranslationResult struct {
 	ServiceNameToKongstateService    map[string]kongstate.Service
 	HTTPRouteNameToTranslationErrors map[k8stypes.NamespacedName][]error
+}
+
+type splitHTTPRouteMatchesWithPrioritiesGroupedByRule map[string][]SplitHTTPRouteMatchToKongRoutePriority
+
+// TranslateHTTPRouteToKongstateServiceOptions is the set of options to translate HTTPRoutes to kongstate services.
+type TranslateHTTPRouteToKongstateServiceOptions struct {
+	CombinedServicesFromDifferentHTTPRoutes bool
+	ExpressionRoutes                        bool
+	SupportRedirectPlugin                   bool
 }
 
 // TranslateHTTPRoutesToKongstateServices translates a set of HTTPRoutes to kongstate services,
@@ -60,9 +48,17 @@ func TranslateHTTPRoutesToKongstateServices(
 	logger logr.Logger,
 	storer store.Storer,
 	routes []*gatewayapi.HTTPRoute,
-	combinedServicesFromDifferentHTTPRoutes bool,
+	options TranslateHTTPRouteToKongstateServiceOptions,
 ) HTTPRoutesTranslationResult {
-	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, combinedServicesFromDifferentHTTPRoutes)
+	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, options.CombinedServicesFromDifferentHTTPRoutes)
+
+	// When feature flag expression routes is enabled, we need first split the matches and assign priorities to them
+	// to set proper priorities to the translated Kong routes for satisfying the specification of priorities of HTTPRoute matches:
+	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
+	var ruleToSplitMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
+	if options.ExpressionRoutes {
+		ruleToSplitMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
+	}
 
 	kongstateServiceCache := map[string]kongstate.Service{}
 	routeTranslationErrors := map[k8stypes.NamespacedName][]error{}
@@ -70,7 +66,28 @@ func TranslateHTTPRoutesToKongstateServices(
 		if len(rulesMeta) == 0 {
 			continue
 		}
-		service, err := translateHTTPRouteRulesMetaToKongstateService(logger, storer, serviceName, rulesMeta)
+
+		// Sort the rules according to the namespace, name and rule number to guarantee a fixed order.
+		sort.SliceStable(rulesMeta, func(i, j int) bool {
+			return rulesMeta[i].getRuleKey() < rulesMeta[j].getRuleKey()
+		})
+
+		var matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority
+		if options.ExpressionRoutes {
+			for _, ruleMeta := range rulesMeta {
+				ruleKey := ruleMeta.getRuleKey()
+				matchesWithPriorities = append(matchesWithPriorities, ruleToSplitMatchesWithPriorities[ruleKey]...)
+			}
+		}
+		service, err := translateHTTPRouteRulesMetaToKongstateService(
+			logger, storer, serviceName, rulesMeta,
+			matchesWithPriorities,
+			TranslateHTTPRouteRulesToKongRouteOptions{
+				ExpressionRoutes:      options.ExpressionRoutes,
+				SupportRedirectPlugin: options.SupportRedirectPlugin,
+			},
+		)
+		// Set translation errors for involved HTTPRoutes on failure of translation.
 		if err != nil {
 			httpRoutes := extractUniqueHTTPRoutes(rulesMeta)
 			for _, route := range httpRoutes {
@@ -82,6 +99,7 @@ func TranslateHTTPRoutesToKongstateServices(
 			}
 			continue
 		}
+
 		kongstateServiceCache[serviceName] = service
 	}
 
@@ -158,6 +176,11 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef, pa
 	return backendRefs
 }
 
+type TranslateHTTPRouteRulesToKongRouteOptions struct {
+	ExpressionRoutes      bool
+	SupportRedirectPlugin bool
+}
+
 // translateHTTPRouteRulesMetaToKongstateService translates a set of rules sharing the same backends to a `kongstate.Service`.
 // The rules should be grouped before calling and the service name should be specified.
 func translateHTTPRouteRulesMetaToKongstateService(
@@ -165,6 +188,8 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	storer store.Storer,
 	serviceName string,
 	rulesMeta []httpRouteRuleMeta,
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) (kongstate.Service, error) {
 	// Fill in the common fields of the kongstate.Service.
 	service := kongstate.Service{
@@ -235,13 +260,19 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		applyTimeoutToServiceFromHTTPRouteRule(&service, ruleMeta.Rule)
 	}
 
-	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta)
-	if err != nil {
-		return kongstate.Service{}, err
+	if options.ExpressionRoutes {
+		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities, options.SupportRedirectPlugin)
+		if err != nil {
+			return kongstate.Service{}, err
+		}
+		service.Routes = routes
+	} else {
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta, options)
+		if err != nil {
+			return kongstate.Service{}, err
+		}
+		service.Routes = routes
 	}
-	// preallocate slice for the routes.
-	service.Routes = make([]kongstate.Route, 0, len(routes))
-	service.Routes = append(service.Routes, routes...)
 
 	return service, nil
 }
@@ -283,6 +314,7 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 // to list of kongstate.Route.
 func translateHTTPRouteRulesMetaToKongstateRoutes(
 	rulesMeta []httpRouteRuleMeta,
+	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	rulesGroupedByFilter := groupRulesByFilter(rulesMeta)
 	routes := make([]kongstate.Route, 0)
@@ -316,6 +348,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 					objectInfo,
 					hostnames,
 					tags,
+					options,
 				)
 				if err != nil {
 					return nil, err
@@ -341,6 +374,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 				objectInfo,
 				hostnames,
 				tags,
+				options,
 			)
 			if err != nil {
 				return nil, err
@@ -428,6 +462,10 @@ func (m httpRouteRuleMeta) getHTTPBackendRefsKey() string {
 	return getSortedItemsString(m.Rule.BackendRefs)
 }
 
+func (m httpRouteRuleMeta) getRuleKey() string {
+	return fmt.Sprintf("%s/%s.%d", m.parentRoute.Namespace, m.parentRoute.Name, m.RuleNumber)
+}
+
 // getFiltersKey computes a key from a list of filters.
 // The order of the filters is not important.
 func (m httpRouteRuleMeta) getFiltersKey() string {
@@ -490,7 +528,6 @@ func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
 		hash := sha256.Sum256([]byte(name))
 		// We have already returned when there are no backends in the rule, so it is safe to use backendNames[0].
 		trimmedName := fmt.Sprintf("httproute.%s.svc.%s_combined.%x", m.parentRoute.Namespace, backendNames[0], hash)
-		// REVIEW: should we emit a log here to tell that the name is trimmed? And should we record the original long name?
 		return trimmedName
 	}
 	return name
@@ -660,6 +697,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []*string,
 	tags []*string,
+	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	if len(matches) == 0 {
 		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
@@ -702,7 +740,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
 	})
 
-	routes, err := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter)
+	routes, err := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter, options.SupportRedirectPlugin)
 	if err != nil {
 		return nil, err
 	}
@@ -725,7 +763,11 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 
 	// If the redirect filter has not been set, we still need to set the route plugins.
 	if !hasRedirectFilter {
-		if err := SetRoutePlugins(&r, filters, path, tags, false); err != nil {
+		setPluginsOptions := setKongRoutePluginsOptions{
+			expressionsRouterEnabled:  options.ExpressionRoutes,
+			redirectKongPluginEnabled: options.SupportRedirectPlugin,
+		}
+		if err := setRoutePlugins(&r, filters, path, tags, setPluginsOptions); err != nil {
 			return nil, err
 		}
 		routes = []kongstate.Route{r}
@@ -785,6 +827,7 @@ func getRoutesFromMatches(
 	filters []gatewayapi.HTTPRouteFilter,
 	tags []*string,
 	hasRedirectFilter bool,
+	supportRedirectPlugin bool,
 ) ([]kongstate.Route, error) {
 	seenMethods := make(map[string]struct{})
 	routes := make([]kongstate.Route, 0)
@@ -820,7 +863,11 @@ func getRoutesFromMatches(
 			}
 
 			// generate kong plugins from rule.filters
-			if err := SetRoutePlugins(matchRoute, filters, path, tags, false); err != nil {
+			setPluginsOptions := setKongRoutePluginsOptions{
+				expressionsRouterEnabled:  false,
+				redirectKongPluginEnabled: supportRedirectPlugin,
+			}
+			if err := setRoutePlugins(matchRoute, filters, path, tags, setPluginsOptions); err != nil {
 				return nil, err
 			}
 
@@ -869,18 +916,23 @@ func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []
 	return []string{""} // unreachable code
 }
 
-// SetRoutePlugins converts HTTPRouteFilter into Kong plugins. The plugins are set into the given kongstate.Route.
+type setKongRoutePluginsOptions struct {
+	expressionsRouterEnabled  bool
+	redirectKongPluginEnabled bool
+}
+
+// setRoutePlugins converts HTTPRouteFilter into Kong plugins. The plugins are set into the given kongstate.Route.
 // The plugins can be set in two different ways:
 // - Direct conversion from the respective HTTPRouteFilter.
 // - ExtensionRef to plugins annotation from the ExtensionRef filter.
-func SetRoutePlugins(
+func setRoutePlugins(
 	route *kongstate.Route,
 	filters []gatewayapi.HTTPRouteFilter,
 	path string,
 	tags []*string,
-	expressionsRouterEnabled bool,
+	options setKongRoutePluginsOptions,
 ) error {
-	generatedPlugins, err := generatePluginsFromHTTPRouteFilters(filters, path, tags, expressionsRouterEnabled)
+	generatedPlugins, err := generatePluginsFromHTTPRouteFilters(filters, path, tags, options)
 	if err != nil {
 		return err
 	}
@@ -919,7 +971,7 @@ func generatePluginsFromHTTPRouteFilters(
 	filters []gatewayapi.HTTPRouteFilter,
 	path string,
 	tags []*string,
-	expressionsRouterEnabled bool,
+	options setKongRoutePluginsOptions,
 ) (httpRouteFiltersOriginatedPlugins, error) {
 	if len(filters) == 0 {
 		return httpRouteFiltersOriginatedPlugins{}, nil
@@ -937,9 +989,13 @@ func generatePluginsFromHTTPRouteFilters(
 			transformerPlugins = append(transformerPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
 
 		case gatewayapi.HTTPRouteFilterRequestRedirect:
-			kongPlugin, transformerPlugin := generateRequestRedirectKongPlugin(filter.RequestRedirect, path)
-			kongPlugins = append(kongPlugins, kongPlugin)
-			transformerPlugins = append(transformerPlugins, transformerPlugin)
+			if options.redirectKongPluginEnabled {
+				kongPlugins = append(kongPlugins, generateRequestRedirectUsingRedirectKongPlugin(filter.RequestRedirect))
+			} else {
+				kongPlugin, transformerPlugin := generateRequestRedirectKongPlugin(filter.RequestRedirect, path)
+				kongPlugins = append(kongPlugins, kongPlugin)
+				transformerPlugins = append(transformerPlugins, transformerPlugin)
+			}
 
 		case gatewayapi.HTTPRouteFilterResponseHeaderModifier:
 			transformerPlugins = append(transformerPlugins, generateResponseHeaderModifierKongPlugin(filter.ResponseHeaderModifier))
@@ -952,7 +1008,7 @@ func generatePluginsFromHTTPRouteFilters(
 			pluginNamesFromExtensionRef = append(pluginNamesFromExtensionRef, plugin)
 
 		case gatewayapi.HTTPRouteFilterURLRewrite:
-			plugins, routeModifiers, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path, expressionsRouterEnabled)
+			plugins, routeModifiers, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path, options.expressionsRouterEnabled)
 			if err != nil {
 				return httpRouteFiltersOriginatedPlugins{}, err
 			}
@@ -1061,6 +1117,25 @@ func generateKongRouteModifierFromExtensionRef(pluginNamesFromExtensionRef []str
 	}
 }
 
+// hostPortFromHTTPPathModifier returns the part of scheme and hostport in the URL of `Location` header
+// for generating configuration of Kong plugins to satisfy `requestRedirect` filter of HTTPRoute.
+func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirectFilter) (string, string) {
+	// Since the `redirect` plugin requires the scheme, we do not change the logic to use `http` scheme when scheme is empty.
+	// TODO: According to the spec of gateway API, the original scheme should be kept if no scheme is given.
+	// So the logic may be changed if Kong gateway supports:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/6856
+	scheme := lo.FromPtrOr(modifier.Scheme, "http")
+	hostname := string(lo.FromPtrOr(modifier.Hostname, ""))
+	// As gateway API specified, if `Port` is nil, port should be left empty for using well-known port for the scheme.
+	// This changed the behavior in previous versions of using port `80` if the port is not given.
+	portStr := ""
+	if modifier.Port != nil {
+		port := int(*modifier.Port)
+		portStr = ":" + strconv.Itoa(port)
+	}
+	return scheme, hostname + portStr
+}
+
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
 // of request redirect filter.
 func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectFilter, path string) (kong.Plugin, transformerPlugin) {
@@ -1071,36 +1146,72 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 		},
 	}
 
-	var locationHeader string
-	scheme := "http"
-	port := 80
-
-	if modifier.Scheme != nil {
-		scheme = *modifier.Scheme
-	}
-	if modifier.Port != nil {
-		port = int(*modifier.Port)
-	}
 	if modifier.Path != nil &&
 		modifier.Path.Type == gatewayapi.FullPathHTTPPathModifier &&
 		modifier.Path.ReplaceFullPath != nil {
 		// only ReplaceFullPath currently supported
 		path = *modifier.Path.ReplaceFullPath
 	}
+
+	const headerLocationKey = "Location"
+	var headerLocation Header
 	if modifier.Hostname != nil {
-		locationHeader = fmt.Sprintf("Location: %s://%s", scheme, pathlib.Join(fmt.Sprintf("%s:%d", *modifier.Hostname, port), path))
+		scheme, hostPort := schemeHostPortFromHTTPPathModifier(modifier)
+		location := pathlib.Join(hostPort, path)
+		if scheme != "" {
+			location = scheme + "://" + location
+		}
+		headerLocation = NewHeader(headerLocationKey, location)
 	} else {
-		locationHeader = fmt.Sprintf("Location: %s", path)
+		headerLocation = NewHeader(headerLocationKey, path)
 	}
 
 	transformerPlugin := transformerPlugin{
 		Type: transformerPluginTypeResponse,
 		Add: TransformerPluginConfig{
-			Headers: []string{locationHeader},
+			Headers: []Header{headerLocation},
 		},
 	}
 
 	return requestTerminationPlugin, transformerPlugin
+}
+
+// generateRequestRedirectUsingRedirectKongPlugin generates configurations of `redirect` Kong plugin to satisfy the specification
+// of request redirect filter.
+// Used if Kong version is >= 3.9.
+func generateRequestRedirectUsingRedirectKongPlugin(
+	modifier *gatewayapi.HTTPRequestRedirectFilter,
+) kong.Plugin {
+	redirectPlugin := kong.Plugin{
+		Name: kong.String("redirect"),
+		Config: kong.Configuration{
+			"status_code": modifier.StatusCode,
+		},
+	}
+
+	path := "/"
+	preservePath := true
+	var location string
+
+	if modifier.Path != nil &&
+		modifier.Path.Type == gatewayapi.FullPathHTTPPathModifier &&
+		modifier.Path.ReplaceFullPath != nil {
+		path = *modifier.Path.ReplaceFullPath
+		preservePath = false
+	}
+	if modifier.Hostname != nil {
+		scheme, hostPort := schemeHostPortFromHTTPPathModifier(modifier)
+		location = pathlib.Join(hostPort, path)
+		if scheme != "" {
+			location = scheme + "://" + location
+		}
+	} else {
+		location = path
+	}
+	redirectPlugin.Config["location"] = kong.String(location)
+	redirectPlugin.Config["keep_incoming_path"] = kong.Bool(preservePath)
+
+	return redirectPlugin
 }
 
 func generateExtensionRefKongPlugin(modifier *gatewayapi.LocalObjectReference) (string, error) {
@@ -1140,16 +1251,32 @@ type transformerPlugin struct {
 	Remove  TransformerPluginConfig        `json:"remove,omitempty"`
 }
 
+// Header represents a header as a string "key:value" or just "key". This is the format accepted
+// by TransformerPluginConfig.
+type Header string
+
+// NewHeader creates a new Header with the given key and value in format accepted by TransformerPluginConfig.
+// For key-only header (e.g. for remove filter), set value to an empty string.
+func NewHeader(key, value string) Header {
+	// It's important to return the value in the format "key:value" (without a space after the colon)
+	// to not have a redundant whitespace (some browser does not trim it).
+	if value != "" {
+		return Header(fmt.Sprintf("%s:%s", key, value))
+	}
+	// Having only key is correct in the case of remove filter.
+	return Header(key)
+}
+
 // TransformerPluginConfig is a configuration for request-transformer and response-transformer plugins'
 // "add", "append", and "remove" fields.
 type TransformerPluginConfig struct {
-	Headers []string `json:"headers,omitempty"`
+	Headers []Header `json:"headers,omitempty"`
 }
 
 // TransformerPluginReplaceConfig is a configuration for request-transformer and response-transformer plugins'
 // "replace" field.
 type TransformerPluginReplaceConfig struct {
-	Headers []string `json:"headers,omitempty"`
+	Headers []Header `json:"headers,omitempty"`
 	URI     string   `json:"uri,omitempty"`
 }
 
@@ -1160,7 +1287,7 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	// modifier.Set is converted to a pair composed of "replace" and "add"
 	if modifier.Set != nil {
-		setModifiers := make([]string, 0, len(modifier.Set))
+		setModifiers := make([]Header, 0, len(modifier.Set))
 		for _, s := range modifier.Set {
 			setModifiers = append(setModifiers, kongHeaderFormatter(s))
 		}
@@ -1174,7 +1301,7 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	// modifier.Add is converted to "append"
 	if modifier.Add != nil {
-		appendModifiers := make([]string, 0, len(modifier.Add))
+		appendModifiers := make([]Header, 0, len(modifier.Add))
 		for _, a := range modifier.Add {
 			appendModifiers = append(appendModifiers, kongHeaderFormatter(a))
 		}
@@ -1185,15 +1312,17 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 
 	if modifier.Remove != nil {
 		plugin.Remove = TransformerPluginConfig{
-			Headers: modifier.Remove,
+			Headers: lo.Map(modifier.Remove, func(headerKey string, _ int) Header {
+				return NewHeader(headerKey, "")
+			}),
 		}
 	}
 
 	return plugin
 }
 
-func kongHeaderFormatter(header gatewayapi.HTTPHeader) string {
-	return fmt.Sprintf("%s:%s", header.Name, header.Value)
+func kongHeaderFormatter(header gatewayapi.HTTPHeader) Header {
+	return NewHeader(string(header.Name), header.Value)
 }
 
 func generateRequestTransformerForURLRewrite(
@@ -1253,17 +1382,14 @@ func generateRequestTransformerForURLRewritePath(
 func generateRequestTransformerForURLRewriteHostname(
 	filter *gatewayapi.HTTPURLRewriteFilter,
 ) transformerPlugin {
+	hostHeader := []Header{NewHeader("host", string(*filter.Hostname))}
 	return transformerPlugin{
 		Type: transformerPluginTypeRequest,
 		Replace: TransformerPluginReplaceConfig{
-			Headers: []string{
-				fmt.Sprintf("host:%s", string(*filter.Hostname)),
-			},
+			Headers: hostHeader,
 		},
 		Add: TransformerPluginConfig{
-			Headers: []string{
-				fmt.Sprintf("host:%s", string(*filter.Hostname)),
-			},
+			Headers: hostHeader,
 		},
 	}
 }

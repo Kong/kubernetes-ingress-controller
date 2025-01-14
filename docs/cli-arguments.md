@@ -15,6 +15,7 @@
 | `--apiserver-qps` | `int` | The Kubernetes API RateLimiter maximum queries per second. | `100` |
 | `--cache-sync-timeout` | `duration` | The time limit set to wait for syncing controllers' caches. Set to 0 to use default from controller-runtime. | `2m0s` |
 | `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. |  |
+| `--configmap-label-selector` | `string` | Limits the configmaps ingested to those having this label set to "true". | `konghq.com/configmap` |
 | `--dump-config` | `bool` | Enable config dumps via web interface host:10256/debug/config. | `false` |
 | `--dump-sensitive-config` | `bool` | Include credentials and TLS secrets in configs exposed with --dump-config flag. | `false` |
 | `--election-id` | `string` | Election id to use for status update. | `5b374a9e.konghq.com` |
@@ -84,6 +85,7 @@
 | `--kubeconfig` | `string` | Path to the kubeconfig file. |  |
 | `--log-format` | `string` | Format of logs of the controller. Allowed values are text and json. | `text` |
 | `--log-level` | `string` | Level of logging for the controller. Allowed values are trace, debug, info, and error. | `info` |
+| `--metrics-access-filter` | `string` | Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). | `"off"` |
 | `--metrics-bind-address` | `string` | The address the metric endpoint binds to. | `:10255` |
 | `--profiling` | `bool` | Enable profiling via web interface host:10256/debug/pprof/. | `false` |
 | `--proxy-sync-seconds` | `float` | Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. | `3` |
@@ -92,6 +94,7 @@
 | `--publish-service-udp` | `namespaced-name` | Service fronting UDP routing resources in "namespace/name" format. The controller will update UDP route status information with this Service's endpoints. If omitted, the same Service will be used for both TCP and UDP routes. |  |
 | `--publish-status-address` | `strings` | Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
 | `--publish-status-address-udp` | `strings` | Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information (for example, in bare-metal environments). | `[]` |
+| `--secret-label-selector` | `string` | Limits the secrets ingested to those having this label set to "true". If not specified, all secrets are ingested. |  |
 | `--skip-ca-certificates` | `bool` | Disable syncing CA certificate syncing (for use with multi-workspace environments). | `false` |
 | `--sync-period` | `duration` | Determine the minimum frequency at which watched resources are reconciled. Set to 0 to use default from controller-runtime. | `10h0m0s` |
 | `--term-delay` | `duration` | The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller. | `0s` |

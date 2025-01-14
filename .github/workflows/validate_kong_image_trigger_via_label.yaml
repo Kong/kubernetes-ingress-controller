@@ -4,18 +4,24 @@ on:
     types:
     - labeled
 
+permissions:
+  contents: read
+
 jobs:
   # Firstly remove the issue label to avoid duplicate triggers.
   check-and-remove-issue-label:
     name: Check label "ci/run-validate-kong-image" and remove the label
     if: contains(github.event.*.labels.*.name, 'ci/run-validate-kong-image')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     env:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: "Remove the label ci/run-validate-kong-image if exist"
         run: gh issue edit ${ISSUE_NUMBER} --remove-label ci/run-validate-kong-image
 
@@ -46,9 +52,11 @@ jobs:
       
       - name: Extract container image from issue body
         id: extract_image
+        env:
+          BODY: ${{ github.event.issue.body }}
         # Fail the job if we cannot get "### Container image" keyword from issue body.
         run: |
-          kong_container_image=$(echo ${{ github.event.issue.body }} | grep -A 2 '### Container image' | tail -n 1) && \
+          kong_container_image=$(echo ${{ env.BODY }} | grep -A 2 '### Container image' | tail -n 1) && \
           echo "TEST_KONG_CONTAINER_IMAGE=${kong_container_image}" >> $GITHUB_ENV
       
       # Split the container into repo and tag by ":" and then extract the first 3 segments of tags as its version.
@@ -72,7 +80,7 @@ jobs:
       # We parse the semver from Kong image tag because we need to run with different KIC images with Kong 2.8.x and Kong 3.x.
       - name: Parse Semver of Kong from image tag
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ env.TEST_KONG_IMAGE_VERSION }}
   
@@ -91,7 +99,7 @@ jobs:
       kic_image_tag: ${{ steps.choose_kic_branch.outputs.KIC_IMAGE_TAG }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Choose KIC image and branch
         id: choose_kic_branch
         run: |
@@ -100,7 +108,7 @@ jobs:
             echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_OUTPUT
           elif [ $TEST_KONG_IMAGE_MAJOR_VERSION -eq 3 ] && [ $TEST_KONG_IMAGE_MINOR_VERSION -le 3 ]; then
             echo "KIC_BRANCH=release/2.12.x" >> $GITHUB_OUTPUT
-            echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_OUTPUT          
+            echo "KIC_IMAGE_TAG=2.12" >> $GITHUB_OUTPUT
           else
             echo "KIC_BRANCH=main" >> $GITHUB_OUTPUT
             echo "KIC_IMAGE_TAG=latest" >> $GITHUB_OUTPUT
@@ -113,6 +121,9 @@ jobs:
     - extract-and-parse-container-image
     - decide-kic-branch-and-image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       WORKFLOW: .github/workflows/validate_kong_image.yaml
@@ -124,7 +135,7 @@ jobs:
       KIC_IMAGE_TAG: ${{ needs.decide-kic-branch-and-image.outputs.kic_image_tag }} 
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Run validate Kong image tests
         id: run_validate_kong_image

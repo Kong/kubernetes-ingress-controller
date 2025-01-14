@@ -17,7 +17,7 @@ import (
 func TeardownCluster(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
 	t.Helper()
 
-	dumpDiagnosticsIfFailed(ctx, t, cluster)
+	DumpDiagnosticsIfFailed(ctx, t, cluster)
 	const environmentCleanupTimeout = 10 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, environmentCleanupTimeout)
 	defer cancel()
@@ -35,8 +35,8 @@ func RemoveCluster(ctx context.Context, cluster clusters.Cluster) error {
 	return nil
 }
 
-// dumpDiagnosticsIfFailed dumps the diagnostics if the test failed.
-func dumpDiagnosticsIfFailed(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
+// DumpDiagnosticsIfFailed dumps the diagnostics if the test failed.
+func DumpDiagnosticsIfFailed(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
 	t.Helper()
 
 	if t.Failed() {

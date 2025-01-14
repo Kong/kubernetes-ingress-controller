@@ -24,7 +24,7 @@ type tTCPorUDPorTLSRoute interface {
 
 type tRoute interface {
 	tTCPorUDPorTLSRoute
-	// Route fullfills client.Object interface (necessary for e.g. GetObjectKind()).
+	// Route fulfills client.Object interface (necessary for e.g. GetObjectKind()).
 	client.Object
 }
 
@@ -65,10 +65,11 @@ func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 	if err := checkBackendRefs(rule); err != nil {
 		return []kongstate.Route{}, err
 	}
+
 	return []kongstate.Route{
 		{
 			Ingress: util.FromK8sObject(route),
-			Route:   routeToKongRoute(route, gwPorts, ruleNumber, util.GenerateTagsForObject(route)),
+			Route:   routeToKongRoute(route, gwPorts, ruleNumber),
 		},
 	}, nil
 }
@@ -78,7 +79,6 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 	r TRoute,
 	gwPorts []gatewayapi.PortNumber,
 	ruleNumber int,
-	tags []*string,
 ) kong.Route {
 	destinations := lo.Map(gwPorts, func(p gatewayapi.PortNumber, _ int) *kong.CIDRPort {
 		return &kong.CIDRPort{
@@ -86,20 +86,16 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 		}
 	})
 
-	var kr kong.Route
 	switch rr := any(r).(type) {
 	case *gatewayapi.UDPRoute:
-		kr = udpRouteToKongRoute(rr, destinations, ruleNumber)
+		return udpRouteToKongRoute(rr, destinations, ruleNumber)
 	case *gatewayapi.TCPRoute:
-		kr = tcpRouteToKongRoute(rr, destinations, ruleNumber)
+		return tcpRouteToKongRoute(rr, destinations, ruleNumber)
 	case *gatewayapi.TLSRoute:
-		kr = tlsRouteToKongRoute(rr, ruleNumber)
+		return tlsRouteToKongRoute(rr, ruleNumber)
 	default:
-		kr = kong.Route{}
+		return kong.Route{}
 	}
-
-	kr.Tags = tags
-	return kr
 }
 
 func udpRouteToKongRoute(
@@ -107,12 +103,21 @@ func udpRouteToKongRoute(
 	destinations []*kong.CIDRPort,
 	ruleNumber int,
 ) kong.Route {
+	var ruleName string
+	if ruleNumber < len(r.Spec.Rules) {
+		ruleName = string(lo.FromPtrOr(r.Spec.Rules[ruleNumber].Name, ""))
+	}
+	tags := util.GenerateTagsForObject(
+		r,
+		util.AdditionalTagsK8sNamedRouteRule(ruleName)...,
+	)
 	return kong.Route{
 		Name: kong.String(
 			generateRouteName(udpRouteType, r.Namespace, r.Name, ruleNumber),
 		),
 		Protocols:    kong.StringSlice("udp"),
 		Destinations: destinations,
+		Tags:         tags,
 	}
 }
 
@@ -121,12 +126,21 @@ func tcpRouteToKongRoute(
 	destinations []*kong.CIDRPort,
 	ruleNumber int,
 ) kong.Route {
+	var ruleName string
+	if ruleNumber < len(r.Spec.Rules) {
+		ruleName = string(lo.FromPtrOr(r.Spec.Rules[ruleNumber].Name, ""))
+	}
+	tags := util.GenerateTagsForObject(
+		r,
+		util.AdditionalTagsK8sNamedRouteRule(ruleName)...,
+	)
 	return kong.Route{
 		Name: kong.String(
 			generateRouteName(tcpRouteType, r.Namespace, r.Name, ruleNumber),
 		),
 		Protocols:    kong.StringSlice("tcp"),
 		Destinations: destinations,
+		Tags:         tags,
 	}
 }
 
@@ -135,12 +149,20 @@ func tlsRouteToKongRoute(r *gatewayapi.TLSRoute, ruleNumber int) kong.Route {
 	for _, hostname := range r.Spec.Hostnames {
 		hostnames = append(hostnames, kong.String(string(hostname)))
 	}
-
+	var ruleName string
+	if ruleNumber < len(r.Spec.Rules) {
+		ruleName = string(lo.FromPtrOr(r.Spec.Rules[ruleNumber].Name, ""))
+	}
+	tags := util.GenerateTagsForObject(
+		r,
+		util.AdditionalTagsK8sNamedRouteRule(ruleName)...,
+	)
 	return kong.Route{
 		Name: kong.String(
 			generateRouteName(tlsRouteType, r.Namespace, r.Name, ruleNumber)),
 		Protocols: kong.StringSlice("tls"),
 		SNIs:      hostnames,
+		Tags:      tags,
 	}
 }
 

@@ -32,6 +32,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   setup-e2e-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
@@ -39,11 +42,11 @@ jobs:
     outputs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - id: setup_golang
         name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
           go-version-file: go.mod
 
@@ -77,7 +80,7 @@ jobs:
       gke: ${{ steps.set-versions.outputs.gke }}
       istio: ${{ steps.set-versions.outputs.istio }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - id: set-versions
         name: Set versions
@@ -106,7 +109,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: kic-image
           path: /tmp
@@ -118,14 +121,14 @@ jobs:
           docker image ls -a
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@master
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
         id: license
         with:
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -134,7 +137,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -159,7 +161,7 @@ jobs:
         if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
         run: docker pull ${{ inputs.kong-image }}
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
         with:
           install: false
 
@@ -206,14 +208,14 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: tests-report-e2e-kind-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: ${{ env.GOTESTSUM_JUNITFILE }}
@@ -233,14 +235,14 @@ jobs:
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@master
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
         continue-on-error: true
         id: license
         with:
@@ -257,7 +259,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -277,7 +278,7 @@ jobs:
             echo "kic-tag=nightly" >> $GITHUB_OUTPUT
           fi
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
         with:
           install: false
 
@@ -332,9 +333,9 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
@@ -342,9 +343,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: tests-report-e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
@@ -362,7 +363,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: kic-image
           path: /tmp
@@ -374,14 +375,14 @@ jobs:
           docker image ls -a
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@master
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
         id: license
         with:
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -390,7 +391,6 @@ jobs:
         id: split
         env:
           KONG: ${{ inputs.kong-image }}
-          CONTROLLER: ${{ inputs.controller-image }}
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
@@ -405,7 +405,7 @@ jobs:
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
         with:
           install: false
 
@@ -441,9 +441,9 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: diagnostics-e2e-tests-istio-${{ matrix.kind }}-${{ matrix.istio }}-${{ env.KONG_IMAGE_ARTIFACT }}
@@ -451,9 +451,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@v4
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: tests-report-e2e-istio-k8s-${{ matrix.kind }}-istio-${{ matrix.istio }}-${{ env.KONG_IMAGE_ARTIFACT }}

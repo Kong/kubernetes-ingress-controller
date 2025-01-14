@@ -62,23 +62,23 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					Name: kong.String("request-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-set:bar",
+							Headers: []Header{
+								NewHeader("header-to-set", "bar"),
 							},
 						},
 						"append": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-add:foo",
+							Headers: []Header{
+								NewHeader("header-to-add", "foo"),
 							},
 						},
 						"remove": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-remove",
+							Headers: []Header{
+								NewHeader("header-to-remove", ""),
 							},
 						},
 						"replace": TransformerPluginReplaceConfig{
-							Headers: []string{
-								"header-to-set:bar",
+							Headers: []Header{
+								NewHeader("header-to-set", "bar"),
 							},
 						},
 					},
@@ -108,8 +108,8 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					Name: kong.String("response-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
-							Headers: []string{
-								"Location: http://example.org:80/test",
+							Headers: []Header{
+								NewHeader("Location", "http://example.org/test"),
 							},
 						},
 					},
@@ -143,23 +143,23 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					Name: kong.String("response-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-set:bar",
+							Headers: []Header{
+								NewHeader("header-to-set", "bar"),
 							},
 						},
 						"append": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-add:foo",
+							Headers: []Header{
+								NewHeader("header-to-add", "foo"),
 							},
 						},
 						"remove": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-remove",
+							Headers: []Header{
+								NewHeader("header-to-remove", ""),
 							},
 						},
 						"replace": TransformerPluginReplaceConfig{
-							Headers: []string{
-								"header-to-set:bar",
+							Headers: []Header{
+								NewHeader("header-to-set", "bar"),
 							},
 						},
 					},
@@ -167,7 +167,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "valid extensionrefs filters",
+			name: "valid extension refs filters",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
@@ -196,7 +196,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			expectedPlugins: nil,
 		},
 		{
-			name: "invalid extensionrefs filter group",
+			name: "invalid extension refs filter group",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
@@ -210,7 +210,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			expectedErr: errors.New("plugin wrong.group/KongPlugin unsupported"),
 		},
 		{
-			name: "invalid extensionrefs filter kind",
+			name: "invalid extension refs filter kind",
 			filters: []gatewayapi.HTTPRouteFilter{
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
@@ -253,14 +253,14 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					Name: kong.String("request-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
-							Headers: []string{
-								"header-to-set:bar",
+							Headers: []Header{
+								NewHeader("header-to-set", "bar"),
 							},
 						},
 						"replace": TransformerPluginReplaceConfig{
 							URI: "/new$(uri_captures[1])",
-							Headers: []string{
-								"header-to-set:bar",
+							Headers: []Header{
+								NewHeader("header-to-set", "bar"),
 							},
 						},
 					},
@@ -279,7 +279,8 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, false)
+			options := setKongRoutePluginsOptions{}
+			result, err := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil, options)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedPlugins, result.Plugins)
 
@@ -493,13 +494,13 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expected: []transformerPlugin{{
 				Type: transformerPluginTypeRequest,
 				Replace: TransformerPluginReplaceConfig{
-					Headers: []string{
-						"host:replaced.host",
+					Headers: []Header{
+						NewHeader("host", "replaced.host"),
 					},
 				},
 				Add: TransformerPluginConfig{
-					Headers: []string{
-						"host:replaced.host",
+					Headers: []Header{
+						NewHeader("host", "replaced.host"),
 					},
 				},
 			}},
@@ -525,13 +526,13 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 				{
 					Type: transformerPluginTypeRequest,
 					Replace: TransformerPluginReplaceConfig{
-						Headers: []string{
-							"host:replaced.host",
+						Headers: []Header{
+							NewHeader("host", "replaced.host"),
 						},
 					},
 					Add: TransformerPluginConfig{
-						Headers: []string{
-							"host:replaced.host",
+						Headers: []Header{
+							NewHeader("host", "replaced.host"),
 						},
 					},
 				},
@@ -678,7 +679,7 @@ func TestMergePluginsOfTheSameType(t *testing.T) {
 				{
 					Type: transformerPluginTypeRequest,
 					Add: TransformerPluginConfig{
-						Headers: []string{"header1:value1"},
+						Headers: []Header{NewHeader("header1", "value1")},
 					},
 					Replace: TransformerPluginReplaceConfig{
 						URI: "path1",
@@ -687,7 +688,7 @@ func TestMergePluginsOfTheSameType(t *testing.T) {
 				{
 					Type: transformerPluginTypeRequest,
 					Add: TransformerPluginConfig{
-						Headers: []string{"header2:value2"},
+						Headers: []Header{NewHeader("header2", "value2")},
 					},
 					Replace: TransformerPluginReplaceConfig{
 						URI: "path2",
@@ -698,7 +699,7 @@ func TestMergePluginsOfTheSameType(t *testing.T) {
 				{
 					Type: transformerPluginTypeRequest,
 					Add: TransformerPluginConfig{
-						Headers: []string{"header1:value1", "header2:value2"},
+						Headers: []Header{NewHeader("header1", "value1"), NewHeader("header2", "value2")},
 					},
 					Replace: TransformerPluginReplaceConfig{
 						URI: "path1",
@@ -1021,7 +1022,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 		Kind:       "Service",
 	}
 
-	refernceGrantTypeMeta := metav1.TypeMeta{
+	referenceGrantTypeMeta := metav1.TypeMeta{
 		APIVersion: "gateway.networking.k8s.io/v1beta1",
 		Kind:       "ReferenceGrant",
 	}
@@ -1270,7 +1271,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					TypeMeta: refernceGrantTypeMeta,
+					TypeMeta: referenceGrantTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "grant-from-httproute-to-service",
@@ -1506,7 +1507,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					TypeMeta: refernceGrantTypeMeta,
+					TypeMeta: referenceGrantTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "grant-from-httproute-to-service",
@@ -1683,7 +1684,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := logr.Discard()
-			fakestore, err := store.NewFakeStore(store.FakeObjects{
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
 				Services:        tc.k8sServices,
 				ReferenceGrants: tc.referenceGrants,
 			})
@@ -1694,7 +1695,12 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				oldHTTPRoutes = append(oldHTTPRoutes, r.DeepCopy())
 			}
 
-			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakestore, tc.httpRoutes, true)
+			translateOptions := TranslateHTTPRouteToKongstateServiceOptions{
+				CombinedServicesFromDifferentHTTPRoutes: true,
+				ExpressionRoutes:                        false,
+				SupportRedirectPlugin:                   false,
+			}
+			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakeStore, tc.httpRoutes, translateOptions)
 			require.Len(t, translationResult.HTTPRouteNameToTranslationErrors, 0, "Should not get translation errors in translating")
 
 			kongstateServices := translationResult.ServiceNameToKongstateService
@@ -1706,10 +1712,10 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				require.Equal(t, *expectedService.Name, *s.Name, "Service %s should have expected name inside", serviceName)
 				require.Equal(t, *expectedService.Host, *s.Host, "Service %s should have expected host", serviceName)
 				// compare backends.
-				require.Lenf(t, s.Backends, len(expectedService.Backends), "Service %s should have expected number of backends")
+				require.Len(t, s.Backends, len(expectedService.Backends), "Service %s should have expected number of backends", serviceName)
 				backendCompareMsg := `Service %s backend %d should have expected %s` // service name, backend index, field name
 				for i, expectedBackend := range expectedService.Backends {
-					require.Equalf(t, s.Backends[i].Namespace(), expectedBackend.Namespace(), backendCompareMsg, serviceName, i, "namespace")
+					require.Equal(t, s.Backends[i].Namespace(), expectedBackend.Namespace(), backendCompareMsg, serviceName, i, "namespace")
 					require.Equal(t, s.Backends[i].Name(), expectedBackend.Name(), backendCompareMsg, serviceName, i, "name")
 					require.Equal(t, s.Backends[i].PortDef(), expectedBackend.PortDef(), backendCompareMsg, serviceName, i, "port")
 					require.Equal(t, s.Backends[i].Weight(), expectedBackend.Weight(), backendCompareMsg, serviceName, i, "weight")
@@ -1717,6 +1723,209 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			}
 
 			require.Equal(t, oldHTTPRoutes, tc.httpRoutes, "HTTPRoutes should not be modified")
+		})
+	}
+}
+
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
+	httpRouteTypeMeta := metav1.TypeMeta{
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Kind:       "HTTPRoute",
+	}
+	backendRefList := []gatewayapi.HTTPBackendRef{
+		{
+			BackendRef: gatewayapi.BackendRef{
+				BackendObjectReference: gatewayapi.BackendObjectReference{
+					Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+					Name:      gatewayapi.ObjectName("service-1"),
+					Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+					Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
+				},
+			},
+		},
+	}
+	httpRouteWithoutHost := &gatewayapi.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+
+	testCases := []struct {
+		name           string
+		rulesMeta      []httpRouteRuleMeta
+		expectedRoutes []kongstate.Route
+		expectError    bool
+	}{
+		{
+			name: "multiple rules with the same(empty) filter from the same HTTPRoute",
+			rulesMeta: []httpRouteRuleMeta{
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/foo"),
+								},
+							},
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/bar"),
+								},
+							},
+						},
+					},
+					RuleNumber:  0,
+					parentRoute: httpRouteWithoutHost,
+				},
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+									Value: lo.ToPtr("/baz"),
+								},
+							},
+						},
+					},
+					RuleNumber:  1,
+					parentRoute: httpRouteWithoutHost,
+				},
+			},
+			expectedRoutes: []kongstate.Route{
+				{
+					Route: kong.Route{
+						Name:         kong.String("httproute.default.httproute-1.0.0"),
+						Paths:        kong.StringSlice("~/foo$", "~/bar$", "~/baz$"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Protocols: []*string{
+							kong.String("http"),
+							kong.String("https"),
+						},
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1"),
+						},
+					},
+					Ingress: util.FromK8sObject(httpRouteWithoutHost),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			generateOptions := TranslateHTTPRouteRulesToKongRouteOptions{
+				ExpressionRoutes:      false,
+				SupportRedirectPlugin: false,
+			}
+			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, generateOptions)
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, routes, len(tc.expectedRoutes))
+			for i, expectedRoute := range tc.expectedRoutes {
+				require.Equal(t, expectedRoute, routes[i])
+			}
+		})
+	}
+}
+
+func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {
+	testCases := []struct {
+		name             string
+		modifier         *gatewayapi.HTTPRequestRedirectFilter
+		expectedScheme   string
+		expectedHostPort string
+	}{
+		{
+			name: "Has scheme, host and port",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				Scheme:   lo.ToPtr("https"),
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Port:     lo.ToPtr(gatewayapi.PortNumber(8443)),
+			},
+			expectedScheme:   "https",
+			expectedHostPort: "a.com:8443",
+		},
+		{
+			name: "no scheme, http scheme should be returned",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+			},
+			expectedScheme:   "http",
+			expectedHostPort: "a.com",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			urlScheme, hostPort := schemeHostPortFromHTTPPathModifier(tc.modifier)
+			require.Equal(t, tc.expectedScheme, urlScheme)
+			require.Equal(t, tc.expectedHostPort, hostPort)
+		})
+	}
+}
+
+func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
+	testCases := []struct {
+		name               string
+		modifier           *gatewayapi.HTTPRequestRedirectFilter
+		expectedKongPlugin kong.Plugin
+	}{
+		{
+			name: "full path replace",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				StatusCode: lo.ToPtr(301),
+				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:            gatewayapi.FullPathHTTPPathModifier,
+					ReplaceFullPath: lo.ToPtr("/foo"),
+				},
+			},
+			expectedKongPlugin: kong.Plugin{
+				Name: kong.String("redirect"),
+				Config: kong.Configuration{
+					"status_code":        lo.ToPtr(301),
+					"location":           lo.ToPtr("http://a.com/foo"),
+					"keep_incoming_path": lo.ToPtr(false),
+				},
+			},
+		},
+		{
+			name: "no path replace",
+			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+				StatusCode: lo.ToPtr(301),
+				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Scheme:     lo.ToPtr("http"),
+			},
+			expectedKongPlugin: kong.Plugin{
+				Name: kong.String("redirect"),
+				Config: kong.Configuration{
+					"status_code":        lo.ToPtr(301),
+					"location":           lo.ToPtr("http://a.com"),
+					"keep_incoming_path": lo.ToPtr(true),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expectedKongPlugin, generateRequestRedirectUsingRedirectKongPlugin(tc.modifier))
 		})
 	}
 }

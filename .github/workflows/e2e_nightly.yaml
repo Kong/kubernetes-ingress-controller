@@ -5,6 +5,9 @@ on:
     - cron: '30 4 * * *'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   ensure-nightly-image-was-built:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
@@ -74,7 +77,7 @@ jobs:
     if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
     steps:
       - name: Notify on Slack for failures of e2e tests run automatically at night
-        uses: 8398a7/action-slack@v3
+        uses: 8398a7/action-slack@28ba43ae48961b90635b50953d216767a6bea486 # v3.16.2
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:

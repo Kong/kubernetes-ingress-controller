@@ -27,4 +27,7 @@ const (
 	// DefaultClusterDomain is the default cluster domain used by the controller.
 	// TODO: change this in next major release: https://github.com/Kong/kubernetes-ingress-controller/issues/6756
 	DefaultClusterDomain = ""
+
+	// DefaultConfigMapSelector is the default label selector used to ingest ConfigMaps in the DataPlane sync.
+	DefaultConfigMapSelector = "konghq.com/configmap"
 )

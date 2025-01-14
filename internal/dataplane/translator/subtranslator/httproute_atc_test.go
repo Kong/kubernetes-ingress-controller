@@ -1,276 +1,20 @@
 package subtranslator
 
 import (
+	"fmt"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
-
-func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
-	testCases := []struct {
-		name              string
-		routeName         string
-		matches           []gatewayapi.HTTPRouteMatch
-		filters           []gatewayapi.HTTPRouteFilter
-		ingressObjectInfo util.K8sObjectInfo
-		hostnames         []string
-		tags              []string
-		expectedRoutes    []kongstate.Route
-		expectedError     error
-	}{
-		{
-			name:              "no hostnames and no matches",
-			routeName:         "empty_route.default.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{},
-			expectedRoutes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Name:         kong.String("empty_route.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(CatchAllHTTPExpression),
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-		{
-			name:              "no matches but have hostnames",
-			routeName:         "host_only.default.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{},
-			hostnames:         []string{"foo.com", "*.bar.com"},
-			expectedRoutes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Name:         kong.String("host_only.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`(http.host == "foo.com") || (http.host =^ ".bar.com")`),
-						Priority:     kong.Uint64(1),
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-		{
-			name:              "single prefix path match",
-			routeName:         "prefix_path_match.defualt.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{},
-			matches: []gatewayapi.HTTPRouteMatch{
-				builder.NewHTTPRouteMatch().WithPathPrefix("/prefix").Build(),
-			},
-			expectedRoutes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Name:         kong.String("prefix_path_match.defualt.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`(http.path == "/prefix") || (http.path ^= "/prefix/")`),
-						Priority:     kong.Uint64(1),
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-		{
-			name:              "multiple matches without filters",
-			routeName:         "multiple_matches.default.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{},
-			matches: []gatewayapi.HTTPRouteMatch{
-				builder.NewHTTPRouteMatch().WithPathPrefix("/prefix").Build(),
-				builder.NewHTTPRouteMatch().WithPathExact("/exact").WithMethod(gatewayapi.HTTPMethodGet).Build(),
-			},
-			expectedRoutes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Name:         kong.String("multiple_matches.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`((http.path == "/prefix") || (http.path ^= "/prefix/")) || ((http.path == "/exact") && (http.method == "GET"))`),
-						Priority:     kong.Uint64(1),
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-		{
-			name:              "multiple matches with request redirect filter",
-			routeName:         "request_redirect.default.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{},
-			matches: []gatewayapi.HTTPRouteMatch{
-				builder.NewHTTPRouteMatch().WithPathExact("/exact/0").Build(),
-				builder.NewHTTPRouteMatch().WithPathExact("/exact/1").Build(),
-			},
-			filters: []gatewayapi.HTTPRouteFilter{
-				builder.NewHTTPRouteRequestRedirectFilter().
-					WithRequestRedirectScheme("http").
-					WithRequestRedirectHost("a.foo.com").
-					WithRequestRedirectStatusCode(301).
-					Build(),
-			},
-			expectedRoutes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Name:         kong.String("request_redirect.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`http.path == "/exact/0"`),
-						Priority:     kong.Uint64(1),
-					},
-					Plugins: []kong.Plugin{
-						{
-							Name: kong.String("request-termination"),
-							Config: kong.Configuration{
-								"status_code": kong.Int(301),
-							},
-						},
-						{
-							Name: kong.String("response-transformer"),
-							Config: kong.Configuration{
-								"add": TransformerPluginConfig{
-									Headers: []string{`Location: http://a.foo.com:80/exact/0`},
-								},
-							},
-						},
-					},
-					ExpressionRoutes: true,
-				},
-				{
-					Route: kong.Route{
-						Name:         kong.String("request_redirect.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`http.path == "/exact/1"`),
-						Priority:     kong.Uint64(1),
-					},
-					Plugins: []kong.Plugin{
-						{
-							Name: kong.String("request-termination"),
-							Config: kong.Configuration{
-								"status_code": kong.Int(301),
-							},
-						},
-						{
-							Name: kong.String("response-transformer"),
-							Config: kong.Configuration{
-								"add": TransformerPluginConfig{
-									Headers: []string{`Location: http://a.foo.com:80/exact/1`},
-								},
-							},
-						},
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-		{
-			name:              "multiple matches with request header transformer filter",
-			routeName:         "request_header_mod.default.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{},
-			matches: []gatewayapi.HTTPRouteMatch{
-				builder.NewHTTPRouteMatch().WithPathExact("/exact/0").Build(),
-				builder.NewHTTPRouteMatch().WithPathRegex("/regex/[a-z]+").Build(),
-			},
-			filters: []gatewayapi.HTTPRouteFilter{
-				builder.NewHTTPRouteRequestHeaderModifierFilter().WithRequestHeaderAdd([]gatewayapi.HTTPHeader{
-					{Name: "foo", Value: "bar"},
-				}).Build(),
-			},
-			expectedRoutes: []kongstate.Route{
-				{
-					Route: kong.Route{
-						Name:         kong.String("request_header_mod.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`(http.path == "/exact/0") || (http.path ~ "^/regex/[a-z]+")`),
-						Priority:     kong.Uint64(1),
-					},
-					Plugins: []kong.Plugin{
-						{
-							Name: kong.String("request-transformer"),
-							Config: kong.Configuration{
-								"append": TransformerPluginConfig{
-									Headers: []string{"foo:bar"},
-								},
-							},
-						},
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-		{
-			name:      "routes with annotations to set protocols and SNIs",
-			routeName: "annotations_protocol_sni.default.0.0",
-			ingressObjectInfo: util.K8sObjectInfo{
-				Namespace: "default",
-				Name:      "httproute-annotations",
-				Annotations: map[string]string{
-					"konghq.com/protocols": "https",
-					"konghq.com/snis":      "a.foo.com",
-				},
-			},
-			hostnames: []string{"a.foo.com"},
-			matches: []gatewayapi.HTTPRouteMatch{
-				builder.NewHTTPRouteMatch().WithPathPrefix("/prefix/0/").Build(),
-			},
-			expectedRoutes: []kongstate.Route{
-				{
-					Ingress: util.K8sObjectInfo{
-						Namespace: "default",
-						Name:      "httproute-annotations",
-						Annotations: map[string]string{
-							"konghq.com/protocols": "https",
-							"konghq.com/snis":      "a.foo.com",
-						},
-					},
-					Route: kong.Route{
-						Name:         kong.String("annotations_protocol_sni.default.0.0"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
-						Expression:   kong.String(`((http.path == "/prefix/0") || (http.path ^= "/prefix/0/")) && (http.host == "a.foo.com") && (tls.sni == "a.foo.com")`),
-						Priority:     kong.Uint64(1),
-					},
-					ExpressionRoutes: true,
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			routes, err := GenerateKongExpressionRoutesFromHTTPRouteMatches(
-				KongRouteTranslation{
-					Name:    tc.routeName,
-					Matches: tc.matches,
-					Filters: tc.filters,
-				},
-				tc.ingressObjectInfo,
-				tc.hostnames,
-				kong.StringSlice(tc.tags...),
-			)
-
-			if tc.expectedError != nil {
-				require.ErrorAs(t, err, &tc.expectedError)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tc.expectedRoutes, routes)
-		})
-	}
-}
 
 func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 	testCases := []struct {
@@ -460,7 +204,7 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			traits := CalculateHTTPRouteMatchPriorityTraits(tc.match)
+			traits := calculateHTTPRouteMatchPriorityTraits(tc.match)
 			require.Equal(t, tc.expectedTraits, traits)
 		})
 	}
@@ -1040,7 +784,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			splitHTTPRoutesWithPriorities := AssignRoutePriorityToSplitHTTPRouteMatches(logr.Discard(), tc.matches)
+			splitHTTPRoutesWithPriorities := assignRoutePriorityToSplitHTTPRouteMatches(logr.Discard(), tc.matches)
 			require.Equal(t, len(tc.priorities), len(splitHTTPRoutesWithPriorities), "should have required number of results")
 			for _, r := range splitHTTPRoutesWithPriorities {
 				httpRoute := r.Match.Source
@@ -1053,6 +797,241 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					matchIndex: r.Match.MatchIndex,
 				}], r.Priority, "httproute %s/%s: hostname %s, rule %d match %d",
 					httpRoute.Namespace, httpRoute.Name, httpRoute.Spec.Hostnames[0], r.Match.RuleIndex, r.Match.MatchIndex)
+			}
+		})
+	}
+}
+
+func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		routes               []*gatewayapi.HTTPRoute
+		expectedSplitMatches splitHTTPRouteMatchesWithPrioritiesGroupedByRule
+	}{
+		{
+			name: "single HTTPRoute with single rule, no hostname and single match",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single HTTPRoute with single rule and multiple hostnames and multiple matches",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname("a.foo.com"),
+							gatewayapi.Hostname("b.bar.com"),
+						},
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "a.foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "a.foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "b.bar.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "b.bar.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single HTTPRoute with multiple rules where one of them does not contain a match",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname("foo.com"),
+						},
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+							{
+								// No matches.
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+				},
+				"ns1/httproute-1.1": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple HTTPRoutes where one of them does not have hostnames and matches",
+			routes: []*gatewayapi.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname("foo.com"),
+						},
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								Matches: []gatewayapi.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-2",
+					},
+					Spec: gatewayapi.HTTPRouteSpec{
+						Rules: []gatewayapi.HTTPRouteRule{
+							{
+								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							},
+						},
+					},
+				},
+			},
+			expectedSplitMatches: splitHTTPRouteMatchesWithPrioritiesGroupedByRule{
+				"ns1/httproute-1.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+						},
+					},
+					{
+						Match: SplitHTTPRouteMatch{
+							Hostname: "foo.com",
+							Match:    builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+						},
+					},
+				},
+				"ns1/httproute-2.0": []SplitHTTPRouteMatchToKongRoutePriority{
+					{
+						Match: SplitHTTPRouteMatch{},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rulesToMatchesWithPriorities := groupHTTPRouteMatchesWithPrioritiesByRule(logr.Discard(), tc.routes)
+			require.Len(t, rulesToMatchesWithPriorities, len(tc.expectedSplitMatches))
+			for _, route := range tc.routes {
+				for ruleIndex := range route.Spec.Rules {
+					ruleKey := fmt.Sprintf("%s/%s.%d", route.Namespace, route.Name, ruleIndex)
+					expectedMatches := tc.expectedSplitMatches[ruleKey]
+					actualMatches, ok := rulesToMatchesWithPriorities[ruleKey]
+					require.Truef(t, ok, "Should find matches from rule %s in HTTPRoute %s/%s", ruleIndex, route.Name, route.Name)
+					require.Len(t, actualMatches, len(expectedMatches), "Rule %d in HTTPRoute %s/%s should have expected number of split matches",
+						ruleIndex, route.Namespace, route.Name)
+					// Sort the matches from the same rule by hostname and match index for comparing.
+					// We need to sort the matches because their order were shuffled during the `assignRoutePriorityToSplitHTTPRouteMatches`
+					// which takes matches from a map.
+					sort.Slice(actualMatches, func(i, j int) bool {
+						if actualMatches[i].Match.Hostname != actualMatches[j].Match.Hostname {
+							return actualMatches[i].Match.Hostname < actualMatches[j].Match.Hostname
+						}
+						return actualMatches[i].Match.MatchIndex < actualMatches[j].Match.MatchIndex
+					})
+					for i, expectedMatch := range expectedMatches {
+						require.Equalf(t, expectedMatch.Match.Hostname, actualMatches[i].Match.Hostname, "Split match %d in rule %s, HTTPRoute %s/%s should have expected hostname",
+							i, ruleIndex, route.Namespace, route.Name)
+						require.Equalf(t, expectedMatch.Match.Match, actualMatches[i].Match.Match, "Split match %d should have expected HTTPRoute match",
+							i, ruleIndex, route.Namespace, route.Name)
+					}
+				}
 			}
 		})
 	}

@@ -41,35 +41,36 @@ const (
 
 	AnnotationPrefix = "konghq.com"
 
-	ConfigurationKey     = "/override"
-	PluginsKey           = "/plugins"
-	ProtocolKey          = "/protocol"
-	ProtocolsKey         = "/protocols"
-	ClientCertKey        = "/client-cert"
-	StripPathKey         = "/strip-path"
-	PathKey              = "/path"
-	HTTPSRedirectCodeKey = "/https-redirect-status-code"
-	PreserveHostKey      = "/preserve-host"
-	RegexPriorityKey     = "/regex-priority"
-	HostHeaderKey        = "/host-header"
-	MethodsKey           = "/methods"
-	SNIsKey              = "/snis"
-	RequestBuffering     = "/request-buffering"
-	ResponseBuffering    = "/response-buffering"
-	HostAliasesKey       = "/host-aliases"
-	RegexPrefixKey       = "/regex-prefix"
-	ConnectTimeoutKey    = "/connect-timeout"
-	WriteTimeoutKey      = "/write-timeout"
-	ReadTimeoutKey       = "/read-timeout"
-	RetriesKey           = "/retries"
-	HeadersKey           = "/headers"
-	HeadersSeparatorKey  = "/headers-separator"
-	PathHandlingKey      = "/path-handling"
-	UserTagKey           = "/tags"
-	RewriteURIKey        = "/rewrite"
-	TLSVerifyKey         = "/tls-verify"
-	TLSVerifyDepthKey    = "/tls-verify-depth"
-	CACertificatesKey    = "/ca-certificates"
+	ConfigurationKey            = "/override"
+	PluginsKey                  = "/plugins"
+	ProtocolKey                 = "/protocol"
+	ProtocolsKey                = "/protocols"
+	ClientCertKey               = "/client-cert"
+	StripPathKey                = "/strip-path"
+	PathKey                     = "/path"
+	HTTPSRedirectCodeKey        = "/https-redirect-status-code"
+	PreserveHostKey             = "/preserve-host"
+	RegexPriorityKey            = "/regex-priority"
+	HostHeaderKey               = "/host-header"
+	MethodsKey                  = "/methods"
+	SNIsKey                     = "/snis"
+	RequestBuffering            = "/request-buffering"
+	ResponseBuffering           = "/response-buffering"
+	HostAliasesKey              = "/host-aliases"
+	RegexPrefixKey              = "/regex-prefix"
+	ConnectTimeoutKey           = "/connect-timeout"
+	WriteTimeoutKey             = "/write-timeout"
+	ReadTimeoutKey              = "/read-timeout"
+	RetriesKey                  = "/retries"
+	HeadersKey                  = "/headers"
+	HeadersSeparatorKey         = "/headers-separator"
+	PathHandlingKey             = "/path-handling"
+	UserTagKey                  = "/tags"
+	RewriteURIKey               = "/rewrite"
+	TLSVerifyKey                = "/tls-verify"
+	TLSVerifyDepthKey           = "/tls-verify-depth"
+	CACertificatesSecretsKey    = "/ca-certificates-secrets"
+	CACertificatesConfigMapsKey = "/ca-certificates-configmaps"
 
 	// GatewayClassUnmanagedKey is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -395,10 +396,18 @@ func ExtractTLSVerifyDepth(anns map[string]string) (int, bool) {
 	return depth, true
 }
 
-// ExtractCACertificates extracts the ca-certificates secret names from the annotation.
-// It expects a comma-separated list of certificate names.
-func ExtractCACertificates(anns map[string]string) []string {
-	s, ok := anns[AnnotationPrefix+CACertificatesKey]
+// ExtractCACertificateSecretNames extracts the ca-certificates secret names from the `ca-certificates-secret` annotation.
+// It expects a comma-separated list of secret names containing CA certificates.
+func ExtractCACertificateSecretNames(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesSecretsKey]
+	if !ok {
+		return nil
+	}
+	return extractCommaDelimitedStrings(s)
+}
+
+func ExtractCACertificateConfigMapNames(anns map[string]string) []string {
+	s, ok := anns[AnnotationPrefix+CACertificatesConfigMapsKey]
 	if !ok {
 		return nil
 	}
@@ -439,4 +448,50 @@ func extractCommaDelimitedStrings(s string, sanitizeFns ...func(string) string) 
 	}
 
 	return out
+}
+
+// SetTLSVerify sets the tls-verify annotation value.
+func SetTLSVerify(anns map[string]string, value bool) {
+	anns[AnnotationPrefix+TLSVerifyKey] = strconv.FormatBool(value)
+}
+
+// SetConfigMapCACertificates merge the ca-certificates configmap names into the already existing CA certificates set via annotation.
+func SetConfigMapCACertificates(anns map[string]string, configMapCertificates []string) {
+	if len(configMapCertificates) == 0 {
+		return
+	}
+	existingCACerts := anns[AnnotationPrefix+CACertificatesConfigMapsKey]
+	if existingCACerts == "" {
+		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = strings.Join(configMapCertificates, ",")
+	} else {
+		anns[AnnotationPrefix+CACertificatesConfigMapsKey] = existingCACerts + "," + strings.Join(configMapCertificates, ",")
+	}
+}
+
+// SetSecretCACertificates merge the ca-certificates secret names into the already existing CA certificates set via annotation.
+func SetSecretCACertificates(anns map[string]string, secretCertificates []string) {
+	if len(secretCertificates) == 0 {
+		return
+	}
+	existingCACerts := anns[AnnotationPrefix+CACertificatesSecretsKey]
+	if existingCACerts == "" {
+		anns[AnnotationPrefix+CACertificatesSecretsKey] = strings.Join(secretCertificates, ",")
+	} else {
+		anns[AnnotationPrefix+CACertificatesSecretsKey] = existingCACerts + "," + strings.Join(secretCertificates, ",")
+	}
+}
+
+// SetHostHeader sets the host-header annotation value.
+func SetHostHeader(anns map[string]string, value string) {
+	anns[AnnotationPrefix+HostHeaderKey] = value
+}
+
+// SetProtocol sets the protocol annotation value.
+func SetProtocol(anns map[string]string, value string) {
+	anns[AnnotationPrefix+ProtocolKey] = value
+}
+
+// SetTLSVerifyDepth sets the tls-verify-depth annotation value.
+func SetTLSVerifyDepth(anns map[string]string, depth int) {
+	anns[AnnotationPrefix+TLSVerifyDepthKey] = strconv.Itoa(depth)
 }

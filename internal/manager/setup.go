@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -16,12 +17,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -38,8 +41,11 @@ import (
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 )
 
@@ -87,6 +93,17 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 		Scheme:                  scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: c.MetricsAddr,
+			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (metricsserver.Filter, error) {
+				switch c.MetricsAccessFilter {
+				case cfgtypes.MetricsAccessFilterOff:
+					return nil
+				case cfgtypes.MetricsAccessFilterRBAC:
+					return filters.WithAuthenticationAndAuthorization
+				default:
+					// This is checked in flags validation so this should never happen.
+					panic("unsupported metrics filter")
+				}
+			}(),
 		},
 		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
 		LeaderElection:   leaderElectionEnabled(logger, c, dbmode),
@@ -486,30 +503,31 @@ func setupLicenseGetter(
 	return nil, nil
 }
 
-// setupKonnectConfigSynchronizer sets up Konnect config sychronizer and adds it to the manager runnables.
-func setupKonnectConfigSynchronizer(
+// setupKonnectConfigSynchronizerWithMgr sets up Konnect config synchronizer and adds it to the manager runnables.
+func setupKonnectConfigSynchronizerWithMgr(
 	ctx context.Context,
 	mgr manager.Manager,
-	configUploadPeriod time.Duration,
+	cfg *Config,
 	kongConfig sendconfig.Config,
-	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,
+	metricsRecorder metrics.Recorder,
 ) (*konnect.ConfigSynchronizer, error) {
-	logger := ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer")
 	s := konnect.NewConfigSynchronizer(
-		ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
-		kongConfig,
-		configUploadPeriod,
-		clientsProvider,
-		updateStrategyResolver,
-		sendconfig.NewDefaultConfigurationChangeDetector(logger),
-		configStatusNotifier,
+		konnect.ConfigSynchronizerParams{
+			Logger:                 ctrl.LoggerFrom(ctx).WithName("konnect-config-synchronizer"),
+			KongConfig:             kongConfig,
+			ConfigUploadTicker:     clock.NewTickerWithDuration(cfg.Konnect.UploadConfigPeriod),
+			KonnectClientFactory:   adminapi.NewKonnectClientFactory(cfg.Konnect, ctrl.LoggerFrom(ctx).WithName("konnect-client-factory")),
+			UpdateStrategyResolver: updateStrategyResolver,
+			ConfigChangeDetector:   sendconfig.NewKonnectConfigurationChangeDetector(),
+			ConfigStatusNotifier:   configStatusNotifier,
+			MetricsRecorder:        metricsRecorder,
+		},
 	)
 	err := mgr.Add(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not add Konnect config synchronizer to manager: %w", err)
 	}
-
 	return s, nil
 }

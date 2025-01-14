@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -30,10 +31,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -61,9 +64,10 @@ type Storer interface {
 
 	// Core Kubernetes resources.
 	GetSecret(namespace, name string) (*corev1.Secret, error)
+	GetConfigMap(namespace, name string) (*corev1.ConfigMap, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
-	ListCACerts() ([]*corev1.Secret, error)
+	ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error)
 
 	// Kong resources.
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
@@ -102,7 +106,7 @@ type Storer interface {
 	ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error)
 	ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error)
 	ListGateways() ([]*gatewayapi.Gateway, error)
-	ListBackendTLSPolicies() ([]*gatewayapi.BackendTLSPolicy, error)
+	ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gatewayapi.BackendTLSPolicy, error)
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -151,6 +155,19 @@ func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 		return nil, NotFoundError{fmt.Sprintf("Secret %v not found", key)}
 	}
 	return secret.(*corev1.Secret), nil
+}
+
+// GetConfigMap returns a ConfigMap using the namespace and name as key.
+func (s Store) GetConfigMap(namespace, name string) (*corev1.ConfigMap, error) {
+	key := fmt.Sprintf("%s/%s", namespace, name)
+	configMap, exists, err := s.stores.ConfigMap.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("ConfigMap %s not found", key)}
+	}
+	return configMap.(*corev1.ConfigMap), nil
 }
 
 // GetService returns a Service using the namespace and name as key.
@@ -295,6 +312,8 @@ func GetTypedStore[T client.Object](cs CacheStores) (cache.Store, error) {
 		return cs.ReferenceGrant, nil
 	case *gatewayapi.Gateway:
 		return cs.Gateway, nil
+	case *gatewayapi.BackendTLSPolicy:
+		return cs.BackendTLSPolicy, nil
 	case *kongv1.KongPlugin:
 		return cs.Plugin, nil
 	default:
@@ -337,8 +356,26 @@ func (s Store) ListGateways() ([]*gatewayapi.Gateway, error) {
 	return List[*gatewayapi.Gateway](s.stores)
 }
 
-func (s Store) ListBackendTLSPolicies() ([]*gatewayapi.BackendTLSPolicy, error) {
-	return List[*gatewayapi.BackendTLSPolicy](s.stores)
+// ListBackendTLSPoliciesByTargetService returns the list of BackendTLSPolicies in the BackendTLSPolicy cache store.
+// The policies are filtered by the target service.
+func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gatewayapi.BackendTLSPolicy, error) {
+	policiesToReturn := []*gatewayapi.BackendTLSPolicy{}
+	policies, err := List[*gatewayapi.BackendTLSPolicy](s.stores)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, policy := range policies {
+		if lo.ContainsBy(policy.Spec.TargetRefs, func(ref gatewayapi.LocalPolicyTargetReferenceWithSectionName) bool {
+			return (ref.Group == "" || ref.Group == "core") &&
+				ref.Kind == "Service" &&
+				(policy.Namespace == service.Namespace && string(ref.Name) == service.Name)
+		}) {
+			policiesToReturn = append(policiesToReturn, policy)
+		}
+	}
+
+	return policiesToReturn, nil
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from
@@ -668,27 +705,39 @@ func (s Store) ListKongPlugins() []*kongv1.KongPlugin {
 	return plugins
 }
 
-// ListCACerts returns all Secrets containing the label
+// ListCACerts returns all Secrets and ConfigMaps containing the label
 // "konghq.com/ca-cert"="true".
-func (s Store) ListCACerts() ([]*corev1.Secret, error) {
+func (s Store) ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error) {
 	var secrets []*corev1.Secret
+	var configMaps []*corev1.ConfigMap
+
 	req, err := labels.NewRequirement(caCertKey,
 		selection.Equals, []string{"true"})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	err = cache.ListAll(s.stores.Secret,
 		labels.NewSelector().Add(*req),
 		func(ob interface{}) {
-			p, ok := ob.(*corev1.Secret)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			if p, ok := ob.(*corev1.Secret); ok {
 				secrets = append(secrets, p)
 			}
 		})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return secrets, nil
+	err = cache.ListAll(s.stores.ConfigMap,
+		labels.NewSelector().Add(*req),
+		func(ob interface{}) {
+			if p, ok := ob.(*corev1.ConfigMap); ok {
+				configMaps = append(configMaps, p)
+			}
+		})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return secrets, configMaps, nil
 }
 
 func (s Store) ListKongVaults() []*kongv1alpha1.KongVault {
@@ -764,6 +813,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
+	case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
+		return &corev1.ConfigMap{}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Discovery APIs
 	// ----------------------------------------------------------------------------
@@ -772,6 +823,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
+	case gatewayv1.SchemeGroupVersion.WithKind("Gateway"):
+		return &gatewayapi.Gateway{}, nil
 	case gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"):
 		return &gatewayapi.HTTPRoute{}, nil
 	case gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"):
@@ -784,6 +837,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &gatewayapi.TLSRoute{}, nil
 	case gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"):
 		return &gatewayapi.ReferenceGrant{}, nil
+	case gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"):
+		return &gatewayapi.BackendTLSPolicy{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------

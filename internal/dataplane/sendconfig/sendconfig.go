@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -22,7 +23,7 @@ import (
 // -----------------------------------------------------------------------------
 
 type UpdateStrategyResolver interface {
-	ResolveUpdateStrategy(client UpdateClient) UpdateStrategy
+	ResolveUpdateStrategy(client UpdateClient, diagnostic *diagnostics.ClientDiagnostic) UpdateStrategy
 }
 
 type AdminAPIClient interface {
@@ -45,9 +46,10 @@ func PerformUpdate(
 	config Config,
 	targetContent *file.Content,
 	customEntities CustomEntitiesByType,
-	promMetrics *metrics.CtrlFuncMetrics,
+	promMetrics metrics.Recorder,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
+	diagnostic *diagnostics.ClientDiagnostic,
 	isFallback bool,
 ) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()
@@ -58,7 +60,7 @@ func PerformUpdate(
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
-		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
+		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client.AdminAPIClient())
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect configuration change: %w", err)
 		}
@@ -72,7 +74,7 @@ func PerformUpdate(
 		}
 	}
 
-	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
+	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client, diagnostic)
 	logger = logger.WithValues("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
 	size, err := updateStrategy.Update(ctx, ContentWithHash{

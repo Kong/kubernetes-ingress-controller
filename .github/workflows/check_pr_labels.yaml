@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, reopened, ready_for_review, labeled, unlabeled, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
   label:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}

@@ -18,6 +18,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   verify-manifest-tag:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
@@ -159,6 +162,8 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     needs: [build-push-images, test-e2e]
+    permissions:
+      contents: write
     steps:
     - name: Parse semver string
       id: semver_parser
@@ -190,6 +195,8 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     if: github.event.inputs.latest == 'true'
+    permissions:
+      contents: write
     needs:
     - publish-release
     steps:

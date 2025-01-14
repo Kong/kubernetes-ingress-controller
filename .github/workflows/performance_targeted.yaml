@@ -23,11 +23,17 @@ on:
         type: string
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   post-comment-in-pr:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: ${{ github.event.inputs.pr-number != '' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       # URL is the current workflow's run URL.

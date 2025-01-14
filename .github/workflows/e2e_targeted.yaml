@@ -31,6 +31,9 @@ on:
         type: string
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   post-comment-in-pr:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
@@ -43,6 +46,9 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.inputs.pr-number }}
       RUN_GKE: ${{ inputs.run-gke }}
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - run: |

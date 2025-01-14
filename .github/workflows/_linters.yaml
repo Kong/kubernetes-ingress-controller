@@ -3,6 +3,9 @@ name: linters
 on:
   workflow_call: {}
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}

@@ -3,6 +3,9 @@ name: kong integration tests
 on:
   workflow_call: {}
 
+permissions:
+  contents: read
+
 jobs:
   kongintegration-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}

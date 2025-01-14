@@ -7,10 +7,16 @@ on:
         description: 'The version to release (e.g. v1.2.3)'
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   create_docs_pr:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Parse semver string
         id: semver_parser

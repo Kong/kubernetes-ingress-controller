@@ -8,15 +8,22 @@ on:
     types:
       - labeled
 
+permissions:
+  contents: read
+
 jobs:
   regenerate:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: contains(github.event.*.labels.*.name, 'renovate/auto-regenerate')
     runs-on: ubuntu-latest
+    env:
+      REF: ${{ github.event.pull_request.head.ref }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ env.ref }}
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
 
       - name: setup golang
@@ -39,4 +46,4 @@ jobs:
           git status
           git diff-index --quiet HEAD || \
           git commit -m "chore: regenerate" && \
-          git push origin ${{ github.event.pull_request.head.ref }}
+          git push origin ${{ env.ref }}

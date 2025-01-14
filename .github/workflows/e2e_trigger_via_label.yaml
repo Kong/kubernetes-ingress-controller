@@ -5,6 +5,9 @@ on:
     types:
     - labeled
 
+permissions:
+  contents: read
+
 jobs:
   check-permission:
     uses: ./.github/workflows/_permission_check.yaml
@@ -20,7 +23,9 @@ jobs:
       WORKFLOW: .github/workflows/e2e_targeted.yaml
       BRANCH: ${{ github.event.pull_request.head.ref }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
-
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

@@ -23,7 +23,7 @@ At Kong, we take security issues very seriously. If you believe you have found a
 
 We encourage security researchers to participate in our bug bounty program as outlined on the [Kong Vulnerability Disclosure](https://konghq.com/compliance/bug-bounty) page. This program provides rewards for discovering and reporting security vulnerabilities in accordance with our disclosure guidelines.
 
-Thank you for helping to keep HTTPSnippet secure.
+Thank you for helping to keep Kong secure.
 
 For more information on our security policies and guidelines, please visit the [Kong Vulnerability Disclosure](https://konghq.com/compliance/bug-bounty) page.
 

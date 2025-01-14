@@ -49,6 +49,16 @@
       "matchStrings": [
         "'(?<currentValue>.+)' # renovate: datasource=(?<datasource>.*) versioning=(?<versioning>.*) depName=(?<depName>.+) (packageName=(?<packageName>.+))"
       ]
+    },
+    {
+      "description": "Match versions in Dockerfile.* that are properly annotated with `# renovate: datasource={} depName={}`.",
+      "customType": "regex",
+      "fileMatch": [
+        "^Dockerfile.*$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*) depName=(?<depName>.+)\\n.*@(?<currentValue>.*)"
+      ]
     }
   ],
   "customDatasources": {

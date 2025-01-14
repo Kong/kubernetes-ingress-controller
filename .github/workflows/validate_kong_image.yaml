@@ -45,7 +45,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - run: |
           gh issue comment ${ISSUE_NUMBER} --body \
             'Kong Gateway validation tests were started at ${{ env.URL }} with the following parameters:
@@ -95,7 +95,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
         run: |
           gh issue close ${ISSUE_NUMBER} --comment \

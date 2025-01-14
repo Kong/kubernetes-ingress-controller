@@ -35,7 +35,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.16.1
 	github.com/kong/go-kong v0.62.0
-	github.com/kong/kubernetes-configuration v1.0.4
+	github.com/kong/kubernetes-configuration v1.0.5
 	github.com/kong/kubernetes-telemetry v0.1.7
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/lithammer/dedent v1.1.0
@@ -94,7 +94,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect
-	github.com/Kong/sdk-konnect-go v0.1.18
+	github.com/Kong/sdk-konnect-go v0.1.19
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect

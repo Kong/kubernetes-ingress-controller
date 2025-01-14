@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: fossas/fossa-action@v1.4.0
+      - uses: fossas/fossa-action@09bcf127dc0ccb4b5a023f6f906728878e8610ba # v1.4.0
         with:
           api-key: ${{secrets.fossaApiKey}}
           branch: main

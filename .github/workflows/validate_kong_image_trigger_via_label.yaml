@@ -72,7 +72,7 @@ jobs:
       # We parse the semver from Kong image tag because we need to run with different KIC images with Kong 2.8.x and Kong 3.x.
       - name: Parse Semver of Kong from image tag
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ env.TEST_KONG_IMAGE_VERSION }}
   

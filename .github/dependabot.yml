@@ -26,10 +26,10 @@ updates:
         applies-to: version-updates # Applies the group rule to version updates
         patterns:
           - "github.com/testcontainers/testcontainers-go*"
-     # Specify a name for the group, which will be used in pull request titles and branch names
+     # Specify a name for the group, which will be used in pull request titles and branch names.
      actions:
-        # Define patterns to include dependencies in the group (based on dependency name)
-        applies-to: version-updates # Applies the group rule to version updates
+        # Define patterns to include dependencies in the group (based on dependency name).
+        applies-to: version-updates # Applies the group rule to version updates.
         patterns:
           - "actions/*"
 - package-ecosystem: github-actions

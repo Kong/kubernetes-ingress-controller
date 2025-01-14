@@ -19,6 +19,9 @@ on:
       - '**'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   check-permission:
     uses: ./.github/workflows/_permission_check.yaml
@@ -142,6 +145,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     needs:
+      - ensure-actions-sha-pin
       - up-to-date
       - tools
       - linters
@@ -160,7 +164,6 @@ jobs:
 
   test-reports:
     needs:
-      - ensure-actions-sha-pin
       - unit-tests
       - envtest-tests
       - kongintegration-tests

@@ -6,6 +6,9 @@ name: permission check
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   check-permission:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}

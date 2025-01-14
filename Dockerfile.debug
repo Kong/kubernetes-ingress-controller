@@ -1,5 +1,5 @@
 # Build a manager binary with debug symbols and download Delve
-FROM --platform=$BUILDPLATFORM golang:1.23.4 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.4@sha256:7ea4c9dcb2b97ff8ee80a67db3d44f98c8ffa0d191399197007d8459c1453041 AS builder
 
 ARG GOPATH
 ARG GOCACHE
@@ -46,8 +46,8 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 
 ### Debug
 # Create an image that runs a debug build with Delve installed
-FROM golang:1.23.4 AS debug
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
+FROM --platform=$BUILDPLATFORM golang:1.23.4@sha256:7ea4c9dcb2b97ff8ee80a67db3d44f98c8ffa0d191399197007d8459c1453041 AS debug
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.24.0
 # We want all source so Delve file location operations work
 COPY --from=builder /workspace/bin/manager-debug /
 USER 65532:65532

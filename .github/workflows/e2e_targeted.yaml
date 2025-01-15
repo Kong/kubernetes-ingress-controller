@@ -31,12 +31,12 @@ jobs:
           - 5000:5000
     steps:
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -44,24 +44,24 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 
     - name: Set up QEMU
       if: ${{ github.event.inputs.controller-image == 'localhost:5000/kong/kubernetes-ingress-controller:ci' }}
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480 # v1
 
     - name: Set up Docker Buildx
       if: ${{ github.event.inputs.controller-image == 'localhost:5000/kong/kubernetes-ingress-controller:ci' }}
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9 # v1
       with:
         driver-opts: network=host
 
     - name: Build and push to local registry
       if: ${{ github.event.inputs.controller-image == 'localhost:5000/kong/kubernetes-ingress-controller:ci' }}
       id: docker_build
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
       with:
         context: .
         push: true
@@ -85,12 +85,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -98,7 +98,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 

@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Setup go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
     - name: Install go-licenses
       run: go get github.com/google/go-licenses
     - name: Checkout target
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         ref: ${{ github.event.pull_request.base.ref }}
         path: ./src
@@ -28,7 +28,7 @@ jobs:
       run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/target_licenses.csv
       working-directory: ./src
     - name: Checkout PR
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         path: ./pr
         ref: ${{ github.head_ref }}
@@ -44,7 +44,7 @@ jobs:
         diff -u target_licenses.csv pr_licenses.csv >> $GITHUB_ENV || true
         echo 'EOF' >> $GITHUB_ENV
     - name: Update PR - go-license output differs
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +63,7 @@ jobs:
             })
     - name: Update PR - remove unchanged label
       continue-on-error: true
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -75,7 +75,7 @@ jobs:
               name: ['ci/license/unchanged']
             })
     - name: Update PR - go-license output equal
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       if: ${{ env.DIFF_OUT == '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

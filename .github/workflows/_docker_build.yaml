@@ -27,19 +27,19 @@ jobs:
       tags: ${{ steps.merge-tags.outputs.tags }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
 
       - name: Parse semver string
         if: ${{ inputs.tag != '' }}
         id: parse-semver-tag
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
-      - uses: benjlevesque/short-sha@v2.2
+      - uses: benjlevesque/short-sha@36eb8c530990ceac5ddf3c0bc32d02c677ae9706 # v2.2
         id: short-sha
 
       - name: Add standard tag
@@ -78,18 +78,18 @@ jobs:
       image: kong/kubernetes-ingress-controller:${{ steps.meta.outputs.version }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -98,7 +98,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4.4.0
+        uses: docker/metadata-action@c4ee3adeed93b1fa6a762f209fb01608c1a22f1e # v4.4.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -107,7 +107,7 @@ jobs:
 
       - name: Build
         id: docker-build-dockerhub
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # v4
         with:
           push: false
           file: Dockerfile
@@ -124,7 +124,7 @@ jobs:
       # Build locally with outputs set to `type=docker,dest=/tmp/image.tar` to save the image as a `kic-image` artifact.
       - name: Build locally
         id: docker-build-local
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # v4
         with:
           load: true
           file: Dockerfile
@@ -139,7 +139,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: kic-image
           path: /tmp/image.tar

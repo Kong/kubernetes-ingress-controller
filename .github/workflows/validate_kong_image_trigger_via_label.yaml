@@ -15,7 +15,7 @@ jobs:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: "Remove the label ci/run-validate-kong-image if exist"
         run: gh issue edit ${ISSUE_NUMBER} --remove-label ci/run-validate-kong-image
 
@@ -91,7 +91,7 @@ jobs:
       kic_image_tag: ${{ steps.choose_kic_branch.outputs.KIC_IMAGE_TAG }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Choose KIC image and branch
         id: choose_kic_branch
         run: |
@@ -124,7 +124,7 @@ jobs:
       KIC_IMAGE_TAG: ${{ needs.decide-kic-branch-and-image.outputs.kic_image_tag }} 
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Run validate Kong image tests
         id: run_validate_kong_image

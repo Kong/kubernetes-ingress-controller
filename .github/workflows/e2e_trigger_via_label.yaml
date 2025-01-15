@@ -17,7 +17,7 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
     # Do not run e2e tests on GKE-based clusters for specific PR, because currently
     # there is no way to use an image built from PR's code for those tests.
     # https://github.com/Kong/kubernetes-testing-framework/issues/587

@@ -13,18 +13,18 @@ jobs:
     steps:
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.6
+        uses: booxmedialtd/ws-action-parse-semver@e81ad80123156d7ddd4f6c8383e63f497f857deb # v1.4.6
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
       - name: Checkout KIC repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
 
       - name: Checkout docs repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           repository: kong/docs.konghq.com
           path: docs.konghq.com

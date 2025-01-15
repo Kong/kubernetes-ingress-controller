@@ -16,7 +16,7 @@ jobs:
       helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
@@ -41,12 +41,12 @@ jobs:
           expression_routes: "true"
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
         with:
           go-version-file: go.mod
 
@@ -60,7 +60,7 @@ jobs:
       # upload logs when test failed
       - name: upload KIC logs 
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with: 
           name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
@@ -68,7 +68,7 @@ jobs:
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: tests-report
           path: conformance-tests.xml

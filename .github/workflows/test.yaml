@@ -17,12 +17,12 @@ jobs:
     steps:
 
     - name: Setup go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: Cache Go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -30,7 +30,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 
@@ -51,15 +51,15 @@ jobs:
     steps:
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9 # v1
 
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
         with:
           fetch-depth: 0
 
       - name: Cache Docker layers
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -67,7 +67,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Verify Docker Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: false
           file: Dockerfile
@@ -80,12 +80,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -93,7 +93,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 
@@ -101,7 +101,7 @@ jobs:
       run: make test
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
       with:
         name: coverage.unit.out
         path: coverage.unit.out
@@ -112,12 +112,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -125,7 +125,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 
@@ -135,7 +135,7 @@ jobs:
         KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
       with:
         name: coverage.enterprisepostgres.out
         path: coverage.enterprisepostgres.out
@@ -145,12 +145,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -158,7 +158,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 
@@ -166,7 +166,7 @@ jobs:
       run: make test.integration.dbless
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
       with:
         name: coverage.dbless.out
         path: coverage.dbless.out
@@ -176,12 +176,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: '^1.17'
 
     - name: cache go modules
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # v2.1.7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -189,7 +189,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       with:
         fetch-depth: 0
 
@@ -197,7 +197,7 @@ jobs:
       run: make test.integration.postgres
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
       with:
         name: coverage.postgres.out
         path: coverage.postgres.out
@@ -214,34 +214,34 @@ jobs:
       # TODO: deduplicate the download-artifact steps by implementing a `matrix` workflow step instead
     - name: collect unit test coverage artifacts
       id: download-unit
-      uses: actions/download-artifact@v2.1.0
+      uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
       with:
         name: coverage.unit.out
         path: coverage.unit.out
 
     - name: collect dbless test coverage artifacts
       id: download-dbless
-      uses: actions/download-artifact@v2.1.0
+      uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
       with:
         name: coverage.dbless.out
         path: coverage.dbless.out
 
     - name: collect postgres test coverage artifacts
       id: download-postgres
-      uses: actions/download-artifact@v2.1.0
+      uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
       with:
         name: coverage.postgres.out
         path: coverage.postgres.out
 
     - name: collect enterprisepostgres test coverage artifacts
       id: download-enterprisepostgres
-      uses: actions/download-artifact@v2.1.0
+      uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869 # v2.1.0
       with:
         name: coverage.enterprisepostgres.out
         path: coverage.enterprisepostgres.out
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b # v2.1.0
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}

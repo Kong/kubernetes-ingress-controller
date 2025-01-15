@@ -17,12 +17,12 @@ jobs:
     steps:
 
     - name: Setup go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: Cache Go modules
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -30,7 +30,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -48,15 +48,15 @@ jobs:
     steps:
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2
 
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -64,7 +64,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Verify Docker Build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3
         with:
           push: false
           file: Dockerfile
@@ -77,12 +77,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -90,7 +90,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -100,14 +100,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.unit.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: unit-tests.xml
@@ -126,7 +126,7 @@ jobs:
     # ref: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     steps:
 
-    - uses: Kong/kong-license@master
+    - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master
       if: env.PULP_PASSWORD != ''
       id: license
       with:
@@ -134,13 +134,13 @@ jobs:
 
     - name: setup golang
       if: env.PULP_PASSWORD != ''
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
       if: env.PULP_PASSWORD != ''
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -149,7 +149,7 @@ jobs:
 
     - name: checkout repository
       if: env.PULP_PASSWORD != ''
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -163,14 +163,14 @@ jobs:
 
     - name: collect test coverage
       if: env.PULP_PASSWORD != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
       if: env.PULP_PASSWORD != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: diagnostics-integration-tests-enterprise-postgres
         path: /tmp/ktf-diag*
@@ -178,7 +178,7 @@ jobs:
 
     - name: collect test report
       if: env.PULP_PASSWORD != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-enterprise-postgres.xml
@@ -188,12 +188,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -201,7 +201,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -212,14 +212,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "integration-tests-dbless.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.dbless.out
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: diagnostics-integration-tests-dbless
         path: /tmp/ktf-diag*
@@ -227,7 +227,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-dbless.xml
@@ -237,12 +237,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -250,7 +250,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -261,14 +261,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "integration-tests-postgres.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.postgres.out
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: diagnostics-integration-tests-postgres
         path: /tmp/ktf-diag*
@@ -276,7 +276,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-postgres.xml
@@ -286,12 +286,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -299,7 +299,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -311,14 +311,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "integration-tests-feature-gates.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.featuregates.out
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: diagnostics-integration-tests-feature-gates
         path: /tmp/ktf-diag*
@@ -326,7 +326,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-feature-gates.xml
@@ -336,12 +336,12 @@ jobs:
     steps:
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
-      uses: actions/cache@v3
+      uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
@@ -349,7 +349,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
@@ -360,7 +360,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: conformance-tests.xml
@@ -376,19 +376,19 @@ jobs:
     steps:
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         fetch-depth: 0
 
     - name: collect test coverage artifacts
       id: download-coverage
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
       with:
         name: coverage
         path: coverage
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3
       with:
         name: combined-coverage
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -409,13 +409,13 @@ jobs:
     steps:
 
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
 
       - name: download tests report
         id: download-coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: tests-report
           path: report

@@ -16,7 +16,7 @@ jobs:
       - name: Parse semver string
         id: semver_parser
         if: ${{ contains(github.ref, 'tags') }}
-        uses: booxmedialtd/ws-action-parse-semver@v1
+        uses: booxmedialtd/ws-action-parse-semver@3576f3a20a39f8752fe0d8195f5ed384090285dc # v1
         with:
           input_string: ${{ github.ref }}
           version_extractor_regex: 'refs\/tags\/v(.*)$'
@@ -47,28 +47,28 @@ jobs:
           echo 'type=semver,pattern={{major}}.{{minor}},suffix=-redhat' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9 # v1
       - name: Cache Docker layers
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # v2.1.6
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.6.0
+        uses: docker/metadata-action@548e2346a9987b56d8a4104fe776321ff8e23440 # v3.6.0
         with:
           images: kong/kubernetes-ingress-controller
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.6.0
+        uses: docker/metadata-action@548e2346a9987b56d8a4104fe776321ff8e23440 # v3.6.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -76,7 +76,7 @@ jobs:
           tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: false
           file: Dockerfile
@@ -89,7 +89,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: true
           file: Dockerfile
@@ -104,7 +104,7 @@ jobs:
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta.outputs.version }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: true
           file: Dockerfile

@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: performance-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: setup ruby
         uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
         with:
@@ -44,7 +44,7 @@ jobs:
           gem install youplot
 
       - name: download performance test results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: performance-tests-results
           path: perf-results

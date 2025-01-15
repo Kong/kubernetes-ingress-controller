@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Check repo access
       id: check
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -42,13 +42,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Setup go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
       with:
         go-version: '^1.18'
     - name: Install go-licenses
       run: go install github.com/google/go-licenses@latest
     - name: Checkout target
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         ref: ${{ github.event.pull_request.base.ref }}
         path: ./src
@@ -57,7 +57,7 @@ jobs:
       run: go-licenses csv ./... | grep -vE "github.com/kong|golang.org/x" | sort > ${{ github.workspace }}/target_licenses.csv
       working-directory: ./src
     - name: Checkout PR
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       with:
         path: ./pr
         ref: ${{ github.head_ref }}
@@ -73,7 +73,7 @@ jobs:
         diff -u target_licenses.csv pr_licenses.csv >> $GITHUB_ENV || true
         echo 'EOF' >> $GITHUB_ENV
     - name: Update PR - go-license output differs
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -92,7 +92,7 @@ jobs:
             })
     - name: Update PR - remove unchanged label
       continue-on-error: true
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       if: ${{ env.DIFF_OUT != '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -104,7 +104,7 @@ jobs:
               name: ['ci/license/unchanged']
             })
     - name: Update PR - go-license output equal
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       if: ${{ env.DIFF_OUT == '' }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -9,7 +9,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: pmalek/verify-pr-label-action@v1.4.5
+      - uses: pmalek/verify-pr-label-action@7c5cdb8db3e959d689b7f13da21826ec8c9f6f8f # v1.4.5
         with:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           invalid-labels: 'do not merge,on-hold'

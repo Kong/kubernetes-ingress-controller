@@ -15,7 +15,7 @@ jobs:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: "Remove the label ci/run-validate-kong-image if exist"
         run: gh issue edit ${ISSUE_NUMBER} --remove-label ci/run-validate-kong-image
 
@@ -72,7 +72,7 @@ jobs:
       # We parse the semver from Kong image tag because we need to run with different KIC images with Kong 2.8.x and Kong 3.x.
       - name: Parse Semver of Kong from image tag
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ env.TEST_KONG_IMAGE_VERSION }}
   
@@ -91,7 +91,7 @@ jobs:
       kic_image_tag: ${{ steps.choose_kic_branch.outputs.KIC_IMAGE_TAG }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Choose KIC image and branch
         id: choose_kic_branch
         run: |
@@ -124,7 +124,7 @@ jobs:
       KIC_IMAGE_TAG: ${{ needs.decide-kic-branch-and-image.outputs.kic_image_tag }} 
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Run validate Kong image tests
         id: run_validate_kong_image

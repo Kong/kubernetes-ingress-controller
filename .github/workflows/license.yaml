@@ -10,8 +10,8 @@ jobs:
     environment: "FOSSA"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: fossas/fossa-action@v1.3.3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: fossas/fossa-action@47ef11b1e1e3812e88dae436ccbd2d0cbd1adab0 # v1.3.3
         with:
           api-key: ${{secrets.fossaApiKey}}
           branch: main

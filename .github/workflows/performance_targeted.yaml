@@ -35,7 +35,7 @@ jobs:
       PR_NUMBER: ${{ github.event.inputs.pr-number }}
       RES_NUM: ${{ inputs.res-number-for-perf }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - run: |
           MSG="performance (targeted) tests with KIND-based clusters were started at ${URL} the number of test resources is ${RES_NUM}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"

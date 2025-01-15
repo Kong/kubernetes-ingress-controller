@@ -110,12 +110,12 @@ jobs:
           fi
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
       - name: setup golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4
         with:
           go-version-file: go.mod
 
@@ -142,14 +142,14 @@ jobs:
 
       - name: collect test coverage
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: coverage
           path: coverage.*.out
 
       - name: upload diagnostics
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
@@ -158,7 +158,7 @@ jobs:
       # upload logs when test failed
       - name: upload KIC logs 
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with: 
           name: integration-tests-kic-logs-${{ matrix.name }}
           path: ${{ inputs.log-output-file }}
@@ -166,7 +166,7 @@ jobs:
 
       - name: collect test report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: tests-report
           path: integration-tests-${{ matrix.name }}.xml

@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       # Do not run e2e tests on GKE-based clusters for specific PR, because currently
       # there is no way to use an image built from PR's code for those tests.
       # https://github.com/Kong/kubernetes-testing-framework/issues/587

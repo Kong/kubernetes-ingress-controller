@@ -39,11 +39,11 @@ jobs:
     outputs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - id: setup_golang
         name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
         with:
           go-version-file: go.mod
 
@@ -77,7 +77,7 @@ jobs:
       gke: ${{ steps.set-versions.outputs.gke }}
       istio: ${{ steps.set-versions.outputs.istio }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - id: set-versions
         name: Set versions
@@ -106,7 +106,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: kic-image
           path: /tmp
@@ -118,14 +118,14 @@ jobs:
           docker image ls -a
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@master
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master
         id: license
         with:
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -159,7 +159,7 @@ jobs:
         if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
         run: docker pull ${{ inputs.kong-image }}
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2
         with:
           install: false
 
@@ -182,14 +182,14 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: tests-report
           path: "*-tests.xml"
@@ -209,14 +209,14 @@ jobs:
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@master
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master
         continue-on-error: true
         id: license
         with:
@@ -253,7 +253,7 @@ jobs:
             echo "kic-tag=nightly" >> $GITHUB_OUTPUT
           fi
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2
         with:
           install: false
 
@@ -284,14 +284,14 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: "diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: tests-report
           path: "*-tests.xml"
@@ -308,7 +308,7 @@ jobs:
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: kic-image
           path: /tmp
@@ -320,14 +320,14 @@ jobs:
           docker image ls -a
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@master
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master
         id: license
         with:
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -351,7 +351,7 @@ jobs:
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2
         with:
           install: false
 
@@ -374,14 +374,14 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: diagnostics-e2e-tests
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: tests-report
           path: "*-tests.xml"

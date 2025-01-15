@@ -42,7 +42,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.inputs.pr-number }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       - run: |
           gh pr comment ${PR_NUMBER} --body \
             "E2E (targeted) tests were started at ${URL}"

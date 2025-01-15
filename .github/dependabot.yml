@@ -20,6 +20,18 @@ updates:
         - k8s.io/klog/*
         - k8s.io/utils
         - k8s.io/kube-openapi
+     # Specify a name for the group, which will be used in pull request titles and branch names
+     github.com/testcontainers/testcontainers-go:
+        # Define patterns to include dependencies in the group (based on dependency name)
+        applies-to: version-updates # Applies the group rule to version updates
+        patterns:
+          - "github.com/testcontainers/testcontainers-go*"
+     # Specify a name for the group, which will be used in pull request titles and branch names.
+     actions:
+        # Define patterns to include dependencies in the group (based on dependency name).
+        applies-to: version-updates # Applies the group rule to version updates.
+        patterns:
+          - "actions/*"
 - package-ecosystem: github-actions
   directory: /
   schedule:

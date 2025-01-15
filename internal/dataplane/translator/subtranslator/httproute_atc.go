@@ -16,122 +16,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// GenerateKongExpressionRoutesFromHTTPRouteMatches generates Kong routes from HTTPRouteRule
-// pointing to a specific backend.
-func GenerateKongExpressionRoutesFromHTTPRouteMatches(
-	translation KongRouteTranslation,
-	ingressObjectInfo util.K8sObjectInfo,
-	hostnames []string,
-	tags []*string,
-	supportRedirectPlugin bool,
-) ([]kongstate.Route, error) {
-	// initialize the route with route name, preserve_host, and tags.
-	r := kongstate.Route{
-		Ingress: ingressObjectInfo,
-		Route: kong.Route{
-			Name:         kong.String(translation.Name),
-			PreserveHost: kong.Bool(true),
-			// stripPath needs to be disabled by default to be conformant with the Gateway API
-			StripPath: kong.Bool(false),
-			Tags:      tags,
-		},
-		ExpressionRoutes: true,
-	}
-
-	if len(translation.Matches) == 0 {
-		if len(hostnames) == 0 {
-			r.Expression = kong.String(CatchAllHTTPExpression)
-			return []kongstate.Route{r}, nil
-		}
-		hostMatcher := hostMatcherFromHosts(hostnames)
-		atc.ApplyExpression(&r.Route, hostMatcher, 1)
-		return []kongstate.Route{r}, nil
-	}
-
-	hasRedirectFilter := lo.ContainsBy(translation.Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
-	})
-	// if the rule has request redirect filter(s), we need to generate a route for each match to
-	// attach plugins for the filter.
-	if hasRedirectFilter {
-		return generateKongExpressionRoutesWithRequestRedirectFilter(translation, ingressObjectInfo, hostnames, tags, supportRedirectPlugin)
-	}
-
-	// if we do not need to generate a kong route for each match, we OR matchers from all matches together.
-	routeMatcher := atc.And(atc.Or(generateMatchersFromHTTPRouteMatches(translation.Matches)...))
-	// Add matcher from parent httproute (hostnames, SNIs) to be ANDed with the matcher from match.
-	matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
-	for _, matcher := range matchersFromParent {
-		routeMatcher.And(matcher)
-	}
-
-	atc.ApplyExpression(&r.Route, routeMatcher, 1)
-	// generate plugins.
-	setPluginsOptions := setKongRoutePluginsOptions{
-		expressionsRouterEnabled:  true,
-		redirectKongPluginEnabled: supportRedirectPlugin,
-	}
-	if err := setRoutePlugins(&r, translation.Filters, "", tags, setPluginsOptions); err != nil {
-		return nil, err
-	}
-	return []kongstate.Route{r}, nil
-}
-
-func generateKongExpressionRoutesWithRequestRedirectFilter(
-	translation KongRouteTranslation,
-	ingressObjectInfo util.K8sObjectInfo,
-	hostnames []string,
-	tags []*string,
-	supportRedirectPlugin bool,
-) ([]kongstate.Route, error) {
-	routes := make([]kongstate.Route, 0, len(translation.Matches))
-	for _, match := range translation.Matches {
-		matchRoute := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name:         kong.String(translation.Name),
-				PreserveHost: kong.Bool(true),
-				StripPath:    kong.Bool(false),
-				Tags:         tags,
-			},
-			ExpressionRoutes: true,
-		}
-		// generate matcher for this HTTPRoute Match.
-		matcher := atc.And(generateMatcherFromHTTPRouteMatch(match))
-
-		// add matcher from parent httproute (hostnames, protocols, SNIs) to be ANDed with the matcher from match.
-		matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
-		for _, m := range matchersFromParent {
-			matcher.And(m)
-		}
-		atc.ApplyExpression(&matchRoute.Route, matcher, 1)
-
-		// we need to extract the path to configure redirect path of the plugins for request redirect filter.
-		path := ""
-		if match.Path != nil && match.Path.Value != nil {
-			path = *match.Path.Value
-		}
-		setPluginsOptions := setKongRoutePluginsOptions{
-			expressionsRouterEnabled:  true,
-			redirectKongPluginEnabled: supportRedirectPlugin,
-		}
-		if err := setRoutePlugins(&matchRoute, translation.Filters, path, tags, setPluginsOptions); err != nil {
-			return nil, err
-		}
-		routes = append(routes, matchRoute)
-	}
-	return routes, nil
-}
-
-func generateMatchersFromHTTPRouteMatches(matches []gatewayapi.HTTPRouteMatch) []atc.Matcher {
-	ret := make([]atc.Matcher, 0, len(matches))
-	for _, match := range matches {
-		matcher := generateMatcherFromHTTPRouteMatch(match)
-		ret = append(ret, matcher)
-	}
-	return ret
-}
-
 func generateMatcherFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) atc.Matcher {
 	matcher := atc.And()
 
@@ -333,7 +217,7 @@ type HTTPRoutePriorityTraits struct {
 	QueryParamCount int
 }
 
-// CalculateHTTPRouteMatchPriorityTraits calculates the parts of priority
+// calculateHTTPRouteMatchPriorityTraits calculates the parts of priority
 // that can be decided by the fields in spec of the match split from HTTPRoute.
 // Specification of priority goes as follow:
 // (The following comments are extracted from gateway API specification about HTTPRoute)
@@ -354,7 +238,7 @@ type HTTPRoutePriorityTraits struct {
 //   - Method match.
 //   - Largest number of header matches.
 //   - Largest number of query param matches.
-func CalculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRoutePriorityTraits {
+func calculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRoutePriorityTraits {
 	traits := HTTPRoutePriorityTraits{}
 	// fill traits from hostname.
 	if len(match.Hostname) != 0 {
@@ -475,7 +359,7 @@ func assignRoutePriorityToSplitHTTPRouteMatches(
 	priorityToSplitHTTPRouteMatches := map[RoutePriorityType][]SplitHTTPRouteMatch{}
 
 	for _, match := range splitHTTPRouteMatches {
-		priority := CalculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority()
+		priority := calculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority()
 		priorityToSplitHTTPRouteMatches[priority] = append(priorityToSplitHTTPRouteMatches[priority], match)
 	}
 
@@ -643,7 +527,7 @@ func groupHTTPRouteMatchesWithPrioritiesByRule(
 }
 
 // translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression translates a list of split HTTPRoute matches with assigned priorities
-// that are poiting to the same service to list of kongstate route with expressions.
+// that are pointing to the same service to list of kongstate route with expressions.
 func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 	supportRedirectPlugin bool,

@@ -197,14 +197,14 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: tests-report-e2e-kind-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
           path: ${{ env.GOTESTSUM_JUNITFILE }}
@@ -311,9 +311,9 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
@@ -321,9 +321,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: tests-report-e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-${{ env.KONG_IMAGE_ARTIFACT }}
@@ -419,9 +419,9 @@ jobs:
 
       - name: upload diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: diagnostics-e2e-tests-istio-${{ matrix.kind }}-${{ matrix.istio }}-${{ env.KONG_IMAGE_ARTIFACT }}
@@ -429,9 +429,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: collect test report
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          # NOTE: we add the kong image suffix here because actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+          # NOTE: we add the kong image suffix here because actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
           # only allows to have 1 artifact with the same name and we run this workflow
           # in parallel for different kong images (specifically for nightly).
           name: tests-report-e2e-istio-k8s-${{ matrix.kind }}-istio-${{ matrix.istio }}-${{ env.KONG_IMAGE_ARTIFACT }}

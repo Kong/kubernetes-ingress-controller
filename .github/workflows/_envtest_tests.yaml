@@ -36,14 +36,14 @@ jobs:
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
       - name: collect test coverage
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: coverage-envtest
           path: coverage.envtest.out
 
       - name: collect test report
         if: always()
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: tests-report-envtest
           path: envtest-tests.xml

@@ -15,7 +15,7 @@ jobs:
   verify-manifest-tag:
     runs-on: ubuntu-latest
     steps:
-      - uses: mukunku/tag-exists-action@v1.0.0
+      - uses: mukunku/tag-exists-action@f8003af57c02ede2638326be67523df10cf6b10a # v1.0.0
         id: check-tag
         name: check if tag already exists
         with:
@@ -26,12 +26,12 @@ jobs:
         if: ${{ steps.check-tag.outputs.exists == 'true' }}
         run: exit 1
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1
+        uses: booxmedialtd/ws-action-parse-semver@3576f3a20a39f8752fe0d8195f5ed384090285dc # v1
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1
+        uses: booxmedialtd/ws-action-parse-semver@3576f3a20a39f8752fe0d8195f5ed384090285dc # v1
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
@@ -76,22 +76,22 @@ jobs:
           echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }},suffix=-redhat' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9 # v1
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3.7.0
+        uses: docker/metadata-action@f2a13332ac1ce8c0a71aeac48a150dbb1838ab67 # v3.7.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -99,7 +99,7 @@ jobs:
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v3.7.0
+        uses: docker/metadata-action@f2a13332ac1ce8c0a71aeac48a150dbb1838ab67 # v3.7.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -107,7 +107,7 @@ jobs:
           tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: false
           file: Dockerfile
@@ -120,7 +120,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: true
           file: Dockerfile
@@ -135,7 +135,7 @@ jobs:
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta.outputs.version }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a # v2
         with:
           push: true
           file: Dockerfile
@@ -159,18 +159,18 @@ jobs:
           - 'postgres'
     steps:
       - name: setup golang
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
         with:
           go-version: '^1.18'
       - name: cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes_version }} ${{ matrix.dbmode }} Integration Tests
@@ -191,18 +191,18 @@ jobs:
           - 'postgres'
     steps:
       - name: setup golang
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3
         with:
           go-version: '^1.18'
       - name: cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
       - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
@@ -220,11 +220,11 @@ jobs:
     steps:
     - name: Parse semver string
       id: semver_parser
-      uses: booxmedialtd/ws-action-parse-semver@v1
+      uses: booxmedialtd/ws-action-parse-semver@3576f3a20a39f8752fe0d8195f5ed384090285dc # v1
       with:
         input_string: ${{ github.event.inputs.tag }}
         version_extractor_regex: 'v(.*)$'
-    - uses: ncipollo/release-action@v1
+    - uses: ncipollo/release-action@cdcc88a9acf3ca41c16c37bb7d21b9ad48560d87 # v1
       with:
         body: |
           #### Download Kong Ingress Controller ${{ steps.semver_parser.outputs.fullversion }}:

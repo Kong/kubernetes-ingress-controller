@@ -20,11 +20,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
-func TestFakeStoreEmpty(t *testing.T) {
-	assert := assert.New(t)
-	store, err := NewFakeStore(FakeObjects{})
-	assert.Nil(err)
-	assert.NotNil(store)
+func TestNewFakeStoreEmpty(t *testing.T) {
+	require.NotPanics(t, func() {
+		s := NewFakeStoreEmpty()
+		_, err := s.GetConfigMap("default", "foo")
+		require.NotNil(t, s)
+		require.ErrorAs(t, err, &NotFoundError{})
+	})
 }
 
 func TestFakeStoreIngressV1(t *testing.T) {

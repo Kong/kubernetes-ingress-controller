@@ -25,30 +25,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// KongServiceTranslation is a translation of a single HTTPRoute into metadata
-// that can be used to instantiate Kong routes and services.
-// Routes from this object should route traffic to BackendRefs from this object.
-type KongServiceTranslation struct {
-	Name        string
-	BackendRefs []gatewayapi.HTTPBackendRef
-	KongRoutes  []KongRouteTranslation
-}
-
-// KongRouteTranslation is a translation of a single HTTPRoute rule into metadata
-// that can be used to instantiate Kong routes.
-type KongRouteTranslation struct {
-	Name string
-	// OptionalNamedRouteRules represents list of RouteName - an optional name
-	// of the particular route that can be defined in the K8s HTTPRoute,
-	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
-	OptionalNamedRouteRules []string
-	Matches                 []gatewayapi.HTTPRouteMatch
-	Filters                 []gatewayapi.HTTPRouteFilter
-}
-
 // HTTPRoutesTranslationResult is the result of translating HTTPRoutes to Kong gateway services.
 // It includes the kongstate services indexed by the Kong gateway service name
-// and translation errors happened on each HTTPRoute to genereate TranslationFailure events.
+// and translation errors happened on each HTTPRoute to generate TranslationFailure events.
 type HTTPRoutesTranslationResult struct {
 	ServiceNameToKongstateService    map[string]kongstate.Service
 	HTTPRouteNameToTranslationErrors map[k8stypes.NamespacedName][]error

@@ -113,7 +113,7 @@ jobs:
 
       - name: Build
         id: docker-build-dockerhub
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
           push: false
           file: Dockerfile
@@ -132,7 +132,7 @@ jobs:
       # Build locally with outputs set to `type=docker,dest=/tmp/image.tar` to save the image as a `kic-image` artifact.
       - name: Build locally
         id: docker-build-local
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
           load: true
           file: Dockerfile

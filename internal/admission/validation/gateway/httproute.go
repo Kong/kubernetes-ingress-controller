@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
 
 type routeValidator interface {
@@ -187,41 +189,36 @@ func validateWithKongGateway(
 	ctx context.Context, routesValidator routeValidator, translatorFeatures translator.FeatureFlags, httproute *gatewayapi.HTTPRoute,
 ) (bool, string) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
-	// Use KIC translator that works both for traditional and expressions based routes.
-	var kongRoutes []kong.Route
+	// Reuse KIC translator that works both for traditional and expressions router to use exactly the same logic.
+	// It does more things than needed for validation, hence logger and store are mocked here.
+	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
+		logr.Discard(),
+		store.NewFakeStoreEmpty(),
+		[]*gatewayapi.HTTPRoute{httproute},
+		subtranslator.TranslateHTTPRouteToKongstateServiceOptions{
+			CombinedServicesFromDifferentHTTPRoutes: translatorFeatures.CombinedServicesFromDifferentHTTPRoutes,
+			ExpressionRoutes:                        translatorFeatures.ExpressionRoutes,
+			SupportRedirectPlugin:                   translatorFeatures.SupportRedirectPlugin,
+		},
+	)
 	var errMsgs []string
-	for _, rule := range httproute.Spec.Rules {
-		translation := subtranslator.KongRouteTranslation{
-			Name:    "validation-attempt",
-			Matches: rule.Matches,
-			Filters: rule.Filters,
-		}
-		routes, err := translator.GenerateKongRouteFromTranslation(
-			httproute, translation,
-			subtranslator.TranslateHTTPRouteRulesToKongRouteOptions{
-				ExpressionRoutes:      translatorFeatures.ExpressionRoutes,
-				SupportRedirectPlugin: translatorFeatures.SupportRedirectPlugin,
-			},
-		)
-		if err != nil {
+	for _, errors := range translationResult.HTTPRouteNameToTranslationErrors {
+		for _, err := range errors {
 			errMsgs = append(errMsgs, err.Error())
-			continue
-		}
-		for _, r := range routes {
-			kongRoutes = append(kongRoutes, r.Route)
 		}
 	}
 	if len(errMsgs) > 0 {
 		return false, validationMsg(errMsgs)
 	}
-	// Validate by using feature of Kong Gateway.
-	for _, kg := range kongRoutes {
-		ok, msg, err := routesValidator.Validate(ctx, &kg)
-		if err != nil {
-			return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())
-		}
-		if !ok {
-			errMsgs = append(errMsgs, msg)
+	for _, service := range translationResult.ServiceNameToKongstateService {
+		for _, route := range service.Routes {
+			ok, msg, err := routesValidator.Validate(ctx, &route.Route)
+			if err != nil {
+				return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())
+			}
+			if !ok {
+				errMsgs = append(errMsgs, msg)
+			}
 		}
 	}
 	if len(errMsgs) > 0 {

@@ -10,6 +10,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -67,6 +68,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -373,6 +375,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongconsumergroups.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -620,6 +623,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongconsumers.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -894,6 +898,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongcustomentities.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1084,6 +1089,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1475,6 +1481,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: konglicenses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1673,6 +1680,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -1973,6 +1981,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller-incubator
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongservicefacades.incubator.ingress-controller.konghq.com
 spec:
   group: incubator.ingress-controller.konghq.com
@@ -2126,6 +2135,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   labels:
     gateway.networking.k8s.io/policy: direct
   name: kongupstreampolicies.configuration.konghq.com
@@ -2812,6 +2822,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller,gateway-operator
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: kongvaults.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -3098,6 +3109,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: tcpingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -3307,6 +3319,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/version: v1.0.6
   name: udpingresses.configuration.konghq.com
 spec:
   group: configuration.konghq.com

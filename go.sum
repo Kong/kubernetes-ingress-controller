@@ -20,8 +20,6 @@ github.com/Kong/go-diff v1.2.2 h1:KKKaqHc8IxuguFVIZMNt3bi6YuC/t9r7BGD8bOOpSgM=
 github.com/Kong/go-diff v1.2.2/go.mod h1:nlvdwVZQk3Rm+tbI0cDmKFrOjghtcZTrZBp+UruvvA8=
 github.com/Kong/gojsondiff v1.3.2 h1:qIOVq2mUXt+NXy8Be5gRUee9TP3Ve0MbQSafg9bXKZE=
 github.com/Kong/gojsondiff v1.3.2/go.mod h1:DiIxtU59q4alK7ecP+7k56C5UjgOviJ5gQVR2esEhYw=
-github.com/Kong/sdk-konnect-go v0.1.20 h1:ZfHUS/L26SmgKCu9vTb3G0gDageHZf/Q2XTg8V3qYe8=
-github.com/Kong/sdk-konnect-go v0.1.20/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/Kong/sdk-konnect-go v0.1.24 h1:U1rOiy9TtYg/pXl7CXABaN96c1rFuHal19zVCuNpkiA=
 github.com/Kong/sdk-konnect-go v0.1.24/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
@@ -143,8 +141,6 @@ github.com/golang/protobuf v1.4.0/go.mod h1:jodUvKwWbYaEsadDk5Fwe5c77LiNKVO9IDvq
 github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw735rRwI=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
 github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
-github.com/google/btree v1.1.2 h1:xf4v41cLI2Z6FxbKm+8Bu+m8ifhj15JuZ9sa0jZCMUU=
-github.com/google/btree v1.1.2/go.mod h1:qOPhT0dTNdNzV6Z/lhRX0YXUafgPLFUh+gZMl761Gm4=
 github.com/google/btree v1.1.3 h1:CVpQJjYgC4VbzxeGVHfvZrv1ctoYCAI8vbl07Fcxlyg=
 github.com/google/btree v1.1.3/go.mod h1:qOPhT0dTNdNzV6Z/lhRX0YXUafgPLFUh+gZMl761Gm4=
 github.com/google/cel-go v0.22.0 h1:b3FJZxpiv1vTMo2/5RDUqAHPxkT8mmMfJIrq1llbf7g=
@@ -231,8 +227,6 @@ github.com/kong/go-database-reconciler v1.16.1 h1:qcQzEuMGfpNjx3UgulBOKulKA+upmH
 github.com/kong/go-database-reconciler v1.16.1/go.mod h1:7CGvStUvUOmUnodUFsWcW3PX2bJgnaKClJ/yhNGEVIE=
 github.com/kong/go-kong v0.60.0 h1:CVrLXRLVE+Gl4IZ3tdvpO7xNDz3c9YLTmra/HvT4oM8=
 github.com/kong/go-kong v0.60.0/go.mod h1:t1eMY8GRS6778uQNzxgzRgnA3YKBXSZOEvYbNocH/aA=
-github.com/kong/kubernetes-configuration v1.0.6 h1:vAYPV/j4utNpFEoXZxjwhQmczcamcodq1DlC3QnXBkg=
-github.com/kong/kubernetes-configuration v1.0.6/go.mod h1:LNmmSe8xV0MeGCxYim/0ZuZhOLNMvsWIQsfKRfqZdPc=
 github.com/kong/kubernetes-configuration v1.1.0 h1:zCj7QlOiZgwQ2wSNlVNR0K6Z+plXTalfihtDzLXQWzs=
 github.com/kong/kubernetes-configuration v1.1.0/go.mod h1:Z9Yo8DyBe/4zw/cgoSYafqHzuviKINVSq1b8D60F0u8=
 github.com/kong/kubernetes-telemetry v0.1.7 h1:R4NUpvbF5uZ+5kgSQsIcf/oulRBGQCHsffFRDE4wxV4=
@@ -592,8 +586,6 @@ k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 h1:M3sRQVHv7vB20Xc2ybTt7ODCeFj6J
 k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 h1:CPT0ExVicCzcpeN4baWEV2ko2Z/AsiZgEdwgcfwLgMo=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
-sigs.k8s.io/controller-runtime v0.19.4 h1:SUmheabttt0nx8uJtoII4oIP27BVVvAKFvdvGFwV/Qo=
-sigs.k8s.io/controller-runtime v0.19.4/go.mod h1:iRmWllt8IlaLjvTTDLhRBXIEtkCK6hwVBJJsYS9Ajf4=
 sigs.k8s.io/controller-runtime v0.20.0 h1:jjkMo29xEXH+02Md9qaVXfEIaMESSpy3TBWPrsfQkQs=
 sigs.k8s.io/controller-runtime v0.20.0/go.mod h1:BrP3w158MwvB3ZbNpaAcIKkHQ7YGpYnzpoSTZ8E14WU=
 sigs.k8s.io/e2e-framework v0.5.0 h1:YLhk8R7EHuTFQAe6Fxy5eBzn5Vb+yamR5u8MH1Rq3cE=

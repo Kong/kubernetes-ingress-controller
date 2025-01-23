@@ -43,7 +43,12 @@ func (e KongGatewayUnsupportedVersionError) Error() string {
 
 // NewKongAPIClient returns a Kong API client for a given root API URL.
 // It ensures that proper User-Agent is set. Do not use kong.NewClient directly.
-func NewKongAPIClient(adminURL string, httpClient *http.Client) (*kong.Client, error) {
+func NewKongAPIClient(adminURL string, kongAdminAPIConfig ClientOpts, kongAdminToken string) (*kong.Client, error) {
+	httpClient, err := makeHTTPClient(kongAdminAPIConfig, kongAdminToken)
+	if err != nil {
+		return nil, err
+	}
+
 	client, err := kong.NewClient(kong.String(adminURL), httpClient) //nolint:forbidigo
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
@@ -57,10 +62,10 @@ func NewKongAPIClient(adminURL string, httpClient *http.Client) (*kong.Client, e
 // or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is not >= 3.4.1.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(
-	ctx context.Context, adminURL string, wsName string, httpClient *http.Client,
+	ctx context.Context, adminURL string, wsName string, kongAdminAPIConfig ClientOpts, kongAdminToken string,
 ) (*Client, error) {
 	// Create the base client, and if no workspace was provided then return that.
-	client, err := NewKongAPIClient(adminURL, httpClient)
+	client, err := NewKongAPIClient(adminURL, kongAdminAPIConfig, kongAdminToken)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
@@ -116,8 +121,8 @@ func NewKongClientForWorkspace(
 	return cl, nil
 }
 
-// HTTPClientOpts defines parameters that configure an HTTP client.
-type HTTPClientOpts struct {
+// ClientOpts defines parameters that configure a client for Kong Admin API.
+type ClientOpts struct {
 	// Disable verification of TLS certificate of Kong's Admin endpoint.
 	TLSSkipVerify bool
 	// SNI name to use to verify the certificate presented by Kong in TLS.
@@ -136,17 +141,18 @@ const (
 	HeaderNameAdminToken = "Kong-Admin-Token"
 )
 
-// MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
-func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, error) {
+// makeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
+func makeHTTPClient(opts ClientOpts, kongAdminToken string) (*http.Client, error) {
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {
 		tlsConfig.InsecureSkipVerify = true //nolint:gosec
+		if opts.TLSServerName != "" || opts.CACertPath != "" || opts.CACert != "" || !opts.TLSClient.IsZero() {
+			return nil, errors.New("when TLSSkipVerify is set, no other TLS options can be set")
+		}
 	}
 
-	if opts.TLSServerName != "" {
-		tlsConfig.ServerName = opts.TLSServerName
-	}
+	tlsConfig.ServerName = opts.TLSServerName
 
 	if opts.CACertPath != "" && opts.CACert != "" {
 		return nil, fmt.Errorf("both --kong-admin-ca-cert-file and --kong-admin-ca-cert are set; " +
@@ -175,7 +181,8 @@ func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, 
 	}
 
 	clientCertificate, err := tlsutil.ExtractClientCertificates(
-		[]byte(opts.TLSClient.Cert), opts.TLSClient.CertFile, []byte(opts.TLSClient.Key), opts.TLSClient.KeyFile)
+		[]byte(opts.TLSClient.Cert), opts.TLSClient.CertFile, []byte(opts.TLSClient.Key), opts.TLSClient.KeyFile,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}

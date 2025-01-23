@@ -20,13 +20,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
-func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
-	cert, key := certificate.MustGenerateCertPEMFormat()
+func TestAdminAPIClientWithTLSOpts(t *testing.T) {
+	const hostname = "localhost"
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(hostname))
 	caCert := cert
 
-	opts := adminapi.HTTPClientOpts{
-		TLSSkipVerify: true,
-		TLSServerName: "",
+	opts := adminapi.ClientOpts{
+		TLSServerName: hostname,
 		CACertPath:    "",
 		CACert:        string(caCert),
 		Headers:       nil,
@@ -36,24 +36,26 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 		},
 	}
 
+	t.Run("with mutually exclusive options set, it should fail", func(t *testing.T) {
+		optsConflict := opts
+		optsConflict.TLSSkipVerify = true
+		_, err := adminapi.NewKongAPIClient("https://localhost", optsConflict, "")
+		require.ErrorContains(t, err, "when TLSSkipVerify is set, no other TLS options can be set")
+	})
+
 	t.Run("without kong admin token", func(t *testing.T) {
-		c, err := adminapi.MakeHTTPClient(&opts, "")
-		require.NoError(t, err)
-		require.NotNil(t, c)
-		validate(t, c, caCert, cert, key, "")
+		validate(t, opts, caCert, cert, key, "")
 	})
 
 	t.Run("with kong admin token", func(t *testing.T) {
 		const kongAdminToken = "my-token"
-		c, err := adminapi.MakeHTTPClient(&opts, kongAdminToken)
-		require.NoError(t, err)
-		require.NotNil(t, c)
-		validate(t, c, caCert, cert, key, kongAdminToken)
+		validate(t, opts, caCert, cert, key, kongAdminToken)
 	})
 }
 
-func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
-	cert, key := certificate.MustGenerateCertPEMFormat()
+func TestAdminAPIClientWithTLSOptsAndFilePaths(t *testing.T) {
+	const hostname = "localhost"
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(hostname))
 	caCert := cert
 
 	certDir := t.TempDir()
@@ -76,9 +78,8 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, key, writtenBytes)
 
-	opts := adminapi.HTTPClientOpts{
-		TLSSkipVerify: true,
-		TLSServerName: "",
+	opts := adminapi.ClientOpts{
+		TLSServerName: hostname,
 		CACertPath:    caFile.Name(),
 		CACert:        "",
 		Headers:       nil,
@@ -88,19 +89,20 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 		},
 	}
 
+	t.Run("with mutually exclusive options set, it should fail", func(t *testing.T) {
+		optsConflict := opts
+		optsConflict.TLSSkipVerify = true
+		_, err := adminapi.NewKongAPIClient("https://localhost", optsConflict, "")
+		require.ErrorContains(t, err, "when TLSSkipVerify is set, no other TLS options can be set")
+	})
+
 	t.Run("without kong admin token", func(t *testing.T) {
-		c, err := adminapi.MakeHTTPClient(&opts, "")
-		require.NoError(t, err)
-		require.NotNil(t, c)
-		validate(t, c, caCert, cert, key, "")
+		validate(t, opts, caCert, cert, key, "")
 	})
 
 	t.Run("with kong admin token", func(t *testing.T) {
 		const kongAdminToken = "my-token"
-		c, err := adminapi.MakeHTTPClient(&opts, kongAdminToken)
-		require.NoError(t, err)
-		require.NotNil(t, c)
-		validate(t, c, caCert, cert, key, kongAdminToken)
+		validate(t, opts, caCert, cert, key, kongAdminToken)
 	})
 }
 
@@ -218,7 +220,8 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 				context.Background(),
 				adminAPIServer.URL,
 				tc.workspace,
-				adminAPIServer.Client(),
+				adminapi.ClientOpts{},
+				"",
 			)
 
 			if tc.expectError != nil {
@@ -243,7 +246,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 // whether the passed client can connect to it successfully.
 func validate(
 	t *testing.T,
-	httpClient *http.Client,
+	opts adminapi.ClientOpts,
 	caPEM []byte,
 	certPEM []byte,
 	certPrivateKeyPEM []byte,
@@ -288,8 +291,13 @@ func validate(
 	server.StartTLS()
 	defer server.Close()
 
-	response, err := httpClient.Get(server.URL)
-	require.NoError(t, err, "HTTP client failed to issue a GET request")
+	cl, err := adminapi.NewKongAPIClient(server.URL, opts, kongAdminToken)
+	require.NoError(t, err, "failed to create Kong API client")
+
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	require.NoError(t, err, "failed to create basic HTTP request")
+	response, err := cl.DoRAW(context.Background(), req)
+	require.NoError(t, err, "Kong API client failed to issue a basic request")
 	defer response.Body.Close()
 
 	data, err := io.ReadAll(response.Body)

@@ -17,11 +17,7 @@ import (
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
 func GetKongRootConfig(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
-	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating specific HTTP client for Kong API URL: %q: %w", proxyAdminURL, err)
-	}
-	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), httpClient)
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), adminapi.ClientOpts{}, kongTestPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
 	}
@@ -100,12 +96,7 @@ func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPa
 
 // GetKongLicenses fetches all licenses applied to Kong gateway.
 func GetKongLicenses(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) ([]*kong.License, error) {
-	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
-	if err != nil {
-		return nil, err
-	}
-
-	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), httpClient)
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), adminapi.ClientOpts{}, kongTestPassword)
 	if err != nil {
 		return nil, err
 	}

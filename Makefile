@@ -63,85 +63,87 @@ mise-plugin-install: mise
 mise-install: mise
 	@$(MISE) install -q $(DEP_VER)
 
-CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
-CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
-.PHONY: controller-gen
-controller-gen: mise ## Download controller-gen locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kube-controller-tools
-	$(MAKE) mise-install DEP_VER=kube-controller-tools@$(CONTROLLER_GEN_VERSION)
-
-KUSTOMIZE_VERSION = $(shell yq -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
-KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
-.PHONY: kustomize
-kustomize: mise ## Download kustomize locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kustomize
-	@$(MAKE) mise-install DEP_VER=kustomize@$(KUSTOMIZE_VERSION)
-
-CLIENT_GEN_VERSION = $(shell yq -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
-CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
-.PHONY: client-gen
-client-gen: mise ## Download client-gen locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kube-code-generator
-	@$(MAKE) mise-install DEP_VER=kube-code-generator@$(CLIENT_GEN_VERSION)
-
-GOLANGCI_LINT_VERSION = $(shell yq -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
-GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
-.PHONY: golangci-lint.download
-golangci-lint.download: mise ## Download golangci-lint locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=golangci-lint
-	@$(MAKE) mise-install DEP_VER=golangci-lint@$(GOLANGCI_LINT_VERSION)
-
-GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
-GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
-.PHONY: gotestsum
-gotestsum: ## Download gotestsum locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=gotestsum
-	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
-
-CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
-CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github-com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
-.PHONY: crd-ref-docs
-crd-ref-docs: ## Download crd-ref-docs locally if necessary.
-	$(MAKE) mise-install DEP_VER=go:github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
-
-SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
-SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
-.PHONY: skaffold
-skaffold: mise ## Download skaffold locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=skaffold
-	@$(MAKE) mise-install DEP_VER=skaffold@$(SKAFFOLD_VERSION)
-
-YQ_VERSION = $(shell yq -ojson -r '.yq' < $(TOOLS_VERSIONS_FILE))
+# Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
+# renovate: datasource=github-releases depName=mikefarah/yq
+YQ_VERSION = 4.43.1
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=yq
 	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
 
-DELVE_VERSION = $(shell yq -ojson -r '.delve' < $(TOOLS_VERSIONS_FILE))
+CONTROLLER_GEN_VERSION = $(shell $(YQ) -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
+CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
+.PHONY: controller-gen
+controller-gen: mise yq ## Download controller-gen locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=kube-controller-tools
+	@$(MAKE) mise-install DEP_VER=kube-controller-tools@$(CONTROLLER_GEN_VERSION)
+
+KUSTOMIZE_VERSION = $(shell $(YQ) -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
+KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
+.PHONY: kustomize
+kustomize: mise yq ## Download kustomize locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=kustomize
+	@$(MAKE) mise-install DEP_VER=kustomize@$(KUSTOMIZE_VERSION)
+
+CLIENT_GEN_VERSION = $(shell $(YQ) -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
+CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
+.PHONY: client-gen
+client-gen: mise yq ## Download client-gen locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=kube-code-generator
+	@$(MAKE) mise-install DEP_VER=kube-code-generator@$(CLIENT_GEN_VERSION)
+
+GOLANGCI_LINT_VERSION = $(shell $(YQ) -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
+GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
+.PHONY: golangci-lint.download
+golangci-lint.download: mise yq ## Download golangci-lint locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=golangci-lint
+	@$(MAKE) mise-install DEP_VER=golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+GOTESTSUM_VERSION = $(shell $(YQ) -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
+GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
+.PHONY: gotestsum
+gotestsum: yq ## Download gotestsum locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=gotestsum
+	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
+
+CRD_REF_DOCS_VERSION = $(shell $(YQ) -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github-com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
+.PHONY: crd-ref-docs
+crd-ref-docs: yq ## Download crd-ref-docs locally if necessary.
+	$(MAKE) mise-install DEP_VER=go:github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
+
+SKAFFOLD_VERSION = $(shell $(YQ) -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
+SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
+.PHONY: skaffold
+skaffold: mise yq ## Download skaffold locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=skaffold
+	@$(MAKE) mise-install DEP_VER=skaffold@$(SKAFFOLD_VERSION)
+
+DELVE_VERSION = $(shell $(YQ) -ojson -r '.delve' < $(TOOLS_VERSIONS_FILE))
 DLV = $(PROJECT_DIR)/bin/installs/go-github-com-go-delve-delve-cmd-dlv/$(DELVE_VERSION)/bin/dlv
 .PHONY: dlv
-dlv: ## Download dlv locally if necessary.
+dlv: yq ## Download dlv locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:github.com/go-delve/delve/cmd/dlv@$(DELVE_VERSION)
 
-SETUP_ENVTEST_VERSION = $(shell yq -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
+SETUP_ENVTEST_VERSION = $(shell $(YQ) -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
-setup-envtest: mise ## Download setup-envtest locally if necessary.
+setup-envtest: mise yq ## Download setup-envtest locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=setup-envtest
 	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
-STATICCHECK_VERSION = $(shell yq -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
+STATICCHECK_VERSION = $(shell $(YQ) -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
 STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
 .PHONY: staticcheck.download
-staticcheck.download: ## Download staticcheck locally if necessary.
+staticcheck.download: yq ## Download staticcheck locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=staticcheck
 	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
 
-GOJUNIT_REPORT_VERSION = $(shell yq -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
+GOJUNIT_REPORT_VERSION = $(shell $(YQ) -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
 GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report
 .PHONY: go-junit-report
-go-junit-report: ## Download go-junit-report locally if necessary.
+go-junit-report: yq ## Download go-junit-report locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=go-junit-report
 	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
@@ -458,7 +460,7 @@ test.envtest.pretty:
 _check.container.environment:
 	@./scripts/check-container-environment.sh
 
-TEST_KONG_HELM_CHART_VERSION ?= $(shell yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml)
+TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml)
 
 # Integration tests don't use gotestsum because there's a data race issue
 # when go toolchain is writing to os.Stderr which is being read in go-kong

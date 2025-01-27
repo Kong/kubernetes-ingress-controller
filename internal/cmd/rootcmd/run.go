@@ -30,6 +30,7 @@ func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
 }
 
 // RunWithLogger starts the controller manager with a provided logger.
+// TODO: this can be used as an entry point exposed by as a public API.
 func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) error {
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("config invalid: %w", err)

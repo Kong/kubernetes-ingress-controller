@@ -41,12 +41,14 @@ import (
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	config2 "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,7 +56,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
+func SetupLoggers(c managercfg.Config, output io.Writer) (logr.Logger, error) {
 	zapBase, err := logging.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
 		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
@@ -73,7 +75,7 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 	return logger, nil
 }
 
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c managercfg.Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := scheme.Get()
 	if err != nil {
@@ -149,17 +151,12 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 	return managerOpts, nil
 }
 
-const (
-	LeaderElectionEnabled  = "enabled"
-	LeaderElectionDisabled = "disabled"
-)
-
-func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode dpconf.DBMode) bool {
-	if c.LeaderElectionForce == LeaderElectionEnabled {
+func leaderElectionEnabled(logger logr.Logger, c managercfg.Config, dbmode dpconf.DBMode) bool {
+	if c.LeaderElectionForce == managercfg.LeaderElectionEnabled {
 		logger.Info("leader election forcibly enabled")
 		return true
 	}
-	if c.LeaderElectionForce == LeaderElectionDisabled {
+	if c.LeaderElectionForce == managercfg.LeaderElectionDisabled {
 		logger.Info("leader election forcibly disabled")
 		return false
 	}
@@ -216,7 +213,7 @@ func setupDataplaneSynchronizer(
 
 func setupAdmissionServer(
 	ctx context.Context,
-	managerConfig *Config,
+	managerConfig managercfg.Config,
 	clientsManager *clients.AdminAPIClientsManager,
 	referenceIndexers ctrlref.CacheIndexers,
 	managerClient client.Client,
@@ -258,7 +255,7 @@ func setupAdmissionServer(
 // set or the publish service addresses if no overrides are set. If no UDP overrides or UDP publish service are set,
 // the UDP finder will also return the default addresses. If no override or publish service is set, this function
 // returns nil finders and an error.
-func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
+func setupDataplaneAddressFinder(mgrc client.Client, c managercfg.Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
 	if !c.UpdateStatus {
 		return nil, nil, nil
 	}
@@ -276,7 +273,7 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN config2.OptionalNamespacedName) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
 	if len(publishStatusAddress) > 0 {
@@ -326,8 +323,9 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) adminAPIClients(
+func adminAPIClients(
 	ctx context.Context,
+	c managercfg.Config,
 	logger logr.Logger,
 	discoverer *adminapi.Discoverer,
 	factory adminapi.ClientFactory,
@@ -335,7 +333,7 @@ func (c *Config) adminAPIClients(
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
-		kubeClient, err := c.GetKubeClient()
+		kubeClient, err := managercfg.GetKubeClient(c)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
@@ -443,7 +441,7 @@ func AdminAPIClientFromServiceDiscovery(
 // it starts and returns a KongLicense controller.
 func setupLicenseGetter(
 	ctx context.Context,
-	c *Config,
+	c managercfg.Config,
 	setupLog logr.Logger,
 	mgr manager.Manager,
 	statusQueue *status.Queue,
@@ -502,7 +500,7 @@ func setupLicenseGetter(
 func setupKonnectConfigSynchronizerWithMgr(
 	ctx context.Context,
 	mgr manager.Manager,
-	cfg *Config,
+	cfg managercfg.Config,
 	kongConfig sendconfig.Config,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,

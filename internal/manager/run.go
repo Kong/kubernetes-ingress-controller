@@ -44,6 +44,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,10 +54,10 @@ import (
 // Run starts the controller manager and blocks until it exits.
 func Run(
 	ctx context.Context,
-	c *Config,
-	diagnostic diagnostics.ClientDiagnostic,
+	c managercfg.Config,
 	logger logr.Logger,
 ) error {
+	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c, logger)
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
 	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("The ingress class name has been set", "value", c.IngressClassName)
@@ -69,7 +70,7 @@ func Run(
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
 	setupLog.Info("Getting the kubernetes client configuration")
-	kubeconfig, err := c.GetKubeconfig()
+	kubeconfig, err := managercfg.GetKubeconfig(c)
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
@@ -92,8 +93,9 @@ func Run(
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 
 	setupLog.Info("Getting the kong admin api client configuration")
-	initialKongClients, err := c.adminAPIClients(
+	initialKongClients, err := adminAPIClients(
 		ctx,
+		c,
 		setupLog.WithName("initialize-kong-clients"),
 		adminAPIsDiscoverer,
 		adminAPIClientsFactory,
@@ -206,7 +208,7 @@ func Run(
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
-		diagnostic,
+		diagnosticsServer.ConfigDumps(),
 		kongConfig,
 		eventRecorder,
 		dbMode,
@@ -406,7 +408,7 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 
 // setupKonnectNodeAgentWithMgr creates and adds Konnect NodeAgent as the manager's Runnable.
 func setupKonnectNodeAgentWithMgr(
-	c *Config,
+	c managercfg.Config,
 	mgr manager.Manager,
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	clientsManager *clients.AdminAPIClientsManager,
@@ -450,6 +452,32 @@ func resolveControllerHostnameForKonnect(logger logr.Logger) string {
 	}
 	logger.WithValues("hostname", nn.String()).Info("Resolved controller hostname for Konnect")
 	return nn.String()
+}
+
+// startDiagnosticsServer starts a goroutine that handles requests for the diagnostics server.
+func startDiagnosticsServer(
+	ctx context.Context,
+	port int,
+	c managercfg.Config,
+	logger logr.Logger,
+) diagnostics.Server {
+	if !c.EnableProfiling && !c.EnableConfigDumps {
+		logger.Info("Diagnostics server disabled")
+		return diagnostics.Server{}
+	}
+	logger.Info("Starting diagnostics server")
+
+	s := diagnostics.NewServer(logger, diagnostics.ServerConfig{
+		ProfilingEnabled:    c.EnableProfiling,
+		ConfigDumpsEnabled:  c.EnableConfigDumps,
+		DumpSensitiveConfig: c.DumpSensitiveConfig,
+	})
+	go func() {
+		if err := s.Listen(ctx, port); err != nil {
+			logger.Error(err, "Unable to start diagnostics server")
+		}
+	}()
+	return s
 }
 
 type IsReady interface {

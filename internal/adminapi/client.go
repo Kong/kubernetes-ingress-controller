@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
@@ -204,25 +206,30 @@ func (c *Client) PodReference() (k8stypes.NamespacedName, bool) {
 }
 
 type ClientFactory struct {
-	workspace      string
-	httpClientOpts HTTPClientOpts
-	adminToken     string
+	logger     logr.Logger
+	workspace  string
+	opts       ClientOpts
+	adminToken string
 }
 
-func NewClientFactoryForWorkspace(workspace string, httpClientOpts HTTPClientOpts, adminToken string) ClientFactory {
+func NewClientFactoryForWorkspace(logger logr.Logger, workspace string, clientOpts ClientOpts, adminToken string) ClientFactory {
 	return ClientFactory{
-		workspace:      workspace,
-		httpClientOpts: httpClientOpts,
-		adminToken:     adminToken,
+		logger:     logger,
+		workspace:  workspace,
+		opts:       clientOpts,
+		adminToken: adminToken,
 	}
 }
 
 func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI DiscoveredAdminAPI) (*Client, error) {
-	httpclient, err := MakeHTTPClient(&cf.httpClientOpts, cf.adminToken)
-	if err != nil {
-		return nil, err
-	}
-	cl, err := NewKongClientForWorkspace(ctx, discoveredAdminAPI.Address, cf.workspace, httpclient)
+	cf.logger.V(logging.DebugLevel).Info(
+		"Creating Kong Gateway Admin API client",
+		"address", discoveredAdminAPI.Address, "tlsServerName", discoveredAdminAPI.TLSServerName,
+	)
+	opts := cf.opts
+	opts.TLSServerName = discoveredAdminAPI.TLSServerName
+
+	cl, err := NewKongClientForWorkspace(ctx, discoveredAdminAPI.Address, cf.workspace, opts, cf.adminToken)
 	if err != nil {
 		return nil, err
 	}

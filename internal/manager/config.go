@@ -50,7 +50,7 @@ type Config struct {
 	LogFormat string
 
 	// Kong high-level controller manager configurations
-	KongAdminAPIConfig                adminapi.HTTPClientOpts
+	KongAdminAPIConfig                adminapi.ClientOpts
 	KongAdminInitializationRetries    uint
 	KongAdminInitializationRetryDelay time.Duration
 	KongAdminToken                    string
@@ -76,7 +76,6 @@ type Config struct {
 	ProbeAddr                              string
 	KongAdminURLs                          []string
 	KongAdminSvc                           OptionalNamespacedName
-	GatewayDiscoveryDNSStrategy            cfgtypes.DNSStrategy
 	GatewayDiscoveryReadinessCheckInterval time.Duration
 	GatewayDiscoveryReadinessCheckTimeout  time.Duration
 	KongAdminSvcPortNames                  []string
@@ -216,8 +215,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
 	flagSet.StringSliceVar(&c.KongAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin-tls", "kong-admin-tls"},
 		"Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery.")
-	flagSet.Var(flags.NewValidatedValue(&c.GatewayDiscoveryDNSStrategy, dnsStrategyFromFlagValue, flags.WithDefault(cfgtypes.IPDNSStrategy), flags.WithTypeNameOverride[cfgtypes.DNSStrategy]("dns-strategy")),
-		"gateway-discovery-dns-strategy", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")
 	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckInterval, "gateway-discovery-readiness-check-interval", clients.DefaultReadinessReconciliationInterval,
 		"Interval of readiness checks on gateway admin API clients for discovery.")
 	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckTimeout, "gateway-discovery-readiness-check-timeout", clients.DefaultReadinessCheckTimeout,
@@ -343,6 +340,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Deprecated flags.
 	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
 	_ = flagSet.MarkDeprecated("konnect-runtime-group-id", "Use --konnect-control-plane-id instead.")
+
+	_ = flagSet.String("gateway-discovery-dns-strategy", "", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")
+	_ = flagSet.MarkDeprecated("gateway-discovery-dns-strategy", "this setting is deprecated and has no effect, now it always works out of the box (without adjustments).")
 
 	c.flagSet = flagSet
 	return flagSet

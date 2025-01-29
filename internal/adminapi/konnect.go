@@ -2,7 +2,6 @@ package adminapi
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 )
 
 type KonnectConfig struct {
@@ -34,30 +32,12 @@ type KonnectConfig struct {
 }
 
 func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error) {
-	clientCertificate, err := tlsutil.ExtractClientCertificates(
-		[]byte(c.TLSClient.Cert),
-		c.TLSClient.CertFile,
-		[]byte(c.TLSClient.Key),
-		c.TLSClient.KeyFile,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
-	}
-	if clientCertificate == nil {
-		return nil, fmt.Errorf("client certificate is missing")
-	}
-
-	tlsConfig := tls.Config{
-		Certificates: []tls.Certificate{*clientCertificate},
-		MinVersion:   tls.VersionTLS12,
-	}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tlsConfig
 	client, err := NewKongAPIClient(
 		fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID),
-		&http.Client{
-			Transport: transport,
+		ClientOpts{
+			TLSClient: c.TLSClient,
 		},
+		"",
 	)
 	if err != nil {
 		return nil, err

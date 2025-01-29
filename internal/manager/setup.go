@@ -332,11 +332,6 @@ func (c *Config) adminAPIClients(
 	discoverer *adminapi.Discoverer,
 	factory adminapi.ClientFactory,
 ) ([]*adminapi.Client, error) {
-	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
-	if err != nil {
-		return nil, err
-	}
-
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
@@ -351,7 +346,7 @@ func (c *Config) adminAPIClients(
 	addresses := c.KongAdminURLs
 	clients := make([]*adminapi.Client, 0, len(addresses))
 	for _, address := range addresses {
-		cl, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, httpclient)
+		cl, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 		if err != nil {
 			return nil, err
 		}

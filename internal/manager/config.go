@@ -341,7 +341,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
 	_ = flagSet.MarkDeprecated("konnect-runtime-group-id", "Use --konnect-control-plane-id instead.")
 
-	_ = flagSet.String("gateway-discovery-dns-strategy", "", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod. AAAA")
+	_ = flagSet.String("gateway-discovery-dns-strategy", "", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")
 	_ = flagSet.MarkDeprecated("gateway-discovery-dns-strategy", "this setting is deprecated and has no effect, now it always works out of the box (without adjustments).")
 
 	c.flagSet = flagSet

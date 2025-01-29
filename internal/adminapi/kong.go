@@ -147,9 +147,6 @@ func makeHTTPClient(opts ClientOpts, kongAdminToken string) (*http.Client, error
 
 	if opts.TLSSkipVerify {
 		tlsConfig.InsecureSkipVerify = true //nolint:gosec
-		if opts.TLSServerName != "" || opts.CACertPath != "" || opts.CACert != "" || !opts.TLSClient.IsZero() {
-			return nil, errors.New("when TLSSkipVerify is set, no other TLS options can be set")
-		}
 	}
 
 	tlsConfig.ServerName = opts.TLSServerName

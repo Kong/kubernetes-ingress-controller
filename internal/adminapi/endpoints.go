@@ -14,8 +14,7 @@ import (
 
 // DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
 // For field Address use format https://<podIP>:<port>, and for field TLSServerName
-// use format <podIPDashes>.<serviceName>.<namespace>.svc, where podIPDashes
-// is the IP address separated by dashes instead of dots.
+// use format pod.<serviceName>.<namespace>.svc.
 type DiscoveredAdminAPI struct {
 	// Address format is https://10.68.0.5:8444.
 	Address string
@@ -181,9 +180,12 @@ func adminAPIFromEndpoint(
 		Address: fmt.Sprintf("https://%s:%d", podIPAddr, *port.Port),
 		// TLSServerName format doesn't need to include the IP address part, it's the same for
 		// ipv4 and ipv6: pod.dataplane-admin-kong-rqwr9-sc49t.default.svc.
-		// Currently everywhere (KGO, Chart) certificates are generated like that
-		// *.<service-name>.<namespace>.svc e.g.: *.dataplane-admin-kong-rqwr9-sc49t.default.svc
-		// so we have to follow the same 4-parts pattern here, to satisfy wildcard. The first part
+		// Currently for KGO certificates are generated like that:
+		// *.<service-name>.<namespace>.svc e.g.: *.dataplane-admin-kong-rqwr9-sc49t.default.svc, see
+		// https://github.com/Kong/gateway-operator/blob/8f009b49b622197ac083abae1c3606bc2c35114f/controller/dataplane/owned_resources.go#L30-L53
+		// In case of Ingress Chart TLS never worked out of the box (by default it's disabled), due to hardcoded service name in the
+		// https://github.com/Kong/charts/blob/1903dd5370e2d028ec31f6b3cec1414a55462ebd/charts/kong/templates/service-kong-admin.yaml#L35-L37
+		// Let's follow the same 4-parts pattern here, to satisfy wildcard. The first part
 		// can be arbitral so let's use "pod". Ditching the first part (wildcard certificate) is
 		// problematic, because this requires changes in the certificate generation logic and may
 		// break existing users' setups, but it can be done one day.

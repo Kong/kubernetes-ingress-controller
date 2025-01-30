@@ -1,4 +1,4 @@
-package manager_test
+package config_test
 
 import (
 	"os"
@@ -6,18 +6,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func TestConfigResolve(t *testing.T) {
 	t.Run("Admin Token Path", func(t *testing.T) {
-		validWithTokenPath := func() manager.Config {
+		validWithTokenPath := func() managercfg.Config {
 			tempDir := t.TempDir()
 			tokenFile, err := os.CreateTemp(tempDir, "kong.token")
 			require.NoError(t, err)
 			_, err = tokenFile.Write([]byte("non-empty-token"))
 			require.NoError(t, err)
-			return manager.Config{
+			return managercfg.Config{
 				KongAdminTokenPath: tokenFile.Name(),
 			}
 		}

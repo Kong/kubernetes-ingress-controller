@@ -15,6 +15,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
@@ -76,7 +78,7 @@ func DeployControllerManagerForCluster(
 	cluster clusters.Cluster,
 	kongAddon *ktfkong.Addon,
 	additionalFlags []string,
-	opts ...manager.ConfigOpt,
+	opts ...managercfg.Opt,
 ) (func(), error) {
 	if kongAddon == nil {
 		// Ensure that the provided test cluster has a kongAddon deployed to it.
@@ -115,26 +117,27 @@ func DeployControllerManagerForCluster(
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)
 
-	config := manager.Config{
-		Impersonate: "system:serviceaccount:kong:kong-serviceaccount",
-	}
+	clicfg := config.NewCLIConfig()
+	clicfg.Impersonate = "system:serviceaccount:kong:kong-serviceaccount"
+
 	// parsing the controller configuration flags
-	flags := config.FlagSet()
+	// TODO(czeslavo): we may switch to using managercfg.Config directly instead of relying on CLI flags here.
+	flags := clicfg.FlagSet()
 	if err := flags.Parse(controllerManagerFlags); err != nil {
 		os.Remove(kubeconfig.Name())
 		return nil, fmt.Errorf("failed to parse manager flags: %w", err)
 	}
 
 	for _, opt := range opts {
-		opt(&config)
+		opt(clicfg.Config)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	// run the controller in the background
 	go func() {
 		defer os.Remove(kubeconfig.Name())
-		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), config)
-		if err := rootcmd.RunWithLogger(ctx, &config, logger); err != nil {
+		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), clicfg)
+		if err := rootcmd.RunWithLogger(ctx, *clicfg.Config, logger); err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with Controller Manager: %s\n", err)
 			os.Exit(1)
 		}
@@ -159,12 +162,12 @@ func SetupLoggers(logLevel string, logFormat string) (logr.Logger, string, error
 			return logr.Logger{}, logOutput, err
 		}
 	}
-	config := manager.Config{
+	config := managercfg.Config{
 		LogLevel:  logLevel,
 		LogFormat: logFormat,
 	}
 
-	logger, err := manager.SetupLoggers(&config, output)
+	logger, err := manager.SetupLoggers(config, output)
 	// Prevents controller-runtime from logging
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
 	ctrllog.SetLogger(logger)

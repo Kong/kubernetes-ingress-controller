@@ -19,7 +19,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -28,7 +27,8 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
 
@@ -42,7 +42,7 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, loggerHook := RunManager(ctx, t, envcfg,
+	loggerHook := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
@@ -98,14 +98,19 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	cfg := ConfigForEnvConfig(t, envcfg)
 
 	logger := zapr.NewLogger(zap.NewNop())
-	ctrl.SetLogger(logger)
+	adminAPIServerURL := StartAdminAPIServerMock(t).URL
 
-	// Reducing the cache sync timeout to speed up the test.
-	cfg.CacheSyncTimeout = time.Millisecond * 500
-	err := manager.Run(ctx, cfg, logger)
+	cfg, err := manager.NewConfig(
+		WithDefaultEnvTestsConfig(envcfg),
+		WithKongAdminURLs(adminAPIServerURL),
+		// Reducing the cache sync timeout to speed up the test.
+		WithCacheSyncTimeout(500*time.Millisecond),
+	)
+	require.NoError(t, err)
+
+	err = managerinternal.Run(ctx, cfg, logger)
 	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 

@@ -31,3 +31,19 @@ const (
 	// from different HTTPRoutes in the same namespace into one Kong gateway service to reduce total number of Kong gateway services.
 	CombinedServicesFromDifferentHTTPRoutesFeature = "CombinedServicesFromDifferentHTTPRoutes"
 )
+
+// GetFeatureGatesDefaults returns the default values for all feature gates.
+//
+// NOTE: if you're adding a new feature gate, it needs to be added here.
+func GetFeatureGatesDefaults() map[string]bool {
+	return map[string]bool{
+		GatewayAlphaFeature:                            false,
+		FillIDsFeature:                                 true,
+		RewriteURIsFeature:                             false,
+		KongServiceFacadeFeature:                       false,
+		SanitizeKonnectConfigDumpsFeature:              true,
+		FallbackConfigurationFeature:                   false,
+		KongCustomEntityFeature:                        true,
+		CombinedServicesFromDifferentHTTPRoutesFeature: false,
+	}
+}

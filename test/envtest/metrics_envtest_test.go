@@ -96,7 +96,7 @@ func TestMetricsAreServed(t *testing.T) {
 				)
 			}
 			addr := fmt.Sprintf("localhost:%d", helpers.GetFreePort(t))
-			_, _ = RunManager(ctx, t, envcfg,
+			_ = RunManager(ctx, t, envcfg,
 				AdminAPIOptFns(adminAPIOpts...),
 				func(cfg *managercfg.Config) {
 					cfg.FeatureGates[managercfg.FallbackConfigurationFeature] = tc.fallbackConfigurationEnabled

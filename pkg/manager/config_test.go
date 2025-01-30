@@ -102,7 +102,7 @@ func TestNewConfig(t *testing.T) {
 			EnableConfigDumps:    false,
 			DumpSensitiveConfig:  false,
 			DiagnosticServerPort: consts.DiagnosticsPort,
-			FeatureGates:         nil,
+			FeatureGates:         managercfg.GetFeatureGatesDefaults(),
 			TermDelay:            0,
 			Konnect: managercfg.KonnectConfig{
 				Address:                     "https://us.kic.api.konghq.com",

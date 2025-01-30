@@ -42,7 +42,7 @@ var (
 
 	// defaultFeatureFlags is the default set of Translator feature flags to use in tests. Can be overridden in a test case.
 	defaultFeatureFlags = func() translator.FeatureFlags {
-		defaults := featuregates.GetFeatureGatesDefaults()
+		defaults := featuregates.FeatureGates(config.GetFeatureGatesDefaults())
 		return translator.FeatureFlags{
 			// We do not verify configuration reports in golden tests.
 			ReportConfiguredKubernetesObjects: false,

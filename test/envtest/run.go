@@ -15,8 +15,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
@@ -33,57 +31,39 @@ const (
 	ManagerStartupWaitInterval = time.Millisecond
 )
 
-// ConfigForEnvConfig prepares a managercfg.Config for use in tests
-// It will start a mock Admin API server which will be set in KIC's config
-// and which will be automatically stopped during test cleanup.
-func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAPIHandlerOpt) managercfg.Config {
-	t.Helper()
+// WithDefaultEnvTestsConfig modifies a managercfg.Config for use in envtests.
+func WithDefaultEnvTestsConfig(envcfg *rest.Config) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		// Override the APIServer.
+		cfg.APIServerHost = envcfg.Host
+		cfg.APIServerCertData = envcfg.CertData
+		cfg.APIServerKeyData = envcfg.KeyData
+		cfg.APIServerCAData = envcfg.CAData
 
-	cfg, err := manager.NewConfig()
-	require.NoError(t, err)
+		// Shorten the wait in tests.
+		cfg.UpdateStatus = false
+		cfg.ProxySyncSeconds = 0.1
+		cfg.InitCacheSyncDuration = 0
 
-	// Disable debugging endpoints.
-	// If need be those can be enabled by manipulating the returned config.
-	cfg.EnableProfiling = false
-	cfg.EnableConfigDumps = false
+		cfg.MetricsAddr = "0"
 
-	// Override the APIServer.
-	cfg.APIServerHost = envcfg.Host
-	cfg.APIServerCertData = envcfg.CertData
-	cfg.APIServerKeyData = envcfg.KeyData
-	cfg.APIServerCAData = envcfg.CAData
+		// And other settings which are irrelevant here.
+		cfg.AnonymousReports = false
 
-	cfg.KongAdminURLs = []string{StartAdminAPIServerMock(t, opts...).URL}
-	cfg.UpdateStatus = false
-	// Shorten the wait in tests.
-	cfg.ProxySyncSeconds = 0.1
-	cfg.InitCacheSyncDuration = 0
+		// Set the GracefulShutdownTimeout to 0 to prevent errors:
+		// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
+		// Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/e59161ee/pkg/manager/internal.go#L543-L548
+		cfg.GracefulShutdownTimeout = lo.ToPtr(time.Duration(0))
 
-	cfg.MetricsAddr = "0"
+		// Disable Gateway API controllers, enable those only in tests that use them.
+		cfg.GatewayAPIGatewayController = false
+		cfg.GatewayAPIHTTPRouteController = false
+		cfg.GatewayAPIReferenceGrantController = false
 
-	// And other settings which are irrelevant here.
-	cfg.Konnect.ConfigSynchronizationEnabled = false
-	cfg.Konnect.LicenseSynchronizationEnabled = false
-	cfg.AnonymousReports = false
-	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
-
-	// Set the GracefulShutdownTimeout to 0 to prevent errors:
-	// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
-	// Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/e59161ee/pkg/manager/internal.go#L543-L548
-	cfg.GracefulShutdownTimeout = lo.ToPtr(time.Duration(0))
-
-	// Disable Gateway API controllers, enable those only in tests that use them.
-	cfg.GatewayAPIGatewayController = false
-	cfg.GatewayAPIHTTPRouteController = false
-	cfg.GatewayAPIReferenceGrantController = false
-
-	// Disable leader election, which doesn't work outside the cluster and is irrelevant for single-instance tests.
-	cfg.LeaderElectionForce = managercfg.LeaderElectionDisabled
-
-	return cfg
+		// Disable leader election, which doesn't work outside the cluster and is irrelevant for single-instance tests.
+		cfg.LeaderElectionForce = managercfg.LeaderElectionDisabled
+	}
 }
-
-type ModifyManagerConfigFn func(cfg *managercfg.Config)
 
 func WithGatewayFeatureEnabled(cfg *managercfg.Config) {
 	cfg.FeatureGates[managercfg.GatewayAlphaFeature] = true
@@ -189,6 +169,23 @@ func WithMetricsAddr(addr string) func(cfg *managercfg.Config) {
 	}
 }
 
+func WithTelemetry(splunkEndpoint string, telemetryPeriod time.Duration) managercfg.Opt {
+	return func(cfg *managercfg.Config) {
+		cfg.AnonymousReports = true
+		cfg.SplunkEndpoint = splunkEndpoint
+		cfg.SplunkEndpointInsecureSkipVerify = true
+		cfg.TelemetryPeriod = telemetryPeriod
+		cfg.EnableProfiling = false
+		cfg.EnableConfigDumps = false
+	}
+}
+
+func WithCacheSyncTimeout(d time.Duration) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		cfg.CacheSyncTimeout = d
+	}
+}
+
 // AdminAPIOptFns wraps a variadic list of mocks.AdminAPIHandlerOpt and returns
 // a slice containing all of them.
 // The purpose of this is func is to make the call sites a bit less verbose.
@@ -208,13 +205,16 @@ func RunManager(
 	t *testing.T,
 	envcfg *rest.Config,
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
-	modifyCfgFns ...func(cfg *managercfg.Config),
-) (managercfg.Config, LogsObserver) {
-	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
+	modifyCfgFns ...managercfg.Opt,
+) LogsObserver {
+	adminAPIServerURL := StartAdminAPIServerMock(t, adminAPIOpts...).URL
 
-	for _, modifyCfgFn := range modifyCfgFns {
-		modifyCfgFn(&cfg)
-	}
+	modifyCfgFns = append([]managercfg.Opt{
+		WithDefaultEnvTestsConfig(envcfg),
+		WithKongAdminURLs(adminAPIServerURL),
+	},
+		modifyCfgFns..., // Add the user-provided modifyCfgFns last so they can override the defaults.
+	)
 
 	ctx, logger, logs := CreateTestLogger(ctx)
 
@@ -225,14 +225,20 @@ func RunManager(
 	go func() {
 		defer wg.Done()
 
-		require.NoError(t, managerinternal.Run(ctx, cfg, logger))
+		mgrID, err := manager.NewID(t.Name())
+		require.NoError(t, err)
+
+		mgr, err := manager.NewManager(mgrID, logger, modifyCfgFns...)
+		require.NoError(t, err)
+
+		require.NoError(t, mgr.Run(ctx))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
 	})
 
-	return cfg, logs
+	return logs
 }
 
 // WaitForManagerStart waits for the manager to start. The indication of the manager starting is

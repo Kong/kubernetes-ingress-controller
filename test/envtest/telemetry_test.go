@@ -29,9 +29,9 @@ import (
 	"k8s.io/client-go/rest"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
@@ -59,17 +59,17 @@ func TestTelemetry(t *testing.T) {
 	envcfg := Setup(t, scheme.Scheme)
 	// Let's have long duration due too rate limiter in K8s client.
 	cfg := configForEnvTestTelemetry(t, envcfg, telemetryServerListener.Addr().String(), 100*time.Millisecond)
-	c, err := cfg.GetKubeconfig()
+	c, err := managercfg.GetKubeconfig(cfg)
 	require.NoError(t, err)
 	createK8sObjectsForTelemetryTest(ctx, t, c)
 
 	t.Log("starting the controller manager")
 	go func() {
-		logger, err := manager.SetupLoggers(&cfg, io.Discard)
+		logger, err := manager.SetupLoggers(cfg, io.Discard)
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
+		err = manager.Run(ctx, cfg, logger)
 		assert.NoError(t, err)
 	}()
 
@@ -93,7 +93,7 @@ func TestTelemetry(t *testing.T) {
 	}, waitTime, tickTime, "telemetry report never matched expected value")
 }
 
-func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) manager.Config {
+func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) managercfg.Config {
 	t.Helper()
 
 	cfg := ConfigForEnvConfig(t, envcfg)

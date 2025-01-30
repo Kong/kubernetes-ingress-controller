@@ -15,9 +15,10 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -32,14 +33,14 @@ const (
 	ManagerStartupWaitInterval = time.Millisecond
 )
 
-// ConfigForEnvConfig prepares a manager.Config for use in tests
+// ConfigForEnvConfig prepares a managercfg.Config for use in tests
 // It will start a mock Admin API server which will be set in KIC's config
 // and which will be automatically stopped during test cleanup.
-func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAPIHandlerOpt) manager.Config {
+func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAPIHandlerOpt) managercfg.Config {
 	t.Helper()
 
-	cfg := manager.Config{}
-	cfg.FlagSet() // Just set the defaults.
+	cfg, err := manager.NewConfig()
+	require.NoError(t, err)
 
 	// Disable debugging endpoints.
 	// If need be those can be enabled by manipulating the returned config.
@@ -77,31 +78,31 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.GatewayAPIReferenceGrantController = false
 
 	// Disable leader election, which doesn't work outside the cluster and is irrelevant for single-instance tests.
-	cfg.LeaderElectionForce = manager.LeaderElectionDisabled
+	cfg.LeaderElectionForce = managercfg.LeaderElectionDisabled
 
 	return cfg
 }
 
-type ModifyManagerConfigFn func(cfg *manager.Config)
+type ModifyManagerConfigFn func(cfg *managercfg.Config)
 
-func WithGatewayFeatureEnabled(cfg *manager.Config) {
+func WithGatewayFeatureEnabled(cfg *managercfg.Config) {
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
 }
 
-func WithGatewayAPIControllers() func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithGatewayAPIControllers() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.GatewayAPIGatewayController = true
 		cfg.GatewayAPIHTTPRouteController = true
 		cfg.GatewayAPIReferenceGrantController = true
 	}
 }
 
-func WithGatewayToReconcile(gatewayNN string) func(cfg *manager.Config) {
+func WithGatewayToReconcile(gatewayNN string) func(cfg *managercfg.Config) {
 	parts := strings.SplitN(gatewayNN, "/", 3)
 	if len(parts) != 2 {
 		panic("the expected format if namespace/name")
 	}
-	return func(cfg *manager.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.GatewayToReconcile = mo.Some(k8stypes.NamespacedName{
 			Namespace: parts[0],
 			Name:      parts[1],
@@ -109,8 +110,8 @@ func WithGatewayToReconcile(gatewayNN string) func(cfg *manager.Config) {
 	}
 }
 
-func WithPublishService(namespace string) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithPublishService(namespace string) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
 			Name:      PublishServiceName,
 			Namespace: namespace,
@@ -118,72 +119,72 @@ func WithPublishService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
-func WithPublishStatusAddress(addresses []string, udps []string) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithPublishStatusAddress(addresses []string, udps []string) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.PublishStatusAddress = addresses
 		cfg.PublishStatusAddressUDP = udps
 	}
 }
 
-func WithIngressClass(name string) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithIngressClass(name string) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.IngressClassName = name
 	}
 }
 
-func WithProxySyncSeconds(period float32) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithProxySyncSeconds(period float32) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.ProxySyncSeconds = period
 	}
 }
 
-func WithDiagnosticsServer(port int) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithDiagnosticsServer(port int) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.DiagnosticServerPort = port
 		cfg.EnableConfigDumps = true
 	}
 }
 
-func WithHealthProbePort(port int) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithHealthProbePort(port int) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.ProbeAddr = fmt.Sprintf("localhost:%d", port)
 	}
 }
 
-func WithProfiling() func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithProfiling() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.EnableProfiling = true
 	}
 }
 
-func WithUpdateStatus() func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithUpdateStatus() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.UpdateStatus = true
 	}
 }
 
-func WithKongServiceFacadeFeatureEnabled() func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithKongServiceFacadeFeatureEnabled() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.FeatureGates[featuregates.KongServiceFacade] = true
 	}
 }
 
-func WithKongAdminURLs(urls ...string) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithKongAdminURLs(urls ...string) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.KongAdminURLs = urls
 	}
 }
 
-func WithAdmissionWebhookEnabled(key, cert []byte, addr string) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithAdmissionWebhookEnabled(key, cert []byte, addr string) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.AdmissionServer.ListenAddr = addr
 		cfg.AdmissionServer.Key = string(key)
 		cfg.AdmissionServer.Cert = string(cert)
 	}
 }
 
-func WithMetricsAddr(addr string) func(cfg *manager.Config) {
-	return func(cfg *manager.Config) {
+func WithMetricsAddr(addr string) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
 		cfg.MetricsAddr = addr
 	}
 }
@@ -207,8 +208,8 @@ func RunManager(
 	t *testing.T,
 	envcfg *rest.Config,
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
-	modifyCfgFns ...func(cfg *manager.Config),
-) (manager.Config, LogsObserver) {
+	modifyCfgFns ...func(cfg *managercfg.Config),
+) (managercfg.Config, LogsObserver) {
 	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
 
 	for _, modifyCfgFn := range modifyCfgFns {
@@ -224,10 +225,7 @@ func RunManager(
 	go func() {
 		defer wg.Done()
 
-		diagServer, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
-		require.NoError(t, err)
-
-		require.NoError(t, manager.Run(ctx, &cfg, diagServer.ConfigDumps(), logger))
+		require.NoError(t, managerinternal.Run(ctx, cfg, logger))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()

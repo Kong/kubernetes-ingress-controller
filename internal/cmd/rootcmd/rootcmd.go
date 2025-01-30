@@ -8,33 +8,34 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 )
 
 // Execute is the entry point to the controller manager.
 func Execute() {
 	var (
-		cfg        manager.Config
-		rootCmd    = GetRootCmd(&cfg)
+		rootCmd    = GetRootCmd()
 		versionCmd = GetVersionCmd()
 	)
 	rootCmd.AddCommand(versionCmd)
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-func GetRootCmd(cfg *manager.Config) *cobra.Command {
+func GetRootCmd() *cobra.Command {
+	cliCfg := config.NewCLIConfig()
+
 	cmd := &cobra.Command{
 		PersistentPreRunE: bindEnvVars,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return Run(cmd.Context(), cfg, os.Stderr)
+			return Run(cmd.Context(), *cliCfg.Config, os.Stderr)
 		},
 		SilenceUsage: true,
 		// We can silence the errors because cobra.CheckErr below will print
 		// the returned error and set the exit code to 1.
 		SilenceErrors: true,
 	}
-	cmd.Flags().AddFlagSet(cfg.FlagSet())
+	cmd.Flags().AddFlagSet(cliCfg.FlagSet())
 	return cmd
 }
 

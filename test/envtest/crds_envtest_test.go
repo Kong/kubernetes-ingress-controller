@@ -28,7 +28,6 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
@@ -106,7 +105,7 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 
 	// Reducing the cache sync timeout to speed up the test.
 	cfg.CacheSyncTimeout = time.Millisecond * 500
-	err := manager.Run(ctx, &cfg, diagnostics.ClientDiagnostic{}, logger)
+	err := manager.Run(ctx, cfg, logger)
 	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 

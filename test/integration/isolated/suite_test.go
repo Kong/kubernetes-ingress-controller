@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
@@ -362,7 +362,7 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			allControllerArgs = opt(allControllerArgs)
 		}
 
-		gracefulShutdownWithoutTimeoutOpt := func(c *manager.Config) {
+		gracefulShutdownWithoutTimeoutOpt := func(c *managercfg.Config) {
 			// Set the GracefulShutdownTimeout to -1 to keep graceful shutdown enabled but disable the timeout.
 			// This prevents the errors:
 			// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded

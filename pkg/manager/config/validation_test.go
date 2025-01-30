@@ -1,8 +1,6 @@
-package manager_test
+package config_test
 
 import (
-	"bytes"
-	"fmt"
 	"testing"
 	"time"
 
@@ -12,159 +10,15 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
-
-func TestConfigValidatedVars(t *testing.T) {
-	type testCase struct {
-		Input                      string
-		ExpectedValue              any
-		ExtractValueFn             func(c manager.Config) any
-		ExpectedErrorContains      string
-		ExpectedUsageAdditionalMsg string
-	}
-
-	testCasesGroupedByFlag := map[string][]testCase{
-		"--gateway-api-controller-name": {
-			{
-				Input: "example.com/controller-name",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.GatewayAPIControllerName
-				},
-				ExpectedValue: "example.com/controller-name",
-			},
-			{
-				Input: "",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.GatewayAPIControllerName
-				},
-				ExpectedValue: string(gateway.GetControllerName()),
-			},
-			{
-				Input:                 "%invalid_controller_name$",
-				ExpectedErrorContains: "the expected format is example.com/controller-name",
-			},
-		},
-		"--publish-service": {
-			{
-				Input: "namespace/servicename",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.PublishService
-				},
-				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
-			},
-			{
-				Input:                 "servicename",
-				ExpectedErrorContains: "the expected format is namespace/name",
-			},
-		},
-		"--kong-admin-svc": {
-			{
-				Input: "namespace/servicename",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.KongAdminSvc
-				},
-				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
-			},
-			{
-				Input:                 "namespace/",
-				ExpectedErrorContains: "name cannot be empty",
-			},
-			{
-				Input:                 "/name",
-				ExpectedErrorContains: "namespace cannot be empty",
-			},
-		},
-		"--konnect-runtime-group-id": {
-			{
-				Input: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.Konnect.ControlPlaneID
-				},
-				ExpectedValue:              "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
-				ExpectedUsageAdditionalMsg: "Flag --konnect-runtime-group-id has been deprecated, Use --konnect-control-plane-id instead.\n",
-			},
-		},
-		"--konnect-control-plane-id": {
-			{
-				Input: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.Konnect.ControlPlaneID
-				},
-				ExpectedValue: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
-			},
-		},
-		"--gateway-to-reconcile": {
-			{
-				Input: "namespace/gatewayname",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.GatewayToReconcile
-				},
-				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "gatewayname"}),
-			},
-			{
-				Input:                 "namespace/",
-				ExpectedErrorContains: "name cannot be empty",
-			},
-			{
-				Input:                 "/name",
-				ExpectedErrorContains: "namespace cannot be empty",
-			},
-		},
-		"--secret-label-selector": {
-			{
-				Input: "konghq.com/label-for-caching",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.SecretLabelSelector
-				},
-				ExpectedValue: "konghq.com/label-for-caching",
-			},
-		},
-		"--configmap-label-selector": {
-			{
-				Input: "konghq.com/label-for-caching",
-				ExtractValueFn: func(c manager.Config) any {
-					return c.ConfigMapLabelSelector
-				},
-				ExpectedValue: "konghq.com/label-for-caching",
-			},
-		},
-	}
-
-	for flag, flagTestCases := range testCasesGroupedByFlag {
-		for _, tc := range flagTestCases {
-			t.Run(fmt.Sprintf("%s=%s", flag, tc.Input), func(t *testing.T) {
-				var c manager.Config
-				var input []string
-				if tc.Input != "" {
-					input = []string{flag, tc.Input}
-				}
-
-				flagSet := c.FlagSet()
-				var usageAdditionalMsg bytes.Buffer
-				flagSet.SetOutput(&usageAdditionalMsg)
-
-				err := flagSet.Parse(input)
-				if tc.ExpectedErrorContains != "" {
-					require.ErrorContains(t, err, tc.ExpectedErrorContains)
-					return
-				}
-
-				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, tc.ExtractValueFn(c))
-				require.Equal(t, tc.ExpectedUsageAdditionalMsg, usageAdditionalMsg.String())
-			})
-		}
-	}
-}
 
 func TestConfigValidate(t *testing.T) {
 	t.Run("konnect", func(t *testing.T) {
-		validEnabled := func() *manager.Config {
-			return &manager.Config{
+		validEnabled := func() *managercfg.Config {
+			return &managercfg.Config{
 				KongAdminSvc: mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
@@ -184,7 +38,7 @@ func TestConfigValidate(t *testing.T) {
 		}
 
 		t.Run("disabled should not require other vars to be set", func(t *testing.T) {
-			c := &manager.Config{Konnect: adminapi.KonnectConfig{ConfigSynchronizationEnabled: false}}
+			c := &managercfg.Config{Konnect: adminapi.KonnectConfig{ConfigSynchronizationEnabled: false}}
 			require.NoError(t, c.Validate())
 		})
 
@@ -238,7 +92,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no gateway service discovery enabled", func(t *testing.T) {
 			c := validEnabled()
-			c.KongAdminSvc = manager.OptionalNamespacedName{}
+			c.KongAdminSvc = managercfg.OptionalNamespacedName{}
 			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
 		})
 
@@ -250,8 +104,8 @@ func TestConfigValidate(t *testing.T) {
 	})
 
 	t.Run("Admin API", func(t *testing.T) {
-		validWithClientTLS := func() manager.Config {
-			return manager.Config{
+		validWithClientTLS := func() managercfg.Config {
+			return managercfg.Config{
 				KongAdminAPIConfig: adminapi.ClientOpts{
 					TLSClient: adminapi.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
@@ -265,7 +119,7 @@ func TestConfigValidate(t *testing.T) {
 		}
 
 		t.Run("no TLS client is allowed", func(t *testing.T) {
-			c := manager.Config{
+			c := managercfg.Config{
 				KongAdminAPIConfig: adminapi.ClientOpts{
 					TLSClient: adminapi.TLSClientConfig{},
 				},
@@ -306,8 +160,8 @@ func TestConfigValidate(t *testing.T) {
 	})
 
 	t.Run("Admin Token", func(t *testing.T) {
-		validWithToken := func() manager.Config {
-			return manager.Config{
+		validWithToken := func() managercfg.Config {
+			return managercfg.Config{
 				KongAdminToken: "non-empty-token",
 			}
 		}
@@ -319,8 +173,8 @@ func TestConfigValidate(t *testing.T) {
 	})
 
 	t.Run("Admin Token Path", func(t *testing.T) {
-		validWithTokenPath := func() manager.Config {
-			return manager.Config{
+		validWithTokenPath := func() managercfg.Config {
+			return managercfg.Config{
 				KongAdminTokenPath: "non-empty-token-path",
 			}
 		}
@@ -332,15 +186,15 @@ func TestConfigValidate(t *testing.T) {
 		})
 	})
 
-	t.Run("--use-last-valid-config-for-fallback", func(t *testing.T) {
+	t.Run("use last valid config for fallback", func(t *testing.T) {
 		t.Run("enabled without feature gate is rejected", func(t *testing.T) {
-			c := manager.Config{
+			c := managercfg.Config{
 				UseLastValidConfigForFallback: true,
 			}
 			require.ErrorContains(t, c.Validate(), "--use-last-valid-config-for-fallback or CONTROLLER_USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with FallbackConfiguration feature gate enabled")
 		})
 		t.Run("enabled with feature gate is accepted", func(t *testing.T) {
-			c := manager.Config{
+			c := managercfg.Config{
 				UseLastValidConfigForFallback: true,
 				FeatureGates: map[string]bool{
 					featuregates.FallbackConfiguration: true,
@@ -351,8 +205,8 @@ func TestConfigValidate(t *testing.T) {
 	})
 
 	t.Run("gateway discovery", func(t *testing.T) {
-		validEnabled := func() *manager.Config {
-			return &manager.Config{
+		validEnabled := func() *managercfg.Config {
+			return &managercfg.Config{
 				KongAdminSvc:                           mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
 				GatewayDiscoveryReadinessCheckInterval: clients.DefaultReadinessReconciliationInterval,
 				GatewayDiscoveryReadinessCheckTimeout:  clients.DefaultReadinessCheckTimeout,
@@ -360,7 +214,7 @@ func TestConfigValidate(t *testing.T) {
 		}
 
 		t.Run("disabled should not check other fields to set", func(t *testing.T) {
-			c := &manager.Config{}
+			c := &managercfg.Config{}
 			require.NoError(t, c.Validate())
 		})
 

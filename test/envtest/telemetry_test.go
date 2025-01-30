@@ -30,6 +30,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
@@ -58,7 +59,7 @@ func TestTelemetry(t *testing.T) {
 	envcfg := Setup(t, scheme.Scheme)
 	// Let's have long duration due too rate limiter in K8s client.
 	cfg := configForEnvTestTelemetry(t, envcfg, telemetryServerListener.Addr().String(), 100*time.Millisecond)
-	c, err := managercfg.GetKubeconfig(cfg)
+	c, err := utils.GetKubeconfig(cfg)
 	require.NoError(t, err)
 	createK8sObjectsForTelemetryTest(ctx, t, c)
 

@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -47,9 +48,9 @@ var (
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			FillIDs:           defaults.Enabled(featuregates.FillIDsFeature),
-			KongServiceFacade: defaults.Enabled(featuregates.KongServiceFacade),
-			KongCustomEntity:  defaults.Enabled(featuregates.KongCustomEntity),
+			FillIDs:           defaults.Enabled(config.FillIDsFeature),
+			KongServiceFacade: defaults.Enabled(config.KongServiceFacadeFeature),
+			KongCustomEntity:  defaults.Enabled(config.KongCustomEntityFeature),
 		}
 	}
 )

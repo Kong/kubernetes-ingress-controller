@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 var (
@@ -23,19 +25,9 @@ const (
 	DefaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
 )
 
-type ServerConfig struct {
-	ListenAddr string
-
-	CertPath string
-	Cert     string
-
-	KeyPath string
-	Key     string
-}
-
 func MakeTLSServer(
 	ctx context.Context,
-	config *ServerConfig,
+	config *config.AdmissionServerConfig,
 	handler http.Handler,
 	logger logr.Logger,
 ) (*http.Server, error) {
@@ -52,7 +44,7 @@ func MakeTLSServer(
 	}, nil
 }
 
-func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, logger logr.Logger) (*tls.Config, error) {
+func serverConfigToTLSConfig(ctx context.Context, sc *config.AdmissionServerConfig, logger logr.Logger) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {

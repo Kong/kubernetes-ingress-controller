@@ -86,7 +86,7 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 type ModifyManagerConfigFn func(cfg *managercfg.Config)
 
 func WithGatewayFeatureEnabled(cfg *managercfg.Config) {
-	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
+	cfg.FeatureGates[managercfg.GatewayAlphaFeature] = true
 }
 
 func WithGatewayAPIControllers() func(cfg *managercfg.Config) {
@@ -165,7 +165,7 @@ func WithUpdateStatus() func(cfg *managercfg.Config) {
 
 func WithKongServiceFacadeFeatureEnabled() func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
-		cfg.FeatureGates[featuregates.KongServiceFacade] = true
+		cfg.FeatureGates[managercfg.KongServiceFacadeFeature] = true
 	}
 }
 

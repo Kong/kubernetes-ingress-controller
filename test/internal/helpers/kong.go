@@ -13,11 +13,12 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
 func GetKongRootConfig(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
-	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), adminapi.ClientOpts{}, kongTestPassword)
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), config.AdminAPIClientConfig{}, kongTestPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
 	}
@@ -96,7 +97,7 @@ func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPa
 
 // GetKongLicenses fetches all licenses applied to Kong gateway.
 func GetKongLicenses(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) ([]*kong.License, error) {
-	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), adminapi.ClientOpts{}, kongTestPassword)
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), config.AdminAPIClientConfig{}, kongTestPassword)
 	if err != nil {
 		return nil, err
 	}

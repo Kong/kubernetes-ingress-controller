@@ -12,29 +12,13 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
-type KonnectConfig struct {
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
-	// ConfigSynchronizationEnabled is the only toggle we had prior to the addition of the license agent.
-	// We likely want to combine these into a single Konnect toggle or piggyback off other Konnect functionality.
-	ConfigSynchronizationEnabled bool
-	ControlPlaneID               string
-	Address                      string
-	UploadConfigPeriod           time.Duration
-	RefreshNodePeriod            time.Duration
-	TLSClient                    TLSClientConfig
-
-	LicenseSynchronizationEnabled bool
-	InitialLicensePollingPeriod   time.Duration
-	LicensePollingPeriod          time.Duration
-	ConsumersSyncDisabled         bool
-}
-
-func NewKongClientForKonnectControlPlane(c KonnectConfig) (*KonnectClient, error) {
+func NewKongClientForKonnectControlPlane(c config.KonnectConfig) (*KonnectClient, error) {
 	client, err := NewKongAPIClient(
 		fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID),
-		ClientOpts{
+		config.AdminAPIClientConfig{
 			TLSClient: c.TLSClient,
 		},
 		"",
@@ -97,12 +81,12 @@ func KonnectHTTPDoer() kong.Doer {
 
 // KonnectClientFactory is a factory to create KonnectClient instances.
 type KonnectClientFactory struct {
-	konnectConfig KonnectConfig
+	konnectConfig config.KonnectConfig
 	logger        logr.Logger
 }
 
 // NewKonnectClientFactory creates a new KonnectClientFactory instance.
-func NewKonnectClientFactory(konnectConfig KonnectConfig, logger logr.Logger) *KonnectClientFactory {
+func NewKonnectClientFactory(konnectConfig config.KonnectConfig, logger logr.Logger) *KonnectClientFactory {
 	return &KonnectClientFactory{
 		konnectConfig: konnectConfig,
 		logger:        logger,

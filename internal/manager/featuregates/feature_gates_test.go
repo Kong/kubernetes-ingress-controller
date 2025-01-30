@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func TestFeatureGates(t *testing.T) {
@@ -20,16 +22,16 @@ func TestFeatureGates(t *testing.T) {
 	assert.Len(t, fgs, len(GetFeatureGatesDefaults()))
 
 	t.Log("Verifying feature gates setup results when valid feature gates options are present")
-	featureGates := map[string]bool{GatewayAlphaFeature: true}
+	featureGates := map[string]bool{config.GatewayAlphaFeature: true}
 	fgs, err = New(setupLog, featureGates)
 	assert.NoError(t, err)
-	assert.True(t, fgs[GatewayAlphaFeature])
+	assert.True(t, fgs[config.GatewayAlphaFeature])
 
 	t.Log("Verifying feature gates setup will return error when settings has conflicts")
-	featureGates = map[string]bool{KongCustomEntity: true, FillIDsFeature: false}
+	featureGates = map[string]bool{config.KongCustomEntityFeature: true, config.FillIDsFeature: false}
 	_, err = New(setupLog, featureGates)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), fmt.Sprintf("%s is required if %s is enabled", FillIDsFeature, KongCustomEntity))
+	assert.Contains(t, err.Error(), fmt.Sprintf("%s is required if %s is enabled", config.FillIDsFeature, config.KongCustomEntityFeature))
 
 	t.Log("Configuring several invalid feature gates options")
 	featureGates = map[string]bool{"invalidGateway": true}

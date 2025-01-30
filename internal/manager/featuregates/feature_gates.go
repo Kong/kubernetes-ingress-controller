@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -13,33 +15,25 @@ import (
 const (
 	// GatewayAlphaFeature is the name of the feature-gate for enabling or
 	// disabling the Alpha maturity APIs and relevant features for Gateway API.
-	GatewayAlphaFeature = "GatewayAlpha"
 
 	// FillIDsFeature is the name of the feature-gate that makes KIC fill in the ID fields of Kong entities (Services,
 	// Routes, and Consumers). It ensures that IDs remain stable across restarts of the controller.
-	FillIDsFeature = "FillIDs"
 
 	// RewriteURIsFeature is the name of the feature-gate for enabling/disabling konghq.com/rewrite annotation.
-	RewriteURIsFeature = "RewriteURIs"
 
 	// KongServiceFacade is the name of the feature-gate for enabling KongServiceFacade CR reconciliation.
-	KongServiceFacade = "KongServiceFacade"
 
 	// SanitizeKonnectConfigDumps is the name of the feature-gate that enables sanitization of Konnect config dumps.
-	SanitizeKonnectConfigDumps = "SanitizeKonnectConfigDumps"
 
 	// FallbackConfiguration is the name of the feature-gate that enables generating fallback configuration in the case
 	// of entity errors returned by the Kong Admin API.
-	FallbackConfiguration = "FallbackConfiguration"
 
 	// KongCustomEntity is the name of the feature-gate for enabling KongCustomEntity CR reconciliation
 	// for configuring custom Kong entities that KIC does not support yet.
 	// Requires feature gate `FillIDs` to be enabled.
-	KongCustomEntity = "KongCustomEntity"
 
 	// CombinedServicesFromDifferentHTTPRoutes is the name of the feature gate that enables combining rules sharing the same backendRefs
 	// from different HTTPRoutes in the same namespace into one Kong gateway service to reduce total number of Kong gateway services.
-	CombinedServicesFromDifferentHTTPRoutes = "CombinedServicesFromDifferentHTTPRoutes"
 
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
@@ -63,8 +57,8 @@ func New(setupLog logr.Logger, featureGates map[string]bool) (FeatureGates, erro
 	}
 
 	// KongCustomEntity requires FillIDs to be enabled, because custom entities requires stable IDs to fill in its "foreign" fields.
-	if ctrlMap.Enabled(KongCustomEntity) && !ctrlMap.Enabled(FillIDsFeature) {
-		return nil, fmt.Errorf("%s is required if %s is enabled", FillIDsFeature, KongCustomEntity)
+	if ctrlMap.Enabled(config.KongCustomEntityFeature) && !ctrlMap.Enabled(config.FillIDsFeature) {
+		return nil, fmt.Errorf("%s is required if %s is enabled", config.FillIDsFeature, config.KongCustomEntityFeature)
 	}
 
 	return ctrlMap, nil
@@ -81,13 +75,13 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
-		GatewayAlphaFeature:                     false,
-		FillIDsFeature:                          true,
-		RewriteURIsFeature:                      false,
-		KongServiceFacade:                       false,
-		SanitizeKonnectConfigDumps:              true,
-		FallbackConfiguration:                   false,
-		KongCustomEntity:                        true,
-		CombinedServicesFromDifferentHTTPRoutes: false,
+		config.GatewayAlphaFeature:                            false,
+		config.FillIDsFeature:                                 true,
+		config.RewriteURIsFeature:                             false,
+		config.KongServiceFacadeFeature:                       false,
+		config.SanitizeKonnectConfigDumpsFeature:              true,
+		config.FallbackConfigurationFeature:                   false,
+		config.KongCustomEntityFeature:                        true,
+		config.CombinedServicesFromDifferentHTTPRoutesFeature: false,
 	}
 }

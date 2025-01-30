@@ -1,4 +1,20 @@
-package adminapi
+package config
+
+// AdminAPIClientConfig defines parameters that configure a client for Kong Admin API.
+type AdminAPIClientConfig struct {
+	// Disable verification of TLS certificate of Kong's Admin endpoint.
+	TLSSkipVerify bool
+	// SNI name to use to verify the certificate presented by Kong in TLS.
+	TLSServerName string
+	// Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.
+	CACertPath string
+	// PEM-encoded CA certificate to verify Kong's Admin SSL certificate.
+	CACert string
+	// Array of headers added to every Admin API call.
+	Headers []string
+	// TLSClient is TLS client config.
+	TLSClient TLSClientConfig
+}
 
 // TLSClientConfig contains TLS client certificate and client key to be used when connecting with Admin APIs.
 // It's validated with manager.validateClientTLS before passing it further down. It guarantees that only the

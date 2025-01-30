@@ -56,14 +56,6 @@ func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
 	return flagValue, nil
 }
 
-func dnsStrategyFromFlagValue(flagValue string) (cfgtypes.DNSStrategy, error) {
-	strategy := cfgtypes.DNSStrategy(flagValue)
-	if err := strategy.Validate(); err != nil {
-		return cfgtypes.DNSStrategy(""), err
-	}
-	return strategy, nil
-}
-
 // Validate validates the config. It should be used to validate the config variables' interdependencies.
 // When a single variable is to be validated, *FromFlagValue function should be implemented.
 func (c *Config) Validate() error {

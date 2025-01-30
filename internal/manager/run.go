@@ -79,7 +79,7 @@ func Run(
 	healthServer.setHealthzCheck(healthz.Ping)
 	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
 
-	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...), c.GatewayDiscoveryDNSStrategy)
+	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
 	if err != nil {
 		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
 	}
@@ -89,7 +89,7 @@ func Run(
 		return fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
-	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
+	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 
 	setupLog.Info("Getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(

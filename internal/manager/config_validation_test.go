@@ -252,7 +252,7 @@ func TestConfigValidate(t *testing.T) {
 	t.Run("Admin API", func(t *testing.T) {
 		validWithClientTLS := func() manager.Config {
 			return manager.Config{
-				KongAdminAPIConfig: adminapi.HTTPClientOpts{
+				KongAdminAPIConfig: adminapi.ClientOpts{
 					TLSClient: adminapi.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
 						// about them being not empty. Their validity is to be verified later on by the Admin API client
@@ -266,7 +266,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("no TLS client is allowed", func(t *testing.T) {
 			c := manager.Config{
-				KongAdminAPIConfig: adminapi.HTTPClientOpts{
+				KongAdminAPIConfig: adminapi.ClientOpts{
 					TLSClient: adminapi.TLSClientConfig{},
 				},
 			}

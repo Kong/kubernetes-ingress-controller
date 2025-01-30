@@ -29,7 +29,8 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 		// the status of the Kong Gateway but just returns the client.
 		client, err := adminapi.NewKongAPIClient(
 			adminAPIServer.URL,
-			adminAPIServer.Client(),
+			adminapi.ClientOpts{},
+			"",
 		)
 		require.NoError(t, err)
 		require.NotNil(t, client)

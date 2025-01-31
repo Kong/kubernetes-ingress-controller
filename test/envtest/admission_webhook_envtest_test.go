@@ -50,7 +50,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
@@ -195,7 +195,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
@@ -449,7 +449,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
@@ -713,7 +713,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
@@ -1054,7 +1054,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
@@ -1222,7 +1222,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),

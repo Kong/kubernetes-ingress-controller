@@ -6,10 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
@@ -28,7 +25,7 @@ func TestNewConfig(t *testing.T) {
 		require.Equal(t, defaultConfig, managercfg.Config{
 			LogLevel:                               "info",
 			LogFormat:                              "text",
-			KongAdminAPIConfig:                     adminapi.ClientOpts{},
+			KongAdminAPIConfig:                     managercfg.AdminAPIClientConfig{},
 			KongAdminInitializationRetries:         60,
 			KongAdminInitializationRetryDelay:      time.Second,
 			KongAdminToken:                         "",
@@ -52,8 +49,8 @@ func TestNewConfig(t *testing.T) {
 			ProbeAddr:                              ":10254",
 			KongAdminURLs:                          []string{"http://localhost:8001"},
 			KongAdminSvc:                           managercfg.OptionalNamespacedName{},
-			GatewayDiscoveryReadinessCheckInterval: clients.DefaultReadinessReconciliationInterval,
-			GatewayDiscoveryReadinessCheckTimeout:  clients.DefaultReadinessCheckTimeout,
+			GatewayDiscoveryReadinessCheckInterval: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
+			GatewayDiscoveryReadinessCheckTimeout:  managercfg.DefaultDataPlanesReadinessCheckTimeout,
 			KongAdminSvcPortNames:                  []string{"admin-tls", "kong-admin-tls"},
 			ProxySyncSeconds:                       dataplane.DefaultSyncSeconds,
 			InitCacheSyncDuration:                  dataplane.DefaultCacheSyncWaitDuration,
@@ -98,20 +95,20 @@ func TestNewConfig(t *testing.T) {
 			GatewayToReconcile:                     managercfg.OptionalNamespacedName{},
 			SecretLabelSelector:                    "",
 			ConfigMapLabelSelector:                 consts.DefaultConfigMapSelector,
-			AdmissionServer: admission.ServerConfig{
+			AdmissionServer: managercfg.AdmissionServerConfig{
 				ListenAddr: "off",
 			},
 			EnableProfiling:      false,
 			EnableConfigDumps:    false,
 			DumpSensitiveConfig:  false,
 			DiagnosticServerPort: consts.DiagnosticsPort,
-			FeatureGates:         nil,
+			FeatureGates:         managercfg.GetFeatureGatesDefaults(),
 			TermDelay:            0,
-			Konnect: adminapi.KonnectConfig{
+			Konnect: managercfg.KonnectConfig{
 				Address:                     "https://us.kic.api.konghq.com",
 				InitialLicensePollingPeriod: license.DefaultInitialPollingPeriod,
 				LicensePollingPeriod:        license.DefaultPollingPeriod,
-				UploadConfigPeriod:          konnect.DefaultConfigUploadPeriod,
+				UploadConfigPeriod:          managercfg.DefaultKonnectConfigUploadPeriod,
 				RefreshNodePeriod:           konnect.DefaultRefreshNodePeriod,
 			},
 			SplunkEndpoint:                   "",

@@ -13,7 +13,6 @@ import (
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
@@ -97,10 +96,10 @@ func TestMetricsAreServed(t *testing.T) {
 				)
 			}
 			addr := fmt.Sprintf("localhost:%d", helpers.GetFreePort(t))
-			_, _ = RunManager(ctx, t, envcfg,
+			_ = RunManager(ctx, t, envcfg,
 				AdminAPIOptFns(adminAPIOpts...),
 				func(cfg *managercfg.Config) {
-					cfg.FeatureGates[featuregates.FallbackConfiguration] = tc.fallbackConfigurationEnabled
+					cfg.FeatureGates[managercfg.FallbackConfigurationFeature] = tc.fallbackConfigurationEnabled
 				},
 				WithMetricsAddr(addr),
 			)

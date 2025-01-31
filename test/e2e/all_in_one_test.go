@@ -22,6 +22,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
@@ -350,7 +351,7 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 
 			// Anything related to TLS can be ignored, because only availability is being tested here.
 			// Testing communicating over TLS is done as part of actual E2E test.
-			kongClient, err := adminapi.NewKongAPIClient(address, adminapi.ClientOpts{TLSSkipVerify: true}, "")
+			kongClient, err := adminapi.NewKongAPIClient(address, config.AdminAPIClientConfig{TLSSkipVerify: true}, "")
 			require.NoError(t, err)
 
 			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)

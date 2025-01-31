@@ -14,9 +14,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func (t *Translator) ingressRulesFromIngressV1() ingressRules {
@@ -138,7 +138,7 @@ func translateIngressDefaultBackendResource(
 	}
 	if !features.KongServiceFacade {
 		failuresCollector.PushResourceFailure(
-			fmt.Sprintf("default backend: KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", featuregates.KongServiceFacade),
+			fmt.Sprintf("default backend: KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", config.KongServiceFacadeFeature),
 			&ingress,
 		)
 		return kongstate.Service{}, false

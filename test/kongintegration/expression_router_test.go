@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
@@ -32,7 +33,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 	ctx := context.Background()
 
 	kongC := containers.NewKong(ctx, t)
-	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), config.AdminAPIClientConfig{}, "")
 	require.NoError(t, err)
 
 	httpBinC := containers.NewHTTPBin(ctx, t)

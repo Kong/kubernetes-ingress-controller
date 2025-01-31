@@ -31,11 +31,11 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
@@ -4776,7 +4776,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		{
 			name: "ServiceFacade enabled and enterprise edition",
 			featureGates: map[string]bool{
-				featuregates.KongServiceFacade: true,
+				config.KongServiceFacadeFeature: true,
 			},
 			enterpriseEdition: true,
 			expectedFeatureFlags: FeatureFlags{

@@ -13,14 +13,7 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
-)
-
-const (
-	// DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
-	// It's the same as the default interval of a Kubernetes container's readiness probe.
-	DefaultReadinessReconciliationInterval = 10 * time.Second
-	// MinReadinessReconciliationInterval is the minimum interval of readiness reconciliation loop.
-	MinReadinessReconciliationInterval = 3 * time.Second
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // ClientFactory is responsible for creating Admin API clients.
@@ -122,7 +115,7 @@ func NewAdminAPIClientsManager(
 	c := &AdminAPIClientsManager{
 		readyGatewayClients:             readyClients,
 		pendingGatewayClients:           make(map[string]adminapi.DiscoveredAdminAPI),
-		readinessReconciliationInterval: DefaultReadinessReconciliationInterval,
+		readinessReconciliationInterval: config.DefaultDataPlanesReadinessReconciliationInterval,
 		readinessChecker:                readinessChecker,
 		readinessReconciliationTicker:   clock.NewTicker(),
 		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),

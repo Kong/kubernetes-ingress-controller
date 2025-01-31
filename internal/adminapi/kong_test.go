@@ -16,6 +16,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -25,12 +26,12 @@ func TestAdminAPIClientWithTLSOpts(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(hostname))
 	caCert := cert
 
-	opts := adminapi.ClientOpts{
+	opts := config.AdminAPIClientConfig{
 		TLSServerName: hostname,
 		CACertPath:    "",
 		CACert:        string(caCert),
 		Headers:       nil,
-		TLSClient: adminapi.TLSClientConfig{
+		TLSClient: config.TLSClientConfig{
 			Cert: string(cert),
 			Key:  string(key),
 		},
@@ -71,12 +72,12 @@ func TestAdminAPIClientWithTLSOptsAndFilePaths(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, key, writtenBytes)
 
-	opts := adminapi.ClientOpts{
+	opts := config.AdminAPIClientConfig{
 		TLSServerName: hostname,
 		CACertPath:    caFile.Name(),
 		CACert:        "",
 		Headers:       nil,
-		TLSClient: adminapi.TLSClientConfig{
+		TLSClient: config.TLSClientConfig{
 			CertFile: certFile.Name(),
 			KeyFile:  certPrivateKeyFile.Name(),
 		},
@@ -206,7 +207,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 				context.Background(),
 				adminAPIServer.URL,
 				tc.workspace,
-				adminapi.ClientOpts{},
+				config.AdminAPIClientConfig{},
 				"",
 			)
 
@@ -232,7 +233,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 // whether the passed client can connect to it successfully.
 func validate(
 	t *testing.T,
-	opts adminapi.ClientOpts,
+	opts config.AdminAPIClientConfig,
 	caPEM []byte,
 	certPEM []byte,
 	certPrivateKeyPEM []byte,

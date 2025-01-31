@@ -16,7 +16,7 @@ func GetKubeconfig(c config.Config) (*rest.Config, error) {
 		return nil, err
 	}
 
-	// Configure k8s client rate-limiting
+	// Configure K8s client rate-limiting.
 	config.QPS = float32(c.APIServerQPS)
 	config.Burst = c.APIServerBurst
 

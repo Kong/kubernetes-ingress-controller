@@ -8,10 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -20,25 +16,25 @@ func TestConfigValidate(t *testing.T) {
 		validEnabled := func() *managercfg.Config {
 			return &managercfg.Config{
 				KongAdminSvc: mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
-				Konnect: adminapi.KonnectConfig{
+				Konnect: managercfg.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
 					ControlPlaneID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
 					Address:                      "https://us.kic.api.konghq.tech",
-					TLSClient: adminapi.TLSClientConfig{
+					TLSClient: managercfg.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
 						// about them being not empty. Their validity is to be verified later on by the Admin API client
 						// constructor.
 						Cert: "not-empty-cert",
 						Key:  "not-empty-key",
 					},
-					UploadConfigPeriod: konnect.DefaultConfigUploadPeriod,
+					UploadConfigPeriod: managercfg.DefaultKonnectConfigUploadPeriod,
 				},
-				GatewayDiscoveryReadinessCheckInterval: clients.DefaultReadinessReconciliationInterval,
+				GatewayDiscoveryReadinessCheckInterval: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
 			}
 		}
 
 		t.Run("disabled should not require other vars to be set", func(t *testing.T) {
-			c := &managercfg.Config{Konnect: adminapi.KonnectConfig{ConfigSynchronizationEnabled: false}}
+			c := &managercfg.Config{Konnect: managercfg.KonnectConfig{ConfigSynchronizationEnabled: false}}
 			require.NoError(t, c.Validate())
 		})
 
@@ -48,7 +44,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no tls config is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.TLSClient = adminapi.TLSClientConfig{}
+			c.Konnect.TLSClient = managercfg.TLSClientConfig{}
 			require.ErrorContains(t, c.Validate(), "missing TLS client configuration")
 		})
 
@@ -106,8 +102,8 @@ func TestConfigValidate(t *testing.T) {
 	t.Run("Admin API", func(t *testing.T) {
 		validWithClientTLS := func() managercfg.Config {
 			return managercfg.Config{
-				KongAdminAPIConfig: adminapi.ClientOpts{
-					TLSClient: adminapi.TLSClientConfig{
+				KongAdminAPIConfig: managercfg.AdminAPIClientConfig{
+					TLSClient: managercfg.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
 						// about them being not empty. Their validity is to be verified later on by the Admin API client
 						// constructor.
@@ -120,8 +116,8 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("no TLS client is allowed", func(t *testing.T) {
 			c := managercfg.Config{
-				KongAdminAPIConfig: adminapi.ClientOpts{
-					TLSClient: adminapi.TLSClientConfig{},
+				KongAdminAPIConfig: managercfg.AdminAPIClientConfig{
+					TLSClient: managercfg.TLSClientConfig{},
 				},
 			}
 			require.NoError(t, c.Validate())
@@ -197,7 +193,7 @@ func TestConfigValidate(t *testing.T) {
 			c := managercfg.Config{
 				UseLastValidConfigForFallback: true,
 				FeatureGates: map[string]bool{
-					featuregates.FallbackConfiguration: true,
+					managercfg.FallbackConfigurationFeature: true,
 				},
 			}
 			require.NoError(t, c.Validate())
@@ -208,8 +204,8 @@ func TestConfigValidate(t *testing.T) {
 		validEnabled := func() *managercfg.Config {
 			return &managercfg.Config{
 				KongAdminSvc:                           mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
-				GatewayDiscoveryReadinessCheckInterval: clients.DefaultReadinessReconciliationInterval,
-				GatewayDiscoveryReadinessCheckTimeout:  clients.DefaultReadinessCheckTimeout,
+				GatewayDiscoveryReadinessCheckInterval: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
+				GatewayDiscoveryReadinessCheckTimeout:  managercfg.DefaultDataPlanesReadinessCheckTimeout,
 			}
 		}
 
@@ -232,7 +228,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("readiness check timeout must be less than reconciliation interval", func(t *testing.T) {
 			c := validEnabled()
-			c.GatewayDiscoveryReadinessCheckTimeout = clients.DefaultReadinessReconciliationInterval
+			c.GatewayDiscoveryReadinessCheckTimeout = managercfg.DefaultDataPlanesReadinessReconciliationInterval
 			require.ErrorContains(t, c.Validate(), "Readiness check timeout must be less than readiness check recociliation interval")
 		})
 	})

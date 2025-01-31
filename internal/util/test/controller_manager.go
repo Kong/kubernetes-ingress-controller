@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
@@ -137,7 +136,7 @@ func DeployControllerManagerForCluster(
 	go func() {
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), clicfg)
-		if err := rootcmd.RunWithLogger(ctx, *clicfg.Config, logger); err != nil {
+		if err := manager.Run(ctx, *clicfg.Config, logger); err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with Controller Manager: %s\n", err)
 			os.Exit(1)
 		}

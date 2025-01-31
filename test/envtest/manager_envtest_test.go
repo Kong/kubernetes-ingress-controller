@@ -43,7 +43,7 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 	t.Log("Replacing Kubernetes API server address with the proxy address")
 	envcfg.Host = fmt.Sprintf("https://%s", apiServerProxy.Address())
 
-	_, loggerHook := RunManager(ctx, t, envcfg, AdminAPIOptFns())
+	loggerHook := RunManager(ctx, t, envcfg, AdminAPIOptFns())
 	hasLog := func(expectedLog string) bool {
 		return lo.ContainsBy(loggerHook.All(), func(entry observer.LoggedEntry) bool {
 			return strings.Contains(entry.Message, expectedLog)

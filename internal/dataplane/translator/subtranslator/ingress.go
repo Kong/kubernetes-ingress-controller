@@ -20,9 +20,9 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -192,7 +192,7 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 			return ingressTranslationMetaBackend{}, fmt.Errorf("unknown resource type %s", gk)
 		}
 		if !i.featureFlags.KongServiceFacade {
-			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", featuregates.KongServiceFacade)
+			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", config.KongServiceFacadeFeature)
 		}
 
 		serviceFacade, err := i.storer.GetKongServiceFacade(namespace, resource.Name)

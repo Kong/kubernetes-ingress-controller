@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/file"
@@ -22,13 +21,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-)
-
-const (
-	// MinConfigUploadPeriod is the minimum period between operations to upload Kong configuration to Konnect.
-	MinConfigUploadPeriod = 10 * time.Second
-	// DefaultConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
-	DefaultConfigUploadPeriod = 30 * time.Second
 )
 
 type ClientFactory interface {

@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -74,11 +75,11 @@ func NewFeatureFlags(
 		ReportConfiguredKubernetesObjects:       updateStatusFlag,
 		ExpressionRoutes:                        dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		EnterpriseEdition:                       enterpriseEdition,
-		FillIDs:                                 featureGates.Enabled(featuregates.FillIDsFeature),
-		RewriteURIs:                             featureGates.Enabled(featuregates.RewriteURIsFeature),
-		KongServiceFacade:                       featureGates.Enabled(featuregates.KongServiceFacade),
-		KongCustomEntity:                        featureGates.Enabled(featuregates.KongCustomEntity),
-		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(featuregates.CombinedServicesFromDifferentHTTPRoutes),
+		FillIDs:                                 featureGates.Enabled(config.FillIDsFeature),
+		RewriteURIs:                             featureGates.Enabled(config.RewriteURIsFeature),
+		KongServiceFacade:                       featureGates.Enabled(config.KongServiceFacadeFeature),
+		KongCustomEntity:                        featureGates.Enabled(config.KongCustomEntityFeature),
+		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(config.CombinedServicesFromDifferentHTTPRoutesFeature),
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }

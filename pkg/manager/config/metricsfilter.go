@@ -1,4 +1,4 @@
-package types
+package config
 
 // MetricsAccessFilter defines the access filter function for the metrics endpoint.
 type MetricsAccessFilter string

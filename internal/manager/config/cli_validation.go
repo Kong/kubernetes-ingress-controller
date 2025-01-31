@@ -9,7 +9,7 @@ import (
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463

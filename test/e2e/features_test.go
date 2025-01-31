@@ -33,8 +33,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
@@ -253,7 +253,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 				controllerDeployment.Spec.Template.Spec.Containers[i].Env,
 				corev1.EnvVar{
 					Name:  "CONTROLLER_FEATURE_GATES",
-					Value: fmt.Sprintf("%s=true", featuregates.GatewayAlphaFeature),
+					Value: fmt.Sprintf("%s=true", config.GatewayAlphaFeature),
 				},
 			)
 		}

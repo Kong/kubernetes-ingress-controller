@@ -6,7 +6,6 @@ import (
 	"io"
 	"os/signal"
 
-	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
@@ -26,15 +25,6 @@ func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
 		return fmt.Errorf("failed to setup signal handler: %w", err)
 	}
 	defer signal.Ignore(shutdownSignals...)
-
-	return RunWithLogger(ctx, c, logger)
-}
-
-// RunWithLogger starts the controller manager with a provided logger.
-func RunWithLogger(ctx context.Context, c managercfg.Config, logger logr.Logger) error {
-	if err := c.Validate(); err != nil {
-		return fmt.Errorf("config invalid: %w", err)
-	}
 
 	return manager.Run(ctx, c, logger)
 }

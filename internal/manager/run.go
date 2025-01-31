@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -57,6 +58,10 @@ func Run(
 	c managercfg.Config,
 	logger logr.Logger,
 ) error {
+	if err := c.Validate(); err != nil {
+		return fmt.Errorf("config invalid: %w", err)
+	}
+
 	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c, logger)
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
 	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
@@ -70,7 +75,7 @@ func Run(
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
 	setupLog.Info("Getting the kubernetes client configuration")
-	kubeconfig, err := managercfg.GetKubeconfig(c)
+	kubeconfig, err := utils.GetKubeconfig(c)
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
@@ -128,8 +133,8 @@ func Run(
 		SkipCACertificates:            c.SkipCACertificates,
 		EnableReverseSync:             c.EnableReverseSync,
 		ExpressionRoutes:              dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		SanitizeKonnectConfigDumps:    featureGates.Enabled(featuregates.SanitizeKonnectConfigDumps),
-		FallbackConfiguration:         featureGates.Enabled(featuregates.FallbackConfiguration),
+		SanitizeKonnectConfigDumps:    featureGates.Enabled(managercfg.SanitizeKonnectConfigDumpsFeature),
+		FallbackConfiguration:         featureGates.Enabled(managercfg.FallbackConfigurationFeature),
 		UseLastValidConfigForFallback: c.UseLastValidConfigForFallback,
 	}
 

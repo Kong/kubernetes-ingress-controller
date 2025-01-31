@@ -7,21 +7,6 @@ import (
 
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
-)
-
-const (
-	// LeaderElectionEnabled is a constant that represents a value that should be used to enable leader election.
-	LeaderElectionEnabled = "enabled"
-	// LeaderElectionDisabled is a constant that represents a value that should be used to disable leader election.
-	LeaderElectionDisabled = "disabled"
 )
 
 // OptionalNamespacedName is a type that represents a NamespacedName that can be omitted in config.
@@ -37,7 +22,7 @@ type Config struct {
 	LogFormat string
 
 	// Kong high-level controller manager configurations
-	KongAdminAPIConfig                adminapi.ClientOpts
+	KongAdminAPIConfig                AdminAPIClientConfig
 	KongAdminInitializationRetries    uint
 	KongAdminInitializationRetryDelay time.Duration
 	KongAdminToken                    string
@@ -59,7 +44,7 @@ type Config struct {
 	APIServerCertData                      []byte
 	APIServerKeyData                       []byte
 	MetricsAddr                            string
-	MetricsAccessFilter                    cfgtypes.MetricsAccessFilter
+	MetricsAccessFilter                    MetricsAccessFilter
 	ProbeAddr                              string
 	KongAdminURLs                          []string
 	KongAdminSvc                           OptionalNamespacedName
@@ -126,7 +111,7 @@ type Config struct {
 	ConfigMapLabelSelector string
 
 	// Admission Webhook server config
-	AdmissionServer admission.ServerConfig
+	AdmissionServer AdmissionServerConfig
 
 	// Diagnostics and performance
 	EnableProfiling      bool
@@ -143,7 +128,7 @@ type Config struct {
 	// controller can be gracefully removed/drained from their rotation.
 	TermDelay time.Duration
 
-	Konnect adminapi.KonnectConfig
+	Konnect KonnectConfig
 
 	// Override default telemetry settings (e.g. for testing). They aren't exposed in the CLI.
 	SplunkEndpoint                   string
@@ -162,42 +147,4 @@ func (c *Config) Resolve() error {
 		c.KongAdminToken = string(token)
 	}
 	return nil
-}
-
-// GetKubeconfig returns a Kubernetes REST config object based on the configuration.
-func GetKubeconfig(c Config) (*rest.Config, error) {
-	config, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Configure k8s client rate-limiting
-	config.QPS = float32(c.APIServerQPS)
-	config.Burst = c.APIServerBurst
-
-	if c.APIServerCertData != nil {
-		config.CertData = c.APIServerCertData
-	}
-	if c.APIServerCAData != nil {
-		config.CAData = c.APIServerCAData
-	}
-	if c.APIServerKeyData != nil {
-		config.KeyData = c.APIServerKeyData
-	}
-	if c.Impersonate != "" {
-		config.Impersonate.UserName = c.Impersonate
-	}
-
-	config.UserAgent = metadata.UserAgent()
-
-	return config, err
-}
-
-// GetKubeClient returns a Kubernetes client based on the configuration.
-func GetKubeClient(c Config) (client.Client, error) {
-	conf, err := GetKubeconfig(c)
-	if err != nil {
-		return nil, err
-	}
-	return client.New(conf, client.Options{})
 }

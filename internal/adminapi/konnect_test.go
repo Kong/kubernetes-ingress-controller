@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func TestNewKongClientForKonnectControlPlane(t *testing.T) {
@@ -17,11 +18,11 @@ func TestNewKongClientForKonnectControlPlane(t *testing.T) {
 	ctx := t.Context()
 	const controlPlaneID = "adf78c28-5763-4394-a9a4-a9436a1bea7d"
 
-	c, err := adminapi.NewKongClientForKonnectControlPlane(adminapi.KonnectConfig{
+	c, err := adminapi.NewKongClientForKonnectControlPlane(config.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
 		ControlPlaneID:               controlPlaneID,
 		Address:                      "https://us.kic.api.konghq.tech",
-		TLSClient: adminapi.TLSClientConfig{
+		TLSClient: config.TLSClientConfig{
 			Cert: os.Getenv("KONG_TEST_KONNECT_TLS_CLIENT_CERT"),
 			Key:  os.Getenv("KONG_TEST_KONNECT_TLS_CLIENT_KEY"),
 		},

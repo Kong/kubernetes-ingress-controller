@@ -13,12 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
-const (
-	// DefaultReadinessCheckTimeout is the default timeout of readiness check.
-	// When a readiness check request did not get response within the timeout, the gateway instance will turn into `Pending` status.
-	DefaultReadinessCheckTimeout = 5 * time.Second
-)
-
 // ReadinessCheckResult represents the result of a readiness check.
 type ReadinessCheckResult struct {
 	// ClientsTurnedReady are the clients that were pending and are now ready to be used.

@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -41,15 +42,15 @@ var (
 
 	// defaultFeatureFlags is the default set of Translator feature flags to use in tests. Can be overridden in a test case.
 	defaultFeatureFlags = func() translator.FeatureFlags {
-		defaults := featuregates.GetFeatureGatesDefaults()
+		defaults := featuregates.FeatureGates(config.GetFeatureGatesDefaults())
 		return translator.FeatureFlags{
 			// We do not verify configuration reports in golden tests.
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			FillIDs:           defaults.Enabled(featuregates.FillIDsFeature),
-			KongServiceFacade: defaults.Enabled(featuregates.KongServiceFacade),
-			KongCustomEntity:  defaults.Enabled(featuregates.KongCustomEntity),
+			FillIDs:           defaults.Enabled(config.FillIDsFeature),
+			KongServiceFacade: defaults.Enabled(config.KongServiceFacadeFeature),
+			KongCustomEntity:  defaults.Enabled(config.KongCustomEntityFeature),
 		}
 	}
 )

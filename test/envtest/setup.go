@@ -11,8 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -72,6 +75,11 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 	t.Logf("starting envtest environment for test %s...", t.Name())
 	cfg, err := testEnv.Start()
 	require.NoError(t, err)
+
+	// Calling ctrllog.SetLogger to prevent controller-runtime from logging "[controller-runtime] log.SetLogger(...)
+	// was never called; logs will not be displayed" message along with a stack trace.
+	// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2622
+	ctrllog.SetLogger(zapr.NewLogger(zap.NewNop()))
 
 	opts := DefaultEnvTestOpts
 	for _, mod := range optModifiers {

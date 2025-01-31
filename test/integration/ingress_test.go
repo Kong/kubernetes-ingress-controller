@@ -27,7 +27,7 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -1072,7 +1072,7 @@ func TestIngressMatchByHost(t *testing.T) {
 func TestIngressRewriteURI(t *testing.T) {
 	ctx := t.Context()
 
-	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
+	if !strings.Contains(testenv.ControllerFeatureGates(), config.RewriteURIsFeature) {
 		t.Skipf("rewrite uri feature is disabled")
 	}
 

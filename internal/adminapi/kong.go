@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // KongClientNotReadyError is returned when the Kong client is not ready to be used yet.
@@ -43,7 +44,7 @@ func (e KongGatewayUnsupportedVersionError) Error() string {
 
 // NewKongAPIClient returns a Kong API client for a given root API URL.
 // It ensures that proper User-Agent is set. Do not use kong.NewClient directly.
-func NewKongAPIClient(adminURL string, kongAdminAPIConfig ClientOpts, kongAdminToken string) (*kong.Client, error) {
+func NewKongAPIClient(adminURL string, kongAdminAPIConfig config.AdminAPIClientConfig, kongAdminToken string) (*kong.Client, error) {
 	httpClient, err := makeHTTPClient(kongAdminAPIConfig, kongAdminToken)
 	if err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func NewKongAPIClient(adminURL string, kongAdminAPIConfig ClientOpts, kongAdminT
 // or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is not >= 3.4.1.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(
-	ctx context.Context, adminURL string, wsName string, kongAdminAPIConfig ClientOpts, kongAdminToken string,
+	ctx context.Context, adminURL string, wsName string, kongAdminAPIConfig config.AdminAPIClientConfig, kongAdminToken string,
 ) (*Client, error) {
 	// Create the base client, and if no workspace was provided then return that.
 	client, err := NewKongAPIClient(adminURL, kongAdminAPIConfig, kongAdminToken)
@@ -124,28 +125,12 @@ func NewKongClientForWorkspace(
 	return cl, nil
 }
 
-// ClientOpts defines parameters that configure a client for Kong Admin API.
-type ClientOpts struct {
-	// Disable verification of TLS certificate of Kong's Admin endpoint.
-	TLSSkipVerify bool
-	// SNI name to use to verify the certificate presented by Kong in TLS.
-	TLSServerName string
-	// Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.
-	CACertPath string
-	// PEM-encoded CA certificate to verify Kong's Admin SSL certificate.
-	CACert string
-	// Array of headers added to every Admin API call.
-	Headers []string
-	// TLSClient is TLS client config.
-	TLSClient TLSClientConfig
-}
-
 const (
 	HeaderNameAdminToken = "Kong-Admin-Token"
 )
 
 // makeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
-func makeHTTPClient(opts ClientOpts, kongAdminToken string) (*http.Client, error) {
+func makeHTTPClient(opts config.AdminAPIClientConfig, kongAdminToken string) (*http.Client, error) {
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {

@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -249,7 +250,7 @@ func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
 
 func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
 	t.Helper()
-	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), adminapi.ClientOpts{}, "")
+	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), config.AdminAPIClientConfig{}, "")
 	require.NoError(t, err)
 	rgID := uuid.NewString()
 	return adminapi.NewKonnectClient(c, rgID, false)

@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
@@ -39,7 +40,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 	_ = containers.NewPostgres(ctx, t, net)
 	kongC := containers.NewKong(ctx, t, containers.KongWithDBMode(net.Name))
 
-	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), config.AdminAPIClientConfig{}, "")
 	require.NoError(t, err)
 
 	logbase, err := zap.NewDevelopment()

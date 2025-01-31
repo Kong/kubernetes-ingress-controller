@@ -42,8 +42,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	config2 "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
@@ -93,9 +93,9 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 			BindAddress: c.MetricsAddr,
 			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (metricsserver.Filter, error) {
 				switch c.MetricsAccessFilter {
-				case cfgtypes.MetricsAccessFilterOff:
+				case managercfg.MetricsAccessFilterOff:
 					return nil
-				case cfgtypes.MetricsAccessFilterRBAC:
+				case managercfg.MetricsAccessFilterRBAC:
 					return filters.WithAuthenticationAndAuthorization
 				default:
 					// This is checked in flags validation so this should never happen.
@@ -329,7 +329,7 @@ func adminAPIClients(
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
-		kubeClient, err := managercfg.GetKubeClient(c)
+		kubeClient, err := utils.GetKubeClient(c)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}

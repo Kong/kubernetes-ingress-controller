@@ -7,13 +7,14 @@ import (
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
-// Note: NewConfig is not implemented in the `pkg/manager/config` package to avoid cyclic dependencies:
-// for now, it depends on `internal/manager/config` to set defaults using CLI flags parsing.
-
-// NewConfig is used to create a new configuration object with default values.
-// Values can be overridden by passing `managercfg.Opt` options.
+// NewConfig is used to create a new configuration object with default values. Values can be overridden by passing
+// `managercfg.Opt` options.
+//
+// Note: the default values binding happens in `internal/manager/config` package and this function relies on it. Because
+// of that, NewConfig is not implemented in the `pkg/manager/config` package as that would impose a cyclic dependency.
+// We might want to move the default values binding to `pkg/manager/config` in the future and implement NewConfig there.
 func NewConfig(opts ...managercfg.Opt) (managercfg.Config, error) {
-	cfg, err := NewDefaultConfig()
+	cfg, err := newDefaultConfig()
 	if err != nil {
 		return managercfg.Config{}, fmt.Errorf("failed to create default manager config: %w", err)
 	}
@@ -25,7 +26,7 @@ func NewConfig(opts ...managercfg.Opt) (managercfg.Config, error) {
 	return cfg, nil
 }
 
-func NewDefaultConfig() (managercfg.Config, error) {
+func newDefaultConfig() (managercfg.Config, error) {
 	// Set default values relying on CLI flags parsing.
 	cliCfg := config.NewCLIConfig()
 	flags := cliCfg.FlagSet()

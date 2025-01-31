@@ -16,6 +16,9 @@ func GetKubeconfig(c config.Config) (*rest.Config, error) {
 		return nil, err
 	}
 
+	// Set the user agent so it's possible to identify the controller in the API server logs.
+	config.UserAgent = metadata.UserAgent()
+
 	// Configure K8s client rate-limiting.
 	config.QPS = float32(c.APIServerQPS)
 	config.Burst = c.APIServerBurst
@@ -32,8 +35,6 @@ func GetKubeconfig(c config.Config) (*rest.Config, error) {
 	if c.Impersonate != "" {
 		config.Impersonate.UserName = c.Impersonate
 	}
-
-	config.UserAgent = metadata.UserAgent()
 
 	return config, err
 }

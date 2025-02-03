@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
@@ -52,18 +51,58 @@ import (
 // Controller Manager - Setup & Run
 // -----------------------------------------------------------------------------
 
-// Run starts the controller manager and blocks until it exits.
-func Run(
+type Manager struct {
+	m                    manager.Manager
+	synchronizer         *dataplane.Synchronizer
+	stopAnonymousReports func()
+}
+
+// Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
+// It should be called only once per Manager instance.
+func (m *Manager) Run(ctx context.Context) error {
+	return m.m.Start(ctx)
+}
+
+// IsReady checks if the controller manager is ready to manage resources.
+// It's only valid to call this method after the controller manager has been started
+// with method Run(ctx).
+func (m *Manager) IsReady() error {
+	select {
+	// If we're elected as leader then report readiness based on the readiness
+	// of dataplane synchronizer.
+	case <-m.m.Elected():
+		if !m.synchronizer.IsReady() {
+			return errors.New("synchronizer not yet configured")
+		}
+	// If we're not the leader then just report as ready.
+	default:
+	}
+	return nil
+}
+
+// StopAnonymousReports stops the telemetry reporting. It's caller responsibility to call it when
+// the manager is no longer needed. It's safe to call it multiple times, when the telemetry
+// was not configured, or when the manager is already stopped (it will be no-op).
+// It makes sense to call it only after Run(ctx) method.
+func (m *Manager) StopAnonymousReports() {
+	if m.stopAnonymousReports != nil {
+		m.stopAnonymousReports()
+	}
+	m.stopAnonymousReports = nil
+}
+
+// New configures the controller manager call Start.
+func New(
 	ctx context.Context,
 	c managercfg.Config,
 	logger logr.Logger,
-) error {
+) (*Manager, error) {
 	// Inject logger into the context so it can be used by the controllers and other components without
 	// passing it explicitly when they accept a context.
 	ctx = ctrl.LoggerInto(ctx, logger)
 
 	if err := c.Validate(); err != nil {
-		return fmt.Errorf("config invalid: %w", err)
+		return nil, fmt.Errorf("config invalid: %w", err)
 	}
 
 	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c)
@@ -76,27 +115,21 @@ func Run(
 	setupLog.Info("Getting enabled options and features")
 	featureGates, err := featuregates.New(setupLog, c.FeatureGates)
 	if err != nil {
-		return fmt.Errorf("failed to configure feature gates: %w", err)
+		return nil, fmt.Errorf("failed to configure feature gates: %w", err)
 	}
 	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := utils.GetKubeconfig(c)
 	if err != nil {
-		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+		return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
-
-	setupLog.Info("Starting standalone health check server")
-	healthServer := &healthCheckServer{}
-	healthServer.setHealthzCheck(healthz.Ping)
-	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
 
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
 	if err != nil {
-		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
+		return nil, fmt.Errorf("failed to create admin apis discoverer: %w", err)
 	}
 
-	err = c.Resolve()
-	if err != nil {
-		return fmt.Errorf("failed to resolve configuration: %w", err)
+	if err = c.Resolve(); err != nil {
+		return nil, fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
@@ -110,18 +143,18 @@ func Run(
 		adminAPIClientsFactory,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to build kong api client(s): %w", err)
+		return nil, fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
 
 	// Get Kong configuration root(s) to validate them and extract Kong's version.
 	kongRoots, err := kongconfig.GetRoots(ctx, setupLog, c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay, initialKongClients)
 	if err != nil {
-		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
+		return nil, fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
 	}
 
 	kongStartUpConfig, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
 	if err != nil {
-		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
+		return nil, fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
 	dbMode := kongStartUpConfig.DBMode
 	routerFlavor := kongStartUpConfig.RouterFlavor
@@ -145,16 +178,16 @@ func Run(
 	setupLog.Info("Configuring and building the controller manager")
 	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)
 	if err != nil {
-		return fmt.Errorf("unable to setup manager options: %w", err)
+		return nil, fmt.Errorf("unable to setup manager options: %w", err)
 	}
 
 	mgr, err := ctrl.NewManager(kubeconfig, managerOpts)
 	if err != nil {
-		return fmt.Errorf("unable to create controller manager: %w", err)
+		return nil, fmt.Errorf("unable to create controller manager: %w", err)
 	}
 
 	if err := waitForKubernetesAPIReadiness(ctx, setupLog, mgr); err != nil {
-		return fmt.Errorf("unable to connect to Kubernetes API: %w", err)
+		return nil, fmt.Errorf("unable to connect to Kubernetes API: %w", err)
 	}
 
 	setupLog.Info("Initializing Dataplane Client")
@@ -175,7 +208,7 @@ func Run(
 		readinessChecker,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
+		return nil, fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
 	clientsManager = clientsManager.WithDBMode(dbMode)
 	clientsManager = clientsManager.WithReconciliationInterval(c.GatewayDiscoveryReadinessCheckInterval)
@@ -200,12 +233,12 @@ func Run(
 
 	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager), c.ClusterDomain)
 	if err != nil {
-		return fmt.Errorf("failed to create translator: %w", err)
+		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
 
 	setupLog.Info("Starting Admission Server")
 	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), translatorFeatureFlags, storer); err != nil {
-		return err
+		return nil, err
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
@@ -230,13 +263,13 @@ func Run(
 		metricsRecorder,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
+		return nil, fmt.Errorf("failed to initialize kong data-plane client: %w", err)
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
 	synchronizer, err := setupDataplaneSynchronizer(logger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
 	if err != nil {
-		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
+		return nil, fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
 
 	var kubernetesStatusQueue *status.Queue
@@ -251,7 +284,7 @@ func Run(
 	setupLog.Info("Initializing Dataplane address Discovery")
 	dataplaneAddressFinder, udpDataplaneAddressFinder, err := setupDataplaneAddressFinder(mgr.GetClient(), c, setupLog)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
@@ -270,7 +303,7 @@ func Run(
 	)
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+			return nil, fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
 	}
 
@@ -278,8 +311,6 @@ func Run(
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("Add readiness probe to health server")
-	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 	instanceIDProvider := NewInstanceIDProvider()
 
 	if c.Konnect.ConfigSynchronizationEnabled {
@@ -330,7 +361,7 @@ func Run(
 	)
 	if err != nil {
 		setupLog.Error(err, "Failed to create a license getter from configuration")
-		return err
+		return nil, err
 	}
 	if licenseGetter != nil {
 		setupLog.Info("Inject license getter to config translator",
@@ -339,8 +370,9 @@ func Run(
 		kongConfigFetcher.InjectLicenseGetter(licenseGetter)
 	}
 
+	stopAnonymousReports := func() {}
 	if c.AnonymousReports {
-		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
+		stopAnonymousReports, err = telemetry.SetupAnonymousReports(
 			ctx,
 			kubeconfig,
 			clientsManager,
@@ -360,8 +392,6 @@ func Run(
 		)
 		if err != nil {
 			setupLog.Error(err, "Failed setting up anonymous reports")
-		} else {
-			defer stopAnonymousReports()
 		}
 		setupLog.Info("Anonymous reports enabled")
 	} else {
@@ -369,7 +399,11 @@ func Run(
 	}
 
 	setupLog.Info("Starting manager")
-	return mgr.Start(ctx)
+	return &Manager{
+		m:                    mgr,
+		stopAnonymousReports: stopAnonymousReports,
+		synchronizer:         synchronizer,
+	}, nil
 }
 
 // waitForKubernetesAPIReadiness waits for the Kubernetes API to be ready. It's used as a prerequisite to run any
@@ -485,24 +519,4 @@ func startDiagnosticsServer(
 		}
 	}()
 	return s
-}
-
-type IsReady interface {
-	IsReady() bool
-}
-
-func readyzHandler(mgr manager.Manager, dataplaneSynchronizer IsReady) func(*http.Request) error {
-	return func(_ *http.Request) error {
-		select {
-		// If we're elected as leader then report readiness based on the readiness
-		// of dataplane synchronizer.
-		case <-mgr.Elected():
-			if !dataplaneSynchronizer.IsReady() {
-				return errors.New("synchronizer not yet configured")
-			}
-		// If we're not the leader then just report as ready.
-		default:
-		}
-		return nil
-	}
 }

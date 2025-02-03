@@ -1,10 +1,9 @@
-package manager
+package health
 
 import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -16,59 +15,45 @@ import (
 // initial kong clients, but we want the liveness probe be OK if
 // gateway discovery enabled, but 0 ready kong gateway endpoints detected.
 // https://github.com/Kong/kubernetes-ingress-controller/issues/3592
+// Furthermore, efforts to allow run controller code as a standalone instance
+// require health/readiness can be examined via Go API instead of HTTP, so
+// the server has to be decoupled from a manager.
+// https://github.com/Kong/kubernetes-ingress-controller/issues/7044
 
-// TODO: let the manager not dependent on initial kong clients
+// TODO: let the manager not dependent on initial Kong clients
 // then we could move back to the health check server inside manager:
 // https://github.com/Kong/kubernetes-ingress-controller/issues/3590
 
-// healthCheckHandler provides health checks for
+// NewHealthCheckerFromFunc creates a new healthz.Checker from a function.
+func NewHealthCheckerFromFunc(check func() error) healthz.Checker {
+	return func(_ *http.Request) error {
+		return check()
+	}
+}
+
+// NewHealthCheckServer creates a new HealthCheckServer.
+func NewHealthCheckServer(healthzCheck, readyzChecker healthz.Checker) *CheckServer {
+	return &CheckServer{
+		healthzCheck: healthzCheck,
+		readyzCheck:  readyzChecker,
+	}
+}
+
+// CheckServer provides health checks for
 // liveness probe (/healthz) and readiness probe (/readyz).
-type healthCheckServer struct {
-	lock         sync.RWMutex
+type CheckServer struct {
 	healthzCheck healthz.Checker
 	readyzCheck  healthz.Checker
 }
 
-// getHealthzCheck gets the checker function for liveness probe.
-func (s *healthCheckServer) getHealthzCheck() healthz.Checker {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	return s.healthzCheck
-}
-
-// getReadyzCheck gets the check function for readiness probe.
-func (s *healthCheckServer) getReadyzCheck() healthz.Checker {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	return s.readyzCheck
-}
-
-// setHealthzCheck sets the checker function for liveness probe. The old checker function is replaced.
-func (s *healthCheckServer) setHealthzCheck(checker healthz.Checker) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	s.healthzCheck = checker
-}
-
-// setReadyzCheck sets the checker function for readiness probe. The old checker function is replaced.
-func (s *healthCheckServer) setReadyzCheck(checker healthz.Checker) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	s.readyzCheck = checker
-}
-
 // ServeHTTP serves for liveness probe (/healthz) and readiness probe (/readyz).
-func (s *healthCheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (s *CheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var check healthz.Checker
 	switch req.URL.Path {
 	case "/healthz", "/healthz/":
-		check = s.getHealthzCheck()
+		check = s.healthzCheck
 	case "/readyz", "/readyz/":
-		check = s.getReadyzCheck()
+		check = s.readyzCheck
 	}
 	// checker function not set or invalid path, return 404 not found
 	if check == nil {
@@ -86,7 +71,7 @@ func (s *healthCheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 }
 
 // Start starts the HTTP server serving healthz and readyz endpoints in a separate goroutine.
-func (s *healthCheckServer) Start(ctx context.Context, addr string, logger logr.Logger) {
+func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger) {
 	server := &http.Server{
 		Addr:              addr,
 		Handler:           s,

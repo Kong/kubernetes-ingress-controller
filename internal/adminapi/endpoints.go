@@ -3,7 +3,6 @@ package adminapi
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -11,40 +10,35 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 )
 
 // DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
+// For field Address use format https://<podIP>:<port>, and for field TLSServerName
+// use format pod.<serviceName>.<namespace>.svc.
 type DiscoveredAdminAPI struct {
+	// Address format is https://10.68.0.5:8444.
 	Address string
-	PodRef  k8stypes.NamespacedName
+	// TLSServerName format is pod.dataplane-admin-kong-rqwr9-sc49t.default.svc.
+	TLSServerName string
+	// PodRef is the reference to the Pod with the above IP address.
+	PodRef k8stypes.NamespacedName
 }
 
 type Discoverer struct {
 	// portNames is the set of port names that Admin API Service ports will be
 	// matched against.
 	portNames sets.Set[string]
-
-	// dnsStrategy is the DNS strategy to use when resolving Admin API Service
-	// addresses.
-	dnsStrategy cfgtypes.DNSStrategy
 }
 
 func NewDiscoverer(
 	adminAPIPortNames sets.Set[string],
-	dnsStrategy cfgtypes.DNSStrategy,
 ) (*Discoverer, error) {
 	if adminAPIPortNames.Len() == 0 {
 		return nil, fmt.Errorf("no admin API port names provided")
 	}
-	if err := dnsStrategy.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid dns strategy: %w", err)
-	}
 
 	return &Discoverer{
-		portNames:   adminAPIPortNames,
-		dnsStrategy: dnsStrategy,
+		portNames: adminAPIPortNames,
 	}, nil
 }
 
@@ -140,7 +134,7 @@ func (d *Discoverer) AdminAPIsFromEndpointSlice(
 				Namespace: endpoints.Namespace,
 			}
 
-			adminAPI, err := adminAPIFromEndpoint(e, p, svc, d.dnsStrategy, endpoints.AddressType)
+			adminAPI, err := adminAPIFromEndpoint(e, p, svc, endpoints.AddressType)
 			if err != nil {
 				return nil, err
 			}
@@ -154,7 +148,6 @@ func adminAPIFromEndpoint(
 	endpoint discoveryv1.Endpoint,
 	port discoveryv1.EndpointPort,
 	service k8stypes.NamespacedName,
-	dnsStrategy cfgtypes.DNSStrategy,
 	addressFamily discoveryv1.AddressType,
 ) (DiscoveredAdminAPI, error) {
 	podNN := k8stypes.NamespacedName{
@@ -165,49 +158,38 @@ func adminAPIFromEndpoint(
 	// NOTE: Endpoint's addresses are assumed to be fungible, therefore we pick
 	// only the first one.
 	// For the context please see the `Endpoint.Addresses` godoc.
-	eAddress := endpoint.Addresses[0]
+	podIPAddr := endpoint.Addresses[0]
+	if addressFamily == discoveryv1.AddressTypeIPv6 {
+		podIPAddr = fmt.Sprintf("[%s]", podIPAddr)
+	}
+
+	if service.Name == "" {
+		return DiscoveredAdminAPI{}, fmt.Errorf(
+			"service name is empty for an endpoint with TargetRef %s/%s",
+			endpoint.TargetRef.Namespace, endpoint.TargetRef.Name,
+		)
+	}
 
 	// NOTE: We assume https below because the referenced Admin API
 	// server will live in another Pod/elsewhere so allowing http would
 	// not be considered best practice.
-
-	switch dnsStrategy {
-	case cfgtypes.ServiceScopedPodDNSStrategy:
-		if service.Name == "" {
-			return DiscoveredAdminAPI{}, fmt.Errorf(
-				"service name is empty for an endpoint with TargetRef %s/%s",
-				endpoint.TargetRef.Namespace, endpoint.TargetRef.Name,
-			)
-		}
-
-		ipAddr := strings.ReplaceAll(eAddress, ".", "-")
-		address := fmt.Sprintf("%s.%s.%s.svc", ipAddr, service.Name, service.Namespace)
-
-		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf("https://%s:%d", address, *port.Port),
-			PodRef:  podNN,
-		}, nil
-
-	case cfgtypes.NamespaceScopedPodDNSStrategy:
-		ipAddr := strings.ReplaceAll(eAddress, ".", "-")
-		address := fmt.Sprintf("%s.%s.pod", ipAddr, service.Namespace)
-
-		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf("https://%s:%d", address, *port.Port),
-			PodRef:  podNN,
-		}, nil
-
-	case cfgtypes.IPDNSStrategy:
-		bounded := eAddress
-		if addressFamily == discoveryv1.AddressTypeIPv6 {
-			bounded = fmt.Sprintf("[%s]", bounded)
-		}
-		return DiscoveredAdminAPI{
-			Address: fmt.Sprintf("https://%s:%d", bounded, *port.Port),
-			PodRef:  podNN,
-		}, nil
-
-	default:
-		return DiscoveredAdminAPI{}, fmt.Errorf("unknown dns strategy: %s", dnsStrategy)
-	}
+	return DiscoveredAdminAPI{
+		// Address format:
+		//   - ipv4 - https://10.244.0.16:8444
+		//   - ipv6 - https://[fd00:10:244::d]:8444
+		Address: fmt.Sprintf("https://%s:%d", podIPAddr, *port.Port),
+		// TLSServerName format doesn't need to include the IP address part, it's the same for
+		// ipv4 and ipv6: pod.dataplane-admin-kong-rqwr9-sc49t.default.svc.
+		// Currently for KGO certificates are generated like that:
+		// *.<service-name>.<namespace>.svc e.g.: *.dataplane-admin-kong-rqwr9-sc49t.default.svc, see
+		// https://github.com/Kong/gateway-operator/blob/8f009b49b622197ac083abae1c3606bc2c35114f/controller/dataplane/owned_resources.go#L30-L53
+		// In case of Ingress Chart TLS never worked out of the box (by default it's disabled), due to hardcoded service name in the
+		// https://github.com/Kong/charts/blob/1903dd5370e2d028ec31f6b3cec1414a55462ebd/charts/kong/templates/service-kong-admin.yaml#L35-L37
+		// Let's follow the same 4-parts pattern here, to satisfy wildcard. The first part
+		// can be arbitral so let's use "pod". Ditching the first part (wildcard certificate) is
+		// problematic, because this requires changes in the certificate generation logic and may
+		// break existing users' setups, but it can be done one day.
+		TLSServerName: fmt.Sprintf("pod.%s.%s.svc", service.Name, service.Namespace),
+		PodRef:        podNN,
+	}, nil
 }

@@ -1,4 +1,4 @@
-package manager
+package health
 
 import (
 	"context"
@@ -56,9 +56,7 @@ func TestHealthCheckServer(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := &healthCheckServer{}
-			h.setHealthzCheck(tc.healthzChecker)
-			h.setReadyzCheck(tc.readyzChecker)
+			h := NewHealthCheckServer(tc.healthzChecker, tc.readyzChecker)
 			s := httptest.NewServer(h)
 			defer s.Close()
 
@@ -76,8 +74,8 @@ func TestHealthCheckServer(t *testing.T) {
 }
 
 func TestHealthCheckServer_Start(t *testing.T) {
-	h := &healthCheckServer{}
-	h.setHealthzCheck(healthz.Ping)
+	// Parameter readyzChecker healthz.Checker does not matter for this test.
+	h := NewHealthCheckServer(healthz.Ping, nil)
 
 	// Get free local port.
 	port := helpers.GetFreePort(t)

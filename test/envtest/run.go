@@ -14,7 +14,9 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/health"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
@@ -228,8 +230,15 @@ func RunManager(
 		mgrID, err := manager.NewID(t.Name())
 		require.NoError(t, err)
 
-		mgr, err := manager.NewManager(mgrID, logger, modifyCfgFns...)
+		mgr, err := manager.NewManager(ctx, mgrID, logger, modifyCfgFns...)
 		require.NoError(t, err)
+
+		if mgr.Config().ProbeAddr != "" {
+			logger.Info("Starting standalone health check server")
+			health.NewHealthCheckServer(
+				healthz.Ping, health.NewHealthCheckerFromFunc(mgr.IsReady),
+			).Start(ctx, mgr.Config().ProbeAddr, logger.WithName("health-check"))
+		}
 
 		require.NoError(t, mgr.Run(ctx))
 	}()

@@ -111,8 +111,10 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = managerinternal.Run(ctx, cfg, logger)
-	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
+	m, err := managerinternal.New(ctx, cfg, logger)
+	require.NoError(t, err)
+
+	require.ErrorContains(t, m.Run(ctx), "timed out waiting for cache to be synced")
 }
 
 func TestCRDValidations(t *testing.T) {

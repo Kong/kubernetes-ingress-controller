@@ -6,7 +6,10 @@ import (
 	"io"
 	"os/signal"
 
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/health"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -23,5 +26,15 @@ func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
 	}
 	defer signal.Ignore(shutdownSignals...)
 
-	return manager.Run(ctx, c, logger)
+	m, err := manager.New(ctx, c, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create manager: %w", err)
+	}
+
+	logger.Info("Starting standalone health check server")
+	health.NewHealthCheckServer(
+		healthz.Ping, health.NewHealthCheckerFromFunc(m.IsReady),
+	).Start(ctx, c.ProbeAddr, logger.WithName("health-check"))
+
+	return m.Run(ctx)
 }

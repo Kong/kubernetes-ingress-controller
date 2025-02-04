@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -100,7 +101,6 @@ func (c *AdminAPIClientsManager) WithReconciliationInterval(d time.Duration) *Ad
 
 func NewAdminAPIClientsManager(
 	ctx context.Context,
-	logger logr.Logger,
 	initialClients []*adminapi.Client,
 	readinessChecker ReadinessChecker,
 	opts ...AdminAPIClientsManagerOption,
@@ -121,7 +121,7 @@ func NewAdminAPIClientsManager(
 		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),
 		ctx:                             ctx,
 		runningChan:                     make(chan struct{}),
-		logger:                          logger,
+		logger:                          ctrl.LoggerFrom(ctx),
 	}
 
 	for _, opt := range opts {

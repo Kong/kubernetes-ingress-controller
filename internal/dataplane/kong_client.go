@@ -113,7 +113,7 @@ type KongClient struct {
 
 	// diagnostic is the client and configuration for reporting diagnostic
 	// information during data-plane update runtime.
-	diagnostic diagnostics.ClientDiagnostic
+	diagnostic diagnostics.Client
 
 	// metricsRecorder is the client for shipping metrics information
 	// updates to the prometheus exporter.
@@ -189,12 +189,21 @@ type KongClient struct {
 	konnectKongStateUpdater KonnectKongStateUpdater
 }
 
+// KongClientOption is a functional option for configuring a KongClient.
+type KongClientOption func(*KongClient)
+
+// WithDiagnosticClient sets the diagnostic client for the KongClient.
+func WithDiagnosticClient(diagnostic diagnostics.Client) func(*KongClient) {
+	return func(c *KongClient) {
+		c.diagnostic = diagnostic
+	}
+}
+
 // NewKongClient provides a new KongClient object after connecting to the
 // data-plane API and verifying integrity.
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	diagnostic diagnostics.ClientDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode dpconf.DBMode,
@@ -206,11 +215,11 @@ func NewKongClient(
 	cacheStores *store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
 	metricsRecorder metrics.Recorder,
+	opts ...KongClientOption,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                  logger,
 		requestTimeout:          timeout,
-		diagnostic:              diagnostic,
 		metricsRecorder:         metricsRecorder,
 		cache:                   cacheStores,
 		kongConfig:              kongConfig,
@@ -225,6 +234,10 @@ func NewKongClient(
 		fallbackConfigGenerator: fallbackConfigGenerator,
 	}
 	c.initializeControllerPodReference()
+
+	for _, opt := range opts {
+		opt(c)
+	}
 
 	return c, nil
 }
@@ -849,13 +862,13 @@ type sendDiagnosticFn func(meta diagnostics.DumpMeta, raw []byte)
 func prepareSendDiagnosticFn(
 	ctx context.Context,
 	logger logr.Logger,
-	diagnosticConfig diagnostics.ClientDiagnostic,
+	diagnosticConfig diagnostics.Client,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
 	isFallback bool,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (diagnostics.ClientDiagnostic{}) {
+	if diagnosticConfig == (diagnostics.Client{}) {
 		// noop, diagnostics won't be sent
 		return func(diagnostics.DumpMeta, []byte) {}
 	}

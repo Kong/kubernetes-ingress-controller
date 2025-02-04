@@ -142,31 +142,31 @@ jobs:
 
       - name: collect test coverage
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: coverage
+          name: coverage-integration-${{ matrix.name }}
           path: coverage.*.out
 
       - name: upload diagnostics
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: diagnostics-integration-tests-${{ matrix.name }}
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
-      
+
       # upload logs when test failed
-      - name: upload KIC logs 
+      - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
-        with: 
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
           name: integration-tests-kic-logs-${{ matrix.name }}
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 
       - name: collect test report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: tests-report
+          name: tests-report-integration-${{ matrix.name }}
           path: integration-tests-${{ matrix.name }}.xml

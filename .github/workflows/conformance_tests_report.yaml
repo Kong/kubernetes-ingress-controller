@@ -31,8 +31,9 @@ jobs:
       # Generated report should be submitted to
       # https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports
       # in future when experimental becomes stable autamate creating PR (add to release workflow).
+      # See: https://github.com/Kong/kubernetes-ingress-controller/issues/4654
       - name: Collect conformance tests report
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: kong-kubernetes-ingress-controller.yaml
-          path: conformance-tests-report.yaml
+          path: kong-kubernetes-ingress-controller.yaml

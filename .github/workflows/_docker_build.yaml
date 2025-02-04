@@ -139,7 +139,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: kic-image
           path: /tmp/image.tar

@@ -15,9 +15,9 @@ import (
 // initial kong clients, but we want the liveness probe be OK if
 // gateway discovery enabled, but 0 ready kong gateway endpoints detected.
 // https://github.com/Kong/kubernetes-ingress-controller/issues/3592
-// Furthermore, efforts to allow run controller code as a standalone instance
-// require health/readiness can be examined via Go API instead of HTTP, so
-// the server has to be decoupled from a manager.
+// Furthermore, efforts to allow running controller code as a standalone instance
+// require health/readiness examination via Go API instead of HTTP, so
+// the server has to be decoupled from the manager.
 // https://github.com/Kong/kubernetes-ingress-controller/issues/7044
 
 // TODO: let the manager not dependent on initial Kong clients

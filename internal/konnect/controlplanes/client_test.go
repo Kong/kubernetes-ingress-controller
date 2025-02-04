@@ -12,7 +12,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
 type mockControlPlanesServer struct {

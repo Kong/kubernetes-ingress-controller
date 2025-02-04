@@ -3,7 +3,7 @@ package useragent
 import (
 	"net/http"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
 func NewTransport(underlyingTransport http.RoundTripper) http.RoundTripper {

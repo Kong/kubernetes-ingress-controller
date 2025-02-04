@@ -58,12 +58,16 @@ func Run(
 	c managercfg.Config,
 	logger logr.Logger,
 ) error {
+	// Inject logger into the context so it can be used by the controllers and other components without
+	// passing it explicitly when they accept a context.
+	ctx = ctrl.LoggerInto(ctx, logger)
+
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}
 
-	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c, logger)
-	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
+	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c)
+	setupLog := logger.WithName("setup")
 	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("The ingress class name has been set", "value", c.IngressClassName)
 
@@ -164,7 +168,6 @@ func Run(
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, c.GatewayDiscoveryReadinessCheckTimeout, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
-		logger,
 		initialKongClients,
 		readinessChecker,
 	)
@@ -198,7 +201,7 @@ func Run(
 	}
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), logger, translatorFeatureFlags, storer); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), translatorFeatureFlags, storer); err != nil {
 		return err
 	}
 
@@ -336,7 +339,6 @@ func Run(
 	if c.AnonymousReports {
 		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
 			ctx,
-			logger.WithName("telemetry"),
 			kubeconfig,
 			clientsManager,
 			telemetry.ReportConfig{
@@ -461,8 +463,8 @@ func startDiagnosticsServer(
 	ctx context.Context,
 	port int,
 	c managercfg.Config,
-	logger logr.Logger,
 ) diagnostics.Server {
+	logger := ctrl.LoggerFrom(ctx)
 	if !c.EnableProfiling && !c.EnableConfigDumps {
 		logger.Info("Diagnostics server disabled")
 		return diagnostics.Server{}

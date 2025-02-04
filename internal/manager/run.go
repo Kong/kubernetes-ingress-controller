@@ -60,6 +60,11 @@ type Manager struct {
 // Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
 // It should be called only once per Manager instance.
 func (m *Manager) Run(ctx context.Context) error {
+	defer func() {
+		if m.stopAnonymousReports != nil {
+			m.stopAnonymousReports()
+		}
+	}()
 	return m.m.Start(ctx)
 }
 
@@ -78,17 +83,6 @@ func (m *Manager) IsReady() error {
 	default:
 	}
 	return nil
-}
-
-// StopAnonymousReports stops the telemetry reporting. It's caller responsibility to call it when
-// the manager is no longer needed. It's safe to call it multiple times, when the telemetry
-// was not configured, or when the manager is already stopped (it will be no-op).
-// It makes sense to call it only after Run(ctx) method.
-func (m *Manager) StopAnonymousReports() {
-	if m.stopAnonymousReports != nil {
-		m.stopAnonymousReports()
-	}
-	m.stopAnonymousReports = nil
 }
 
 // New configures the controller manager call Start.

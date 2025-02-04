@@ -20,10 +20,6 @@ import (
 // the server has to be decoupled from the manager.
 // https://github.com/Kong/kubernetes-ingress-controller/issues/7044
 
-// TODO: let the manager not dependent on initial Kong clients
-// then we could move back to the health check server inside manager:
-// https://github.com/Kong/kubernetes-ingress-controller/issues/3590
-
 // NewHealthCheckerFromFunc creates a new healthz.Checker from a function.
 func NewHealthCheckerFromFunc(check func() error) healthz.Checker {
 	return func(_ *http.Request) error {

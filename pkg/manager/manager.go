@@ -18,6 +18,26 @@ type Manager struct {
 	manager *managerinternal.Manager
 }
 
+// NewManager creates a new instance of the Kong Ingress Controller. It does not start the controller.
+func NewManager(ctx context.Context, id ID, logger logr.Logger, configOpts ...managercfg.Opt) (*Manager, error) {
+	cfg, err := NewConfig(configOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create manager config: %w", err)
+	}
+
+	m, err := managerinternal.New(ctx, cfg, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create manager: %w", err)
+	}
+
+	return &Manager{
+		id:      id,
+		config:  cfg,
+		logger:  logger.WithValues("managerID", id.String()),
+		manager: m,
+	}, nil
+}
+
 // Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
 // It should be called only once per Manager instance.
 func (m *Manager) Run(ctx context.Context) error {
@@ -39,24 +59,4 @@ func (m *Manager) ID() ID {
 // Config returns the configuration of the manager.
 func (m *Manager) Config() managercfg.Config {
 	return m.config
-}
-
-// NewManager creates a new instance of the Kong Ingress Controller. It does not start the controller.
-func NewManager(ctx context.Context, id ID, logger logr.Logger, configOpts ...managercfg.Opt) (*Manager, error) {
-	cfg, err := NewConfig(configOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create manager config: %w", err)
-	}
-
-	m, err := managerinternal.New(ctx, cfg, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create manager: %w", err)
-	}
-
-	return &Manager{
-		id:      id,
-		config:  cfg,
-		logger:  logger.WithValues("managerID", id.String()),
-		manager: m,
-	}, nil
 }

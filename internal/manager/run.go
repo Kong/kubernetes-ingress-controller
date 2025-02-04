@@ -57,34 +57,6 @@ type Manager struct {
 	stopAnonymousReports func()
 }
 
-// Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
-// It should be called only once per Manager instance.
-func (m *Manager) Run(ctx context.Context) error {
-	defer func() {
-		if m.stopAnonymousReports != nil {
-			m.stopAnonymousReports()
-		}
-	}()
-	return m.m.Start(ctx)
-}
-
-// IsReady checks if the controller manager is ready to manage resources.
-// It's only valid to call this method after the controller manager has been started
-// with method Run(ctx).
-func (m *Manager) IsReady() error {
-	select {
-	// If we're elected as leader then report readiness based on the readiness
-	// of dataplane synchronizer.
-	case <-m.m.Elected():
-		if !m.synchronizer.IsReady() {
-			return errors.New("synchronizer not yet configured")
-		}
-	// If we're not the leader then just report as ready.
-	default:
-	}
-	return nil
-}
-
 // New configures the controller manager call Start.
 func New(
 	ctx context.Context,
@@ -513,4 +485,32 @@ func startDiagnosticsServer(
 		}
 	}()
 	return s
+}
+
+// Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
+// It should be called only once per Manager instance.
+func (m *Manager) Run(ctx context.Context) error {
+	defer func() {
+		if m.stopAnonymousReports != nil {
+			m.stopAnonymousReports()
+		}
+	}()
+	return m.m.Start(ctx)
+}
+
+// IsReady checks if the controller manager is ready to manage resources.
+// It's only valid to call this method after the controller manager has been started
+// with method Run(ctx).
+func (m *Manager) IsReady() error {
+	select {
+	// If we're elected as leader then report readiness based on the readiness
+	// of dataplane synchronizer.
+	case <-m.m.Elected():
+		if !m.synchronizer.IsReady() {
+			return errors.New("synchronizer not yet configured")
+		}
+	// If we're not the leader then just report as ready.
+	default:
+	}
+	return nil
 }

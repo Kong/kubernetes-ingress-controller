@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
@@ -44,12 +44,13 @@ type ReportConfig struct {
 // error is not nil - to stop the reports sending.
 func SetupAnonymousReports(
 	ctx context.Context,
-	logger logr.Logger,
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
 	reportCfg ReportConfig,
 	instanceIDProvider InstanceIDProvider,
 ) (func(), error) {
+	logger := ctrl.LoggerFrom(ctx).WithName("telemetry")
+
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
 	// This data helps inform us what versions, features, e.t.c. end-users are actively using which helps to inform

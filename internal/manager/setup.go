@@ -213,14 +213,13 @@ func setupAdmissionServer(
 	clientsManager *clients.AdminAPIClientsManager,
 	referenceIndexers ctrlref.CacheIndexers,
 	managerClient client.Client,
-	logger logr.Logger,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
 ) error {
-	admissionLogger := logger.WithName("admission-server")
+	admissionLogger := ctrl.LoggerFrom(ctx).WithName("admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		logger.Info("Admission webhook server disabled")
+		admissionLogger.Info("Admission webhook server disabled")
 		return nil
 	}
 
@@ -242,7 +241,7 @@ func setupAdmissionServer(
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.Error(err, "Admission webhook server stopped")
+		admissionLogger.Error(err, "Admission webhook server stopped")
 	}()
 	return nil
 }

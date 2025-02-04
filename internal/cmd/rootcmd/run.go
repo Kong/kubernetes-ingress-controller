@@ -6,8 +6,6 @@ import (
 	"io"
 	"os/signal"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
@@ -18,7 +16,6 @@ func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
-	ctx = ctrl.LoggerInto(ctx, logger)
 
 	ctx, err = SetupSignalHandler(ctx, c, logger)
 	if err != nil {

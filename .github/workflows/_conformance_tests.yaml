@@ -32,25 +32,27 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - run: echo "JUNIT_REPORT=conformance-tests-${{ matrix.name }}.xml" >> $GITHUB_ENV
+
       - name: run conformance tests
         run: make test.conformance
         env:
-          JUNIT_REPORT: "conformance-tests.xml"
+          JUNIT_REPORT: ${{ env.JUNIT_REPORT }}
           KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
       
       # upload logs when test failed
-      - name: upload KIC logs 
+      - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
-        with: 
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
           name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
 
       - name: collect test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: tests-report
-          path: conformance-tests.xml
+          name: test-report-conformance-${{ matrix.name }}
+          path: ${{ env.JUNIT_REPORT }}

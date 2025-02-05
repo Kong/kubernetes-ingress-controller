@@ -14,10 +14,10 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
 // KongClientNotReadyError is returned when the Kong client is not ready to be used yet.

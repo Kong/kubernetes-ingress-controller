@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
 	"github.com/spf13/pflag"
 )
 

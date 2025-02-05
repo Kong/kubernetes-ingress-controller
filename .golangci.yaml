@@ -178,6 +178,26 @@ linters-settings:
             desc: github.com/kong/kubernetes-ingress-controller/v3 clientset is deprecated. Use github.com/kong/kubernetes-configuration/pkg/clientset instead.
           - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/apis
             desc: github.com/kong/kubernetes-ingress-controller/v3 apis are deprecated. Use github.com/kong/kubernetes-configuration/api instead.
+      do-not-use-internal-manager-package:
+        files:
+        # Files that includes actual implementation of the package.
+        - "!**/internal/manager/**/*.go"
+        - "!**/internal/manager/*.go"
+        # Package that expose public API to the above.
+        - "!**/pkg/manager/**/*.go" 
+        - "!**/pkg/manager/*.go"
+        # TODO: Remove those exclusion once the needed parts of manager are moved to pkg/manager.
+        # Imported stuff: featuregates, consts, flags, kongconfig, utils.GetKubeconfig(...).
+        - "!**/internal/dataplane/kong_client_golden_test.go"
+        - "!**/internal/dataplane/translator/translator.go"
+        - "!**/internal/dataplane/translator/translator_test.go"
+        - "!**/test/integration/isolated/backendtlspolicy_test.go"
+        - "!**/internal/cmd/rootcmd/config/cli.go"
+        - "!**/test/internal/helpers/kong.go"
+        - "!**/test/envtest/telemetry_test.go"
+        deny:
+        - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/manager
+          desc: github.com/kong/kubernetes-ingress-controller/v3/internal/manager should not be used outside of its package. Use github.com/kong/kubernetes-ingress-controller/v3/pkg/manager instead.
 issues:
   fix: true
   max-same-issues: 0

@@ -35,7 +35,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
@@ -45,6 +44,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
 // -----------------------------------------------------------------------------

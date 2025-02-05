@@ -28,7 +28,6 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
@@ -111,7 +110,10 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	m, err := managerinternal.New(ctx, cfg, logger)
+	id, err := manager.NewID(t.Name())
+	require.NoError(t, err)
+
+	m, err := manager.NewManager(ctx, id, logger, cfg)
 	require.NoError(t, err)
 
 	require.ErrorContains(t, m.Run(ctx), "timed out waiting for cache to be synced")

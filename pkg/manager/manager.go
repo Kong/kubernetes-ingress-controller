@@ -19,12 +19,7 @@ type Manager struct {
 }
 
 // NewManager creates a new instance of the Kong Ingress Controller. It does not start the controller.
-func NewManager(ctx context.Context, id ID, logger logr.Logger, configOpts ...managercfg.Opt) (*Manager, error) {
-	cfg, err := NewConfig(configOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create manager config: %w", err)
-	}
-
+func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.Config) (*Manager, error) {
 	m, err := managerinternal.New(ctx, cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)

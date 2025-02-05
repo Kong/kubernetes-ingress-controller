@@ -1,4 +1,4 @@
-package test
+package util
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 )
@@ -136,7 +136,12 @@ func DeployControllerManagerForCluster(
 	go func() {
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), clicfg)
-		m, err := manager.New(ctx, *clicfg.Config, logger)
+		mid, err := manager.NewID("kic-" + cluster.Name())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Problems with creating Manager ID: %s\n", err)
+			os.Exit(1)
+		}
+		m, err := manager.NewManager(ctx, mid, logger, *clicfg.Config)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with set up of Controller Manager: %s\n", err)
 			os.Exit(1)
@@ -171,9 +176,8 @@ func SetupLoggers(logLevel string, logFormat string) (logr.Logger, string, error
 		LogFormat: logFormat,
 	}
 
-	logger, err := manager.SetupLoggers(config, output)
+	logger, err := logging.SetupLoggers(config, output)
 	// Prevents controller-runtime from logging
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
-	ctrllog.SetLogger(logger)
 	return logger, "", err
 }

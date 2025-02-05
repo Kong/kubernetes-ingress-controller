@@ -41,7 +41,7 @@ var zapLevels = map[string]zapcore.Level{
 	"trace": zapcore.Level(-2),
 }
 
-func MakeLogger(level string, formatter string, output io.Writer) (*zap.Logger, error) {
+func makeLogger(level string, formatter string, output io.Writer) (*zap.Logger, error) {
 	logLevel, err := getZapLevel(level)
 	if err != nil {
 		return nil, fmt.Errorf("setting log level failed: %w", err)

@@ -1,4 +1,4 @@
-package test
+package util
 
 import (
 	"fmt"
@@ -65,6 +65,6 @@ func getRepoRoot() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("failed to get repo root: runtime.Caller(0) failed")
 	}
-	d := filepath.Dir(path.Join(path.Dir(b), "../../")) // Number of ../ depends on the path of this file.
+	d := filepath.Dir(path.Join(path.Dir(b), "../")) // Number of ../ depends on the path of this file.
 	return filepath.Abs(d)
 }

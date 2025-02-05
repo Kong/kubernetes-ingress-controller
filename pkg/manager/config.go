@@ -3,7 +3,7 @@ package manager
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -27,7 +27,7 @@ func NewConfig(opts ...managercfg.Opt) (managercfg.Config, error) {
 }
 
 func newDefaultConfig() (managercfg.Config, error) {
-	// Set default values relying on CLI flags parsing.
+	// Set default values relying on CLI flags parsing. This is the only intersection of this package with the CLI.
 	cliCfg := config.NewCLIConfig()
 	flags := cliCfg.FlagSet()
 	if err := flags.Parse([]string{}); err != nil {

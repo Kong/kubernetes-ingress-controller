@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
 )
 
 func TestPopulateTypeMeta(t *testing.T) {

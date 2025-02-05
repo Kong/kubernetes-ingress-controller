@@ -27,10 +27,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	testutils "github.com/kong/kubernetes-ingress-controller/v3/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	testutils "github.com/kong/kubernetes-ingress-controller/v3/test/util"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"

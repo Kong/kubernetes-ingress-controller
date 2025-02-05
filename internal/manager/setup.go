@@ -4,14 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"github.com/kong/go-database-reconciler/pkg/cprint"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -40,40 +36,18 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	config2 "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
 )
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup Utility Functions
 // -----------------------------------------------------------------------------
-
-// SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c managercfg.Config, output io.Writer) (logr.Logger, error) {
-	zapBase, err := logging.MakeLogger(c.LogLevel, c.LogFormat, output)
-	if err != nil {
-		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
-	}
-	logger := zapr.NewLoggerWithOptions(zapBase, zapr.LogInfoLevel("v"))
-
-	if c.LogLevel != "trace" && c.LogLevel != "debug" {
-		// disable deck's per-change diff output
-		cprint.DisableOutput = true
-	}
-
-	// Prevents controller-runtime from logging
-	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
-	ctrllog.SetLogger(logger)
-
-	return logger, nil
-}
 
 func setupManagerOptions(ctx context.Context, logger logr.Logger, c managercfg.Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
@@ -272,7 +246,7 @@ func setupDataplaneAddressFinder(mgrc client.Client, c managercfg.Config, log lo
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN config2.OptionalNamespacedName) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN mo.Option[k8stypes.NamespacedName]) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
 	if len(publishStatusAddress) > 0 {

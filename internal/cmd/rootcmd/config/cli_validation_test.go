@@ -3,6 +3,7 @@ package config_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/samber/mo"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	mgrconfig "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func TestConfigValidatedVars(t *testing.T) {
@@ -155,4 +157,25 @@ func TestConfigValidatedVars(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TesCLIArgumentParser(t *testing.T) {
+	c := config.NewCLIConfig()
+	flagSet := c.FlagSet()
+	flagSet.SetOutput(io.Discard)
+
+	err := flagSet.Parse([]string{
+		"--feature-gates=GatewayAlpha=true,RewriteURIs=true",
+		"--health-probe-bind-address=:4321",
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, c.FeatureGates.Enabled(mgrconfig.GatewayAlphaFeature))
+	require.True(t, c.FeatureGates.Enabled(mgrconfig.RewriteURIsFeature))
+	for key, value := range mgrconfig.GetFeatureGatesDefaults() {
+		if key == mgrconfig.GatewayAlphaFeature || key == mgrconfig.RewriteURIsFeature {
+			continue
+		}
+		require.Equal(t, value, c.FeatureGates.Enabled(key))
+	}
+	require.Equal(t, c.ProbeAddr, ":4321")
 }

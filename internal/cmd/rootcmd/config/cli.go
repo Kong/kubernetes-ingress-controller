@@ -7,7 +7,6 @@ import (
 	"github.com/samber/mo"
 	"github.com/spf13/pflag"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/component-base/cli/flag"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -16,9 +15,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -192,8 +191,8 @@ func (c *CLIConfig) bindFlagSet() {
 	_ = flagSet.MarkHidden("diagnostic-server-port")
 
 	// Feature Gates (see FEATURE_GATES.md).
-	flagSet.Var(flag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+
-		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", featuregates.DocsURL))
+	flagSet.Var(config.NewMapStringBoolForFeatureGatesWithDefaults(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+
+		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", config.DocsURL))
 
 	// SIGTERM or SIGINT signal delay.
 	flagSet.DurationVar(&c.TermDelay, "term-delay", 0, "The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller.")

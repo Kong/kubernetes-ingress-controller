@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -494,7 +495,13 @@ func TestTLSRoutePassthrough(t *testing.T) {
 			proxyTLSURL,
 			testUUID, tlsRouteHostname, certPool, false,
 		)
-		return errors.Is(err, io.EOF)
+		opErr := &net.OpError{}
+		if errors.As(err, &opErr) {
+			// From kong/kong-gateway-dev:20250129, the returned error changed in the scenario where no routes matched.
+			return strings.Contains(opErr.Error(), "connection reset by peer")
+		} else {
+			return errors.Is(err, io.EOF)
+		}
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")

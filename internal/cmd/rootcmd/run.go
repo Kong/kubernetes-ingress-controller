@@ -8,14 +8,15 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/health"
 )
 
 // Run sets up a default stderr logger and starts the controller manager.
 func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
-	logger, err := manager.SetupLoggers(c, output)
+	logger, err := logging.SetupLoggers(c, output)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}

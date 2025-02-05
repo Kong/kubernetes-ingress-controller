@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/health"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 

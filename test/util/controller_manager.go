@@ -11,9 +11,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -176,9 +176,9 @@ func SetupLoggers(logLevel string, logFormat string) (logr.Logger, string, error
 		LogFormat: logFormat,
 	}
 
-	logger, err := manager.SetupLoggers(config, output)
+	logger, err := logging.SetupLoggers(config, output)
 	// Prevents controller-runtime from logging
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
-	ctrllog.SetLogger(logger)
+	// ctrllog.SetLogger(logger)
 	return logger, "", err
 }

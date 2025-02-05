@@ -499,9 +499,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		if errors.As(err, &opErr) {
 			// From kong/kong-gateway-dev:20250129, the returned error changed in the scenario where no routes matched.
 			return strings.Contains(opErr.Error(), "connection reset by peer")
-		} else {
-			return errors.Is(err, io.EOF)
 		}
+		return errors.Is(err, io.EOF)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")

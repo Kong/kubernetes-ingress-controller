@@ -179,6 +179,5 @@ func SetupLoggers(logLevel string, logFormat string) (logr.Logger, string, error
 	logger, err := logging.SetupLoggers(config, output)
 	// Prevents controller-runtime from logging
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
-	// ctrllog.SetLogger(logger)
 	return logger, "", err
 }

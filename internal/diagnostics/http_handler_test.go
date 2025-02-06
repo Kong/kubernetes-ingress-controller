@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 )
 
+// MockDiagnosticsProvider is a mock implementation of diagnostics.Provider.
 type MockDiagnosticsProvider struct {
 	lastSuccessfulConfigDump mo.Option[file.Content]
 
@@ -73,7 +74,7 @@ func (m MockDiagnosticsProvider) AvailableConfigDiffsHashes() []diagnostics.Diff
 	return result
 }
 
-func TestConfigDiagnosticsHTTPHandler(t *testing.T) {
+func TestHTTPHandler(t *testing.T) {
 	testCases := []struct {
 		name               string
 		provider           MockDiagnosticsProvider
@@ -96,7 +97,7 @@ func TestConfigDiagnosticsHTTPHandler(t *testing.T) {
 			},
 			endpoint:           "/successful",
 			expectedStatusCode: http.StatusOK,
-			expectedResponse:   `{"_format_version":"2.0"}`,
+			expectedResponse:   `{"config": {"_format_version":"2.0"}, "hash": "success-hash"}`,
 		},
 		{
 			name:               "no failed config dump",

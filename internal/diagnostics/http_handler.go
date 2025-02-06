@@ -11,26 +11,33 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 )
 
-// ConfigDiagnosticsProvider is an interface representing a provider of diagnostic information.
-type ConfigDiagnosticsProvider interface {
+const (
+	// diffHashQuery is the query parameter used to request a specific diff by hash from the /diff-report endpoint.
+	diffHashQuery = "hash"
+)
+
+// Provider is an interface representing a provider of config diagnostics data (e.g. config dumps, diffs).
+type Provider interface {
 	LastSuccessfulConfigDump() (file.Content, string, bool)
 	LastFailedConfigDump() (file.Content, string, bool)
 	LastErrorBody() ([]byte, bool)
+
 	CurrentFallbackCacheMetadata() mo.Option[fallback.GeneratedCacheMetadata]
+
 	LastConfigDiffHash() string
 	ConfigDiffByHash(string) (ConfigDiff, bool)
 	AvailableConfigDiffsHashes() []DiffIndex
 }
 
-// ConfigDiagnosticsHTTPHandler is a handler for the diagnostic HTTP endpoints.
-type ConfigDiagnosticsHTTPHandler struct {
-	diagnosticsProvider   ConfigDiagnosticsProvider
+// HTTPHandler is a handler for the config diagnostics HTTP endpoints.
+type HTTPHandler struct {
+	diagnosticsProvider   Provider
 	dumpsIncludeSensitive bool
 	mux                   *http.ServeMux
 }
 
-func NewConfigDiagnosticsHTTPHandler(diagnosticsProvider ConfigDiagnosticsProvider, dumpsIncludeSensitive bool) *ConfigDiagnosticsHTTPHandler {
-	h := &ConfigDiagnosticsHTTPHandler{
+func NewConfigDiagnosticsHTTPHandler(diagnosticsProvider Provider, dumpsIncludeSensitive bool) *HTTPHandler {
+	h := &HTTPHandler{
 		diagnosticsProvider:   diagnosticsProvider,
 		dumpsIncludeSensitive: dumpsIncludeSensitive,
 	}
@@ -46,11 +53,11 @@ func NewConfigDiagnosticsHTTPHandler(diagnosticsProvider ConfigDiagnosticsProvid
 	return h
 }
 
-func (h *ConfigDiagnosticsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mux.ServeHTTP(w, r)
 }
 
-func (h *ConfigDiagnosticsHTTPHandler) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) {
+func (h *HTTPHandler) handleLastValidConfig(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	config, configHash, ok := h.diagnosticsProvider.LastSuccessfulConfigDump()
 	if !ok {
@@ -61,12 +68,12 @@ func (h *ConfigDiagnosticsHTTPHandler) handleLastValidConfig(rw http.ResponseWri
 		ConfigDumpResponse{
 			Config:     config,
 			ConfigHash: configHash,
-		}.Config); err != nil {
+		}); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (h *ConfigDiagnosticsHTTPHandler) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request) {
+func (h *HTTPHandler) handleLastFailedConfig(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	config, configHash, ok := h.diagnosticsProvider.LastFailedConfigDump()
@@ -84,7 +91,7 @@ func (h *ConfigDiagnosticsHTTPHandler) handleLastFailedConfig(rw http.ResponseWr
 	}
 }
 
-func (h *ConfigDiagnosticsHTTPHandler) handleCurrentFallback(rw http.ResponseWriter, _ *http.Request) {
+func (h *HTTPHandler) handleCurrentFallback(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	fallbackCacheMeta := h.diagnosticsProvider.CurrentFallbackCacheMetadata()
@@ -94,7 +101,7 @@ func (h *ConfigDiagnosticsHTTPHandler) handleCurrentFallback(rw http.ResponseWri
 	}
 }
 
-func (h *ConfigDiagnosticsHTTPHandler) handleLastErrBody(rw http.ResponseWriter, _ *http.Request) {
+func (h *HTTPHandler) handleLastErrBody(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Set("Content-Type", "text/plain")
 
 	errBody, ok := h.diagnosticsProvider.LastErrorBody()
@@ -107,7 +114,7 @@ func (h *ConfigDiagnosticsHTTPHandler) handleLastErrBody(rw http.ResponseWriter,
 	}
 }
 
-func (h *ConfigDiagnosticsHTTPHandler) handleDiffReport(rw http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandler) handleDiffReport(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	// GDR has no notion of sensitive data, so its raw diffs will include credentials and certificates when they

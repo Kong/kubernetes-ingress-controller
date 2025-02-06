@@ -192,8 +192,8 @@ type KongClient struct {
 // KongClientOption is a functional option for configuring a KongClient.
 type KongClientOption func(*KongClient)
 
-// WithDiagnosticClient sets the diagnostic client for the KongClient.
-func WithDiagnosticClient(diagnostic diagnostics.Client) func(*KongClient) {
+// WithDiagnosticsClient sets the diagnostic client for the KongClient.
+func WithDiagnosticsClient(diagnostic diagnostics.Client) func(*KongClient) {
 	return func(c *KongClient) {
 		c.diagnostic = diagnostic
 	}
@@ -779,7 +779,7 @@ func (c *KongClient) sendToClient(
 		}
 	}
 
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, isFallback)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -821,14 +821,22 @@ func (c *KongClient) sendToClient(
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
 
-		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
+		sendDiagnostic(diagnostics.DumpMeta{
+			Failed:   true,
+			Hash:     string(newConfigSHA),
+			Fallback: isFallback,
+		}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {
 			logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
 	}
-	sendDiagnostic(diagnostics.DumpMeta{Failed: false, Hash: string(newConfigSHA)}, nil) // No error occurred.
+	sendDiagnostic(diagnostics.DumpMeta{
+		Failed:   false,
+		Hash:     string(newConfigSHA),
+		Fallback: isFallback,
+	}, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
 	client.SetLastCacheStoresHash(c.lastProcessedSnapshotHash)
@@ -866,7 +874,6 @@ func prepareSendDiagnosticFn(
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
-	isFallback bool,
 ) sendDiagnosticFn {
 	if diagnosticConfig == (diagnostics.Client{}) {
 		// noop, diagnostics won't be sent
@@ -894,10 +901,7 @@ func prepareSendDiagnosticFn(
 		// later on but we're OK with this limitation of said API.
 		select {
 		case diagnosticConfig.Configs <- diagnostics.ConfigDump{
-			Meta: diagnostics.DumpMeta{
-				Failed:   meta.Failed,
-				Fallback: isFallback,
-			},
+			Meta:            meta,
 			Config:          *config,
 			RawResponseBody: rawResponseBody,
 		}:

@@ -24,22 +24,19 @@ const (
 
 	// diffHistorySize is the number of diffs to keep in history.
 	diffHistorySize = 5
-
-	// diffHashQuery is the query string key for requesting a specific hash's diff.
-	diffHashQuery = "hash"
 )
 
 // Collector collects diagnostic information from the proxy sync loop via Client it returns from Client()
-// method. It can be queried for everything it collects as it implements the ConfigDiagnosticsProvider interface.
+// method. It can be queried for everything it collects via the Provider interface it implements.
 type Collector struct {
 	logger logr.Logger
 
 	clientDiagnostic Client
 
-	lastSuccessfulConfigDump file.Content
+	lastSuccessfulConfigDump mo.Option[file.Content]
 	lastSuccessHash          string
 
-	lastFailedConfigDump file.Content
+	lastFailedConfigDump mo.Option[file.Content]
 	lastFailedHash       string
 	lastRawErrBody       []byte
 
@@ -80,8 +77,8 @@ func (s *Collector) LastSuccessfulConfigDump() (file.Content, string, bool) {
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 
-	if s.lastSuccessHash != "" {
-		return *s.lastSuccessfulConfigDump.DeepCopy(), s.lastSuccessHash, true
+	if d, ok := s.lastSuccessfulConfigDump.Get(); ok {
+		return *d.DeepCopy(), s.lastSuccessHash, true
 	}
 	return file.Content{}, "", false
 }
@@ -91,8 +88,8 @@ func (s *Collector) LastFailedConfigDump() (file.Content, string, bool) {
 	s.configLock.RLock()
 	defer s.configLock.RUnlock()
 
-	if s.lastFailedHash != "" {
-		return *s.lastFailedConfigDump.DeepCopy(), s.lastFailedHash, true
+	if d, ok := s.lastFailedConfigDump.Get(); ok {
+		return *d.DeepCopy(), s.lastFailedHash, true
 	}
 	return file.Content{}, "", false
 }
@@ -168,12 +165,12 @@ func (s *Collector) onConfigDump(dump ConfigDump) {
 
 	if dump.Meta.Failed {
 		// If the config push failed, we need to keep the failed config dump and the raw error body.
-		s.lastFailedConfigDump = dump.Config
+		s.lastFailedConfigDump = mo.Some(dump.Config)
 		s.lastFailedHash = dump.Meta.Hash
 		s.lastRawErrBody = dump.RawResponseBody
 	} else {
 		// If the config push was successful, we need to keep successful config dump and the hash.
-		s.lastSuccessfulConfigDump = dump.Config
+		s.lastSuccessfulConfigDump = mo.Some(dump.Config)
 		s.lastSuccessHash = dump.Meta.Hash
 
 		// If the regular config push was successful, we can drop the fallback cache metadata as it is
@@ -190,6 +187,7 @@ func (s *Collector) onConfigDump(dump ConfigDump) {
 func (s *Collector) onFallbackCacheMetadata(meta fallback.GeneratedCacheMetadata) {
 	s.fallbackLock.Lock()
 	defer s.fallbackLock.Unlock()
+
 	s.currentFallbackCacheMetadata = mo.Some(meta)
 }
 
@@ -197,5 +195,6 @@ func (s *Collector) onFallbackCacheMetadata(meta fallback.GeneratedCacheMetadata
 func (s *Collector) onDiff(diff ConfigDiff) {
 	s.diffLock.Lock()
 	defer s.diffLock.Unlock()
+
 	s.diffs.Update(diff)
 }

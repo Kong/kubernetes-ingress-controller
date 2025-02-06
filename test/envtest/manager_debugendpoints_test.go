@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
@@ -37,49 +38,53 @@ func TestDebugEndpoints(t *testing.T) {
 	)
 
 	urls := []struct {
-		name string
-		port int
+		name         string
+		port         int
+		expectedCode int
 	}{
 		{
-			port: diagPort,
-			name: "debug/pprof/",
+			port:         diagPort,
+			name:         "debug/pprof/",
+			expectedCode: http.StatusOK,
 		},
 		{
-			port: diagPort,
-			name: "debug/config/successful",
+			port:         diagPort,
+			name:         "debug/config/successful",
+			expectedCode: http.StatusOK,
 		},
 		{
-			port: diagPort,
-			name: "debug/config/failed",
+			port:         diagPort,
+			name:         "debug/config/failed",
+			expectedCode: http.StatusNoContent, // No failed push, so no content.
 		},
 		{
-			port: healthPort,
-			name: "healthz",
+			port:         healthPort,
+			name:         "healthz",
+			expectedCode: http.StatusOK,
 		},
 		{
-			port: healthPort,
-			name: "readyz",
+			port:         healthPort,
+			name:         "readyz",
+			expectedCode: http.StatusOK,
 		},
 	}
 
 	for _, u := range urls {
 		t.Run(u.name, func(t *testing.T) {
 			url := fmt.Sprintf("http://localhost:%d/%s", u.port, u.name)
-			eventuallHTTPGet(t, http.DefaultClient, url, waitTime, tickTime)
+			eventuallHTTPGet(t, http.DefaultClient, url, u.expectedCode, waitTime, tickTime)
 		})
 	}
 }
 
-func eventuallHTTPGet(t *testing.T, h *http.Client, url string, waitTime, tickTime time.Duration) {
+func eventuallHTTPGet(t *testing.T, h *http.Client, url string, expectedCode int, waitTime, tickTime time.Duration) {
 	t.Helper()
 
 	t.Logf("HTTP GET %s", url)
 	assert.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := h.Get(url)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 		defer resp.Body.Close()
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, expectedCode, resp.StatusCode)
 	}, waitTime, tickTime)
 }

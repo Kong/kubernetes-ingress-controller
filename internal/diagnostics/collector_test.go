@@ -46,12 +46,12 @@ func TestCollector_EventsHandling(t *testing.T) {
 	})
 	t.Run("on successful config dump", func(t *testing.T) {
 		c.onConfigDump(successfulDump)
-		require.Equal(t, successfulDump.Config, c.lastSuccessfulConfigDump)
+		require.Equal(t, mo.Some(successfulDump.Config), c.lastSuccessfulConfigDump)
 		require.Equal(t, successfulDump.Meta.Hash, c.lastSuccessHash)
 	})
 	t.Run("on failed config dump", func(t *testing.T) {
 		c.onConfigDump(failedDump)
-		require.Equal(t, failedDump.Config, c.lastFailedConfigDump)
+		require.Equal(t, mo.Some(failedDump.Config), c.lastFailedConfigDump)
 		require.Equal(t, failedDump.Meta.Hash, c.lastFailedHash)
 		require.Equal(t, failedDump.RawResponseBody, c.lastRawErrBody)
 	})
@@ -64,7 +64,7 @@ func TestCollector_EventsHandling(t *testing.T) {
 	})
 	t.Run("on successful config dump after fallback", func(t *testing.T) {
 		c.onConfigDump(successfulDump)
-		require.Equal(t, successfulDump.Config, c.lastSuccessfulConfigDump)
+		require.Equal(t, mo.Some(successfulDump.Config), c.lastSuccessfulConfigDump)
 		require.Equal(t, successfulDump.Meta.Hash, c.lastSuccessHash)
 		require.Equal(t, mo.None[fallback.GeneratedCacheMetadata](), c.currentFallbackCacheMetadata, "expected fallback cache metadata to be dropped as it'c no more relevant")
 	})

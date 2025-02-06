@@ -1033,7 +1033,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 				&originalCache,
 				fallbackConfigGenerator,
 				mocks.MetricsRecorder{},
-				WithDiagnosticClient(diagnostics.Client{
+				WithDiagnosticsClient(diagnostics.Client{
 					Configs: diagnosticsCh,
 				}),
 			)
@@ -1167,7 +1167,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		&originalCache,
 		fallbackConfigGenerator,
 		mocks.MetricsRecorder{},
-		WithDiagnosticClient(diagnostics.Client{
+		WithDiagnosticsClient(diagnostics.Client{
 			Configs: diagnosticsCh,
 		}),
 	)
@@ -1312,7 +1312,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 		&originalCache,
 		fallbackConfigGenerator,
 		mocks.MetricsRecorder{},
-		WithDiagnosticClient(diagnostics.Client{
+		WithDiagnosticsClient(diagnostics.Client{
 			Configs: diagnosticsCh,
 		}),
 	)

@@ -227,7 +227,7 @@ func New(
 
 	var dataplaneClientOpts []dataplane.KongClientOption
 	if dc, ok := diagnosticsClient.Get(); ok {
-		dataplaneClientOpts = append(dataplaneClientOpts, dataplane.WithDiagnosticClient(dc))
+		dataplaneClientOpts = append(dataplaneClientOpts, dataplane.WithDiagnosticsClient(dc))
 	}
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
@@ -479,7 +479,7 @@ func resolveControllerHostnameForKonnect(logger logr.Logger) string {
 }
 
 // setupDiagnostics creates diagnostics components (collector, server) if enabled in the configuration and prepares
-// them to be run by the manager. It returns a non-empty diagnostics.ConfigDiagnosticsProvider if config dumps are enabled.
+// them to be run by the manager. It returns a non-empty diagnostics.Provider if config dumps are enabled.
 func (m *Manager) setupDiagnostics(
 	ctx context.Context,
 	c managercfg.Config,
@@ -521,7 +521,7 @@ func (m *Manager) setupDiagnostics(
 func (m *Manager) Run(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 
-	logger.Info("Starting controller manager")
+	logger.Info("Starting manager")
 
 	defer func() {
 		if m.stopAnonymousReports != nil {

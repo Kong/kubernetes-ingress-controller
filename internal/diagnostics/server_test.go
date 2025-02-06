@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/go-logr/logr/testr"
 	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/stretchr/testify/assert"
@@ -53,17 +52,18 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 
 	readWriteWg.Done()
 	readWriteWg.Wait()
+
 	httpClient := &http.Client{}
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/successful", port))
 		require.NoError(t, err)
 		_ = resp.Body.Close()
-		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/failed", port))
 		require.NoError(t, err)
 		_ = resp.Body.Close()
-		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/raw-error", port))
 		require.NoError(t, err)
@@ -166,7 +166,7 @@ func testConfigDiff() ConfigDiff {
 
 // setupTestServer sets up a diagnostics server for testing. It returns a client attached to it and the port it's running on.
 func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
-	diagnosticsCollector := NewCollector(testr.New(t), managercfg.Config{
+	diagnosticsCollector := NewCollector(logr.Discard(), managercfg.Config{
 		DumpSensitiveConfig: true,
 	})
 	diagnosticsHandler := NewConfigDiagnosticsHTTPHandler(diagnosticsCollector, true)

@@ -60,6 +60,7 @@ type Manager struct {
 	diagnosticsServer    mo.Option[diagnostics.Server]
 	stopAnonymousReports func()
 	diagnosticsCollector mo.Option[*diagnostics.Collector]
+	diagnosticsHandler   mo.Option[*diagnostics.HTTPHandler]
 }
 
 // New configures the controller manager call Start.
@@ -498,15 +499,17 @@ func (m *Manager) setupDiagnostics(
 	if c.EnableConfigDumps {
 		diagnosticsCollector := diagnostics.NewCollector(logger, c)
 		m.diagnosticsCollector = mo.Some(diagnosticsCollector)
-		configDiagnosticsHandler := diagnostics.NewConfigDiagnosticsHTTPHandler(diagnosticsCollector, c.DumpSensitiveConfig)
-		serverOpts = append(serverOpts, diagnostics.WithConfigDiagnostics(configDiagnosticsHandler))
+		m.diagnosticsHandler = mo.Some(diagnostics.NewConfigDiagnosticsHTTPHandler(diagnosticsCollector, c.DumpSensitiveConfig))
+		serverOpts = append(serverOpts, diagnostics.WithConfigDiagnostics(m.diagnosticsHandler.MustGet()))
 	}
 
-	m.diagnosticsServer = mo.Some(diagnostics.NewServer(logger, diagnostics.ServerConfig{
-		ProfilingEnabled:    c.EnableProfiling,
-		DumpSensitiveConfig: c.DumpSensitiveConfig,
-		ListenerPort:        c.DiagnosticServerPort,
-	}, serverOpts...))
+	if !c.DisableRunningDiagnosticsServer {
+		m.diagnosticsServer = mo.Some(diagnostics.NewServer(logger, diagnostics.ServerConfig{
+			ProfilingEnabled:    c.EnableProfiling,
+			DumpSensitiveConfig: c.DumpSensitiveConfig,
+			ListenerPort:        c.DiagnosticServerPort,
+		}, serverOpts...))
+	}
 
 	// If diagnosticsCollector is set, it means that config dumps are enabled and we should return a diagnostics.Client.
 	if dc, ok := m.diagnosticsCollector.Get(); ok {
@@ -563,6 +566,14 @@ func (m *Manager) IsReady() error {
 		}
 	// If we're not the leader then just report as ready.
 	default:
+	}
+	return nil
+}
+
+// DiagnosticsHandler returns the diagnostics HTTP handler if it's enabled in the configuration. Otherwise, it returns nil.
+func (m *Manager) DiagnosticsHandler() http.Handler {
+	if h, ok := m.diagnosticsHandler.Get(); ok {
+		return h
 	}
 	return nil
 }

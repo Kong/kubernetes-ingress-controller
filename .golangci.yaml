@@ -179,9 +179,9 @@ linters-settings:
         - "!**/pkg/manager/**/*.go" 
         - "!**/pkg/manager/*.go"
         # TODO: Remove those exclusion once the needed parts of manager are moved to pkg/manager.
-        # Imported stuff: featuregates, consts, flags, kongconfig, utils.GetKubeconfig(...).
+        # Imported stuff: consts, flags, kongconfig, utils.GetKubeconfig(...).
+        - "!**/pkg/telemetry/reports.go"
         - "!**/internal/dataplane/kong_client_golden_test.go"
-        - "!**/internal/dataplane/translator/translator.go"
         - "!**/internal/dataplane/translator/translator_test.go"
         - "!**/test/integration/isolated/backendtlspolicy_test.go"
         - "!**/internal/cmd/rootcmd/config/cli.go"

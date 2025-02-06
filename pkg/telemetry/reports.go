@@ -40,8 +40,8 @@ type ReportConfig struct {
 
 // SetupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
-// The caller is responsible to call the returned function - when the returned
-// error is not nil - to stop the reports sending.
+// In case of no error returned - the caller is responsible to call the returned
+// function - to stop the reports sending.
 func SetupAnonymousReports(
 	ctx context.Context,
 	kubeCfg *rest.Config,
@@ -113,7 +113,8 @@ func SetupAnonymousReports(
 	}
 
 	if err := tMgr.TriggerExecute(ctx, SignalStart); err != nil {
-		return tMgr.Stop, fmt.Errorf("failed to trigger telemetry report during start: %w", err)
+		tMgr.Stop()
+		return nil, fmt.Errorf("failed to trigger telemetry report during start: %w", err)
 	}
 
 	return tMgr.Stop, nil

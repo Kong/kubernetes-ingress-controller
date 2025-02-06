@@ -67,8 +67,16 @@ func New(
 	// passing it explicitly when they accept a context.
 	ctx = ctrl.LoggerInto(ctx, logger)
 
+	// Ensure that instance of config is valid, otherwise don't start the manager.
 	if err := c.Validate(); err != nil {
 		return nil, fmt.Errorf("config invalid: %w", err)
+	}
+	existingFeatureGates := config.GetFeatureGatesDefaults()
+	for feature, enabled := range c.FeatureGates {
+		logger.Info("Found configuration option for gated feature", "feature", feature, "enabled", enabled)
+		if _, ok := existingFeatureGates[feature]; !ok {
+			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, config.DocsURL)
+		}
 	}
 
 	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c)

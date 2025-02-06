@@ -11,10 +11,10 @@ const (
 
 type FeatureGates map[string]bool
 
-// newFeatureGates creates FeatureGates from the given feature gate map, overriding the default settings.
-func newFeatureGates(featureGates map[string]bool) (FeatureGates, error) {
+// NewFeatureGates creates FeatureGates from the given feature gate map, overriding the default settings.
+func NewFeatureGates(featureGates map[string]bool) (FeatureGates, error) {
 	// generate a map of feature gates by string names to their controller enablement
-	ctrlMap := FeatureGates(GetFeatureGatesDefaults())
+	ctrlMap := GetFeatureGatesDefaults()
 
 	// override the default settings
 	for feature, enabled := range featureGates {

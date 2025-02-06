@@ -9,23 +9,20 @@ import (
 )
 
 func TestFeatureGates(t *testing.T) {
-	t.Log("Setting up configurations and logging for feature gates testing")
-	// setupLog := zapr.NewLogger(zap.NewNop())
-
 	t.Log("Verifying feature gates setup defaults when no feature gates are configured")
-	fgs, err := newFeatureGates(nil)
+	fgs, err := NewFeatureGates(nil)
 	assert.NoError(t, err)
 	assert.Len(t, fgs, len(GetFeatureGatesDefaults()))
 
 	t.Log("Verifying feature gates setup results when valid feature gates options are present")
 	featureGates := map[string]bool{GatewayAlphaFeature: true}
-	fgs, err = newFeatureGates(featureGates)
+	fgs, err = NewFeatureGates(featureGates)
 	assert.NoError(t, err)
 	assert.True(t, fgs[GatewayAlphaFeature])
 
 	t.Log("Verifying feature gates setup will return error when settings has conflicts")
 	featureGates = map[string]bool{KongCustomEntityFeature: true, FillIDsFeature: false}
-	_, err = newFeatureGates(featureGates)
+	_, err = NewFeatureGates(featureGates)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), fmt.Sprintf("%s is required if %s is enabled", FillIDsFeature, KongCustomEntityFeature))
 
@@ -33,7 +30,7 @@ func TestFeatureGates(t *testing.T) {
 	featureGates = map[string]bool{"invalidGateway": true}
 
 	t.Log("Verifying feature gates setup results when invalid feature gates options are present")
-	_, err = newFeatureGates(featureGates)
+	_, err = NewFeatureGates(featureGates)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalidGateway is not a valid feature")
 }

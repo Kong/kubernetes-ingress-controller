@@ -34,8 +34,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
@@ -43,8 +41,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 )
 
 // -----------------------------------------------------------------------------
@@ -67,8 +67,16 @@ func New(
 	// passing it explicitly when they accept a context.
 	ctx = ctrl.LoggerInto(ctx, logger)
 
+	// Ensure that instance of config is valid, otherwise don't start the manager.
 	if err := c.Validate(); err != nil {
 		return nil, fmt.Errorf("config invalid: %w", err)
+	}
+	existingFeatureGates := config.GetFeatureGatesDefaults()
+	for feature, enabled := range c.FeatureGates {
+		logger.Info("Found configuration option for gated feature", "feature", feature, "enabled", enabled)
+		if _, ok := existingFeatureGates[feature]; !ok {
+			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, config.DocsURL)
+		}
 	}
 
 	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c)
@@ -78,11 +86,6 @@ func New(
 
 	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
-	setupLog.Info("Getting enabled options and features")
-	featureGates, err := featuregates.New(setupLog, c.FeatureGates)
-	if err != nil {
-		return nil, fmt.Errorf("failed to configure feature gates: %w", err)
-	}
 	setupLog.Info("Getting the kubernetes client configuration")
 	kubeconfig, err := utils.GetKubeconfig(c)
 	if err != nil {
@@ -136,8 +139,8 @@ func New(
 		SkipCACertificates:            c.SkipCACertificates,
 		EnableReverseSync:             c.EnableReverseSync,
 		ExpressionRoutes:              dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		SanitizeKonnectConfigDumps:    featureGates.Enabled(managercfg.SanitizeKonnectConfigDumpsFeature),
-		FallbackConfiguration:         featureGates.Enabled(managercfg.FallbackConfigurationFeature),
+		SanitizeKonnectConfigDumps:    c.FeatureGates.Enabled(config.SanitizeKonnectConfigDumpsFeature),
+		FallbackConfiguration:         c.FeatureGates.Enabled(config.FallbackConfigurationFeature),
 		UseLastValidConfigForFallback: c.UseLastValidConfigForFallback,
 	}
 
@@ -183,7 +186,7 @@ func New(
 
 	supportRedirectPlugin := kongSemVersion.GTE(versions.KongRedirectPluginCutoff)
 	translatorFeatureFlags := translator.NewFeatureFlags(
-		featureGates,
+		c.FeatureGates,
 		routerFlavor,
 		c.UpdateStatus,
 		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
@@ -260,7 +263,7 @@ func New(
 		udpDataplaneAddressFinder,
 		kubernetesStatusQueue,
 		c,
-		featureGates,
+		c.FeatureGates,
 		clientsManager,
 		adminAPIsDiscoverer,
 	)
@@ -345,7 +348,7 @@ func New(
 				TelemetryPeriod:                  c.TelemetryPeriod,
 				ReportValues: telemetry.ReportValues{
 					PublishServiceNN:               c.PublishService.OrEmpty(),
-					FeatureGates:                   featureGates,
+					FeatureGates:                   c.FeatureGates,
 					MeshDetection:                  len(c.WatchNamespaces) == 0,
 					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
 					GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),

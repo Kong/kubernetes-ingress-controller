@@ -120,7 +120,7 @@ type Config struct {
 	DiagnosticServerPort int
 
 	// Feature Gates
-	FeatureGates map[string]bool
+	FeatureGates FeatureGates
 
 	// TermDelay is the time.Duration which the controller manager will wait
 	// after receiving SIGTERM or SIGINT before shutting down. This can be

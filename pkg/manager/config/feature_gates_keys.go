@@ -35,7 +35,7 @@ const (
 // GetFeatureGatesDefaults returns the default values for all feature gates.
 //
 // NOTE: if you're adding a new feature gate, it needs to be added here.
-func GetFeatureGatesDefaults() map[string]bool {
+func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
 		GatewayAlphaFeature:                            false,
 		FillIDsFeature:                                 true,

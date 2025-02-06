@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
@@ -65,7 +64,7 @@ type FeatureFlags struct {
 }
 
 func NewFeatureFlags(
-	featureGates featuregates.FeatureGates,
+	featureGates config.FeatureGates,
 	routerFlavor dpconf.RouterFlavor,
 	updateStatusFlag bool,
 	enterpriseEdition bool,

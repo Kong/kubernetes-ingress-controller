@@ -34,8 +34,5 @@ func newDefaultConfig() (managercfg.Config, error) {
 		return managercfg.Config{}, fmt.Errorf("failed to parse CLI flags: %w", err)
 	}
 
-	// Set default feature gates values as they're not populated by the CLI flags parsing.
-	cliCfg.FeatureGates = managercfg.GetFeatureGatesDefaults()
-
 	return *cliCfg.Config, nil
 }

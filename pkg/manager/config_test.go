@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -22,7 +23,7 @@ func TestNewConfig(t *testing.T) {
 		defaultConfig, err := manager.NewConfig()
 		require.NoError(t, err)
 
-		require.Equal(t, defaultConfig, managercfg.Config{
+		require.Equal(t, managercfg.Config{
 			LogLevel:                               "info",
 			LogFormat:                              "text",
 			KongAdminAPIConfig:                     managercfg.AdminAPIClientConfig{},
@@ -102,7 +103,7 @@ func TestNewConfig(t *testing.T) {
 			EnableConfigDumps:    false,
 			DumpSensitiveConfig:  false,
 			DiagnosticServerPort: consts.DiagnosticsPort,
-			FeatureGates:         managercfg.GetFeatureGatesDefaults(),
+			FeatureGates:         config.GetFeatureGatesDefaults(),
 			TermDelay:            0,
 			Konnect: managercfg.KonnectConfig{
 				Address:                     "https://us.kic.api.konghq.com",
@@ -114,7 +115,9 @@ func TestNewConfig(t *testing.T) {
 			SplunkEndpoint:                   "",
 			SplunkEndpointInsecureSkipVerify: false,
 			TelemetryPeriod:                  0,
-		})
+		},
+			defaultConfig,
+		)
 	})
 
 	t.Run("verify it's possible to override defaults", func(t *testing.T) {
@@ -124,5 +127,14 @@ func TestNewConfig(t *testing.T) {
 		cfg, err := manager.NewConfig(overrideDiagnosticsServerPort)
 		require.NoError(t, err)
 		require.Equal(t, 1234, cfg.DiagnosticServerPort)
+	})
+
+	t.Run("verify it's possible to override default feature gate", func(t *testing.T) {
+		overrideFeatureGate := func(config *managercfg.Config) {
+			config.FeatureGates[managercfg.GatewayAlphaFeature] = true
+		}
+		cfg, err := manager.NewConfig(overrideFeatureGate)
+		require.NoError(t, err)
+		require.True(t, cfg.FeatureGates[managercfg.GatewayAlphaFeature])
 	})
 }

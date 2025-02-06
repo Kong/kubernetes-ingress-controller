@@ -14,6 +14,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	"github.com/samber/mo"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,9 +53,13 @@ import (
 // -----------------------------------------------------------------------------
 
 type Manager struct {
+	cfg managercfg.Config
+
 	m                    manager.Manager
 	synchronizer         *dataplane.Synchronizer
+	diagnosticsServer    mo.Option[diagnostics.Server]
 	stopAnonymousReports func()
+	diagnosticsCollector mo.Option[*diagnostics.Collector]
 }
 
 // New configures the controller manager call Start.
@@ -79,7 +84,11 @@ func New(
 		}
 	}
 
-	diagnosticsServer := startDiagnosticsServer(ctx, c.DiagnosticServerPort, c)
+	m := &Manager{
+		cfg: c,
+	}
+
+	diagnosticsClient := m.setupDiagnostics(ctx, c)
 	setupLog := logger.WithName("setup")
 	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("The ingress class name has been set", "value", c.IngressClassName)
@@ -212,10 +221,14 @@ func New(
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
 	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
+
+	var dataplaneClientOpts []dataplane.KongClientOption
+	if dc, ok := diagnosticsClient.Get(); ok {
+		dataplaneClientOpts = append(dataplaneClientOpts, dataplane.WithDiagnosticsClient(dc))
+	}
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
-		diagnosticsServer.ConfigDumps(),
 		kongConfig,
 		eventRecorder,
 		dbMode,
@@ -227,6 +240,7 @@ func New(
 		&cache,
 		fallbackConfigGenerator,
 		metricsRecorder,
+		dataplaneClientOpts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -364,12 +378,12 @@ func New(
 		setupLog.Info("Anonymous reports disabled, skipping")
 	}
 
-	setupLog.Info("Starting manager")
-	return &Manager{
-		m:                    mgr,
-		stopAnonymousReports: stopAnonymousReports,
-		synchronizer:         synchronizer,
-	}, nil
+	m.m = mgr
+	m.stopAnonymousReports = stopAnonymousReports
+	m.synchronizer = synchronizer
+
+	setupLog.Info("Finished setting up the controller manager")
+	return m, nil
 }
 
 // waitForKubernetesAPIReadiness waits for the Kubernetes API to be ready. It's used as a prerequisite to run any
@@ -461,40 +475,75 @@ func resolveControllerHostnameForKonnect(logger logr.Logger) string {
 	return nn.String()
 }
 
-// startDiagnosticsServer starts a goroutine that handles requests for the diagnostics server.
-func startDiagnosticsServer(
+// setupDiagnostics creates diagnostics components (collector, server) if enabled in the configuration and prepares
+// them to be run by the manager. It returns a non-empty diagnostics.Provider if config dumps are enabled.
+func (m *Manager) setupDiagnostics(
 	ctx context.Context,
-	port int,
 	c managercfg.Config,
-) diagnostics.Server {
+) mo.Option[diagnostics.Client] {
 	logger := ctrl.LoggerFrom(ctx)
-	if !c.EnableProfiling && !c.EnableConfigDumps {
-		logger.Info("Diagnostics server disabled")
-		return diagnostics.Server{}
-	}
-	logger.Info("Starting diagnostics server")
 
-	s := diagnostics.NewServer(logger, diagnostics.ServerConfig{
+	// If neither profiling nor config dumps are enabled, we don't need to setup diagnostics at all.
+	if !c.EnableProfiling && !c.EnableConfigDumps {
+		logger.Info("Diagnostics disabled")
+		return mo.None[diagnostics.Client]()
+	}
+
+	var serverOpts []diagnostics.ServerOption
+	// If config dumps are enabled, we need to create a diagnostics collector, setup an HTTP handler exposing its
+	// diagnostics, and pass it to the server options so it's plugged in.
+	if c.EnableConfigDumps {
+		diagnosticsCollector := diagnostics.NewCollector(logger, c)
+		m.diagnosticsCollector = mo.Some(diagnosticsCollector)
+		configDiagnosticsHandler := diagnostics.NewConfigDiagnosticsHTTPHandler(diagnosticsCollector, c.DumpSensitiveConfig)
+		serverOpts = append(serverOpts, diagnostics.WithConfigDiagnostics(configDiagnosticsHandler))
+	}
+
+	m.diagnosticsServer = mo.Some(diagnostics.NewServer(logger, diagnostics.ServerConfig{
 		ProfilingEnabled:    c.EnableProfiling,
-		ConfigDumpsEnabled:  c.EnableConfigDumps,
 		DumpSensitiveConfig: c.DumpSensitiveConfig,
-	})
-	go func() {
-		if err := s.Listen(ctx, port); err != nil {
-			logger.Error(err, "Unable to start diagnostics server")
-		}
-	}()
-	return s
+		ListenerPort:        c.DiagnosticServerPort,
+	}, serverOpts...))
+
+	// If diagnosticsCollector is set, it means that config dumps are enabled and we should return a diagnostics.Client.
+	if dc, ok := m.diagnosticsCollector.Get(); ok {
+		return mo.Some(dc.Client())
+	}
+
+	return mo.None[diagnostics.Client]()
 }
 
 // Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
 // It should be called only once per Manager instance.
 func (m *Manager) Run(ctx context.Context) error {
+	logger := ctrl.LoggerFrom(ctx)
+
+	logger.Info("Starting manager")
+
 	defer func() {
 		if m.stopAnonymousReports != nil {
 			m.stopAnonymousReports()
 		}
 	}()
+
+	if ds, ok := m.diagnosticsServer.Get(); ok {
+		go func() {
+			logger.Info("Starting diagnostics server")
+			if err := ds.Listen(ctx); err != nil {
+				logger.Error(err, "Diagnostics server exited")
+			}
+		}()
+	}
+
+	if dc, ok := m.diagnosticsCollector.Get(); ok {
+		go func() {
+			logger.Info("Starting diagnostics collector")
+			if err := dc.Start(ctx); err != nil {
+				logger.Error(err, "Diagnostics collector exited")
+			}
+		}()
+	}
+
 	return m.m.Start(ctx)
 }
 

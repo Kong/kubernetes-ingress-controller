@@ -9,17 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -98,7 +95,6 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	ctrl.SetLogger(zapr.NewLogger(zap.NewNop()))
 	ctx, logger, _ := CreateTestLogger(ctx)
 	adminAPIServerURL := StartAdminAPIServerMock(t).URL
 

@@ -5,13 +5,10 @@ package envtest
 import (
 	"testing"
 
-	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -36,8 +33,6 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
-	logger := zapr.NewLogger(zap.NewNop())
-	ctrl.SetLogger(logger)
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),

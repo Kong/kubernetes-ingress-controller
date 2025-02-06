@@ -22,19 +22,11 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
-
-// configDumpResponse mirrors the diagnostics.configDumpResponse struct, which isn't published.
-// It's replicated here since some envtests use the config dump endpoints as a hack to extract the config for
-// inspection.
-
-type configDumpResponse struct {
-	ConfigHash string       `json:"hash"`
-	Config     file.Content `json:"config"`
-}
 
 func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	t.Parallel()
@@ -165,7 +157,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 		defer resp.Body.Close()
 
 		var (
-			configDump configDumpResponse
+			configDump diagnostics.ConfigDumpResponse
 			config     file.Content
 			buff       bytes.Buffer
 		)

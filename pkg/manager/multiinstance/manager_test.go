@@ -45,10 +45,7 @@ func (m *MockInstance) Run(ctx context.Context) error {
 		m.wasContextCanceled.Store(true)
 	}()
 
-	if m.returnErrOnRun != nil {
-		return m.returnErrOnRun
-	}
-	return nil
+	return m.returnErrOnRun
 }
 
 func (m *MockInstance) IsReady() error {

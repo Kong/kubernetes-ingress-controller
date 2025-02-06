@@ -41,8 +41,7 @@ func (i *instance) StopChannel() <-chan struct{} {
 func (i *instance) Run(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
-		err := i.in.Run(ctx)
-		if err != nil {
+		if err := i.in.Run(ctx); err != nil {
 			i.logger.Error(err, "Instance exited with an error")
 		}
 	}()

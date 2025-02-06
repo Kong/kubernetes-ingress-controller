@@ -23,8 +23,8 @@ import (
 // TestDiagnosticsServer_ConfigDumps tests that the diagnostics server can receive and serve config dumps.
 // It's primarily to test that write and read operations run simultaneously do not fall into a race condition.
 func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
+	ctx := t.Context()
+
 	client, port := setupTestServer(ctx, t)
 	configsCh := client.Configs
 
@@ -74,7 +74,7 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 
 // TestDiagnosticsServer_Diffs tests the diff endpoint using fake data.
 func TestDiagnosticsServer_Diffs(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	client, port := setupTestServer(ctx, t)
 	diffCh := client.Diffs

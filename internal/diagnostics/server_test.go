@@ -13,29 +13,20 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
 // TestDiagnosticsServer_ConfigDumps tests that the diagnostics server can receive and serve config dumps.
 // It's primarily to test that write and read operations run simultaneously do not fall into a race condition.
 func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
-	s := NewServer(logr.Discard(), ServerConfig{
-		ConfigDumpsEnabled: true,
-	})
-	configsCh := s.clientDiagnostic.Configs
-
-	port := testhelpers.GetFreePort(t)
-	t.Logf("Obtained a free port: %d", port)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	go func() {
-		err := s.Listen(ctx, port)
-		require.NoError(t, err)
-	}()
-	t.Log("Started diagnostics server")
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	client, port := setupTestServer(ctx, t)
+	configsCh := client.Configs
 
 	// Use a WaitGroup to ensure that both the write and read operations are run simultaneously.
 	readWriteWg := sync.WaitGroup{}
@@ -47,9 +38,8 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 		readWriteWg.Done()
 		readWriteWg.Wait()
 
-		defer cancel()
 		failed := false
-		for i := 0; i < configDumpsToWrite; i++ {
+		for range configDumpsToWrite {
 			failed = !failed // Toggle failed flag.
 			configsCh <- ConfigDump{
 				Config:          file.Content{},
@@ -60,112 +50,34 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 	}()
 	t.Log("Started writing config dumps")
 
-	// Continuously read config dumps from the Server until context is cancelled.
-	go func() {
-		readWriteWg.Done()
-		readWriteWg.Wait()
+	readWriteWg.Done()
+	readWriteWg.Wait()
 
-		httpClient := &http.Client{}
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/successful", port))
-				if err == nil {
-					_ = resp.Body.Close()
-				}
-				resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/failed", port))
-				if err == nil {
-					_ = resp.Body.Close()
-				}
-				resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/raw-error", port))
-				if err == nil {
-					_ = resp.Body.Close()
-				}
-			}
-		}
-	}()
-	t.Log("Started reading config dumps")
+	httpClient := &http.Client{}
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/successful", port))
+		require.NoError(t, err)
+		_ = resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	<-ctx.Done()
-}
+		resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/failed", port))
+		require.NoError(t, err)
+		_ = resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-func TestServer_EventsHandling(t *testing.T) {
-	successfulDump := ConfigDump{
-		Meta: DumpMeta{
-			Failed:   false,
-			Fallback: false,
-			Hash:     "success-hash",
-		},
-		Config: file.Content{
-			FormatVersion: "success", // Just for the sake of distinguishing between success and failure.
-		},
-	}
-	failedDump := ConfigDump{
-		Config: file.Content{
-			FormatVersion: "failed", // Just for the sake of distinguishing between success and failure.
-		},
-		Meta: DumpMeta{
-			Failed:   true,
-			Fallback: false,
-		},
-		RawResponseBody: []byte("error body"),
-	}
-	fallbackMeta := fallback.GeneratedCacheMetadata{
-		BrokenObjects: []fallback.ObjectHash{
-			{
-				Name: "object",
-			},
-		},
-	}
-
-	s := NewServer(logr.Discard(), ServerConfig{
-		ConfigDumpsEnabled: true,
-	})
-
-	t.Run("on successful config dump", func(t *testing.T) {
-		s.onConfigDump(successfulDump)
-		require.Equal(t, successfulDump.Config, s.lastSuccessfulConfigDump)
-		require.Equal(t, successfulDump.Meta.Hash, s.lastSuccessHash)
-	})
-	t.Run("on failed config dump", func(t *testing.T) {
-		s.onConfigDump(failedDump)
-		require.Equal(t, failedDump.Config, s.lastFailedConfigDump)
-		require.Equal(t, failedDump.Meta.Hash, s.lastFailedHash)
-		require.Equal(t, failedDump.RawResponseBody, s.lastRawErrBody)
-	})
-	t.Run("on fallback cache metadata", func(t *testing.T) {
-		s.onFallbackCacheMetadata(fallbackMeta)
-		require.NotNilf(t, s.currentFallbackCacheMetadata, "expected fallback cache metadata to be set")
-		require.Equal(t, fallbackMeta, *s.currentFallbackCacheMetadata)
-	})
-	t.Run("on successful config dump after fallback", func(t *testing.T) {
-		s.onConfigDump(successfulDump)
-		require.Equal(t, successfulDump.Config, s.lastSuccessfulConfigDump)
-		require.Equal(t, successfulDump.Meta.Hash, s.lastSuccessHash)
-		require.Nil(t, s.currentFallbackCacheMetadata, "expected fallback cache metadata to be dropped as it's no more relevant")
-	})
+		resp, err = httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/raw-error", port))
+		require.NoError(t, err)
+		_ = resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+	}, time.Second*5, time.Millisecond*10)
 }
 
 // TestDiagnosticsServer_Diffs tests the diff endpoint using fake data.
 func TestDiagnosticsServer_Diffs(t *testing.T) {
-	s := NewServer(logr.Discard(), ServerConfig{
-		ConfigDumpsEnabled:  true,
-		DumpSensitiveConfig: true,
-	})
-	diffCh := s.clientDiagnostic.Diffs
-
-	port := testhelpers.GetFreePort(t)
-	t.Logf("Obtained a free port: %d", port)
-
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go func() {
-		err := s.Listen(ctx, port)
-		require.NoError(t, err)
-	}()
-	t.Log("Started diagnostics server")
+	client, port := setupTestServer(ctx, t)
+	diffCh := client.Diffs
 
 	// initially write the max number of cached diffs
 	configDumpsToWrite := diffHistorySize
@@ -250,4 +162,34 @@ func testConfigDiff() ConfigDiff {
 			},
 		},
 	}
+}
+
+// setupTestServer sets up a diagnostics server for testing. It returns a client attached to it and the port it's running on.
+func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
+	diagnosticsCollector := NewCollector(logr.Discard(), managercfg.Config{
+		DumpSensitiveConfig: true,
+	})
+	diagnosticsHandler := NewConfigDiagnosticsHTTPHandler(diagnosticsCollector, true)
+
+	port := testhelpers.GetFreePort(t)
+	t.Logf("Obtained a free port: %d", port)
+
+	s := NewServer(logr.Discard(), ServerConfig{
+		ListenerPort: port,
+	}, WithConfigDiagnostics(diagnosticsHandler))
+	client := diagnosticsCollector.Client()
+
+	go func() {
+		err := s.Listen(ctx)
+		require.NoError(t, err)
+	}()
+	t.Log("Started diagnostics server")
+
+	go func() {
+		err := diagnosticsCollector.Start(ctx)
+		require.NoError(t, err)
+	}()
+	t.Log("Started diagnostics collector")
+
+	return client, port
 }

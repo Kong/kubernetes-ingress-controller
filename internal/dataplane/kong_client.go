@@ -113,7 +113,7 @@ type KongClient struct {
 
 	// diagnostic is the client and configuration for reporting diagnostic
 	// information during data-plane update runtime.
-	diagnostic diagnostics.ClientDiagnostic
+	diagnostic diagnostics.Client
 
 	// metricsRecorder is the client for shipping metrics information
 	// updates to the prometheus exporter.
@@ -189,12 +189,21 @@ type KongClient struct {
 	konnectKongStateUpdater KonnectKongStateUpdater
 }
 
+// KongClientOption is a functional option for configuring a KongClient.
+type KongClientOption func(*KongClient)
+
+// WithDiagnosticsClient sets the diagnostic client for the KongClient.
+func WithDiagnosticsClient(diagnostic diagnostics.Client) func(*KongClient) {
+	return func(c *KongClient) {
+		c.diagnostic = diagnostic
+	}
+}
+
 // NewKongClient provides a new KongClient object after connecting to the
 // data-plane API and verifying integrity.
 func NewKongClient(
 	logger logr.Logger,
 	timeout time.Duration,
-	diagnostic diagnostics.ClientDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode dpconf.DBMode,
@@ -206,11 +215,11 @@ func NewKongClient(
 	cacheStores *store.CacheStores,
 	fallbackConfigGenerator FallbackConfigGenerator,
 	metricsRecorder metrics.Recorder,
+	opts ...KongClientOption,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                  logger,
 		requestTimeout:          timeout,
-		diagnostic:              diagnostic,
 		metricsRecorder:         metricsRecorder,
 		cache:                   cacheStores,
 		kongConfig:              kongConfig,
@@ -225,6 +234,10 @@ func NewKongClient(
 		fallbackConfigGenerator: fallbackConfigGenerator,
 	}
 	c.initializeControllerPodReference()
+
+	for _, opt := range opts {
+		opt(c)
+	}
 
 	return c, nil
 }
@@ -766,7 +779,7 @@ func (c *KongClient) sendToClient(
 		}
 	}
 
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams, isFallback)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -808,14 +821,22 @@ func (c *KongClient) sendToClient(
 			rawResponseBody = responseParsingErr.ResponseBody()
 		}
 
-		sendDiagnostic(diagnostics.DumpMeta{Failed: true, Hash: string(newConfigSHA)}, rawResponseBody)
+		sendDiagnostic(diagnostics.DumpMeta{
+			Failed:   true,
+			Hash:     string(newConfigSHA),
+			Fallback: isFallback,
+		}, rawResponseBody)
 
 		if err := ctx.Err(); err != nil {
 			logger.Error(err, "Exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
 	}
-	sendDiagnostic(diagnostics.DumpMeta{Failed: false, Hash: string(newConfigSHA)}, nil) // No error occurred.
+	sendDiagnostic(diagnostics.DumpMeta{
+		Failed:   false,
+		Hash:     string(newConfigSHA),
+		Fallback: isFallback,
+	}, nil) // No error occurred.
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
 	client.SetLastCacheStoresHash(c.lastProcessedSnapshotHash)
@@ -849,13 +870,12 @@ type sendDiagnosticFn func(meta diagnostics.DumpMeta, raw []byte)
 func prepareSendDiagnosticFn(
 	ctx context.Context,
 	logger logr.Logger,
-	diagnosticConfig diagnostics.ClientDiagnostic,
+	diagnosticConfig diagnostics.Client,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
-	isFallback bool,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (diagnostics.ClientDiagnostic{}) {
+	if diagnosticConfig == (diagnostics.Client{}) {
 		// noop, diagnostics won't be sent
 		return func(diagnostics.DumpMeta, []byte) {}
 	}
@@ -881,10 +901,7 @@ func prepareSendDiagnosticFn(
 		// later on but we're OK with this limitation of said API.
 		select {
 		case diagnosticConfig.Configs <- diagnostics.ConfigDump{
-			Meta: diagnostics.DumpMeta{
-				Failed:   meta.Failed,
-				Fallback: isFallback,
-			},
+			Meta:            meta,
 			Config:          *config,
 			RawResponseBody: rawResponseBody,
 		}:

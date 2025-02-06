@@ -351,7 +351,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 		name       string
 		initial    diffMap
 		hash       string
-		expected   []EntityDiff
+		expected   ConfigDiff
 		shouldFail bool
 	}{
 		{
@@ -363,7 +363,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 				hashQueue: list.New(),
 			},
 			hash:       "hash1",
-			expected:   []EntityDiff{},
+			expected:   ConfigDiff{},
 			shouldFail: true,
 		},
 		{
@@ -380,7 +380,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 					Timestamp: now.Format(time.RFC3339),
 					Entities: []EntityDiff{
 						{
-							Generated: generatedEntity{Name: "entity1", Kind: "kind1"},
+							Generated: GeneratedEntity{Name: "entity1", Kind: "kind1"},
 							Action:    "create",
 							Diff:      "diff1",
 						},
@@ -389,11 +389,15 @@ func TestDiffMap_ByHash(t *testing.T) {
 				return dm
 			}(),
 			hash: "hash1",
-			expected: []EntityDiff{
-				{
-					Generated: generatedEntity{Name: "entity1", Kind: "kind1"},
-					Action:    "create",
-					Diff:      "diff1",
+			expected: ConfigDiff{
+				Hash:      "hash1",
+				Timestamp: now.Format(time.RFC3339),
+				Entities: []EntityDiff{
+					{
+						Generated: GeneratedEntity{Name: "entity1", Kind: "kind1"},
+						Action:    "create",
+						Diff:      "diff1",
+					},
 				},
 			},
 			shouldFail: false,
@@ -412,7 +416,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 					Timestamp: now.Format(time.RFC3339),
 					Entities: []EntityDiff{
 						{
-							Generated: generatedEntity{Name: "entity1", Kind: "kind1"},
+							Generated: GeneratedEntity{Name: "entity1", Kind: "kind1"},
 							Action:    "create",
 							Diff:      "diff1",
 						},
@@ -423,7 +427,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 					Timestamp: now.Format(time.RFC3339),
 					Entities: []EntityDiff{
 						{
-							Generated: generatedEntity{Name: "entity2", Kind: "kind2"},
+							Generated: GeneratedEntity{Name: "entity2", Kind: "kind2"},
 							Action:    "update",
 							Diff:      "diff2",
 						},
@@ -432,11 +436,15 @@ func TestDiffMap_ByHash(t *testing.T) {
 				return dm
 			}(),
 			hash: "hash2",
-			expected: []EntityDiff{
-				{
-					Generated: generatedEntity{Name: "entity2", Kind: "kind2"},
-					Action:    "update",
-					Diff:      "diff2",
+			expected: ConfigDiff{
+				Hash:      "hash2",
+				Timestamp: now.Format(time.RFC3339),
+				Entities: []EntityDiff{
+					{
+						Generated: GeneratedEntity{Name: "entity2", Kind: "kind2"},
+						Action:    "update",
+						Diff:      "diff2",
+					},
 				},
 			},
 			shouldFail: false,
@@ -455,7 +463,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 					Timestamp: now.Format(time.RFC3339),
 					Entities: []EntityDiff{
 						{
-							Generated: generatedEntity{Name: "entity1", Kind: "kind1"},
+							Generated: GeneratedEntity{Name: "entity1", Kind: "kind1"},
 							Action:    "create",
 							Diff:      "diff1",
 						},
@@ -466,7 +474,7 @@ func TestDiffMap_ByHash(t *testing.T) {
 					Timestamp: now.Format(time.RFC3339),
 					Entities: []EntityDiff{
 						{
-							Generated: generatedEntity{Name: "entity2", Kind: "kind2"},
+							Generated: GeneratedEntity{Name: "entity2", Kind: "kind2"},
 							Action:    "update",
 							Diff:      "diff2",
 						},
@@ -475,19 +483,19 @@ func TestDiffMap_ByHash(t *testing.T) {
 				return dm
 			}(),
 			hash:       "hash3",
-			expected:   []EntityDiff{},
+			expected:   ConfigDiff{},
 			shouldFail: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.initial.ByHash(tt.hash)
+			result, ok := tt.initial.ByHash(tt.hash)
 			if tt.shouldFail {
-				assert.Error(t, err)
+				assert.False(t, ok)
 				return
 			}
-			assert.NoError(t, err)
+			assert.True(t, ok)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -33,7 +33,7 @@ func NewUpdateStrategyResolver() *UpdateStrategyResolver {
 }
 
 // ResolveUpdateStrategy returns a mocked UpdateStrategy that will track which URLs were called.
-func (f *UpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateClient, _ *diagnostics.ClientDiagnostic) sendconfig.UpdateStrategy {
+func (f *UpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateClient, _ *diagnostics.Client) sendconfig.UpdateStrategy {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 

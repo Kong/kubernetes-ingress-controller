@@ -3,32 +3,29 @@
 package envtest
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"testing"
 
-	"github.com/go-logr/zapr"
-	gojson "github.com/goccy/go-json"
 	"github.com/google/uuid"
-	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -46,9 +43,6 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
-
-	logger := zapr.NewLogger(zap.NewNop())
-	ctrl.SetLogger(logger)
 
 	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
@@ -129,34 +123,26 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
 
 	t.Logf("verify that upstream policy is configured in Kong gateway correctly")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/debug/config/successful", diagPort))
-		if err != nil {
-			t.Logf("WARNING: error while getting config: %v", err)
-			return false
-		}
+		require.NoError(t, err, "failed to get successful config from debug endpoint")
 		defer resp.Body.Close()
 
-		var (
-			configDump configDumpResponse
-			config     file.Content
-			buff       bytes.Buffer
-		)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "failed to read response body")
 
-		if err := gojson.NewDecoder(io.TeeReader(resp.Body, &buff)).Decode(&configDump); err != nil {
-			t.Logf("WARNING: error while decoding config: %+v, response: %s", err, buff.String())
-			return false
-		}
+		var configDump diagnostics.ConfigDump
+		require.NoError(t, json.Unmarshal(body, &configDump), "failed to decode config dump")
 
-		config = configDump.Config
+		config := configDump.Config
+		require.Len(t, config.Upstreams, 1, "expected 1 upstream in config: %+v", config)
 
-		if len(config.Upstreams) != 1 {
-			t.Logf("WARNING: expected 1 upstream in config: %+v", config)
-			return false
-		}
 		upstream := config.Upstreams[0]
-		return upstream.Algorithm != nil && *upstream.Algorithm == "round-robin" && upstream.Slots != nil && *upstream.Slots == 32
-	}, waitTime, tickTime)
+		require.NotNil(t, upstream.Algorithm)
+		require.Equal(t, "round-robin", *upstream.Algorithm)
+		require.NotNil(t, upstream.Slots)
+		require.Equal(t, 32, *upstream.Slots)
+	}, waitTime*20, tickTime)
 
 	t.Logf("verify that ancestor status of KongUpstreamPolicy is updated correctly")
 	err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
@@ -181,9 +167,6 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
-
-	logger := zapr.NewLogger(zap.NewNop())
-	ctrl.SetLogger(logger)
 
 	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
@@ -371,9 +354,6 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
 	alterIngressClassName := "kongenvtest-alter"
 	deployIngressClass(ctx, t, alterIngressClassName, ctrlClient)
-
-	logger := zapr.NewLogger(zap.NewNop())
-	ctrl.SetLogger(logger)
 
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,

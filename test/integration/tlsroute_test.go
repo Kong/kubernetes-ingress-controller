@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -495,12 +495,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 			proxyTLSURL,
 			testUUID, tlsRouteHostname, certPool, false,
 		)
-		opErr := &net.OpError{}
-		if errors.As(err, &opErr) {
-			// From kong/kong-gateway-dev:20250129, the returned error changed in the scenario where no routes matched.
-			return strings.Contains(opErr.Error(), "connection reset by peer")
-		}
-		return errors.Is(err, io.EOF)
+		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
@@ -535,7 +530,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
 		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
-		return errors.Is(err, io.EOF)
+		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
@@ -565,7 +560,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
 		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
-		return errors.Is(err, io.EOF)
+		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
@@ -659,7 +654,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		err := tlsEchoResponds(
 			proxyTLSURL,
 			testUUID, tlsRouteHostname, certPool, true)
-		return errors.Is(err, io.EOF)
+		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
 	t.Log("testing port matching")
@@ -715,7 +710,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		err := tlsEchoResponds(
 			proxyTLSURL, testUUID, tlsRouteHostname, certPool, true,
 		)
-		return errors.Is(err, io.EOF)
+		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 }
 
@@ -820,4 +815,9 @@ func createTLSEchoContainer(tlsEchoPort int32, sendMsg string) corev1.Container 
 		MountPath: tlsCertDir,
 	})
 	return container
+}
+
+// isTLSNoResponseError returns true if the error indicates that no response get from a TLS connection.
+func isTLSNoResponseError(err error) bool {
+	return errors.Is(err, syscall.ECONNRESET) || errors.Is(err, io.EOF)
 }

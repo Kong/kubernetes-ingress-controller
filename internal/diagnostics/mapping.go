@@ -2,13 +2,15 @@ package diagnostics
 
 import (
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 )
 
 // mapFallbackCacheMetadataIntoFallbackResponse maps the generated cache metadata into a FallbackResponse.
-func mapFallbackCacheMetadataIntoFallbackResponse(meta *fallback.GeneratedCacheMetadata) FallbackResponse {
-	if meta == nil {
+func mapFallbackCacheMetadataIntoFallbackResponse(m mo.Option[fallback.GeneratedCacheMetadata]) FallbackResponse {
+	meta, ok := m.Get()
+	if !ok {
 		return FallbackResponse{
 			Status: FallbackStatusNotTriggered,
 		}

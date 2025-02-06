@@ -28,7 +28,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
@@ -300,7 +299,6 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	kongClient, err := NewKongClient(
 		logger,
 		timeout,
-		diagnostics.ClientDiagnostic{},
 		cfg,
 		mocks.NewEventRecorder(),
 		dpconf.DBModeOff, // Test will run in DB-less mode only for now. In the future, we may want to test DB mode as well.

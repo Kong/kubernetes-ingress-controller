@@ -23,7 +23,7 @@ import (
 // -----------------------------------------------------------------------------
 
 type UpdateStrategyResolver interface {
-	ResolveUpdateStrategy(client UpdateClient, diagnostic *diagnostics.ClientDiagnostic) UpdateStrategy
+	ResolveUpdateStrategy(client UpdateClient, diagnostic *diagnostics.Client) UpdateStrategy
 }
 
 type AdminAPIClient interface {
@@ -49,7 +49,7 @@ func PerformUpdate(
 	promMetrics metrics.Recorder,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
-	diagnostic *diagnostics.ClientDiagnostic,
+	diagnostic *diagnostics.Client,
 	isFallback bool,
 ) ([]byte, error) {
 	oldSHA := client.LastConfigSHA()

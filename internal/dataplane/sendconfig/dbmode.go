@@ -31,7 +31,7 @@ type UpdateStrategyDBMode struct {
 	dumpConfig        dump.Config
 	version           semver.Version
 	concurrency       int
-	diagnostic        *diagnostics.ClientDiagnostic
+	diagnostic        *diagnostics.Client
 	isKonnect         bool
 	logger            logr.Logger
 	resourceErrors    []ResourceError
@@ -42,7 +42,7 @@ type UpdateStrategyDBMode struct {
 type UpdateStrategyDBModeOpt func(*UpdateStrategyDBMode)
 
 // WithDiagnostic sets the diagnostic server to send diffs to.
-func WithDiagnostic(diagnostic *diagnostics.ClientDiagnostic) UpdateStrategyDBModeOpt {
+func WithDiagnostic(diagnostic *diagnostics.Client) UpdateStrategyDBModeOpt {
 	return func(s *UpdateStrategyDBMode) {
 		s.diagnostic = diagnostic
 	}
@@ -137,7 +137,7 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 func (s *UpdateStrategyDBMode) HandleEvents(
 	ctx context.Context,
 	events chan diff.EntityAction,
-	diagnostic *diagnostics.ClientDiagnostic,
+	diagnostic *diagnostics.Client,
 	hash string,
 ) {
 	s.resourceErrorLock.Lock()

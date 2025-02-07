@@ -24,8 +24,8 @@ type DiagnosticsServer struct {
 	listenerPort int
 	handlers     map[manager.ID]http.Handler
 
-	mux     *http.ServeMux
 	muxLock sync.Mutex
+	mux     *http.ServeMux
 }
 
 func NewDiagnosticsServer(listenerPort int) *DiagnosticsServer {

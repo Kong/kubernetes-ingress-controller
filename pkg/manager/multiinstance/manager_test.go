@@ -96,12 +96,9 @@ func TestManager_WithDiagnosticsExposer(t *testing.T) {
 	diagnosticsExposer := newMockDiagnosticsExposer()
 	multiManager := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagnosticsExposer))
 
-	managerRunning := make(chan struct{})
 	go func() {
-		close(managerRunning)
 		require.NoError(t, multiManager.Run(ctx))
 	}()
-	<-managerRunning // Wait for the manager to start.
 
 	instanceID1 := manager.NewRandomID()
 	instanceID2 := manager.NewRandomID()
@@ -112,8 +109,8 @@ func TestManager_WithDiagnosticsExposer(t *testing.T) {
 
 	t.Log("Expecting the diagnostics exposer to have the first instance registered")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		require.Contains(t, diagnosticsExposer.RegisteredInstances(), instanceID1)
-		require.NotContains(t, diagnosticsExposer.RegisteredInstances(), instanceID2)
+		assert.Contains(t, diagnosticsExposer.RegisteredInstances(), instanceID1)
+		assert.NotContains(t, diagnosticsExposer.RegisteredInstances(), instanceID2)
 	}, waitTime, tickTime)
 
 	t.Log("Scheduling second instance")
@@ -122,7 +119,7 @@ func TestManager_WithDiagnosticsExposer(t *testing.T) {
 
 	t.Log("Expecting the diagnostics exposer to have both instances registered")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		require.ElementsMatch(t, diagnosticsExposer.RegisteredInstances(), []manager.ID{instanceID1, instanceID2})
+		assert.ElementsMatch(t, diagnosticsExposer.RegisteredInstances(), []manager.ID{instanceID1, instanceID2})
 	}, waitTime, tickTime)
 
 	t.Log("Stopping first instance")
@@ -131,8 +128,8 @@ func TestManager_WithDiagnosticsExposer(t *testing.T) {
 
 	t.Log("Expecting the diagnostics exposer to have only the second instance registered")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		require.Contains(t, diagnosticsExposer.RegisteredInstances(), instanceID2)
-		require.NotContains(t, diagnosticsExposer.RegisteredInstances(), instanceID1)
+		assert.Contains(t, diagnosticsExposer.RegisteredInstances(), instanceID2)
+		assert.NotContains(t, diagnosticsExposer.RegisteredInstances(), instanceID1)
 	}, waitTime, tickTime)
 
 	t.Log("Stopping second instance")

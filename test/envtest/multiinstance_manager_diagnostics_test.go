@@ -51,14 +51,16 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 	t.Log("Waiting for the diagnostics server to expose instances' diagnostics endpoints")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgrInstance1.ID()))
-		require.NoError(t, err)
-		resp.Body.Close()
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
 
 		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgrInstance2.ID()))
-		require.NoError(t, err)
-		resp.Body.Close()
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
 	}, waitTime, tickTime, "diagnostics should be exposed under /{instanceID}/debug/config prefix for both instances")
 
 	t.Log("Stopping the first instance and waiting for its diagnostics endpoints to be removed from the server")

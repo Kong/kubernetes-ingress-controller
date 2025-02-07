@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
@@ -339,15 +337,6 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 	require.NoError(t, err)
 
 	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
-	client := cleanhttp.DefaultClient()
-	tr := cleanhttp.DefaultTransport()
-	// Anything related to TLS can be ignored, because only availability is being tested here.
-	// Testing communicating over TLS is done as part of actual E2E test.
-	tr.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: true, //nolint:gosec
-	}
-	client.Transport = tr
-
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
 		wg.Add(1)
@@ -359,7 +348,9 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 			localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, pod.Name, "8444")
 			address := fmt.Sprintf("https://localhost:%d", localPort)
 
-			kongClient, err := adminapi.NewKongAPIClient(address, client)
+			// Anything related to TLS can be ignored, because only availability is being tested here.
+			// Testing communicating over TLS is done as part of actual E2E test.
+			kongClient, err := adminapi.NewKongAPIClient(address, adminapi.ClientOpts{TLSSkipVerify: true}, "")
 			require.NoError(t, err)
 
 			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)

@@ -29,7 +29,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
@@ -90,7 +89,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 
 	n = &notifier{t: t}
 
-	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New("admin"), types.ServiceScopedPodDNSStrategy)
+	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New("admin"))
 	require.NoError(t, err)
 
 	require.NoError(t,
@@ -127,11 +126,15 @@ func TestKongAdminAPIController(t *testing.T) {
 	cfg := Setup(t, Scheme(t))
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{})
 	require.NoError(t, err)
+	getTLSServerName := func(adminSvc corev1.Service) string {
+		return fmt.Sprintf("pod.%s.%s.svc", adminSvc.Name, adminSvc.Namespace)
+	}
 
 	t.Run("Endpoints are matched properly", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
+		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -186,14 +189,16 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.1:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.2:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -208,6 +213,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
+		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -258,7 +264,8 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.2:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -273,6 +280,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
+		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -368,28 +376,32 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.1:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.2:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: fmt.Sprintf("https://10-0-0-10.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.10:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: fmt.Sprintf("https://10-0-0-20.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.20:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -404,6 +416,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
+		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -454,14 +467,16 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.1:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.2:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -489,7 +504,8 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.1:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -504,6 +520,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
+		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -554,14 +571,16 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.1:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					Address:       "https://10.0.0.2:8080",
+					TLSServerName: tlsServerName,
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,

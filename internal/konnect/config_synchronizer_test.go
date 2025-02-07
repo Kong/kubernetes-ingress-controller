@@ -3,7 +3,6 @@ package konnect_test
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 
@@ -250,7 +249,7 @@ func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
 
 func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
 	t.Helper()
-	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), &http.Client{})
+	c, err := adminapi.NewKongAPIClient(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString()), adminapi.ClientOpts{}, "")
 	require.NoError(t, err)
 	rgID := uuid.NewString()
 	return adminapi.NewKonnectClient(c, rgID, false)

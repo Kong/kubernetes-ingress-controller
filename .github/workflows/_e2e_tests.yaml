@@ -121,6 +121,8 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - run: echo "GOTESTSUM_JUNITFILE=e2e-kind-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml" >> $GITHUB_ENV
+
       - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
         id: license
         with:
@@ -174,7 +176,7 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.28.11'
+          - 'v1.31.5'
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: checkout repository
@@ -186,6 +188,8 @@ jobs:
         uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4
         with:
           go-version-file: go.mod
+
+      - run: echo "GOTESTSUM_JUNITFILE=e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml" >> $GITHUB_ENV
 
       - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
         continue-on-error: true
@@ -289,6 +293,8 @@ jobs:
         uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4
         with:
           go-version-file: go.mod
+
+      - run: echo "GOTESTSUM_JUNITFILE=e2e-istio-${{ matrix.kind }}-${{ matrix.istio }}-tests.xml" >> $GITHUB_ENV
 
       - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
         id: license

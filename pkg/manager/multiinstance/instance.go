@@ -2,6 +2,7 @@ package multiinstance
 
 import (
 	"context"
+	"net/http"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -53,6 +54,13 @@ func (i *instance) Run(ctx context.Context) {
 	}
 }
 
+// DiagnosticsHandler returns an HTTP handler that exposes diagnostics information for this instance. It can return
+// nil if the instance does not expose diagnostics information.
+func (i *instance) DiagnosticsHandler() http.Handler {
+	return i.in.DiagnosticsHandler()
+}
+
+// IsReady returns an error if the instance is not ready.
 func (i *instance) IsReady() error {
 	return i.in.IsReady()
 }

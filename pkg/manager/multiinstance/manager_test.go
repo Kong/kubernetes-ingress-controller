@@ -1,8 +1,6 @@
 package multiinstance_test
 
 import (
-	"context"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,41 +18,8 @@ const (
 	tickTime = time.Millisecond * 10
 )
 
-type MockInstance struct {
-	id                 manager.ID
-	returnErrOnRun     error
-	wasStarted         atomic.Bool
-	wasContextCanceled atomic.Bool
-}
-
-func newMockInstance(id manager.ID) *MockInstance {
-	return &MockInstance{
-		id: id,
-	}
-}
-
-func (m *MockInstance) ID() manager.ID {
-	return m.id
-}
-
-func (m *MockInstance) Run(ctx context.Context) error {
-	m.wasStarted.Store(true)
-
-	go func() {
-		<-ctx.Done()
-		m.wasContextCanceled.Store(true)
-	}()
-
-	return m.returnErrOnRun
-}
-
-func (m *MockInstance) IsReady() error {
-	return nil
-}
-
-func TestManager(t *testing.T) {
-	// At the end of the test, assert that there are no goroutines leaked.
-	t.Cleanup(func() { goleak.VerifyNone(t) })
+func TestManager_Scheduling(t *testing.T) {
+	onCleanupVerifyThereAreNoLeakedGoroutines(t)
 
 	// Such context will be canceled just before the test ends (Cleanups are run)
 	// so we can ensure all goroutines are cleaned up.
@@ -75,7 +40,7 @@ func TestManager(t *testing.T) {
 		require.False(t, mockInstance1.wasStarted.Load(), "instance should not have been started yet as the manager is not running")
 	})
 
-	t.Run("schedling an instance with the same ID should fail", func(t *testing.T) {
+	t.Run("scheduling an instance with the same ID should fail", func(t *testing.T) {
 		err := multiManager.ScheduleInstance(mockInstance1)
 		require.Error(t, err)
 		require.IsType(t, multiinstance.InstanceWithIDAlreadyScheduledError{}, err)
@@ -118,4 +83,66 @@ func TestManager(t *testing.T) {
 		require.Error(t, err)
 		require.IsType(t, multiinstance.InstanceNotFoundError{}, err)
 	})
+}
+
+func TestManager_WithDiagnosticsExposer(t *testing.T) {
+	onCleanupVerifyThereAreNoLeakedGoroutines(t)
+
+	ctx := t.Context()
+
+	t.Log("Configuring a manager with a diagnostics exposer")
+	diagnosticsExposer := newMockDiagnosticsExposer()
+	multiManager := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagnosticsExposer))
+
+	go func() {
+		require.NoError(t, multiManager.Run(ctx))
+	}()
+
+	instanceID1 := manager.NewRandomID()
+	instanceID2 := manager.NewRandomID()
+
+	t.Log("Scheduling first instance")
+	err := multiManager.ScheduleInstance(newMockInstance(instanceID1))
+	require.NoError(t, err)
+
+	t.Log("Expecting the diagnostics exposer to have the first instance registered")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		assert.Contains(t, diagnosticsExposer.RegisteredInstances(), instanceID1)
+		assert.NotContains(t, diagnosticsExposer.RegisteredInstances(), instanceID2)
+	}, waitTime, tickTime)
+
+	t.Log("Scheduling second instance")
+	err = multiManager.ScheduleInstance(newMockInstance(instanceID2))
+	require.NoError(t, err)
+
+	t.Log("Expecting the diagnostics exposer to have both instances registered")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		assert.ElementsMatch(t, diagnosticsExposer.RegisteredInstances(), []manager.ID{instanceID1, instanceID2})
+	}, waitTime, tickTime)
+
+	t.Log("Stopping first instance")
+	err = multiManager.StopInstance(instanceID1)
+	require.NoError(t, err)
+
+	t.Log("Expecting the diagnostics exposer to have only the second instance registered")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		assert.Contains(t, diagnosticsExposer.RegisteredInstances(), instanceID2)
+		assert.NotContains(t, diagnosticsExposer.RegisteredInstances(), instanceID1)
+	}, waitTime, tickTime)
+
+	t.Log("Stopping second instance")
+	err = multiManager.StopInstance(instanceID2)
+	require.NoError(t, err)
+
+	t.Log("Expecting the diagnostics exposer to have no instances registered")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		require.Empty(t, diagnosticsExposer.RegisteredInstances())
+	}, waitTime, tickTime)
+}
+
+// onCleanupVerifyThereAreNoLeakedGoroutines is a helper function that sets up a cleanup function to verify there are no
+// leaked goroutines at the end of the test.
+func onCleanupVerifyThereAreNoLeakedGoroutines(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() { goleak.VerifyNone(t) })
 }

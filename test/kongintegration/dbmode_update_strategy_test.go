@@ -3,7 +3,6 @@ package kongintegration
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 	"time"
 
@@ -41,7 +40,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 	_ = containers.NewPostgres(ctx, t, net)
 	kongC := containers.NewKong(ctx, t, containers.KongWithDBMode(net.Name))
 
-	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), &http.Client{})
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")
 	require.NoError(t, err)
 
 	logbase, err := zap.NewDevelopment()

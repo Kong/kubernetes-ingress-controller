@@ -750,7 +750,7 @@ func (c *KongClient) sendToClient(
 	config sendconfig.Config,
 	isFallback bool,
 ) (string, error) {
-	logger := c.logger.WithValues("url", client.AdminAPIClient().BaseRootURL())
+	logger := c.logger.WithValues("url", client.BaseRootURL())
 
 	deckGenParams := deckgen.GenerateDeckContentParams{
 		SelectorTags:                    config.FilterTags,

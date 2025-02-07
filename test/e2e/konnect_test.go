@@ -5,14 +5,12 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"os/exec"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-cleanhttp"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -299,21 +297,14 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	nodeAPIClient := createKonnectNodeClient(t, rg, cert, key)
 
 	getNodeIDFromAdminAPI := func(proxyPod corev1.Pod) string {
-		client := cleanhttp.DefaultClient()
-		tr := cleanhttp.DefaultTransport()
-		// Anything related to TLS can be ignored, because only availability is being tested here.
-		// Testing communicating over TLS is done as part of actual E2E test.
-		tr.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec
-		}
-		client.Transport = tr
-
 		forwardCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, proxyPod.Name, "8444")
 		address := fmt.Sprintf("https://localhost:%d", localPort)
 
-		kongClient, err := adminapi.NewKongAPIClient(address, client)
+		// Anything related to TLS can be ignored, because only availability is being tested here.
+		// Testing communicating as part of actual E2E test.
+		kongClient, err := adminapi.NewKongAPIClient(address, adminapi.ClientOpts{TLSSkipVerify: true}, "")
 		require.NoError(t, err)
 
 		nodeID, err := adminapi.NewClient(kongClient).NodeID(ctx)

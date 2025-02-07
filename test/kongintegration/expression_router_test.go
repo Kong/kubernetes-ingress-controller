@@ -32,7 +32,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 	ctx := context.Background()
 
 	kongC := containers.NewKong(ctx, t)
-	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), helpers.DefaultHTTPClient())
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")
 	require.NoError(t, err)
 
 	httpBinC := containers.NewHTTPBin(ctx, t)

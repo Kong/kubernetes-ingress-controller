@@ -3,7 +3,6 @@ package adminapi
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -17,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
@@ -50,69 +48,12 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 		endpoints   discoveryv1.EndpointSlice
 		want        sets.Set[DiscoveredAdminAPI]
 		portNames   sets.Set[string]
-		dnsStrategy cfgtypes.DNSStrategy
 		expectedErr error
 	}{
 		{
-			name: "basic",
+			name: "basic IPv6",
 			endpoints: discoveryv1.EndpointSlice{
-				ObjectMeta:  endpointsSliceObjectMeta,
-				AddressType: discoveryv1.AddressTypeIPv4,
-				Endpoints: []discoveryv1.Endpoint{
-					{
-						Addresses: []string{"10.0.0.1", "10.0.0.2"},
-						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
-						},
-						TargetRef: testPodReference(namespaceName, "pod-1"),
-					},
-				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
-			},
-			portNames: sets.New("admin"),
-			want: sets.New(
-				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.ns.pod:8444",
-					PodRef: k8stypes.NamespacedName{
-						Name: "pod-1", Namespace: namespaceName,
-					},
-				},
-			),
-			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
-		},
-		{
-			name: "basic",
-			endpoints: discoveryv1.EndpointSlice{
-				ObjectMeta:  endpointsSliceObjectMeta,
-				AddressType: discoveryv1.AddressTypeIPv4,
-				Endpoints: []discoveryv1.Endpoint{
-					{
-						Addresses: []string{"10.0.0.1", "10.0.0.2"},
-						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
-						},
-						TargetRef: testPodReference(namespaceName, "pod-1"),
-					},
-				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
-			},
-			portNames: sets.New("admin"),
-			want: sets.New(
-				DiscoveredAdminAPI{
-					Address: "https://10.0.0.1:8444",
-					PodRef: k8stypes.NamespacedName{
-						Name: "pod-1", Namespace: namespaceName,
-					},
-				},
-			),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
-		},
-		{
-			name: "basic IPDNSStrategy IPv6",
-			endpoints: discoveryv1.EndpointSlice{
-				ObjectMeta:  endpointsSliceObjectMeta,
+				ObjectMeta:  endpointsSliceWithOwnerReferenceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv6,
 				Endpoints: []discoveryv1.Endpoint{
 					{
@@ -129,13 +70,13 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://[fe80::cae2:65ff:fe7b:2852]:8444",
+					Address:       "https://[fe80::cae2:65ff:fe7b:2852]:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
 				},
 			),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
 			name: "basic",
@@ -157,13 +98,13 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://10.0.0.1:8444",
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
 				},
 			),
-			dnsStrategy: cfgtypes.ServiceScopedPodDNSStrategy,
 			expectedErr: errors.New("service name is empty for an endpoint with TargetRef ns/pod-1"),
 		},
 		{
@@ -186,18 +127,18 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.kong-admin.ns.svc:8444",
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
 				},
 			),
-			dnsStrategy: cfgtypes.ServiceScopedPodDNSStrategy,
 		},
 		{
 			name: "not ready endpoints are returned",
 			endpoints: discoveryv1.EndpointSlice{
-				ObjectMeta:  endpointsSliceObjectMeta,
+				ObjectMeta:  endpointsSliceWithOwnerReferenceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
 					{
@@ -212,14 +153,14 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
 			portNames: sets.New("admin"),
-			want: sets.New[DiscoveredAdminAPI](
+			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://10.0.0.1:8444",
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
 				}),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
 			name: "ready and terminating endpoints are not returned",
@@ -241,12 +182,11 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
-			portNames:   sets.New("admin"),
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
-			name: "multiple endpoints are concatenated properly",
+			name: "multiple endpoints without owner reference returns error",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
@@ -278,24 +218,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
-			portNames: sets.New("admin"),
-			want: sets.New(
-				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.ns.pod:8444",
-					PodRef: k8stypes.NamespacedName{
-						Namespace: namespaceName,
-						Name:      "pod-1",
-					},
-				},
-				DiscoveredAdminAPI{
-					Address: "https://10-0-1-1.ns.pod:8444",
-					PodRef: k8stypes.NamespacedName{
-						Namespace: namespaceName,
-						Name:      "pod-2",
-					},
-				},
-			),
-			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
+			portNames:   sets.New("admin"),
+			expectedErr: errors.New("service name is empty for an endpoint with TargetRef ns/pod-1"),
 		},
 		{
 			name: "multiple endpoints with owner reference are concatenated properly",
@@ -333,21 +257,22 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.kong-admin.ns.svc:8444",
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
 					},
 				},
 				DiscoveredAdminAPI{
-					Address: "https://10-0-1-1.kong-admin.ns.svc:8444",
+					Address:       "https://10.0.1.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-2",
 					},
 				},
 			),
-			dnsStrategy: cfgtypes.ServiceScopedPodDNSStrategy,
 		},
 		{
 			name: "ports not called 'admin' are not added",
@@ -382,9 +307,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("non-admin-port-name").IntoSlice(),
 			},
-			want:        sets.New[DiscoveredAdminAPI](),
-			portNames:   sets.New("admin"),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			want:      sets.New[DiscoveredAdminAPI](),
+			portNames: sets.New("admin"),
 		},
 		{
 			name: "ports without names are not taken into account",
@@ -403,14 +327,13 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).IntoSlice(),
 			},
-			portNames:   sets.New("admin"),
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
 			name: "multiple ports names",
 			endpoints: discoveryv1.EndpointSlice{
-				ObjectMeta:  endpointsSliceObjectMeta,
+				ObjectMeta:  endpointsSliceWithOwnerReferenceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
 					{
@@ -430,21 +353,22 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			portNames: sets.New("admin", "admin-tls"),
 			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.ns.pod:8443",
+					Address:       "https://10.0.0.1:8443",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
 					},
 				},
 				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.ns.pod:8444",
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
 					},
 				},
 			),
-			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
 		},
 		{
 			name: "endpoints with no target ref return error for service scopec dns strategy",
@@ -463,9 +387,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
-			portNames:   sets.New("admin"),
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
 			name: "endpoints with target ref other than Pod are ignored",
@@ -484,49 +407,55 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
-			portNames:   sets.New("admin"),
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 	}
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("dnsstrategy_%s/%s", tt.dnsStrategy, tt.name), func(t *testing.T) {
-			discoverer, err := NewDiscoverer(tt.portNames, tt.dnsStrategy)
+		t.Run(tt.name, func(t *testing.T) {
+			discoverer, err := NewDiscoverer(tt.portNames)
 			require.NoError(t, err)
 
 			got, err := discoverer.AdminAPIsFromEndpointSlice(tt.endpoints)
 			if tt.expectedErr != nil {
 				require.EqualError(t, err, tt.expectedErr.Error())
-			} else {
-				require.Equal(t, tt.want, got)
+				return
 			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
-	const namespaceName = "ns"
-
-	var (
-		serviceName                   = uuid.NewString()
-		matchingServiceObjectMetaFunc = func() metav1.ObjectMeta {
-			return metav1.ObjectMeta{
-				Name:      uuid.NewString(),
-				Namespace: namespaceName,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": serviceName,
-				},
-			}
-		}
+	const (
+		namespaceName = "ns"
+		serviceName   = "kong-admin"
 	)
 
+	matchingServiceObjectWithOwnerRef := func() metav1.ObjectMeta {
+		return metav1.ObjectMeta{
+			Name:      uuid.NewString(),
+			Namespace: namespaceName,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": serviceName,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "v1",
+					Name:       serviceName,
+					Kind:       "Service",
+				},
+			},
+		}
+	}
+
 	tests := []struct {
-		name        string
-		service     k8stypes.NamespacedName
-		objects     []client.ObjectList
-		dnsStrategy cfgtypes.DNSStrategy
-		want        sets.Set[DiscoveredAdminAPI]
-		wantErr     bool
+		name    string
+		service k8stypes.NamespacedName
+		objects []client.ObjectList
+		want    sets.Set[DiscoveredAdminAPI]
+		wantErr bool
 	}{
 		{
 			name: "basic",
@@ -538,7 +467,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				&discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{
 						{
-							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							ObjectMeta:  matchingServiceObjectWithOwnerRef(),
 							AddressType: discoveryv1.AddressTypeIPv4,
 							Endpoints: []discoveryv1.Endpoint{
 								{
@@ -557,7 +486,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				&discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{
 						{
-							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							ObjectMeta:  matchingServiceObjectWithOwnerRef(),
 							AddressType: discoveryv1.AddressTypeIPv4,
 							Endpoints: []discoveryv1.Endpoint{
 								{
@@ -576,7 +505,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				&discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{
 						{
-							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							ObjectMeta:  matchingServiceObjectWithOwnerRef(),
 							AddressType: discoveryv1.AddressTypeIPv4,
 							Endpoints: []discoveryv1.Endpoint{
 								{
@@ -595,19 +524,22 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 			},
 			want: sets.New(
 				DiscoveredAdminAPI{
-					Address: "https://10-0-0-1.ns.pod:8444", PodRef: k8stypes.NamespacedName{
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
+					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
 					},
 				},
 				DiscoveredAdminAPI{
-					Address: "https://9-0-0-1.ns.pod:8444", PodRef: k8stypes.NamespacedName{
+					Address:       "https://9.0.0.1:8444",
+					TLSServerName: "pod.kong-admin.ns.svc",
+					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-2",
 					},
 				},
 			),
-			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
 		},
 		{
 			name: "ports not matching the specified port names are not taken into account",
@@ -619,7 +551,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				&discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{
 						{
-							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							ObjectMeta:  matchingServiceObjectWithOwnerRef(),
 							AddressType: discoveryv1.AddressTypeIPv4,
 							Endpoints: []discoveryv1.Endpoint{
 								{
@@ -636,8 +568,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 					},
 				},
 			},
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			want: sets.New[DiscoveredAdminAPI](),
 		},
 		{
 			name: "Endpoints without a TargetRef are not matched",
@@ -649,7 +580,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				&discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{
 						{
-							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							ObjectMeta:  matchingServiceObjectWithOwnerRef(),
 							AddressType: discoveryv1.AddressTypeIPv4,
 							Endpoints: []discoveryv1.Endpoint{
 								{
@@ -665,8 +596,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 					},
 				},
 			},
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			want: sets.New[DiscoveredAdminAPI](),
 		},
 		{
 			name: "terminating Endpoints are not matched",
@@ -678,7 +608,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				&discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{
 						{
-							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							ObjectMeta:  matchingServiceObjectWithOwnerRef(),
 							AddressType: discoveryv1.AddressTypeIPv4,
 							Endpoints: []discoveryv1.Endpoint{
 								{
@@ -695,20 +625,17 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 					},
 				},
 			},
-			want:        sets.New[DiscoveredAdminAPI](),
-			dnsStrategy: cfgtypes.IPDNSStrategy,
+			want: sets.New[DiscoveredAdminAPI](),
 		},
 	}
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("dnsstrategy_%s/%s", tt.dnsStrategy, tt.name), func(t *testing.T) {
-			require.NoError(t, tt.dnsStrategy.Validate())
-
+		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
 				WithLists(tt.objects...).
 				Build()
 
 			portNames := sets.New("admin")
-			discoverer, err := NewDiscoverer(portNames, tt.dnsStrategy)
+			discoverer, err := NewDiscoverer(portNames)
 			require.NoError(t, err)
 
 			got, err := discoverer.GetAdminAPIsForService(context.Background(), fakeClient, tt.service)
@@ -716,7 +643,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				require.Error(t, err)
 				return
 			}
-
+			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
 		})
 	}

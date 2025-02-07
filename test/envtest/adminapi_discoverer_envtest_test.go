@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
 )
 
@@ -49,14 +48,38 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			const (
+				serviceName = "test-service"
+				portName    = "admin"
+				portNumber  = 8444
+			)
 			var (
-				ns          = CreateNamespace(ctx, t, client)
-				serviceName = uuid.NewString()
-				service     = k8stypes.NamespacedName{
-					Namespace: ns.Name,
-					Name:      serviceName,
+				ns         = CreateNamespace(ctx, t, client)
+				serviceObj = corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns.Name,
+						Name:      serviceName,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       ns.Name,
+								UID:        ns.UID,
+							},
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:     portName,
+								Protocol: corev1.ProtocolTCP,
+								Port:     portNumber,
+							},
+						},
+					},
 				}
 			)
+			require.NoError(t, client.Create(ctx, &serviceObj))
 
 			for i := 0; i < tc.subnetC; i++ {
 				for j := 0; j < tc.subnetD; j++ {
@@ -66,6 +89,14 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 							Namespace: ns.Name,
 							Labels: map[string]string{
 								"kubernetes.io/service-name": serviceName,
+							},
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "v1",
+									Kind:       "Service",
+									Name:       serviceName,
+									UID:        serviceObj.UID,
+								},
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,
@@ -79,16 +110,16 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 								TargetRef: testPodReference("pod-1", ns.Name),
 							},
 						},
-						Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+						Ports: builder.NewEndpointPort(portNumber).WithName(portName).IntoSlice(),
 					}
 					require.NoError(t, client.Create(ctx, &es))
 				}
 			}
 
-			discoverer, err := adminapi.NewDiscoverer(sets.New("admin"), cfgtypes.IPDNSStrategy)
+			discoverer, err := adminapi.NewDiscoverer(sets.New(portName))
 			require.NoError(t, err)
 
-			got, err := discoverer.GetAdminAPIsForService(ctx, client, service)
+			got, err := discoverer.GetAdminAPIsForService(ctx, client, k8stypes.NamespacedName{Name: serviceObj.Name, Namespace: serviceObj.Namespace})
 			require.NoError(t, err)
 			require.Len(t, got, tc.subnetD*tc.subnetC, "GetAdminAPIsForService should return all valid addresses")
 		})

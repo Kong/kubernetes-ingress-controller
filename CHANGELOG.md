@@ -114,6 +114,9 @@ Adding a new version? You'll need three changes:
   For more information on this migration please consult
   [kubernetes-sigs/kubebuilder#3907][kubebuilder_3907].
   [#6861](https://github.com/Kong/kubernetes-ingress-controller/pull/6861)
+- Deprecate flag `--gateway-discovery-dns-strategy` and remove it from the help message,
+  this setting is not needed anymore, discovery always works without any adjustments.
+  [#7033](https://github.com/Kong/kubernetes-ingress-controller/pull/7033)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -13,7 +14,7 @@ import (
 )
 
 func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
-	factory := adminapi.NewClientFactoryForWorkspace("workspace", adminapi.HTTPClientOpts{}, "")
+	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", adminapi.ClientOpts{}, "")
 
 	adminAPIHandler := mocks.NewAdminAPIHandler(t)
 	adminAPIServer := httptest.NewServer(adminAPIHandler)

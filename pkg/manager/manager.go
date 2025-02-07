@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/go-logr/logr"
 
@@ -54,4 +55,9 @@ func (m *Manager) ID() ID {
 // Config returns the configuration of the manager.
 func (m *Manager) Config() managercfg.Config {
 	return m.config
+}
+
+// DiagnosticsHandler returns the diagnostics handler of the manager if available. Otherwise, it returns nil.
+func (m *Manager) DiagnosticsHandler() http.Handler {
+	return m.manager.DiagnosticsHandler()
 }

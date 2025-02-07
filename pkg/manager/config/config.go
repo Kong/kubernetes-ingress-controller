@@ -114,10 +114,11 @@ type Config struct {
 	AdmissionServer AdmissionServerConfig
 
 	// Diagnostics and performance
-	EnableProfiling      bool
-	EnableConfigDumps    bool
-	DumpSensitiveConfig  bool
-	DiagnosticServerPort int
+	EnableProfiling                 bool
+	EnableConfigDumps               bool
+	DumpSensitiveConfig             bool
+	DiagnosticServerPort            int
+	DisableRunningDiagnosticsServer bool // TODO(czeslavo): instead of this toggle, move the server out of the internal.Manager
 
 	// Feature Gates
 	FeatureGates FeatureGates

@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
@@ -127,6 +128,13 @@ func WithDiagnosticsServer(port int) func(cfg *managercfg.Config) {
 	}
 }
 
+func WithDiagnosticsWithoutServer() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		cfg.EnableConfigDumps = true
+		cfg.DisableRunningDiagnosticsServer = true
+	}
+}
+
 func WithHealthProbePort(port int) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.ProbeAddr = fmt.Sprintf("localhost:%d", port)
@@ -200,6 +208,25 @@ func AdminAPIOptFns(fns ...mocks.AdminAPIHandlerOpt) []mocks.AdminAPIHandlerOpt 
 	return fns
 }
 
+func SetupManager(ctx context.Context, t *testing.T, mgrID manager.ID, envcfg *rest.Config, adminAPIOpts []mocks.AdminAPIHandlerOpt, modifyCfgFns ...managercfg.Opt) *manager.Manager {
+	adminAPIServerURL := StartAdminAPIServerMock(t, adminAPIOpts...).URL
+
+	modifyCfgFns = append([]managercfg.Opt{
+		WithDefaultEnvTestsConfig(envcfg),
+		WithKongAdminURLs(adminAPIServerURL),
+	},
+		modifyCfgFns..., // Add the user-provided modifyCfgFns last so they can override the defaults.
+	)
+
+	cfg, err := manager.NewConfig(modifyCfgFns...)
+	require.NoError(t, err)
+
+	mgr, err := manager.NewManager(ctx, mgrID, ctrl.LoggerFrom(ctx), cfg)
+	require.NoError(t, err)
+
+	return mgr
+}
+
 // RunManager runs the manager in a goroutine. It's possible to modify the manager's configuration
 // by passing in modifyCfgFns. The manager is stopped when the context is canceled.
 func RunManager(
@@ -209,14 +236,8 @@ func RunManager(
 	adminAPIOpts []mocks.AdminAPIHandlerOpt,
 	modifyCfgFns ...managercfg.Opt,
 ) LogsObserver {
-	adminAPIServerURL := StartAdminAPIServerMock(t, adminAPIOpts...).URL
-
-	modifyCfgFns = append([]managercfg.Opt{
-		WithDefaultEnvTestsConfig(envcfg),
-		WithKongAdminURLs(adminAPIServerURL),
-	},
-		modifyCfgFns..., // Add the user-provided modifyCfgFns last so they can override the defaults.
-	)
+	mgrID, err := manager.NewID(t.Name())
+	require.NoError(t, err)
 
 	ctx, logger, logs := CreateTestLogger(ctx)
 
@@ -227,17 +248,9 @@ func RunManager(
 	go func() {
 		defer wg.Done()
 
-		mgrID, err := manager.NewID(t.Name())
-		require.NoError(t, err)
-
-		cfg, err := manager.NewConfig(modifyCfgFns...)
-		require.NoError(t, err)
-
-		mgr, err := manager.NewManager(ctx, mgrID, logger, cfg)
-		require.NoError(t, err)
-
+		mgr := SetupManager(ctx, t, mgrID, envcfg, adminAPIOpts, modifyCfgFns...)
 		if mgr.Config().ProbeAddr != "" {
-			logger.Info("Starting standalone health check server")
+			t.Log("Starting standalone health check server")
 			health.NewHealthCheckServer(
 				healthz.Ping, health.NewHealthCheckerFromFunc(mgr.IsReady),
 			).Start(ctx, mgr.Config().ProbeAddr, logger.WithName("health-check"))

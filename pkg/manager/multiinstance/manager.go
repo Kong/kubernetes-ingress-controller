@@ -2,6 +2,7 @@ package multiinstance
 
 import (
 	"context"
+	"net/http"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -21,30 +22,55 @@ type ManagerInstance interface {
 	ID() manager.ID
 	Run(context.Context) error
 	IsReady() error
+	DiagnosticsHandler() http.Handler
+}
 
-	// TODO(czeslavo): expose a getter for the diagnostics server and handle its lifecycle.
+// DiagnosticsExposer is an interface that represents an object that can expose diagnostics data of manager.Manager
+// instances.
+type DiagnosticsExposer interface {
+	// RegisterInstance registers a new manager.Manager instance with the diagnostics exposer.
+	RegisterInstance(manager.ID, http.Handler)
+
+	// UnregisterInstance unregisters a manager.Manager instance with the diagnostics exposer.
+	UnregisterInstance(manager.ID)
 }
 
 // Manager is able to dynamically run multiple instances of manager.Manager and manage their lifecycle.
 // It is responsible for things like:
 // - Making sure there's only one instance of a manager.Manager with a given ID.
 // - Starting and stopping manager.Manager instances as needed.
-// - Exposing a common diagnostics server for all manager.Manager instances.
+// - Registering instances' diagnostic handlers in a DiagnosticsExposer when configured.
 type Manager struct {
 	logger logr.Logger
 
-	instances       map[manager.ID]*instance
-	instancesLock   sync.RWMutex
-	schedulingQueue chan manager.ID
+	instances          map[manager.ID]*instance
+	instancesLock      sync.RWMutex
+	schedulingQueue    chan manager.ID
+	diagnosticsExposer DiagnosticsExposer
+}
+
+// ManagerOption is a functional option that can be used to configure a new multi-instance manager.
+type ManagerOption func(*Manager)
+
+func WithDiagnosticsExposer(exposer DiagnosticsExposer) ManagerOption {
+	return func(m *Manager) {
+		m.diagnosticsExposer = exposer
+	}
 }
 
 // NewManager creates a new multi-instance manager.
-func NewManager(logger logr.Logger) *Manager {
-	return &Manager{
+func NewManager(logger logr.Logger, opts ...ManagerOption) *Manager {
+	m := &Manager{
 		logger:          logger,
 		instances:       make(map[manager.ID]*instance),
 		schedulingQueue: make(chan manager.ID, SchedulingQueueSize),
 	}
+
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	return m
 }
 
 // Run starts the multi-instance manager and blocks until the context is canceled. It should only be called once.
@@ -93,6 +119,11 @@ func (m *Manager) StopInstance(instanceID manager.ID) error {
 		return NewInstanceNotFoundError(instanceID)
 	}
 
+	// If diagnostics are enabled, unregister the instance from the diagnostics exposer.
+	if m.diagnosticsExposer != nil {
+		m.diagnosticsExposer.UnregisterInstance(instanceID)
+	}
+
 	// Send a signal to the instance to stop and let the running goroutine handle the cleanup.
 	in.Stop()
 
@@ -124,6 +155,11 @@ func (m *Manager) runInstance(ctx context.Context, instanceID manager.ID) {
 
 	m.logger.Info("Starting instance", "instanceID", instanceID)
 	go in.Run(ctx)
+
+	// If diagnostics are enabled, register the instance with the diagnostics exposer.
+	if m.diagnosticsExposer != nil {
+		m.diagnosticsExposer.RegisterInstance(instanceID, in.DiagnosticsHandler())
+	}
 
 	// Wait for the instance to stop or the parent context be done.
 	select {

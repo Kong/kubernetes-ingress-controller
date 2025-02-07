@@ -69,6 +69,6 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgrInstance1.ID()))
 		require.NoError(t, err)
 		resp.Body.Close()
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	}, waitTime, tickTime, "diagnostics should no longer be available after stopping the instance")
 }

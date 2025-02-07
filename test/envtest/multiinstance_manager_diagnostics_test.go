@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr/testr"
+	"github.com/google/pprof/profile"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -71,4 +73,48 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 		resp.Body.Close()
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	}, waitTime, tickTime, "diagnostics should no longer be available after stopping the instance")
+}
+
+func TestMultiInstanceManager_Profiling(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	envcfg := Setup(t, scheme.Scheme)
+	diagPort := helpers.GetFreePort(t)
+	t.Logf("Diagnostics port: %d", diagPort)
+
+	t.Log("Starting the diagnostics server and the multi-instance manager")
+	diagServer := multiinstance.NewDiagnosticsServer(diagPort, multiinstance.WithPprofHandler())
+	go func() {
+		require.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
+	}()
+	multimgr := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagServer))
+	go func() {
+		require.NoError(t, multimgr.Run(ctx))
+	}()
+
+	m1 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-1")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
+	m2 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-2")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
+
+	require.NoError(t, multimgr.ScheduleInstance(m1))
+	require.NoError(t, multimgr.ScheduleInstance(m2))
+
+	t.Log("Profiling CPU usage for 5 seconds")
+	profileResp, err := http.Get(fmt.Sprintf("http://localhost:%d/debug/pprof/profile?seconds=5", diagPort))
+	require.NoError(t, err, "failed to get profile")
+	defer profileResp.Body.Close()
+
+	p, err := profile.Parse(profileResp.Body)
+	require.NoError(t, err, "failed to parse profile")
+
+	requireProfileHasInstanceIDLabelSamples := func(t *testing.T, p *profile.Profile, expectedInstanceID manager.ID) {
+		samples := lo.Filter(p.Sample, func(s *profile.Sample, _ int) bool {
+			return s.HasLabel("instanceID", expectedInstanceID.String())
+		})
+		require.NotEmpty(t, samples, "profile does not contain samples with instanceID label %q", expectedInstanceID)
+	}
+	requireProfileHasInstanceIDLabelSamples(t, p, m1.ID())
+	requireProfileHasInstanceIDLabelSamples(t, p, m2.ID())
 }

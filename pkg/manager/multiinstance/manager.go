@@ -3,6 +3,7 @@ package multiinstance
 import (
 	"context"
 	"net/http"
+	"runtime/pprof"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -154,7 +155,12 @@ func (m *Manager) runInstance(ctx context.Context, instanceID manager.ID) {
 	}
 
 	m.logger.Info("Starting instance", "instanceID", instanceID)
-	go in.Run(ctx)
+
+	// Wrap with pprof.Do to add instanceID to the pprof labels. That will make it easier to identify which instance
+	// is responsible for the CPU consumption.
+	pprof.Do(ctx, pprof.Labels("instanceID", instanceID.String()), func(ctx context.Context) {
+		go in.Run(ctx)
+	})
 
 	// If diagnostics are enabled, register the instance with the diagnostics exposer.
 	if m.diagnosticsExposer != nil {

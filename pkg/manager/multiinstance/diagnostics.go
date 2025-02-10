@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"sync"
 	"time"
 
@@ -23,17 +24,38 @@ const (
 type DiagnosticsServer struct {
 	listenerPort int
 	handlers     map[manager.ID]http.Handler
+	pprofMux     *http.ServeMux
 
 	muxLock sync.Mutex
 	mux     *http.ServeMux
 }
 
-func NewDiagnosticsServer(listenerPort int) *DiagnosticsServer {
-	return &DiagnosticsServer{
+// DiagnosticsServerOption is a functional option for configuring the DiagnosticsServer.
+type DiagnosticsServerOption func(*DiagnosticsServer)
+
+func WithPprofHandler() DiagnosticsServerOption {
+	return func(s *DiagnosticsServer) {
+		s.pprofMux = http.NewServeMux()
+		s.pprofMux.HandleFunc("/", pprof.Index)
+		s.pprofMux.HandleFunc("/cmdline", pprof.Cmdline)
+		s.pprofMux.HandleFunc("/profile", pprof.Profile)
+		s.pprofMux.HandleFunc("/symbol", pprof.Symbol)
+		s.pprofMux.HandleFunc("/trace", pprof.Trace)
+	}
+}
+
+func NewDiagnosticsServer(listenerPort int, opts ...DiagnosticsServerOption) *DiagnosticsServer {
+	s := &DiagnosticsServer{
 		listenerPort: listenerPort,
 		handlers:     make(map[manager.ID]http.Handler),
 		mux:          http.NewServeMux(),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
 }
 
 // Start starts the diagnostics server.
@@ -79,6 +101,11 @@ func (s *DiagnosticsServer) UnregisterInstance(instanceID manager.ID) {
 // rebuildMux rebuilds the mux with the current handlers. It should be called with the muxLock held.
 func (s *DiagnosticsServer) rebuildMux() {
 	s.mux = http.NewServeMux()
+
+	if s.pprofMux != nil {
+		s.mux.Handle("/debug/pprof/", http.StripPrefix("/debug/pprof", s.pprofMux))
+	}
+
 	for instanceID, handler := range s.handlers {
 		// It's possible an instance doesn't have a diagnostics handler. Handle that gracefully.
 		if handler == nil {

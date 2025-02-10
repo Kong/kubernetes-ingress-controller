@@ -161,8 +161,8 @@ github.com/google/go-querystring v1.1.0/go.mod h1:Kcdr2DB4koayq7X8pmAG4sNG59So17
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
 github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
-github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db h1:097atOisP2aRj7vFgYQBbFN4U4JNXUNYpxael3UzMyo=
-github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
+github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad h1:a6HEuzUHeKH6hwfN/ZoQgRgVIWFJljSWa/zetS2WTvg=
+github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
 github.com/google/s2a-go v0.1.9 h1:LGD7gtMgezd8a/Xak7mEWL0PjoTQFvpRudN895yqKW0=
 github.com/google/s2a-go v0.1.9/go.mod h1:YA0Ei2ZQL3acow2O62kdp9UlnvMmU7kA6Eutn0dXayM=
 github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=
@@ -223,8 +223,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2qeMA=
 github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
-github.com/kong/go-database-reconciler v1.16.1 h1:qcQzEuMGfpNjx3UgulBOKulKA+upmHwqw4dy6TMEV7A=
-github.com/kong/go-database-reconciler v1.16.1/go.mod h1:7CGvStUvUOmUnodUFsWcW3PX2bJgnaKClJ/yhNGEVIE=
+github.com/kong/go-database-reconciler v1.20.1 h1:mXS4sThlsZAJda+jX3Gf2JCdqQZx7FWSuhMIuwVjKg0=
+github.com/kong/go-database-reconciler v1.20.1/go.mod h1:crxjFGiSSKWtP1AqFZz/IEnlxTX/hFkcBdMdwQbEpmk=
 github.com/kong/go-kong v0.60.0 h1:CVrLXRLVE+Gl4IZ3tdvpO7xNDz3c9YLTmra/HvT4oM8=
 github.com/kong/go-kong v0.60.0/go.mod h1:t1eMY8GRS6778uQNzxgzRgnA3YKBXSZOEvYbNocH/aA=
 github.com/kong/kubernetes-configuration v1.1.0 h1:zCj7QlOiZgwQ2wSNlVNR0K6Z+plXTalfihtDzLXQWzs=

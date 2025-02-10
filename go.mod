@@ -29,6 +29,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/goccy/go-json v0.10.5
 	github.com/google/go-cmp v0.7.0
+	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.20.3

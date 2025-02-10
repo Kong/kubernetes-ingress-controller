@@ -31,6 +31,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/goccy/go-json v0.10.5
 	github.com/google/go-cmp v0.6.0
+	github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.16.1

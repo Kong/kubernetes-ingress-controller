@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/rest"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
@@ -21,7 +23,7 @@ type Manager struct {
 
 // NewManager creates a new instance of the Kong Ingress Controller. It does not start the controller.
 func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.Config) (*Manager, error) {
-	m, err := managerinternal.New(ctx, cfg, logger)
+	m, err := managerinternal.New(ctx, id, cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
@@ -52,9 +54,14 @@ func (m *Manager) ID() ID {
 	return m.id
 }
 
-// Config returns the configuration of the manager.
-func (m *Manager) Config() managercfg.Config {
-	return m.config
+// GetKubeconfig returns the Kubernetes REST config object associated with the instance.
+func (m *Manager) GetKubeconfig() *rest.Config {
+	return m.manager.GetKubeconfig()
+}
+
+// GetClientsManager returns the clients manager associated with the instance.
+func (m *Manager) GetClientsManager() *clients.AdminAPIClientsManager {
+	return m.manager.GetClientsManager()
 }
 
 // DiagnosticsHandler returns the diagnostics handler of the manager if available. Otherwise, it returns nil.

@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/mo"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -45,27 +46,31 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 )
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup & Run
 // -----------------------------------------------------------------------------
 
-type Manager struct {
-	cfg managercfg.Config
+type InstanceID interface {
+	String() string
+}
 
+type Manager struct {
 	m                    manager.Manager
 	synchronizer         *dataplane.Synchronizer
 	diagnosticsServer    mo.Option[diagnostics.Server]
-	stopAnonymousReports func()
 	diagnosticsCollector mo.Option[*diagnostics.Collector]
 	diagnosticsHandler   mo.Option[*diagnostics.HTTPHandler]
+
+	kubeconfig     *rest.Config
+	clientsManager *clients.AdminAPIClientsManager
 }
 
 // New configures the controller manager call Start.
 func New(
 	ctx context.Context,
+	instanceID InstanceID,
 	c managercfg.Config,
 	logger logr.Logger,
 ) (*Manager, error) {
@@ -85,10 +90,7 @@ func New(
 		}
 	}
 
-	m := &Manager{
-		cfg: c,
-	}
-
+	m := &Manager{}
 	diagnosticsClient := m.setupDiagnostics(ctx, c)
 	setupLog := logger.WithName("setup")
 	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
@@ -101,6 +103,7 @@ func New(
 	if err != nil {
 		return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
+	m.kubeconfig = kubeconfig
 
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
 	if err != nil {
@@ -191,6 +194,7 @@ func New(
 	}
 	clientsManager = clientsManager.WithDBMode(dbMode)
 	clientsManager = clientsManager.WithReconciliationInterval(c.GatewayDiscoveryReadinessCheckInterval)
+	m.clientsManager = clientsManager
 
 	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager loop")
@@ -295,8 +299,6 @@ func New(
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	// +kubebuilder:scaffold:builder
 
-	instanceIDProvider := NewInstanceIDProvider()
-
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
@@ -329,7 +331,7 @@ func New(
 			configStatusNotifier,
 			clientsManager,
 			setupLog,
-			instanceIDProvider,
+			instanceID,
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
@@ -354,36 +356,7 @@ func New(
 		kongConfigFetcher.InjectLicenseGetter(licenseGetter)
 	}
 
-	stopAnonymousReports := func() {}
-	if c.AnonymousReports {
-		stopAnonymousReports, err = telemetry.SetupAnonymousReports(
-			ctx,
-			kubeconfig,
-			clientsManager,
-			telemetry.ReportConfig{
-				SplunkEndpoint:                   c.SplunkEndpoint,
-				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
-				TelemetryPeriod:                  c.TelemetryPeriod,
-				ReportValues: telemetry.ReportValues{
-					PublishServiceNN:               c.PublishService.OrEmpty(),
-					FeatureGates:                   c.FeatureGates,
-					MeshDetection:                  len(c.WatchNamespaces) == 0,
-					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
-					GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
-				},
-			},
-			instanceIDProvider,
-		)
-		if err != nil {
-			setupLog.Error(err, "Failed setting up anonymous reports")
-		}
-		setupLog.Info("Anonymous reports enabled")
-	} else {
-		setupLog.Info("Anonymous reports disabled, skipping")
-	}
-
 	m.m = mgr
-	m.stopAnonymousReports = stopAnonymousReports
 	m.synchronizer = synchronizer
 
 	setupLog.Info("Finished setting up the controller manager")
@@ -438,7 +411,7 @@ func setupKonnectNodeAgentWithMgr(
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
-	instanceIDProvider *InstanceIDProvider,
+	instanceID InstanceID,
 ) error {
 	konnectNodesAPIClient, err := nodes.NewClient(c.Konnect)
 	if err != nil {
@@ -453,7 +426,7 @@ func setupKonnectNodeAgentWithMgr(
 		configStatusSubscriber,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
-		instanceIDProvider,
+		instanceID,
 	)
 	if err := mgr.Add(agent); err != nil {
 		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)
@@ -526,12 +499,6 @@ func (m *Manager) Run(ctx context.Context) error {
 
 	logger.Info("Starting manager")
 
-	defer func() {
-		if m.stopAnonymousReports != nil {
-			m.stopAnonymousReports()
-		}
-	}()
-
 	if ds, ok := m.diagnosticsServer.Get(); ok {
 		go func() {
 			logger.Info("Starting diagnostics server")
@@ -576,4 +543,14 @@ func (m *Manager) DiagnosticsHandler() http.Handler {
 		return h
 	}
 	return nil
+}
+
+// GetKubeconfig returns the Kubernetes client configuration used by the manager.
+func (m *Manager) GetKubeconfig() *rest.Config {
+	return m.kubeconfig
+}
+
+// GetClientsManager returns the AdminAPIClientsManager used by the manager.
+func (m *Manager) GetClientsManager() *clients.AdminAPIClientsManager {
+	return m.clientsManager
 }

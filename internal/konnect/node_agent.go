@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/google/uuid"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
@@ -39,8 +38,8 @@ type GatewayClientsChangesNotifier interface {
 	SubscribeToGatewayClientsChanges() (<-chan struct{}, bool)
 }
 
-type ManagerInstanceIDProvider interface {
-	GetID() uuid.UUID
+type ManagerInstanceID interface {
+	String() string
 }
 
 // NodeClient is the interface to Konnect Control Plane Node API.
@@ -76,7 +75,7 @@ type NodeAgent struct {
 
 	gatewayInstanceGetter         GatewayInstanceGetter
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier
-	managerInstanceIDProvider     ManagerInstanceIDProvider
+	managerInstanceID             ManagerInstanceID
 }
 
 type NodeAgentOpt func(*NodeAgent)
@@ -99,7 +98,7 @@ func NewNodeAgent(
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	gatewayGetter GatewayInstanceGetter,
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
-	managerInstanceIDProvider ManagerInstanceIDProvider,
+	managerInstanceID ManagerInstanceID,
 	opts ...NodeAgentOpt,
 ) *NodeAgent {
 	if refreshPeriod < MinRefreshNodePeriod {
@@ -115,7 +114,7 @@ func NewNodeAgent(
 		configStatusSubscriber:        configStatusSubscriber,
 		gatewayInstanceGetter:         gatewayGetter,
 		gatewayClientsChangesNotifier: gatewayClientsChangesNotifier,
-		managerInstanceIDProvider:     managerInstanceIDProvider,
+		managerInstanceID:             managerInstanceID,
 	}
 	a.configStatus.Store(clients.ConfigStatusOK)
 
@@ -290,7 +289,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 	if len(nodesWithSameName) == 0 {
 		a.logger.V(logging.DebugLevel).Info("No nodes found for KIC pod, should create one", "hostname", a.hostname)
 		createNodeReq := &nodes.CreateNodeRequest{
-			ID:       a.managerInstanceIDProvider.GetID().String(),
+			ID:       a.managerInstanceID.String(),
 			Hostname: a.hostname,
 			Version:  a.version,
 			Type:     nodes.NodeTypeIngressController,

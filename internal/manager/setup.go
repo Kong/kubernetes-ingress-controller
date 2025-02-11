@@ -11,6 +11,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/kong/go-database-reconciler/pkg/cprint"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
@@ -26,8 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	"github.com/kong/go-database-reconciler/pkg/cprint"
 
 	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"

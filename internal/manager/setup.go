@@ -73,12 +73,8 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 	return logger, nil
 }
 
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dpconf.DBMode) ctrl.Options {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
-	scheme, err := scheme.Get()
-	if err != nil {
-		return ctrl.Options{}, err
-	}
 
 	// configure the general manager options
 	managerOpts := ctrl.Options{
@@ -90,7 +86,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 			SkipNameValidation: lo.ToPtr(true),
 		},
 		GracefulShutdownTimeout: c.GracefulShutdownTimeout,
-		Scheme:                  scheme,
+		Scheme:                  scheme.Get(),
 		Metrics: metricsserver.Options{
 			BindAddress: c.MetricsAddr,
 			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (metricsserver.Filter, error) {
@@ -146,7 +142,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 		managerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
-	return managerOpts, nil
+	return managerOpts
 }
 
 const (

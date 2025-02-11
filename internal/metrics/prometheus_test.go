@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	prom "github.com/prometheus/client_model/go"
@@ -22,16 +23,16 @@ import (
 
 func TestNewGlobalCtrlRuntimeMetricsRecorder_DoesNotPanicWhenCalledTwice(t *testing.T) {
 	require.NotPanics(t, func() {
-		_ = NewGlobalCtrlRuntimeMetricsRecorder()
+		_ = NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
 	})
 	require.NotPanics(t, func() {
-		_ = NewGlobalCtrlRuntimeMetricsRecorder()
+		_ = NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
 	})
 }
 
 func TestGlobalCtrlRuntimeMetricsRecorder_AnyInstanceWritesToTheSameRegistry(t *testing.T) {
-	m1 := NewGlobalCtrlRuntimeMetricsRecorder()
-	m2 := NewGlobalCtrlRuntimeMetricsRecorder()
+	m1 := NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
+	m2 := NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
 
 	const (
 		firstDPHost  = "https://1.host"
@@ -62,7 +63,7 @@ func TestGlobalCtrlRuntimeMetricsRecorder_AnyInstanceWritesToTheSameRegistry(t *
 
 func TestRecordPush(t *testing.T) {
 	mockSizeOfCfg := mo.Some(22)
-	m := NewGlobalCtrlRuntimeMetricsRecorder()
+	m := NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
 
 	t.Run("recording push success works", func(t *testing.T) {
 		require.NotPanics(t, func() {
@@ -75,7 +76,7 @@ func TestRecordPush(t *testing.T) {
 		})
 	})
 	// Verify that multiple call of NewGlobalCtrlRuntimeMetricsRecorder keeps all created metrics work.
-	m2 := NewGlobalCtrlRuntimeMetricsRecorder()
+	m2 := NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
 	t.Run("recording push success works for old metrics", func(t *testing.T) {
 		require.NotPanics(t, func() {
 			m.RecordPushSuccess(ProtocolDBLess, time.Millisecond, mockSizeOfCfg, "https://10.0.0.1:8080")
@@ -89,7 +90,7 @@ func TestRecordPush(t *testing.T) {
 }
 
 func TestRecordTranslation(t *testing.T) {
-	m := NewGlobalCtrlRuntimeMetricsRecorder()
+	m := NewGlobalCtrlRuntimeMetricsRecorder(uuid.New())
 	t.Run("recording translation success works", func(t *testing.T) {
 		require.NotPanics(t, func() {
 			m.RecordTranslationSuccess(10 * time.Millisecond)

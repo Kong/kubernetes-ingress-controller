@@ -25,6 +25,7 @@ func NewID(s string) (ID, error) {
 	return ID{id: s}, nil
 }
 
+// String returns the string representation (usable for various APIs) of the manager ID.
 func (id ID) String() string {
 	return id.id
 }

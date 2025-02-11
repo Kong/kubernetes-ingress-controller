@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -208,7 +209,9 @@ func AdminAPIOptFns(fns ...mocks.AdminAPIHandlerOpt) []mocks.AdminAPIHandlerOpt 
 	return fns
 }
 
-func SetupManager(ctx context.Context, t *testing.T, mgrID manager.ID, envcfg *rest.Config, adminAPIOpts []mocks.AdminAPIHandlerOpt, modifyCfgFns ...managercfg.Opt) *manager.Manager {
+func SetupManager(
+	ctx context.Context, t *testing.T, mgrID manager.ID, envcfg *rest.Config, adminAPIOpts []mocks.AdminAPIHandlerOpt, modifyCfgFns ...managercfg.Opt,
+) *manager.Manager {
 	adminAPIServerURL := StartAdminAPIServerMock(t, adminAPIOpts...).URL
 
 	modifyCfgFns = append([]managercfg.Opt{
@@ -221,8 +224,46 @@ func SetupManager(ctx context.Context, t *testing.T, mgrID manager.ID, envcfg *r
 	cfg, err := manager.NewConfig(modifyCfgFns...)
 	require.NoError(t, err)
 
-	mgr, err := manager.NewManager(ctx, mgrID, ctrl.LoggerFrom(ctx), cfg)
+	logger := ctrl.LoggerFrom(ctx)
+	mgr, err := manager.NewManager(ctx, mgrID, logger, cfg)
 	require.NoError(t, err)
+
+	if cfg.ProbeAddr != "" {
+		t.Log("Starting standalone health check server")
+		health.NewHealthCheckServer(
+			healthz.Ping, health.NewHealthCheckerFromFunc(mgr.IsReady),
+		).Start(ctx, cfg.ProbeAddr, logger.WithName("health-check"))
+	}
+	if cfg.AnonymousReports {
+		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
+			ctx,
+			mgr.GetKubeconfig(),
+			mgr.GetClientsManager(),
+			telemetry.ReportConfig{
+				SplunkEndpoint:                   cfg.SplunkEndpoint,
+				SplunkEndpointInsecureSkipVerify: cfg.SplunkEndpointInsecureSkipVerify,
+				TelemetryPeriod:                  cfg.TelemetryPeriod,
+				ReportValues: telemetry.ReportValues{
+					PublishServiceNN:               cfg.PublishService.OrEmpty(),
+					FeatureGates:                   cfg.FeatureGates,
+					MeshDetection:                  len(cfg.WatchNamespaces) == 0,
+					KonnectSyncEnabled:             cfg.Konnect.ConfigSynchronizationEnabled,
+					GatewayServiceDiscoveryEnabled: cfg.KongAdminSvc.IsPresent(),
+				},
+			},
+			mgrID,
+		)
+		// TODO: it's not closed properly (should be called after Run(...) returns), but for test it's fine for now.
+		// It will leak only in case of running it with telemetry enabled.
+		_ = stopAnonymousReports
+		if err != nil {
+			logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")
+		} else {
+			logger.Info("Anonymous reports enabled")
+		}
+	} else {
+		logger.Info("Anonymous reports disabled, skipping")
+	}
 
 	return mgr
 }
@@ -239,7 +280,7 @@ func RunManager(
 	mgrID, err := manager.NewID(t.Name())
 	require.NoError(t, err)
 
-	ctx, logger, logs := CreateTestLogger(ctx)
+	ctx, _, logs := CreateTestLogger(ctx)
 
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
@@ -249,13 +290,6 @@ func RunManager(
 		defer wg.Done()
 
 		mgr := SetupManager(ctx, t, mgrID, envcfg, adminAPIOpts, modifyCfgFns...)
-		if mgr.Config().ProbeAddr != "" {
-			t.Log("Starting standalone health check server")
-			health.NewHealthCheckServer(
-				healthz.Ping, health.NewHealthCheckerFromFunc(mgr.IsReady),
-			).Start(ctx, mgr.Config().ProbeAddr, logger.WithName("health-check"))
-		}
-
 		require.NoError(t, mgr.Run(ctx))
 	}()
 	t.Cleanup(func() {

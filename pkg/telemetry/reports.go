@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,10 +18,6 @@ import (
 type GatewayClientsProvider interface {
 	GatewayClients() []*adminapi.Client
 	GatewayClientsCount() int
-}
-
-type InstanceIDProvider interface {
-	GetID() uuid.UUID
 }
 
 const (
@@ -47,7 +42,7 @@ func SetupAnonymousReports(
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
 	reportCfg ReportConfig,
-	instanceIDProvider InstanceIDProvider,
+	instanceID interface{ String() string },
 ) (func(), error) {
 	logger := ctrl.LoggerFrom(ctx).WithName("telemetry")
 
@@ -89,7 +84,7 @@ func SetupAnonymousReports(
 		"kv": kongVersion,
 		"db": kongDB,
 		"rf": routerFlavor,
-		"id": instanceIDProvider.GetID(), // universal unique identifier for this system
+		"id": instanceID.String(), // Universal unique identifier for this system.
 	}
 
 	// Use defaults when not specified.

@@ -56,18 +56,6 @@ func (m *mockGatewayClientsNotifier) Notify() {
 	m.ch <- struct{}{}
 }
 
-type mockManagerInstanceIDProvider struct {
-	instanceID uuid.UUID
-}
-
-func newMockManagerInstanceIDProvider(instanceID uuid.UUID) *mockManagerInstanceIDProvider {
-	return &mockManagerInstanceIDProvider{instanceID: instanceID}
-}
-
-func (m *mockManagerInstanceIDProvider) GetID() uuid.UUID {
-	return m.instanceID
-}
-
 type mockConfigStatusQueue struct {
 	gatewayStatusCh chan clients.GatewayConfigApplyStatus
 	konnetStatusCh  chan clients.KonnectConfigUploadStatus
@@ -287,7 +275,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				configStatusQueue,
 				newMockGatewayInstanceGetter(tc.gatewayInstances),
 				gatewayClientsChangesNotifier,
-				newMockManagerInstanceIDProvider(testManagerID),
+				testManagerID,
 			)
 
 			runAgent(t, nodeAgent)
@@ -355,7 +343,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 		newMockConfigStatusNotifier(),
 		newMockGatewayInstanceGetter(nil),
 		newMockGatewayClientsNotifier(),
-		newMockManagerInstanceIDProvider(uuid.New()),
+		uuid.New(),
 	)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -400,7 +388,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 		configStatusQueue,
 		newMockGatewayInstanceGetter(nil),
 		gatewayClientsChangesNotifier,
-		newMockManagerInstanceIDProvider(uuid.New()),
+		uuid.New(),
 	)
 
 	runAgent(t, nodeAgent)
@@ -502,7 +490,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 		configStatusQueue,
 		newMockGatewayInstanceGetter(nil),
 		gatewayClientsChangesNotifier,
-		newMockManagerInstanceIDProvider(uuid.New()),
+		uuid.New(),
 	)
 
 	runAgent(t, nodeAgent)
@@ -552,7 +540,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 			configStatusQueue,
 			newMockGatewayInstanceGetter(nil),
 			gatewayClientsChangesNotifier,
-			newMockManagerInstanceIDProvider(uuid.New()),
+			uuid.New(),
 			konnect.WithRefreshTicker(ticker),
 		)
 
@@ -589,7 +577,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 			configStatusQueue,
 			newMockGatewayInstanceGetter(nil),
 			gatewayClientsChangesNotifier,
-			newMockManagerInstanceIDProvider(uuid.New()),
+			uuid.New(),
 			konnect.WithRefreshTicker(ticker),
 		)
 

@@ -551,6 +551,8 @@ func (m *Manager) GetKubeconfig() *rest.Config {
 }
 
 // GetClientsManager returns the AdminAPIClientsManager used by the manager.
+// TODO: It is used by telemetry to calculate kongVersion, DB mode and router
+// flavor. It shouldn't be exposed so wide, only relevant stuff.
 func (m *Manager) GetClientsManager() *clients.AdminAPIClientsManager {
 	return m.clientsManager
 }

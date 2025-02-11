@@ -225,7 +225,7 @@ func New(
 	configurationChangeDetector := sendconfig.NewKongGatewayConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
 	fallbackConfigGenerator := fallback.NewGenerator(fallback.NewDefaultCacheGraphProvider(), logger)
-	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
+	metricsRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder(instanceID)
 
 	var dataplaneClientOpts []dataplane.KongClientOption
 	if dc, ok := diagnosticsClient.Get(); ok {

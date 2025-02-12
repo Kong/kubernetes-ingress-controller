@@ -187,6 +187,7 @@ linters-settings:
         - "!**/internal/cmd/rootcmd/config/cli.go"
         - "!**/test/internal/helpers/kong.go"
         - "!**/test/envtest/telemetry_test.go"
+        - "!**/test/envtest/configerrorevent_envtest_test.go"
         deny:
         - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/manager
           desc: github.com/kong/kubernetes-ingress-controller/v3/internal/manager should not be used outside of its package. Use github.com/kong/kubernetes-ingress-controller/v3/pkg/manager instead.

@@ -419,7 +419,7 @@ func setupKonnectNodeAgentWithMgr(
 	}
 	agent := konnect.NewNodeAgent(
 		resolveControllerHostnameForKonnect(logger),
-		metadata.Release,
+		metadata.UserAgent(),
 		c.Konnect.RefreshNodePeriod,
 		logger,
 		konnectNodesAPIClient,

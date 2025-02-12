@@ -33,6 +33,7 @@ var (
 	// Commit returns the SHA from the current branch HEAD.
 	Commit = NotSet
 
+	// ProjectName is the name of repository, the last part of the URL. Thus it's basically name of the application.
 	ProjectName = projectNameFromRepo(Repo)
 )
 

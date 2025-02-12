@@ -27,6 +27,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -103,9 +104,12 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		t.Logf("got %d events", len(events.Items))
 
 		const numberOfExpectedEvents = 8
+		// InstanceID of manager run for the test is the same as the test name.
+		expectedInstanceID := t.Name()
 		matches := make([]bool, numberOfExpectedEvents)
 		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Ingress" &&
 				e.InvolvedObject.Name == ingress.Name &&
@@ -113,6 +117,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		})
 		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&
@@ -120,6 +125,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		})
 		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&
@@ -128,6 +134,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		matches[3] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`, e.Message)
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
 				e.InvolvedObject.Kind == "Pod" &&
 				e.InvolvedObject.Name == podName &&
@@ -135,6 +142,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		})
 		matches[4] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&
@@ -142,6 +150,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		})
 		matches[5] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&
@@ -149,6 +158,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		})
 		matches[6] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
 				e.InvolvedObject.Kind == "Ingress" &&
 				e.InvolvedObject.Name == ingress.Name &&
@@ -156,6 +166,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		})
 		matches[7] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
 			return e.Type == corev1.EventTypeWarning &&
+				e.ObjectMeta.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
 				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
 				e.InvolvedObject.Kind == "Service" &&
 				e.InvolvedObject.Name == service.Name &&

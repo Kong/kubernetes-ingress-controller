@@ -132,10 +132,7 @@ func Run(
 	}
 
 	setupLog.Info("Configuring and building the controller manager")
-	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)
-	if err != nil {
-		return fmt.Errorf("unable to setup manager options: %w", err)
-	}
+	managerOpts := setupManagerOptions(ctx, setupLog, c, dbMode)
 
 	mgr, err := ctrl.NewManager(kubeconfig, managerOpts)
 	if err != nil {

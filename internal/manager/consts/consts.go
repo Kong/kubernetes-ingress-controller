@@ -30,4 +30,8 @@ const (
 
 	// DefaultConfigMapSelector is the default label selector used to ingest ConfigMaps in the DataPlane sync.
 	DefaultConfigMapSelector = "konghq.com/configmap"
+
+	// InstanceIDAnnotationKey is the annotation key used to store the instance ID of particular manager,
+	// to corelate events with it.
+	InstanceIDAnnotationKey = "konghq.com/instance-id"
 )

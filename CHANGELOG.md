@@ -100,6 +100,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- `AddToScheme` is only run in the initialization of scheme of the manager but
+  not called in `scheme.Get` to reduce the CPU usage.
+  [#7105](https://github.com/Kong/kubernetes-ingress-controller/pull/7105) 
+
 ## [3.4.1]
 
 > Release date: 2025-01-02

@@ -727,7 +727,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			tc.inputObjects = append(tc.inputObjects, &tc.kongUpstreamPolicy)
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
-				WithScheme(lo.Must(scheme.Get())).
+				WithScheme(scheme.Get()).
 				WithObjects(tc.inputObjects...).
 				WithStatusSubresource(tc.inputObjects...).
 				WithIndex(&corev1.Service{}, upstreamPolicyIndexKey, indexServicesOnUpstreamPolicyAnnotation).

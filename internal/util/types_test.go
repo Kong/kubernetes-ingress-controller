@@ -3,7 +3,6 @@ package util
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +27,7 @@ func TestPopulateTypeMeta(t *testing.T) {
 
 	require.Empty(t, credential.GetObjectKind().GroupVersionKind().Kind)
 
-	err := PopulateTypeMeta(credential, lo.Must(scheme.Get()))
+	err := PopulateTypeMeta(credential, scheme.Get())
 
 	require.NoError(t, err)
 	require.NotEmpty(t, credential.GetObjectKind().GroupVersionKind().Kind)

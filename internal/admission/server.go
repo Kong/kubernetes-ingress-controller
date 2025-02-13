@@ -27,7 +27,7 @@ const (
 
 func MakeTLSServer(
 	ctx context.Context,
-	config *config.AdmissionServerConfig,
+	config config.AdmissionServerConfig,
 	handler http.Handler,
 	logger logr.Logger,
 ) (*http.Server, error) {
@@ -44,7 +44,7 @@ func MakeTLSServer(
 	}, nil
 }
 
-func serverConfigToTLSConfig(ctx context.Context, sc *config.AdmissionServerConfig, logger logr.Logger) (*tls.Config, error) {
+func serverConfigToTLSConfig(ctx context.Context, sc config.AdmissionServerConfig, logger logr.Logger) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {

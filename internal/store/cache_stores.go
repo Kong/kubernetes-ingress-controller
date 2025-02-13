@@ -15,10 +15,6 @@ import (
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
 // YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
 func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
-	s, err := scheme.Get()
-	if err != nil {
-		return c, err
-	}
 	kobjs := make([]runtime.Object, 0, len(objs))
 	sr := serializer.NewYAMLSerializer(
 		yamlserializer.DefaultMetaFactory,
@@ -30,7 +26,7 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 		if err = decodeErr; err != nil {
 			return
 		}
-		if err := util.PopulateTypeMeta(kobj, s); err != nil {
+		if err := util.PopulateTypeMeta(kobj, scheme.Get()); err != nil {
 			return c, err
 		}
 		kobjs = append(kobjs, kobj)

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
@@ -63,7 +64,7 @@ type Manager struct {
 	diagnosticsServer    mo.Option[diagnostics.Server]
 	diagnosticsCollector mo.Option[*diagnostics.Collector]
 	diagnosticsHandler   mo.Option[*diagnostics.HTTPHandler]
-	admissionServer      mo.Option[*http.Server]
+	admissionServer      mo.Option[*admission.Server]
 	kubeconfig           *rest.Config
 	clientsManager       *clients.AdminAPIClientsManager
 }
@@ -521,7 +522,7 @@ func (m *Manager) Run(ctx context.Context) error {
 	if s, ok := m.admissionServer.Get(); ok {
 		go func() {
 			logger.Info("Starting admission server")
-			if err := s.ListenAndServeTLS("", ""); err != nil {
+			if err := s.Start(ctx); err != nil {
 				logger.Error(err, "Admission server exited")
 			}
 		}()

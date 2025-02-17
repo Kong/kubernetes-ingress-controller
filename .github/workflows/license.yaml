@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '30 2 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   fossa-scan:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}

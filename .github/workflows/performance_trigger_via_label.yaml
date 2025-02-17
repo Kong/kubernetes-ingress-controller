@@ -5,11 +5,17 @@ on:
     types:
     - labeled
 
+permissions:
+  contents: read
+
 jobs:
   trigger-performance-tests-targeted:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-performance')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       WORKFLOW: .github/workflows/performance_targeted.yaml

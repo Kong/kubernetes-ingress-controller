@@ -9,6 +9,9 @@ on:
         required: false
         default: main
 
+permissions:
+  contents: read
+
 jobs:
   dependencies-versions:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}

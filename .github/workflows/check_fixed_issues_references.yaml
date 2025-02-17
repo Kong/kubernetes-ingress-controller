@@ -5,6 +5,9 @@ on:
     - cron: '30 4 * * *'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
     check_issues_state:
       timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}

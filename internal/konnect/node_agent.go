@@ -35,7 +35,7 @@ type GatewayInstanceGetter interface {
 }
 
 type GatewayClientsChangesNotifier interface {
-	SubscribeToGatewayClientsChanges() (<-chan struct{}, bool)
+	SubscribeToGatewayClientsChanges(ctx context.Context) (<-chan struct{}, bool)
 }
 
 type ManagerInstanceID interface {
@@ -221,7 +221,7 @@ func (a *NodeAgent) maybeUpdateConfigStatus(ctx context.Context) {
 }
 
 func (a *NodeAgent) subscribeToGatewayClientsChanges(ctx context.Context) {
-	gatewayClientsChangedCh, changesAreExpected := a.gatewayClientsChangesNotifier.SubscribeToGatewayClientsChanges()
+	gatewayClientsChangedCh, changesAreExpected := a.gatewayClientsChangesNotifier.SubscribeToGatewayClientsChanges(ctx)
 	if !changesAreExpected {
 		// There are no changes of gateway clients going to happen, we don't have to watch them.
 		return

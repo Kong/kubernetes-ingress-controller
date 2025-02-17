@@ -181,28 +181,25 @@ func setupDataplaneSynchronizer(
 	return dataplaneSynchronizer, nil
 }
 
-func setupAdmissionServer(
+func (m *Manager) setupAdmissionServer(
 	ctx context.Context,
-	managerConfig managercfg.Config,
-	clientsManager *clients.AdminAPIClientsManager,
 	referenceIndexers ctrlref.CacheIndexers,
-	managerClient client.Client,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
 ) error {
 	admissionLogger := ctrl.LoggerFrom(ctx).WithName("admission-server")
 
-	if managerConfig.AdmissionServer.ListenAddr == "off" {
+	if m.cfg.AdmissionServer.ListenAddr == "off" {
 		admissionLogger.Info("Admission webhook server disabled")
 		return nil
 	}
 
-	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
-	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
+	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(m.clientsManager)
+	srv, err := admission.MakeTLSServer(ctx, m.cfg.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
 			admissionLogger,
-			managerClient,
-			managerConfig.IngressClassName,
+			m.m.GetClient(),
+			m.cfg.IngressClassName,
 			adminAPIServicesProvider,
 			translatorFeatures,
 			storer,
@@ -213,10 +210,8 @@ func setupAdmissionServer(
 	if err != nil {
 		return err
 	}
-	go func() {
-		err := srv.ListenAndServeTLS("", "")
-		admissionLogger.Error(err, "Admission webhook server stopped")
-	}()
+
+	m.admissionServer = mo.Some(srv)
 	return nil
 }
 

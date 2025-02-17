@@ -199,7 +199,7 @@ func (m *Manager) setupAdmissionServer(
 	}
 
 	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(m.clientsManager)
-	srv, err := admission.MakeTLSServer(ctx, m.cfg.AdmissionServer, &admission.RequestHandler{
+	srv, err := admission.MakeTLSServer(m.cfg.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
 			admissionLogger,
 			m.m.GetClient(),
@@ -210,7 +210,7 @@ func (m *Manager) setupAdmissionServer(
 		),
 		ReferenceIndexers: referenceIndexers,
 		Logger:            admissionLogger,
-	}, admissionLogger)
+	})
 	if err != nil {
 		return err
 	}

@@ -180,14 +180,17 @@ linters-settings:
         - "!**/pkg/manager/*.go"
         # TODO: Remove those exclusion once the needed parts of manager are moved to pkg/manager.
         # Imported stuff: consts, flags, kongconfig, utils.GetKubeconfig(...).
-        - "!**/pkg/telemetry/reports.go"
+        - "!**/internal/admission/server.go"
+        - "!**/internal/cmd/rootcmd/config/cli.go"
         - "!**/internal/dataplane/kong_client_golden_test.go"
         - "!**/internal/dataplane/translator/translator_test.go"
-        - "!**/test/integration/isolated/backendtlspolicy_test.go"
-        - "!**/internal/cmd/rootcmd/config/cli.go"
-        - "!**/test/internal/helpers/kong.go"
-        - "!**/test/envtest/telemetry_test.go"
+        - "!**/internal/diagnostics/server.go"
+        - "!**/pkg/telemetry/reports.go"
         - "!**/test/envtest/configerrorevent_envtest_test.go"
+        - "!**/test/envtest/manager_envtest_test.go"
+        - "!**/test/envtest/telemetry_test.go"
+        - "!**/test/integration/isolated/backendtlspolicy_test.go"
+        - "!**/test/internal/helpers/kong.go"
         deny:
         - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/manager
           desc: github.com/kong/kubernetes-ingress-controller/v3/internal/manager should not be used outside of its package. Use github.com/kong/kubernetes-ingress-controller/v3/pkg/manager instead.

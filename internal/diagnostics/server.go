@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 )
 
 const (
@@ -78,27 +80,24 @@ func (s *Server) Listen(ctx context.Context) error {
 		Handler:           mux,
 		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
 	}
-	errChan := make(chan error)
 
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				s.logger.Error(err, "Could not start diagnostics server")
-				errChan <- err
 			}
 		}
 	}()
 
 	s.logger.Info("Diagnostics server is starting to listen", "addr", s.cfg.ListenerPort)
 
-	select {
-	case <-ctx.Done():
-		s.logger.Info("Shutting down diagnostics server")
-		return httpServer.Shutdown(context.Background()) //nolint:contextcheck
-	case err := <-errChan:
-		return err
-	}
+	<-ctx.Done()
+
+	s.logger.Info("Shutting down diagnostics server")
+	ctx, cancel := context.WithTimeout(context.Background(), consts.DefaultGracefulShutdownTimeout)
+	defer cancel()
+	return httpServer.Shutdown(ctx) //nolint:contextcheck
 }
 
 // installProfilingHandlers adds the Profiling webservice to the given mux.

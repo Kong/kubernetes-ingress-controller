@@ -10,11 +10,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/zap/zaptest/observer"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
@@ -68,4 +75,48 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 		return hasLog(startingManagerLog) &&
 			hasLog(configurationSyncedToKongLog)
 	}, time.Minute, time.Millisecond)
+}
+
+func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
+	// Not using t.Parallel() because goleak.VerifyNone(t) does not work with parallel tests.
+	t.Cleanup(func() {
+		t.Logf("Checking for goroutine leaks")
+		goleak.VerifyNone(t)
+	})
+
+	scheme := Scheme(t, WithKong)
+	envcfg := Setup(t, scheme)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	diagnosticsServerPort := testhelpers.GetFreePort(t)
+	webhookServerPort := testhelpers.GetFreePort(t)
+	webhookCert, webhookKey := certificate.MustGenerateCertPEMFormat(
+		certificate.WithDNSNames("localhost"),
+	)
+	ctx = ctrllog.IntoContext(ctx, testr.New(t))
+	t.Log("Running the manager")
+	m := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(),
+		WithDefaultEnvTestsConfig(envcfg),
+		WithDiagnosticsServer(diagnosticsServerPort),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, webhookServerPort),
+	)
+	go func() {
+		err := m.Run(ctx)
+		require.NoError(t, err)
+	}()
+
+	t.Log("Waiting for the manager to become ready")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		require.NoError(t, m.IsReady())
+	}, time.Minute, time.Millisecond)
+
+	t.Log("Cancelling context")
+	cancel()
+
+	t.Logf("Waiting for the manager to stop gracefully, this should happen within %f seconds",
+		consts.DefaultGracefulShutdownTimeout.Seconds(),
+	)
+	<-time.After(consts.DefaultGracefulShutdownTimeout)
 }

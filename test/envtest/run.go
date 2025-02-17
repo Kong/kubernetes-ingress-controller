@@ -166,9 +166,9 @@ func WithKongAdminURLs(urls ...string) func(cfg *managercfg.Config) {
 	}
 }
 
-func WithAdmissionWebhookEnabled(key, cert []byte, addr string) func(cfg *managercfg.Config) {
+func WithAdmissionWebhookEnabled(key, cert []byte, port int) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
-		cfg.AdmissionServer.ListenAddr = addr
+		cfg.AdmissionServer.ListenAddr = fmt.Sprintf(":%d", port)
 		cfg.AdmissionServer.Key = string(key)
 		cfg.AdmissionServer.Cert = string(cert)
 	}
@@ -210,7 +210,12 @@ func AdminAPIOptFns(fns ...mocks.AdminAPIHandlerOpt) []mocks.AdminAPIHandlerOpt 
 }
 
 func SetupManager(
-	ctx context.Context, t *testing.T, mgrID manager.ID, envcfg *rest.Config, adminAPIOpts []mocks.AdminAPIHandlerOpt, modifyCfgFns ...managercfg.Opt,
+	ctx context.Context,
+	t *testing.T,
+	mgrID manager.ID,
+	envcfg *rest.Config,
+	adminAPIOpts []mocks.AdminAPIHandlerOpt,
+	modifyCfgFns ...managercfg.Opt,
 ) *manager.Manager {
 	adminAPIServerURL := StartAdminAPIServerMock(t, adminAPIOpts...).URL
 

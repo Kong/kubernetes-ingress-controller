@@ -48,7 +48,7 @@ func newMockGatewayClientsNotifier() *mockGatewayClientsNotifier {
 	}
 }
 
-func (m *mockGatewayClientsNotifier) SubscribeToGatewayClientsChanges() (<-chan struct{}, bool) {
+func (m *mockGatewayClientsNotifier) SubscribeToGatewayClientsChanges(context.Context) (<-chan struct{}, bool) {
 	return m.ch, true
 }
 

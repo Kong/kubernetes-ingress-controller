@@ -38,7 +38,7 @@ type notifier struct {
 	last []adminapi.DiscoveredAdminAPI
 }
 
-func (n *notifier) Notify(adminAPIs []adminapi.DiscoveredAdminAPI) {
+func (n *notifier) Notify(_ context.Context, adminAPIs []adminapi.DiscoveredAdminAPI) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	n.last = adminAPIs

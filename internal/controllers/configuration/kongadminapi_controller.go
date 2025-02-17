@@ -45,7 +45,7 @@ type KongAdminAPIServiceReconciler struct {
 type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
 
 type EndpointsNotifier interface {
-	Notify(adminAPIs []adminapi.DiscoveredAdminAPI)
+	Notify(ctx context.Context, adminAPIs []adminapi.DiscoveredAdminAPI)
 }
 
 type AdminAPIsDiscoverer interface {
@@ -117,7 +117,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 			// If we have an entry for this EndpointSlice, remove it and notify about the change.
 			if _, ok := r.Cache[req.NamespacedName]; ok {
 				delete(r.Cache, req.NamespacedName)
-				r.notify()
+				r.notify(ctx)
 			}
 			return ctrl.Result{}, nil
 		}
@@ -133,7 +133,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		// If we have an entry for this EndpointSlice, remove it and notify about the change.
 		if _, ok := r.Cache[req.NamespacedName]; ok {
 			delete(r.Cache, req.NamespacedName)
-			r.notify()
+			r.notify(ctx)
 		}
 
 		return ctrl.Result{}, nil
@@ -150,7 +150,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 				"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
 			)
 		}
-		r.notify()
+		r.notify(ctx)
 		return ctrl.Result{}, nil
 	}
 
@@ -169,17 +169,17 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	r.Cache[req.NamespacedName] = addresses
-	r.notify()
+	r.notify(ctx)
 
 	return ctrl.Result{}, nil
 }
 
-func (r *KongAdminAPIServiceReconciler) notify() {
+func (r *KongAdminAPIServiceReconciler) notify(ctx context.Context) {
 	discovered := flattenDiscoveredAdminAPIs(r.Cache)
 	addresses := lo.Map(discovered, func(d adminapi.DiscoveredAdminAPI, _ int) string { return d.Address })
 	r.Log.V(logging.DebugLevel).
 		Info("Notifying about newly detected Admin APIs", "admin_apis", addresses)
-	r.EndpointsNotifier.Notify(discovered)
+	r.EndpointsNotifier.Notify(ctx, discovered)
 }
 
 func flattenDiscoveredAdminAPIs(cache DiscoveredAdminAPIsCache) []adminapi.DiscoveredAdminAPI {

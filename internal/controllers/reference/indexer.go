@@ -40,12 +40,7 @@ func objectKeyFunc(obj client.Object) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("could not convert %s/%s back to client Object", obj.GetNamespace(), obj.GetName())
 	}
-	s, err := scheme.Get()
-	if err != nil {
-		return "", fmt.Errorf("could not get scheme for %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
-	}
-	err = util.PopulateTypeMeta(o, s)
-	if err != nil {
+	if err := util.PopulateTypeMeta(o, scheme.Get()); err != nil {
 		return "", fmt.Errorf("could not populate %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 	return metaObj.GetObjectKind().GroupVersionKind().String() + "/" +

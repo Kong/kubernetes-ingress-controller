@@ -44,8 +44,7 @@ func (r *EventRecorder) writeEvent(o runtime.Object, eventtype, reason, messageF
 	r.l.Lock()
 	defer r.l.Unlock()
 
-	s, _ := scheme.Get()
-	_ = util.PopulateTypeMeta(o, s)
+	_ = util.PopulateTypeMeta(o, scheme.Get())
 	fmtString := fmt.Sprintf("%s: %s %s %s", o.GetObjectKind().GroupVersionKind().Kind, eventtype, reason, messageFmt)
 	r.events = append(r.events, fmt.Sprintf(fmtString, args...))
 }

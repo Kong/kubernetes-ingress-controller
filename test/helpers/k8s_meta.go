@@ -12,9 +12,7 @@ import (
 
 // WithTypeMeta adds type meta to the given object based on its Go type.
 func WithTypeMeta[T runtime.Object](t *testing.T, obj T) T {
-	s, err := scheme.Get()
-	require.NoError(t, err)
-	err = util.PopulateTypeMeta(obj, s)
+	err := util.PopulateTypeMeta(obj, scheme.Get())
 	require.NoError(t, err)
 	return obj
 }

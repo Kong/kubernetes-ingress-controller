@@ -1249,7 +1249,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			validator := KongHTTPValidator{
-				ManagerClient: fake.NewClientBuilder().WithScheme(lo.Must(managerscheme.Get())).WithObjects(tc.clientObjects...).Build(),
+				ManagerClient: fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(tc.clientObjects...).Build(),
 				Storer:        storer,
 				AdminAPIServicesProvider: fakeServicesProvider{
 					routeSvc: &fakeRouteSvc{

@@ -57,14 +57,15 @@ type InstanceID interface {
 }
 
 type Manager struct {
+	cfg                  managercfg.Config
 	m                    manager.Manager
 	synchronizer         *dataplane.Synchronizer
 	diagnosticsServer    mo.Option[diagnostics.Server]
 	diagnosticsCollector mo.Option[*diagnostics.Collector]
 	diagnosticsHandler   mo.Option[*diagnostics.HTTPHandler]
-
-	kubeconfig     *rest.Config
-	clientsManager *clients.AdminAPIClientsManager
+	admissionServer      mo.Option[*http.Server]
+	kubeconfig           *rest.Config
+	clientsManager       *clients.AdminAPIClientsManager
 }
 
 // New configures the controller manager call Start.
@@ -90,7 +91,9 @@ func New(
 		}
 	}
 
-	m := &Manager{}
+	m := &Manager{
+		cfg: c,
+	}
 	diagnosticsClient := m.setupDiagnostics(ctx, c)
 	setupLog := logger.WithName("setup")
 	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
@@ -167,6 +170,7 @@ func New(
 	if err != nil {
 		return nil, fmt.Errorf("unable to create controller manager: %w", err)
 	}
+	m.m = mgr
 
 	if err := waitForKubernetesAPIReadiness(ctx, setupLog, mgr); err != nil {
 		return nil, fmt.Errorf("unable to connect to Kubernetes API: %w", err)
@@ -196,11 +200,6 @@ func New(
 	clientsManager = clientsManager.WithReconciliationInterval(c.GatewayDiscoveryReadinessCheckInterval)
 	m.clientsManager = clientsManager
 
-	if c.KongAdminSvc.IsPresent() {
-		setupLog.Info("Running AdminAPIClientsManager loop")
-		clientsManager.Run()
-	}
-
 	supportRedirectPlugin := kongSemVersion.GTE(versions.KongRedirectPluginCutoff)
 	translatorFeatureFlags := translator.NewFeatureFlags(
 		c.FeatureGates,
@@ -219,8 +218,8 @@ func New(
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
 
-	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, referenceIndexers, mgr.GetClient(), translatorFeatureFlags, storer); err != nil {
+	setupLog.Info("Setting up admission server")
+	if err := m.setupAdmissionServer(ctx, referenceIndexers, translatorFeatureFlags, storer); err != nil {
 		return nil, err
 	}
 
@@ -259,6 +258,7 @@ func New(
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
+	m.synchronizer = synchronizer
 
 	var kubernetesStatusQueue *status.Queue
 	if c.UpdateStatus {
@@ -355,9 +355,6 @@ func New(
 		configTranslator.InjectLicenseGetter(licenseGetter)
 		kongConfigFetcher.InjectLicenseGetter(licenseGetter)
 	}
-
-	m.m = mgr
-	m.synchronizer = synchronizer
 
 	setupLog.Info("Finished setting up the controller manager")
 	return m, nil
@@ -496,7 +493,6 @@ func (m *Manager) setupDiagnostics(
 // It should be called only once per Manager instance.
 func (m *Manager) Run(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
-
 	logger.Info("Starting manager")
 
 	if ds, ok := m.diagnosticsServer.Get(); ok {
@@ -513,6 +509,20 @@ func (m *Manager) Run(ctx context.Context) error {
 			logger.Info("Starting diagnostics collector")
 			if err := dc.Start(ctx); err != nil {
 				logger.Error(err, "Diagnostics collector exited")
+			}
+		}()
+	}
+
+	if m.cfg.KongAdminSvc.IsPresent() {
+		logger.Info("Starting AdminAPIClientsManager loop")
+		m.clientsManager.Run(ctx)
+	}
+
+	if s, ok := m.admissionServer.Get(); ok {
+		go func() {
+			logger.Info("Starting admission server")
+			if err := s.ListenAndServeTLS("", ""); err != nil {
+				logger.Error(err, "Admission server exited")
 			}
 		}()
 	}

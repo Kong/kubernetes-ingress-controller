@@ -130,6 +130,8 @@ Adding a new version? You'll need three changes:
 - `AddToScheme` is only run in the initialization of scheme of the manager but
   not called in `scheme.Get` to reduce the CPU usage.
   [#7105](https://github.com/Kong/kubernetes-ingress-controller/pull/7105) 
+- GatewayReconciler will fall into a loop and cannot converge to stable state
+  [#7111](https://github.com/Kong/kubernetes-ingress-controller/pull/7111)
 
 ## [3.4.1]
 

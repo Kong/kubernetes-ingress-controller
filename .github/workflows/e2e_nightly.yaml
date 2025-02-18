@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
     with:
-      kong-container-repo: kong/kong
+      kong-container-repo: kong/kong-dev
       kong-container-tag: nightly
       kong-oss-effective-version: "3.4.1"
       kong-enterprise-container-repo: kong/kong-gateway-dev

@@ -956,7 +956,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			fakeClient := fakeclient.
 				NewClientBuilder().
-				WithScheme(lo.Must(scheme.Get())).
+				WithScheme(scheme.Get()).
 				WithObjects(tt.cachedObjects...).
 				Build()
 

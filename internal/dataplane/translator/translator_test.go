@@ -1096,9 +1096,7 @@ func TestServiceClientCertificate(t *testing.T) {
 			},
 		}
 		for _, service := range services {
-			scheme, err := scheme.Get()
-			require.NoError(t, err)
-			err = util.PopulateTypeMeta(service, scheme)
+			err := util.PopulateTypeMeta(service, scheme.Get())
 			require.NoError(t, err)
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{

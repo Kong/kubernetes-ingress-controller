@@ -201,7 +201,7 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 	}
 
 	for _, tc := range httpRouteTestCases {
-		cl := fakeclient.NewClientBuilder().WithScheme(lo.Must(scheme.Get())).WithObjects(tc.objects...).Build()
+		cl := fakeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(tc.objects...).Build()
 		t.Run(tc.name, func(t *testing.T) {
 			logger := logr.Discard()
 			result := IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](cl, logger, tc.gatewayNN, tc.route)

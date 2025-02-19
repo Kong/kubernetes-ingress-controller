@@ -103,7 +103,7 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, webhookServerPort),
 	)
 	go func() {
-		err := m.Run(ctx)
+		err := m.Start(ctx)
 		require.NoError(t, err)
 	}()
 

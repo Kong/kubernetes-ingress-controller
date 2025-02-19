@@ -295,7 +295,7 @@ func RunManager(
 		defer wg.Done()
 
 		mgr := SetupManager(ctx, t, mgrID, envcfg, adminAPIOpts, modifyCfgFns...)
-		require.NoError(t, mgr.Run(ctx))
+		require.NoError(t, mgr.Start(ctx))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()

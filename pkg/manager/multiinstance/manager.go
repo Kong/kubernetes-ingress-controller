@@ -21,7 +21,7 @@ const (
 // needed by the multi-instance manager.
 type ManagerInstance interface {
 	ID() manager.ID
-	Run(context.Context) error
+	Start(context.Context) error
 	IsReady() error
 	DiagnosticsHandler() http.Handler
 }
@@ -74,8 +74,8 @@ func NewManager(logger logr.Logger, opts ...ManagerOption) *Manager {
 	return m
 }
 
-// Run starts the multi-instance manager and blocks until the context is canceled. It should only be called once.
-func (m *Manager) Run(ctx context.Context) error {
+// Start starts the multi-instance manager and blocks until the context is canceled. It should only be called once.
+func (m *Manager) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -159,7 +159,7 @@ func (m *Manager) runInstance(ctx context.Context, instanceID manager.ID) {
 	// Wrap with pprof.Do to add instanceID to the pprof labels. That will make it easier to identify which instance
 	// is responsible for the CPU consumption.
 	pprof.Do(ctx, pprof.Labels("instanceID", instanceID.String()), func(ctx context.Context) {
-		go in.Run(ctx)
+		go in.Start(ctx)
 	})
 
 	// If diagnostics are enabled, register the instance with the diagnostics exposer.

@@ -146,7 +146,7 @@ func DeployControllerManagerForCluster(
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with set up of Controller Manager: %s\n", err)
 			os.Exit(1)
 		}
-		if err := m.Run(ctx); err != nil {
+		if err := m.Start(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with running Controller Manager: %s\n", err)
 			os.Exit(1)
 		}

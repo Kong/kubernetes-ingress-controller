@@ -29,6 +29,10 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					CreatedAt: int64Ptr(4),
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
 				},
+				ConsumerGroups: []kong.ConsumerGroup{
+					{ID: kong.String("group-1")},
+					{ID: kong.String("group-2")},
+				},
 				Plugins: []kong.Plugin{{ID: kong.String("1")}},
 				KeyAuths: []*KeyAuth{
 					{
@@ -74,6 +78,10 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					Username:  kong.String("3"),
 					CreatedAt: int64Ptr(4),
 					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
+				},
+				ConsumerGroups: []kong.ConsumerGroup{
+					{ID: kong.String("group-1")},
+					{ID: kong.String("group-2")},
 				},
 				Plugins: []kong.Plugin{{ID: kong.String("1")}},
 				KeyAuths: []*KeyAuth{

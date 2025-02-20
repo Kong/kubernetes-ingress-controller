@@ -129,7 +129,9 @@ Adding a new version? You'll need three changes:
   [#6881](https://github.com/Kong/kubernetes-ingress-controller/pull/6881)
 - `AddToScheme` is only run in the initialization of scheme of the manager but
   not called in `scheme.Get` to reduce the CPU usage.
-  [#7105](https://github.com/Kong/kubernetes-ingress-controller/pull/7105) 
+  [#7105](https://github.com/Kong/kubernetes-ingress-controller/pull/7105)
+- Fix mapping `KongConsumer` to respective `KongConsumerGroup` in Konnect
+  [#7144](https://github.com/Kong/kubernetes-ingress-controller/pull/7144)
 
 ## [3.4.1]
 

@@ -32,8 +32,9 @@ type Consumer struct {
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *Consumer) SanitizedCopy(uuidGenerator util.UUIDGenerator) Consumer {
 	return Consumer{
-		Consumer: c.Consumer,
-		Plugins:  c.Plugins,
+		Consumer:       c.Consumer,
+		Plugins:        c.Plugins,
+		ConsumerGroups: c.ConsumerGroups,
 		KeyAuths: func() []*KeyAuth {
 			if c.KeyAuths == nil {
 				return nil

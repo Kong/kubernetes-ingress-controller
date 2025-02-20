@@ -5,11 +5,11 @@ controller-tools: "0.17.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.6.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "1.64.4"
+golangci-lint: "1.64.5"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.14.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.20.1"
+setup-envtest: "0.20.2"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=mikefarah/yq

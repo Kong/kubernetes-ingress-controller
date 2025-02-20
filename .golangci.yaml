@@ -41,7 +41,7 @@ linters:
   - prealloc
   - revive
   - staticcheck
-  - tenv
+  - usetesting
   - typecheck
   - unconvert
   - unparam
@@ -153,8 +153,8 @@ linters-settings:
       - github.com/kong/kubernetes-ingress-controller/v2:
           recommendations:
           - github.com/kong/kubernetes-ingress-controller/v3
-  tenv:
-    all: true
+  usetesting:
+    os-temp-dir: true
   loggercheck:
     kitlog: false
     klog: true

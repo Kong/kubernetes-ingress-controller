@@ -36,9 +36,9 @@ func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.C
 	}, nil
 }
 
-// Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
+// Start starts the Kong Ingress Controller. It blocks until the context is cancelled.
 // It should be called only once per Manager instance.
-func (m *Manager) Run(ctx context.Context) error {
+func (m *Manager) Start(ctx context.Context) error {
 	return m.manager.Run(ctx)
 }
 

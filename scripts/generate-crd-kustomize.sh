@@ -7,7 +7,14 @@ set -o pipefail
 REPO_ROOT=$(dirname ${BASH_SOURCE})/..
 
 KCONF_PACKAGE="github.com/kong/kubernetes-configuration"
-KCONF_VERSION=$(go list -m -f '{{ .Version }}' ${KCONF_PACKAGE})
+RAW_VERSION=$(go list -m -f '{{ .Version }}' ${KCONF_PACKAGE})
+if [[ $(echo "${RAW_VERSION}" | tr -cd '-' | wc -c) -ge 2 ]]; then
+    # If there are 2 or more hyphens, extract the part after the last hyphen as
+    # that's a git commit hash (e.g. `v1.1.1-0.20250217181409-44e5ddce290d`).
+    KCONF_VERSION=$(echo "${RAW_VERSION}" | rev | cut -d'-' -f1 | rev)
+else
+    KCONF_VERSION="ref=${RAW_VERSION}"
+fi
 
 generate_kustomization_file() {
   local file_path=$1

@@ -70,5 +70,5 @@ func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
 		logger.Info("Anonymous reports disabled, skipping")
 	}
 
-	return m.Run(ctx)
+	return m.Start(ctx)
 }

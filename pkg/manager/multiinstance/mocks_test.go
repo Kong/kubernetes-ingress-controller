@@ -29,7 +29,7 @@ func (m *mockInstance) ID() manager.ID {
 	return m.id
 }
 
-func (m *mockInstance) Run(ctx context.Context) error {
+func (m *mockInstance) Start(ctx context.Context) error {
 	m.wasStarted.Store(true)
 
 	go func() {

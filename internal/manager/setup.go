@@ -357,7 +357,7 @@ func AdminAPIClientFromServiceDiscovery(
 	// configuration validation and sending code.
 	retryOpts = append([]retry.Option{
 		retry.Context(ctx),
-		retry.Attempts(0),
+		retry.Attempts(1),
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(delay),
 		retry.OnRetry(func(_ uint, err error) {

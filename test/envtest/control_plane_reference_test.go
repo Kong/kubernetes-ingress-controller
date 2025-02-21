@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kongcommonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -44,11 +45,11 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	)
 
 	var (
-		kicCPRef = &kongv1alpha1.ControlPlaneRef{
-			Type: kongv1alpha1.ControlPlaneRefKIC,
+		kicCPRef = &kongcommonv1alpha1.ControlPlaneRef{
+			Type: kongcommonv1alpha1.ControlPlaneRefKIC,
 		}
-		konnectCPRef = &kongv1alpha1.ControlPlaneRef{
-			Type:      kongv1alpha1.ControlPlaneRefKonnectID,
+		konnectCPRef = &kongcommonv1alpha1.ControlPlaneRef{
+			Type:      kongcommonv1alpha1.ControlPlaneRefKonnectID,
 			KonnectID: lo.ToPtr("konnect-id"),
 		}
 
@@ -101,9 +102,9 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		object interface {
 			client.Object
 			GetConditions() []metav1.Condition
-			SetControlPlaneRef(*kongv1alpha1.ControlPlaneRef)
+			SetControlPlaneRef(*kongcommonv1alpha1.ControlPlaneRef)
 		}
-		controlPlaneRef      *kongv1alpha1.ControlPlaneRef
+		controlPlaneRef      *kongcommonv1alpha1.ControlPlaneRef
 		expectToBeProgrammed bool
 	}{
 		{

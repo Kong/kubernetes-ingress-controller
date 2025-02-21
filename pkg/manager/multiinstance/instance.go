@@ -38,11 +38,11 @@ func (i *instance) StopChannel() <-chan struct{} {
 	return i.stopCh
 }
 
-// Run runs the instance in a goroutine and blocks until the instance is stopped or the context is done.
-func (i *instance) Run(ctx context.Context) {
+// Start runs the instance in a goroutine and blocks until the instance is stopped or the context is done.
+func (i *instance) Start(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
-		if err := i.in.Run(ctx); err != nil {
+		if err := i.in.Start(ctx); err != nil {
 			i.logger.Error(err, "Instance exited with an error")
 		}
 	}()

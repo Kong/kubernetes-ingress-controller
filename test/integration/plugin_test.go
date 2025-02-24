@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -35,7 +34,7 @@ import (
 )
 
 func TestPluginEssentials(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -164,7 +163,7 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginConfigPatch(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -337,7 +336,7 @@ func TestPluginOrdering(t *testing.T) {
 
 	RunWhenKongEnterprise(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -483,7 +482,7 @@ func TestPluginOrdering(t *testing.T) {
 // the controller can generate a plugin attached to the generated route and consumer if and only if a ReferenceGrant
 // allows access to the KongPlugin from KongConsumers in a remote namespace.
 func TestPluginCrossNamespaceReference(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)

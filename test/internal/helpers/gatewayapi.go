@@ -205,7 +205,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	namespace, name string,
 	expectedStatus metav1.ConditionStatus,
 ) bool {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType {

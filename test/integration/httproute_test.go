@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -35,7 +34,7 @@ import (
 var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -347,7 +346,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -535,7 +534,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 

@@ -83,7 +83,7 @@ func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, 
 
 func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayapi.HTTPRoute, accepted bool, reason gatewayapi.RouteConditionReason) bool {
 	var err error
-	httpRoute, err = c.GatewayV1().HTTPRoutes(httpRoute.Namespace).Get(context.Background(), httpRoute.Name, metav1.GetOptions{})
+	httpRoute, err = c.GatewayV1().HTTPRoutes(httpRoute.Namespace).Get(t.Context(), httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	if len(httpRoute.Status.Parents) == 0 {
@@ -111,7 +111,7 @@ func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset,
 // each listener's name.
 func ListenersHaveNAttachedRoutesCallback(t *testing.T, c *gatewayclient.Clientset, namespace, gatewayName string, attachedRoutesByListener map[string]int32) func() bool {
 	return func() bool {
-		gateway, err := c.GatewayV1().Gateways(namespace).Get(context.Background(), gatewayName, metav1.GetOptions{})
+		gateway, err := c.GatewayV1().Gateways(namespace).Get(t.Context(), gatewayName, metav1.GetOptions{})
 		assert.NoError(t, err)
 
 		for _, listenerStatus := range gateway.Status.Listeners {

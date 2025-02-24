@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -742,11 +741,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				HTTPRouteEnabled:         true,
 			}
 
-			updated, err := reconciler.enforceKongUpstreamPolicyStatus(context.TODO(), &tc.kongUpstreamPolicy)
+			updated, err := reconciler.enforceKongUpstreamPolicyStatus(t.Context(), &tc.kongUpstreamPolicy)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.updated, updated)
 			newPolicy := &kongv1beta1.KongUpstreamPolicy{}
-			assert.NoError(t, fakeClient.Get(context.TODO(), k8stypes.NamespacedName{
+			assert.NoError(t, fakeClient.Get(t.Context(), k8stypes.NamespacedName{
 				Namespace: tc.kongUpstreamPolicy.Namespace,
 				Name:      tc.kongUpstreamPolicy.Name,
 			}, newPolicy))

@@ -41,7 +41,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
@@ -176,7 +176,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	scheme := Scheme(t, WithKong, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
@@ -364,7 +364,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"

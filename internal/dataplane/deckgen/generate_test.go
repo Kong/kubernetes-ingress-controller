@@ -51,7 +51,7 @@ func TestToDeckContent(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := ToDeckContent(context.Background(), zapr.NewLogger(zap.NewNop()), tc.input, tc.params)
+			result := ToDeckContent(t.Context(), zapr.NewLogger(zap.NewNop()), tc.input, tc.params)
 			require.Equal(t, tc.expected, result)
 		})
 	}
@@ -578,7 +578,7 @@ func TestFillPlugin(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			plugin := tc.plugin.DeepCopy()
-			err := fillPlugin(context.Background(), plugin, tc.schemas)
+			err := fillPlugin(t.Context(), plugin, tc.schemas)
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {

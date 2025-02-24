@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,7 +22,7 @@ import (
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	pathRegexPrefix := "/~"
@@ -140,7 +139,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	headerRegexPrefix := "~*"

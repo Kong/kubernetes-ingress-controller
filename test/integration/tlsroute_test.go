@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -55,7 +54,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
@@ -331,7 +330,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")

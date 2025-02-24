@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -25,8 +24,8 @@ import (
 )
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
-	ctx := context.Background()
-	RunWhenKongExpressionRouter(context.Background(), t)
+	ctx := t.Context()
+	RunWhenKongExpressionRouter(t.Context(), t)
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {

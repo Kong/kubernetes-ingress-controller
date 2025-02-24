@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -118,7 +117,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 }
 
 func TestGetListenerStatus(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	scheme := runtime.NewScheme()
 	require.NoError(t, gatewayapi.InstallV1(scheme))
 

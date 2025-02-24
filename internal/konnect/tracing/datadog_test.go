@@ -2,7 +2,6 @@ package tracing_test
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -83,7 +82,7 @@ func TestDoRequest(t *testing.T) {
 
 			loggerBuf := &bytes.Buffer{}
 			logger := buflogr.NewWithBuffer(loggerBuf)
-			ctx := log.IntoContext(context.Background(), logger)
+			ctx := log.IntoContext(t.Context(), logger)
 
 			resp, err := tracing.DoRequest(ctx, client, request)
 			require.NoError(t, err)

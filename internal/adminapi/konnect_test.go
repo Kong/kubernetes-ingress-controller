@@ -3,7 +3,6 @@
 package adminapi_test
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -15,7 +14,7 @@ import (
 func TestNewKongClientForKonnectControlPlane(t *testing.T) {
 	t.Skip("There's no infrastructure for Konnect tests yet")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	const controlPlaneID = "adf78c28-5763-4394-a9a4-a9436a1bea7d"
 
 	c, err := adminapi.NewKongClientForKonnectControlPlane(adminapi.KonnectConfig{

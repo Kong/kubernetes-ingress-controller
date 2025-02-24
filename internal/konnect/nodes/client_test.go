@@ -1,7 +1,6 @@
 package nodes_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,9 +33,9 @@ func TestNodesClientUserAgent(t *testing.T) {
 	c, err := nodes.NewClient(adminapi.KonnectConfig{Address: ts.URL})
 	require.NoError(t, err)
 
-	_, err = c.GetNode(context.Background(), "test-node-id")
+	_, err = c.GetNode(t.Context(), "test-node-id")
 	require.Error(t, err)
 
-	err = c.DeleteNode(context.Background(), "test-node-id")
+	err = c.DeleteNode(t.Context(), "test-node-id")
 	require.NoError(t, err)
 }

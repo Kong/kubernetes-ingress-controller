@@ -41,7 +41,7 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	_, loggerHook := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
@@ -97,7 +97,7 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 	scheme := Scheme(t)
 	envcfg := Setup(t, scheme, WithInstallKongCRDs(false))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	cfg := ConfigForEnvConfig(t, envcfg)
 
@@ -113,7 +113,7 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 func TestCRDValidations(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)

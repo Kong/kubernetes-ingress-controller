@@ -33,7 +33,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	client := NewControllerClient(t, scheme, cfg)
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	ns := CreateNamespace(ctx, t, client)

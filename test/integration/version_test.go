@@ -81,11 +81,11 @@ func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 		version kong.Version
 	)
 
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ctx, cancel := context.WithTimeout(context.Background(), test.RequestTimeout)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ctx, cancel := context.WithTimeout(t.Context(), test.RequestTimeout)
 		defer cancel()
 		version, err = helpers.GetKongVersion(ctx, adminURL, consts.KongTestPassword)
-		assert.NoError(t, err)
+		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 	return version
 }
@@ -98,11 +98,11 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) dpconf.DBMode {
 		dbmode dpconf.DBMode
 	)
 
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ctx, cancel := context.WithTimeout(context.Background(), test.RequestTimeout)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ctx, cancel := context.WithTimeout(t.Context(), test.RequestTimeout)
 		defer cancel()
 		dbmode, err = helpers.GetKongDBMode(ctx, adminURL, consts.KongTestPassword)
-		assert.NoError(t, err)
+		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 	return dbmode
 }

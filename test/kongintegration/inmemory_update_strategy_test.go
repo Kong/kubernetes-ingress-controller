@@ -1,7 +1,6 @@
 package kongintegration
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -35,7 +34,7 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		period  = time.Millisecond * 200
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kongC := containers.NewKong(ctx, t)
 	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")

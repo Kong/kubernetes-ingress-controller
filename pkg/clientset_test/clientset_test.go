@@ -1,7 +1,6 @@
 package clientset_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +20,7 @@ func TestClientset(t *testing.T) {
 		})
 
 		plugin, err := cl.ConfigurationV1().KongPlugins("test-ns").
-			Get(context.Background(), "test-plugin", metav1.GetOptions{})
+			Get(t.Context(), "test-plugin", metav1.GetOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, plugin)
 		require.Equal(t, "test-plugin", plugin.Name)

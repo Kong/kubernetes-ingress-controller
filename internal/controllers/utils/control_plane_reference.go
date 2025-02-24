@@ -4,7 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 // ObjectWithControlPlaneRef is an interface that represents an object that has a control plane reference.

@@ -2,4 +2,4 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/kong/kubernetes-configuration/config/crd/ingress-controller?ref=v1.1.0 # Version is auto-updated by the generating script.
+  - https://github.com/kong/kubernetes-configuration/config/crd/ingress-controller?ref=v1.1.1-0.20250224133355-0c2aa5d85cad # Version is auto-updated by the generating script.

@@ -299,7 +299,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			gotOK, gotMessage, err := validator.ValidatePlugin(context.Background(), tt.args.plugin, tt.args.overrideSecrets)
+			gotOK, gotMessage, err := validator.ValidatePlugin(t.Context(), tt.args.plugin, tt.args.overrideSecrets)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidatePlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,
@@ -513,7 +513,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 				ingressClassMatcher: fakeClassMatcher,
 			}
 
-			gotOK, gotMessage, err := validator.ValidateClusterPlugin(context.Background(), tt.args.plugin, tt.args.overrideSecrets)
+			gotOK, gotMessage, err := validator.ValidateClusterPlugin(t.Context(), tt.args.plugin, tt.args.overrideSecrets)
 			assert.Equalf(t, tt.wantOK, gotOK,
 				"KongHTTPValidator.ValidateClusterPlugin() want OK: %v, got OK: %v",
 				tt.wantOK, gotOK,
@@ -543,7 +543,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+		valid, errText, err := validator.ValidateConsumer(t.Context(), kongv1.KongConsumer{
 			Username: "username",
 		})
 		require.NoError(t, err)
@@ -553,7 +553,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		// make services unavailable
 		validator.AdminAPIServicesProvider = fakeServicesProvider{}
 
-		valid, errText, err = validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+		valid, errText, err = validator.ValidateConsumer(t.Context(), kongv1.KongConsumer{
 			Username: "username",
 		})
 		require.NoError(t, err)
@@ -571,7 +571,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+		valid, errText, err := validator.ValidateConsumer(t.Context(), kongv1.KongConsumer{
 			Username: "username",
 		})
 		require.NoError(t, err)
@@ -617,7 +617,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, _, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+		valid, _, err := validator.ValidateConsumer(t.Context(), kongv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
@@ -661,7 +661,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
+		valid, errText, err := validator.ValidateConsumer(t.Context(), kongv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
@@ -880,7 +880,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 				ingressClassMatcher: fakeClassMatcher,
 				Logger:              zapr.NewLogger(zap.NewNop()),
 			}
-			got, gotMsg, err := validator.ValidateConsumerGroup(context.Background(), tt.args.cg)
+			got, gotMsg, err := validator.ValidateConsumerGroup(t.Context(), tt.args.cg)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KongHTTPValidator.ValidateConsumerGroups() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1010,7 +1010,7 @@ func TestKongHTTPValidator_ValidateCredential(t *testing.T) {
 				Logger:                   logr.Discard(),
 			}
 
-			ok, msg := validator.ValidateCredential(context.Background(), tc.secret)
+			ok, msg := validator.ValidateCredential(t.Context(), tc.secret)
 			assert.Equal(t, tc.wantOK, ok)
 			assert.Equal(t, tc.wantMessage, msg)
 		})
@@ -1265,7 +1265,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				},
 				Logger: logr.Discard(),
 			}
-			ok, msg, err := validator.ValidateIngress(context.Background(), *tc.ingress)
+			ok, msg, err := validator.ValidateIngress(t.Context(), *tc.ingress)
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantOK, ok)
 			assert.Equal(t, tc.wantMessage, msg)
@@ -1401,7 +1401,7 @@ func TestValidator_ValidateVault(t *testing.T) {
 				ingressClassMatcher: fakeClassMatcher,
 				Logger:              logr.Discard(),
 			}
-			ok, msg, err := validator.ValidateVault(context.Background(), tc.kongVault)
+			ok, msg, err := validator.ValidateVault(t.Context(), tc.kongVault)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedOK, ok)
 			assert.Contains(t, msg, tc.expectedMessage)
@@ -1541,7 +1541,7 @@ func TestValidator_ValidateCustomEntity(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			ok, msg, err := validator.ValidateCustomEntity(context.Background(), tc.entity)
+			ok, msg, err := validator.ValidateCustomEntity(t.Context(), tc.entity)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedOK, ok)
 			assert.Contains(t, msg, tc.expectedMessage)

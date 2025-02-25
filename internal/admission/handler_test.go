@@ -1,7 +1,6 @@
 package admission
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -99,7 +98,7 @@ func TestHandleKongIngress(t *testing.T) {
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
 
-			got, err := handler.handleKongIngress(context.Background(), request, responseBuilder)
+			got, err := handler.handleKongIngress(t.Context(), request, responseBuilder)
 			require.NoError(t, err)
 			require.True(t, got.Allowed)
 			require.Equal(t, tt.wantWarnings, got.Warnings)
@@ -428,7 +427,7 @@ func TestHandleSecret(t *testing.T) {
 			}
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
-			got, err := handler.handleSecret(context.Background(), request, responseBuilder)
+			got, err := handler.handleSecret(t.Context(), request, responseBuilder)
 			if tc.expectError {
 				require.Error(t, err)
 				return

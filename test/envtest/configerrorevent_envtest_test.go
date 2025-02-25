@@ -39,7 +39,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		tickTime = 100 * time.Millisecond
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	restConfig := Setup(t, scheme.Scheme)
@@ -295,7 +295,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 		tickTime = 100 * time.Millisecond
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	scheme := Scheme(t, WithKong)

@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -36,7 +35,7 @@ var (
 )
 
 func TestTCPIngressTLS(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	RunWhenKongExpressionRouter(ctx, t)
 	t.Parallel()
 
@@ -238,7 +237,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")

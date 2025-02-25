@@ -16,7 +16,7 @@ func TestAddressFinder(t *testing.T) {
 	require.Nil(t, finder.addressGetter)
 
 	t.Log("verifying that a finder with no overrides or getter produces an error")
-	ctx := context.Background()
+	ctx := t.Context()
 	addrs, err := finder.GetAddresses(ctx)
 	require.Error(t, err)
 	require.Empty(t, addrs)

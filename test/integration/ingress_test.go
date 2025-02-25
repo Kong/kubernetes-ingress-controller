@@ -46,7 +46,7 @@ func TestIngressEssentials(t *testing.T) {
 		ingressClassMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -154,7 +154,7 @@ func TestIngressEssentials(t *testing.T) {
 }
 
 func TestIngressDefaultBackend(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -204,7 +204,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 		ingressClassMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
@@ -301,7 +301,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 func TestIngressServiceUpstream(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("using testing namespace %s", ns.Name)
@@ -354,7 +354,7 @@ func TestIngressServiceUpstream(t *testing.T) {
 func TestIngressStatusUpdatesExtended(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -487,7 +487,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		ingressClassMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -602,7 +602,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -765,7 +765,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 		t.Skipf("the case %s should be run separately; please set TEST_RUN_INVALID_CONFIG_CASES to true to run this case", t.Name())
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -970,7 +970,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 }
 
 func TestIngressMatchByHost(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -1070,7 +1070,7 @@ func TestIngressMatchByHost(t *testing.T) {
 }
 
 func TestIngressRewriteURI(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if !strings.Contains(testenv.ControllerFeatureGates(), featuregates.RewriteURIsFeature) {
 		t.Skipf("rewrite uri feature is disabled")

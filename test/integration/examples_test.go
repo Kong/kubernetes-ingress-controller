@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
@@ -29,7 +28,7 @@ func TestTLSRouteExample(t *testing.T) {
 
 	var (
 		tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesDIR)
-		ctx                      = context.Background()
+		ctx                      = t.Context()
 	)
 	_, cleaner := helpers.Setup(ctx, t, env)
 

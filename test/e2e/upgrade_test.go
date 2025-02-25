@@ -183,7 +183,7 @@ func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version 
 	dockerc, err := client.NewClientWithOpts(client.FromEnv)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Log("negotiating docker API version")
 	dockerc.NegotiateAPIVersion(ctx)

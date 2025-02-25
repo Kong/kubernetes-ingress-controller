@@ -79,9 +79,9 @@ func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIn
 
 func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(context.Background(), t, expressions)
+	skipTestForRouterFlavors(t.Context(), t, expressions)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, _ := helpers.Setup(ctx, t, env)
 	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
 
@@ -101,9 +101,9 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 
 func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(context.Background(), t, traditional, traditionalCompatible)
+	skipTestForRouterFlavors(t.Context(), t, traditional, traditionalCompatible)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, _ := helpers.Setup(ctx, t, env)
 	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
 

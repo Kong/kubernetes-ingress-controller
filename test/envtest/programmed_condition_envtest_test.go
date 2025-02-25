@@ -29,7 +29,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	ctrlClient := NewControllerClient(t, scheme, envcfg)

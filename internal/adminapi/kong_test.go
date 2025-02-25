@@ -1,7 +1,6 @@
 package adminapi_test
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -203,7 +202,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			t.Cleanup(func() { adminAPIServer.Close() })
 
 			client, err := adminapi.NewKongClientForWorkspace(
-				context.Background(),
+				t.Context(),
 				adminAPIServer.URL,
 				tc.workspace,
 				adminapi.ClientOpts{},
@@ -282,7 +281,7 @@ func validate(
 
 	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	require.NoError(t, err, "failed to create basic HTTP request")
-	response, err := cl.DoRAW(context.Background(), req)
+	response, err := cl.DoRAW(t.Context(), req)
 	require.NoError(t, err, "Kong API client failed to issue a basic request")
 	defer response.Body.Close()
 

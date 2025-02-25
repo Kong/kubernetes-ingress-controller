@@ -41,7 +41,7 @@ func TestTCPProxy(t *testing.T) {
 	proxy, err := helpers.NewTCPProxy(ls.Addr().String())
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	go func() {
 		err := proxy.Run(ctx)

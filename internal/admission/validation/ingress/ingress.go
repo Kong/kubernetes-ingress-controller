@@ -9,7 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -69,7 +69,7 @@ func ingressToKongRoutesForValidation(
 ) []kong.Route {
 	kongServices := subtranslator.TranslateIngresses(
 		[]*netv1.Ingress{ingress},
-		kongv1alpha1.IngressClassParametersSpec{EnableLegacyRegexDetection: true},
+		configurationv1alpha1.IngressClassParametersSpec{EnableLegacyRegexDetection: true},
 		subtranslator.TranslateIngressFeatureFlags{
 			ExpressionRoutes:  translatorFeatures.ExpressionRoutes,
 			KongServiceFacade: translatorFeatures.KongServiceFacade,

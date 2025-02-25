@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -504,11 +504,11 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an IngressClassParameters with legacy regex detection enabled")
-	params := &kongv1alpha1.IngressClassParameters{
+	params := &configurationv1alpha1.IngressClassParameters{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: consts.IngressClass,
 		},
-		Spec: kongv1alpha1.IngressClassParametersSpec{
+		Spec: configurationv1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
 		},
 	}
@@ -522,8 +522,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("adding legacy regex IngressClassParameters to the %q IngressClass", class.Name)
 	class.Spec.Parameters = &netv1.IngressClassParametersReference{
-		APIGroup:  &kongv1alpha1.GroupVersion.Group,
-		Kind:      kongv1alpha1.IngressClassParametersKind,
+		APIGroup:  &configurationv1alpha1.GroupVersion.Group,
+		Kind:      configurationv1alpha1.IngressClassParametersKind,
 		Name:      params.Name,
 		Scope:     kong.String(netv1.IngressClassParametersReferenceScopeNamespace),
 		Namespace: &params.Namespace,

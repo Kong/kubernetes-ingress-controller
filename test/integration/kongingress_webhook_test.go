@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/net"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 	"github.com/kong/kubernetes-configuration/pkg/clientset/scheme"
 
@@ -31,12 +31,12 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("when deprecated fields are populated warnings are returned", func(t *testing.T) {
-		kongIngress := &kongv1.KongIngress{
+		kongIngress := &configurationv1.KongIngress{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "kong-ingress-validation-",
 			},
 			// Upstream field is deprecated, expecting warning for it.
-			Upstream: &kongv1.KongIngressUpstream{
+			Upstream: &configurationv1.KongIngressUpstream{
 				HashOn: lo.ToPtr("none"),
 			},
 		}

@@ -20,6 +20,7 @@ go 1.24.0
 
 require (
 	cloud.google.com/go/container v1.42.2
+	github.com/Kong/sdk-konnect-go v0.2.14
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/blang/semver/v4 v4.0.0
@@ -32,7 +33,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.20.3
 	github.com/kong/go-kong v0.63.0
-	github.com/kong/kubernetes-configuration v1.1.0
+	github.com/kong/kubernetes-configuration v1.1.1-0.20250224133355-0c2aa5d85cad
 	github.com/kong/kubernetes-telemetry v0.1.8
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/lithammer/dedent v1.1.0
@@ -92,7 +93,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect
-	github.com/Kong/sdk-konnect-go v0.2.4
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect

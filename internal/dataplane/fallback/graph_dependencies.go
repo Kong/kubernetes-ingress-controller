@@ -8,9 +8,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -39,21 +39,21 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 	case *gatewayapi.GRPCRoute:
 		return resolveGRPCRouteDependencies(cache, obj), nil
 	// Kong specific objects.
-	case *kongv1.KongPlugin:
+	case *configurationv1.KongPlugin:
 		return resolveKongPluginDependencies(cache, obj), nil
-	case *kongv1.KongClusterPlugin:
+	case *configurationv1.KongClusterPlugin:
 		return resolveKongClusterPluginDependencies(cache, obj), nil
-	case *kongv1.KongConsumer:
+	case *configurationv1.KongConsumer:
 		return resolveKongConsumerDependencies(cache, obj), nil
-	case *kongv1beta1.KongConsumerGroup:
+	case *configurationv1beta1.KongConsumerGroup:
 		return resolveKongConsumerGroupDependencies(cache, obj), nil
-	case *kongv1beta1.UDPIngress:
+	case *configurationv1beta1.UDPIngress:
 		return resolveUDPIngressDependencies(cache, obj), nil
-	case *kongv1beta1.TCPIngress:
+	case *configurationv1beta1.TCPIngress:
 		return resolveTCPIngressDependencies(cache, obj), nil
 	case *incubatorv1alpha1.KongServiceFacade:
 		return resolveKongServiceFacadeDependencies(cache, obj), nil
-	case *kongv1alpha1.KongCustomEntity:
+	case *configurationv1alpha1.KongCustomEntity:
 		return resolveKongCustomEntityDependencies(cache, obj), nil
 	// Object types that have no dependencies.
 	case *netv1.IngressClass,
@@ -63,10 +63,10 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		*gatewayapi.ReferenceGrant,
 		*gatewayapi.Gateway,
 		*gatewayapi.BackendTLSPolicy,
-		*kongv1.KongIngress,
-		*kongv1beta1.KongUpstreamPolicy,
-		*kongv1alpha1.IngressClassParameters,
-		*kongv1alpha1.KongVault:
+		*configurationv1.KongIngress,
+		*configurationv1beta1.KongUpstreamPolicy,
+		*configurationv1alpha1.IngressClassParameters,
+		*configurationv1alpha1.KongVault:
 		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type: %T", obj)

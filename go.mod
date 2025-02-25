@@ -22,7 +22,7 @@ require (
 	cloud.google.com/go/container v1.42.2
 	github.com/Kong/sdk-konnect-go v0.2.14
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/avast/retry-go/v4 v4.6.0
+	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/dominikbraun/graph v0.23.0
 	github.com/go-logr/logr v1.4.2

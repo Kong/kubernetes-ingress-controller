@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -414,7 +413,7 @@ func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
 			}
 
 			// Call the function
-			requests := reconciler.getUpstreamPoliciesForIngressServices(context.Background(), &tt.ingress)
+			requests := reconciler.getUpstreamPoliciesForIngressServices(t.Context(), &tt.ingress)
 
 			// Assert the results
 			assert.ElementsMatch(t, tt.expectedRequests, requests)

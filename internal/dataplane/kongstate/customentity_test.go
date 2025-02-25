@@ -1,7 +1,6 @@
 package kongstate
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"testing"
@@ -1102,7 +1101,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 
 			ks := tc.initialState
 			ks.FillCustomEntities(
-				context.Background(),
+				t.Context(),
 				logr.Discard(), s,
 				failuresCollector,
 				&fakeSchemaService{schemas: tc.schemas}, "",

@@ -83,7 +83,7 @@ func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			discoverer := mocks.NewAdminAPIDiscoverer(tc.discoveredAPIs, tc.discovererErr)
 			factory := mocks.NewAdminAPIClientFactory(tc.factoryErrs)
 

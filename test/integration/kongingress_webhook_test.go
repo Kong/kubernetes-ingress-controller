@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -21,9 +20,9 @@ import (
 
 func TestKongIngressValidationWebhook(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(context.Background(), t, expressions)
+	skipTestForRouterFlavors(t.Context(), t, expressions)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, _ := helpers.Setup(ctx, t, env)
 
 	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-kongingress", ns.Name)

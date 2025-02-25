@@ -1,7 +1,6 @@
 package kongintegration
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -31,7 +30,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 		period  = time.Millisecond * 100
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kongC := containers.NewKong(ctx, t)
 	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")

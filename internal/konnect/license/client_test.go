@@ -1,7 +1,6 @@
 package license_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -53,7 +52,7 @@ func TestLicenseClient(t *testing.T) {
 			}`),
 			status: http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
-				licenseOpt, err := c.Get(context.Background())
+				licenseOpt, err := c.Get(t.Context())
 				require.NoError(t, err)
 
 				l, ok := licenseOpt.Get()
@@ -67,7 +66,7 @@ func TestLicenseClient(t *testing.T) {
 			response: []byte(`{}`),
 			status:   http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
-				_, err := c.Get(context.Background())
+				_, err := c.Get(t.Context())
 				require.ErrorContains(t, err, "no license item found in response")
 			},
 		},
@@ -76,7 +75,7 @@ func TestLicenseClient(t *testing.T) {
 			response: []byte(`{invalid-json`),
 			status:   http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
-				_, err := c.Get(context.Background())
+				_, err := c.Get(t.Context())
 				require.ErrorContains(t, err, "failed to parse response body")
 			},
 		},
@@ -93,7 +92,7 @@ func TestLicenseClient(t *testing.T) {
 			}`),
 			status: http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
-				_, err := c.Get(context.Background())
+				_, err := c.Get(t.Context())
 				require.ErrorContains(t, err, "empty id")
 			},
 		},
@@ -110,7 +109,7 @@ func TestLicenseClient(t *testing.T) {
 			}`),
 			status: http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
-				_, err := c.Get(context.Background())
+				_, err := c.Get(t.Context())
 				require.ErrorContains(t, err, "empty updated_at")
 			},
 		},
@@ -127,7 +126,7 @@ func TestLicenseClient(t *testing.T) {
 			}`),
 			status: http.StatusOK,
 			assertions: func(t *testing.T, c *license.Client) {
-				_, err := c.Get(context.Background())
+				_, err := c.Get(t.Context())
 				require.ErrorContains(t, err, "empty license")
 			},
 		},
@@ -136,7 +135,7 @@ func TestLicenseClient(t *testing.T) {
 			response: nil,
 			status:   http.StatusNotFound,
 			assertions: func(t *testing.T, c *license.Client) {
-				l, err := c.Get(context.Background())
+				l, err := c.Get(t.Context())
 				require.NoError(t, err)
 				require.False(t, l.IsPresent())
 			},
@@ -146,7 +145,7 @@ func TestLicenseClient(t *testing.T) {
 			response: nil,
 			status:   http.StatusBadRequest,
 			assertions: func(t *testing.T, c *license.Client) {
-				_, err := c.Get(context.Background())
+				_, err := c.Get(t.Context())
 				require.Error(t, err)
 			},
 		},

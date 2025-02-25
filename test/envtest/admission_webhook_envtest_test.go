@@ -33,7 +33,7 @@ import (
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -177,7 +177,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongPlugins(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -431,7 +431,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -695,7 +695,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -775,6 +775,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 	}
 	require.NoError(t, ctrlClient.Create(ctx, consumer))
 	t.Cleanup(func() {
+		ctx := t.Context()
 		if err := ctrlClient.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
 			assert.NoError(t, err)
 		}
@@ -1004,7 +1005,8 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, credential := range tc.credentials {
 				require.NoError(t, ctrlClient.Create(ctx, credential))
-				t.Cleanup(func() {
+				t.Cleanup(func() { //nolint:contextcheck
+					ctx := context.Background() //nolint:usetesting
 					if err := ctrlClient.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
@@ -1030,7 +1032,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 }
 
 func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	// highEndConsumerUsageCount indicates a number of consumers with credentials
@@ -1204,7 +1206,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (

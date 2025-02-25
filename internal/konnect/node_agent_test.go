@@ -358,7 +358,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 		newMockManagerInstanceIDProvider(uuid.New()),
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	agentReturned := make(chan struct{})
 	go func() {
 		err := nodeAgent.Start(ctx)
@@ -614,7 +614,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 // runAgent runs the agent in a goroutine and cancels the context after the test is done, ensuring that the agent
 // doesn't return prematurely.
 func runAgent(t *testing.T, nodeAgent *konnect.NodeAgent) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	// To be used as a barrier to ensure that the agent returned after the context was cancelled.
 	agentReturned := make(chan struct{})

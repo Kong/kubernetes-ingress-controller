@@ -10,9 +10,9 @@ import (
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 )
 
@@ -23,9 +23,9 @@ func initScheme() *runtime.Scheme {
 	utilruntime.Must(apiextensionsv1.AddToScheme(s))
 	utilruntime.Must(clientgoscheme.AddToScheme(s))
 
-	utilruntime.Must(kongv1.AddToScheme(s))
-	utilruntime.Must(kongv1alpha1.AddToScheme(s))
-	utilruntime.Must(kongv1beta1.AddToScheme(s))
+	utilruntime.Must(configurationv1.AddToScheme(s))
+	utilruntime.Must(configurationv1alpha1.AddToScheme(s))
+	utilruntime.Must(configurationv1beta1.AddToScheme(s))
 	utilruntime.Must(incubatorv1alpha1.AddToScheme(s))
 
 	utilruntime.Must(gatewayv1.Install(s))

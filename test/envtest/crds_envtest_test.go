@@ -22,9 +22,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -125,7 +125,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "invalid TCPIngress service name",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *kongv1beta1.TCPIngress) {
+				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.TCPIngress) {
 					ingress.Spec.Rules[0].Backend.ServiceName = ""
 				})
 
@@ -135,7 +135,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "invalid TCPIngress service port",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *kongv1beta1.TCPIngress) {
+				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.TCPIngress) {
 					ingress.Spec.Rules[0].Backend.ServicePort = 0
 				})
 
@@ -145,7 +145,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "invalid TCPIngress rule port",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *kongv1beta1.TCPIngress) {
+				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.TCPIngress) {
 					ingress.Spec.Rules[0].Port = 0
 				})
 
@@ -155,7 +155,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "invalid UDPIngress service name",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *kongv1beta1.UDPIngress) {
+				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.UDPIngress) {
 					ingress.Spec.Rules[0].Backend.ServiceName = ""
 				})
 
@@ -165,7 +165,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "invalid UDPIngress service port",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *kongv1beta1.UDPIngress) {
+				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.UDPIngress) {
 					ingress.Spec.Rules[0].Backend.ServicePort = 0
 				})
 
@@ -175,7 +175,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "invalid UDPIngress rule port",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *kongv1beta1.UDPIngress) {
+				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.UDPIngress) {
 					ingress.Spec.Rules[0].Port = 0
 				})
 
@@ -187,7 +187,7 @@ func TestCRDValidations(t *testing.T) {
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				for i, invalidHashOn := range generateInvalidHashOns() {
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
-						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 							HashOn: &invalidHashOn,
 						})
 						require.ErrorContains(t, err, "Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set.")
@@ -198,13 +198,13 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - only one of spec.hashOnFallback.(header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				invalidHashOns := lo.Reject(generateInvalidHashOns(), func(hashOn kongv1beta1.KongUpstreamHash, _ int) bool {
+				invalidHashOns := lo.Reject(generateInvalidHashOns(), func(hashOn configurationv1beta1.KongUpstreamHash, _ int) bool {
 					// Filter out Cookie which is not allowed in spec.hashOnFallback.
 					return hashOn.Cookie != nil
 				})
 				for i, invalidHashOn := range invalidHashOns {
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
-						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 							HashOnFallback: &invalidHashOn,
 						})
 						require.ErrorContains(t, err, "Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set.")
@@ -215,9 +215,9 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - spec.hashOn.cookie and spec.hashOn.cookiePath are set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					Algorithm: lo.ToPtr("consistent-hashing"),
-					HashOn: &kongv1beta1.KongUpstreamHash{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Cookie:     lo.ToPtr("cookie-name"),
 						CookiePath: lo.ToPtr("/"),
 					},
@@ -228,9 +228,9 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - spec.hashOn.cookie is set, spec.hashOn.cookiePath is required",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					Algorithm: lo.ToPtr("consistent-hashing"),
-					HashOn: &kongv1beta1.KongUpstreamHash{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Cookie: lo.ToPtr("cookie-name"),
 					},
 				})
@@ -240,9 +240,9 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - spec.hashOn.cookiePath is set, spec.hashOn.cookie is required",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					Algorithm: lo.ToPtr("consistent-hashing"),
-					HashOn: &kongv1beta1.KongUpstreamHash{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						CookiePath: lo.ToPtr("/"),
 					},
 				})
@@ -252,8 +252,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie must not be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						CookiePath: lo.ToPtr("/"),
 					},
 				})
@@ -263,8 +263,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - spec.hashOnFallback.cookiePath must not be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						CookiePath: lo.ToPtr("/"),
 					},
 				})
@@ -274,11 +274,11 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - healthchecks.active.healthy.httpStatuses contains invalid HTTP status code",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-						Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
-							Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
-								HTTPStatuses: []kongv1beta1.HTTPStatus{600},
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+						Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
+							Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
+								HTTPStatuses: []configurationv1beta1.HTTPStatus{600},
 							},
 						},
 					},
@@ -289,11 +289,11 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - healthchecks.active.unhealthy.httpStatuses contains invalid HTTP status code",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-						Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
-							Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
-								HTTPStatuses: []kongv1beta1.HTTPStatus{99},
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+						Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
+							Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
+								HTTPStatuses: []configurationv1beta1.HTTPStatus{99},
 							},
 						},
 					},
@@ -304,10 +304,10 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - healthchecks.passive.healthy.interval must not be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-						Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
-							Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+						Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
+							Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
 								Interval: lo.ToPtr(10),
 							},
 						},
@@ -319,10 +319,10 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - healthchecks.passive.unhealthy.interval must not be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-						Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
-							Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+						Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
+							Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
 								Interval: lo.ToPtr(10),
 							},
 						},
@@ -334,8 +334,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - hashOn can only be set when algorithm is set to consistent-hashing",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					HashOn: &kongv1beta1.KongUpstreamHash{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
 					},
 				})
@@ -345,8 +345,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - hashOnFallback can only be set when algorithm is set to consistent-hashing",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
 					},
 				})
@@ -359,13 +359,13 @@ func TestCRDValidations(t *testing.T) {
 				validValues := []string{"ip", "consumer", "path"}
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
-						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 							Algorithm: lo.ToPtr("consistent-hashing"),
-							HashOn: &kongv1beta1.KongUpstreamHash{
-								Input: lo.ToPtr(kongv1beta1.HashInput(validValue)),
+							HashOn: &configurationv1beta1.KongUpstreamHash{
+								Input: lo.ToPtr(configurationv1beta1.HashInput(validValue)),
 							},
-							HashOnFallback: &kongv1beta1.KongUpstreamHash{
-								Input: lo.ToPtr(kongv1beta1.HashInput(validValue)),
+							HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+								Input: lo.ToPtr(configurationv1beta1.HashInput(validValue)),
 							},
 						})
 						require.NoError(t, err)
@@ -373,13 +373,13 @@ func TestCRDValidations(t *testing.T) {
 				}
 
 				t.Run("invalid value", func(t *testing.T) {
-					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
-						HashOn: &kongv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(kongv1beta1.HashInput("unknown-input")),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("unknown-input")),
 						},
-						HashOnFallback: &kongv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(kongv1beta1.HashInput("unknown-input-fallback")),
+						HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("unknown-input-fallback")),
 						},
 					})
 					require.ErrorContains(t, err, `spec.hashOn.input: Unsupported value: "unknown-input": supported values: "ip", "consumer", "path"`)
@@ -393,7 +393,7 @@ func TestCRDValidations(t *testing.T) {
 				validValues := []string{"consistent-hashing", "round-robin", "least-connections", "latency"}
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
-						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 							Algorithm: lo.ToPtr(validValue),
 						})
 						require.NoError(t, err)
@@ -401,7 +401,7 @@ func TestCRDValidations(t *testing.T) {
 				}
 
 				t.Run("invalid value", func(t *testing.T) {
-					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("unknown-algorithm"),
 					})
 					require.ErrorContains(t, err, `spec.algorithm: Unsupported value: "unknown-algorithm": supported values: "round-robin", "consistent-hashing", "least-connections", "latency"`)
@@ -414,12 +414,12 @@ func TestCRDValidations(t *testing.T) {
 				validValues := []string{"http", "https", "tcp", "grpc", "grpcs"}
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
-						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-							Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-								Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+							Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+								Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
 									Type: lo.ToPtr(validValue),
 								},
-								Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+								Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
 									Type: lo.ToPtr(validValue),
 								},
 							},
@@ -428,12 +428,12 @@ func TestCRDValidations(t *testing.T) {
 					})
 				}
 				t.Run("invalid value", func(t *testing.T) {
-					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
-						Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-							Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+						Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+							Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
 								Type: lo.ToPtr("unknown-type-active"),
 							},
-							Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+							Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
 								Type: lo.ToPtr("unknown-type-passive"),
 							},
 						},
@@ -446,13 +446,13 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - hashOnFallback must not be set when spec.hasOn.cookie is set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, kongv1beta1.KongUpstreamPolicySpec{
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					Algorithm: lo.ToPtr("consistent-hashing"),
-					HashOn: &kongv1beta1.KongUpstreamHash{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Cookie:     lo.ToPtr("cookie-name"),
 						CookiePath: lo.ToPtr("/"),
 					},
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						Header: lo.ToPtr("header-name"),
 					},
 				})
@@ -462,8 +462,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongIngress - proxy is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongIngress(ctx, ctrlClient, ns, &kongv1.KongIngress{
-					Proxy: &kongv1.KongIngressService{
+				err := createKongIngress(ctx, ctrlClient, ns, &configurationv1.KongIngress{
+					Proxy: &configurationv1.KongIngressService{
 						Retries: lo.ToPtr(5),
 					},
 				})
@@ -473,8 +473,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongIngress - route is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongIngress(ctx, ctrlClient, ns, &kongv1.KongIngress{
-					Route: &kongv1.KongIngressRoute{
+				err := createKongIngress(ctx, ctrlClient, ns, &configurationv1.KongIngress{
+					Route: &configurationv1.KongIngressRoute{
 						PreserveHost: lo.ToPtr(true),
 					},
 				})
@@ -484,7 +484,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - no config is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+				err := createKongPlugin(ctx, ctrlClient, ns, &configurationv1.KongPlugin{
 					PluginName: "key-auth",
 				})
 				require.NoError(t, err)
@@ -493,7 +493,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - with config is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+				err := createKongPlugin(ctx, ctrlClient, ns, &configurationv1.KongPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names":["apikey"]}`),
@@ -505,10 +505,10 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - with configFrom is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+				err := createKongPlugin(ctx, ctrlClient, ns, &configurationv1.KongPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Secret: "secret-name",
 							Key:    "key-name",
 						},
@@ -520,13 +520,13 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - with configFrom and config is rejected",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongPlugin(ctx, ctrlClient, ns, &kongv1.KongPlugin{
+				err := createKongPlugin(ctx, ctrlClient, ns, &configurationv1.KongPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names":["apikey"]}`),
 					},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Secret: "secret-name",
 							Key:    "key-name",
 						},
@@ -539,7 +539,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - change plugin field is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongPlugin{
+				plugin := &configurationv1.KongPlugin{
 					PluginName: "key-auth",
 				}
 				err := createKongPlugin(ctx, ctrlClient, ns, plugin)
@@ -553,13 +553,13 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - using configPatches is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongPlugin{
+				plugin := &configurationv1.KongPlugin{
 					PluginName: "key-auth",
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/key_names",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Secret: "secret-name",
 									Key:    "key-name",
 								},
@@ -573,16 +573,16 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - using config and configPatches is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongPlugin{
+				plugin := &configurationv1.KongPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_name":"apikey"}`),
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/key_names",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Secret: "secret-name",
 									Key:    "key-name",
 								},
@@ -596,19 +596,19 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongPlugin - using configFrom and configPatches is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongPlugin{
+				plugin := &configurationv1.KongPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Secret: "secret-name",
 							Key:    "key-name",
 						},
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/key_names",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Secret: "secret-name",
 									Key:    "key-name",
 								},
@@ -623,7 +623,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - no config is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
 				})
 				require.NoError(t, err)
@@ -632,7 +632,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - with config is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names":["apikey"]}`),
@@ -644,10 +644,10 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - with configFrom is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Secret:    "secret-name",
 							Key:       "key-name",
 							Namespace: "ns",
@@ -660,13 +660,13 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - with configFrom and config is rejected",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createKongClusterPlugin(ctx, ctrlClient, ns, &kongv1.KongClusterPlugin{
+				err := createKongClusterPlugin(ctx, ctrlClient, ns, &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names":["apikey"]}`),
 					},
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Secret:    "secret-name",
 							Key:       "key-name",
 							Namespace: "ns",
@@ -680,7 +680,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - change plugin field is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongClusterPlugin{
+				plugin := &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
 				}
 				err := createKongClusterPlugin(ctx, ctrlClient, ns, plugin)
@@ -694,13 +694,13 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - using configPatches is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongClusterPlugin{
+				plugin := &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/key_names",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: ns,
 									Secret:    "secret-name",
 									Key:       "key-name",
@@ -715,16 +715,16 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - using config and configPatches is allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongClusterPlugin{
+				plugin := &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_name":"apikey"}`),
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/key_names",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: ns,
 									Secret:    "secret-name",
 									Key:       "key-name",
@@ -739,19 +739,19 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongClusterPlugin - using configFrom and configPatches is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				plugin := &kongv1.KongClusterPlugin{
+				plugin := &configurationv1.KongClusterPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Secret: "secret-name",
 							Key:    "key-name",
 						},
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/key_names",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: ns,
 									Secret:    "secret-name",
 									Key:       "key-name",
@@ -767,8 +767,8 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongVault - changing spec.prefix is not allowed",
 			scenario: func(ctx context.Context, t *testing.T, _ string) {
-				vault := &kongv1alpha1.KongVault{
-					Spec: kongv1alpha1.KongVaultSpec{
+				vault := &configurationv1alpha1.KongVault{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-0",
 					},
@@ -782,7 +782,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongConsumer - duplicate credentials are not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				consumer := &kongv1.KongConsumer{
+				consumer := &configurationv1.KongConsumer{
 					Username:    "u1",
 					Credentials: []string{"c1", "c1", "c2"},
 				}
@@ -792,7 +792,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongConsumer - unique credentials are allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				consumer := &kongv1.KongConsumer{
+				consumer := &configurationv1.KongConsumer{
 					Username:    "u1",
 					Credentials: []string{"c1", "c2"},
 				}
@@ -802,7 +802,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongConsumer - duplicate consumer groups are not allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				consumer := &kongv1.KongConsumer{
+				consumer := &configurationv1.KongConsumer{
 					Username:       "u1",
 					ConsumerGroups: []string{"cg1", "cg1", "cg2"},
 				}
@@ -812,7 +812,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongConsumer - unique consumer groups are allowed",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				consumer := &kongv1.KongConsumer{
+				consumer := &configurationv1.KongConsumer{
 					Username:       "u1",
 					ConsumerGroups: []string{"cg1", "cg2"},
 				}
@@ -829,7 +829,7 @@ func TestCRDValidations(t *testing.T) {
 	}
 }
 
-func createFaultyTCPIngress(ctx context.Context, t *testing.T, envcfg *rest.Config, ns string, modifier func(*kongv1beta1.TCPIngress)) error {
+func createFaultyTCPIngress(ctx context.Context, t *testing.T, envcfg *rest.Config, ns string, modifier func(*configurationv1beta1.TCPIngress)) error {
 	ingress := validTCPIngress()
 	modifier(ingress)
 
@@ -844,19 +844,19 @@ func createFaultyTCPIngress(ctx context.Context, t *testing.T, envcfg *rest.Conf
 	return err
 }
 
-func validTCPIngress() *kongv1beta1.TCPIngress {
-	return &kongv1beta1.TCPIngress{
+func validTCPIngress() *configurationv1beta1.TCPIngress {
+	return &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
-		Spec: kongv1beta1.TCPIngressSpec{
-			Rules: []kongv1beta1.IngressRule{
+		Spec: configurationv1beta1.TCPIngressSpec{
+			Rules: []configurationv1beta1.IngressRule{
 				{
 					Port: 80,
-					Backend: kongv1beta1.IngressBackend{
+					Backend: configurationv1beta1.IngressBackend{
 						ServiceName: "service-name",
 						ServicePort: 80,
 					},
@@ -866,7 +866,7 @@ func validTCPIngress() *kongv1beta1.TCPIngress {
 	}
 }
 
-func createFaultyUDPIngress(ctx context.Context, t *testing.T, envcfg *rest.Config, ns string, modifier func(ingress *kongv1beta1.UDPIngress)) error {
+func createFaultyUDPIngress(ctx context.Context, t *testing.T, envcfg *rest.Config, ns string, modifier func(ingress *configurationv1beta1.UDPIngress)) error {
 	ingress := validUDPIngress()
 	modifier(ingress)
 
@@ -881,19 +881,19 @@ func createFaultyUDPIngress(ctx context.Context, t *testing.T, envcfg *rest.Conf
 	return err
 }
 
-func validUDPIngress() *kongv1beta1.UDPIngress {
-	return &kongv1beta1.UDPIngress{
+func validUDPIngress() *configurationv1beta1.UDPIngress {
+	return &configurationv1beta1.UDPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
-		Spec: kongv1beta1.UDPIngressSpec{
-			Rules: []kongv1beta1.UDPIngressRule{
+		Spec: configurationv1beta1.UDPIngressSpec{
+			Rules: []configurationv1beta1.UDPIngressRule{
 				{
 					Port: 80,
-					Backend: kongv1beta1.IngressBackend{
+					Backend: configurationv1beta1.IngressBackend{
 						ServiceName: "service-name",
 						ServicePort: 80,
 					},
@@ -903,8 +903,8 @@ func validUDPIngress() *kongv1beta1.UDPIngress {
 	}
 }
 
-func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns string, spec kongv1beta1.KongUpstreamPolicySpec) error {
-	return client.Create(ctx, &kongv1beta1.KongUpstreamPolicy{
+func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns string, spec configurationv1beta1.KongUpstreamPolicySpec) error {
+	return client.Create(ctx, &configurationv1beta1.KongUpstreamPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
 			Namespace:    ns,
@@ -914,29 +914,29 @@ func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns stri
 }
 
 // generateInvalidHashOns generates a list of KongUpstreamHash objects with all possible invalid fields pairs.
-func generateInvalidHashOns() []kongv1beta1.KongUpstreamHash {
-	fieldSetFns := []func(h *kongv1beta1.KongUpstreamHash){
-		func(h *kongv1beta1.KongUpstreamHash) {
-			h.Input = lo.ToPtr(kongv1beta1.HashInput("consumer"))
+func generateInvalidHashOns() []configurationv1beta1.KongUpstreamHash {
+	fieldSetFns := []func(h *configurationv1beta1.KongUpstreamHash){
+		func(h *configurationv1beta1.KongUpstreamHash) {
+			h.Input = lo.ToPtr(configurationv1beta1.HashInput("consumer"))
 		},
-		func(h *kongv1beta1.KongUpstreamHash) {
+		func(h *configurationv1beta1.KongUpstreamHash) {
 			h.Cookie = lo.ToPtr("cookie-name")
 			h.CookiePath = lo.ToPtr("/")
 		},
-		func(h *kongv1beta1.KongUpstreamHash) {
+		func(h *configurationv1beta1.KongUpstreamHash) {
 			h.Header = lo.ToPtr("header-name")
 		},
-		func(h *kongv1beta1.KongUpstreamHash) {
+		func(h *configurationv1beta1.KongUpstreamHash) {
 			h.URICapture = lo.ToPtr("uri-capture")
 		},
-		func(h *kongv1beta1.KongUpstreamHash) {
+		func(h *configurationv1beta1.KongUpstreamHash) {
 			h.QueryArg = lo.ToPtr("query-arg")
 		},
 	}
 
-	var invalidHashOns []kongv1beta1.KongUpstreamHash
+	var invalidHashOns []configurationv1beta1.KongUpstreamHash
 	for outerIdx, fieldSetFn := range fieldSetFns {
-		hashOn := kongv1beta1.KongUpstreamHash{}
+		hashOn := configurationv1beta1.KongUpstreamHash{}
 		fieldSetFn(&hashOn)
 
 		for innerIdx, innerFieldSetFn := range fieldSetFns {
@@ -955,52 +955,52 @@ func generateInvalidHashOns() []kongv1beta1.KongUpstreamHash {
 		}
 		return *s
 	}
-	return lo.UniqBy(invalidHashOns, func(h kongv1beta1.KongUpstreamHash) string {
+	return lo.UniqBy(invalidHashOns, func(h configurationv1beta1.KongUpstreamHash) string {
 		return fmt.Sprintf("%s.%s.%s.%s", optStr(h.Cookie), optStr(h.Header), optStr(h.URICapture), optStr(h.QueryArg))
 	})
 }
 
-func createKongIngress(ctx context.Context, client client.Client, ns string, ingress *kongv1.KongIngress) error {
+func createKongIngress(ctx context.Context, client client.Client, ns string, ingress *configurationv1.KongIngress) error {
 	ingress.GenerateName = "test-"
 	ingress.Namespace = ns
 	return client.Create(ctx, ingress)
 }
 
-func createKongPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongPlugin) error {
+func createKongPlugin(ctx context.Context, client client.Client, ns string, plugin *configurationv1.KongPlugin) error {
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Create(ctx, plugin)
 }
 
-func createKongClusterPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongClusterPlugin) error {
+func createKongClusterPlugin(ctx context.Context, client client.Client, ns string, plugin *configurationv1.KongClusterPlugin) error {
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Create(ctx, plugin)
 }
 
-func updateKongPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongPlugin) error {
+func updateKongPlugin(ctx context.Context, client client.Client, ns string, plugin *configurationv1.KongPlugin) error {
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Update(ctx, plugin)
 }
 
-func updateKongClusterPlugin(ctx context.Context, client client.Client, ns string, plugin *kongv1.KongClusterPlugin) error {
+func updateKongClusterPlugin(ctx context.Context, client client.Client, ns string, plugin *configurationv1.KongClusterPlugin) error {
 	plugin.GenerateName = "test-"
 	plugin.Namespace = ns
 	return client.Update(ctx, plugin)
 }
 
-func createKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
+func createKongVault(ctx context.Context, c client.Client, vault *configurationv1alpha1.KongVault) error {
 	vault.GenerateName = "test-"
 	return c.Create(ctx, vault)
 }
 
-func updateKongVault(ctx context.Context, c client.Client, vault *kongv1alpha1.KongVault) error {
+func updateKongVault(ctx context.Context, c client.Client, vault *configurationv1alpha1.KongVault) error {
 	vault.GenerateName = "test-"
 	return c.Update(ctx, vault)
 }
 
-func createKongConsumer(ctx context.Context, c client.Client, ns string, consumer *kongv1.KongConsumer) error {
+func createKongConsumer(ctx context.Context, c client.Client, ns string, consumer *configurationv1.KongConsumer) error {
 	consumer.GenerateName = "test-"
 	consumer.Namespace = ns
 	return c.Create(ctx, consumer)

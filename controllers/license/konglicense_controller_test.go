@@ -7,26 +7,26 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func TestCompareLicense(t *testing.T) {
 	now := time.Now()
 	testCases := []struct {
 		name           string
-		license1       *kongv1alpha1.KongLicense
-		license2       *kongv1alpha1.KongLicense
+		license1       *configurationv1alpha1.KongLicense
+		license2       *configurationv1alpha1.KongLicense
 		expectedResult bool
 	}{
 		{
 			name: "The newer one should win",
-			license1: &kongv1alpha1.KongLicense{
+			license1: &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
 					Name:              "alpha",
 				},
 			},
-			license2: &kongv1alpha1.KongLicense{
+			license2: &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 					Name:              "beta",
@@ -36,13 +36,13 @@ func TestCompareLicense(t *testing.T) {
 		},
 		{
 			name: "If the creationTimestamp equals, the one with lexical smaller name should win",
-			license1: &kongv1alpha1.KongLicense{
+			license1: &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 					Name:              "alpha",
 				},
 			},
-			license2: &kongv1alpha1.KongLicense{
+			license2: &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 					Name:              "beta",
@@ -65,18 +65,18 @@ func TestKongLicenseController_pickLicense(t *testing.T) {
 	now := time.Now()
 	testCases := []struct {
 		name              string
-		licenses          []*kongv1alpha1.KongLicense
+		licenses          []*configurationv1alpha1.KongLicense
 		expectedNil       bool
 		chosenLicenseName string
 	}{
 		{
 			name:        "No licenses in cache - should return nil",
-			licenses:    []*kongv1alpha1.KongLicense{},
+			licenses:    []*configurationv1alpha1.KongLicense{},
 			expectedNil: true,
 		},
 		{
 			name: "Should choose the newest one",
-			licenses: []*kongv1alpha1.KongLicense{
+			licenses: []*configurationv1alpha1.KongLicense{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),

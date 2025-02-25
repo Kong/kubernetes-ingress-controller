@@ -13,7 +13,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -139,7 +139,7 @@ type KongCustomEntityCollection struct {
 type CustomEntity struct {
 	custom.Object
 	// K8sKongCustomEntity refers to the KongCustomEntity resource that translate to it.
-	K8sKongCustomEntity *kongv1alpha1.KongCustomEntity
+	K8sKongCustomEntity *configurationv1alpha1.KongCustomEntity
 	// ForeignEntityIDs stores the IDs of the foreign Kong entities attached to the entity.
 	ForeignEntityIDs map[kong.EntityType]string
 }
@@ -307,13 +307,13 @@ func (ks *KongState) sortCustomEntities() {
 	}
 }
 
-func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, k8sEntity *kongv1alpha1.KongCustomEntity) (string, bool, error) {
+func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, k8sEntity *configurationv1alpha1.KongCustomEntity) (string, bool, error) {
 	// Find referred entity via the plugin in its spec.parentRef.
 	// Then we can fetch the referred service/route/consumer from the reference relations of the plugin.
 	parentRef := k8sEntity.Spec.ParentRef
 	// Abort if the parentRef is empty or does not refer to a plugin.
 	if parentRef == nil ||
-		(parentRef.Group == nil || *parentRef.Group != kongv1alpha1.GroupVersion.Group) {
+		(parentRef.Group == nil || *parentRef.Group != configurationv1alpha1.GroupVersion.Group) {
 		return "", false, nil
 	}
 	if parentRef.Kind == nil || (*parentRef.Kind != "KongPlugin" && *parentRef.Kind != "KongClusterPlugin") {
@@ -357,7 +357,7 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 func findCustomEntityForeignFields(
 	logger logr.Logger,
 	cacheStore store.Storer,
-	k8sEntity *kongv1alpha1.KongCustomEntity,
+	k8sEntity *configurationv1alpha1.KongCustomEntity,
 	schema EntitySchema,
 	pluginRelEntities PluginRelatedEntitiesRefs,
 	workspace string,
@@ -446,7 +446,7 @@ func findCustomEntityForeignFields(
 // If the KCE is attached to any foreign entities, it generates one entity per combination of foreign entities.
 // If the KCE is not attached, generate one entity for itself.
 func generateCustomEntities(
-	entity *kongv1alpha1.KongCustomEntity,
+	entity *configurationv1alpha1.KongCustomEntity,
 	foreignFieldCombinations [][]entityForeignFieldValue,
 ) ([]CustomEntity, error) {
 	copyEntityFields := func() (map[string]any, error) {

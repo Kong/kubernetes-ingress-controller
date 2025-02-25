@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func int64Ptr(i int64) *int64 {
@@ -69,7 +69,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 						MTLSAuth: kong.MTLSAuth{ID: kong.String("1"), SubjectName: kong.String("foo@example.com")},
 					},
 				},
-				K8sKongConsumer: kongv1.KongConsumer{Username: "foo"},
+				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
 			},
 			want: Consumer{
 				Consumer: kong.Consumer{
@@ -119,7 +119,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 						MTLSAuth: kong.MTLSAuth{ID: kong.String("1"), SubjectName: kong.String("foo@example.com")},
 					},
 				},
-				K8sKongConsumer: kongv1.KongConsumer{Username: "foo"},
+				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
 			},
 		},
 	} {

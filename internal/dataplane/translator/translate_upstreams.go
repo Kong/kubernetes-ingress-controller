@@ -11,7 +11,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -223,16 +223,16 @@ func getServiceEndpoints(
 // getIngressClassParametersOrDefault returns the parameters for the current ingress class.
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
-func getIngressClassParametersOrDefault(s store.Storer) (kongv1alpha1.IngressClassParametersSpec, error) {
+func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
 	ingressClassName := s.GetIngressClassName()
 	ingressClass, err := s.GetIngressClassV1(ingressClassName)
 	if err != nil {
-		return kongv1alpha1.IngressClassParametersSpec{}, err
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
 
 	params, err := s.GetIngressClassParametersV1Alpha1(ingressClass)
 	if err != nil {
-		return kongv1alpha1.IngressClassParametersSpec{}, err
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
 
 	return params.Spec, nil

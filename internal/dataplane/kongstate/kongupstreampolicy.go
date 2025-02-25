@@ -8,7 +8,7 @@ import (
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -30,7 +30,7 @@ const (
 //
 // If the KongUpstreamPolicy configuration is inconsistent or a configured KongUpstreamPolicy cannot be fetched from
 // the store, an error is returned.
-func GetKongUpstreamPolicyForServices(s store.Storer, servicesGroup []*corev1.Service) (*kongv1beta1.KongUpstreamPolicy, error) {
+func GetKongUpstreamPolicyForServices(s store.Storer, servicesGroup []*corev1.Service) (*configurationv1beta1.KongUpstreamPolicy, error) {
 	if len(servicesGroup) == 0 {
 		return nil, nil
 	}
@@ -66,7 +66,7 @@ func GetKongUpstreamPolicyForServices(s store.Storer, servicesGroup []*corev1.Se
 
 // TranslateKongUpstreamPolicy translates KongUpstreamPolicySpec to kong.Upstream. It makes assumption that
 // KongUpstreamPolicySpec has been validated on the API level.
-func TranslateKongUpstreamPolicy(policy kongv1beta1.KongUpstreamPolicySpec) *kong.Upstream {
+func TranslateKongUpstreamPolicy(policy configurationv1beta1.KongUpstreamPolicySpec) *kong.Upstream {
 	return &kong.Upstream{
 		Algorithm:    policy.Algorithm,
 		Slots:        policy.Slots,
@@ -86,7 +86,7 @@ func TranslateKongUpstreamPolicy(policy kongv1beta1.KongUpstreamPolicySpec) *kon
 	}
 }
 
-func translateHashOn(hashOn *kongv1beta1.KongUpstreamHash) *string {
+func translateHashOn(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
@@ -107,42 +107,42 @@ func translateHashOn(hashOn *kongv1beta1.KongUpstreamHash) *string {
 	}
 }
 
-func translateHashOnHeader(hashOn *kongv1beta1.KongUpstreamHash) *string {
+func translateHashOnHeader(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
 	return hashOn.Header
 }
 
-func translateHashOnCookie(hashOn *kongv1beta1.KongUpstreamHash) *string {
+func translateHashOnCookie(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
 	return hashOn.Cookie
 }
 
-func translateHashOnQueryArg(hashOn *kongv1beta1.KongUpstreamHash) *string {
+func translateHashOnQueryArg(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
 	return hashOn.QueryArg
 }
 
-func translateHashOnURICapture(hashOn *kongv1beta1.KongUpstreamHash) *string {
+func translateHashOnURICapture(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
 	return hashOn.URICapture
 }
 
-func translateHashOnCookiePath(hashOn *kongv1beta1.KongUpstreamHash) *string {
+func translateHashOnCookiePath(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
 	return hashOn.CookiePath
 }
 
-func translateHealthchecks(healthchecks *kongv1beta1.KongUpstreamHealthcheck) *kong.Healthcheck {
+func translateHealthchecks(healthchecks *configurationv1beta1.KongUpstreamHealthcheck) *kong.Healthcheck {
 	if healthchecks == nil {
 		return nil
 	}
@@ -152,7 +152,7 @@ func translateHealthchecks(healthchecks *kongv1beta1.KongUpstreamHealthcheck) *k
 	}
 }
 
-func translateActiveHealthcheck(healthcheck *kongv1beta1.KongUpstreamActiveHealthcheck) *kong.ActiveHealthcheck {
+func translateActiveHealthcheck(healthcheck *configurationv1beta1.KongUpstreamActiveHealthcheck) *kong.ActiveHealthcheck {
 	if healthcheck == nil {
 		return nil
 	}
@@ -169,7 +169,7 @@ func translateActiveHealthcheck(healthcheck *kongv1beta1.KongUpstreamActiveHealt
 	}
 }
 
-func translatePassiveHealthcheck(healthcheck *kongv1beta1.KongUpstreamPassiveHealthcheck) *kong.PassiveHealthcheck {
+func translatePassiveHealthcheck(healthcheck *configurationv1beta1.KongUpstreamPassiveHealthcheck) *kong.PassiveHealthcheck {
 	if healthcheck == nil {
 		return nil
 	}
@@ -180,7 +180,7 @@ func translatePassiveHealthcheck(healthcheck *kongv1beta1.KongUpstreamPassiveHea
 	}
 }
 
-func translateHealthy(healthy *kongv1beta1.KongUpstreamHealthcheckHealthy) *kong.Healthy {
+func translateHealthy(healthy *configurationv1beta1.KongUpstreamHealthcheckHealthy) *kong.Healthy {
 	if healthy == nil {
 		return nil
 	}
@@ -191,7 +191,7 @@ func translateHealthy(healthy *kongv1beta1.KongUpstreamHealthcheckHealthy) *kong
 	}
 }
 
-func translateUnhealthy(unhealthy *kongv1beta1.KongUpstreamHealthcheckUnhealthy) *kong.Unhealthy {
+func translateUnhealthy(unhealthy *configurationv1beta1.KongUpstreamHealthcheckUnhealthy) *kong.Unhealthy {
 	if unhealthy == nil {
 		return nil
 	}
@@ -204,11 +204,11 @@ func translateUnhealthy(unhealthy *kongv1beta1.KongUpstreamHealthcheckUnhealthy)
 	}
 }
 
-func translateHTTPStatuses(statuses []kongv1beta1.HTTPStatus) []int {
+func translateHTTPStatuses(statuses []configurationv1beta1.HTTPStatus) []int {
 	if statuses == nil {
 		return nil
 	}
 	// Using lo.Map only in case healthy.HTTPStatuses is not nil, because lo.Map creates a non-nil slice even
 	// if the input slice is nil.
-	return lo.Map(statuses, func(s kongv1beta1.HTTPStatus, _ int) int { return int(s) })
+	return lo.Map(statuses, func(s configurationv1beta1.HTTPStatus, _ int) int { return int(s) })
 }

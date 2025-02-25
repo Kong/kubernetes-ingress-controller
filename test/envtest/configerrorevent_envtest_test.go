@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
@@ -312,7 +312,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 	t.Setenv("POD_NAME", podName)
 
 	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
-	consumer := &kongv1.KongConsumer{
+	consumer := &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "donenbai",
 			Annotations: map[string]string{

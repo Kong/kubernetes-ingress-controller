@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
@@ -67,7 +67,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		require.NoError(t, client.Create(ctx, secret))
 	}
 
-	kongConsumers := []*kongv1.KongConsumer{
+	kongConsumers := []*configurationv1.KongConsumer{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "consumer-key-auth-cred",
@@ -96,7 +96,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	}
 
 	// These KongConsumers should fail admission via the CRD Validation Expressions.
-	brokenKongConsumers := []*kongv1.KongConsumer{
+	brokenKongConsumers := []*configurationv1.KongConsumer{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "consumer-no-username-and-no-custom-id",

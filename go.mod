@@ -18,9 +18,6 @@ go 1.24.0
 //
 // toolchain go1.21.0
 
-// NOTICE: Issue https://github.com/Kong/kubernetes-ingress-controller/issues/6823 has to be resolved.
-replace github.com/kong/go-kong => github.com/kong/go-kong v0.60.0
-
 require (
 	cloud.google.com/go/container v1.42.2
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -33,7 +30,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.16.1
+	github.com/kong/go-database-reconciler v1.20.3
 	github.com/kong/go-kong v0.63.0
 	github.com/kong/kubernetes-configuration v1.1.0
 	github.com/kong/kubernetes-telemetry v0.1.8

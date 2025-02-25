@@ -36,7 +36,7 @@ func TestConsumerGroup(t *testing.T) {
 
 	RunWhenKongEnterprise(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	// path is the basic path used for most of the test

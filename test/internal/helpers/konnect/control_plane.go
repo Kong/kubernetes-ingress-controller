@@ -69,17 +69,19 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
+		ctx = context.Background()
 		t.Logf("deleting test Konnect Control Plane: %q", cpID)
 		err := retry.Do(
-			func() error {
-				_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, cpID)
+			func() error { //nolint:contextcheck
+				_, err := sdk.ControlPlanes.DeleteControlPlane(context.Background(), cpID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
 		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", cpID)
 
-		me, err := sdk.Me.GetUsersMe(ctx,
+		me, err := sdk.Me.GetUsersMe(
+			ctx,
 			// NOTE: Otherwise we use prod server by default.
 			// Related issue: https://github.com/Kong/sdk-konnect-go/issues/20
 			sdkkonnectops.WithServerURL(test.KonnectServerURL()),

@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -37,7 +36,7 @@ func TestCustomVault(t *testing.T) {
 	// TODO: run hcv vault to enable test with DBMode
 	RunWhenKongDBMode(t, dpconf.DBModeOff, "Skipping because DBMode cannot support env vault")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")

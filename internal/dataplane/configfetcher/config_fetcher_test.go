@@ -1,7 +1,6 @@
 package configfetcher
 
 import (
-	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -101,7 +100,7 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 			require.False(t, ok)
 			require.Nil(t, state)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			clients := tc.adminAPIClients(t)
 			logger := zapr.NewLogger(zap.NewNop())
 			err := fetcher.TryFetchingValidConfigFromGateways(ctx, logger, clients, nil)

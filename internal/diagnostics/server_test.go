@@ -30,7 +30,7 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 	port := testhelpers.GetFreePort(t)
 	t.Logf("Obtained a free port: %d", port)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		err := s.Listen(ctx, port)
 		require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	port := testhelpers.GetFreePort(t)
 	t.Logf("Obtained a free port: %d", port)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	go func() {
 		err := s.Listen(ctx, port)

@@ -23,7 +23,7 @@ func TestKongLicenseController(t *testing.T) {
 	cfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, cfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
@@ -128,7 +128,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 	cfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, cfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	const (

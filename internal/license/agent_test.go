@@ -72,7 +72,7 @@ func (m *mockKonnectClientClient) GetCalls() []time.Time {
 func TestAgent(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	expectedLicense := license.KonnectLicense{
 		Payload:   "test-license",

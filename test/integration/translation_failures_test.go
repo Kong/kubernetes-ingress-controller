@@ -38,7 +38,7 @@ const testTranslationFailuresObjectsPrefix = "translation-failures-"
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	type expectedTranslationFailure struct {
 		causingObjects []client.Object

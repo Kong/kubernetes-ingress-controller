@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -30,7 +29,7 @@ import (
 )
 
 func TestConsumerCredential(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)

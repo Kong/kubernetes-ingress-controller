@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestGatewayValidationWebhook(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := helpers.Namespace(ctx, t, env)
 

@@ -84,7 +84,7 @@ func TestWebhookUpdate(t *testing.T) {
 
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	t.Log("building test cluster and environment")

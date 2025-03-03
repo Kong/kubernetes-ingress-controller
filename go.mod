@@ -20,7 +20,7 @@ go 1.24.0
 
 require (
 	cloud.google.com/go/container v1.42.2
-	github.com/Kong/sdk-konnect-go v0.2.16
+	github.com/Kong/sdk-konnect-go v0.2.17
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0

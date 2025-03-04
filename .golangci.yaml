@@ -93,6 +93,8 @@ linters-settings:
       alias: gateway${1}
     - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
       alias: kong${1}
+    - pkg: github.com/kong/kubernetes-configuration/api/common/(v[\w\d]+)
+      alias: kongcommon${1}
     - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
       alias: incubator${1}
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config

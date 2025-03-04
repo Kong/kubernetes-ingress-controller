@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 )
 
 const (
@@ -13,16 +15,15 @@ type FeatureGates map[string]bool
 
 // NewFeatureGates creates FeatureGates from the given feature gate map, overriding the default settings.
 func NewFeatureGates(featureGates map[string]bool) (FeatureGates, error) {
-	// generate a map of feature gates by string names to their controller enablement
+	// Generate a map of feature gates by string names to their controller enablement
 	ctrlMap := GetFeatureGatesDefaults()
 
-	// override the default settings
-	for feature, enabled := range featureGates {
-		_, ok := ctrlMap[feature]
-		if !ok {
-			return ctrlMap, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, DocsURL)
+	// Override the default settings.
+	for _, fgName := range slices.Sorted(maps.Keys(featureGates)) {
+		if _, ok := ctrlMap[fgName]; !ok {
+			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", fgName, DocsURL)
 		}
-		ctrlMap[feature] = enabled
+		ctrlMap[fgName] = featureGates[fgName]
 	}
 
 	// KongCustomEntity requires FillIDs to be enabled, because custom entities requires stable IDs to fill in its "foreign" fields.

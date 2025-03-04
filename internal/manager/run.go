@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -85,10 +87,11 @@ func New(
 		return nil, fmt.Errorf("config invalid: %w", err)
 	}
 	existingFeatureGates := config.GetFeatureGatesDefaults()
-	for feature, enabled := range c.FeatureGates {
-		logger.Info("Found configuration option for gated feature", "feature", feature, "enabled", enabled)
-		if _, ok := existingFeatureGates[feature]; !ok {
-			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, config.DocsURL)
+	for _, fgName := range slices.Sorted(maps.Keys(c.FeatureGates)) {
+		fgVal := c.FeatureGates[fgName]
+		logger.Info("Found configuration option for gated feature", "feature", fgName, "enabled", fgVal)
+		if _, ok := existingFeatureGates[fgName]; !ok {
+			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", fgName, config.DocsURL)
 		}
 	}
 

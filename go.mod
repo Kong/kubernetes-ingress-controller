@@ -20,7 +20,7 @@ go 1.24.0
 
 require (
 	cloud.google.com/go/container v1.42.2
-	github.com/Kong/sdk-konnect-go v0.2.17
+	github.com/Kong/sdk-konnect-go v0.2.19
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
@@ -40,7 +40,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
-	github.com/prometheus/client_golang v1.21.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/common v0.62.0
 	github.com/samber/lo v1.49.1
 	github.com/samber/mo v1.13.0

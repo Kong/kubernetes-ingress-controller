@@ -301,7 +301,17 @@ func adminAPIClients(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
-		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
+
+		// Respect the configuration for retries and delay.
+		var retryOpts []retry.Option
+		if c.KongAdminInitializationRetries != 0 {
+			retryOpts = append(retryOpts, retry.Attempts(c.KongAdminInitializationRetries))
+		}
+		if c.KongAdminInitializationRetryDelay != 0 {
+			retryOpts = append(retryOpts, retry.Delay(c.KongAdminInitializationRetryDelay))
+		}
+
+		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory, retryOpts...)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.

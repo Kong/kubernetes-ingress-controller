@@ -1068,6 +1068,21 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount)
 
 	t.Run("attaching secret to consumer", func(t *testing.T) {
+		t.Log("verifying that a secret with unsupported credential type passes the validation")
+		require.NoError(t, ctrlClient.Create(ctx,
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unsupported-credential",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "whatever-credential",
+					},
+				},
+				StringData: map[string]string{
+					"key": "kong-credential",
+				},
+			},
+		))
+
 		t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer fails validation")
 		require.Error(t,
 			ctrlClient.Create(ctx,
@@ -1075,16 +1090,16 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "brokenfence",
 						Labels: map[string]string{
-							labels.CredentialTypeLabel: "invalid-auth",
+							labels.CredentialTypeLabel: "basic-auth",
 						},
 					},
 					StringData: map[string]string{
-						"username": "brokenfence",
+						// missing "username" field.
 						"password": "testpass",
 					},
 				},
 			),
-			"invalid credential type",
+			"missing required field(s)",
 		)
 
 		t.Log("creating a valid credential secret to be referenced by a KongConsumer")
@@ -1135,14 +1150,15 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		require.NoError(t, ctrlClient.Update(ctx, validCredential))
 
 		t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
-		validCredential.ObjectMeta.Labels[labels.CredentialTypeLabel] = "invalid-auth"
+		delete(validCredential.Data, "username")
 		err := ctrlClient.Update(ctx, validCredential)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "invalid credential type")
+		require.ErrorContains(t, err, "missing required field(s)")
 
 		t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
+		delete(validCredential.Data, "username")
 		require.NoError(t, ctrlClient.Delete(ctx, validConsumerLinkedToValidCredentials))
-		require.ErrorContains(t, ctrlClient.Update(ctx, validCredential), "invalid credential type")
+		require.ErrorContains(t, ctrlClient.Update(ctx, validCredential), "missing required field(s)")
 	})
 
 	t.Run("JWT", func(t *testing.T) {

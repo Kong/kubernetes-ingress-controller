@@ -229,6 +229,8 @@ github.com/kong/go-kong v0.63.0 h1:8ECLgkgDqON61qCMq/M0gTwZKYxg55Oy692dRDOOBiU=
 github.com/kong/go-kong v0.63.0/go.mod h1:ma9GWnhkxtrXZlLFfED955HjVzmUojYEHet3lm+PDik=
 github.com/kong/kubernetes-configuration v1.2.0-rc.1 h1:npv4JO9pNY85xVSEjeBTZa17Gn7SVFQznMBomUce+JA=
 github.com/kong/kubernetes-configuration v1.2.0-rc.1/go.mod h1:ktUCDIijOS9qfjTLfGXMEJmQPQrqCU/0so88d3/Dj5Q=
+github.com/kong/kubernetes-configuration v1.2.0 h1:5yQl+OH2mwxtTF0pjg54JYiCDA+YzxGpVIiycR7358I=
+github.com/kong/kubernetes-configuration v1.2.0/go.mod h1:6u7VSbzqgiqFVMldmI3X1IouCxO9RJeTuWSjRW1d9nU=
 github.com/kong/kubernetes-telemetry v0.1.8 h1:nbtUmXW9xkzRO7dgvrgVrJZiRksATk4XHrqX+78g/5k=
 github.com/kong/kubernetes-telemetry v0.1.8/go.mod h1:ZEQY/4DddKoe5XA7UTOIbdI/4d6ZRcrzh2ezRxnuyl0=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
@@ -590,6 +592,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 h1:CPT0ExVicCzcp
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
 sigs.k8s.io/controller-runtime v0.20.2 h1:/439OZVxoEc02psi1h4QO3bHzTgu49bb347Xp4gW1pc=
 sigs.k8s.io/controller-runtime v0.20.2/go.mod h1:xg2XB0K5ShQzAgsoujxuKN4LNXR2LfwwHsPj7Iaw+XY=
+sigs.k8s.io/controller-runtime v0.20.3 h1:I6Ln8JfQjHH7JbtCD2HCYHoIzajoRxPNuvhvcDbZgkI=
+sigs.k8s.io/controller-runtime v0.20.3/go.mod h1:xg2XB0K5ShQzAgsoujxuKN4LNXR2LfwwHsPj7Iaw+XY=
 sigs.k8s.io/e2e-framework v0.6.0 h1:p7hFzHnLKO7eNsWGI2AbC1Mo2IYxidg49BiT4njxkrM=
 sigs.k8s.io/e2e-framework v0.6.0/go.mod h1:IREnCHnKgRCioLRmNi0hxSJ1kJ+aAdjEKK/gokcZu4k=
 sigs.k8s.io/gateway-api v1.2.1 h1:fZZ/+RyRb+Y5tGkwxFKuYuSRQHu9dZtbjenblleOLHM=

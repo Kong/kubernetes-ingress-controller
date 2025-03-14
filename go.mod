@@ -33,7 +33,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.20.3
 	github.com/kong/go-kong v0.63.0
-	github.com/kong/kubernetes-configuration v1.2.0-rc.1
+	github.com/kong/kubernetes-configuration v1.2.0
 	github.com/kong/kubernetes-telemetry v0.1.8
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/lithammer/dedent v1.1.0
@@ -58,7 +58,7 @@ require (
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	k8s.io/component-base v0.32.3
-	sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime v0.20.3
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/gateway-api v1.2.1
 	sigs.k8s.io/kustomize/api v0.19.0

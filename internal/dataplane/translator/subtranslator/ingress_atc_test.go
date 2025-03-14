@@ -12,7 +12,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -423,7 +423,7 @@ func TestTranslateIngressATC(t *testing.T) {
 			}))
 			services := TranslateIngresses(
 				[]*netv1.Ingress{tc.ingress},
-				kongv1alpha1.IngressClassParametersSpec{},
+				configurationv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					ExpressionRoutes:  true,
 					KongServiceFacade: true,

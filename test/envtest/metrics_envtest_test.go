@@ -87,7 +87,7 @@ func TestMetricsAreServed(t *testing.T) {
 			if tc.skippedMessage != "" {
 				t.Skip(tc.skippedMessage)
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+			ctx, cancel := context.WithTimeout(t.Context(), waitTime)
 			defer cancel()
 
 			var adminAPIOpts []mocks.AdminAPIHandlerOpt

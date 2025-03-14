@@ -8,8 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -204,10 +204,10 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 }
 
 func gvkIsClusterScoped(gvk schema.GroupVersionKind) bool {
-	if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version {
+	if gvk.Group == configurationv1.GroupVersion.Group && gvk.Version == configurationv1.GroupVersion.Version {
 		return gvk.Kind == "KongClusterPlugin" || gvk.Kind == "KongLicense"
 	}
-	if gvk.Group == kongv1alpha1.GroupVersion.Group && gvk.Version == kongv1alpha1.GroupVersion.Version {
+	if gvk.Group == configurationv1alpha1.GroupVersion.Group && gvk.Version == configurationv1alpha1.GroupVersion.Version {
 		return gvk.Kind == "KongVault"
 	}
 	return false

@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -43,7 +43,7 @@ func TestGlobalPlugin(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("global plugins are processed correctly", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			KongClusterPlugins: []*kongv1.KongClusterPlugin{
+			KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
@@ -54,7 +54,7 @@ func TestGlobalPlugin(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"foo1": "bar1"}`),
@@ -167,22 +167,22 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 	t.Run("plugins with secret configuration are processed correctly",
 		func(t *testing.T) {
 			objects := stock
-			objects.KongPlugins = []*kongv1.KongPlugin{
+			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
 							Secret: "conf-secret",
 						},
 					},
 				},
 			}
-			objects.KongClusterPlugins = []*kongv1.KongClusterPlugin{
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "global-bar-plugin",
@@ -193,10 +193,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -213,10 +213,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							// explicitly none, this should not get rendered
 						},
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -227,10 +227,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -281,7 +281,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 	t.Run("plugins with missing secrets or keys are not constructed",
 		func(t *testing.T) {
 			objects := stock
-			objects.KongPlugins = []*kongv1.KongPlugin{
+			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "global-foo-plugin",
@@ -291,8 +291,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
 						},
@@ -304,15 +304,15 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
 						},
 					},
 				},
 			}
-			objects.KongClusterPlugins = []*kongv1.KongClusterPlugin{
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "global-bar-plugin",
@@ -320,10 +320,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							"global": "true",
 						},
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
 							Namespace: "default",
@@ -334,10 +334,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
 							Namespace: "default",
@@ -373,7 +373,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 	t.Run("plugins with both config and configFrom are not constructed",
 		func(t *testing.T) {
 			objects := stock
-			objects.KongPlugins = []*kongv1.KongPlugin{
+			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "global-foo-plugin",
@@ -386,8 +386,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
 							Secret: "conf-secret",
 						},
@@ -402,15 +402,15 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "jwt-config",
 							Secret: "conf-secret",
 						},
 					},
 				},
 			}
-			objects.KongClusterPlugins = []*kongv1.KongClusterPlugin{
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "global-bar-plugin",
@@ -418,13 +418,13 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							"global": "true",
 						},
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -435,13 +435,13 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
 					},
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -495,7 +495,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 			},
 		}
-		references := []*kongv1.SecretValueFromSource{
+		references := []*configurationv1.SecretValueFromSource{
 			{
 				Secret: "conf-secret",
 				Key:    "jwt-config",
@@ -505,7 +505,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				Key:    "basic-auth-config",
 			},
 		}
-		badReferences := []*kongv1.SecretValueFromSource{
+		badReferences := []*configurationv1.SecretValueFromSource{
 			{
 				Secret: "conf-secret",
 				Key:    "bad-basic-auth-config",
@@ -538,7 +538,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			jwtPluginConfig := "22222"        // not JSON
 			basicAuthPluginConfig := "111111" // not YAML
 			objects := stock
-			objects.KongPlugins = []*kongv1.KongPlugin{
+			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "global-foo-plugin",
@@ -548,8 +548,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						},
 					},
 					PluginName: "jwt",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
 						},
@@ -561,15 +561,15 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 						Namespace: "default",
 					},
 					PluginName: "jwt",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "missing-key",
 							Secret: "conf-secret",
 						},
 					},
 				},
 			}
-			objects.KongClusterPlugins = []*kongv1.KongClusterPlugin{
+			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "global-bar-plugin",
@@ -577,10 +577,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 							"global": "true",
 						},
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
 							Namespace: "default",
@@ -591,10 +591,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar-plugin",
 					},
-					Protocols:  kongv1.StringsToKongProtocols([]string{"http"}),
+					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "basic-auth-config",
 							Secret:    "missing-secret",
 							Namespace: "default",
@@ -3486,14 +3486,14 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		plugins := []*kongv1.KongPlugin{
+		plugins := []*configurationv1.KongPlugin{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-plugin",
 					Namespace: "default",
 				},
 				PluginName: "key-auth",
-				Protocols:  []kongv1.KongProtocol{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{
 					"foo": "bar",
@@ -3584,27 +3584,27 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		clusterPlugins := []*kongv1.KongClusterPlugin{
+		clusterPlugins := []*configurationv1.KongClusterPlugin{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-plugin",
 					Namespace: "default",
 				},
 				PluginName: "basic-auth",
-				Protocols:  []kongv1.KongProtocol{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		}
-		plugins := []*kongv1.KongPlugin{
+		plugins := []*configurationv1.KongPlugin{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-plugin",
 					Namespace: "default",
 				},
 				PluginName: "key-auth",
-				Protocols:  []kongv1.KongProtocol{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
@@ -3673,14 +3673,14 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		clusterPlugins := []*kongv1.KongClusterPlugin{
+		clusterPlugins := []*configurationv1.KongClusterPlugin{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-plugin",
 					Namespace: "default",
 				},
 				PluginName: "basic-auth",
-				Protocols:  []kongv1.KongProtocol{"grpc"},
+				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"foo": "bar"}`),
 				},
@@ -4709,7 +4709,7 @@ func TestTranslator_FillsEntitiesIDs(t *testing.T) {
 				},
 			},
 		},
-		KongConsumers: []*kongv1.KongConsumer{
+		KongConsumers: []*configurationv1.KongConsumer{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "user.foo",
@@ -4859,7 +4859,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 		{
 			name: "KongConsumers",
 			objectsInStore: store.FakeObjects{
-				KongConsumers: []*kongv1.KongConsumer{
+				KongConsumers: []*configurationv1.KongConsumer{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "consumer1",
@@ -4886,7 +4886,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 		{
 			name: "KongConsumerGroup",
 			objectsInStore: store.FakeObjects{
-				KongConsumerGroups: []*kongv1beta1.KongConsumerGroup{
+				KongConsumerGroups: []*configurationv1beta1.KongConsumerGroup{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "consumer-group1",
@@ -4911,7 +4911,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 		{
 			name: "KongPlugins with KongConsumer",
 			objectsInStore: store.FakeObjects{
-				KongPlugins: []*kongv1.KongPlugin{
+				KongPlugins: []*configurationv1.KongPlugin{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "plugin1",
@@ -4929,7 +4929,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 						PluginName: "plugin2",
 					},
 				},
-				KongConsumers: []*kongv1.KongConsumer{
+				KongConsumers: []*configurationv1.KongConsumer{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "consumer",
@@ -4952,7 +4952,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 		{
 			name: "KongClusterPlugins with KongConsumer",
 			objectsInStore: store.FakeObjects{
-				KongClusterPlugins: []*kongv1.KongClusterPlugin{
+				KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "plugin1",
@@ -4968,7 +4968,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 						PluginName: "plugin2",
 					},
 				},
-				KongConsumers: []*kongv1.KongConsumer{
+				KongConsumers: []*configurationv1.KongConsumer{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "consumer",
@@ -4991,7 +4991,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 		{
 			name: "Ingress using Services and KongServiceFacades annotated with KongUpstreamPolicy",
 			objectsInStore: store.FakeObjects{
-				KongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+				KongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "upstream-policy1",
@@ -5005,7 +5005,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 							Name:      "service1",
 							Namespace: "bar",
 							Annotations: map[string]string{
-								kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
+								configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
 							},
 						},
 						Spec: corev1.ServiceSpec{
@@ -5023,7 +5023,7 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 							Name:      "service-facade1",
 							Namespace: "bar",
 							Annotations: map[string]string{
-								kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
+								configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
 							},
 						},
 						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
@@ -5257,10 +5257,10 @@ func TestTranslator_UpdateStore(t *testing.T) {
 	originalBuildConfigResult := translator.BuildKongConfig()
 
 	newStore, err := store.NewCacheStoresFromObjs(
-		&kongv1.KongConsumer{
+		&configurationv1.KongConsumer{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "KongConsumer",
-				APIVersion: kongv1.GroupVersion.String(),
+				APIVersion: configurationv1.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "consumer1",

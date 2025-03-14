@@ -314,7 +314,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	require.NoError(t, err)
 
 	t.Log("Triggering KongClient.Update")
-	ctx := context.Background()
+	ctx := t.Context()
 	err = kongClient.Update(ctx)
 	if len(objectsToBeConsideredBroken) > 0 {
 		require.Error(t, err, "expected an error when fallback configuration is enabled")

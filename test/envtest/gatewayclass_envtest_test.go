@@ -91,7 +91,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			) {
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) }) //nolint:contextcheck
+				t.Cleanup(func() { _ = client.Delete(t.Context(), &gwc) }) //nolint:contextcheck
 
 				t.Logf("verifying that the unsupported Gateway %s does not get Accepted or Programmed by the controller", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -180,7 +180,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) }) //nolint:contextcheck
+				t.Cleanup(func() { _ = client.Delete(t.Context(), &gwc) }) //nolint:contextcheck
 
 				// Let's wait and check that the Gateway hasn't been reconciled by the operator.
 				t.Log("verifying the Gateway is not reconciled as it is using a managed GatewayClass")
@@ -278,7 +278,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(context.Background(), &gwc) }) //nolint:contextcheck
+				t.Cleanup(func() { _ = client.Delete(t.Context(), &gwc) }) //nolint:contextcheck
 
 				t.Logf("now that the GatewayClass exists, verifying that the Gateway %s gets Accepted and Programmed", gw.Name)
 
@@ -327,9 +327,9 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 			// We use a deferred cancel to stop the manager and not wait for its timeout.
 			if deadline, ok := t.Deadline(); ok {
-				ctx, cancel = context.WithDeadline(context.Background(), deadline)
+				ctx, cancel = context.WithDeadline(t.Context(), deadline)
 			} else {
-				ctx, cancel = context.WithCancel(context.Background())
+				ctx, cancel = context.WithCancel(t.Context())
 			}
 			defer cancel()
 
@@ -367,7 +367,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			t.Logf("deploying gateway %s using %s gateway class", tc.Gateway.Name, tc.GatewayClass.Name)
 			tc.Gateway.Namespace = ns.Name
 			require.NoError(t, client.Create(ctx, &tc.Gateway))
-			t.Cleanup(func() { _ = client.Delete(context.Background(), &tc.Gateway) })
+			t.Cleanup(func() { _ = client.Delete(t.Context(), &tc.Gateway) })
 
 			gwClient := gatewayClient.GatewayV1().Gateways(ns.Name)
 			tc.Test(ctx, t, gwClient, tc.GatewayClass, tc.Gateway)

@@ -152,7 +152,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 
 	client := &http.Client{Timeout: time.Second * 30}
 	t.Log("confirming the second replica is not the leader and is not pushing configuration")
-	forwardCtx, cancel := context.WithCancel(context.Background())
+	forwardCtx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	localPort := startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "cmetrics")

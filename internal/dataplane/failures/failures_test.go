@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 const someValidResourceFailureReason = "some valid message"
@@ -114,11 +114,11 @@ func someResourceFailureCausingObjects() []client.Object {
 	return []client.Object{validCausingObject(), validCausingObject()}
 }
 
-func validCausingObject() *kongv1.KongPlugin {
-	return &kongv1.KongPlugin{
+func validCausingObject() *configurationv1.KongPlugin {
+	return &configurationv1.KongPlugin{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KongPlugin",
-			APIVersion: kongv1.SchemeGroupVersion.String(),
+			APIVersion: configurationv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "plugin-name",

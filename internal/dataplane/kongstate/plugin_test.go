@@ -9,7 +9,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
@@ -34,7 +34,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongClusterPlugin
+		plugin configurationv1.KongClusterPlugin
 	}
 	tests := []struct {
 		name    string
@@ -45,8 +45,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "basic configuration",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:    []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:    []configurationv1.KongProtocol{"http"},
 					PluginName:   "correlation-id",
 					InstanceName: "example",
 					Config: apiextensionsv1.JSON{
@@ -67,11 +67,11 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "secret configuration",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -91,11 +91,11 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "missing secret configuration",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "missing",
 							Namespace: "default",
@@ -109,8 +109,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "non-JSON configuration",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
@@ -123,14 +123,14 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "both Config and ConfigFrom set",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigFrom: &kongv1.NamespacedConfigSource{
-						SecretValue: kongv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &configurationv1.NamespacedConfigSource{
+						SecretValue: configurationv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -144,17 +144,17 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "Config and ConfigPatches set",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Key:       "correlation-id-generator",
 									Secret:    "conf-secret",
 									Namespace: "default",
@@ -176,17 +176,17 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "configPatch on subpath of non-exist path",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "response-transformer",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"replace":{"headers":["foo:bar"]}}`),
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/add/headers",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "response-transformer-add-headers",
 									Secret:    "conf-secret",
@@ -217,15 +217,15 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "empty config and configPatch for particular paths",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config:     apiextensionsv1.JSON{},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/header_name",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "correlation-id-headername",
 									Secret:    "conf-secret",
@@ -234,8 +234,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 						},
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "correlation-id-generator",
 									Secret:    "conf-secret",
@@ -257,15 +257,15 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "empty config and configPatch for whole object",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config:     apiextensionsv1.JSON{},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "correlation-id-config",
 									Secret:    "conf-secret",
@@ -286,20 +286,20 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "missing secret in configPatches",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
+				plugin: configurationv1.KongClusterPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "correlation-id-generator",
 									Secret:    "missing-secret",
@@ -314,20 +314,20 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "missing key of secret in cofigPatches",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
+				plugin: configurationv1.KongClusterPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "correlation-id-missing",
 									Secret:    "conf-secret",
@@ -342,20 +342,20 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "invalid value in configPatches",
 			args: args{
-				plugin: kongv1.KongClusterPlugin{
+				plugin: configurationv1.KongClusterPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.NamespacedConfigPatch{
+					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.NamespacedConfigSource{
-								SecretValue: kongv1.NamespacedSecretValueFromSource{
+							ValueFrom: configurationv1.NamespacedConfigSource{
+								SecretValue: configurationv1.NamespacedSecretValueFromSource{
 									Namespace: "default",
 									Key:       "correlation-id-invalid",
 									Secret:    "conf-secret",
@@ -401,7 +401,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin kongv1.KongPlugin
+		plugin configurationv1.KongPlugin
 	}
 	tests := []struct {
 		name    string
@@ -412,8 +412,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "basic configuration",
 			args: args{
-				plugin: kongv1.KongPlugin{
-					Protocols:    []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongPlugin{
+					Protocols:    []configurationv1.KongProtocol{"http"},
 					PluginName:   "correlation-id",
 					InstanceName: "example",
 					Config: apiextensionsv1.JSON{
@@ -434,15 +434,15 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "secret configuration",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "conf-secret",
 						},
@@ -461,15 +461,15 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "missing secret configuration",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "missing",
 						},
@@ -482,8 +482,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "non-JSON configuration",
 			args: args{
-				plugin: kongv1.KongPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
@@ -496,14 +496,14 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "both Config and ConfigFrom set",
 			args: args{
-				plugin: kongv1.KongPlugin{
-					Protocols:  []kongv1.KongProtocol{"http"},
+				plugin: configurationv1.KongPlugin{
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
+					ConfigFrom: &configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "conf-secret",
 						},
@@ -516,21 +516,21 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "config and configPatches set",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-generator",
 									Secret: "conf-secret",
 								},
@@ -551,21 +551,21 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "configPatch on subpath of non-exist path",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "response-transformer",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"replace":{"headers":["foo:bar"]}}`),
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/add/headers",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "response-transformer-add-headers",
 									Secret: "conf-secret",
 								},
@@ -595,19 +595,19 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "empty config and configPatch for particular paths",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config:     apiextensionsv1.JSON{},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/header_name",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-headername",
 									Secret: "conf-secret",
 								},
@@ -615,8 +615,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 						},
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-generator",
 									Secret: "conf-secret",
 								},
@@ -637,19 +637,19 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "empty config and configPatch for whole object",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config:     apiextensionsv1.JSON{},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-config",
 									Secret: "conf-secret",
 								},
@@ -669,21 +669,21 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "missing secret in configPatches",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-generator",
 									Secret: "missing-secret",
 								},
@@ -697,21 +697,21 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "missing key of secret in configPatches",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-missing",
 									Secret: "conf-secret",
 								},
@@ -725,21 +725,21 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "invalid value in configPatches",
 			args: args{
-				plugin: kongv1.KongPlugin{
+				plugin: configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Protocols:  []kongv1.KongProtocol{"http"},
+					Protocols:  []configurationv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigPatches: []kongv1.ConfigPatch{
+					ConfigPatches: []configurationv1.ConfigPatch{
 						{
 							Path: "/generator",
-							ValueFrom: kongv1.ConfigSource{
-								SecretValue: kongv1.SecretValueFromSource{
+							ValueFrom: configurationv1.ConfigSource{
+								SecretValue: configurationv1.SecretValueFromSource{
 									Key:    "correlation-id-invalid",
 									Secret: "conf-secret",
 								},

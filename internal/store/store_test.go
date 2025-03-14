@@ -15,7 +15,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -163,12 +163,12 @@ func TestStore_Getters(t *testing.T) {
 		_, err := s.GetKongUpstreamPolicy("default", "kong-upstream-policy")
 		require.ErrorAs(t, err, &NotFoundError{})
 
-		upstreamPolicy := &kongv1beta1.KongUpstreamPolicy{
+		upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kong-upstream-policy",
 				Namespace: "default",
 			},
-			Spec: kongv1beta1.KongUpstreamPolicySpec{
+			Spec: configurationv1beta1.KongUpstreamPolicySpec{
 				Algorithm: lo.ToPtr("least-connections"),
 			},
 		}

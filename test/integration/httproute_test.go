@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -21,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -35,7 +34,7 @@ import (
 var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -74,7 +73,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	kongplugin := &kongv1.KongPlugin{
+	kongplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "correlation",
@@ -347,7 +346,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -535,7 +534,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 

@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -192,7 +192,7 @@ func (m *mockFallbackConfigGenerator) GenerateBackfillingBrokenObjects(
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
 	var (
-		ctx                = context.Background()
+		ctx                = t.Context()
 		testGatewayClients = []*adminapi.Client{
 			mustSampleGatewayClient(t),
 			mustSampleGatewayClient(t),
@@ -285,7 +285,7 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 	kongRawStateGetter := &mockKongLastValidConfigFetcher{}
 	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err := kongClient.Update(ctx)
 	require.NoError(t, err)
 
@@ -413,7 +413,7 @@ func (p *mockKongConfigBuilder) returnTranslationFailuresForAllButFirstCall(fail
 
 func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 	var (
-		ctx               = context.Background()
+		ctx               = t.Context()
 		testGatewayClient = mustSampleGatewayClient(t)
 
 		clientsProvider = &mockGatewayClientsProvider{
@@ -528,7 +528,7 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 			kongRawStateGetter := &mockKongLastValidConfigFetcher{}
 			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, eventRecorder, kongRawStateGetter)
 
-			err := kongClient.Update(context.Background())
+			err := kongClient.Update(t.Context())
 			require.NoError(t, err)
 
 			if tc.expectEvents {
@@ -544,7 +544,7 @@ func TestKongClient_KubernetesEvents(t *testing.T) {
 	t.Setenv("POD_NAMESPACE", "test-namespace")
 	t.Setenv("POD_NAME", "test-pod")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	configChangeDetector := mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
 	testIngress := helpers.WithTypeMeta(t, &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -719,7 +719,7 @@ func TestKongClient_KubernetesEvents(t *testing.T) {
 
 func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 	var (
-		ctx               = context.Background()
+		ctx               = t.Context()
 		testGatewayClient = mustSampleGatewayClient(t)
 
 		clientsProvider = &mockGatewayClientsProvider{
@@ -849,7 +849,7 @@ func (cf *mockKongLastValidConfigFetcher) TryFetchingValidConfigFromGateways(con
 
 func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 	var (
-		ctx = context.Background()
+		ctx = t.Context()
 
 		clientsProvider = &mockGatewayClientsProvider{
 			gatewayClients: []*adminapi.Client{
@@ -978,7 +978,7 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 }
 
 func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	configChangeDetector := mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
 	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
@@ -1136,7 +1136,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 }
 
 func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	gwClient := mustSampleGatewayClient(t)
 	clientsProvider := &mockGatewayClientsProvider{
 		gatewayClients: []*adminapi.Client{gwClient},
@@ -1280,7 +1280,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 }
 
 func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	gwClient := mustSampleGatewayClient(t)
 	clientsProvider := &mockGatewayClientsProvider{
 		gatewayClients: []*adminapi.Client{gwClient},
@@ -1358,7 +1358,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 
 func TestKongClient_LastValidCacheSnapshot(t *testing.T) {
 	var (
-		ctx                     = context.Background()
+		ctx                     = t.Context()
 		updateStrategyResolver  = mocks.NewUpdateStrategyResolver()
 		configChangeDetector    = mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
 		configBuilder           = newMockKongConfigBuilder()
@@ -1499,7 +1499,7 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 				Configs:               diagnosticsCh,
 				DumpsIncludeSensitive: tc.dumpsIncludeSensitive,
 			}
-			ctx := context.Background()
+			ctx := t.Context()
 			err := kongClient.Update(ctx)
 			require.NoError(t, err)
 
@@ -1517,7 +1517,7 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 }
 
 func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	configChangeDetector := mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
 	fallbackConfigGenerator := newMockFallbackConfigGenerator()
 	originalCache := cacheStoresFromObjs(t)
@@ -1685,8 +1685,8 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 	}
 }
 
-func someConsumer(t *testing.T, name string) *kongv1.KongConsumer {
-	return helpers.WithTypeMeta(t, &kongv1.KongConsumer{
+func someConsumer(t *testing.T, name string) *configurationv1.KongConsumer {
+	return helpers.WithTypeMeta(t, &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "name",
 			Namespace: "namespace",

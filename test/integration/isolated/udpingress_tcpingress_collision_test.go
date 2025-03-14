@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 	"github.com/kong/kubernetes-configuration/pkg/clientset/typed/configuration/v1beta1"
 
@@ -98,17 +98,17 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			cleaner.Add(service)
 
 			t.Logf("creating a UDPIngress to access deployment %s via kong", deployment.Name)
-			udpIngress := &kongv1beta1.UDPIngress{
+			udpIngress := &configurationv1beta1.UDPIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: udpIngressName,
 					Annotations: map[string]string{
 						annotations.IngressClassKey: GetIngressClassFromCtx(ctx),
 					},
 				},
-				Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
+				Spec: configurationv1beta1.UDPIngressSpec{Rules: []configurationv1beta1.UDPIngressRule{
 					{
 						Port: ktfkong.DefaultUDPServicePort,
-						Backend: kongv1beta1.IngressBackend{
+						Backend: configurationv1beta1.IngressBackend{
 							ServiceName: service.Name,
 							ServicePort: commonTCPandUDPPort,
 						},
@@ -119,17 +119,17 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Logf("creating a TCPIngress to access deployment %s via kong", deployment.Name)
-			tcpIngress := &kongv1beta1.TCPIngress{
+			tcpIngress := &configurationv1beta1.TCPIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tcpIngressName,
 					Annotations: map[string]string{
 						annotations.IngressClassKey: GetIngressClassFromCtx(ctx),
 					},
 				},
-				Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{
+				Spec: configurationv1beta1.TCPIngressSpec{Rules: []configurationv1beta1.IngressRule{
 					{
 						Port: ktfkong.DefaultTCPServicePort,
-						Backend: kongv1beta1.IngressBackend{
+						Backend: configurationv1beta1.IngressBackend{
 							ServiceName: service.Name,
 							ServicePort: commonTCPandUDPPort,
 						},

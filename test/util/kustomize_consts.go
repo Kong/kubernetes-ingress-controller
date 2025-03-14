@@ -19,7 +19,7 @@ var (
 	kongGatewayRBACsKustomize = initKongGatewayRBACsKustomizePath()
 	kongCRDsRBACsKustomize    = initKongCRDsRBACsKustomizePath()
 
-	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersion(kubernetesConfigurationModulePath))
+	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersionGit(kubernetesConfigurationModulePath))
 	kongCRDsKustomize                    = initKongConfigurationCRDs()
 	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
 )

@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -26,14 +26,15 @@ type Consumer struct {
 	Oauth2Creds []*Oauth2Credential
 	MTLSAuths   []*MTLSAuth
 
-	K8sKongConsumer kongv1.KongConsumer
+	K8sKongConsumer configurationv1.KongConsumer
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *Consumer) SanitizedCopy(uuidGenerator util.UUIDGenerator) Consumer {
 	return Consumer{
-		Consumer: c.Consumer,
-		Plugins:  c.Plugins,
+		Consumer:       c.Consumer,
+		Plugins:        c.Plugins,
+		ConsumerGroups: c.ConsumerGroups,
 		KeyAuths: func() []*KeyAuth {
 			if c.KeyAuths == nil {
 				return nil

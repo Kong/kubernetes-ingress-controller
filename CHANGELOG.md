@@ -7,6 +7,8 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.3](#343)
+ - [3.4.2](#342)
  - [3.4.1](#341)
  - [3.4.0](#340)
  - [3.3.1](#331)
@@ -103,6 +105,18 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+
+### Fixed
+
+- Ignore `Secret`s with value of `konghq.com/credential` label not included in the
+  supported credential types like `konnect`. This prevents `Secret`s used for
+  credentials in other places to be rejected.
+  [#7226](https://github.com/Kong/kubernetes-ingress-controller/pull/7226)
+
+## [3.4.3]
+
+> Release date: 2025-02-27
+
 ### Changed
 
 - Remove usage of `kube-rbac-proxy` from `default` kustomization.
@@ -127,9 +141,18 @@ Adding a new version? You'll need three changes:
   collected properly when the Konnect integration was enabled (only Konnect-related
   metrics were collected, omitting regular DP metrics). This has been fixed.
   [#6881](https://github.com/Kong/kubernetes-ingress-controller/pull/6881)
+- Fix mapping `KongConsumer` to respective `KongConsumerGroup` in Konnect.
+  [#7144](https://github.com/Kong/kubernetes-ingress-controller/pull/7144)
+
+## [3.4.2]
+
+> Release date: 2025-02-17
+
+### Fixed
+
 - `AddToScheme` is only run in the initialization of scheme of the manager but
   not called in `scheme.Get` to reduce the CPU usage.
-  [#7105](https://github.com/Kong/kubernetes-ingress-controller/pull/7105) 
+  [#7105](https://github.com/Kong/kubernetes-ingress-controller/pull/7105)
 
 ## [3.4.1]
 
@@ -3999,6 +4022,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.1...v3.4.2
 [3.4.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.3.1...v3.4.0
 [3.3.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.3.0...v3.3.1

@@ -12,9 +12,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
@@ -86,38 +86,38 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var (
 	consumerGVResource = metav1.GroupVersionResource{
-		Group:    kongv1.SchemeGroupVersion.Group,
-		Version:  kongv1.SchemeGroupVersion.Version,
+		Group:    configurationv1.SchemeGroupVersion.Group,
+		Version:  configurationv1.SchemeGroupVersion.Version,
 		Resource: "kongconsumers",
 	}
 	consumerGroupGVResource = metav1.GroupVersionResource{
-		Group:    kongv1beta1.SchemeGroupVersion.Group,
-		Version:  kongv1beta1.SchemeGroupVersion.Version,
+		Group:    configurationv1beta1.SchemeGroupVersion.Group,
+		Version:  configurationv1beta1.SchemeGroupVersion.Version,
 		Resource: "kongconsumergroups",
 	}
 	pluginGVResource = metav1.GroupVersionResource{
-		Group:    kongv1.SchemeGroupVersion.Group,
-		Version:  kongv1.SchemeGroupVersion.Version,
+		Group:    configurationv1.SchemeGroupVersion.Group,
+		Version:  configurationv1.SchemeGroupVersion.Version,
 		Resource: "kongplugins",
 	}
 	clusterPluginGVResource = metav1.GroupVersionResource{
-		Group:    kongv1.SchemeGroupVersion.Group,
-		Version:  kongv1.SchemeGroupVersion.Version,
+		Group:    configurationv1.SchemeGroupVersion.Group,
+		Version:  configurationv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
 	kongIngressGVResource = metav1.GroupVersionResource{
-		Group:    kongv1.SchemeGroupVersion.Group,
-		Version:  kongv1.SchemeGroupVersion.Version,
+		Group:    configurationv1.SchemeGroupVersion.Group,
+		Version:  configurationv1.SchemeGroupVersion.Version,
 		Resource: "kongingresses",
 	}
 	kongVaultGVResource = metav1.GroupVersionResource{
-		Group:    kongv1alpha1.SchemeGroupVersion.Group,
-		Version:  kongv1alpha1.SchemeGroupVersion.Version,
+		Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+		Version:  configurationv1alpha1.SchemeGroupVersion.Version,
 		Resource: "kongvaults",
 	}
 	kongCustomEntityGVResource = metav1.GroupVersionResource{
-		Group:    kongv1alpha1.SchemeGroupVersion.Group,
-		Version:  kongv1alpha1.SchemeGroupVersion.Version,
+		Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+		Version:  configurationv1alpha1.SchemeGroupVersion.Version,
 		Resource: "kongcustomentities",
 	}
 	secretGVResource = metav1.GroupVersionResource{
@@ -181,7 +181,7 @@ func (h RequestHandler) handleKongConsumer(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	consumer := kongv1.KongConsumer{}
+	consumer := configurationv1.KongConsumer{}
 	deserializer := codecs.UniversalDeserializer()
 	_, _, err := deserializer.Decode(request.Object.Raw, nil, &consumer)
 	if err != nil {
@@ -196,7 +196,7 @@ func (h RequestHandler) handleKongConsumer(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(msg).Build(), nil
 	case admissionv1.Update:
-		var oldConsumer kongv1.KongConsumer
+		var oldConsumer configurationv1.KongConsumer
 		_, _, err = deserializer.Decode(request.OldObject.Raw, nil, &oldConsumer)
 		if err != nil {
 			return nil, err
@@ -222,7 +222,7 @@ func (h RequestHandler) handleKongConsumerGroup(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	var consumerGroup kongv1beta1.KongConsumerGroup
+	var consumerGroup configurationv1beta1.KongConsumerGroup
 	if _, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &consumerGroup); err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (h RequestHandler) handleKongPlugin(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	plugin := kongv1.KongPlugin{}
+	plugin := configurationv1.KongPlugin{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
@@ -262,7 +262,7 @@ func (h RequestHandler) handleKongClusterPlugin(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	plugin := kongv1.KongClusterPlugin{}
+	plugin := configurationv1.KongClusterPlugin{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
@@ -295,7 +295,8 @@ func (h RequestHandler) handleSecret(
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
 		// credential secrets
-		if credType, err := util.ExtractKongCredentialType(&secret); err == nil && credType != "" {
+		// Run ValidateCredential if the secret has the `konghq.com/credential` label and its value is one of supported credential type.
+		if _, err := util.ExtractKongCredentialType(&secret); err == nil {
 			ok, message := h.Validator.ValidateCredential(ctx, secret)
 			if !ok {
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
@@ -342,9 +343,9 @@ func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *core
 	count := 0
 	for _, obj := range referrers {
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
+		if gvk.Group == configurationv1.GroupVersion.Group && gvk.Version == configurationv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
 			count++
-			plugin := obj.(*kongv1.KongPlugin)
+			plugin := obj.(*configurationv1.KongPlugin)
 			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
 				return false, count, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
@@ -358,9 +359,9 @@ func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *core
 					), nil
 			}
 		}
-		if gvk.Group == kongv1.GroupVersion.Group && gvk.Version == kongv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
+		if gvk.Group == configurationv1.GroupVersion.Group && gvk.Version == configurationv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
 			count++
-			plugin := obj.(*kongv1.KongClusterPlugin)
+			plugin := obj.(*configurationv1.KongClusterPlugin)
 			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
 			if err != nil {
 				return false, count, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
@@ -426,7 +427,7 @@ const (
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongingresses,versions=v1,name=kongingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
-	kongIngress := kongv1.KongIngress{}
+	kongIngress := configurationv1.KongIngress{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongIngress)
 	if err != nil {
 		return nil, err
@@ -467,7 +468,7 @@ func (h RequestHandler) handleService(request admissionv1.AdmissionRequest, resp
 
 	if annotations.ExtractConfigurationName(service.Annotations) != "" {
 		warning := fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
-			kongv1beta1.KongUpstreamPolicyAnnotationKey)
+			configurationv1beta1.KongUpstreamPolicyAnnotationKey)
 
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
@@ -494,7 +495,7 @@ func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.A
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongvaults,versions=v1alpha1,name=kongvaults.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
-	kongVault := kongv1alpha1.KongVault{}
+	kongVault := configurationv1alpha1.KongVault{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongVault)
 	if err != nil {
 		return nil, err
@@ -510,7 +511,7 @@ func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
-	kongCustomEntity := kongv1alpha1.KongCustomEntity{}
+	kongCustomEntity := configurationv1alpha1.KongCustomEntity{}
 
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongCustomEntity)
 	if err != nil {

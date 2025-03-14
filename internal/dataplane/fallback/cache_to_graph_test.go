@@ -10,7 +10,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -342,28 +342,28 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 		{
 			name: "cache with KongCustomEntities and its dependencies",
 			cache: cacheStoresFromObjs(t,
-				&kongv1alpha1.KongCustomEntity{
+				&configurationv1alpha1.KongCustomEntity{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-entity-kong-plugin",
 						Namespace: testNamespace,
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						ParentRef: &kongv1alpha1.ObjectReference{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
+						ParentRef: &configurationv1alpha1.ObjectReference{
 							Kind:  lo.ToPtr("KongPlugin"),
-							Group: lo.ToPtr(kongv1alpha1.GroupVersion.Group),
+							Group: lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
 							Name:  "test-plugin",
 						},
 					},
 				},
-				&kongv1alpha1.KongCustomEntity{
+				&configurationv1alpha1.KongCustomEntity{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-entity-kong-cluster-plugin",
 						Namespace: testNamespace,
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
-						ParentRef: &kongv1alpha1.ObjectReference{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
+						ParentRef: &configurationv1alpha1.ObjectReference{
 							Kind:  lo.ToPtr("KongClusterPlugin"),
-							Group: lo.ToPtr(kongv1alpha1.GroupVersion.Group),
+							Group: lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
 							Name:  "test-cluster-plugin",
 						},
 					},

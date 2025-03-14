@@ -24,7 +24,7 @@ func TestDebugEndpoints(t *testing.T) {
 		tickTime = 10 * time.Millisecond
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	diagPort := helpers.GetFreePort(t)

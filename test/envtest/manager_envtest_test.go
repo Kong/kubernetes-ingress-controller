@@ -33,7 +33,7 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	t.Log("Setting up a proxy for Kubernetes API server so that we can interrupt it")
@@ -87,7 +87,7 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	diagnosticsServerPort := testhelpers.GetFreePort(t)

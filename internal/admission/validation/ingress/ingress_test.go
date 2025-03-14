@@ -50,7 +50,7 @@ func TestValidateIngress(t *testing.T) {
 			})
 			require.NoError(t, err)
 			valid, validMsg, err := ValidateIngress(
-				context.Background(),
+				t.Context(),
 				mockRoutesValidator{},
 				translator.FeatureFlags{},
 				tt.ingress,

@@ -1,7 +1,6 @@
 package admission
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,8 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
@@ -33,11 +32,11 @@ var (
 		Kind:       "Secret",
 	}
 	kongPluginTypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1.GroupVersion.String(),
+		APIVersion: configurationv1.GroupVersion.String(),
 		Kind:       "KongPlugin",
 	}
 	kongClusterPluginTypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1.GroupVersion.String(),
+		APIVersion: configurationv1.GroupVersion.String(),
 		Kind:       "KongClusterPlugin",
 	}
 )
@@ -45,36 +44,36 @@ var (
 func TestHandleKongIngress(t *testing.T) {
 	tests := []struct {
 		name         string
-		resource     kongv1.KongIngress
+		resource     configurationv1.KongIngress
 		wantWarnings []string
 	}{
 		{
 			name: "has proxy",
-			resource: kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{},
+			resource: configurationv1.KongIngress{
+				Proxy: &configurationv1.KongIngressService{},
 			},
 			wantWarnings: []string{proxyWarning},
 		},
 		{
 			name: "has route",
-			resource: kongv1.KongIngress{
-				Route: &kongv1.KongIngressRoute{},
+			resource: configurationv1.KongIngress{
+				Route: &configurationv1.KongIngressRoute{},
 			},
 			wantWarnings: []string{routeWarning},
 		},
 		{
 			name: "has upstream",
-			resource: kongv1.KongIngress{
-				Upstream: &kongv1.KongIngressUpstream{},
+			resource: configurationv1.KongIngress{
+				Upstream: &configurationv1.KongIngressUpstream{},
 			},
 			wantWarnings: []string{upstreamWarning},
 		},
 		{
 			name: "has everything",
-			resource: kongv1.KongIngress{
-				Proxy:    &kongv1.KongIngressService{},
-				Route:    &kongv1.KongIngressRoute{},
-				Upstream: &kongv1.KongIngressUpstream{},
+			resource: configurationv1.KongIngress{
+				Proxy:    &configurationv1.KongIngressService{},
+				Route:    &configurationv1.KongIngressRoute{},
+				Upstream: &configurationv1.KongIngressUpstream{},
 			},
 			wantWarnings: []string{proxyWarning, routeWarning, upstreamWarning},
 		},
@@ -99,7 +98,7 @@ func TestHandleKongIngress(t *testing.T) {
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
 
-			got, err := handler.handleKongIngress(context.Background(), request, responseBuilder)
+			got, err := handler.handleKongIngress(t.Context(), request, responseBuilder)
 			require.NoError(t, err)
 			require.True(t, got.Allowed)
 			require.Equal(t, tt.wantWarnings, got.Warnings)
@@ -129,7 +128,7 @@ func TestHandleService(t *testing.T) {
 
 			wantWarnings: []string{
 				fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
-					kongv1beta1.KongUpstreamPolicyAnnotationKey),
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey),
 			},
 			isAllowed: true,
 		},
@@ -139,7 +138,7 @@ func TestHandleService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 					Annotations: map[string]string{
-						annotations.AnnotationPrefix + kongv1beta1.KongUpstreamPolicyAnnotationKey: "test",
+						annotations.AnnotationPrefix + configurationv1beta1.KongUpstreamPolicyAnnotationKey: "test",
 					},
 				},
 			},
@@ -159,23 +158,23 @@ func TestHandleService(t *testing.T) {
 			validator: KongHTTPValidator{
 				ManagerClient: func() client.Client {
 					scheme := runtime.NewScheme()
-					require.NoError(t, kongv1.AddToScheme(scheme))
+					require.NoError(t, configurationv1.AddToScheme(scheme))
 					fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-						&kongv1.KongPlugin{
+						&configurationv1.KongPlugin{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "plugin1",
 								Namespace: "default",
 							},
 							PluginName: "foo",
 						},
-						&kongv1.KongPlugin{
+						&configurationv1.KongPlugin{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "plugin2",
 								Namespace: "default",
 							},
 							PluginName: "bar",
 						},
-						&kongv1.KongPlugin{
+						&configurationv1.KongPlugin{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "plugin3",
 								Namespace: "default",
@@ -203,16 +202,16 @@ func TestHandleService(t *testing.T) {
 			validator: KongHTTPValidator{
 				ManagerClient: func() client.Client {
 					scheme := runtime.NewScheme()
-					require.NoError(t, kongv1.AddToScheme(scheme))
+					require.NoError(t, configurationv1.AddToScheme(scheme))
 					fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-						&kongv1.KongPlugin{
+						&configurationv1.KongPlugin{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "plugin1",
 								Namespace: "default",
 							},
 							PluginName: "foo",
 						},
-						&kongv1.KongPlugin{
+						&configurationv1.KongPlugin{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "plugin2",
 								Namespace: "default",
@@ -226,7 +225,7 @@ func TestHandleService(t *testing.T) {
 			isAllowed: true,
 			wantWarnings: []string{
 				fmt.Sprintf(serviceWarning, annotations.AnnotationPrefix+annotations.ConfigurationKey,
-					kongv1beta1.KongUpstreamPolicyAnnotationKey),
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey),
 			},
 		},
 	}
@@ -278,10 +277,13 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "credential-0",
 					Labels: map[string]string{
-						"konghq.com/credential": "true",
+						"konghq.com/credential": "basic-auth",
 					},
 				},
-				Data: map[string][]byte{},
+				Data: map[string][]byte{
+					"username": []byte("user"),
+					"password": []byte("password"),
+				},
 			},
 			validatorOK:   true,
 			expectAllowed: true,
@@ -294,16 +296,38 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "credential-1",
 					Labels: map[string]string{
-						"konghq.com/credential": "true",
+						"konghq.com/credential": "basic-auth",
 					},
 				},
-				Data: map[string][]byte{},
+				Data: map[string][]byte{
+					"username": []byte("user"),
+					"password": []byte("password"),
+				},
 			},
 			validatorOK:      false,
 			validatorMessage: "invalid credential",
 			expectAllowed:    false,
 			expectStatusCode: http.StatusBadRequest,
 			expectMessage:    "invalid credential",
+		},
+		{
+			name: "secret with not supported type of credential is ignored",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "whatever-credential",
+					},
+				},
+				Data: map[string][]byte{
+					"username": []byte("user"),
+					"password": []byte("password"),
+				},
+			},
+			validatorOK:   true,
+			expectAllowed: true,
 		},
 		{
 			name: "secret used as KongPlugin config and KongClusterPlugin and passes validation of both CRDs",
@@ -318,7 +342,7 @@ func TestHandleSecret(t *testing.T) {
 				},
 			},
 			referrers: []client.Object{
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					TypeMeta: kongPluginTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -326,7 +350,7 @@ func TestHandleSecret(t *testing.T) {
 					},
 					PluginName: "test-plugin",
 				},
-				&kongv1.KongClusterPlugin{
+				&configurationv1.KongClusterPlugin{
 					TypeMeta: kongClusterPluginTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-plugin-0",
@@ -353,7 +377,7 @@ func TestHandleSecret(t *testing.T) {
 				},
 			},
 			referrers: []client.Object{
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					TypeMeta: kongPluginTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -381,7 +405,7 @@ func TestHandleSecret(t *testing.T) {
 				},
 			},
 			referrers: []client.Object{
-				&kongv1.KongClusterPlugin{
+				&configurationv1.KongClusterPlugin{
 					TypeMeta: kongClusterPluginTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-plugin-0",
@@ -428,7 +452,7 @@ func TestHandleSecret(t *testing.T) {
 			}
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
-			got, err := handler.handleSecret(context.Background(), request, responseBuilder)
+			got, err := handler.handleSecret(t.Context(), request, responseBuilder)
 			if tc.expectError {
 				require.Error(t, err)
 				return

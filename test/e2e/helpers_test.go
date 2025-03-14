@@ -96,7 +96,7 @@ const (
 func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, environments.Environment) {
 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:usetesting
 	t.Cleanup(cancel)
 
 	t.Log("building test cluster and environment")
@@ -798,12 +798,9 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 	t.Log("creating a tempfile for kubeconfig")
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
+	kubeconfigFile, err := os.CreateTemp(t.TempDir(), "manifest-tests-kubeconfig-")
 	require.NoError(t, err)
 	defer kubeconfigFile.Close()
-	t.Cleanup(func() {
-		assert.NoError(t, os.Remove(kubeconfigFile.Name()))
-	})
 
 	t.Logf("dumping kubeconfig to tempfile: %s", kubeconfigFile.Name())
 	written, err := kubeconfigFile.Write(kubeconfig)

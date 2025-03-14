@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -35,7 +34,7 @@ import (
 )
 
 func TestPluginEssentials(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -81,7 +80,7 @@ func TestPluginEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	kongplugin := &kongv1.KongPlugin{
+	kongplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "teapot",
@@ -92,7 +91,7 @@ func TestPluginEssentials(t *testing.T) {
 			Raw: []byte(`{"status_code": 418}`),
 		},
 	}
-	kongclusterplugin := &kongv1.KongClusterPlugin{
+	kongclusterplugin := &configurationv1.KongClusterPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "legal",
 			Annotations: map[string]string{
@@ -164,7 +163,7 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginConfigPatch(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -224,7 +223,7 @@ func TestPluginConfigPatch(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(secret)
 
-	kongplugin := &kongv1.KongPlugin{
+	kongplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "teapot",
@@ -234,11 +233,11 @@ func TestPluginConfigPatch(t *testing.T) {
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"status_code": 418}`),
 		},
-		ConfigPatches: []kongv1.ConfigPatch{
+		ConfigPatches: []configurationv1.ConfigPatch{
 			{
 				Path: "/message",
-				ValueFrom: kongv1.ConfigSource{
-					SecretValue: kongv1.SecretValueFromSource{
+				ValueFrom: configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{
 						Secret: "kongplugin-config",
 						Key:    "teapot-message",
 					},
@@ -252,7 +251,7 @@ func TestPluginConfigPatch(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(kongplugin)
 
-	kongclusterplugin := &kongv1.KongClusterPlugin{
+	kongclusterplugin := &configurationv1.KongClusterPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "forbidden",
 			Annotations: map[string]string{
@@ -264,11 +263,11 @@ func TestPluginConfigPatch(t *testing.T) {
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"status_code": 403}`),
 		},
-		ConfigPatches: []kongv1.NamespacedConfigPatch{
+		ConfigPatches: []configurationv1.NamespacedConfigPatch{
 			{
 				Path: "/message",
-				ValueFrom: kongv1.NamespacedConfigSource{
-					SecretValue: kongv1.NamespacedSecretValueFromSource{
+				ValueFrom: configurationv1.NamespacedConfigSource{
+					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: ns.Name,
 						Secret:    "kongplugin-config",
 						Key:       "forbidden-message",
@@ -337,7 +336,7 @@ func TestPluginOrdering(t *testing.T) {
 
 	RunWhenKongEnterprise(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -382,7 +381,7 @@ func TestPluginOrdering(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	termplugin := &kongv1.KongPlugin{
+	termplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "teapot",
@@ -392,7 +391,7 @@ func TestPluginOrdering(t *testing.T) {
 			Raw: []byte(`{"status_code": 418}`),
 		},
 	}
-	authplugin := &kongv1.KongPlugin{
+	authplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "auth",
@@ -483,7 +482,7 @@ func TestPluginOrdering(t *testing.T) {
 // the controller can generate a plugin attached to the generated route and consumer if and only if a ReferenceGrant
 // allows access to the KongPlugin from KongConsumers in a remote namespace.
 func TestPluginCrossNamespaceReference(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -532,7 +531,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("creating plugins")
-	kongplugin := &kongv1.KongPlugin{
+	kongplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "teapot",
@@ -552,7 +551,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	// this isn't strictly necessary, but it's convenient for diagnosing issues if the test breaks, as it confirms
 	// that a request was indeed recognized as being from the consumer. unlike the other consumer plugin, it's associated
 	// with the consumer alone and works regardless of the grant state or any cross-namespace shenanigans
-	kongslugin := &kongv1.KongPlugin{
+	kongslugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "snurch",
@@ -583,7 +582,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(credential)
 
-	consumer := &kongv1.KongConsumer{
+	consumer := &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
@@ -599,7 +598,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	cleaner.Add(consumer)
 
 	t.Log("creating auth plugin to identify consumer accessing route")
-	authplugin := &kongv1.KongPlugin{
+	authplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "keykey",

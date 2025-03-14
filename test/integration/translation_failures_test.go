@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -38,7 +38,7 @@ const testTranslationFailuresObjectsPrefix = "translation-failures-"
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	type expectedTranslationFailure struct {
 		causingObjects []client.Object
@@ -363,8 +363,8 @@ func invalidCASecret(ns string) *corev1.Secret {
 	}
 }
 
-func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
-	return &kongv1.KongPlugin{
+func pluginUsingInvalidCACert(ns string) *configurationv1.KongPlugin {
+	return &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Namespace: ns,

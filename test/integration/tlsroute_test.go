@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -55,7 +54,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
@@ -331,7 +330,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
@@ -719,18 +718,21 @@ func TestTLSRoutePassthrough(t *testing.T) {
 // a message and checks if returned one matches. It returns an error with
 // an explanation if it is not (typical network related errors like io.EOF or
 // syscall.ECONNRESET are returned directly).
+// Deprecated: use test.EchoResponds with ProtocolTLS instead.
 func tlsEchoResponds(
 	url string, podName string, hostname string, certPool *x509.CertPool, passthrough bool,
 ) error {
 	dialer := net.Dialer{Timeout: time.Second * 10}
-	conn, err := tls.DialWithDialer(&dialer,
+	conn, err := tls.DialWithDialer(
+		&dialer,
 		"tcp",
 		url,
 		&tls.Config{
 			MinVersion: tls.VersionTLS12,
 			ServerName: hostname,
 			RootCAs:    certPool,
-		})
+		},
+	)
 	if err != nil {
 		return err
 	}

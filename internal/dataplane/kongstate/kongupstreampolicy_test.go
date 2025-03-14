@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -19,7 +19,7 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 	testCases := []struct {
 		name          string
 		servicesGroup []*corev1.Service
-		policies      []*kongv1beta1.KongUpstreamPolicy
+		policies      []*configurationv1beta1.KongUpstreamPolicy
 		expectPolicy  bool
 		expectError   string
 	}{
@@ -34,7 +34,7 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 					Name:      "svc",
 					Namespace: "default",
 					Annotations: map[string]string{
-						kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 					},
 				},
 			}},
@@ -66,7 +66,7 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 						},
 					},
 				},
@@ -75,7 +75,7 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 						Name:      "svc-2",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "other-upstream-policy",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "other-upstream-policy",
 						},
 					},
 				},
@@ -90,7 +90,7 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 						},
 					},
 				},
@@ -111,7 +111,7 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 						},
 					},
 				},
@@ -120,12 +120,12 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 						Name:      "svc-2",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 						},
 					},
 				},
 			},
-			policies: []*kongv1beta1.KongUpstreamPolicy{
+			policies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "upstream-policy",
@@ -162,12 +162,12 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 func TestTranslateKongUpstreamPolicy(t *testing.T) {
 	testCases := []struct {
 		name             string
-		policySpec       kongv1beta1.KongUpstreamPolicySpec
+		policySpec       configurationv1beta1.KongUpstreamPolicySpec
 		expectedUpstream *kong.Upstream
 	}{
 		{
 			name: "KongUpstreamPolicySpec with no hash-on or hash-fallback",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				Algorithm: lo.ToPtr("least-connections"),
 				Slots:     lo.ToPtr(10),
 			},
@@ -178,11 +178,11 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on header",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HashOn: &kongv1beta1.KongUpstreamHash{
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
 					Header: lo.ToPtr("foo"),
 				},
-				HashOnFallback: &kongv1beta1.KongUpstreamHash{
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 					Header: lo.ToPtr("bar"),
 				},
 			},
@@ -195,8 +195,8 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on cookie",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HashOn: &kongv1beta1.KongUpstreamHash{
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
 					Cookie:     lo.ToPtr("foo"),
 					CookiePath: lo.ToPtr("/"),
 				},
@@ -209,8 +209,8 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on query-arg",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HashOn: &kongv1beta1.KongUpstreamHash{
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
 					QueryArg: lo.ToPtr("foo"),
 				},
 			},
@@ -221,8 +221,8 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on uri-capture",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HashOn: &kongv1beta1.KongUpstreamHash{
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
 					URICapture: lo.ToPtr("foo"),
 				},
 			},
@@ -233,12 +233,12 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		},
 		{
 			name: "KongUpstreamPolicySpec with predefined hash input",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				HashOn: &kongv1beta1.KongUpstreamHash{
-					Input: lo.ToPtr(kongv1beta1.HashInput("consumer")),
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(configurationv1beta1.HashInput("consumer")),
 				},
-				HashOnFallback: &kongv1beta1.KongUpstreamHash{
-					Input: lo.ToPtr(kongv1beta1.HashInput("ip")),
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+					Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
@@ -248,19 +248,19 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		},
 		{
 			name: "KongUpstreamPolicySpec with healthchecks",
-			policySpec: kongv1beta1.KongUpstreamPolicySpec{
-				Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-					Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+					Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
 						Type:        lo.ToPtr("http"),
 						Concurrency: lo.ToPtr(10),
-						Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
-							HTTPStatuses: []kongv1beta1.HTTPStatus{200},
+						Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
+							HTTPStatuses: []configurationv1beta1.HTTPStatus{200},
 							Interval:     lo.ToPtr(20),
 							Successes:    lo.ToPtr(30),
 						},
-						Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
+						Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
 							HTTPFailures: lo.ToPtr(40),
-							HTTPStatuses: []kongv1beta1.HTTPStatus{500},
+							HTTPStatuses: []configurationv1beta1.HTTPStatus{500},
 							Timeouts:     lo.ToPtr(60),
 							Interval:     lo.ToPtr(70),
 						},
@@ -270,12 +270,12 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 						Timeout:                lo.ToPtr(80),
 						Headers:                map[string][]string{"foo": {"bar"}},
 					},
-					Passive: &kongv1beta1.KongUpstreamPassiveHealthcheck{
+					Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
 						Type: lo.ToPtr("tcp"),
-						Healthy: &kongv1beta1.KongUpstreamHealthcheckHealthy{
+						Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
 							Successes: lo.ToPtr(100),
 						},
-						Unhealthy: &kongv1beta1.KongUpstreamHealthcheckUnhealthy{
+						Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
 							TCPFailures: lo.ToPtr(110),
 							Timeouts:    lo.ToPtr(120),
 						},

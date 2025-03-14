@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"context"
 	"slices"
 	"testing"
 
@@ -64,7 +63,7 @@ func TestParseNameNS(t *testing.T) {
 }
 
 func TestGetNodeIP(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	fKNodes := []struct {
 		cs *testclient.Clientset
@@ -180,7 +179,7 @@ func TestGetNodeIP(t *testing.T) {
 }
 
 func TestGetPodDetails(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	// POD_NAME & POD_NAMESPACE not exist
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", "")

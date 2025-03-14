@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,8 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -37,7 +36,7 @@ func TestCustomVault(t *testing.T) {
 	// TODO: run hcv vault to enable test with DBMode
 	RunWhenKongDBMode(t, dpconf.DBModeOff, "Skipping because DBMode cannot support env vault")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -84,14 +83,14 @@ func TestCustomVault(t *testing.T) {
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	_, err = c.ConfigurationV1alpha1().KongVaults().Create(ctx, &kongv1alpha1.KongVault{
+	_, err = c.ConfigurationV1alpha1().KongVaults().Create(ctx, &configurationv1alpha1.KongVault{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-env-vault",
 			Annotations: map[string]string{
 				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
-		Spec: kongv1alpha1.KongVaultSpec{
+		Spec: configurationv1alpha1.KongVaultSpec{
 			Backend:     "env",
 			Prefix:      "test-env",
 			Description: "env vault for test",
@@ -103,7 +102,7 @@ func TestCustomVault(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("create a request-transformer-advanced plugin referencing the value from the vault")
-	_, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, &kongv1.KongPlugin{
+	_, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "request-transformer-advanced",

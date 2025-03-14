@@ -16,7 +16,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -297,7 +296,7 @@ func (h RequestHandler) handleSecret(
 	case admissionv1.Update, admissionv1.Create:
 		// credential secrets
 		// Run ValidateCredential if the secret has the `konghq.com/credential` label and its value is one of supported credential type.
-		if credType, err := util.ExtractKongCredentialType(&secret); err == nil && credentials.SupportedTypes.Has(credType) {
+		if _, err := util.ExtractKongCredentialType(&secret); err == nil {
 			ok, message := h.Validator.ValidateCredential(ctx, secret)
 			if !ok {
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil

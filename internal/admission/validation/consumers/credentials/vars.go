@@ -17,6 +17,19 @@ var SupportedTypes = sets.NewString(
 	"mtls-auth",
 )
 
+var ValidTypes = sets.NewString(
+	"basic-auth",
+	"hmac-auth",
+	"jwt",
+	"key-auth",
+	"oauth2",
+	"acl",
+	"mtls-auth",
+	// Secrets with `konghq.com/cerdential=konnect is used by KGO.
+	// KIC should not reconcile them, but should accept them in validation webhook.
+	"konnect",
+)
+
 var (
 	KeyAuthFields    = []string{"key"}
 	BasicAuthFields  = []string{"username", "password"}

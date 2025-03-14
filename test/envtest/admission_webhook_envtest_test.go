@@ -1068,13 +1068,28 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount)
 
 	t.Run("attaching secret to consumer", func(t *testing.T) {
-		t.Log("verifying that a secret with unsupported credential type passes the validation")
+		t.Log("verifying that a secret with unsupported but valid credential type passes the validation")
 		require.NoError(t, ctrlClient.Create(ctx,
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "unsupported-credential",
+					Name: "konnect-credential",
 					Labels: map[string]string{
-						labels.CredentialTypeLabel: "whatever-credential",
+						labels.CredentialTypeLabel: "konnect",
+					},
+				},
+				StringData: map[string]string{
+					"key": "kong-credential",
+				},
+			},
+		))
+
+		t.Log("verifying that a secret with invalid credential type fails the validation")
+		require.Error(t, ctrlClient.Create(ctx,
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-credential",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "bad-type",
 					},
 				},
 				StringData: map[string]string{

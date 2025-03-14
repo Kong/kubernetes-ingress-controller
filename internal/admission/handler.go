@@ -295,7 +295,8 @@ func (h RequestHandler) handleSecret(
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
 		// credential secrets
-		if credType, err := util.ExtractKongCredentialType(&secret); err == nil && credType != "" {
+		// Run ValidateCredential if the secret has the `konghq.com/credential` label and its value is one of supported credential type.
+		if _, err := util.ExtractKongCredentialType(&secret); err == nil {
 			ok, message := h.Validator.ValidateCredential(ctx, secret)
 			if !ok {
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil

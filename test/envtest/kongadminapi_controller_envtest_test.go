@@ -131,7 +131,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	}
 
 	t.Run("Endpoints are matched properly", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
 		tlsServerName := getTLSServerName(adminService)
@@ -210,7 +210,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	})
 
 	t.Run("terminating Endpoints are not matched", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
 		tlsServerName := getTLSServerName(adminService)
@@ -277,7 +277,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	})
 
 	t.Run("multiple EndpointSlices are matched properly", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
 		tlsServerName := getTLSServerName(adminService)
@@ -413,7 +413,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	})
 
 	t.Run("with EndpointSlices changing over time the notifications are sent properly", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
 		tlsServerName := getTLSServerName(adminService)
@@ -517,7 +517,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	})
 
 	t.Run("when deleted EndpointsSlice is observed notifications are sent properly", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
 		tlsServerName := getTLSServerName(adminService)

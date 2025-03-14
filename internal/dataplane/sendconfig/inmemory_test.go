@@ -154,7 +154,7 @@ func TestUpdateStrategyInMemory(t *testing.T) {
 			configService := &mockConfigService{err: tc.configServiceError}
 			configConverter := &mockConfigConverter{}
 			s := sendconfig.NewUpdateStrategyInMemory(configService, configConverter, logr.Discard())
-			n, err := s.Update(context.Background(), emptyCfg)
+			n, err := s.Update(t.Context(), emptyCfg)
 			require.Equal(t, tc.expectedError, err)
 			if tc.expectedError != nil {
 				// Default value 0 to discard, since error has been returned.

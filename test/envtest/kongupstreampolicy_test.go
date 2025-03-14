@@ -22,7 +22,7 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
@@ -38,7 +38,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
@@ -61,12 +61,12 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 
 	t.Log("creating a KongUpstreamPolicy")
 	const KongUpstreamPolicyName = "test-upstream-policy"
-	kup := &kongv1beta1.KongUpstreamPolicy{
+	kup := &configurationv1beta1.KongUpstreamPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      KongUpstreamPolicyName,
 			Namespace: ns.Name,
 		},
-		Spec: kongv1beta1.KongUpstreamPolicySpec{
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: lo.ToPtr("round-robin"),
 			Slots:     lo.ToPtr(32),
 		},
@@ -83,7 +83,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service.Namespace = ns.Name
 	service.Annotations = map[string]string{
-		kongv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
+		configurationv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
 	}
 	t.Logf("exposing deployment %s via service %s", deployment.Name, service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, service))
@@ -162,7 +162,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	scheme := Scheme(t, WithKong, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
@@ -184,12 +184,12 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 
 	t.Log("creating a KongUpstreamPolicy")
 	const KongUpstreamPolicyName = "test-upstream-policy"
-	kup := &kongv1beta1.KongUpstreamPolicy{
+	kup := &configurationv1beta1.KongUpstreamPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      KongUpstreamPolicyName,
 			Namespace: ns.Name,
 		},
-		Spec: kongv1beta1.KongUpstreamPolicySpec{
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: lo.ToPtr("round-robin"),
 			Slots:     lo.ToPtr(32),
 		},
@@ -295,7 +295,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service.Namespace = ns.Name
 	service.Annotations = map[string]string{
-		kongv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
+		configurationv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
 	}
 	t.Logf("exposing deployment %s via service %s", deployment.Name, service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, service))
@@ -326,7 +326,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	t.Logf("verifying that the Service as backend of HTTPRoute is added to ancestor status of KongUpstreamPolicy")
 	require.Eventually(t, func() bool {
 		var (
-			kup kongv1beta1.KongUpstreamPolicy
+			kup configurationv1beta1.KongUpstreamPolicy
 			nn  = k8stypes.NamespacedName{
 				Namespace: ns.Name,
 				Name:      KongUpstreamPolicyName,
@@ -347,7 +347,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
@@ -365,12 +365,12 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 
 	t.Log("creating a KongUpstreamPolicy")
 	const KongUpstreamPolicyName = "test-upstream-policy"
-	kup := &kongv1beta1.KongUpstreamPolicy{
+	kup := &configurationv1beta1.KongUpstreamPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      KongUpstreamPolicyName,
 			Namespace: ns.Name,
 		},
-		Spec: kongv1beta1.KongUpstreamPolicySpec{
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: lo.ToPtr("round-robin"),
 			Slots:     lo.ToPtr(32),
 		},
@@ -384,7 +384,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 	service.Namespace = ns.Name
 	service.Annotations = map[string]string{
-		kongv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
+		configurationv1beta1.KongUpstreamPolicyAnnotationKey: KongUpstreamPolicyName,
 	}
 	t.Logf("Creating a Service %s with the KongUpstreamPolicy and used as backend of Ingress", service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, service))
@@ -427,7 +427,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	t.Logf("verify that ancestor status of KongUpstreamPolicy is not updated when it is not referenced by reconciled Ingress")
 	require.Never(t, func() bool {
 		var (
-			kup kongv1beta1.KongUpstreamPolicy
+			kup configurationv1beta1.KongUpstreamPolicy
 			nn  = k8stypes.NamespacedName{
 				Namespace: ns.Name,
 				Name:      KongUpstreamPolicyName,
@@ -475,7 +475,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	t.Logf("verifying that ancestor status of KongUpstreamPolicy is updated when it is references by reconciled Ingress")
 	require.Eventually(t, func() bool {
 		var (
-			kup kongv1beta1.KongUpstreamPolicy
+			kup configurationv1beta1.KongUpstreamPolicy
 			nn  = k8stypes.NamespacedName{
 				Namespace: ns.Name,
 				Name:      KongUpstreamPolicyName,

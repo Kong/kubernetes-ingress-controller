@@ -56,8 +56,10 @@ func ensureAdmissionRegistration(
 	validationWebhookClient := client.AdmissionregistrationV1().ValidatingWebhookConfigurations()
 	webhookConfig, err := validationWebhookClient.Create(ctx, webhookConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		if err := validationWebhookClient.Delete(ctx, webhookConfig.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	t.Cleanup(func() { //nolint:contextcheck
+		if err := validationWebhookClient.Delete(
+			context.Background(), webhookConfig.Name, metav1.DeleteOptions{},
+		); err != nil && !apierrors.IsNotFound(err) {
 			require.NoError(t, err)
 		}
 	})
@@ -110,7 +112,8 @@ func ensureWebhookService(ctx context.Context, t *testing.T, client *kubernetes.
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	t.Cleanup(func() {
+	t.Cleanup(func() { //nolint:contextcheck
+		ctx := context.Background()
 		if err := client.CoreV1().Services(nn.Namespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			require.NoError(t, err)
 		}

@@ -9,8 +9,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
@@ -33,13 +33,13 @@ func updateReferredObjects(
 		referredSecretList = listCoreV1ServiceReferredSecrets(obj)
 	case *netv1.Ingress:
 		referredSecretList = listNetV1IngressReferredSecrets(obj)
-	case *kongv1.KongPlugin:
+	case *configurationv1.KongPlugin:
 		referredSecretList = listKongPluginReferredSecrets(obj)
-	case *kongv1.KongClusterPlugin:
+	case *configurationv1.KongClusterPlugin:
 		referredSecretList = listKongClusterPluginReferredSecrets(obj)
-	case *kongv1.KongConsumer:
+	case *configurationv1.KongConsumer:
 		referredSecretList = listKongConsumerReferredSecrets(obj)
-	case *kongv1beta1.TCPIngress:
+	case *configurationv1beta1.TCPIngress:
 		referredSecretList = listTCPIngressReferredSecrets(obj)
 	}
 
@@ -89,7 +89,7 @@ func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []k8stypes.Namespac
 	return referredSecretNames
 }
 
-func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.NamespacedName {
+func listKongPluginReferredSecrets(plugin *configurationv1.KongPlugin) []k8stypes.NamespacedName {
 	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
@@ -110,7 +110,7 @@ func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []k8stypes.Namespa
 	return lo.Uniq(referredSecretNames)
 }
 
-func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8stypes.NamespacedName {
+func listKongClusterPluginReferredSecrets(plugin *configurationv1.KongClusterPlugin) []k8stypes.NamespacedName {
 	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(plugin.ConfigPatches)+1)
 	if plugin.ConfigFrom != nil {
 		nsName := k8stypes.NamespacedName{
@@ -131,7 +131,7 @@ func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []k8
 	return lo.Uniq(referredSecretNames)
 }
 
-func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []k8stypes.NamespacedName {
+func listKongConsumerReferredSecrets(consumer *configurationv1.KongConsumer) []k8stypes.NamespacedName {
 	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(consumer.Credentials))
 	for _, secretName := range consumer.Credentials {
 		nsName := k8stypes.NamespacedName{
@@ -143,7 +143,7 @@ func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []k8stypes.N
 	return referredSecretNames
 }
 
-func listTCPIngressReferredSecrets(tcpIngress *kongv1beta1.TCPIngress) []k8stypes.NamespacedName {
+func listTCPIngressReferredSecrets(tcpIngress *configurationv1beta1.TCPIngress) []k8stypes.NamespacedName {
 	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(tcpIngress.Spec.TLS))
 	for _, tls := range tcpIngress.Spec.TLS {
 		if tls.SecretName == "" {

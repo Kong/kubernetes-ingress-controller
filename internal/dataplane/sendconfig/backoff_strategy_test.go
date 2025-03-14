@@ -72,7 +72,7 @@ func newMockBackoffStrategy(allowUpdate bool) *mockBackoffStrategy {
 }
 
 func TestUpdateStrategyWithBackoff(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := zapr.NewLogger(zap.NewNop())
 
 	testCases := []struct {

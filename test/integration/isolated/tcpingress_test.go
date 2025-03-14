@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -85,17 +85,17 @@ func TestTCPIngressEssentials(t *testing.T) {
 				cleaner.Add(service)
 
 				t.Logf("creating a TCPIngress to access deployment %s via kong", deployment.Name)
-				tcpIngress := &kongv1beta1.TCPIngress{
+				tcpIngress := &configurationv1beta1.TCPIngress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: tcpIngressName,
 						Annotations: map[string]string{
 							annotations.IngressClassKey: GetIngressClassFromCtx(ctx),
 						},
 					},
-					Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{
+					Spec: configurationv1beta1.TCPIngressSpec{Rules: []configurationv1beta1.IngressRule{
 						{
 							Port: ktfkong.DefaultTCPServicePort,
-							Backend: kongv1beta1.IngressBackend{
+							Backend: configurationv1beta1.IngressBackend{
 								ServiceName: service.Name,
 								ServicePort: servicePort,
 							},

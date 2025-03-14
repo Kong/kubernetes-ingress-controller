@@ -14,7 +14,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
@@ -55,7 +55,7 @@ type servicesSet map[serviceKey]struct{}
 // in the KongUpstreamPolicy status.
 func (r *KongUpstreamPolicyReconciler) enforceKongUpstreamPolicyStatus(
 	ctx context.Context,
-	oldPolicy *kongv1beta1.KongUpstreamPolicy,
+	oldPolicy *configurationv1beta1.KongUpstreamPolicy,
 ) (bool, error) {
 	policyNN := k8stypes.NamespacedName{
 		Namespace: oldPolicy.Namespace,

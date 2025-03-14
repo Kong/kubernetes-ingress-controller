@@ -4,12 +4,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	kongcommonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 // ObjectWithControlPlaneRef is an interface that represents an object that has a control plane reference.
 type ObjectWithControlPlaneRef interface {
-	GetControlPlaneRef() *kongcommonv1alpha1.ControlPlaneRef
+	GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
 }
 
 // GenerateCPReferenceMatchesPredicate generates a predicate function that filters out objects that have a control plane
@@ -22,7 +22,7 @@ func GenerateCPReferenceMatchesPredicate[T ObjectWithControlPlaneRef]() predicat
 		}
 		if cpRef := c.GetControlPlaneRef(); cpRef != nil {
 			// If the cpRef is set, reconcile the object only if it is set explicitly to 'kic'.
-			return cpRef.Type == kongcommonv1alpha1.ControlPlaneRefKIC
+			return cpRef.Type == commonv1alpha1.ControlPlaneRefKIC
 		}
 		// If there's no cpRef set, we should reconcile it as by default it's 'kic'.
 		return true

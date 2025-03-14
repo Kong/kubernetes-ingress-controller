@@ -11,7 +11,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -20,8 +20,8 @@ import (
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
 // If both don't exist pluginFound is set to false.
 func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
-	kp *kongv1.KongPlugin,
-	kcp *kongv1.KongClusterPlugin,
+	kp *configurationv1.KongPlugin,
+	kcp *configurationv1.KongClusterPlugin,
 	pluginFound bool,
 	err error,
 ) {
@@ -50,7 +50,7 @@ func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
 
 func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
-	k8sPlugin kongv1.KongClusterPlugin,
+	k8sPlugin configurationv1.KongClusterPlugin,
 ) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigurationWithNamespacedPatchesToConfiguration(
@@ -95,7 +95,7 @@ func kongPluginFromK8SClusterPlugin(
 	}, nil
 }
 
-func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
+func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string) {
 	for _, protocol := range protocols {
 		res = append(res, string(protocol))
 	}
@@ -104,7 +104,7 @@ func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 
 func kongPluginFromK8SPlugin(
 	s store.Storer,
-	k8sPlugin kongv1.KongPlugin,
+	k8sPlugin configurationv1.KongPlugin,
 ) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigurationWithPatchesToConfiguration(
@@ -201,7 +201,7 @@ func applyJSONPatchFromNamespacedSecretRef(s SecretGetter, raw []byte, path stri
 func RawConfigurationWithPatchesToConfiguration(
 	s SecretGetter, namespace string,
 	rawConfig apiextensionsv1.JSON,
-	patches []kongv1.ConfigPatch,
+	patches []configurationv1.ConfigPatch,
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
 	if raw == nil {
@@ -232,7 +232,7 @@ func RawConfigurationWithPatchesToConfiguration(
 func RawConfigurationWithNamespacedPatchesToConfiguration(
 	s SecretGetter,
 	rawConfig apiextensionsv1.JSON,
-	patches []kongv1.NamespacedConfigPatch,
+	patches []configurationv1.NamespacedConfigPatch,
 ) (kong.Configuration, error) {
 	raw := rawConfig.Raw
 
@@ -263,10 +263,10 @@ func RawConfigurationWithNamespacedPatchesToConfiguration(
 // Exported primarily to be used in admission validators.
 func NamespacedSecretToConfiguration(
 	s SecretGetter,
-	reference kongv1.NamespacedSecretValueFromSource) (
+	reference configurationv1.NamespacedSecretValueFromSource) (
 	kong.Configuration, error,
 ) {
-	bareReference := kongv1.SecretValueFromSource{
+	bareReference := configurationv1.SecretValueFromSource{
 		Secret: reference.Secret,
 		Key:    reference.Key,
 	}
@@ -282,7 +282,7 @@ type SecretGetter interface {
 // Exported primarily to be used in admission validators.
 func SecretToConfiguration(
 	s SecretGetter,
-	reference kongv1.SecretValueFromSource, namespace string) (
+	reference configurationv1.SecretValueFromSource, namespace string) (
 	kong.Configuration, error,
 ) {
 	secret, err := s.GetSecret(namespace, reference.Secret)

@@ -26,9 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -40,7 +40,7 @@ import (
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
-	APIVersion: kongv1.GroupVersion.String(),
+	APIVersion: configurationv1.GroupVersion.String(),
 	Kind:       "KongConsumer",
 }
 
@@ -251,7 +251,7 @@ func TestGetPluginRelations(t *testing.T) {
 		{
 			name: "single consumer annotation",
 			data: func() data {
-				k8sKongConsumer := kongv1.KongConsumer{
+				k8sKongConsumer := configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -281,7 +281,7 @@ func TestGetPluginRelations(t *testing.T) {
 		{
 			name: "single consumer group annotation",
 			data: func() data {
-				k8sKongConsumerGroup := kongv1beta1.KongConsumerGroup{
+				k8sKongConsumerGroup := configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -439,7 +439,7 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "multiple consumers, consumer groups, routes and services",
 			data: func() data {
 				// Kong consumers.
-				k8sKongConsumer1Foobar := kongv1.KongConsumer{
+				k8sKongConsumer1Foobar := configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -447,7 +447,7 @@ func TestGetPluginRelations(t *testing.T) {
 						},
 					},
 				}
-				k8sKongConsumer1FooBar := kongv1.KongConsumer{
+				k8sKongConsumer1FooBar := configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -455,7 +455,7 @@ func TestGetPluginRelations(t *testing.T) {
 						},
 					},
 				}
-				k8sKongConsumer2FooBar := kongv1.KongConsumer{
+				k8sKongConsumer2FooBar := configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
 						Annotations: map[string]string{
@@ -464,7 +464,7 @@ func TestGetPluginRelations(t *testing.T) {
 					},
 				}
 				// Kong consumer groups.
-				k8sKongConsumerGroup1FooBar := kongv1beta1.KongConsumerGroup{
+				k8sKongConsumerGroup1FooBar := configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -472,7 +472,7 @@ func TestGetPluginRelations(t *testing.T) {
 						},
 					},
 				}
-				k8sKongConsumerGroup2FooBar := kongv1beta1.KongConsumerGroup{
+				k8sKongConsumerGroup2FooBar := configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
 						Annotations: map[string]string{
@@ -481,7 +481,7 @@ func TestGetPluginRelations(t *testing.T) {
 					},
 				}
 
-				k8sKongConsumerGroup2BarBaz := kongv1beta1.KongConsumerGroup{
+				k8sKongConsumerGroup2BarBaz := configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
 						Annotations: map[string]string{
@@ -620,7 +620,7 @@ func TestGetPluginRelations(t *testing.T) {
 		{
 			name: "consumer with custom_id and a plugin attached",
 			data: func() data {
-				k8sKongConsumer := kongv1.KongConsumer{
+				k8sKongConsumer := configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Annotations: map[string]string{
@@ -644,7 +644,7 @@ func TestGetPluginRelations(t *testing.T) {
 								Plugin: kong.Plugin{
 									Name: kong.String("rate-limiting"),
 								},
-								K8sParent: &kongv1.KongPlugin{
+								K8sParent: &configurationv1.KongPlugin{
 									ObjectMeta: metav1.ObjectMeta{
 										Namespace: "default",
 										Name:      "rate-limiting-1",
@@ -656,7 +656,7 @@ func TestGetPluginRelations(t *testing.T) {
 								Plugin: kong.Plugin{
 									Name: kong.String("basic-auth"),
 								},
-								K8sParent: &kongv1.KongPlugin{
+								K8sParent: &configurationv1.KongPlugin{
 									ObjectMeta: metav1.ObjectMeta{
 										Namespace: "default",
 										Name:      "basic-auth-1",
@@ -692,7 +692,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				Consumer: kong.Consumer{
 					Username: kong.String("foo-consumer"),
 				},
-				K8sKongConsumer: kongv1.KongConsumer{
+				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -705,7 +705,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				Consumer: kong.Consumer{
 					Username: kong.String("foo-consumer"),
 				},
-				K8sKongConsumer: kongv1.KongConsumer{
+				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
 						Annotations: map[string]string{
@@ -718,7 +718,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				Consumer: kong.Consumer{
 					Username: kong.String("bar-consumer"),
 				},
-				K8sKongConsumer: kongv1.KongConsumer{
+				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -733,7 +733,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				ConsumerGroup: kong.ConsumerGroup{
 					Name: kong.String("foo-consumer-group"),
 				},
-				K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
 						Annotations: map[string]string{
@@ -746,7 +746,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				ConsumerGroup: kong.ConsumerGroup{
 					Name: kong.String("foo-consumer-group"),
 				},
-				K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
 						Annotations: map[string]string{
@@ -759,7 +759,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				ConsumerGroup: kong.ConsumerGroup{
 					Name: kong.String("bar-consumer-group"),
 				},
-				K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
 						Annotations: map[string]string{
@@ -930,13 +930,13 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 
 	testCases := []struct {
 		name                               string
-		k8sConsumers                       []*kongv1.KongConsumer
+		k8sConsumers                       []*configurationv1.KongConsumer
 		expectedKongStateConsumers         []Consumer
 		expectedTranslationFailureMessages map[k8stypes.NamespacedName]string
 	}{
 		{
 			name: "KongConsumer with key-auth and oauth2",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -992,7 +992,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "missing username and custom_id",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1014,7 +1014,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "referring to non-exist secret",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1043,7 +1043,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "referring to secret with unsupported credType",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1072,7 +1072,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "referring to secret with unsupported credential label",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1101,7 +1101,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "KongConsumer with key-auth from label secret",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1142,7 +1142,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "KongConusmers with conflicting key-auths",
-			k8sConsumers: []*kongv1.KongConsumer{
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1405,13 +1405,13 @@ func TestKongState_FillIDs(t *testing.T) {
 func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
-		in         []*kongv1.KongPlugin
+		in         []*configurationv1.KongPlugin
 		pluginRels map[string]rels.ForeignRelations
 		want       []string
 	}{
 		{
 			name: "collision test",
-			in: []*kongv1.KongPlugin{
+			in: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
@@ -1435,7 +1435,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 		},
 		{
 			name: "binding to route and consumer group",
-			in: []*kongv1.KongPlugin{
+			in: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
@@ -1458,7 +1458,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 		},
 		{
 			name: "binding to routes and consumer",
-			in: []*kongv1.KongPlugin{
+			in: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
@@ -1481,7 +1481,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 		},
 		{
 			name: "binding to service and consumer group",
-			in: []*kongv1.KongPlugin{
+			in: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo-plugin",
@@ -1535,7 +1535,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 				Name:      "service",
 				Namespace: "default",
 				Annotations: map[string]string{
-					kongv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
 				},
 			},
 		}
@@ -1550,8 +1550,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		upstream             Upstream
-		kongUpstreamPolicies []*kongv1beta1.KongUpstreamPolicy
-		kongIngresses        []*kongv1.KongIngress
+		kongUpstreamPolicies []*configurationv1beta1.KongUpstreamPolicy
+		kongIngresses        []*configurationv1.KongIngress
 		expectedUpstream     kong.Upstream
 		expectedFailures     []failures.ResourceFailure
 	}{
@@ -1576,13 +1576,13 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
 				},
 			},
-			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      kongUpstreamPolicyName,
 						Namespace: "default",
 					},
-					Spec: kongv1beta1.KongUpstreamPolicySpec{
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("least-connections"),
 					},
 				},
@@ -1622,13 +1622,13 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicyAndKongIngress()},
 				},
 			},
-			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      kongUpstreamPolicyName,
 						Namespace: "default",
 					},
-					Spec: kongv1beta1.KongUpstreamPolicySpec{
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("least-connections"),
 					},
 				},
@@ -1654,24 +1654,24 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicyAndKongIngress()},
 				},
 			},
-			kongUpstreamPolicies: []*kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      kongUpstreamPolicyName,
 						Namespace: "default",
 					},
-					Spec: kongv1beta1.KongUpstreamPolicySpec{
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("least-connections"),
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      kongIngressName,
 						Namespace: "default",
 					},
-					Upstream: &kongv1.KongIngressUpstream{
+					Upstream: &configurationv1.KongIngressUpstream{
 						Algorithm: lo.ToPtr("round-robin"),
 					},
 				},
@@ -1702,20 +1702,20 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 
 func TestFillVaults(t *testing.T) {
 	kongVaultTypeMeta := metav1.TypeMeta{
-		APIVersion: kongv1alpha1.GroupVersion.String(),
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
 		Kind:       "KongVault",
 	}
 	now := time.Now()
 	testCases := []struct {
 		name                     string
-		kongVaults               []*kongv1alpha1.KongVault
+		kongVaults               []*configurationv1alpha1.KongVault
 		expectedTranslatedVaults []Vault
 		// name of KongVault -> failure message
 		expectedTranslationFailures map[string]string
 	}{
 		{
 			name: "single valid KongVault",
-			kongVaults: []*kongv1alpha1.KongVault{
+			kongVaults: []*configurationv1alpha1.KongVault{
 				{
 					TypeMeta: kongVaultTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1725,7 +1725,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-1",
 					},
@@ -1737,7 +1737,7 @@ func TestFillVaults(t *testing.T) {
 						Name:   kong.String("env"),
 						Prefix: kong.String("env-1"),
 					},
-					K8sKongVault: &kongv1alpha1.KongVault{
+					K8sKongVault: &configurationv1alpha1.KongVault{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "vault-1",
 						},
@@ -1747,7 +1747,7 @@ func TestFillVaults(t *testing.T) {
 		},
 		{
 			name: "one valid KongVault with correct ingress class, and one KongVault with other ingress class",
-			kongVaults: []*kongv1alpha1.KongVault{
+			kongVaults: []*configurationv1alpha1.KongVault{
 				{
 					TypeMeta: kongVaultTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1756,7 +1756,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-1",
 					},
@@ -1769,7 +1769,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: "other-ingress-class",
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-2",
 					},
@@ -1781,7 +1781,7 @@ func TestFillVaults(t *testing.T) {
 						Name:   kong.String("env"),
 						Prefix: kong.String("env-1"),
 					},
-					K8sKongVault: &kongv1alpha1.KongVault{
+					K8sKongVault: &configurationv1alpha1.KongVault{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "vault-1",
 						},
@@ -1791,7 +1791,7 @@ func TestFillVaults(t *testing.T) {
 		},
 		{
 			name: "KongVault with invalid configuration is rejected",
-			kongVaults: []*kongv1alpha1.KongVault{
+			kongVaults: []*configurationv1alpha1.KongVault{
 				{
 					TypeMeta: kongVaultTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1800,7 +1800,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-1",
 						Config: apiextensionsv1.JSON{
@@ -1815,7 +1815,7 @@ func TestFillVaults(t *testing.T) {
 		},
 		{
 			name: "multiple KongVaults with same spec.prefix, only one translated and translation failure for the other",
-			kongVaults: []*kongv1alpha1.KongVault{
+			kongVaults: []*configurationv1alpha1.KongVault{
 				{
 					TypeMeta: kongVaultTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1825,7 +1825,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-1",
 					},
@@ -1839,7 +1839,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-1",
 					},
@@ -1853,7 +1853,7 @@ func TestFillVaults(t *testing.T) {
 							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 					},
-					Spec: kongv1alpha1.KongVaultSpec{
+					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-1",
 					},
@@ -1865,7 +1865,7 @@ func TestFillVaults(t *testing.T) {
 						Name:   kong.String("env"),
 						Prefix: kong.String("env-1"),
 					},
-					K8sKongVault: &kongv1alpha1.KongVault{
+					K8sKongVault: &configurationv1alpha1.KongVault{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "vault-1",
 						},
@@ -2081,7 +2081,7 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 						},
 						To: []gatewayapi.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Group: gatewayapi.Group(configurationv1.GroupVersion.Group),
 								Kind:  gatewayapi.Kind("KongPlugin"),
 							},
 						},
@@ -2116,7 +2116,7 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 						},
 						To: []gatewayapi.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Group: gatewayapi.Group(configurationv1.GroupVersion.Group),
 								Kind:  gatewayapi.Kind("KongPlugin"),
 							},
 						},

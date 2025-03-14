@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -81,17 +81,17 @@ func TestUDPIngressEssentials(t *testing.T) {
 			cleaner.Add(service)
 
 			t.Logf("creating a UDPIngress to access deployment %s via kong", deployment.Name)
-			udpIngress := &kongv1beta1.UDPIngress{
+			udpIngress := &configurationv1beta1.UDPIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: udpIngressName,
 					Annotations: map[string]string{
 						annotations.IngressClassKey: GetIngressClassFromCtx(ctx),
 					},
 				},
-				Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
+				Spec: configurationv1beta1.UDPIngressSpec{Rules: []configurationv1beta1.UDPIngressRule{
 					{
 						Port: ktfkong.DefaultUDPServicePort,
-						Backend: kongv1beta1.IngressBackend{
+						Backend: configurationv1beta1.IngressBackend{
 							ServiceName: service.Name,
 							ServicePort: servicePort,
 						},

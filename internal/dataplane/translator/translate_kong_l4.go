@@ -9,7 +9,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -183,7 +183,7 @@ func (t *Translator) ingressRulesFromUDPIngressV1beta1() ingressRules {
 	return result
 }
 
-func tcpIngressToNetworkingTLS(tls []kongv1beta1.IngressTLS) []netv1.IngressTLS {
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []netv1.IngressTLS {
 	result := make([]netv1.IngressTLS, 0, len(tls))
 
 	for _, t := range tls {

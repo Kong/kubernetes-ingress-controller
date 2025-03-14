@@ -10,7 +10,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -237,7 +237,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade shouldn't be recovered as it wasn't in the last valid cache snapshot")
 
-		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		fallbackPlugin, err := getFromStore[*configurationv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackPlugin)
 	})
@@ -255,7 +255,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade shouldn't be recovered as it wasn't in the last valid cache snapshot")
 
-		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		fallbackPlugin, err := getFromStore[*configurationv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackPlugin)
 
@@ -280,7 +280,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackService)
 
-		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		fallbackPlugin, err := getFromStore[*configurationv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackPlugin)
 	})
@@ -291,7 +291,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		require.Equal(t, []store.CacheStores{inputCacheStores, lastValidCacheStores}, graphProvider.CacheToGraphLastNCalledWith(2), "expected the generator to call CacheToGraph with the input cache stores")
 		require.NotSame(t, &inputCacheStores, &fallbackCache)
 
-		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		fallbackPlugin, err := getFromStore[*configurationv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireAnnotatedLastValid(t, fallbackPlugin)
 
@@ -322,7 +322,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade shouldn't be recovered as it wasn't in the last valid cache snapshot")
 
-		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		fallbackPlugin, err := getFromStore[*configurationv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackPlugin)
 	})
@@ -337,7 +337,7 @@ func TestGenerator_GenerateBackfillingBrokenObjects(t *testing.T) {
 		require.Empty(t, fallbackCache.Service.List(), "service should be excluded as it's broken and there's no last valid cache snapshot")
 		require.Empty(t, fallbackCache.KongServiceFacade.List(), "serviceFacade should be excluded as it depends on service and there's no last valid cache snapshot")
 
-		fallbackPlugin, err := getFromStore[*kongv1.KongPlugin](fallbackCache.Plugin, plugin)
+		fallbackPlugin, err := getFromStore[*configurationv1.KongPlugin](fallbackCache.Plugin, plugin)
 		require.NoError(t, err)
 		requireNotAnnotatedLastValid(t, fallbackPlugin)
 	})

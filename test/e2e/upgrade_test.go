@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/kong/go-kong/kong"
@@ -184,7 +183,7 @@ func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version 
 	dockerc, err := client.NewClientWithOpts(client.FromEnv)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Log("negotiating docker API version")
 	dockerc.NegotiateAPIVersion(ctx)
@@ -194,11 +193,11 @@ func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version 
 	require.NoError(t, err)
 
 	t.Logf("inspecting docker image %s", image)
-	var imageDetails types.ImageInspect
+	var imageDetails dockerimage.InspectResponse
 	// Retry because the image may not be available immediately after pulling it.
 	require.Eventually(t, func() bool {
 		var err error
-		imageDetails, _, err = dockerc.ImageInspectWithRaw(ctx, image)
+		imageDetails, err = dockerc.ImageInspect(ctx, image)
 		if err != nil {
 			t.Logf("failed to inspect docker image %s: %s", image, err)
 			return false

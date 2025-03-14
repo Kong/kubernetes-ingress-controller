@@ -7,9 +7,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -17,7 +17,7 @@ import (
 
 // resolveKongPluginDependencies resolves potential dependencies for a KongPlugin object:
 // - Secret.
-func resolveKongPluginDependencies(cache store.CacheStores, kongPlugin *kongv1.KongPlugin) []client.Object {
+func resolveKongPluginDependencies(cache store.CacheStores, kongPlugin *configurationv1.KongPlugin) []client.Object {
 	var dependencies []client.Object
 	if cf := kongPlugin.ConfigFrom; cf != nil {
 		if s, ok := fetchSecret(
@@ -46,7 +46,7 @@ func resolveKongPluginDependencies(cache store.CacheStores, kongPlugin *kongv1.K
 
 // resolveKongClusterPluginDependencies resolves potential dependencies for a KongClusterPlugin object:
 // - Secret.
-func resolveKongClusterPluginDependencies(cache store.CacheStores, kongClusterPlugin *kongv1.KongClusterPlugin) []client.Object {
+func resolveKongClusterPluginDependencies(cache store.CacheStores, kongClusterPlugin *configurationv1.KongClusterPlugin) []client.Object {
 	var dependencies []client.Object
 	if cf := kongClusterPlugin.ConfigFrom; cf != nil {
 		if s, ok := fetchSecret(
@@ -77,7 +77,7 @@ func resolveKongClusterPluginDependencies(cache store.CacheStores, kongClusterPl
 // - KongPlugin
 // - KongClusterPlugin
 // - Secret.
-func resolveKongConsumerDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
+func resolveKongConsumerDependencies(cache store.CacheStores, kongConsumer *configurationv1.KongConsumer) []client.Object {
 	return slices.Concat(
 		resolveObjectDependenciesPlugin(cache, kongConsumer),
 		resolveKongConsumerSecretDependencies(cache, kongConsumer),
@@ -85,7 +85,7 @@ func resolveKongConsumerDependencies(cache store.CacheStores, kongConsumer *kong
 }
 
 // resolveKongConsumerSecretDependencies resolves Secret dependencies for a KongConsumer object.
-func resolveKongConsumerSecretDependencies(cache store.CacheStores, kongConsumer *kongv1.KongConsumer) []client.Object {
+func resolveKongConsumerSecretDependencies(cache store.CacheStores, kongConsumer *configurationv1.KongConsumer) []client.Object {
 	var dependencies []client.Object
 	for _, credSecret := range kongConsumer.Credentials {
 		secret, exists, err := cache.Secret.GetByKey(fmt.Sprintf("%s/%s", kongConsumer.Namespace, credSecret))
@@ -99,7 +99,7 @@ func resolveKongConsumerSecretDependencies(cache store.CacheStores, kongConsumer
 // resolveKongConsumerGroupDependencies resolves potential dependencies for a KongConsumerGroup object:
 // - KongPlugin
 // - KongClusterPlugin.
-func resolveKongConsumerGroupDependencies(cache store.CacheStores, kongConsumerGroup *kongv1beta1.KongConsumerGroup) []client.Object {
+func resolveKongConsumerGroupDependencies(cache store.CacheStores, kongConsumerGroup *configurationv1beta1.KongConsumerGroup) []client.Object {
 	return resolveObjectDependenciesPlugin(cache, kongConsumerGroup)
 }
 
@@ -107,7 +107,7 @@ func resolveKongConsumerGroupDependencies(cache store.CacheStores, kongConsumerG
 // - KongPlugin
 // - KongClusterPlugin
 // - Service.
-func resolveUDPIngressDependencies(cache store.CacheStores, udpIngress *kongv1beta1.UDPIngress) []client.Object {
+func resolveUDPIngressDependencies(cache store.CacheStores, udpIngress *configurationv1beta1.UDPIngress) []client.Object {
 	dependencies := resolveObjectDependenciesPlugin(cache, udpIngress)
 	for _, rule := range udpIngress.Spec.Rules {
 		if service, exists, err := cache.Service.GetByKey(
@@ -123,7 +123,7 @@ func resolveUDPIngressDependencies(cache store.CacheStores, udpIngress *kongv1be
 // - KongPlugin
 // - KongClusterPlugin
 // - Service.
-func resolveTCPIngressDependencies(cache store.CacheStores, tcpIngress *kongv1beta1.TCPIngress) []client.Object {
+func resolveTCPIngressDependencies(cache store.CacheStores, tcpIngress *configurationv1beta1.TCPIngress) []client.Object {
 	dependencies := resolveObjectDependenciesPlugin(cache, tcpIngress)
 	for _, rule := range tcpIngress.Spec.Rules {
 		if service, exists, err := cache.Service.GetByKey(
@@ -146,13 +146,13 @@ func resolveKongServiceFacadeDependencies(cache store.CacheStores, kongServiceFa
 // resolveKongCustomEntityDependencies resolves potential dependencies for a KongCustomEntities object:
 // - KongPlugin
 // - KongClusterPlugin.
-func resolveKongCustomEntityDependencies(cache store.CacheStores, obj *kongv1alpha1.KongCustomEntity) []client.Object {
+func resolveKongCustomEntityDependencies(cache store.CacheStores, obj *configurationv1alpha1.KongCustomEntity) []client.Object {
 	if obj.Spec.ParentRef == nil {
 		return nil
 	}
 
 	parentRef := *obj.Spec.ParentRef
-	groupMatches := parentRef.Group != nil && *parentRef.Group == kongv1.GroupVersion.Group
+	groupMatches := parentRef.Group != nil && *parentRef.Group == configurationv1.GroupVersion.Group
 
 	if isKongPlugin := parentRef.Kind != nil && *parentRef.Kind == "KongPlugin" && groupMatches; isKongPlugin {
 		// TODO: Cross-namespace references are not supported yet.

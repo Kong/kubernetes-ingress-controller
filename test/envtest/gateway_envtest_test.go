@@ -28,7 +28,7 @@ func TestGatewayAddressOverride(t *testing.T) {
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	expected := []string{"10.0.0.1", "10.0.0.2"}
 	udp := []string{"10.0.0.3", "10.0.0.4"}
@@ -78,7 +78,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	gw, _ := deployGateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,

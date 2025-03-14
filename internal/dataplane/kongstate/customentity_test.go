@@ -1,7 +1,6 @@
 package kongstate
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"testing"
@@ -17,8 +16,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -28,7 +27,7 @@ import (
 )
 
 var customEntityTypeMeta = metav1.TypeMeta{
-	APIVersion: kongv1alpha1.GroupVersion.Group + "/" + kongv1alpha1.GroupVersion.Version,
+	APIVersion: configurationv1alpha1.GroupVersion.Group + "/" + configurationv1alpha1.GroupVersion.Version,
 	Kind:       "KongCustomEntity",
 }
 
@@ -140,7 +139,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e1",
 								"key":  "value1",
 							},
-							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &configurationv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "aab",
 									Namespace: "bbb",
@@ -152,7 +151,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e2",
 								"key":  "value2",
 							},
-							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &configurationv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "bbb",
@@ -164,7 +163,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e3",
 								"key":  "value3",
 							},
-							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &configurationv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "aaa",
@@ -182,7 +181,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e3",
 								"key":  "value3",
 							},
-							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &configurationv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "aaa",
@@ -194,7 +193,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e1",
 								"key":  "value1",
 							},
-							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &configurationv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "aab",
 									Namespace: "bbb",
@@ -206,7 +205,7 @@ func TestSortCustomEntities(t *testing.T) {
 								"name": "e2",
 								"key":  "value2",
 							},
-							K8sKongCustomEntity: &kongv1alpha1.KongCustomEntity{
+							K8sKongCustomEntity: &configurationv1alpha1.KongCustomEntity{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "abc",
 									Namespace: "bbb",
@@ -231,20 +230,20 @@ func TestSortCustomEntities(t *testing.T) {
 }
 
 func TestFindCustomEntityForeignFields(t *testing.T) {
-	testCustomEntity := &kongv1alpha1.KongCustomEntity{
+	testCustomEntity := &configurationv1alpha1.KongCustomEntity{
 		TypeMeta: customEntityTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "fake-entity",
 		},
-		Spec: kongv1alpha1.KongCustomEntitySpec{
+		Spec: configurationv1alpha1.KongCustomEntitySpec{
 			EntityType:     "fake_entities",
 			ControllerName: annotations.DefaultIngressClass,
 			Fields: apiextensionsv1.JSON{
 				Raw: []byte(`{"uri":"/api/me"}`),
 			},
-			ParentRef: &kongv1alpha1.ObjectReference{
-				Group: kong.String(kongv1.GroupVersion.Group),
+			ParentRef: &configurationv1alpha1.ObjectReference{
+				Group: kong.String(configurationv1.GroupVersion.Group),
 				Kind:  kong.String("KongPlugin"),
 				Name:  "fake-plugin",
 			},
@@ -276,9 +275,9 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 	}
 	testCases := []struct {
 		name                     string
-		plugins                  []*kongv1.KongPlugin
+		plugins                  []*configurationv1.KongPlugin
 		referenceGrants          []*gatewayapi.ReferenceGrant
-		customEntity             *kongv1alpha1.KongCustomEntity
+		customEntity             *configurationv1alpha1.KongCustomEntity
 		schema                   EntitySchema
 		pluginRelEntities        PluginRelatedEntitiesRefs
 		expectError              bool
@@ -286,7 +285,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 	}{
 		{
 			name: "attached to single entity: service",
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -326,7 +325,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 		},
 		{
 			name: "attached to routes and consumers",
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -389,7 +388,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 		},
 		{
 			name: "attached to foreign plugin with reference grant allowed",
-			customEntity: func() *kongv1alpha1.KongCustomEntity {
+			customEntity: func() *configurationv1alpha1.KongCustomEntity {
 				e := testCustomEntity.DeepCopy()
 				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
 				return e
@@ -400,7 +399,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 					"service": {Name: "service", Type: EntityFieldTypeForeign, Reference: "services"},
 				},
 			},
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "another-namespace",
@@ -418,13 +417,13 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
 								Namespace: gatewayapi.Namespace("default"),
-								Group:     gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Group:     gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:      "KongCustomEntity",
 							},
 						},
 						To: []gatewayapi.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Group: gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:  gatewayapi.Kind("KongPlugin"),
 							},
 						},
@@ -456,7 +455,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 		},
 		{
 			name: "attached to foreign plugin without reference grant allowed should fail",
-			customEntity: func() *kongv1alpha1.KongCustomEntity {
+			customEntity: func() *configurationv1alpha1.KongCustomEntity {
 				e := testCustomEntity.DeepCopy()
 				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
 				return e
@@ -485,7 +484,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 		},
 		{
 			name: "attached to foreign plugin with misconfigured reference grant should fail",
-			customEntity: func() *kongv1alpha1.KongCustomEntity {
+			customEntity: func() *configurationv1alpha1.KongCustomEntity {
 				e := testCustomEntity.DeepCopy()
 				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
 				return e
@@ -506,13 +505,13 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
 								Namespace: gatewayapi.Namespace("default"),
-								Group:     gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Group:     gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:      "KongCustomEntity",
 							},
 						},
 						To: []gatewayapi.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Group: gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:  gatewayapi.Kind("KongPlugin"),
 							},
 						},
@@ -611,8 +610,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 	testCases := []struct {
 		name                        string
 		initialState                *KongState
-		customEntities              []*kongv1alpha1.KongCustomEntity
-		plugins                     []*kongv1.KongPlugin
+		customEntities              []*configurationv1alpha1.KongCustomEntity
+		plugins                     []*configurationv1.KongPlugin
 		schemas                     map[string]kong.Schema
 		expectedCustomEntities      map[string][]custom.Object
 		expectedTranslationFailures map[k8stypes.NamespacedName]string
@@ -620,14 +619,14 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 		{
 			name:         "single custom entity",
 			initialState: &KongState{},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "session-foo",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "sessions",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
@@ -659,14 +658,14 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 		{
 			name:         "custom entity with unknown type",
 			initialState: &KongState{},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "session-foo",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "sessions",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
@@ -685,14 +684,14 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 		{
 			name:         "multiple custom entities with same type",
 			initialState: &KongState{},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "session-foo",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "sessions",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
@@ -706,7 +705,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 						Namespace: "default",
 						Name:      "session-bar",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "sessions",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
@@ -720,7 +719,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 						Namespace: "default-1",
 						Name:      "session-foo",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "sessions",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
@@ -764,28 +763,28 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			initialState: &KongState{
 				Services: []Service{ksService1}, // Services
 			},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "degraphql-1",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "degraphql_routes",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(`{"uri":"/api/me"}`),
 						},
-						ParentRef: &kongv1alpha1.ObjectReference{
-							Group: kong.String(kongv1.GroupVersion.Group),
+						ParentRef: &configurationv1alpha1.ObjectReference{
+							Group: kong.String(configurationv1.GroupVersion.Group),
 							Kind:  kong.String("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
 				},
 			},
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -832,28 +831,28 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 					ksService2,
 				},
 			},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "degraphql-1",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "degraphql_routes",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(`{"uri":"/api/me"}`),
 						},
-						ParentRef: &kongv1alpha1.ObjectReference{
-							Group: kong.String(kongv1.GroupVersion.Group),
+						ParentRef: &configurationv1alpha1.ObjectReference{
+							Group: kong.String(configurationv1.GroupVersion.Group),
 							Kind:  kong.String("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
 				},
 			},
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -923,28 +922,28 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "degraphql-1",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "degraphql_routes",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(`{"uri":"/api/me"}`),
 						},
-						ParentRef: &kongv1alpha1.ObjectReference{
-							Group: kong.String(kongv1.GroupVersion.Group),
+						ParentRef: &configurationv1alpha1.ObjectReference{
+							Group: kong.String(configurationv1.GroupVersion.Group),
 							Kind:  kong.String("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
 				},
 			},
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -996,7 +995,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 							ID:       kong.String("consumer1"),
 							Username: kong.String("consumer1"),
 						},
-						K8sKongConsumer: kongv1.KongConsumer{
+						K8sKongConsumer: configurationv1.KongConsumer{
 							ObjectMeta: metav1.ObjectMeta{
 								Namespace: "default",
 								Name:      "consumer1",
@@ -1008,28 +1007,28 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			customEntities: []*kongv1alpha1.KongCustomEntity{
+			customEntities: []*configurationv1alpha1.KongCustomEntity{
 				{
 					TypeMeta: customEntityTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "fake-entity-1",
 					},
-					Spec: kongv1alpha1.KongCustomEntitySpec{
+					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType:     "fake_entities",
 						ControllerName: annotations.DefaultIngressClass,
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(`{"foo":"bar"}`),
 						},
-						ParentRef: &kongv1alpha1.ObjectReference{
-							Group: kong.String(kongv1.GroupVersion.Group),
+						ParentRef: &configurationv1alpha1.ObjectReference{
+							Group: kong.String(configurationv1.GroupVersion.Group),
 							Kind:  kong.String("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
 				},
 			},
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -1102,7 +1101,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 
 			ks := tc.initialState
 			ks.FillCustomEntities(
-				context.Background(),
+				t.Context(),
 				logr.Discard(), s,
 				failuresCollector,
 				&fakeSchemaService{schemas: tc.schemas}, "",
@@ -1133,29 +1132,29 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 	testCases := []struct {
 		name            string
 		referenceGrants []*gatewayapi.ReferenceGrant
-		plugins         []*kongv1.KongPlugin
-		customEntity    *kongv1alpha1.KongCustomEntity
+		plugins         []*configurationv1.KongPlugin
+		customEntity    *configurationv1alpha1.KongCustomEntity
 		expectedRef     string
 		expectedResult  bool
 		expectedErr     bool
 	}{
 		{
 			name:    "referenced plugin does not exist in the store - error",
-			plugins: []*kongv1.KongPlugin{},
-			customEntity: &kongv1alpha1.KongCustomEntity{
+			plugins: []*configurationv1.KongPlugin{},
+			customEntity: &configurationv1alpha1.KongCustomEntity{
 				TypeMeta: customEntityTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "session-foo",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "sessions",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"name":"session1"}`),
 					},
-					ParentRef: &kongv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+					ParentRef: &configurationv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
 						Kind:      lo.ToPtr("KongPlugin"),
 						Name:      "ratelimiting-1",
 						Namespace: lo.ToPtr("default"),
@@ -1166,7 +1165,7 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 		},
 		{
 			name: "referenced plugin exists in the store",
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -1175,20 +1174,20 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 					PluginName: "ratelimiting",
 				},
 			},
-			customEntity: &kongv1alpha1.KongCustomEntity{
+			customEntity: &configurationv1alpha1.KongCustomEntity{
 				TypeMeta: customEntityTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "session-foo",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "sessions",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"name":"session1"}`),
 					},
-					ParentRef: &kongv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+					ParentRef: &configurationv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
 						Kind:      lo.ToPtr("KongPlugin"),
 						Name:      "ratelimiting-1",
 						Namespace: lo.ToPtr("default"),
@@ -1200,7 +1199,7 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 		},
 		{
 			name: "referenced plugin exists but in different namespace without cross-namespace reference grant",
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "different-ns",
@@ -1209,20 +1208,20 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 					PluginName: "ratelimiting",
 				},
 			},
-			customEntity: &kongv1alpha1.KongCustomEntity{
+			customEntity: &configurationv1alpha1.KongCustomEntity{
 				TypeMeta: customEntityTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "session-foo",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "sessions",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"name":"session1"}`),
 					},
-					ParentRef: &kongv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+					ParentRef: &configurationv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
 						Kind:      lo.ToPtr("KongPlugin"),
 						Name:      "ratelimiting-1",
 						Namespace: lo.ToPtr("different-ns"),
@@ -1243,20 +1242,20 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
 								Namespace: gatewayapi.Namespace("default"),
-								Group:     gatewayapi.Group(kongv1alpha1.GroupVersion.Group),
+								Group:     gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:      "KongCustomEntity",
 							},
 						},
 						To: []gatewayapi.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(kongv1.GroupVersion.Group),
+								Group: gatewayapi.Group(configurationv1.GroupVersion.Group),
 								Kind:  gatewayapi.Kind("KongPlugin"),
 							},
 						},
 					},
 				},
 			},
-			plugins: []*kongv1.KongPlugin{
+			plugins: []*configurationv1.KongPlugin{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "different-ns",
@@ -1265,20 +1264,20 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 					PluginName: "ratelimiting",
 				},
 			},
-			customEntity: &kongv1alpha1.KongCustomEntity{
+			customEntity: &configurationv1alpha1.KongCustomEntity{
 				TypeMeta: customEntityTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "session-foo",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "sessions",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"name":"session1"}`),
 					},
-					ParentRef: &kongv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(kongv1.GroupVersion.Group),
+					ParentRef: &configurationv1alpha1.ObjectReference{
+						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
 						Kind:      lo.ToPtr("KongPlugin"),
 						Name:      "ratelimiting-1",
 						Namespace: lo.ToPtr("different-ns"),

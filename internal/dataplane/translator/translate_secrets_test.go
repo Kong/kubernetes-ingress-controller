@@ -9,15 +9,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
 
 func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
-	kongPluginWithSecret := func(name, secretID string) *kongv1.KongPlugin {
-		return &kongv1.KongPlugin{
+	kongPluginWithSecret := func(name, secretID string) *configurationv1.KongPlugin {
+		return &configurationv1.KongPlugin{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
@@ -26,8 +26,8 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 			},
 		}
 	}
-	kongClusterPluginWithSecret := func(name, secretID string) *kongv1.KongClusterPlugin {
-		return &kongv1.KongClusterPlugin{
+	kongClusterPluginWithSecret := func(name, secretID string) *configurationv1.KongClusterPlugin {
+		return &configurationv1.KongClusterPlugin{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,
 				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
@@ -49,8 +49,8 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 		nonAssociatedClusterPlugin = kongClusterPluginWithSecret("non_associated_cluster_plugin", anotherSecretID)
 	)
 	storer, err := store.NewFakeStore(store.FakeObjects{
-		KongPlugins:        []*kongv1.KongPlugin{associatedPlugin, nonAssociatedPlugin},
-		KongClusterPlugins: []*kongv1.KongClusterPlugin{associatedClusterPlugin, nonAssociatedClusterPlugin},
+		KongPlugins:        []*configurationv1.KongPlugin{associatedPlugin, nonAssociatedPlugin},
+		KongClusterPlugins: []*configurationv1.KongClusterPlugin{associatedClusterPlugin, nonAssociatedClusterPlugin},
 	})
 	require.NoError(t, err)
 

@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,8 +23,8 @@ import (
 )
 
 func TestServiceOverrides(t *testing.T) {
-	skipTestForRouterFlavors(context.Background(), t, expressions)
-	ctx := context.Background()
+	skipTestForRouterFlavors(t.Context(), t, expressions)
+	ctx := t.Context()
 
 	t.Parallel()
 	ns := helpers.Namespace(ctx, t, env)

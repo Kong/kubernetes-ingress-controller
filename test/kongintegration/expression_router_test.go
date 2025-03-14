@@ -2,7 +2,6 @@ package kongintegration
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -30,7 +29,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 		period  = time.Millisecond * 200
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kongC := containers.NewKong(ctx, t)
 	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), config.AdminAPIClientConfig{}, "")

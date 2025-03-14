@@ -5,6 +5,7 @@ const (
 	Kind                   = "kind"
 	KindUDPRoute           = "UDPRoute"
 	KindTCPRoute           = "TCPRoute"
+	KindTLSRoute           = "TLSRoute"
 	KindHTTPRoute          = "HTTPRoute"
 	KindGRPCRoute          = "GRPCRoute"
 	KindBackendTLSPolicy   = "BackendTLSPolicy"

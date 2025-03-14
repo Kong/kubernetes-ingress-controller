@@ -35,6 +35,38 @@ func TestValidateCredentials(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid credential but not supported by KIC",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "konnect",
+					},
+				},
+				Data: map[string][]byte{
+					"key": []byte("little-rabbits-be-good"),
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "credential with invalid type",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "bad-cred",
+					},
+				},
+				Data: map[string][]byte{
+					"key": []byte("little-rabbits-be-good"),
+				},
+			},
+			wantErr: fmt.Errorf("invalid credential type bad-cred"),
+		},
+		{
 			name: "valid jwt credential with HS512",
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{

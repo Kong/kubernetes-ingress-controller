@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 )
@@ -22,15 +22,15 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			},
 		}
 	}
-	someConsumer := func(name string) *kongv1.KongConsumer {
-		return &kongv1.KongConsumer{
+	someConsumer := func(name string) *configurationv1.KongConsumer {
+		return &configurationv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: "default",
 			},
 		}
 	}
-	expectedConflict := func(msg string, secret *corev1.Secret, consumer *kongv1.KongConsumer) kongstate.CredentialConflict {
+	expectedConflict := func(msg string, secret *corev1.Secret, consumer *configurationv1.KongConsumer) kongstate.CredentialConflict {
 		return kongstate.CredentialConflict{
 			Message: msg,
 			Credential: kongstate.CredentialWithConsumer{
@@ -43,7 +43,7 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 	type testCredentialDetails struct {
 		credential any
 		secret     *corev1.Secret
-		consumer   *kongv1.KongConsumer
+		consumer   *configurationv1.KongConsumer
 	}
 	testCases := []struct {
 		name              string

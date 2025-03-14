@@ -20,8 +20,8 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -36,7 +36,7 @@ func TestConsumerGroup(t *testing.T) {
 
 	RunWhenKongEnterprise(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	// path is the basic path used for most of the test
@@ -246,14 +246,14 @@ func TestConsumerGroup(t *testing.T) {
 
 func deployMinimalSvcWithKeyAuth(
 	ctx context.Context, t *testing.T, namespace, path string,
-) (*appsv1.Deployment, *corev1.Service, *netv1.Ingress, *kongv1.KongPlugin) {
+) (*appsv1.Deployment, *corev1.Service, *netv1.Ingress, *configurationv1.KongPlugin) {
 	const pluginKeyAuthName = "key-auth"
 	t.Logf("configuring plugin %q (to give consumers an identity)", pluginKeyAuthName)
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	pluginKeyAuth, err := c.ConfigurationV1().KongPlugins(namespace).Create(
 		ctx,
-		&kongv1.KongPlugin{
+		&configurationv1.KongPlugin{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: pluginKeyAuthName,
 				Annotations: map[string]string{
@@ -289,13 +289,13 @@ func deployMinimalSvcWithKeyAuth(
 
 func configurePlugin(
 	ctx context.Context, t *testing.T, namespace string, name string, pluginName string, cfg string,
-) *kongv1.KongPlugin {
+) *configurationv1.KongPlugin {
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	t.Logf("configuring plugin %q (%q)", name, pluginName)
 	pluginRespTrans, err := c.ConfigurationV1().KongPlugins(namespace).Create(
 		ctx,
-		&kongv1.KongPlugin{
+		&configurationv1.KongPlugin{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Annotations: map[string]string{
@@ -315,7 +315,7 @@ func configurePlugin(
 
 func configureConsumerGroupWithPlugins(
 	ctx context.Context, t *testing.T, namespace string, name string, pluginName ...string,
-) *kongv1beta1.KongConsumerGroup {
+) *configurationv1beta1.KongConsumerGroup {
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	a := map[string]string{
@@ -329,7 +329,7 @@ func configureConsumerGroupWithPlugins(
 	}
 	cg, err := c.ConfigurationV1beta1().KongConsumerGroups(namespace).Create(
 		ctx,
-		&kongv1beta1.KongConsumerGroup{
+		&configurationv1beta1.KongConsumerGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,
 				Annotations: a,
@@ -345,7 +345,7 @@ func configureConsumerGroupWithPlugins(
 // Assign consumer to specified consumer groups.
 func configureConsumerWithAPIKey(
 	ctx context.Context, t *testing.T, namespace string, name string, consumerGroups ...string,
-) (*kongv1.KongConsumer, *corev1.Secret) {
+) (*configurationv1.KongConsumer, *corev1.Secret) {
 	t.Logf(
 		"creating a consumer: %q with api-key and consumer groups: %s configured",
 		name, strings.Join(consumerGroups, ","),
@@ -370,7 +370,7 @@ func configureConsumerWithAPIKey(
 	require.NoError(t, err)
 	consumer, err := c.ConfigurationV1().KongConsumers(namespace).Create(
 		ctx,
-		&kongv1.KongConsumer{
+		&configurationv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Annotations: map[string]string{

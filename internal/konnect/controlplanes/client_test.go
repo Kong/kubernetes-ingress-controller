@@ -1,7 +1,6 @@
 package controlplanes_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -41,7 +40,7 @@ func TestControlPlanesClientUserAgent(t *testing.T) {
 	ts := httptest.NewServer(newMockControlPlanesServer(t))
 	t.Cleanup(ts.Close)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := sdk.New("kpat_xxx", sdkkonnectgo.WithServerURL(ts.URL))
 
 	_, err := sdk.ControlPlanes.CreateControlPlane(ctx, sdkkonnectcomp.CreateControlPlaneRequest{

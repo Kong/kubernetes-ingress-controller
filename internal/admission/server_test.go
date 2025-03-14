@@ -18,9 +18,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
@@ -35,21 +35,21 @@ type KongFakeValidator struct {
 
 func (v KongFakeValidator) ValidateConsumer(
 	_ context.Context,
-	_ kongv1.KongConsumer,
+	_ configurationv1.KongConsumer,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidateConsumerGroup(
 	_ context.Context,
-	_ kongv1beta1.KongConsumerGroup,
+	_ configurationv1beta1.KongConsumerGroup,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidatePlugin(
 	_ context.Context,
-	_ kongv1.KongPlugin,
+	_ configurationv1.KongPlugin,
 	_ []*corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
@@ -57,7 +57,7 @@ func (v KongFakeValidator) ValidatePlugin(
 
 func (v KongFakeValidator) ValidateClusterPlugin(
 	_ context.Context,
-	_ kongv1.KongClusterPlugin,
+	_ configurationv1.KongClusterPlugin,
 	_ []*corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
@@ -79,11 +79,11 @@ func (v KongFakeValidator) ValidateIngress(_ context.Context, _ netv1.Ingress) (
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateVault(_ context.Context, _ kongv1alpha1.KongVault) (bool, string, error) {
+func (v KongFakeValidator) ValidateVault(_ context.Context, _ configurationv1alpha1.KongVault) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateCustomEntity(_ context.Context, _ kongv1alpha1.KongCustomEntity) (bool, string, error) {
+func (v KongFakeValidator) ValidateCustomEntity(_ context.Context, _ configurationv1alpha1.KongCustomEntity) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

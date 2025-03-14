@@ -1,7 +1,6 @@
 package kongintegration
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -32,7 +31,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 		timeout = time.Second * 5
 		period  = time.Millisecond * 200
 	)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Create a network for Postgres and Kong containers to communicate over.
 	net, err := network.New(ctx)

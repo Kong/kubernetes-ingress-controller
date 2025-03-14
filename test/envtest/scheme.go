@@ -10,9 +10,9 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 )
 
@@ -27,9 +27,9 @@ func WithGatewayAPI(t *testing.T, s *k8sruntime.Scheme) {
 
 // WithKong registers the Kong types with the scheme.
 func WithKong(t *testing.T, s *k8sruntime.Scheme) {
-	require.NoError(t, kongv1.AddToScheme(s))
-	require.NoError(t, kongv1beta1.AddToScheme(s))
-	require.NoError(t, kongv1alpha1.AddToScheme(s))
+	require.NoError(t, configurationv1.AddToScheme(s))
+	require.NoError(t, configurationv1beta1.AddToScheme(s))
+	require.NoError(t, configurationv1alpha1.AddToScheme(s))
 	require.NoError(t, incubatorv1alpha1.AddToScheme(s))
 }
 

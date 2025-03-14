@@ -9,14 +9,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestOverrideUpstream(t *testing.T) {
 	testTable := []struct {
 		inUpstream     Upstream
-		inKongIngresss *kongv1.KongIngress
+		inKongIngresss *configurationv1.KongIngress
 		outUpstream    Upstream
 		svc            *corev1.Service
 	}{
@@ -39,8 +39,8 @@ func TestOverrideUpstream(t *testing.T) {
 					Name: kong.String("foo.com"),
 				},
 			},
-			inKongIngresss: &kongv1.KongIngress{
-				Upstream: &kongv1.KongIngressUpstream{
+			inKongIngresss: &configurationv1.KongIngress{
+				Upstream: &configurationv1.KongIngressUpstream{
 					HashOn:                 kong.String("HashOn"),
 					HashOnCookie:           kong.String("HashOnCookie"),
 					HashOnCookiePath:       kong.String("HashOnCookiePath"),
@@ -96,7 +96,7 @@ func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {
 	testCases := []struct {
 		name               string
 		upstream           kong.Upstream
-		kongUpstreamPolicy *kongv1beta1.KongUpstreamPolicy
+		kongUpstreamPolicy *configurationv1beta1.KongUpstreamPolicy
 		expected           kong.Upstream
 	}{
 		{
@@ -113,19 +113,19 @@ func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {
 				HashFallback:       kong.String("HashFallback"),
 				HashFallbackHeader: kong.String("HashFallbackHeader"),
 			},
-			kongUpstreamPolicy: &kongv1beta1.KongUpstreamPolicy{
-				Spec: kongv1beta1.KongUpstreamPolicySpec{
+			kongUpstreamPolicy: &configurationv1beta1.KongUpstreamPolicy{
+				Spec: configurationv1beta1.KongUpstreamPolicySpec{
 					Algorithm: lo.ToPtr("least-connections"),
 					Slots:     lo.ToPtr(10),
-					Healthchecks: &kongv1beta1.KongUpstreamHealthcheck{
-						Active: &kongv1beta1.KongUpstreamActiveHealthcheck{
+					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+						Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
 							Concurrency: lo.ToPtr(2),
 						},
 					},
-					HashOn: &kongv1beta1.KongUpstreamHash{
-						Input: lo.ToPtr(kongv1beta1.HashInput("consumer")),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						Input: lo.ToPtr(configurationv1beta1.HashInput("consumer")),
 					},
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						Header: lo.ToPtr("foo"),
 					},
 				},
@@ -151,12 +151,12 @@ func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {
 				HashOnHeader:         kong.String("HashOnHeader"),
 				HashFallbackQueryArg: kong.String("HashOnQueryArg"),
 			},
-			kongUpstreamPolicy: &kongv1beta1.KongUpstreamPolicy{
-				Spec: kongv1beta1.KongUpstreamPolicySpec{
-					HashOn: &kongv1beta1.KongUpstreamHash{
+			kongUpstreamPolicy: &configurationv1beta1.KongUpstreamPolicy{
+				Spec: configurationv1beta1.KongUpstreamPolicySpec{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Header: lo.ToPtr("foo"),
 					},
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						QueryArg: lo.ToPtr("foo"),
 					},
 				},
@@ -177,13 +177,13 @@ func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {
 				HashOnCookiePath:       kong.String("HashOnCookiePath"),
 				HashFallbackURICapture: kong.String("HashFallbackURICapture"),
 			},
-			kongUpstreamPolicy: &kongv1beta1.KongUpstreamPolicy{
-				Spec: kongv1beta1.KongUpstreamPolicySpec{
-					HashOn: &kongv1beta1.KongUpstreamHash{
+			kongUpstreamPolicy: &configurationv1beta1.KongUpstreamPolicy{
+				Spec: configurationv1beta1.KongUpstreamPolicySpec{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Cookie:     lo.ToPtr("foo"),
 						CookiePath: lo.ToPtr("/"),
 					},
-					HashOnFallback: &kongv1beta1.KongUpstreamHash{
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
 						URICapture: lo.ToPtr("foo"),
 					},
 				},
@@ -202,9 +202,9 @@ func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {
 				HashOn:           kong.String("HashOn"),
 				HashOnURICapture: kong.String("HashOnURICapture"),
 			},
-			kongUpstreamPolicy: &kongv1beta1.KongUpstreamPolicy{
-				Spec: kongv1beta1.KongUpstreamPolicySpec{
-					HashOn: &kongv1beta1.KongUpstreamHash{
+			kongUpstreamPolicy: &configurationv1beta1.KongUpstreamPolicy{
+				Spec: configurationv1beta1.KongUpstreamPolicySpec{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						URICapture: lo.ToPtr("foo"),
 					},
 				},
@@ -220,9 +220,9 @@ func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {
 				HashOn:         kong.String("HashOn"),
 				HashOnQueryArg: kong.String("HashOnQueryArg"),
 			},
-			kongUpstreamPolicy: &kongv1beta1.KongUpstreamPolicy{
-				Spec: kongv1beta1.KongUpstreamPolicySpec{
-					HashOn: &kongv1beta1.KongUpstreamHash{
+			kongUpstreamPolicy: &configurationv1beta1.KongUpstreamPolicy{
+				Spec: configurationv1beta1.KongUpstreamPolicySpec{
+					HashOn: &configurationv1beta1.KongUpstreamHash{
 						QueryArg: lo.ToPtr("foo"),
 					},
 				},

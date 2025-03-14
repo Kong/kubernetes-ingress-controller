@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -45,7 +45,7 @@ func TestKongLicense(t *testing.T) {
 			licenseString, err := ktfkong.GetLicenseJSONFromEnv()
 			require.NoError(t, err)
 
-			kongLicenseResource := &kongv1alpha1.KongLicense{
+			kongLicenseResource := &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-license",
 				},

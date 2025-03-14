@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
 )
@@ -23,7 +23,7 @@ func TestKongLicenseController(t *testing.T) {
 	cfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, cfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	reconciler := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
@@ -46,7 +46,7 @@ func TestKongLicenseController(t *testing.T) {
 	)
 
 	t.Log("Create a KongLicense and verify that it is reconciled")
-	kongLicense1 := &kongv1alpha1.KongLicense{
+	kongLicense1 := &configurationv1alpha1.KongLicense{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "license-1",
 		},
@@ -80,7 +80,7 @@ func TestKongLicenseController(t *testing.T) {
 	// have it set to false.
 	// CreationTimestamp precision upstream issue: https://github.com/kubernetes/kubernetes/issues/81026
 	time.Sleep(time.Second)
-	kongLicense2 := &kongv1alpha1.KongLicense{
+	kongLicense2 := &configurationv1alpha1.KongLicense{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "license-2",
 		},
@@ -128,7 +128,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 	cfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, cfg)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	const (
@@ -157,7 +157,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
 
 	t.Log("Create a KongLicense and verify that it is reconciled")
-	kongLicense1 := &kongv1alpha1.KongLicense{
+	kongLicense1 := &configurationv1alpha1.KongLicense{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "license-1",
 		},
@@ -205,10 +205,10 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 }
 
 func findConditionInControllerStatus(
-	l *kongv1alpha1.KongLicense, controllerName string, conditionType string, conditionStatus metav1.ConditionStatus,
+	l *configurationv1alpha1.KongLicense, controllerName string, conditionType string, conditionStatus metav1.ConditionStatus,
 ) bool {
 	controllerStatus, found := lo.Find(
-		l.Status.KongLicenseControllerStatuses, func(c kongv1alpha1.KongLicenseControllerStatus) bool {
+		l.Status.KongLicenseControllerStatuses, func(c configurationv1alpha1.KongLicenseControllerStatus) bool {
 			return c.ControllerName == controllerName
 		})
 	if !found {

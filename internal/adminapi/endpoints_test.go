@@ -1,7 +1,6 @@
 package adminapi
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -638,7 +637,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 			discoverer, err := NewDiscoverer(portNames)
 			require.NoError(t, err)
 
-			got, err := discoverer.GetAdminAPIsForService(context.Background(), fakeClient, tt.service)
+			got, err := discoverer.GetAdminAPIsForService(t.Context(), fakeClient, tt.service)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

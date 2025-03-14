@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
@@ -89,7 +89,7 @@ type KongV1Alpha1KongLicenseReconciler struct {
 
 	licenseValidator  func(rawLicenseString string) error
 	chosenLicenseLock sync.RWMutex
-	chosenLicense     *kongv1alpha1.KongLicense
+	chosenLicense     *configurationv1alpha1.KongLicense
 }
 
 const (
@@ -122,7 +122,7 @@ func NewLicenseCache() cache.Store {
 }
 
 func kongLicenseKeyFunc(obj interface{}) (string, error) {
-	l, ok := obj.(*kongv1alpha1.KongLicense)
+	l, ok := obj.(*configurationv1alpha1.KongLicense)
 	if !ok {
 		return "", fmt.Errorf("object is type %T, not KongLicense", obj)
 	}
@@ -152,7 +152,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) e
 			),
 		)
 	}
-	return blder.Watches(&kongv1alpha1.KongLicense{},
+	return blder.Watches(&configurationv1alpha1.KongLicense{},
 		&handler.EnqueueRequestForObject{},
 		builder.WithPredicates(predicate.NewPredicateFuncs(isKongLicenseEnabled)),
 	).
@@ -172,7 +172,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 	log := r.Log.WithValues("KongV1Alpha1KongLicense", req.NamespacedName)
 
 	// get the relevant object
-	obj := new(kongv1alpha1.KongLicense)
+	obj := new(configurationv1alpha1.KongLicense)
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -298,7 +298,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License]
 // -----------------------------------------------------------------------------
 
 func isKongLicenseEnabled(obj client.Object) bool {
-	kongLicense, ok := obj.(*kongv1alpha1.KongLicense)
+	kongLicense, ok := obj.(*configurationv1alpha1.KongLicense)
 	if !ok {
 		return false
 	}
@@ -307,7 +307,7 @@ func isKongLicenseEnabled(obj client.Object) bool {
 
 // compareKongLicense returns true if license1 is newer than license2 (compared by metadata.creationTimestamp).
 // If the creationTimestamp equals or not comparable, returns the one with lexical smaller name.
-func compareKongLicense(license1, license2 *kongv1alpha1.KongLicense) bool {
+func compareKongLicense(license1, license2 *configurationv1alpha1.KongLicense) bool {
 	if license1.CreationTimestamp.After(license2.CreationTimestamp.Time) {
 		return true
 	}
@@ -318,11 +318,11 @@ func compareKongLicense(license1, license2 *kongv1alpha1.KongLicense) bool {
 }
 
 // pickLicenseInCache picks the newest license in the cache.
-func (r *KongV1Alpha1KongLicenseReconciler) pickLicenseInCache() *kongv1alpha1.KongLicense {
+func (r *KongV1Alpha1KongLicenseReconciler) pickLicenseInCache() *configurationv1alpha1.KongLicense {
 	licenseList := r.LicenseCache.List()
-	var chosenLicense *kongv1alpha1.KongLicense
+	var chosenLicense *configurationv1alpha1.KongLicense
 	for _, obj := range licenseList {
-		license, ok := obj.(*kongv1alpha1.KongLicense)
+		license, ok := obj.(*configurationv1alpha1.KongLicense)
 		if !ok {
 			continue
 		}
@@ -343,20 +343,20 @@ func (r *KongV1Alpha1KongLicenseReconciler) fullControllerName() string {
 }
 
 // setChosenLicense sets the chosen effective KongLicense copy in the cache.
-func (r *KongV1Alpha1KongLicenseReconciler) setChosenLicense(l *kongv1alpha1.KongLicense) {
+func (r *KongV1Alpha1KongLicenseReconciler) setChosenLicense(l *configurationv1alpha1.KongLicense) {
 	r.chosenLicenseLock.Lock()
 	defer r.chosenLicenseLock.Unlock()
 	r.chosenLicense = l.DeepCopy()
 }
 
 // getChosenLicense fetches the the chosen effective KongLicense in the cache.
-func (r *KongV1Alpha1KongLicenseReconciler) getChosenLicense() *kongv1alpha1.KongLicense {
+func (r *KongV1Alpha1KongLicenseReconciler) getChosenLicense() *configurationv1alpha1.KongLicense {
 	r.chosenLicenseLock.RLock()
 	defer r.chosenLicenseLock.RUnlock()
 	return r.chosenLicense
 }
 
-func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Context, deletedLicense *kongv1alpha1.KongLicense) error {
+func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Context, deletedLicense *configurationv1alpha1.KongLicense) error {
 	oldChosenLicense := r.getChosenLicense()
 	// Trigger a repick of license if the originally chosen license is deleted.
 	if oldChosenLicense.Name == deletedLicense.Name {
@@ -399,7 +399,7 @@ func setLicenseValidityCondition(ks *[]metav1.Condition, licenseValidationError 
 // in the controller status item managed by the reconciler if required.
 // If licenseValidator is provided, it also updates the "LicenseValid" condition.
 func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
-	ctx context.Context, license *kongv1alpha1.KongLicense,
+	ctx context.Context, license *configurationv1alpha1.KongLicense,
 	programmedStatus metav1.ConditionStatus,
 	reason string, message string,
 ) error {
@@ -410,11 +410,11 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 
 	fullControllerName := r.fullControllerName()
 	// Find the managed controller status item and append new item when absent.
-	_, controllerIndex, found := lo.FindIndexOf(license.Status.KongLicenseControllerStatuses, func(controllerStatus kongv1alpha1.KongLicenseControllerStatus) bool {
+	_, controllerIndex, found := lo.FindIndexOf(license.Status.KongLicenseControllerStatuses, func(controllerStatus configurationv1alpha1.KongLicenseControllerStatus) bool {
 		return controllerStatus.ControllerName == fullControllerName
 	})
 	if !found {
-		wantedControllerStatus := kongv1alpha1.KongLicenseControllerStatus{
+		wantedControllerStatus := configurationv1alpha1.KongLicenseControllerStatus{
 			ControllerName: fullControllerName,
 		}
 		license.Status.KongLicenseControllerStatuses = append(license.Status.KongLicenseControllerStatuses, wantedControllerStatus)
@@ -465,8 +465,8 @@ func WrapKongLicenseReconcilerToDynamicCRDController(
 		CacheSyncTimeout: r.CacheSyncTimeout,
 		RequiredCRDs: []schema.GroupVersionResource{
 			{
-				Group:    kongv1alpha1.GroupVersion.Group,
-				Version:  kongv1alpha1.GroupVersion.Version,
+				Group:    configurationv1alpha1.GroupVersion.Group,
+				Version:  configurationv1alpha1.GroupVersion.Version,
 				Resource: "konglicenses",
 			},
 		},

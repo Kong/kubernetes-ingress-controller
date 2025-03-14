@@ -47,7 +47,7 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 		},
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	runSynchronizer(ctx, t, s)
 
@@ -147,7 +147,7 @@ func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
 		},
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	runSynchronizer(ctx, t, s)
 
@@ -221,7 +221,7 @@ func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
 					MetricsRecorder:        &mocks.MetricsRecorder{},
 				},
 			)
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			runSynchronizer(ctx, t, s)
 

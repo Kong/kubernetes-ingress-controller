@@ -80,7 +80,7 @@ func TestHealthCheckServer_Start(t *testing.T) {
 	// Get free local port.
 	port := helpers.GetFreePort(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	addr := fmt.Sprintf("localhost:%d", port)
 	// Use discard logger to prevent:
 	// panic: Log in goroutine after TestHealthCheckServer_Start has completed: "level"=0 "msg"="healthz server closed"

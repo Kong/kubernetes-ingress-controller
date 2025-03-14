@@ -50,7 +50,7 @@ func TestTelemetry(t *testing.T) {
 	// Run a server that will receive the report, it's expected
 	// to be the first connection and the payload.
 	reportChan := make(chan []byte)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	go runTelemetryServer(ctx, t, telemetryServerListener, reportChan)
 

@@ -24,7 +24,7 @@ func (c statusClientMock) Status(context.Context) (*kong.Status, error) {
 }
 
 func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testSHAs := [][]byte{
 		[]byte("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
 		[]byte("82e35a63ceba37e9646434c5dd412ea577147f1e4a41ccde1614253187e3dbf9"),
@@ -129,7 +129,7 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 }
 
 func TestKonnectConfigurationChangeDetector(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testSHAs := [][]byte{
 		[]byte("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
 		[]byte("82e35a63ceba37e9646434c5dd412ea577147f1e4a41ccde1614253187e3dbf9"),

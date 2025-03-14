@@ -41,7 +41,7 @@ linters:
   - prealloc
   - revive
   - staticcheck
-  - tenv
+  - usetesting
   - typecheck
   - unconvert
   - unparam
@@ -91,12 +91,18 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
-    - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
-      alias: kong${1}
+
     - pkg: github.com/kong/kubernetes-configuration/api/common/(v[\w\d]+)
-      alias: kongcommon${1}
+      alias: common${1}
+    - pkg: github.com/kong/kubernetes-configuration/api/gateway-operator/(v[\w\d]+)
+      alias: operator${1}
+    - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
+      alias: configuration${1}
     - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
       alias: incubator${1}
+    - pkg: github.com/kong/kubernetes-configuration/api/konnect/(v[\w\d]+)
+      alias: konnect${1}
+
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
       alias: dpconf
     - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
@@ -155,8 +161,8 @@ linters-settings:
       - github.com/kong/kubernetes-ingress-controller/v2:
           recommendations:
           - github.com/kong/kubernetes-ingress-controller/v3
-  tenv:
-    all: true
+  usetesting:
+    os-temp-dir: true
   loggercheck:
     kitlog: false
     klog: true
@@ -178,7 +184,7 @@ linters-settings:
         - "!**/internal/manager/**/*.go"
         - "!**/internal/manager/*.go"
         # Package that expose public API to the above.
-        - "!**/pkg/manager/**/*.go" 
+        - "!**/pkg/manager/**/*.go"
         - "!**/pkg/manager/*.go"
         # TODO: Remove those exclusion once the needed parts of manager are moved to pkg/manager.
         # Imported stuff: consts, flags, kongconfig, utils.GetKubeconfig(...).

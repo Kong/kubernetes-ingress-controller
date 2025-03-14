@@ -15,9 +15,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/gateway"
@@ -34,12 +34,12 @@ import (
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
-	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer) (bool, string, error)
-	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
-	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
-	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
-	ValidateVault(ctx context.Context, vault kongv1alpha1.KongVault) (bool, string, error)
-	ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error)
+	ValidateConsumer(ctx context.Context, consumer configurationv1.KongConsumer) (bool, string, error)
+	ValidateConsumerGroup(ctx context.Context, consumerGroup configurationv1beta1.KongConsumerGroup) (bool, string, error)
+	ValidatePlugin(ctx context.Context, plugin configurationv1.KongPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
+	ValidateClusterPlugin(ctx context.Context, plugin configurationv1.KongClusterPlugin, overrideSecrets []*corev1.Secret) (bool, string, error)
+	ValidateVault(ctx context.Context, vault configurationv1alpha1.KongVault) (bool, string, error)
+	ValidateCustomEntity(ctx context.Context, entity configurationv1alpha1.KongCustomEntity) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string)
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
@@ -60,7 +60,7 @@ type AdminAPIServicesProvider interface {
 
 // ConsumerGetter is an interface for retrieving KongConsumers.
 type ConsumerGetter interface {
-	ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error)
+	ListAllConsumers(ctx context.Context) ([]configurationv1.KongConsumer, error)
 }
 
 // SecretGetterWithOverride returns the override secrets in the list if the namespace and name matches,
@@ -148,7 +148,7 @@ func NewKongHTTPValidator(
 // holds a message if the entity is not valid.
 func (validator KongHTTPValidator) ValidateConsumer(
 	ctx context.Context,
-	consumer kongv1.KongConsumer,
+	consumer configurationv1.KongConsumer,
 ) (bool, string, error) {
 	// ignore consumers that are being managed by another controller
 	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
@@ -226,7 +226,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 
 func (validator KongHTTPValidator) ValidateConsumerGroup(
 	ctx context.Context,
-	consumerGroup kongv1beta1.KongConsumerGroup,
+	consumerGroup configurationv1beta1.KongConsumerGroup,
 ) (bool, string, error) {
 	// Ignore ConsumerGroups that are being managed by another controller.
 	if !validator.ingressClassMatcher(&consumerGroup.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
@@ -330,7 +330,7 @@ func (validator KongHTTPValidator) ValidateCredential(ctx context.Context, secre
 // holds a message if the entity is not valid.
 func (validator KongHTTPValidator) ValidatePlugin(
 	ctx context.Context,
-	k8sPlugin kongv1.KongPlugin,
+	k8sPlugin configurationv1.KongPlugin,
 	overrideSecrets []*corev1.Secret,
 ) (bool, string, error) {
 	var plugin kong.Plugin
@@ -359,7 +359,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		plugin.RunOn = kong.String(k8sPlugin.RunOn)
 	}
 	plugin.Ordering = k8sPlugin.Ordering
-	plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
+	plugin.Protocols = kong.StringSlice(configurationv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 
 	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
 	if err != nil || errText != "" {
@@ -377,7 +377,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 // the result of ValidatePlugin for the derived KongPlugin.
 func (validator KongHTTPValidator) ValidateClusterPlugin(
 	ctx context.Context,
-	k8sPlugin kongv1.KongClusterPlugin,
+	k8sPlugin configurationv1.KongClusterPlugin,
 	overrideSecrets []*corev1.Secret,
 ) (bool, string, error) {
 	var plugin kong.Plugin
@@ -406,7 +406,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	}
 
 	plugin.Ordering = k8sPlugin.Ordering
-	plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
+	plugin.Protocols = kong.StringSlice(configurationv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 
 	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
 	if err != nil || errText != "" {
@@ -479,7 +479,7 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 	return true, "", nil
 }
 
-func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault kongv1alpha1.KongVault) (bool, string, error) {
+func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault configurationv1alpha1.KongVault) (bool, string, error) {
 	// Ignore KongVaults that are being managed by another controller.
 	if !validator.ingressClassMatcher(&k8sKongVault.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil
@@ -491,7 +491,7 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 
 	// list existing KongVaults and reject if the spec.prefix is duplicate with another `KongVault`.
 	existingKongVaults := validator.Storer.ListKongVaults()
-	dupeVault, hasDupe := lo.Find(existingKongVaults, func(v *kongv1alpha1.KongVault) bool {
+	dupeVault, hasDupe := lo.Find(existingKongVaults, func(v *configurationv1alpha1.KongVault) bool {
 		return v.Spec.Prefix == k8sKongVault.Spec.Prefix && v.Name != k8sKongVault.Name
 	})
 	if hasDupe {
@@ -518,7 +518,7 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 // KongHTTPValidator - Private Methods
 // -----------------------------------------------------------------------------
 
-func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]*kongv1.KongConsumer, error) {
+func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]*configurationv1.KongConsumer, error) {
 	// Gather a list of all consumers from the cached client.
 	consumers, err := validator.ConsumerGetter.ListAllConsumers(ctx)
 	if err != nil {
@@ -526,7 +526,7 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	}
 
 	// Reduce the consumer set to consumers managed by this controller.
-	managedConsumers := make([]*kongv1.KongConsumer, 0)
+	managedConsumers := make([]*configurationv1.KongConsumer, 0)
 	for _, consumer := range consumers {
 		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 			// ignore consumers (and subsequently secrets) that are managed by other controllers
@@ -605,8 +605,8 @@ type managerClientConsumerGetter struct {
 	managerClient client.Client
 }
 
-func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]kongv1.KongConsumer, error) {
-	consumers := &kongv1.KongConsumerList{}
+func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]configurationv1.KongConsumer, error) {
+	consumers := &configurationv1.KongConsumerList{}
 	if err := m.managerClient.List(ctx, consumers, &client.ListOptions{
 		Namespace: corev1.NamespaceAll,
 	}); err != nil {
@@ -615,8 +615,8 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]k
 	return consumers.Items, nil
 }
 
-func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity kongv1alpha1.KongCustomEntity) (bool, string, error) {
-	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", kongv1alpha1.KongCustomEntityKind)
+func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity configurationv1alpha1.KongCustomEntity) (bool, string, error) {
+	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", configurationv1alpha1.KongCustomEntityKind)
 	// If the spec.contollerName does not match the ingress class name,
 	// and the ingress class annotation does not match the ingress class name either,
 	// ignore it as it is not controlled by the controller.

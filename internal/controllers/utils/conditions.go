@@ -4,7 +4,7 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
@@ -49,26 +49,26 @@ func EnsureProgrammedCondition(
 ) {
 	var (
 		status  metav1.ConditionStatus
-		reason  kongv1.ConditionReason
+		reason  configurationv1.ConditionReason
 		message string
 	)
 	switch configurationStatus {
 	case object.ConfigurationStatusSucceeded:
 		status = metav1.ConditionTrue
-		reason = kongv1.ReasonProgrammed
+		reason = configurationv1.ReasonProgrammed
 		message = ProgrammedConditionTrueMessage
 	case object.ConfigurationStatusFailed:
 		status = metav1.ConditionFalse
-		reason = kongv1.ReasonInvalid
+		reason = configurationv1.ReasonInvalid
 		message = ProgrammedConditionFalseInvalidMessage
 	case object.ConfigurationStatusUnknown:
 		status = metav1.ConditionFalse
-		reason = kongv1.ReasonPending
+		reason = configurationv1.ReasonPending
 		message = ProgrammedConditionFalsePendingMessage
 	}
 
 	desiredCondition := metav1.Condition{
-		Type:               string(kongv1.ConditionProgrammed),
+		Type:               string(configurationv1.ConditionProgrammed),
 		Status:             status,
 		ObservedGeneration: objectGeneration,
 		LastTransitionTime: metav1.Now(),
@@ -91,7 +91,7 @@ func EnsureProgrammedCondition(
 		return conditions, false
 	}
 
-	_, idx, ok := lo.FindIndexOf(conditions, func(c metav1.Condition) bool { return c.Type == string(kongv1.ConditionProgrammed) })
+	_, idx, ok := lo.FindIndexOf(conditions, func(c metav1.Condition) bool { return c.Type == string(configurationv1.ConditionProgrammed) })
 	if !ok {
 		conditions = append(conditions, desiredCondition)
 	} else {

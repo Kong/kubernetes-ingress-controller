@@ -1,7 +1,6 @@
 package adminapi_test
 
 import (
-	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
 	adminAPIServer := httptest.NewServer(adminAPIHandler)
 	t.Cleanup(func() { adminAPIServer.Close() })
 
-	client, err := factory.CreateAdminAPIClient(context.Background(), adminapi.DiscoveredAdminAPI{
+	client, err := factory.CreateAdminAPIClient(t.Context(), adminapi.DiscoveredAdminAPI{
 		Address: adminAPIServer.URL,
 		PodRef: k8stypes.NamespacedName{
 			Namespace: "namespace",

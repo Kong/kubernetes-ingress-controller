@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -220,7 +219,7 @@ func runManagerTest(
 	// testFn is a function that will be called with the actual report string.
 	testFn func(t *testing.T, actualReport string),
 ) {
-	ctx := context.Background()
+	ctx := t.Context()
 	mgr, err := createManager(
 		k8sclient,
 		dyn,

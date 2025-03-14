@@ -45,7 +45,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	ns := CreateNamespace(ctx, t, client)
@@ -278,7 +278,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	ns := CreateNamespace(ctx, t, client)

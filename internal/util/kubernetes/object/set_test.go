@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestObjectConfigurationStatusSet(t *testing.T) {
@@ -38,7 +38,7 @@ func TestObjectConfigurationStatusSet(t *testing.T) {
 		},
 	}
 	ing3.SetGroupVersionKind(ingGVK)
-	tcp := &kongv1beta1.TCPIngress{
+	tcp := &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  corev1.NamespaceDefault,
 			Name:       "test-tcpingress",

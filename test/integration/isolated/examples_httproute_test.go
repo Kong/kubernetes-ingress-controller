@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -226,7 +226,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			require.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, client)
 
-			workingPlugin := &kongv1.KongPlugin{
+			workingPlugin := &configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      "response-transformer",

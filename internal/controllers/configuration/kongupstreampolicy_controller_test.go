@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -16,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
@@ -206,7 +205,7 @@ func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
 						Name:      "service1",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
 						},
 					},
 				},
@@ -215,7 +214,7 @@ func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
 						Name:      "service2",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy2",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy2",
 						},
 					},
 				},
@@ -336,7 +335,7 @@ func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
 						Name:      "service1",
 						Namespace: "other",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
 						},
 					},
 				},
@@ -376,7 +375,7 @@ func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
 						Name:      "service1",
 						Namespace: "default",
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy1",
 						},
 					},
 				},
@@ -414,7 +413,7 @@ func TestGetUpstreamPoliciesForIngressServices(t *testing.T) {
 			}
 
 			// Call the function
-			requests := reconciler.getUpstreamPoliciesForIngressServices(context.Background(), &tt.ingress)
+			requests := reconciler.getUpstreamPoliciesForIngressServices(t.Context(), &tt.ingress)
 
 			// Assert the results
 			assert.ElementsMatch(t, tt.expectedRequests, requests)

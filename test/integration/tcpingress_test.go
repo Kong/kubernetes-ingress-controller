@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -20,7 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -36,7 +35,7 @@ var (
 )
 
 func TestTCPIngressTLS(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	RunWhenKongExpressionRouter(ctx, t)
 	t.Parallel()
 
@@ -102,7 +101,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	}
 
 	t.Log("adding TCPIngresses")
-	tcpX := &kongv1beta1.TCPIngress{
+	tcpX := &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf(testName, "x"),
 			Namespace: ns.Name,
@@ -110,18 +109,18 @@ func TestTCPIngressTLS(t *testing.T) {
 				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
-		Spec: kongv1beta1.TCPIngressSpec{
-			TLS: []kongv1beta1.IngressTLS{
+		Spec: configurationv1beta1.TCPIngressSpec{
+			TLS: []configurationv1beta1.IngressTLS{
 				{
 					Hosts:      []string{testServiceSuffixes[0] + domain, testServiceSuffixes[1] + domain},
 					SecretName: tlsSecretName,
 				},
 			},
-			Rules: []kongv1beta1.IngressRule{
+			Rules: []configurationv1beta1.IngressRule{
 				{
 					Host: testServiceSuffixes[0] + domain,
 					Port: ktfkong.DefaultTLSServicePort,
-					Backend: kongv1beta1.IngressBackend{
+					Backend: configurationv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[0]].Name,
 						ServicePort: test.EchoTCPPort,
 					},
@@ -129,7 +128,7 @@ func TestTCPIngressTLS(t *testing.T) {
 				{
 					Host: testServiceSuffixes[1] + domain,
 					Port: ktfkong.DefaultTLSServicePort,
-					Backend: kongv1beta1.IngressBackend{
+					Backend: configurationv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[1]].Name,
 						ServicePort: test.EchoTCPPort,
 					},
@@ -141,7 +140,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(tcpX)
 
-	tcpY := &kongv1beta1.TCPIngress{
+	tcpY := &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf(testName, "y"),
 			Namespace: ns.Name,
@@ -149,18 +148,18 @@ func TestTCPIngressTLS(t *testing.T) {
 				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
-		Spec: kongv1beta1.TCPIngressSpec{
-			TLS: []kongv1beta1.IngressTLS{
+		Spec: configurationv1beta1.TCPIngressSpec{
+			TLS: []configurationv1beta1.IngressTLS{
 				{
 					Hosts:      []string{testServiceSuffixes[2] + domain},
 					SecretName: tlsSecretName,
 				},
 			},
-			Rules: []kongv1beta1.IngressRule{
+			Rules: []configurationv1beta1.IngressRule{
 				{
 					Host: testServiceSuffixes[2] + domain,
 					Port: ktfkong.DefaultTLSServicePort,
-					Backend: kongv1beta1.IngressBackend{
+					Backend: configurationv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[2]].Name,
 						ServicePort: test.EchoTCPPort,
 					},
@@ -238,7 +237,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")
@@ -289,7 +288,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Log("adding TCPIngress")
-	tcp := &kongv1beta1.TCPIngress{
+	tcp := &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "redis",
 			Namespace: ns.Name,
@@ -298,12 +297,12 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 				annotations.AnnotationPrefix + annotations.ProtocolsKey: "tls_passthrough",
 			},
 		},
-		Spec: kongv1beta1.TCPIngressSpec{
-			Rules: []kongv1beta1.IngressRule{
+		Spec: configurationv1beta1.TCPIngressSpec{
+			Rules: []configurationv1beta1.IngressRule{
 				{
 					Host: tlsExampleHostname,
 					Port: ktfkong.DefaultTLSServicePort,
-					Backend: kongv1beta1.IngressBackend{
+					Backend: configurationv1beta1.IngressBackend{
 						ServiceName: service.Name,
 						ServicePort: tlsEchoPort,
 					},
@@ -318,8 +317,9 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	cleaner.Add(tcp)
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
+	tlsOpt := test.WithTLSOption(tlsRouteHostname, certPool, true)
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
+		err := test.EchoResponds(test.ProtocolTLS, proxyTLSURL, testUUID, tlsOpt)
 		assert.NoError(c, err)
 	}, ingressWait, waitTick)
 }

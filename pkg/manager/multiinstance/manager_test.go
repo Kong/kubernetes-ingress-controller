@@ -23,7 +23,7 @@ func TestManager_Scheduling(t *testing.T) {
 	onCleanupVerifyThereAreNoLeakedGoroutines(t)
 
 	// Create a context that will be canceled when the test ends so we can ensure all goroutines are cleaned up.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	multiManager := multiinstance.NewManager(testr.New(t))
@@ -89,7 +89,7 @@ func TestManager_Scheduling(t *testing.T) {
 func TestManager_WithDiagnosticsExposer(t *testing.T) {
 	onCleanupVerifyThereAreNoLeakedGoroutines(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	t.Log("Configuring a manager with a diagnostics exposer")

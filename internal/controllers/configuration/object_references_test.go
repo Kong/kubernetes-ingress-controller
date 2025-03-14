@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
@@ -131,13 +131,13 @@ func TestListIngressReferredSecrets(t *testing.T) {
 func TestListKongPluginReferredSecrets(t *testing.T) {
 	testCases := []struct {
 		name          string
-		plugin        *kongv1.KongPlugin
+		plugin        *configurationv1.KongPlugin
 		secretNum     int
 		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "kong_plugin_refer_no_secrets",
-			plugin: &kongv1.KongPlugin{
+			plugin: &configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns",
 					Name:      "plugin1",
@@ -147,13 +147,13 @@ func TestListKongPluginReferredSecrets(t *testing.T) {
 		},
 		{
 			name: "kong_plugin_refer_secrets",
-			plugin: &kongv1.KongPlugin{
+			plugin: &configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns",
 					Name:      "plugin1",
 				},
-				ConfigFrom: &kongv1.ConfigSource{
-					SecretValue: kongv1.SecretValueFromSource{
+				ConfigFrom: &configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{
 						Secret: "secret1",
 						Key:    "k",
 					},
@@ -181,13 +181,13 @@ func TestListKongPluginReferredSecrets(t *testing.T) {
 func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 	testCases := []struct {
 		name          string
-		plugin        *kongv1.KongClusterPlugin
+		plugin        *configurationv1.KongClusterPlugin
 		secretNum     int
 		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "kong_cluster_plugin_refer_no_secrets",
-			plugin: &kongv1.KongClusterPlugin{
+			plugin: &configurationv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "plugin1",
 				},
@@ -196,12 +196,12 @@ func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 		},
 		{
 			name: "kong_cluster_plugin_refer_secrets",
-			plugin: &kongv1.KongClusterPlugin{
+			plugin: &configurationv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "plugin1",
 				},
-				ConfigFrom: &kongv1.NamespacedConfigSource{
-					SecretValue: kongv1.NamespacedSecretValueFromSource{
+				ConfigFrom: &configurationv1.NamespacedConfigSource{
+					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: "ns",
 						Secret:    "secret1",
 						Key:       "k",
@@ -230,13 +230,13 @@ func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 func TestListKongConsumerReferredSecrets(t *testing.T) {
 	testCases := []struct {
 		name          string
-		consumer      *kongv1.KongConsumer
+		consumer      *configurationv1.KongConsumer
 		secretNum     int
 		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "consumer_refer_no_secrets",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns",
 					Name:      "consumer1",
@@ -246,7 +246,7 @@ func TestListKongConsumerReferredSecrets(t *testing.T) {
 		},
 		{
 			name: "consumer_refer_secrets",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns",
 					Name:      "consumer1",
@@ -275,13 +275,13 @@ func TestListKongConsumerReferredSecrets(t *testing.T) {
 func TestListTCPIngressReferredSecrets(t *testing.T) {
 	testCases := []struct {
 		name          string
-		tcpIngress    *kongv1beta1.TCPIngress
+		tcpIngress    *configurationv1beta1.TCPIngress
 		secretNum     int
 		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "tcp_ingress_refer_no_secrets",
-			tcpIngress: &kongv1beta1.TCPIngress{
+			tcpIngress: &configurationv1beta1.TCPIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns",
 					Name:      "ingress1",
@@ -291,13 +291,13 @@ func TestListTCPIngressReferredSecrets(t *testing.T) {
 		},
 		{
 			name: "tcp_ingress_refer_secrets",
-			tcpIngress: &kongv1beta1.TCPIngress{
+			tcpIngress: &configurationv1beta1.TCPIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns",
 					Name:      "ingress1",
 				},
-				Spec: kongv1beta1.TCPIngressSpec{
-					TLS: []kongv1beta1.IngressTLS{
+				Spec: configurationv1beta1.TCPIngressSpec{
+					TLS: []configurationv1beta1.IngressTLS{
 						{Hosts: []string{"example.com"}, SecretName: "secret1"},
 						{Hosts: []string{"konghq.com"}, SecretName: ""},
 					},

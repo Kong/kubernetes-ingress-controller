@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )
@@ -36,7 +36,7 @@ func TestResolveDependencies_Service(t *testing.T) {
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
-						kongv1beta1.KongUpstreamPolicyAnnotationKey:           "1",
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "1",
 					},
 				},
 			},
@@ -75,7 +75,7 @@ func TestResolveDependencies_Service(t *testing.T) {
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
-						kongv1beta1.KongUpstreamPolicyAnnotationKey:           "3",
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "3",
 					},
 				},
 			},
@@ -94,13 +94,13 @@ func TestResolveDependencies_Service(t *testing.T) {
 					Name:      "test-service",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						kongv1beta1.KongUpstreamPolicyAnnotationKey: "1",
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "1",
 					},
 				},
 			},
 			cache: cacheStoresFromObjs(t,
 				testKongUpstreamPolicy(t, "1"),
-				testKongUpstreamPolicy(t, "1", func(kup *kongv1beta1.KongUpstreamPolicy) {
+				testKongUpstreamPolicy(t, "1", func(kup *configurationv1beta1.KongUpstreamPolicy) {
 					kup.Namespace = "other-namespace"
 				}),
 			),

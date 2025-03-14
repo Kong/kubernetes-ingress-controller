@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -582,7 +581,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.NewOptionalNamespacedName(mo.None[k8stypes.NamespacedName]()))
+				got, err := getSupportedGatewayForRoute(t.Context(), logr.Discard(), fakeClient, tt.route, controllers.NewOptionalNamespacedName(mo.None[k8stypes.NamespacedName]()))
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -852,7 +851,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
+				got, err := getSupportedGatewayForRoute(t.Context(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1086,7 +1085,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
+				got, err := getSupportedGatewayForRoute(t.Context(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, 1)
 				match := got[0]
@@ -1307,7 +1306,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					WithObjects(tt.objects...).
 					Build()
 
-				got, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
+				got, err := getSupportedGatewayForRoute(t.Context(), logr.Discard(), fakeClient, tt.route, controllers.OptionalNamespacedName{})
 				require.NoError(t, err)
 				require.Len(t, got, len(tt.expected))
 
@@ -1337,7 +1336,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			WithScheme(scheme.Scheme).
 			Build()
 
-		_, err := getSupportedGatewayForRoute(context.Background(), logr.Discard(), fakeClient, bustedParentHTTPRoute, controllers.OptionalNamespacedName{})
+		_, err := getSupportedGatewayForRoute(t.Context(), logr.Discard(), fakeClient, bustedParentHTTPRoute, controllers.OptionalNamespacedName{})
 		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
 	})
 
@@ -1442,7 +1441,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Build()
 
 				got, err := getSupportedGatewayForRoute(
-					context.Background(),
+					t.Context(),
 					logr.Discard(),
 					fakeClient,
 					tt.route,
@@ -2041,7 +2040,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
 				var (
-					ctx       = context.Background()
+					ctx       = t.Context()
 					httproute = tc.httpRouteFunc()
 					gateways  = tc.gatewayFunc()
 				)
@@ -2536,7 +2535,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var (
-				ctx       = context.Background()
+				ctx       = t.Context()
 				namespace = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "other-namespace",

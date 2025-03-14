@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -342,7 +341,7 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 				Client: cl,
 			}
 
-			gateways, err := r.getBackendTLSPolicyAncestors(context.Background(), tt.policy)
+			gateways, err := r.getBackendTLSPolicyAncestors(t.Context(), tt.policy)
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
@@ -961,7 +960,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Client: cl,
 			}
 
-			condition, err := r.validateBackendTLSPolicy(context.Background(), *tt.policy)
+			condition, err := r.validateBackendTLSPolicy(t.Context(), *tt.policy)
 			if tt.expectError {
 				require.Error(t, err)
 			} else {

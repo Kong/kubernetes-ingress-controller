@@ -21,8 +21,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
@@ -33,7 +33,7 @@ import (
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -65,19 +65,19 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 
 	testCases := []struct {
 		name                string
-		kongVault           *kongv1alpha1.KongVault
+		kongVault           *configurationv1alpha1.KongVault
 		expectErrorContains string
 	}{
 		{
 			name: "should pass the validation if the configuration is correct",
-			kongVault: &kongv1alpha1.KongVault{
+			kongVault: &configurationv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "vault-valid",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
+				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env",
 					Prefix:      "env-test",
 					Description: "test env vault",
@@ -89,14 +89,14 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		},
 		{
 			name: "should also pass the validation if the description is empty",
-			kongVault: &kongv1alpha1.KongVault{
+			kongVault: &configurationv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "vault-empty-description",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
+				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend: "env",
 					Prefix:  "env-empty-desc",
 					Config: apiextensionsv1.JSON{
@@ -107,14 +107,14 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		},
 		{
 			name: "should fail the validation if the backend is not supported by Kong gateway",
-			kongVault: &kongv1alpha1.KongVault{
+			kongVault: &configurationv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "vault-unsupported-backend",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
+				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env1",
 					Prefix:      "unsupported-backend",
 					Description: "test env vault",
@@ -127,14 +127,14 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		},
 		{
 			name: "should fail the validation if the spec.config does not pass the schema check of Kong gateway",
-			kongVault: &kongv1alpha1.KongVault{
+			kongVault: &configurationv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "vault-invalid-config",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
+				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env",
 					Prefix:      "invalid-config",
 					Description: "test env vault",
@@ -147,14 +147,14 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		},
 		{
 			name: "should fail the validation if spec.prefix is duplicate",
-			kongVault: &kongv1alpha1.KongVault{
+			kongVault: &configurationv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "vault-dupe",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
+				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env",
 					Prefix:      prefixForDuplicationTest, // This is the same prefix as the one created in setup.
 					Description: "test env vault",
@@ -177,7 +177,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongPlugins(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -206,7 +206,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 
 	testCases := []struct {
 		name                string
-		kongPlugin          *kongv1.KongPlugin
+		kongPlugin          *configurationv1.KongPlugin
 		expectErrorContains string
 		secretBefore        *corev1.Secret
 		secretAfter         *corev1.Secret
@@ -215,7 +215,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 	}{
 		{
 			name: "should fail the validation if secret used in ConfigFrom of KongPlugin generates invalid plugin configuration",
-			kongPlugin: &kongv1.KongPlugin{
+			kongPlugin: &configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-invalid-config-from",
 					Labels: map[string]string{
@@ -223,8 +223,8 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 					},
 				},
 				PluginName: "rate-limiting",
-				ConfigFrom: &kongv1.ConfigSource{
-					SecretValue: kongv1.SecretValueFromSource{
+				ConfigFrom: &configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{
 						Secret: "conf-secret-invalid-config",
 						Key:    "rate-limiting-config",
 					},
@@ -257,7 +257,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		},
 		{
 			name: "should fail the validation if the secret is used in ConfigPatches of KongPlugin and generates invalid config",
-			kongPlugin: &kongv1.KongPlugin{
+			kongPlugin: &configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-invalid-config-patches",
 				},
@@ -265,11 +265,11 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
 				},
-				ConfigPatches: []kongv1.ConfigPatch{
+				ConfigPatches: []configurationv1.ConfigPatch{
 					{
 						Path: "/minute",
-						ValueFrom: kongv1.ConfigSource{
-							SecretValue: kongv1.SecretValueFromSource{
+						ValueFrom: configurationv1.ConfigSource{
+							SecretValue: configurationv1.SecretValueFromSource{
 								Secret: "conf-secret-invalid-field",
 								Key:    "rate-limiting-config-minutes",
 							},
@@ -304,7 +304,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		},
 		{
 			name: "should pass the validation if the secret used in ConfigPatches of KongPlugin and generates valid config",
-			kongPlugin: &kongv1.KongPlugin{
+			kongPlugin: &configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "rate-limiting-valid-config",
 					Labels: map[string]string{
@@ -315,11 +315,11 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
 				},
-				ConfigPatches: []kongv1.ConfigPatch{
+				ConfigPatches: []configurationv1.ConfigPatch{
 					{
 						Path: "/minute",
-						ValueFrom: kongv1.ConfigSource{
-							SecretValue: kongv1.SecretValueFromSource{
+						ValueFrom: configurationv1.ConfigSource{
+							SecretValue: configurationv1.SecretValueFromSource{
 								Secret: "conf-secret-valid-field",
 								Key:    "rate-limiting-config-minutes",
 							},
@@ -431,7 +431,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -460,7 +460,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 
 	testCases := []struct {
 		name                string
-		kongClusterPlugin   *kongv1.KongClusterPlugin
+		kongClusterPlugin   *configurationv1.KongClusterPlugin
 		expectErrorContains string
 		secretBefore        *corev1.Secret
 		secretAfter         *corev1.Secret
@@ -469,7 +469,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 	}{
 		{
 			name: "should pass the validation if the secret used in ConfigFrom of KongClusterPlugin generates valid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
+			kongClusterPlugin: &configurationv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-rate-limiting-valid",
 					Annotations: map[string]string{
@@ -477,8 +477,8 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 					},
 				},
 				PluginName: "rate-limiting",
-				ConfigFrom: &kongv1.NamespacedConfigSource{
-					SecretValue: kongv1.NamespacedSecretValueFromSource{
+				ConfigFrom: &configurationv1.NamespacedConfigSource{
+					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: ns.Name,
 						Secret:    "cluster-conf-secret-valid",
 						Key:       "rate-limiting-config",
@@ -511,7 +511,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		},
 		{
 			name: "should fail the validation if the secret in ConfigFrom of KongClusterPlugin generates invalid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
+			kongClusterPlugin: &configurationv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-rate-limiting-invalid",
 					Annotations: map[string]string{
@@ -519,8 +519,8 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 					},
 				},
 				PluginName: "rate-limiting",
-				ConfigFrom: &kongv1.NamespacedConfigSource{
-					SecretValue: kongv1.NamespacedSecretValueFromSource{
+				ConfigFrom: &configurationv1.NamespacedConfigSource{
+					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: ns.Name,
 						Secret:    "cluster-conf-secret-invalid",
 						Key:       "rate-limiting-config",
@@ -554,7 +554,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		},
 		{
 			name: "should pass the validation if the secret in ConfigPatches of KongClusterPlugin generates valid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
+			kongClusterPlugin: &configurationv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-rate-limiting-valid-config-patches",
 					Annotations: map[string]string{
@@ -565,11 +565,11 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
 				},
-				ConfigPatches: []kongv1.NamespacedConfigPatch{
+				ConfigPatches: []configurationv1.NamespacedConfigPatch{
 					{
 						Path: "/minute",
-						ValueFrom: kongv1.NamespacedConfigSource{
-							SecretValue: kongv1.NamespacedSecretValueFromSource{
+						ValueFrom: configurationv1.NamespacedConfigSource{
+							SecretValue: configurationv1.NamespacedSecretValueFromSource{
 								Namespace: ns.Name,
 								Secret:    "cluster-conf-secret-valid-patch",
 								Key:       "rate-limiting-minute",
@@ -604,7 +604,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		},
 		{
 			name: "should fail the validation if the secret in ConfigPatches of KongClusterPlugin generates invalid configuration",
-			kongClusterPlugin: &kongv1.KongClusterPlugin{
+			kongClusterPlugin: &configurationv1.KongClusterPlugin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-rate-limiting-invalid-config-patches",
 					Annotations: map[string]string{
@@ -615,11 +615,11 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
 				},
-				ConfigPatches: []kongv1.NamespacedConfigPatch{
+				ConfigPatches: []configurationv1.NamespacedConfigPatch{
 					{
 						Path: "/minute",
-						ValueFrom: kongv1.NamespacedConfigSource{
-							SecretValue: kongv1.NamespacedSecretValueFromSource{
+						ValueFrom: configurationv1.NamespacedConfigSource{
+							SecretValue: configurationv1.NamespacedSecretValueFromSource{
 								Namespace: ns.Name,
 								Secret:    "cluster-conf-secret-invalid-patch",
 								Key:       "rate-limiting-minute",
@@ -695,7 +695,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -759,7 +759,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 	}
 
 	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
-	consumer := &kongv1.KongConsumer{
+	consumer := &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "statis-consumer-",
 			Annotations: map[string]string{
@@ -775,6 +775,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 	}
 	require.NoError(t, ctrlClient.Create(ctx, consumer))
 	t.Cleanup(func() {
+		ctx := t.Context()
 		if err := ctrlClient.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
 			assert.NoError(t, err)
 		}
@@ -782,14 +783,14 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		consumer       *kongv1.KongConsumer
+		consumer       *configurationv1.KongConsumer
 		credentials    []*corev1.Secret
 		wantErr        bool
 		wantPartialErr string
 	}{
 		{
 			name: "a consumer with no credentials should pass validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "testconsumer",
 					Annotations: map[string]string{
@@ -804,7 +805,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 		{
 			name: "a consumer with valid credentials should pass validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
@@ -831,7 +832,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 		{
 			name: "a consumer with duplicate credentials which are NOT constrained should pass validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
@@ -875,7 +876,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 		{
 			name: "a consumer referencing credentials secrets which do not yet exist should fail validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
@@ -893,7 +894,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 		{
 			name: "a consumer with duplicate credentials which ARE constrained should fail validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "brokenshovel",
 					Annotations: map[string]string{
@@ -938,7 +939,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 		{
 			name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 					Annotations: map[string]string{
@@ -969,7 +970,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		},
 		{
 			name: "a consumer that provides credentials that are in violation of unique constraints globally against other existing consumers should fail validation",
-			consumer: &kongv1.KongConsumer{
+			consumer: &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "violating-uniqueness-",
 					Annotations: map[string]string{
@@ -1004,7 +1005,8 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, credential := range tc.credentials {
 				require.NoError(t, ctrlClient.Create(ctx, credential))
-				t.Cleanup(func() {
+				t.Cleanup(func() { //nolint:contextcheck
+					ctx := context.Background() //nolint:usetesting
 					if err := ctrlClient.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
@@ -1030,7 +1032,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 }
 
 func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	// highEndConsumerUsageCount indicates a number of consumers with credentials
@@ -1066,6 +1068,36 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount)
 
 	t.Run("attaching secret to consumer", func(t *testing.T) {
+		t.Log("verifying that a secret with unsupported but valid credential type passes the validation")
+		require.NoError(t, ctrlClient.Create(ctx,
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "konnect-credential",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "konnect",
+					},
+				},
+				StringData: map[string]string{
+					"key": "kong-credential",
+				},
+			},
+		))
+
+		t.Log("verifying that a secret with invalid credential type fails the validation")
+		require.Error(t, ctrlClient.Create(ctx,
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-credential",
+					Labels: map[string]string{
+						labels.CredentialTypeLabel: "bad-type",
+					},
+				},
+				StringData: map[string]string{
+					"key": "kong-credential",
+				},
+			},
+		))
+
 		t.Log("verifying that an invalid credential secret not yet referenced by a KongConsumer fails validation")
 		require.Error(t,
 			ctrlClient.Create(ctx,
@@ -1073,16 +1105,16 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "brokenfence",
 						Labels: map[string]string{
-							labels.CredentialTypeLabel: "invalid-auth",
+							labels.CredentialTypeLabel: "basic-auth",
 						},
 					},
 					StringData: map[string]string{
-						"username": "brokenfence",
+						// missing "username" field.
 						"password": "testpass",
 					},
 				},
 			),
-			"invalid credential type",
+			"missing required field(s)",
 		)
 
 		t.Log("creating a valid credential secret to be referenced by a KongConsumer")
@@ -1107,7 +1139,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		})
 
 		t.Log("verifying that valid credentials assigned to a consumer pass validation")
-		validConsumerLinkedToValidCredentials := &kongv1.KongConsumer{
+		validConsumerLinkedToValidCredentials := &configurationv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "valid-consumer-",
 				Annotations: map[string]string{
@@ -1133,14 +1165,15 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		require.NoError(t, ctrlClient.Update(ctx, validCredential))
 
 		t.Log("verifying that validation fails if the now referenced and valid credential gets updated to become invalid")
-		validCredential.ObjectMeta.Labels[labels.CredentialTypeLabel] = "invalid-auth"
+		delete(validCredential.Data, "username")
 		err := ctrlClient.Update(ctx, validCredential)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "invalid credential type")
+		require.ErrorContains(t, err, "missing required field(s)")
 
 		t.Log("verifying that if the referent consumer goes away the validation fails for updates that make the credential invalid")
+		delete(validCredential.Data, "username")
 		require.NoError(t, ctrlClient.Delete(ctx, validConsumerLinkedToValidCredentials))
-		require.ErrorContains(t, ctrlClient.Update(ctx, validCredential), "invalid credential type")
+		require.ErrorContains(t, ctrlClient.Update(ctx, validCredential), "missing required field(s)")
 	})
 
 	t.Run("JWT", func(t *testing.T) {
@@ -1204,7 +1237,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	var (
@@ -1234,18 +1267,18 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		requireEnterpriseLicense bool
-		entity                   *kongv1alpha1.KongCustomEntity
+		entity                   *configurationv1alpha1.KongCustomEntity
 		valid                    bool
 
 		errContains string
 	}{
 		{
 			name: "entity not supported in Kong",
-			entity: &kongv1alpha1.KongCustomEntity{
+			entity: &configurationv1alpha1.KongCustomEntity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "not-supported-entity",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "invalid_entity",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
@@ -1258,14 +1291,14 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		},
 		{
 			name: "valid session entity",
-			entity: &kongv1alpha1.KongCustomEntity{
+			entity: &configurationv1alpha1.KongCustomEntity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "session-1",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "sessions",
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"session_id":"session1"}`),
@@ -1276,14 +1309,14 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		},
 		{
 			name: "invalid session entity",
-			entity: &kongv1alpha1.KongCustomEntity{
+			entity: &configurationv1alpha1.KongCustomEntity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "session-1",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "sessions",
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"session_id":"session2","foo":"bar"}`),
@@ -1294,11 +1327,11 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		},
 		{
 			name: "valid degraphql_route entity",
-			entity: &kongv1alpha1.KongCustomEntity{
+			entity: &configurationv1alpha1.KongCustomEntity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "degraphql-route-1",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "degraphql_routes",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
@@ -1311,11 +1344,11 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		},
 		{
 			name: "invalid degraphql_route entity",
-			entity: &kongv1alpha1.KongCustomEntity{
+			entity: &configurationv1alpha1.KongCustomEntity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "degraphql-route-1",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "degraphql_routes",
 					ControllerName: annotations.DefaultIngressClass,
 					Fields: apiextensionsv1.JSON{
@@ -1328,11 +1361,11 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		},
 		{
 			name: "KongCustomEntity not controlled by the current controller",
-			entity: &kongv1alpha1.KongCustomEntity{
+			entity: &configurationv1alpha1.KongCustomEntity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "unrelated-entity",
 				},
-				Spec: kongv1alpha1.KongCustomEntitySpec{
+				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "unrelated_entity",
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte("{}"),
@@ -1397,7 +1430,7 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 			}
 
 			// create the consumer referencing its credentials
-			consumer := &kongv1.KongConsumer{
+			consumer := &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: consumerName,
 					Annotations: map[string]string{
@@ -1441,14 +1474,14 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 	)
 
 	name := uuid.NewString()
-	vault := &kongv1alpha1.KongVault{
+	vault := &configurationv1alpha1.KongVault{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
-		Spec: kongv1alpha1.KongVaultSpec{
+		Spec: configurationv1alpha1.KongVaultSpec{
 			Backend:     "env",
 			Prefix:      vaultPrefix,
 			Description: "vault description",
@@ -1459,7 +1492,7 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 
 	t.Logf("Waiting for KongVault %s to be programmed...", name)
 	require.Eventuallyf(t, func() bool {
-		kv := &kongv1alpha1.KongVault{}
+		kv := &configurationv1alpha1.KongVault{}
 		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Name: name}, kv)
 		if err != nil {
 			return false

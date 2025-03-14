@@ -27,7 +27,7 @@ func TestSynchronizer(t *testing.T) {
 	c := &fakeDataplaneClient{dbmode: dpconf.DBModePostgres}
 
 	t.Log("configuring the dataplane synchronizer")
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	t.Log("initializing the dataplane synchronizer")
@@ -76,7 +76,7 @@ func TestSynchronizer(t *testing.T) {
 	totalUpdatesSeenSoFar := c.totalUpdates()
 
 	t.Log("verifying that the server can be started back up with a new context")
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel = context.WithCancel(t.Context())
 	defer cancel()
 	assert.NoError(t, sync.Start(ctx))
 	assert.Eventually(t, func() bool { return sync.IsRunning() }, time.Second, testSynchronizerTick)
@@ -109,7 +109,7 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, s)
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			require.NoError(t, s.Start(ctx))
 

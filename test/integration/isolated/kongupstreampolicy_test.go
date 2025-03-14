@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
@@ -60,12 +60,12 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 
 			t.Log("creating KongUpstreamPolicies")
-			upstreamPolicies := []*kongv1beta1.KongUpstreamPolicy{
+			upstreamPolicies := []*configurationv1beta1.KongUpstreamPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "upstream-policy-1",
 					},
-					Spec: kongv1beta1.KongUpstreamPolicySpec{
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("round-robin"),
 					},
 				},
@@ -73,7 +73,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "upstream-policy-2",
 					},
-					Spec: kongv1beta1.KongUpstreamPolicySpec{
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 					},
 				},
@@ -94,13 +94,13 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			service1 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 			service1.Name = "service-1"
 			service1.Annotations = map[string]string{
-				kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-1",
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-1",
 			}
 
 			service2 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 			service2.Name = "service-2"
 			service2.Annotations = map[string]string{
-				kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-2",
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-2",
 			}
 
 			services := []*corev1.Service{service1, service2}
@@ -114,8 +114,8 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "service-facade",
 					Annotations: map[string]string{
-						kongv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-1",
-						annotations.IngressClassKey:                 ingressClass,
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-1",
+						annotations.IngressClassKey:                          ingressClass,
 					},
 				},
 				Spec: incubatorv1alpha1.KongServiceFacadeSpec{

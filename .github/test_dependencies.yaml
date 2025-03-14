@@ -3,14 +3,14 @@ e2e:
     # renovate: datasource=docker depName=kindest/node versioning=docker
     - 'v1.32.2'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.31.4'
+    - 'v1.31.6'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.30.8'
+    - 'v1.30.10'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.29.12'
+    - 'v1.29.14'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.32.1'
+    - '1.32.2'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
@@ -44,14 +44,14 @@ integration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.9.0.0'
+  kong-ee: '3.9.0.1'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.9.0.0'
+  kong-ee: '3.9.0.1'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.9.0.0'
+  kong-ee: '3.9.0.1'

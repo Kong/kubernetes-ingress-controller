@@ -12,10 +12,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongcommonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/conditions"
@@ -27,7 +27,7 @@ import (
 func TestControlPlaneReferenceHandling(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	const ingressClassName = "kongenvtest"
@@ -45,16 +45,16 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	)
 
 	var (
-		kicCPRef = &kongcommonv1alpha1.ControlPlaneRef{
-			Type: kongcommonv1alpha1.ControlPlaneRefKIC,
+		kicCPRef = &commonv1alpha1.ControlPlaneRef{
+			Type: commonv1alpha1.ControlPlaneRefKIC,
 		}
-		konnectCPRef = &kongcommonv1alpha1.ControlPlaneRef{
-			Type:      kongcommonv1alpha1.ControlPlaneRefKonnectID,
+		konnectCPRef = &commonv1alpha1.ControlPlaneRef{
+			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
 			KonnectID: lo.ToPtr("konnect-id"),
 		}
 
-		validConsumer = func() *kongv1.KongConsumer {
-			return &kongv1.KongConsumer{
+		validConsumer = func() *configurationv1.KongConsumer {
+			return &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "consumer-",
 					Namespace:    ns.Name,
@@ -65,8 +65,8 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 				Username: "consumer",
 			}
 		}
-		validConsumerGroup = func() *kongv1beta1.KongConsumerGroup {
-			return &kongv1beta1.KongConsumerGroup{
+		validConsumerGroup = func() *configurationv1beta1.KongConsumerGroup {
+			return &configurationv1beta1.KongConsumerGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "consumer-group-",
 					Namespace:    ns.Name,
@@ -74,13 +74,13 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 						annotations.IngressClassKey: ingressClassName,
 					},
 				},
-				Spec: kongv1beta1.KongConsumerGroupSpec{
+				Spec: configurationv1beta1.KongConsumerGroupSpec{
 					Name: "consumer-group",
 				},
 			}
 		}
-		validVault = func() *kongv1alpha1.KongVault {
-			return &kongv1alpha1.KongVault{
+		validVault = func() *configurationv1alpha1.KongVault {
+			return &configurationv1alpha1.KongVault{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "vault-",
 					Namespace:    ns.Name,
@@ -88,7 +88,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 						annotations.IngressClassKey: ingressClassName,
 					},
 				},
-				Spec: kongv1alpha1.KongVaultSpec{
+				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend: "env",
 					// Prefix has to be unique for each Vault object as it's validated by KIC in translation.
 					Prefix: "prefix-" + lo.RandomString(8, lo.LowerCaseLettersCharset),
@@ -102,9 +102,9 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		object interface {
 			client.Object
 			GetConditions() []metav1.Condition
-			SetControlPlaneRef(*kongcommonv1alpha1.ControlPlaneRef)
+			SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
 		}
-		controlPlaneRef      *kongcommonv1alpha1.ControlPlaneRef
+		controlPlaneRef      *commonv1alpha1.ControlPlaneRef
 		expectToBeProgrammed bool
 	}{
 		{
@@ -174,7 +174,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 					}
 					assert.True(t, conditions.Contain(
 						tc.object.GetConditions(),
-						conditions.WithType(string(kongv1.ConditionProgrammed)),
+						conditions.WithType(string(configurationv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),
 					))
 				}, waitTime, tickDuration, "expected object to be programmed")
@@ -191,7 +191,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 					wasObjectSuccessfullyFetched = true
 					return conditions.Contain(
 						tc.object.GetConditions(),
-						conditions.WithType(string(kongv1.ConditionProgrammed)),
+						conditions.WithType(string(configurationv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),
 					)
 				}, waitTime, tickDuration, "expected object not to be programmed")

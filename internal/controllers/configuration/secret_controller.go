@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
@@ -108,7 +109,7 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 			return true
 		}
 
-		if _, ok := l[labels.CredentialTypeLabel]; ok {
+		if credType, ok := l[labels.CredentialTypeLabel]; ok && credentials.SupportedTypes.Has(credType) {
 			return true
 		}
 	}

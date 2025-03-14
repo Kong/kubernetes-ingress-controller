@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 // CredentialConflictsDetector registers all credentials and detects conflicts globally using indices.
@@ -30,7 +30,7 @@ func NewCredentialConflictsDetector() *CredentialConflictsDetector {
 func (d *CredentialConflictsDetector) RegisterForConflictDetection(
 	cred any,
 	credSource *corev1.Secret,
-	consumerRef *kongv1.KongConsumer,
+	consumerRef *configurationv1.KongConsumer,
 ) {
 	credWithParent := CredentialWithConsumer{
 		CredentialSecret: credSource,
@@ -91,7 +91,7 @@ type CredentialConflict struct {
 // CredentialWithConsumer represents a credential and its associated consumer.
 type CredentialWithConsumer struct {
 	CredentialSecret *corev1.Secret
-	Consumer         *kongv1.KongConsumer
+	Consumer         *configurationv1.KongConsumer
 }
 
 // credentialIndex is an index for credentials.

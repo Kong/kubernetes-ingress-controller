@@ -13,8 +13,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -29,7 +29,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -49,12 +49,12 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		objects                     []client.Object
 		getExpectedObjectConditions func(ctrlClient client.Client) ([]metav1.Condition, error)
 		expectedProgrammedStatus    metav1.ConditionStatus
-		expectedProgrammedReason    kongv1.ConditionReason
+		expectedProgrammedReason    configurationv1.ConditionReason
 	}{
 		{
 			name: "valid KongConsumer",
 			objects: []client.Object{
-				&kongv1.KongConsumer{
+				&configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "consumer",
 						Namespace: ns.Name,
@@ -66,7 +66,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				},
 			},
 			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var consumer kongv1.KongConsumer
+				var consumer configurationv1.KongConsumer
 				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
 					Name:      "consumer",
 					Namespace: ns.Name,
@@ -77,12 +77,12 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				return consumer.Status.Conditions, nil
 			},
 			expectedProgrammedStatus: metav1.ConditionTrue,
-			expectedProgrammedReason: kongv1.ReasonProgrammed,
+			expectedProgrammedReason: configurationv1.ReasonProgrammed,
 		},
 		{
 			name: "KongConsumer referencing non-existent secret",
 			objects: []client.Object{
-				&kongv1.KongConsumer{
+				&configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "consumer-with-secret",
 						Namespace: ns.Name,
@@ -95,7 +95,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				},
 			},
 			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var consumer kongv1.KongConsumer
+				var consumer configurationv1.KongConsumer
 				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
 					Name:      "consumer-with-secret",
 					Namespace: ns.Name,
@@ -106,12 +106,12 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				return consumer.Status.Conditions, nil
 			},
 			expectedProgrammedStatus: metav1.ConditionFalse,
-			expectedProgrammedReason: kongv1.ReasonInvalid,
+			expectedProgrammedReason: configurationv1.ReasonInvalid,
 		},
 		{
 			name: "valid KongConsumerGroup",
 			objects: []client.Object{
-				&kongv1beta1.KongConsumerGroup{
+				&configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "consumer-group",
 						Namespace: ns.Name,
@@ -122,7 +122,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				},
 			},
 			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var consumerGroup kongv1beta1.KongConsumerGroup
+				var consumerGroup configurationv1beta1.KongConsumerGroup
 				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
 					Name:      "consumer-group",
 					Namespace: ns.Name,
@@ -133,7 +133,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				return consumerGroup.Status.Conditions, nil
 			},
 			expectedProgrammedStatus: metav1.ConditionTrue,
-			expectedProgrammedReason: kongv1.ReasonProgrammed,
+			expectedProgrammedReason: configurationv1.ReasonProgrammed,
 		},
 		{
 			name: "valid KongServiceFacade with Ingress",
@@ -205,7 +205,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				return serviceFacade.Status.Conditions, nil
 			},
 			expectedProgrammedStatus: metav1.ConditionTrue,
-			expectedProgrammedReason: kongv1.ReasonProgrammed,
+			expectedProgrammedReason: configurationv1.ReasonProgrammed,
 		},
 		{
 			name: "KongServiceFacade with Ingress referring to non-existent Service",
@@ -264,7 +264,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				return serviceFacade.Status.Conditions, nil
 			},
 			expectedProgrammedStatus: metav1.ConditionFalse,
-			expectedProgrammedReason: kongv1.ReasonInvalid,
+			expectedProgrammedReason: configurationv1.ReasonInvalid,
 		},
 		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4578
 		// if there are multiple KIC instances within a cluster, they will fight over setting this condition because the
@@ -449,7 +449,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				}
 				if !conditions.Contain(
 					cs,
-					conditions.WithType(string(kongv1.ConditionProgrammed)),
+					conditions.WithType(string(configurationv1.ConditionProgrammed)),
 					conditions.WithReason(string(tc.expectedProgrammedReason)),
 					conditions.WithStatus(tc.expectedProgrammedStatus),
 				) {

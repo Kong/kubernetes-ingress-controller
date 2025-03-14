@@ -7,7 +7,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 )
@@ -18,9 +18,9 @@ import (
 
 // listManagedConsumersReferencingCredentialsSecret takes a Secret and a list of KongConsumers.
 // It returns a list of KongConsumers that reference that Secret as a credential.
-func listManagedConsumersReferencingCredentialsSecret(secret corev1.Secret, managedConsumers []*kongv1.KongConsumer) []*kongv1.KongConsumer {
+func listManagedConsumersReferencingCredentialsSecret(secret corev1.Secret, managedConsumers []*configurationv1.KongConsumer) []*configurationv1.KongConsumer {
 	// determine if this credential is being actively referenced by a consumer
-	consumersWhichReferenceSecret := make([]*kongv1.KongConsumer, 0)
+	consumersWhichReferenceSecret := make([]*configurationv1.KongConsumer, 0)
 	for _, consumer := range managedConsumers {
 		// verify that the secret is actually in the same namespace (its possible for
 		// there to be name duplication across multiple namespaces).
@@ -45,7 +45,7 @@ func listManagedConsumersReferencingCredentialsSecret(secret corev1.Secret, mana
 // if the caller is building the index to validate updates for specific secrets
 // and those secrets should be excluded from the index because they will be added
 // later, a map of the namespace and name of those secrets can be provided to exclude them.
-func globalValidationIndexForCredentials(ctx context.Context, managerClient client.Client, consumers []*kongv1.KongConsumer, ignoredSecrets map[string]map[string]struct{}) (credsvalidation.Index, error) {
+func globalValidationIndexForCredentials(ctx context.Context, managerClient client.Client, consumers []*configurationv1.KongConsumer, ignoredSecrets map[string]map[string]struct{}) (credsvalidation.Index, error) {
 	// pull the reference secrets for credentials from each consumer in the list
 	index := make(credsvalidation.Index)
 	for _, consumer := range consumers {

@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -42,7 +41,7 @@ const (
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var gw *gatewayapi.Gateway
 
@@ -141,7 +140,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestGatewayListenerConflicts(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var gw *gatewayapi.Gateway
 
@@ -333,7 +332,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 }
 
 func TestGatewayFilters(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 

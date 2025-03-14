@@ -38,7 +38,7 @@ const (
 // TestKongClientGoldenTestsOutputs ensures that the KongClient's golden tests outputs are accepted by Kong.
 func TestKongClientGoldenTestsOutputs(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// By default, run only non-EE tests.
 	goldenTestsOutputsPaths := lo.Filter(allGoldenTestsOutputsPaths(t), func(path string, _ int) bool {
@@ -97,7 +97,7 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	konnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cpID := konnect.CreateTestControlPlane(ctx, t)
 	cert, key := konnect.CreateClientCertificate(ctx, t, cpID)

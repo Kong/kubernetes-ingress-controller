@@ -28,7 +28,7 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 		tickTime = 10 * time.Millisecond
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	envcfg := Setup(t, scheme.Scheme)
@@ -78,7 +78,7 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 func TestMultiInstanceManager_Profiling(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	envcfg := Setup(t, scheme.Scheme)

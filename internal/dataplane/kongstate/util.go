@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -18,7 +18,7 @@ import (
 func getKongIngressForServices(
 	s store.Storer,
 	services []*corev1.Service,
-) (*kongv1.KongIngress, error) {
+) (*configurationv1.KongIngress, error) {
 	// loop through each service and retrieve the attached KongIngress resources.
 	// there can only be one KongIngress for a group of services: either one of
 	// them is configured with a KongIngress and this configures the Kong Service
@@ -51,7 +51,7 @@ func getKongIngressFromObjectMeta(
 	s store.Storer,
 	obj client.Object,
 ) (
-	*kongv1.KongIngress, error,
+	*configurationv1.KongIngress, error,
 ) {
 	return getKongIngressFromObjAnnotations(s, obj)
 }
@@ -60,7 +60,7 @@ func getKongIngressFromObjAnnotations(
 	s store.Storer,
 	obj client.Object,
 ) (
-	*kongv1.KongIngress, error,
+	*configurationv1.KongIngress, error,
 ) {
 	confName := annotations.ExtractConfigurationName(obj.GetAnnotations())
 	if confName != "" {

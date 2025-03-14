@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
@@ -39,7 +38,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 
 	testCases := []struct {
 		name                             string
-		kongUpstreamPolicy               kongv1beta1.KongUpstreamPolicy
+		kongUpstreamPolicy               configurationv1beta1.KongUpstreamPolicy
 		inputObjects                     []client.Object
 		objectsConfiguredInDataPlane     bool
 		expectedKongUpstreamPolicyStatus gatewayapi.PolicyStatus
@@ -47,7 +46,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 	}{
 		{
 			name: "3 services referencing the same policy, all accepted. Status update.",
-			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: configurationv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -59,7 +58,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -69,7 +68,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-2",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
 							Time: now.Add(10 * time.Second),
@@ -81,7 +80,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-3",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
 							Time: now.Add(5 * time.Second),
@@ -197,7 +196,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "2 services referencing the same policy, all accepted. No status update.",
-			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: configurationv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -255,7 +254,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -265,7 +264,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-2",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -350,7 +349,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "2 services in the same httproute rule referencing different policies, conflict",
-			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: configurationv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -362,7 +361,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -372,7 +371,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-2",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
 						},
 						CreationTimestamp: metav1.Time{
 							Time: now.Add(10 * time.Second),
@@ -438,7 +437,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "2 services referencing different policies in different http route rules, accepted",
-			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: configurationv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -450,7 +449,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -460,7 +459,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-2",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
 						},
 						CreationTimestamp: metav1.Time{
 							Time: now.Add(10 * time.Second),
@@ -530,7 +529,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "service and kong service facade referencing the same policy, accepted",
-			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: configurationv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -542,7 +541,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -552,7 +551,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-facade-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
 							Time: now.Add(10 * time.Second),
@@ -626,7 +625,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		},
 		{
 			name: "service and kong service facade not configured in data plane, programmed=false",
-			kongUpstreamPolicy: kongv1beta1.KongUpstreamPolicy{
+			kongUpstreamPolicy: configurationv1beta1.KongUpstreamPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: testNamespace,
@@ -638,7 +637,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: now,
 					},
@@ -648,7 +647,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Name:      "svc-facade-1",
 						Namespace: testNamespace,
 						Annotations: map[string]string{
-							kongv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 						},
 						CreationTimestamp: metav1.Time{
 							Time: now.Add(10 * time.Second),
@@ -742,11 +741,11 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				HTTPRouteEnabled:         true,
 			}
 
-			updated, err := reconciler.enforceKongUpstreamPolicyStatus(context.TODO(), &tc.kongUpstreamPolicy)
+			updated, err := reconciler.enforceKongUpstreamPolicyStatus(t.Context(), &tc.kongUpstreamPolicy)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.updated, updated)
-			newPolicy := &kongv1beta1.KongUpstreamPolicy{}
-			assert.NoError(t, fakeClient.Get(context.TODO(), k8stypes.NamespacedName{
+			newPolicy := &configurationv1beta1.KongUpstreamPolicy{}
+			assert.NoError(t, fakeClient.Get(t.Context(), k8stypes.NamespacedName{
 				Namespace: tc.kongUpstreamPolicy.Namespace,
 				Name:      tc.kongUpstreamPolicy.Name,
 			}, newPolicy))

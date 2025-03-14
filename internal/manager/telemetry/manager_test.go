@@ -79,9 +79,9 @@ func TestCreateManager(t *testing.T) {
 		WithRuntimeObjects(objs...).
 		Build()
 
-	k8sclient := testk8sclient.NewSimpleClientset(objs...)
+	k8sClient := testk8sclient.NewSimpleClientset(objs...)
 
-	d, ok := k8sclient.Discovery().(*fakediscovery.FakeDiscovery)
+	d, ok := k8sClient.Discovery().(*fakediscovery.FakeDiscovery)
 	require.True(t, ok)
 	d.FakedServerVersion = &version.Info{
 		Major:        "1",
@@ -105,7 +105,7 @@ func TestCreateManager(t *testing.T) {
 
 	runManagerTest(
 		t,
-		k8sclient,
+		k8sClient,
 		dyn,
 		ctrlClient,
 		mockGatewaysCounter(5),
@@ -129,6 +129,7 @@ func TestCreateManager(t *testing.T) {
 						"k8sv=v1.24.5;"+
 						"k8sv_semver=v1.24.5;"+
 						"openshift_version=4.13.0;"+
+						"k8s_ingresses_count=0;"+
 						"k8s_nodes_count=4;"+
 						"k8s_pods_count=11;"+
 						"k8s_services_count=18;"+

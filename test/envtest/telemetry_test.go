@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/version"
@@ -170,6 +171,22 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{Name: "test", Image: "test"},
+						},
+					},
+				},
+				metav1.CreateOptions{},
+			)
+			require.NoError(t, err)
+
+			_, err = cl.NetworkingV1().Ingresses(namespace).Create(
+				ctx,
+				&netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Spec: netv1.IngressSpec{
+						Rules: []netv1.IngressRule{
+							{
+								Host: fmt.Sprintf("test-%d.example.com", i),
+							},
 						},
 					},
 				},
@@ -378,6 +395,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"k8s_gateways_count=4;"+
 			"k8s_grpcroutes_count=4;"+
 			"k8s_httproutes_count=4;"+
+			"k8s_ingresses_count=4;"+
 			"k8s_nodes_count=2;"+
 			"k8s_pods_count=4;"+
 			"k8s_referencegrants_count=4;"+

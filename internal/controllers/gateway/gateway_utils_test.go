@@ -528,125 +528,121 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 }
 
 func Test_isEqualListenersStatus(t *testing.T) {
-	type args struct {
-		a []gatewayapi.ListenerStatus
-		b []gatewayapi.ListenerStatus
-	}
-
 	lastTransitionTime := metav1.Now()
 	lastTransitionTime2 := metav1.NewTime(lastTransitionTime.Add(time.Second))
 
 	tests := []struct {
-		name string
-		args args
-		want bool
+		name     string
+		a        []gatewayapi.ListenerStatus
+		b        []gatewayapi.ListenerStatus
+		expected bool
 	}{
 		{
-			name: "",
-			args: args{
-				a: []gatewayapi.ListenerStatus{
-					{
-						Name: "http",
-						SupportedKinds: []gatewayapi.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  gatewayapi.Kind("HTTPRoute"),
-							},
-						},
-					},
-					{
-						Name: "https",
-						SupportedKinds: []gatewayapi.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  gatewayapi.Kind("HTTPRoute"),
-							},
-						},
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Accepted",
-								Status:             metav1.ConditionTrue,
-								LastTransitionTime: lastTransitionTime,
-							},
+			name: "equal listeners status",
+			a: []gatewayapi.ListenerStatus{
+				{
+					Name: "http",
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
 				},
-				b: []gatewayapi.ListenerStatus{
-					{
-						Name: "https",
-						SupportedKinds: []gatewayapi.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  gatewayapi.Kind("HTTPRoute"),
-							},
-						},
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Accepted",
-								Status:             metav1.ConditionTrue,
-								LastTransitionTime: lastTransitionTime2,
-							},
+				{
+					Name: "https",
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
-					{
-						Name: "http",
-						SupportedKinds: []gatewayapi.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  gatewayapi.Kind("HTTPRoute"),
-							},
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Accepted",
+							Status:             metav1.ConditionTrue,
+							LastTransitionTime: lastTransitionTime,
 						},
 					},
 				},
 			},
-			want: true,
+			b: []gatewayapi.ListenerStatus{
+				{
+					Name: "https",
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
+						},
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Accepted",
+							Status:             metav1.ConditionTrue,
+							LastTransitionTime: lastTransitionTime2,
+						},
+					},
+				},
+				{
+					Name: "http",
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
+						},
+					},
+				},
+			},
+			expected: true,
 		},
 		{
-			name: "",
-			args: args{
-				a: []gatewayapi.ListenerStatus{
-					{
-						Name: "http",
-						SupportedKinds: []gatewayapi.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  gatewayapi.Kind("HTTPRoute"),
-							},
-						},
-						Conditions: []metav1.Condition{
-							{
-								Type:   "Programmed",
-								Status: metav1.ConditionTrue,
-							},
+			name: "not equal listeners status",
+			a: []gatewayapi.ListenerStatus{
+				{
+					Name: "http",
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
-				},
-				b: []gatewayapi.ListenerStatus{
-					{
-						Name: "http",
-						SupportedKinds: []gatewayapi.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  gatewayapi.Kind("HTTPRoute"),
-							},
-						},
-						Conditions: []metav1.Condition{
-							{
-								Type:   "Accepted",
-								Status: metav1.ConditionTrue,
-							},
+					Conditions: []metav1.Condition{
+						{
+							Type:   "Programmed",
+							Status: metav1.ConditionTrue,
 						},
 					},
 				},
 			},
-			want: false,
+			b: []gatewayapi.ListenerStatus{
+				{
+					Name: "http",
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
+						},
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   "Accepted",
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name:     "no listeners",
+			a:        []gatewayapi.ListenerStatus{},
+			b:        []gatewayapi.ListenerStatus{},
+			expected: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isEqualListenersStatus(tt.args.a, tt.args.b); got != tt.want {
-				t.Errorf("isEqualListenersStatus() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.expected, isEqualListenersStatus(tt.a, tt.b))
 		})
 	}
 }

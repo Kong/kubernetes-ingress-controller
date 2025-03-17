@@ -751,6 +751,9 @@ func isEqualListenersStatus(a, b []gatewayapi.ListenerStatus) bool {
 	if len(a) != len(b) {
 		return false
 	}
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
 
 	t := metav1.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	ax := prepareListenersStatusForDeepEqual(a, t)

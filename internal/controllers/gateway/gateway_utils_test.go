@@ -541,7 +541,6 @@ func Test_isEqualListenersStatus(t *testing.T) {
 		args args
 		want bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "",
 			args: args{

@@ -112,6 +112,8 @@ Adding a new version? You'll need three changes:
   supported credential types like `konnect`. This prevents `Secret`s used for
   credentials in other places to be rejected.
   [#7226](https://github.com/Kong/kubernetes-ingress-controller/pull/7226)
+- GatewayReconciler falls into a loop and cannot converge to a stable state.
+  [#7237](https://github.com/Kong/kubernetes-ingress-controller/pull/7237)
 
 ## [3.4.3]
 
@@ -143,8 +145,6 @@ Adding a new version? You'll need three changes:
   [#6881](https://github.com/Kong/kubernetes-ingress-controller/pull/6881)
 - Fix mapping `KongConsumer` to respective `KongConsumerGroup` in Konnect.
   [#7144](https://github.com/Kong/kubernetes-ingress-controller/pull/7144)
-- GatewayReconciler will fall into a loop and cannot converge to stable state.
-  [#7111](https://github.com/Kong/kubernetes-ingress-controller/pull/7111)
 
 ## [3.4.2]
 

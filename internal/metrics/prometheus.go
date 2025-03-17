@@ -146,7 +146,7 @@ var (
 			Help: fmt.Sprintf(
 				"Count of translations from Kubernetes state to Kong state. "+
 					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
-					"Unrecoveirable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model."+
+					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model."+
 					"`%s` describes the instance of the controller that pushed the configuration.",
 				SuccessKey, SuccessFalse, SuccessTrue,
 				InstanceIDKey,

@@ -202,7 +202,6 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 					current.cert.ID = cw.cert.ID
 					current.CreationTimestamp = cw.CreationTimestamp
 				}
-				current.snis = append(current.snis, cw.snis...)
 			}
 
 			// although we use current in the end, we only warn/exclude on new ones here. SNIs already in the slice
@@ -212,7 +211,7 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 				if seen, ok := snisSeen[sni]; !ok {
 					snisSeen[sni] = *current.cert.ID
 					current.cert.SNIs = append(current.cert.SNIs, kong.String(sni))
-				} else {
+				} else if seen != *current.cert.ID {
 					// TODO this should really log information about the requesting Listener or Ingress-like, which is
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
 					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info

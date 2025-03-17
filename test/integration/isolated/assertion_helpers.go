@@ -3,7 +3,6 @@ package isolated
 import (
 	"errors"
 	"io"
-	"os"
 	"syscall"
 	"testing"
 
@@ -17,8 +16,14 @@ func assertEventuallyNoResponseUDP(t *testing.T, udpGatewayURL string) {
 	t.Helper()
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		// For UDP lack of response (a timeout) means that we can't reach a service.
+		type timeout interface {
+			Timeout() bool
+		}
 		err := test.EchoResponds(test.ProtocolUDP, udpGatewayURL, "irrelevant")
-		assert.True(c, os.IsTimeout(err), "unexpected error: %v", err)
+		var timeoutErr timeout
+		if assert.ErrorAs(c, err, &timeoutErr, "unexpected error: %v", err) {
+			assert.True(c, timeoutErr.Timeout(), `returned syscall error should be "i/o timeout", but it's: %v`, err)
+		}
 	}, consts.IngressWait, consts.WaitTick)
 }
 

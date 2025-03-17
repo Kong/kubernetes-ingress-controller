@@ -277,10 +277,13 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "credential-0",
 					Labels: map[string]string{
-						"konghq.com/credential": "true",
+						"konghq.com/credential": "basic-auth",
 					},
 				},
-				Data: map[string][]byte{},
+				Data: map[string][]byte{
+					"username": []byte("user"),
+					"password": []byte("password"),
+				},
 			},
 			validatorOK:   true,
 			expectAllowed: true,
@@ -293,16 +296,38 @@ func TestHandleSecret(t *testing.T) {
 					Namespace: "default",
 					Name:      "credential-1",
 					Labels: map[string]string{
-						"konghq.com/credential": "true",
+						"konghq.com/credential": "basic-auth",
 					},
 				},
-				Data: map[string][]byte{},
+				Data: map[string][]byte{
+					"username": []byte("user"),
+					"password": []byte("password"),
+				},
 			},
 			validatorOK:      false,
 			validatorMessage: "invalid credential",
 			expectAllowed:    false,
 			expectStatusCode: http.StatusBadRequest,
 			expectMessage:    "invalid credential",
+		},
+		{
+			name: "secret with not supported type of credential is ignored",
+			secret: &corev1.Secret{
+				TypeMeta: secretTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "credential-0",
+					Labels: map[string]string{
+						"konghq.com/credential": "whatever-credential",
+					},
+				},
+				Data: map[string][]byte{
+					"username": []byte("user"),
+					"password": []byte("password"),
+				},
+			},
+			validatorOK:   true,
+			expectAllowed: true,
 		},
 		{
 			name: "secret used as KongPlugin config and KongClusterPlugin and passes validation of both CRDs",

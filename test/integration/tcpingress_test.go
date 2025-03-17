@@ -317,8 +317,9 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	cleaner.Add(tcp)
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
+	tlsOpt := test.WithTLSOption(tlsRouteHostname, certPool, true)
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
+		err := test.EchoResponds(test.ProtocolTLS, proxyTLSURL, testUUID, tlsOpt)
 		assert.NoError(c, err)
 	}, ingressWait, waitTick)
 }

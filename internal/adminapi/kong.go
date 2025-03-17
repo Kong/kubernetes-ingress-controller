@@ -69,12 +69,15 @@ func NewKongClientForWorkspace(
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
-	// Ensure that the client is ready to be used by performing a status check.
-	if _, err := client.Status(ctx); err != nil {
-		return nil, KongClientNotReadyError{Err: err}
-	}
 
-	if wsName != "" {
+	// Ensure that the client is ready to be used by performing a status check.
+	// Only run the check when workspace is not given,
+	// because the client may not be granted to call /status and only allowed to access the given workspace.
+	if wsName == "" {
+		if _, err := client.Status(ctx); err != nil {
+			return nil, KongClientNotReadyError{Err: err}
+		}
+	} else {
 		// If a workspace was provided, verify whether or not it exists.
 		exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 		if err != nil {

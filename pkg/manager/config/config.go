@@ -114,11 +114,13 @@ type Config struct {
 	AdmissionServer AdmissionServerConfig
 
 	// Diagnostics and performance
-	EnableProfiling                 bool
-	EnableConfigDumps               bool
-	DumpSensitiveConfig             bool
-	DiagnosticServerPort            int
-	DisableRunningDiagnosticsServer bool // TODO(czeslavo): instead of this toggle, move the server out of the internal.Manager
+	EnableProfiling      bool
+	EnableConfigDumps    bool
+	DumpSensitiveConfig  bool
+	DiagnosticServerPort int
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/7285
+	// instead of this toggle, move the server out of the internal.Manager
+	DisableRunningDiagnosticsServer bool
 
 	// Feature Gates
 	FeatureGates FeatureGates

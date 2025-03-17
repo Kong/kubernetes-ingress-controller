@@ -5,7 +5,7 @@ controller-tools: "0.17.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.6.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "1.64.6"
+golangci-lint: "1.64.8"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.14.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
@@ -17,11 +17,11 @@ yq: "4.45.1"
 # renovate: datasource=github-releases depName=jstemmer/go-junit-report
 gojunit-report: "2.1.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
-gotestsum: "1.12.0"
+gotestsum: "1.12.1"
 # renovate: datasource=github-releases depName=dominikh/go-tools
 staticcheck: "2025.1.1"
 # renovate: datasource=github-releases depName=go-delve/delve
-delve: "1.24.0"
+delve: "1.24.1"
 # renovate: datasource=github-releases depName=rhysd/actionlint
 actionlint: "1.7.7"
 # renovate: datasource=github-releases depName=koalaman/shellcheck

@@ -27,8 +27,13 @@ func ValidateCredentials(secret *corev1.Secret) error {
 	}
 
 	// verify that the credential type provided is valid
-	if !SupportedTypes.Has(credentialType) {
+	if !ValidTypes.Has(credentialType) {
 		return fmt.Errorf("invalid credential type %s", credentialType)
+	}
+
+	// skip further validation if the credential type is not supported.
+	if !SupportedTypes.Has(credentialType) {
+		return nil
 	}
 
 	// Check if we're dealing with a JWT credential with an HMAC algorithm.

@@ -1,7 +1,7 @@
 e2e:
   kind:
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.32.2'
+    - 'v1.32.3'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.31.6'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
@@ -16,9 +16,9 @@ e2e:
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.32.2'
+      kind: 'v1.32.3'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.24.3'
+      istio: '1.25.0'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
       kind: 'v1.30.8'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
@@ -40,7 +40,7 @@ integration:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
     kong: '2.47.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.32.2'
+  kind: 'v1.32.3'
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker

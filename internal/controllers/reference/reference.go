@@ -134,7 +134,7 @@ func removeOutdatedReferencesToSecretOrConfigMap(
 			// if the secret or configmap does not exist in k8s, we ignore the error and continue the check and delete operation.
 			// for other errors, we return the error and stop the operation.
 			if !apierrors.IsNotFound(getErr) {
-				return err
+				return getErr
 			}
 		}
 

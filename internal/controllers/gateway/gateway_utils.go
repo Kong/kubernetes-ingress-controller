@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
@@ -737,4 +738,47 @@ func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gatew
 		}
 	}
 	return attachedRoutes, nil
+}
+
+// GatewayReconciler will determine the change of ListenerStatus to decide whether to update Gateway.status.
+// When Gateway.spec.listeners has many entries (greater than 10 and has a certain relationship with the number of HTTPRoutes),
+// GatewayReconciler will fall into a loop and cannot converge to a stable state (updating status
+// will trigger a new gateway reconciler event, and the new round of reconcile will always find differences).
+// The reason here is that when using reflect.DeepEqual to compare two slice structs,
+// the order of elements will affect the result, and Gateway.status.listeners[].conditions[].lastTransitionTime
+// will always be assigned the current time in each round of reconcile, which should be excluded.
+func isEqualListenersStatus(a, b []gatewayapi.ListenerStatus) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+
+	t := metav1.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	ax := prepareListenersStatusForDeepEqual(a, t)
+	bx := prepareListenersStatusForDeepEqual(b, t)
+
+	return reflect.DeepEqual(ax, bx)
+}
+
+func prepareListenersStatusForDeepEqual(ls []gatewayapi.ListenerStatus, t metav1.Time) []gatewayapi.ListenerStatus {
+	ret := make([]gatewayapi.ListenerStatus, len(ls))
+
+	for k, v := range ls {
+		co := v.DeepCopy()
+
+		sort.Slice(co.Conditions, func(i, j int) bool {
+			return co.Conditions[i].Type < co.Conditions[j].Type
+		})
+		for kc := range co.Conditions {
+			co.Conditions[kc].LastTransitionTime = t
+		}
+		ret[k] = *co
+	}
+
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Name < ret[j].Name
+	})
+	return ret
 }

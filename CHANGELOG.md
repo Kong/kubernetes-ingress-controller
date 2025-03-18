@@ -105,6 +105,16 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+
+### Fixed
+
+- Ignore `Secret`s with value of `konghq.com/credential` label not included in the
+  supported credential types like `konnect`. This prevents `Secret`s used for
+  credentials in other places to be rejected.
+  [#7226](https://github.com/Kong/kubernetes-ingress-controller/pull/7226)
+- GatewayReconciler falls into a loop and cannot converge to a stable state.
+  [#7237](https://github.com/Kong/kubernetes-ingress-controller/pull/7237)
+
 ## [3.4.3]
 
 > Release date: 2025-02-27

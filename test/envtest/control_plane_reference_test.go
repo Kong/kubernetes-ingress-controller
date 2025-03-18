@@ -3,7 +3,6 @@
 package envtest
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/zapr"
@@ -30,8 +29,7 @@ import (
 func TestControlPlaneReferenceHandling(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	ctx := t.Context()
 
 	const ingressClassName = "kongenvtest"
 	scheme := Scheme(t, WithKong)
@@ -109,59 +107,53 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			GetConditions() []metav1.Condition
 			SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
 		}
-		controlPlaneRef      *commonv1alpha1.ControlPlaneRef
-		expectToBeProgrammed bool
+		controlPlaneRef                 *commonv1alpha1.ControlPlaneRef
+		expectedErrorOnCreationContains string
 	}{
 		{
-			name:                 "KongConsumer - without ControlPlaneRef",
-			object:               validConsumer(),
-			expectToBeProgrammed: true,
+			name:   "KongConsumer - without ControlPlaneRef",
+			object: validConsumer(),
 		},
 		{
-			name:                 "KongConsumer - with ControlPlaneRef == kic",
-			object:               validConsumer(),
-			controlPlaneRef:      kicCPRef,
-			expectToBeProgrammed: true,
+			name:            "KongConsumer - with ControlPlaneRef == kic",
+			object:          validConsumer(),
+			controlPlaneRef: kicCPRef,
 		},
 		{
-			name:                 "KongConsumer - with ControlPlaneRef != kic",
-			object:               validConsumer(),
-			controlPlaneRef:      konnectCPRef,
-			expectToBeProgrammed: false,
+			name:                            "KongConsumer - with ControlPlaneRef != kic",
+			object:                          validConsumer(),
+			controlPlaneRef:                 konnectCPRef,
+			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
 		},
 		{
-			name:                 "KongConsumerGroup - without ControlPlaneRef",
-			object:               validConsumerGroup(),
-			expectToBeProgrammed: true,
+			name:   "KongConsumerGroup - without ControlPlaneRef",
+			object: validConsumerGroup(),
 		},
 		{
-			name:                 "KongConsumerGroup - with ControlPlaneRef == kic",
-			object:               validConsumerGroup(),
-			controlPlaneRef:      kicCPRef,
-			expectToBeProgrammed: true,
+			name:            "KongConsumerGroup - with ControlPlaneRef == kic",
+			object:          validConsumerGroup(),
+			controlPlaneRef: kicCPRef,
 		},
 		{
-			name:                 "KongConsumerGroup - with ControlPlaneRef != kic",
-			object:               validConsumerGroup(),
-			controlPlaneRef:      konnectCPRef,
-			expectToBeProgrammed: false,
+			name:                            "KongConsumerGroup - with ControlPlaneRef != kic",
+			object:                          validConsumerGroup(),
+			controlPlaneRef:                 konnectCPRef,
+			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
 		},
 		{
-			name:                 "KongVault - without ControlPlaneRef",
-			object:               validVault(),
-			expectToBeProgrammed: true,
+			name:   "KongVault - without ControlPlaneRef",
+			object: validVault(),
 		},
 		{
-			name:                 "KongVault - with ControlPlaneRef == kic",
-			object:               validVault(),
-			controlPlaneRef:      kicCPRef,
-			expectToBeProgrammed: true,
+			name:            "KongVault - with ControlPlaneRef == kic",
+			object:          validVault(),
+			controlPlaneRef: kicCPRef,
 		},
 		{
-			name:                 "KongVault - with ControlPlaneRef != kic",
-			object:               validVault(),
-			controlPlaneRef:      konnectCPRef,
-			expectToBeProgrammed: false,
+			name:                            "KongVault - with ControlPlaneRef != kic",
+			object:                          validVault(),
+			controlPlaneRef:                 konnectCPRef,
+			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
 		},
 	}
 
@@ -170,38 +162,27 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			if tc.controlPlaneRef != nil {
 				tc.object.SetControlPlaneRef(tc.controlPlaneRef)
 			}
-			require.NoError(t, ctrlClient.Create(ctx, tc.object))
-
-			if tc.expectToBeProgrammed {
-				require.EventuallyWithT(t, func(t *assert.CollectT) {
-					if !assert.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)) {
-						return
-					}
-					assert.True(t, conditions.Contain(
-						tc.object.GetConditions(),
-						conditions.WithType(string(configurationv1.ConditionProgrammed)),
-						conditions.WithStatus(metav1.ConditionTrue),
-					))
-				}, waitTime, tickDuration, "expected object to be programmed")
-			} else {
-				// We'll wait for `waitTime` to ensure the object does not get programmed. We need a following boolean
-				// to make sure the object was fetched successfully at least once.
-				var wasObjectSuccessfullyFetched bool
-				require.Never(t, func() bool {
-					err := ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)
-					if err != nil {
-						t.Logf("Error fetching object: %v", err)
-						return false // Most likely that would is NotFound error. We want to keep waiting in any case.
-					}
-					wasObjectSuccessfullyFetched = true
-					return conditions.Contain(
-						tc.object.GetConditions(),
-						conditions.WithType(string(configurationv1.ConditionProgrammed)),
-						conditions.WithStatus(metav1.ConditionTrue),
-					)
-				}, waitTime, tickDuration, "expected object not to be programmed")
-				assert.True(t, wasObjectSuccessfullyFetched, "expected object to be fetched at least once")
+			err := ctrlClient.Create(ctx, tc.object)
+			if tc.expectedErrorOnCreationContains != "" {
+				require.ErrorContains(
+					t,
+					err,
+					tc.expectedErrorOnCreationContains,
+				)
+				return
 			}
+			require.NoError(t, err)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				if !assert.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)) {
+					return
+				}
+				assert.True(t, conditions.Contain(
+					tc.object.GetConditions(),
+					conditions.WithType(string(configurationv1.ConditionProgrammed)),
+					conditions.WithStatus(metav1.ConditionTrue),
+				))
+			}, waitTime, tickDuration, "expected object to be programmed")
 		})
 	}
 }

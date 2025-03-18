@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
@@ -20,13 +20,13 @@ func TestGetKongIngressForServices(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		services            []*corev1.Service
-		kongIngresses       []*kongv1.KongIngress
-		expectedKongIngress *kongv1.KongIngress
+		kongIngresses       []*configurationv1.KongIngress
+		expectedKongIngress *configurationv1.KongIngress
 		expectedError       error
 	}{
 		{
 			name: "when no services are provided, no KongIngress will be provided",
-			kongIngresses: []*kongv1.KongIngress{{
+			kongIngresses: []*configurationv1.KongIngress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress1",
 					Namespace: corev1.NamespaceDefault,
@@ -49,7 +49,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{{
+			kongIngresses: []*configurationv1.KongIngress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress1",
 					Namespace: corev1.NamespaceDefault,
@@ -75,7 +75,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -89,7 +89,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			expectedKongIngress: &kongv1.KongIngress{
+			expectedKongIngress: &configurationv1.KongIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
@@ -127,7 +127,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -147,7 +147,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			expectedKongIngress: &kongv1.KongIngress{
+			expectedKongIngress: &configurationv1.KongIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
@@ -176,8 +176,8 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		route               client.Object
-		kongIngresses       []*kongv1.KongIngress
-		expectedKongIngress *kongv1.KongIngress
+		kongIngresses       []*configurationv1.KongIngress
+		expectedKongIngress *configurationv1.KongIngress
 		expectedError       error
 	}{
 		{
@@ -192,7 +192,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -214,7 +214,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -239,7 +239,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -264,7 +264,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*kongv1.KongIngress{
+			kongIngresses: []*configurationv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",

@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
@@ -121,7 +121,7 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			)
 	}
 
-	return blder.For(&kongv1beta1.KongUpstreamPolicy{}).
+	return blder.For(&configurationv1beta1.KongUpstreamPolicy{}).
 		Complete(r)
 }
 
@@ -132,7 +132,7 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		upstreamPolicyIndexKey,
 		indexServicesOnUpstreamPolicyAnnotation,
 	); err != nil {
-		return fmt.Errorf("failed to index services on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
+		return fmt.Errorf("failed to index services on annotation %s: %w", configurationv1beta1.KongUpstreamPolicyAnnotationKey, err)
 	}
 
 	if err := mgr.GetCache().IndexField(
@@ -162,7 +162,7 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 			upstreamPolicyIndexKey,
 			indexServiceFacadesOnUpstreamPolicyAnnotation,
 		); err != nil {
-			return fmt.Errorf("failed to index KongServiceFacades on annotation %s: %w", kongv1beta1.KongUpstreamPolicyAnnotationKey, err)
+			return fmt.Errorf("failed to index KongServiceFacades on annotation %s: %w", configurationv1beta1.KongUpstreamPolicyAnnotationKey, err)
 		}
 
 		if r.HTTPRouteEnabled {
@@ -197,7 +197,7 @@ func indexServicesOnUpstreamPolicyAnnotation(o client.Object) []string {
 		return []string{}
 	}
 	if service.Annotations != nil {
-		if policy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]; ok {
+		if policy, ok := service.Annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey]; ok {
 			return []string{policy}
 		}
 	}
@@ -271,7 +271,7 @@ func indexServiceFacadesOnUpstreamPolicyAnnotation(o client.Object) []string {
 		return []string{}
 	}
 	if service.Annotations != nil {
-		if policy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]; ok {
+		if policy, ok := service.Annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey]; ok {
 			return []string{policy}
 		}
 	}
@@ -288,12 +288,12 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPolicyForObject(ctx context.Co
 	if annotations == nil {
 		return nil
 	}
-	policyName, ok := annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+	policyName, ok := annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey]
 	if !ok {
 		return nil
 	}
 
-	kongUpstreamPolicy := &kongv1beta1.KongUpstreamPolicy{}
+	kongUpstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{}
 	if err := r.Get(ctx, k8stypes.NamespacedName{
 		Namespace: obj.GetNamespace(),
 		Name:      policyName,
@@ -352,7 +352,7 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx
 			if service.Annotations == nil {
 				continue
 			}
-			upstreamPolicy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+			upstreamPolicy, ok := service.Annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey]
 			if !ok {
 				continue
 			}
@@ -401,7 +401,7 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(c
 			if service.Annotations == nil {
 				continue
 			}
-			upstreamPolicy, ok := service.Annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+			upstreamPolicy, ok := service.Annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey]
 			if !ok {
 				continue
 			}
@@ -422,7 +422,7 @@ func doesObjectReferUpstreamPolicy(obj client.Object) bool {
 	if annotations == nil {
 		return false
 	}
-	_, ok := annotations[kongv1beta1.KongUpstreamPolicyAnnotationKey]
+	_, ok := annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey]
 	return ok
 }
 
@@ -463,7 +463,7 @@ func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	log := r.Log.WithValues("KongV1beta1KongUpstreamPolicy", req.NamespacedName)
 
 	// get the relevant object
-	kongUpstreamPolicy := new(kongv1beta1.KongUpstreamPolicy)
+	kongUpstreamPolicy := new(configurationv1beta1.KongUpstreamPolicy)
 
 	if err := r.Get(ctx, req.NamespacedName, kongUpstreamPolicy); err != nil {
 		if apierrors.IsNotFound(err) {

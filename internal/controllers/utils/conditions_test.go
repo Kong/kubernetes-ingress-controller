@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
@@ -18,24 +18,24 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 	const testObjectGeneration = 2
 	var (
 		expectedProgrammedConditionTrue = metav1.Condition{
-			Type:               string(kongv1.ConditionProgrammed),
+			Type:               string(configurationv1.ConditionProgrammed),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: testObjectGeneration,
-			Reason:             string(kongv1.ReasonProgrammed),
+			Reason:             string(configurationv1.ReasonProgrammed),
 			Message:            utils.ProgrammedConditionTrueMessage,
 		}
 		expectedProgrammedConditionFalse = metav1.Condition{
-			Type:               string(kongv1.ConditionProgrammed),
+			Type:               string(configurationv1.ConditionProgrammed),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: testObjectGeneration,
-			Reason:             string(kongv1.ReasonInvalid),
+			Reason:             string(configurationv1.ReasonInvalid),
 			Message:            utils.ProgrammedConditionFalseInvalidMessage,
 		}
 		expectedProgrammedConditionUnknown = metav1.Condition{
-			Type:               string(kongv1.ConditionProgrammed),
+			Type:               string(configurationv1.ConditionProgrammed),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: testObjectGeneration,
-			Reason:             string(kongv1.ReasonPending),
+			Reason:             string(configurationv1.ReasonPending),
 			Message:            utils.ProgrammedConditionFalsePendingMessage,
 		}
 	)

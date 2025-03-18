@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )
@@ -35,7 +35,7 @@ func MatchesIngressClass(obj client.Object, controllerIngressClass string, isDef
 		}
 	}
 	// For KongCustomEntities, we check whether the `spec.ControllerName` matches.
-	if customEntity, isKongCustomEntity := obj.(*kongv1alpha1.KongCustomEntity); isKongCustomEntity {
+	if customEntity, isKongCustomEntity := obj.(*configurationv1alpha1.KongCustomEntity); isKongCustomEntity {
 		if customEntity.Spec.ControllerName == controllerIngressClass {
 			return true
 		}

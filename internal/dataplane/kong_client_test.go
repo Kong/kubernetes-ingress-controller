@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -1689,8 +1689,8 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 	}
 }
 
-func someConsumer(t *testing.T, name string) *kongv1.KongConsumer {
-	return helpers.WithTypeMeta(t, &kongv1.KongConsumer{
+func someConsumer(t *testing.T, name string) *configurationv1.KongConsumer {
+	return helpers.WithTypeMeta(t, &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "name",
 			Namespace: "namespace",

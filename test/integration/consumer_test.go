@@ -18,7 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -73,7 +73,7 @@ func TestConsumerCredential(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	kongplugin := &kongv1.KongPlugin{
+	kongplugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "basicbasic",
@@ -127,7 +127,7 @@ func TestConsumerCredential(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(credential)
 
-	consumer := &kongv1.KongConsumer{
+	consumer := &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{

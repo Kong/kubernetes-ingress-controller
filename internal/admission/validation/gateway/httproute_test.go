@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
@@ -203,21 +203,21 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 					},
 				},
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "plugin1",
 						Namespace: "default",
 					},
 					PluginName: "foo",
 				},
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "plugin2",
 						Namespace: "default",
 					},
 					PluginName: "bar",
 				},
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "plugin3",
 						Namespace: "default",
@@ -267,14 +267,14 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 					},
 				},
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "plugin1",
 						Namespace: "default",
 					},
 					PluginName: "foo",
 				},
-				&kongv1.KongPlugin{
+				&configurationv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "plugin2",
 						Namespace: "default",

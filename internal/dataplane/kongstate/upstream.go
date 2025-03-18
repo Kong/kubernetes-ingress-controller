@@ -5,8 +5,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )
@@ -41,7 +41,7 @@ func (u *Upstream) overrideByAnnotation(anns map[string]string) {
 
 // overrideByKongIngress modifies the Kong upstream based on KongIngresses
 // associated with the Kubernetes service.
-func (u *Upstream) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
+func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngress) {
 	if u == nil {
 		return
 	}
@@ -94,7 +94,7 @@ func (u *Upstream) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
 	}
 }
 
-func (u *Upstream) overrideByKongUpstreamPolicy(policy *kongv1beta1.KongUpstreamPolicy) {
+func (u *Upstream) overrideByKongUpstreamPolicy(policy *configurationv1beta1.KongUpstreamPolicy) {
 	if u == nil {
 		return
 	}
@@ -143,7 +143,7 @@ func (u *Upstream) overrideByKongUpstreamPolicy(policy *kongv1beta1.KongUpstream
 
 // override sets Upstream fields by KongIngress first, then by k8s Service's annotations.
 func (u *Upstream) override(
-	kongIngress *kongv1.KongIngress,
+	kongIngress *configurationv1.KongIngress,
 	svc *corev1.Service,
 ) {
 	if u == nil {

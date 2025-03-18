@@ -24,7 +24,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -266,7 +266,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Logf("deploying a kong rate-limiter plugin for the %s deployment", deployment.Name)
 	kongc, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	rateLimiterPlugin := &kongv1.KongPlugin{
+	rateLimiterPlugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rate-limit",
 			Namespace: namespace.Name,

@@ -10,7 +10,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestUpdateLoadBalancerIngress(t *testing.T) {
@@ -45,8 +45,8 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 					},
 				},
 			},
-			&kongv1beta1.TCPIngress{
-				Status: kongv1beta1.TCPIngressStatus{
+			&configurationv1beta1.TCPIngress{
+				Status: configurationv1beta1.TCPIngressStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{
 							{
@@ -57,8 +57,8 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 					},
 				},
 			},
-			&kongv1beta1.UDPIngress{
-				Status: kongv1beta1.UDPIngressStatus{
+			&configurationv1beta1.UDPIngress{
+				Status: configurationv1beta1.UDPIngressStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{
 							{

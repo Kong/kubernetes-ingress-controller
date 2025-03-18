@@ -18,8 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
@@ -308,7 +308,7 @@ func (ks *KongState) FillUpstreamOverrides(
 // It returns true when v1 has higher priority then v2, by the following order:
 // - The one created earlier (earlier `creationTimestamp`) takes precedence.
 // - If the creationTimestamp equals, the one with smaller lexical order (`<` for strings) takes precedence.
-func compareKongVault(v1, v2 *kongv1alpha1.KongVault) bool {
+func compareKongVault(v1, v2 *configurationv1alpha1.KongVault) bool {
 	if v1.CreationTimestamp.Before(&v2.CreationTimestamp) {
 		return true
 	}
@@ -326,7 +326,7 @@ func (ks *KongState) FillVaults(
 ) {
 	// List all vaults and reject the KongVaults with duplicate prefix to prevent invalid Kong configuration generated.
 	allKongVaults := s.ListKongVaults()
-	prefixToKongVault := map[string]*kongv1alpha1.KongVault{}
+	prefixToKongVault := map[string]*configurationv1alpha1.KongVault{}
 	for _, vault := range allKongVaults {
 		prefix := vault.Spec.Prefix
 		existingVault, ok := prefixToKongVault[prefix]
@@ -710,9 +710,9 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 			logger.Error(nil, fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
 				"from %s will take precedence",
 				annotations.AnnotationPrefix+annotations.ConfigurationKey,
-				kongv1beta1.KongUpstreamPolicyAnnotationKey,
-				kongv1beta1.KongUpstreamPolicyAnnotationKey,
-				kongv1beta1.KongUpstreamPolicyAnnotationKey),
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey,
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey,
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey),
 				"namespace", svc.Namespace, "name", svc.Name,
 			)
 		}
@@ -722,7 +722,7 @@ func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.
 			logger.Error(nil, fmt.Sprintf(
 				"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
 				annotations.AnnotationPrefix+annotations.ConfigurationKey,
-				kongv1beta1.KongUpstreamPolicyAnnotationKey),
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey),
 				"namespace", svc.Namespace, "name", svc.Name,
 			)
 		}

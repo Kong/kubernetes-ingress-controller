@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -1582,7 +1582,7 @@ func TestTranslateIngress(t *testing.T) {
 			}))
 			translatedServices := TranslateIngresses(
 				tt.ingresses,
-				kongv1alpha1.IngressClassParametersSpec{},
+				configurationv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					ExpressionRoutes:  false,
 					KongServiceFacade: true,
@@ -1689,7 +1689,7 @@ func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {
 			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
 			result := TranslateIngresses(
 				[]*netv1.Ingress{tc.ingress},
-				kongv1alpha1.IngressClassParametersSpec{},
+				configurationv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					KongServiceFacade: tc.serviceFacadeFeatureOn,
 				},

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestQueue(t *testing.T) {
@@ -32,13 +32,13 @@ func TestQueue(t *testing.T) {
 			Name:      "ingress-test-1",
 		},
 	}
-	tcp := &kongv1beta1.TCPIngress{
+	tcp := &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: corev1.NamespaceDefault,
 			Name:      "tcpingress-test-1",
 		},
 	}
-	udp := &kongv1beta1.UDPIngress{
+	udp := &configurationv1beta1.UDPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: corev1.NamespaceDefault,
 			Name:      "udpingress-test-1",

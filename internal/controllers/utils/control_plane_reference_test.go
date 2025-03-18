@@ -8,17 +8,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 )
 
 type objectWithCPRefType struct {
 	client.Object
-	cpRef *kongv1alpha1.ControlPlaneRef
+	cpRef *commonv1alpha1.ControlPlaneRef
 }
 
-func (o *objectWithCPRefType) GetControlPlaneRef() *kongv1alpha1.ControlPlaneRef {
+func (o *objectWithCPRefType) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return o.cpRef
 }
 
@@ -38,8 +38,8 @@ func TestGenerateCPReferenceMatchesPredicate(t *testing.T) {
 		{
 			name: "control plane reference is set to kic",
 			obj: objectWithCPRefType{
-				cpRef: &kongv1alpha1.ControlPlaneRef{
-					Type: kongv1alpha1.ControlPlaneRefKIC,
+				cpRef: &commonv1alpha1.ControlPlaneRef{
+					Type: commonv1alpha1.ControlPlaneRefKIC,
 				},
 			},
 			expected: true,
@@ -47,8 +47,8 @@ func TestGenerateCPReferenceMatchesPredicate(t *testing.T) {
 		{
 			name: "control plane reference is set to konnect",
 			obj: objectWithCPRefType{
-				cpRef: &kongv1alpha1.ControlPlaneRef{
-					Type:      kongv1alpha1.ControlPlaneRefKonnectID,
+				cpRef: &commonv1alpha1.ControlPlaneRef{
+					Type:      commonv1alpha1.ControlPlaneRefKonnectID,
 					KonnectID: lo.ToPtr("konnect-id"),
 				},
 			},
@@ -57,9 +57,9 @@ func TestGenerateCPReferenceMatchesPredicate(t *testing.T) {
 		{
 			name: "control plane reference is set to konnect namespaced reference",
 			obj: objectWithCPRefType{
-				cpRef: &kongv1alpha1.ControlPlaneRef{
-					Type: kongv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &kongv1alpha1.KonnectNamespacedRef{
+				cpRef: &commonv1alpha1.ControlPlaneRef{
+					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 						Name: "konnect-name",
 					},
 				},

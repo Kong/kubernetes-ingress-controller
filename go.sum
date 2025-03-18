@@ -227,8 +227,6 @@ github.com/kong/go-database-reconciler v1.20.3 h1:ZdLXz+pa3tKptCZJydZJBvPgTxQ9kJ
 github.com/kong/go-database-reconciler v1.20.3/go.mod h1:crxjFGiSSKWtP1AqFZz/IEnlxTX/hFkcBdMdwQbEpmk=
 github.com/kong/go-kong v0.63.0 h1:8ECLgkgDqON61qCMq/M0gTwZKYxg55Oy692dRDOOBiU=
 github.com/kong/go-kong v0.63.0/go.mod h1:ma9GWnhkxtrXZlLFfED955HjVzmUojYEHet3lm+PDik=
-github.com/kong/kubernetes-configuration v1.2.0-rc.1 h1:npv4JO9pNY85xVSEjeBTZa17Gn7SVFQznMBomUce+JA=
-github.com/kong/kubernetes-configuration v1.2.0-rc.1/go.mod h1:ktUCDIijOS9qfjTLfGXMEJmQPQrqCU/0so88d3/Dj5Q=
 github.com/kong/kubernetes-configuration v1.2.0 h1:5yQl+OH2mwxtTF0pjg54JYiCDA+YzxGpVIiycR7358I=
 github.com/kong/kubernetes-configuration v1.2.0/go.mod h1:6u7VSbzqgiqFVMldmI3X1IouCxO9RJeTuWSjRW1d9nU=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=

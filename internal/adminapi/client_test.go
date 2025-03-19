@@ -3,6 +3,7 @@ package adminapi_test
 import (
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
-	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", adminapi.ClientOpts{}, "")
+	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", adminapi.ClientOpts{}, "", uint(5), time.Second)
 
 	adminAPIHandler := mocks.NewAdminAPIHandler(t)
 	adminAPIServer := httptest.NewServer(adminAPIHandler)

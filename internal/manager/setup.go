@@ -342,12 +342,23 @@ func (c *Config) adminAPIClients(
 	addresses := c.KongAdminURLs
 	clients := make([]*adminapi.Client, 0, len(addresses))
 	for _, address := range addresses {
-		cl, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
+		// REVIEW: create clients concurrently here?
+		err := retry.Do(
+			func() error {
+				cl, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
+				if err != nil {
+					return err
+				}
+				clients = append(clients, cl)
+				return nil
+			},
+			// REVIEW: reuse the `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` here or add new flags?
+			retry.Attempts(c.KongAdminInitializationRetries),
+			retry.Delay(c.KongAdminInitializationRetryDelay),
+		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create admin API client to %s: %w", address, err)
 		}
-
-		clients = append(clients, cl)
 	}
 
 	return clients, nil
@@ -423,6 +434,7 @@ func AdminAPIClientFromServiceDiscovery(
 
 	clients := make([]*adminapi.Client, 0, len(adminAPIs))
 	for _, adminAPI := range adminAPIs {
+		// REVIEW: Should we create clients concurrently here?
 		cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
 		if err != nil {
 			return nil, err

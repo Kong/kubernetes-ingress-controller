@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -206,18 +208,26 @@ func (c *Client) PodReference() (k8stypes.NamespacedName, bool) {
 }
 
 type ClientFactory struct {
-	logger     logr.Logger
-	workspace  string
-	opts       ClientOpts
-	adminToken string
+	logger        logr.Logger
+	workspace     string
+	opts          ClientOpts
+	adminToken    string
+	retryAttempts uint
+	retryDelay    time.Duration
 }
 
-func NewClientFactoryForWorkspace(logger logr.Logger, workspace string, clientOpts ClientOpts, adminToken string) ClientFactory {
+func NewClientFactoryForWorkspace(
+	logger logr.Logger, workspace string,
+	clientOpts ClientOpts, adminToken string,
+	retryAttempts uint, retryDelay time.Duration,
+) ClientFactory {
 	return ClientFactory{
-		logger:     logger,
-		workspace:  workspace,
-		opts:       clientOpts,
-		adminToken: adminToken,
+		logger:        logger,
+		workspace:     workspace,
+		opts:          clientOpts,
+		adminToken:    adminToken,
+		retryAttempts: retryAttempts,
+		retryDelay:    retryDelay,
 	}
 }
 
@@ -229,10 +239,22 @@ func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdmi
 	opts := cf.opts
 	opts.TLSServerName = discoveredAdminAPI.TLSServerName
 
-	cl, err := NewKongClientForWorkspace(ctx, discoveredAdminAPI.Address, cf.workspace, opts, cf.adminToken)
+	var client *Client
+	err := retry.Do(
+		func() error {
+			cl, err := NewKongClientForWorkspace(ctx, discoveredAdminAPI.Address, cf.workspace, opts, cf.adminToken)
+			if err != nil {
+				return err
+			}
+			client = cl
+			return nil
+		},
+		retry.Attempts(cf.retryAttempts),
+		retry.Delay(cf.retryDelay),
+	)
 	if err != nil {
 		return nil, err
 	}
-	cl.AttachPodReference(discoveredAdminAPI.PodRef)
-	return cl, nil
+	client.AttachPodReference(discoveredAdminAPI.PodRef)
+	return client, nil
 }

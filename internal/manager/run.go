@@ -89,7 +89,11 @@ func Run(
 		return fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
-	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
+	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(
+		logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken,
+		// REVIEW: reuse the `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` here or add new flags?
+		c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay,
+	)
 
 	setupLog.Info("Getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(

@@ -212,7 +212,10 @@ type ClientFactory struct {
 	adminToken string
 }
 
-func NewClientFactoryForWorkspace(logger logr.Logger, workspace string, clientOpts ClientOpts, adminToken string) ClientFactory {
+func NewClientFactoryForWorkspace(
+	logger logr.Logger, workspace string,
+	clientOpts ClientOpts, adminToken string,
+) ClientFactory {
 	return ClientFactory{
 		logger:     logger,
 		workspace:  workspace,
@@ -233,6 +236,7 @@ func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdmi
 	if err != nil {
 		return nil, err
 	}
+
 	cl.AttachPodReference(discoveredAdminAPI.PodRef)
 	return cl, nil
 }

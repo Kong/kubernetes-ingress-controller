@@ -335,7 +335,8 @@ func (c *Config) adminAPIClients(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
-		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
+		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory,
+			retry.Attempts(c.KongAdminInitializationRetries), retry.Delay(c.KongAdminInitializationRetryDelay))
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -388,7 +389,8 @@ func AdminAPIClientFromServiceDiscovery(
 	retryOpts ...retry.Option,
 ) ([]*adminapi.Client, error) {
 	const (
-		delay = time.Second
+		delay                        = time.Second
+		createAdminAPIClientAttempts = 60
 	)
 
 	// Retry this as we may encounter an error of getting 0 addresses,
@@ -398,7 +400,7 @@ func AdminAPIClientFromServiceDiscovery(
 	// because we have more code that relies on the configuration of Kong
 	// instance and without an address and there's no way to initialize the
 	// configuration validation and sending code.
-	retryOpts = append([]retry.Option{
+	fetchEndpointsRetryOptions := append([]retry.Option{
 		retry.Context(ctx),
 		retry.Attempts(0),
 		retry.DelayType(retry.FixedDelay),
@@ -424,19 +426,37 @@ func AdminAPIClientFromServiceDiscovery(
 		adminAPIs = s.UnsortedList()
 		return nil
 	},
-		retryOpts...,
+		fetchEndpointsRetryOptions...,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	createAdminAPIClientRetryOptions := append([]retry.Option{
+		retry.Context(ctx),
+		retry.Attempts(createAdminAPIClientAttempts),
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(delay),
+	}, retryOpts...)
 	clients := make([]*adminapi.Client, 0, len(adminAPIs))
 	for _, adminAPI := range adminAPIs {
-		cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
+		var client *adminapi.Client
+		err := retry.Do(
+			func() error {
+				cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
+				if err != nil {
+					return err
+				}
+				client = cl
+				return nil
+			},
+			createAdminAPIClientRetryOptions...,
+		)
 		if err != nil {
 			return nil, err
 		}
-		clients = append(clients, cl)
+
+		clients = append(clients, client)
 	}
 
 	return clients, nil

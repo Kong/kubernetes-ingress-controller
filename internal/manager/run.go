@@ -89,10 +89,7 @@ func Run(
 		return fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
-	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(
-		logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken,
-		c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay,
-	)
+	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 
 	setupLog.Info("Getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(

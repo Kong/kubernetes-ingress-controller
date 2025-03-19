@@ -91,7 +91,6 @@ func Run(
 
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(
 		logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken,
-		// REVIEW: reuse the `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` here or add new flags?
 		c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay,
 	)
 

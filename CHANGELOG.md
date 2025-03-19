@@ -114,6 +114,9 @@ Adding a new version? You'll need three changes:
   [#7226](https://github.com/Kong/kubernetes-ingress-controller/pull/7226)
 - GatewayReconciler falls into a loop and cannot converge to a stable state.
   [#7237](https://github.com/Kong/kubernetes-ingress-controller/pull/7237)
+- Retry on creating admin API clients. The attempts and delay can be configured
+  by the flags `--kong-admin-init-retries` and `--kong-admin-init-retry-delay`.
+  [#7255](https://github.com/Kong/kubernetes-ingress-controller/pull/7255)
 
 ## [3.4.3]
 

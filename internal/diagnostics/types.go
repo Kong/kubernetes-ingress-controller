@@ -27,8 +27,9 @@ type ConfigDump struct {
 	RawResponseBody []byte
 }
 
-// ClientDiagnostic contains settings and channels for receiving diagnostic data from the controller's Kong client.
-type ClientDiagnostic struct {
+// Client contains settings and channels for receiving diagnostic data from the controller's Kong client.
+// TODO(czeslavo): we could consider refactoring this to use private channels and expose methods for sending data.
+type Client struct {
 	// DumpsIncludeSensitive is true if the configuration dump includes sensitive values, such as certificate private
 	// keys and credential secrets.
 	DumpsIncludeSensitive bool

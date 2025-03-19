@@ -29,7 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
@@ -66,7 +66,7 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 			withControllerManagerOpts(
 				helpers.ControllerManagerOptAdditionalWatchNamespace("default"),
 			),
-			withControllerManagerFeatureGates(map[string]string{featuregates.FallbackConfiguration: "true"}),
+			withControllerManagerFeatureGates(map[string]string{config.FallbackConfigurationFeature: "true"}),
 		)).
 		Assess("deploying to cluster works and HTTP requests are routed properly",
 			runHTTPRouteExampleTestScenario(httprouteWithBrokenPluginFallback),
@@ -167,7 +167,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				helpers.ControllerManagerOptAdditionalWatchNamespace(namespace),
 				helpers.ControllerManagerOptFlagUseLastValidConfigForFallback(),
 			),
-			withControllerManagerFeatureGates(map[string]string{featuregates.FallbackConfiguration: "true"}),
+			withControllerManagerFeatureGates(map[string]string{config.FallbackConfigurationFeature: "true"}),
 		)).
 		Assess("deploying to cluster works and HTTP requests are routed properly", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 			runHTTPRouteExampleTestScenario(httprouteExampleManifest)(ctx, t, c)

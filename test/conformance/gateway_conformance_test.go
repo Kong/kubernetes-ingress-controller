@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 

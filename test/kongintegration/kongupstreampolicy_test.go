@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
 )
 
@@ -33,7 +34,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 	ctx := t.Context()
 
 	kongC := containers.NewKong(ctx, t)
-	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), adminapi.ClientOpts{}, "")
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), config.AdminAPIClientConfig{}, "")
 	require.NoError(t, err)
 	updateStrategy := sendconfig.NewUpdateStrategyInMemory(
 		kongClient,

@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	prom "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
@@ -97,10 +98,10 @@ func TestMetricsAreServed(t *testing.T) {
 				)
 			}
 			addr := fmt.Sprintf("localhost:%d", helpers.GetFreePort(t))
-			_, _ = RunManager(ctx, t, envcfg,
+			_ = RunManager(ctx, t, envcfg,
 				AdminAPIOptFns(adminAPIOpts...),
-				func(cfg *manager.Config) {
-					cfg.FeatureGates[featuregates.FallbackConfiguration] = tc.fallbackConfigurationEnabled
+				func(cfg *managercfg.Config) {
+					cfg.FeatureGates[managercfg.FallbackConfigurationFeature] = tc.fallbackConfigurationEnabled
 				},
 				WithMetricsAddr(addr),
 			)
@@ -128,9 +129,20 @@ func TestMetricsAreServed(t *testing.T) {
 								return fmt.Errorf("error %w parsing %q", err, metricsURL)
 							}
 
-							if _, ok := mf[metric]; !ok {
+							m, ok := mf[metric]
+							if !ok {
 								return fmt.Errorf("metric %q not present yet", metric)
 							}
+
+							for _, m := range m.GetMetric() {
+								containsInstanceID := lo.ContainsBy(m.GetLabel(), func(l *prom.LabelPair) bool {
+									return l.GetName() == metrics.InstanceIDKey && l.GetValue() != ""
+								})
+								if !containsInstanceID {
+									return fmt.Errorf("metric %q does not contain instance id label", metric)
+								}
+							}
+
 							return nil
 						},
 							retry.Context(ctx),

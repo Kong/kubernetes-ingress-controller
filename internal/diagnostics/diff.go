@@ -2,13 +2,12 @@ package diagnostics
 
 import (
 	"container/list"
-	"fmt"
 
 	"github.com/kong/go-database-reconciler/pkg/diff"
 )
 
-// generatedEntity is basic name and type metadata about a Kong gateway entity.
-type generatedEntity struct {
+// GeneratedEntity is basic name and type metadata about a Kong gateway entity.
+type GeneratedEntity struct {
 	// Name is the name of the entity.
 	Name string `json:"name"`
 	// Kind is the type of entity.
@@ -26,7 +25,7 @@ type ConfigDiff struct {
 // EntityDiff is an individual entity change. It includes the entity metadata, the action performed during
 // reconciliation, and the diff string for update actions.
 type EntityDiff struct {
-	Generated generatedEntity `json:"kongEntity"`
+	Generated GeneratedEntity `json:"kongEntity"`
 	Action    string          `json:"action"`
 	Diff      string          `json:"diff,omitempty"`
 }
@@ -34,7 +33,7 @@ type EntityDiff struct {
 // NewEntityDiff creates a diagnostic entity diff.
 func NewEntityDiff(diff string, action string, entity diff.Entity) EntityDiff {
 	return EntityDiff{
-		Generated: generatedEntity{
+		Generated: GeneratedEntity{
 			Name: entity.Name,
 			Kind: entity.Kind,
 		},
@@ -89,11 +88,11 @@ func (d *diffMap) Latest() string {
 }
 
 // ByHash returns the diff array matching the given hash.
-func (d *diffMap) ByHash(hash string) ([]EntityDiff, error) {
+func (d *diffMap) ByHash(hash string) (ConfigDiff, bool) {
 	if diff, ok := d.diffs[hash]; ok {
-		return diff.Entities, nil
+		return diff, true
 	}
-	return []EntityDiff{}, fmt.Errorf("no diff found for hash %s", hash)
+	return ConfigDiff{}, false
 }
 
 // TimeByHash returns the diff timestamp matching the given hash.

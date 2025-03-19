@@ -1,5 +1,7 @@
 package consts
 
+import "time"
+
 // -----------------------------------------------------------------------------
 // Controller Manager - Constants & Vars
 // -----------------------------------------------------------------------------
@@ -30,4 +32,12 @@ const (
 
 	// DefaultConfigMapSelector is the default label selector used to ingest ConfigMaps in the DataPlane sync.
 	DefaultConfigMapSelector = "konghq.com/configmap"
+
+	// InstanceIDAnnotationKey is the annotation key used to store the instance ID of particular manager,
+	// to corelate events with it.
+	InstanceIDAnnotationKey = "konghq.com/instance-id"
+
+	// DefaultGracefulShutdownTimeout is the default timeout for graceful shutdown. It is used by the manager
+	// subcomponents to wait for the resources to be cleaned up before shutting down.
+	DefaultGracefulShutdownTimeout = time.Second * 5
 )

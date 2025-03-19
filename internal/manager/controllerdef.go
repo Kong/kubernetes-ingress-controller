@@ -19,8 +19,9 @@ import (
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -64,8 +65,8 @@ func setupControllers(
 	dataplaneAddressFinder *dataplane.AddressFinder,
 	udpDataplaneAddressFinder *dataplane.AddressFinder,
 	kubernetesStatusQueue *status.Queue,
-	c *Config,
-	featureGates featuregates.FeatureGates,
+	c managercfg.Config,
+	featureGates config.FeatureGates,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
@@ -275,7 +276,7 @@ func setupControllers(
 				Scheme:                   mgr.GetScheme(),
 				DataplaneClient:          dataplaneClient,
 				CacheSyncTimeout:         c.CacheSyncTimeout,
-				KongServiceFacadeEnabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+				KongServiceFacadeEnabled: featureGates.Enabled(managercfg.KongServiceFacadeFeature) && c.KongServiceFacadeEnabled,
 				StatusQueue:              kubernetesStatusQueue,
 				HTTPRouteEnabled: utils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
 					Group:    gatewayv1.GroupVersion.Group,
@@ -287,7 +288,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(featuregates.KongServiceFacade) && c.KongServiceFacadeEnabled,
+			Enabled: featureGates.Enabled(managercfg.KongServiceFacadeFeature) && c.KongServiceFacadeEnabled,
 			Controller: &configuration.IncubatorV1Alpha1KongServiceFacadeReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongServiceFacade"),
@@ -313,7 +314,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(featuregates.KongCustomEntity) && c.KongCustomEntityEnabled,
+			Enabled: featureGates.Enabled(managercfg.KongCustomEntityFeature) && c.KongCustomEntityEnabled,
 			Controller: &configuration.KongV1Alpha1KongCustomEntityReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongCustomEntity"),
@@ -420,7 +421,7 @@ func setupControllers(
 		// Gateway API Controllers - Alpha APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
+			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/UDPRoute"),
@@ -442,7 +443,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
+			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TCPRoute"),
@@ -464,7 +465,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature),
+			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
@@ -486,7 +487,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(featuregates.GatewayAlphaFeature) &&
+			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature) &&
 				c.GatewayAPIGatewayController &&
 				c.GatewayAPIHTTPRouteController,
 			Controller: &crds.DynamicCRDController{

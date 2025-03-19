@@ -6,8 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
 )
 
 // EventRecorder is a mock implementation of the k8s.io/client-go/tools/record.EventRecorder interface.

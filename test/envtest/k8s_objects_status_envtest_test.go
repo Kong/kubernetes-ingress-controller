@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExceeded(t *testing.T) {
@@ -34,7 +34,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
-		func(cfg *manager.Config) {
+		func(cfg *managercfg.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to
 			// ensure that the status update notifications do not block the
 			// sync loop despite the fact that the status update queue is full.
@@ -134,7 +134,7 @@ func Test_WatchNamespaces(t *testing.T) {
 		WithPublishService(gw.Namespace),
 		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
-		func(cfg *manager.Config) {
+		func(cfg *managercfg.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to
 			// ensure that the status update notifications do not block the
 			// sync loop despite the fact that the status update queue is full.

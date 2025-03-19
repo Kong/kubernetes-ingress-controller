@@ -50,10 +50,10 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 		WithUpdateStatus(),
 	)
@@ -195,10 +195,10 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -449,10 +449,10 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -713,10 +713,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -1056,10 +1056,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -1255,10 +1255,10 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
-	_, logs := RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, fmt.Sprintf(":%d", admissionWebhookPort)),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)

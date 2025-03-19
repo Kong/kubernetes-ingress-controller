@@ -8,16 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/zapr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -94,19 +93,17 @@ func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	logger := zapr.NewLogger(zap.NewNop())
 	readinessChecker := &mockReadinessChecker{}
 	initialClient, err := adminapi.NewTestClient("https://localhost:8083")
 	require.NoError(t, err)
 	manager, err := clients.NewAdminAPIClientsManager(
 		ctx,
-		logger,
 		[]*adminapi.Client{initialClient},
 		readinessChecker,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, manager)
-	manager.Run()
+	manager.Run(ctx)
 	<-manager.Running()
 
 	requireClientsMatchEventually := func(t *testing.T, c *clients.AdminAPIClientsManager, addresses []string, args ...any) {
@@ -122,50 +119,49 @@ func TestAdminAPIClientsManager_OnNotifyClientsAreUpdatedAccordingly(t *testing.
 		"initially there should be the initial client")
 
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL1)})
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
 	requireClientsMatchEventually(t, manager, []string{testURL1},
 		"after notifying about a new address we should get 1 client eventually")
 
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{})
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
 	requireClientsMatchEventually(t, manager, []string{testURL1},
 		"after notifying the same address there's no update in clients")
 
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
 	requireClientsMatchEventually(t, manager, []string{testURL1},
 		"after notifying new address set including the old already existing one but new one not yet ready we get just the old one")
 
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
 	requireClientsMatchEventually(t, manager, []string{testURL1, testURL2},
 		"after notifying new address set including the old already existing one and new one turning ready we get both the old and the new")
 
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{})
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
 	requireClientsMatchEventually(t, manager, []string{testURL1, testURL2},
 		"after notifying again with the same set of URLs should not change the existing URLs")
 
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedPending: intoTurnedPending(testURL2)})
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
 	requireClientsMatchEventually(t, manager, []string{testURL1},
 		"after notifying the same address set with one turning pending, we get only one client")
 
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{})
-	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
 	requireClientsMatchEventually(t, manager, []string{testURL1},
 		"notifying again with just one URL should decrease the set of URLs to just this one")
 
-	manager.Notify([]adminapi.DiscoveredAdminAPI{})
+	manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{})
 	requireClientsMatchEventually(t, manager, []string{})
 
 	cancel()
-	require.NotPanics(t, func() { manager.Notify([]adminapi.DiscoveredAdminAPI{}) }, "notifying about new clients after manager has been shut down shouldn't panic")
+	require.NotPanics(t, func() { manager.Notify(ctx, []adminapi.DiscoveredAdminAPI{}) }, "notifying about new clients after manager has been shut down shouldn't panic")
 }
 
 func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
 	_, err := clients.NewAdminAPIClientsManager(
 		t.Context(),
-		zapr.NewLogger(zap.NewNop()),
 		nil,
 		&mockReadinessChecker{},
 	)
@@ -179,7 +175,6 @@ func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
 	require.NoError(t, err)
 	m, err := clients.NewAdminAPIClientsManager(
 		t.Context(),
-		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
 		&mockReadinessChecker{},
 	)
@@ -199,7 +194,6 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.NoError(t, err)
 	m, err := clients.NewAdminAPIClientsManager(
 		t.Context(),
-		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
 		&mockReadinessChecker{},
 	)
@@ -219,7 +213,6 @@ func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
 
 	m, err := clients.NewAdminAPIClientsManager(
 		t.Context(),
-		zapr.NewLogger(zap.NewNop()),
 		initialClients,
 		&mockReadinessChecker{},
 	)
@@ -253,27 +246,26 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	m, err := clients.NewAdminAPIClientsManager(
 		ctx,
-		zapr.NewLogger(zap.NewNop()),
 		[]*adminapi.Client{testClient},
 		readinessChecker)
 
 	require.NoError(t, err)
 
 	t.Run("no notify loop running should return false when subscribing", func(t *testing.T) {
-		ch, ok := m.SubscribeToGatewayClientsChanges()
+		ch, ok := m.SubscribeToGatewayClientsChanges(ctx)
 		require.Nil(t, ch)
 		require.Falsef(t, ok, "expected no subscription to be created because no notification loop is running")
 	})
 
-	m.Run()
+	m.Run(ctx)
 
 	t.Run("when notification loop is running subscription should be created", func(t *testing.T) {
-		ch, ok := m.SubscribeToGatewayClientsChanges()
+		ch, ok := m.SubscribeToGatewayClientsChanges(ctx)
 		require.NotNil(t, ch)
 		require.True(t, ok)
 
 		readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL1, testURL2)})
-		m.Notify([]adminapi.DiscoveredAdminAPI{
+		m.Notify(ctx, []adminapi.DiscoveredAdminAPI{
 			testDiscoveredAdminAPI(testURL1),
 			testDiscoveredAdminAPI(testURL2),
 		})
@@ -287,16 +279,16 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	})
 
 	t.Run("when multiple subscriptions are created, each of them should receive notifications", func(t *testing.T) {
-		sub1, ok := m.SubscribeToGatewayClientsChanges()
+		sub1, ok := m.SubscribeToGatewayClientsChanges(ctx)
 		require.NotNil(t, sub1)
 		require.True(t, ok)
 
-		sub2, ok := m.SubscribeToGatewayClientsChanges()
+		sub2, ok := m.SubscribeToGatewayClientsChanges(ctx)
 		require.NotNil(t, sub2)
 		require.True(t, ok)
 
 		readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedPending: intoTurnedPending(testURL2)})
-		m.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
+		m.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
 
 		select {
 		case <-sub2:
@@ -313,7 +305,7 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	})
 
 	t.Run("when the context gets cancelled, subscriber channel gets closed", func(t *testing.T) {
-		ch, ok := m.SubscribeToGatewayClientsChanges()
+		ch, ok := m.SubscribeToGatewayClientsChanges(ctx)
 		require.NotNil(t, ch)
 		require.True(t, ok)
 
@@ -327,7 +319,7 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	})
 
 	t.Run("when the context is cancelled, subscriptions cannot be created", func(t *testing.T) {
-		ch, ok := m.SubscribeToGatewayClientsChanges()
+		ch, ok := m.SubscribeToGatewayClientsChanges(ctx)
 		require.Nil(t, ch)
 		require.False(t, ok)
 	})
@@ -345,9 +337,9 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	m, err := clients.NewAdminAPIClientsManager(ctx, zapr.NewLogger(zap.NewNop()), []*adminapi.Client{testClient}, readinessChecker)
+	m, err := clients.NewAdminAPIClientsManager(ctx, []*adminapi.Client{testClient}, readinessChecker)
 	require.NoError(t, err)
-	m.Run()
+	m.Run(ctx)
 
 	// Run a goroutine that will call GatewayClients() every millisecond.
 	go func() {
@@ -363,7 +355,7 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 
 	go func() {
 		for i := 0; i < 100; i++ {
-			go m.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
+			go m.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
 		}
 	}()
 
@@ -384,14 +376,14 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	readinessChecker := &mockReadinessChecker{}
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	m, err := clients.NewAdminAPIClientsManager(ctx, zapr.NewLogger(zap.NewNop()), []*adminapi.Client{testClient}, readinessChecker)
+	m, err := clients.NewAdminAPIClientsManager(ctx, []*adminapi.Client{testClient}, readinessChecker)
 	require.NoError(t, err)
 
-	m.Run()
+	m.Run(ctx)
 	<-m.Running()
 
 	var receivedNotificationsCount atomic.Uint32
-	ch, ok := m.SubscribeToGatewayClientsChanges()
+	ch, ok := m.SubscribeToGatewayClientsChanges(ctx)
 	require.NotNil(t, ch)
 	require.True(t, ok)
 
@@ -425,7 +417,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	}
 
 	// Notify the first set of clients and make sure that the subscriber doesn't get notified as it was initial state.
-	m.Notify(firstClientsSet)
+	m.Notify(ctx, firstClientsSet)
 	notificationsCountEventuallyEquals(0)
 	require.Equal(t, 1, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 	requireLastReadinessCheckCall(readinessCheckCall{
@@ -434,17 +426,17 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	})
 
 	// Notify an empty set of clients and make sure that the subscriber get notified.
-	m.Notify(nil)
+	m.Notify(ctx, nil)
 	notificationsCountEventuallyEquals(1)
 	require.Equal(t, 1, readinessChecker.CallsCount(), "no readiness check should be performed when notifying an empty set")
 
 	// Notify an empty set again and make sure that the subscriber doesn't get notified as the state didn't change.
-	m.Notify(nil)
+	m.Notify(ctx, nil)
 	notificationsCountEventuallyEquals(1)
 	require.Equal(t, 1, readinessChecker.CallsCount(), "no readiness check should be performed when notifying an empty set")
 
 	// Notify the second set of clients without making the new one ready and make sure that the subscriber gets no notification.
-	m.Notify(secondClientsSet)
+	m.Notify(ctx, secondClientsSet)
 	notificationsCountEventuallyEquals(1)
 	requireLastReadinessCheckCall(readinessCheckCall{
 		AlreadyCreatedURLs: []string{},
@@ -454,7 +446,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 
 	// Notify the second set of clients and make sure that the subscriber gets notified after the new one becomes ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
-	m.Notify(secondClientsSet)
+	m.Notify(ctx, secondClientsSet)
 	notificationsCountEventuallyEquals(2)
 	requireLastReadinessCheckCall(readinessCheckCall{
 		AlreadyCreatedURLs: []string{},
@@ -462,7 +454,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	})
 	require.Equal(t, 3, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 
-	m.Notify([]adminapi.DiscoveredAdminAPI{firstClientsSet[0], secondClientsSet[0]})
+	m.Notify(ctx, []adminapi.DiscoveredAdminAPI{firstClientsSet[0], secondClientsSet[0]})
 	notificationsCountEventuallyEquals(3)
 	requireLastReadinessCheckCall(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL2},
@@ -484,15 +476,9 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	readinessChecker := &mockReadinessChecker{}
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	m, err := clients.NewAdminAPIClientsManager(
-		ctx,
-		zapr.NewLogger(zap.NewNop()),
-		[]*adminapi.Client{testClient},
-		readinessChecker,
-		clients.WithReadinessReconciliationTicker(readinessTicker),
-	)
+	m, err := clients.NewAdminAPIClientsManager(ctx, []*adminapi.Client{testClient}, readinessChecker, clients.WithReadinessReconciliationTicker(readinessTicker))
 	require.NoError(t, err)
-	m.Run()
+	m.Run(ctx)
 	<-m.Running()
 
 	readinessCheckCallEventuallyMatches := func(expected readinessCheckCall) {
@@ -511,7 +497,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	}
 
 	// Trigger the first readiness check.
-	readinessTicker.Add(clients.DefaultReadinessReconciliationInterval)
+	readinessTicker.Add(config.DefaultDataPlanesReadinessReconciliationInterval)
 	readinessCheckCallEventuallyMatches(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{},
@@ -519,7 +505,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	require.Equal(t, 1, readinessChecker.CallsCount())
 
 	// Notify with a new client and check the readiness check call was made as expected.
-	m.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
+	m.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
 	readinessCheckCallEventuallyMatches(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{testURL2},
@@ -528,7 +514,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 
 	// Trigger a next readiness check which will make testURL2 ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
-	readinessTicker.Add(clients.DefaultReadinessReconciliationInterval)
+	readinessTicker.Add(config.DefaultDataPlanesReadinessReconciliationInterval)
 	readinessCheckCallEventuallyMatches(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{testURL2},

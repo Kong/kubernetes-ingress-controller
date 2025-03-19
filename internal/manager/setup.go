@@ -4,14 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"github.com/kong/go-database-reconciler/pkg/cprint"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -40,40 +36,20 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/config/types"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
 )
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup Utility Functions
 // -----------------------------------------------------------------------------
 
-// SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
-	zapBase, err := logging.MakeLogger(c.LogLevel, c.LogFormat, output)
-	if err != nil {
-		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
-	}
-	logger := zapr.NewLoggerWithOptions(zapBase, zapr.LogInfoLevel("v"))
-
-	if c.LogLevel != "trace" && c.LogLevel != "debug" {
-		// disable deck's per-change diff output
-		cprint.DisableOutput = true
-	}
-
-	// Prevents controller-runtime from logging
-	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
-	ctrllog.SetLogger(logger)
-
-	return logger, nil
-}
-
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode dpconf.DBMode) ctrl.Options {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.Config, dbmode dpconf.DBMode) ctrl.Options {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 
 	// configure the general manager options
@@ -91,9 +67,9 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 			BindAddress: c.MetricsAddr,
 			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (metricsserver.Filter, error) {
 				switch c.MetricsAccessFilter {
-				case cfgtypes.MetricsAccessFilterOff:
+				case managercfg.MetricsAccessFilterOff:
 					return nil
-				case cfgtypes.MetricsAccessFilterRBAC:
+				case managercfg.MetricsAccessFilterRBAC:
 					return filters.WithAuthenticationAndAuthorization
 				default:
 					// This is checked in flags validation so this should never happen.
@@ -102,7 +78,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 			}(),
 		},
 		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
-		LeaderElection:   leaderElectionEnabled(logger, c, dbmode),
+		LeaderElection:   leaderElectionEnabled(logger, *c, dbmode),
 		LeaderElectionID: c.LeaderElectionID,
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
@@ -145,17 +121,12 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbm
 	return managerOpts
 }
 
-const (
-	LeaderElectionEnabled  = "enabled"
-	LeaderElectionDisabled = "disabled"
-)
-
-func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode dpconf.DBMode) bool {
-	if c.LeaderElectionForce == LeaderElectionEnabled {
+func leaderElectionEnabled(logger logr.Logger, c managercfg.Config, dbmode dpconf.DBMode) bool {
+	if c.LeaderElectionForce == managercfg.LeaderElectionEnabled {
 		logger.Info("leader election forcibly enabled")
 		return true
 	}
-	if c.LeaderElectionForce == LeaderElectionDisabled {
+	if c.LeaderElectionForce == managercfg.LeaderElectionDisabled {
 		logger.Info("leader election forcibly disabled")
 		return false
 	}
@@ -210,43 +181,37 @@ func setupDataplaneSynchronizer(
 	return dataplaneSynchronizer, nil
 }
 
-func setupAdmissionServer(
+func (m *Manager) setupAdmissionServer(
 	ctx context.Context,
-	managerConfig *Config,
-	clientsManager *clients.AdminAPIClientsManager,
 	referenceIndexers ctrlref.CacheIndexers,
-	managerClient client.Client,
-	logger logr.Logger,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
 ) error {
-	admissionLogger := logger.WithName("admission-server")
+	admissionLogger := ctrl.LoggerFrom(ctx).WithName("admission-server")
 
-	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		logger.Info("Admission webhook server disabled")
+	if m.cfg.AdmissionServer.ListenAddr == "off" {
+		admissionLogger.Info("Admission webhook server disabled")
 		return nil
 	}
 
-	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
-	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
+	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(m.clientsManager)
+	srv, err := admission.MakeTLSServer(m.cfg.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
 			admissionLogger,
-			managerClient,
-			managerConfig.IngressClassName,
+			m.m.GetClient(),
+			m.cfg.IngressClassName,
 			adminAPIServicesProvider,
 			translatorFeatures,
 			storer,
 		),
 		ReferenceIndexers: referenceIndexers,
 		Logger:            admissionLogger,
-	}, admissionLogger)
+	})
 	if err != nil {
 		return err
 	}
-	go func() {
-		err := srv.ListenAndServeTLS("", "")
-		logger.Error(err, "Admission webhook server stopped")
-	}()
+
+	m.admissionServer = mo.Some(srv)
 	return nil
 }
 
@@ -254,7 +219,7 @@ func setupAdmissionServer(
 // set or the publish service addresses if no overrides are set. If no UDP overrides or UDP publish service are set,
 // the UDP finder will also return the default addresses. If no override or publish service is set, this function
 // returns nil finders and an error.
-func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
+func setupDataplaneAddressFinder(mgrc client.Client, c managercfg.Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
 	if !c.UpdateStatus {
 		return nil, nil, nil
 	}
@@ -272,7 +237,7 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN mo.Option[k8stypes.NamespacedName]) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
 	if len(publishStatusAddress) > 0 {
@@ -322,8 +287,9 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) adminAPIClients(
+func adminAPIClients(
 	ctx context.Context,
+	c managercfg.Config,
 	logger logr.Logger,
 	discoverer *adminapi.Discoverer,
 	factory adminapi.ClientFactory,
@@ -331,11 +297,21 @@ func (c *Config) adminAPIClients(
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
-		kubeClient, err := c.GetKubeClient()
+		kubeClient, err := utils.GetKubeClient(c)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}
-		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory)
+
+		// Respect the configuration for retries and delay.
+		var retryOpts []retry.Option
+		if c.KongAdminInitializationRetries != 0 {
+			retryOpts = append(retryOpts, retry.Attempts(c.KongAdminInitializationRetries))
+		}
+		if c.KongAdminInitializationRetryDelay != 0 {
+			retryOpts = append(retryOpts, retry.Delay(c.KongAdminInitializationRetryDelay))
+		}
+
+		return AdminAPIClientFromServiceDiscovery(ctx, logger, kongAdminSvc, kubeClient, discoverer, factory, retryOpts...)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -439,7 +415,7 @@ func AdminAPIClientFromServiceDiscovery(
 // it starts and returns a KongLicense controller.
 func setupLicenseGetter(
 	ctx context.Context,
-	c *Config,
+	c managercfg.Config,
 	setupLog logr.Logger,
 	mgr manager.Manager,
 	statusQueue *status.Queue,
@@ -498,7 +474,7 @@ func setupLicenseGetter(
 func setupKonnectConfigSynchronizerWithMgr(
 	ctx context.Context,
 	mgr manager.Manager,
-	cfg *Config,
+	cfg managercfg.Config,
 	kongConfig sendconfig.Config,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,

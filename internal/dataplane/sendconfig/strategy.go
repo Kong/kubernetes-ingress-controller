@@ -81,7 +81,7 @@ func NewDefaultUpdateStrategyResolver(config Config, logger logr.Logger) Default
 // with the backoff strategy it provides.
 func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	client UpdateClient,
-	diagnostic *diagnostics.ClientDiagnostic,
+	diagnostic *diagnostics.Client,
 ) UpdateStrategy {
 	updateStrategy := r.resolveUpdateStrategy(client, diagnostic)
 
@@ -94,7 +94,7 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 
 func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
 	client UpdateClient,
-	diagnostic *diagnostics.ClientDiagnostic,
+	diagnostic *diagnostics.Client,
 ) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 

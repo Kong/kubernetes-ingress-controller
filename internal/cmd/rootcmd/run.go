@@ -6,19 +6,21 @@ import (
 	"io"
 	"os/signal"
 
-	"github.com/go-logr/logr"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 )
 
 // Run sets up a default stderr logger and starts the controller manager.
-func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
-	logger, err := manager.SetupLoggers(c, output)
+func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
+	logger, err := logging.SetupLoggers(c, output)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
-	ctx = ctrl.LoggerInto(ctx, logger)
 
 	ctx, err = SetupSignalHandler(ctx, c, logger)
 	if err != nil {
@@ -26,19 +28,47 @@ func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
 	}
 	defer signal.Ignore(shutdownSignals...)
 
-	return RunWithLogger(ctx, c, logger)
-}
+	// Single manager with the same ID.
+	mid := manager.NewRandomID()
 
-// RunWithLogger starts the controller manager with a provided logger.
-func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) error {
-	if err := c.Validate(); err != nil {
-		return fmt.Errorf("config invalid: %w", err)
-	}
-
-	diag, err := StartDiagnosticsServer(ctx, c.DiagnosticServerPort, c, logger)
+	m, err := manager.NewManager(ctx, mid, logger, c)
 	if err != nil {
-		return fmt.Errorf("failed to start diagnostics server: %w", err)
+		return fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	return manager.Run(ctx, c, diag.ConfigDumps(), logger)
+	logger.Info("Starting standalone health check server")
+	health.NewHealthCheckServer(
+		healthz.Ping, health.NewHealthCheckerFromFunc(m.IsReady),
+	).Start(ctx, c.ProbeAddr, logger.WithName("health-check"))
+
+	if c.AnonymousReports {
+		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
+			ctx,
+			m.GetKubeconfig(),
+			m.GetClientsManager(),
+			telemetry.ReportConfig{
+				SplunkEndpoint:                   c.SplunkEndpoint,
+				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
+				TelemetryPeriod:                  c.TelemetryPeriod,
+				ReportValues: telemetry.ReportValues{
+					PublishServiceNN:               c.PublishService.OrEmpty(),
+					FeatureGates:                   c.FeatureGates,
+					MeshDetection:                  len(c.WatchNamespaces) == 0,
+					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
+					GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
+				},
+			},
+			mid,
+		)
+		if err != nil {
+			logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")
+		} else {
+			defer stopAnonymousReports()
+			logger.Info("Anonymous reports enabled")
+		}
+	} else {
+		logger.Info("Anonymous reports disabled, skipping")
+	}
+
+	return m.Run(ctx)
 }

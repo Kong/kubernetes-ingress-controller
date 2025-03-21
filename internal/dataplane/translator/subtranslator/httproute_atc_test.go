@@ -18,9 +18,10 @@ import (
 
 func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 	testCases := []struct {
-		name       string
-		match      gatewayapi.HTTPRouteMatch
-		expression string
+		name                                      string
+		match                                     gatewayapi.HTTPRouteMatch
+		containReplacePrefixMatchURLRewriteFilter bool
+		expression                                string
 	}{
 		{
 			name:       "empty prefix path match",
@@ -41,6 +42,18 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 			name:       "simple regex match",
 			match:      builder.NewHTTPRouteMatch().WithPathRegex("/regex/\\d{1,3}").Build(),
 			expression: `http.path ~ "^/regex/\\d{1,3}"`,
+		},
+		{
+			name:  "empty prefix match with ReplacePrefixMatch URLRewrite filter",
+			match: builder.NewHTTPRouteMatch().WithPathPrefix("").Build(),
+			containReplacePrefixMatchURLRewriteFilter: true,
+			expression: `(http.path == "/") || (http.path ~ "^/(.*)")`,
+		},
+		{
+			name:  "non-empty prefix match with ReplacePrefixMatch URLRewrite filter",
+			match: builder.NewHTTPRouteMatch().WithPathPrefix("/prefix").Build(),
+			containReplacePrefixMatchURLRewriteFilter: true,
+			expression: `(http.path == "/prefix") || (http.path ~ "^/prefix(/.*)")`,
 		},
 		{
 			name: "exact path and method and a single header",
@@ -70,7 +83,7 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.expression, generateMatcherFromHTTPRouteMatch(tc.match).Expression())
+			require.Equal(t, tc.expression, generateMatcherFromHTTPRouteMatch(tc.match, tc.containReplacePrefixMatchURLRewriteFilter).Expression())
 		})
 	}
 }
@@ -1035,4 +1048,8 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
+
 }

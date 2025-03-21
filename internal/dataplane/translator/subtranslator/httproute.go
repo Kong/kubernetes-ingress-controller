@@ -19,7 +19,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -1489,22 +1488,9 @@ func generateRequestTransformerReplaceURIForURLRewritePrefixMatch(
 func generateKongRouteModifierForURLRewritePrefixMatch(path string, expressionsRouterEnabled bool) func(route *kongstate.Route) {
 	pathIsRoot := isPathRoot(path)
 
-	// If expressions router is enabled, we need to set the expression on the Kong Route.
+	// If expressions router is enabled, we do not set the route because we have set it in generating the route from its matches.
 	if expressionsRouterEnabled {
-		return func(route *kongstate.Route) {
-			exactPrefixPredicate := atc.NewPredicateHTTPPath(atc.OpEqual, path)
-			subpathsPredicate := func() atc.Predicate {
-				if pathIsRoot {
-					// If the path is "/", we don't capture the slash as Kong Route's path has to begin with a slash.
-					// If we captured the slash, we'd generate "(/.*)", and it'd be rejected by Kong.
-					return atc.NewPredicateHTTPPath(atc.OpRegexMatch, "^/(.*)")
-				}
-				// If the path is not "/", i.e. it has a prefix, we capture the slash to make it possible to
-				// route "/prefix" to "/replacement" and "/prefix/" to "/replacement/" correctly.
-				return atc.NewPredicateHTTPPath(atc.OpRegexMatch, fmt.Sprintf("^%s(/.*)", path))
-			}()
-			route.Expression = lo.ToPtr(atc.Or(exactPrefixPredicate, subpathsPredicate).Expression())
-		}
+		return nil
 	}
 
 	// Otherwise, we set the Kong Route's paths.

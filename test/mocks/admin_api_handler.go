@@ -183,6 +183,27 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 
 		t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 	})
+	// The handler for the status call in a specific workspace.
+	mux.HandleFunc("/workspace/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			if !h.ready {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			if !h.workspaceExists && !h.workspaceWasCreated.Load() {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			if h.configurationHash != "" {
+				_, _ = w.Write([]byte(formatDBLessStatusResponseWithConfigurationHash(h.configurationHash)))
+			} else {
+				_, _ = w.Write([]byte(defaultDBLessStatusResponseWithoutConfigurationHash))
+			}
+			return
+		}
+
+		t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+	})
 	mux.HandleFunc("/workspace/workspaces/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			if h.workspaceExists {

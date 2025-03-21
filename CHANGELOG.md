@@ -117,6 +117,11 @@ Adding a new version? You'll need three changes:
 - Retry on creating admin API clients. The attempts and delay can be configured
   by the flags `--kong-admin-init-retries` and `--kong-admin-init-retry-delay`.
   [#7255](https://github.com/Kong/kubernetes-ingress-controller/pull/7255)
+- Skip checking whether Kong gateway is ready by `/status` admin API endpoint
+  when KIC is configured to use a specific workspace. This fixes the scenario
+  where KIC is permitted to access only the given workspace but cannot access
+  `/status` endpoint.
+  [#7233](https://github.com/Kong/kubernetes-ingress-controller/pull/7233)
 
 ## [3.4.3]
 

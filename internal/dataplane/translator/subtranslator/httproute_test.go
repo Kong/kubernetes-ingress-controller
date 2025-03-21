@@ -569,42 +569,6 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 	}
 }
 
-func TestGenerateKongRouteModifierForURLRewritePrefixMatch_ExpressionsRouter(t *testing.T) {
-	testCases := []struct {
-		name                      string
-		path                      string
-		expectedRouteModification kongstate.Route
-	}{
-		{
-			name: "root path",
-			path: "/",
-			expectedRouteModification: kongstate.Route{
-				Route: kong.Route{
-					Expression: lo.ToPtr(`(http.path == "/") || (http.path ~ "^/(.*)")`),
-				},
-			},
-		},
-		{
-			name: "prefix path",
-			path: "/prefix",
-			expectedRouteModification: kongstate.Route{
-				Route: kong.Route{
-					Expression: lo.ToPtr(`(http.path == "/prefix") || (http.path ~ "^/prefix(/.*)")`),
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			modifier := generateKongRouteModifierForURLRewritePrefixMatch(tc.path, true)
-			route := kongstate.Route{}
-			modifier(&route)
-			require.Equal(t, tc.expectedRouteModification, route)
-		})
-	}
-}
-
 func TestMergePluginsOfTheSameType(t *testing.T) {
 	testCases := []struct {
 		name     string

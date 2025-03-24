@@ -79,14 +79,14 @@ jobs:
 
 
     - name: collect test coverage
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: coverage-integration-tests-enterprise-postgres-nightly
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: diagnostics-integration-tests-enterprise-postgres-nightly
         path: /tmp/ktf-diag*
@@ -122,14 +122,14 @@ jobs:
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: coverage-integration-tests-enterprise-dbless-nightly
         path: coverage.enterprisedbless.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: diagnostics-integration-tests-enterprise-dbless-nightly
         path: /tmp/ktf-diag*
@@ -156,14 +156,14 @@ jobs:
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: coverage-integration-tests-postgres-nightly
         path: coverage.postgres.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: diagnostics-integration-tests-postgres-nightly
         path: /tmp/ktf-diag*
@@ -191,14 +191,14 @@ jobs:
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: coverage-integration-tests-dbless-nightly
         path: coverage.dbless.out
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: diagnostics-integration-tests-dbless-nightly
         path: /tmp/ktf-diag*

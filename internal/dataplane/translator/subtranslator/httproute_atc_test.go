@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1051,5 +1052,176 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 }
 
 func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		httproute             *gatewayapi.HTTPRoute
+		hostname              string
+		ruleIndex             int
+		matchIndex            int
+		namedRouteRule        string
+		priority              RoutePriorityType
+		supportRedirectPlugin bool
 
+		hasError       bool
+		routeName      string
+		routeExpresion string
+		tags           []string
+	}{
+		{
+			name: "exact path match without hostname",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "exact-path-match",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Matches:     builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
+							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+						},
+					},
+				},
+			},
+			ruleIndex:  0,
+			matchIndex: 0,
+			priority:   RoutePriorityType(1024),
+
+			routeName:      "httproute.default.exact-path-match._.0.0",
+			routeExpresion: `http.path == "/foo"`,
+			tags: []string{
+				"k8s-name:exact-path-match",
+				"k8s-namespace:default",
+			},
+		},
+		{
+			name: "prefix path match with hostname",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "prefix-path-match-with-hostname",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"foo.com", "bar.us"},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Matches:     builder.NewHTTPRouteMatch().WithPathPrefix("/foo").ToSlice(),
+							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+						},
+					},
+				},
+			},
+			hostname:   "foo.com",
+			ruleIndex:  0,
+			matchIndex: 0,
+			priority:   RoutePriorityType(2048),
+
+			routeName:      "httproute.default.prefix-path-match-with-hostname.foo.com.0.0",
+			routeExpresion: `(http.host == "foo.com") && ((http.path == "/foo") || (http.path ^= "/foo/"))`,
+			tags: []string{
+				"k8s-name:prefix-path-match-with-hostname",
+				"k8s-namespace:default",
+			},
+		},
+		{
+			name: "prefix match with hostname and ReplaceMatchPrefix URLRewrite filter",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "prefix-path-match-with-url-rewrite",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"foo.com", "bar.us"},
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Matches:     builder.NewHTTPRouteMatch().WithPathPrefix("/foo").ToSlice(),
+							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+							Filters: []gatewayapi.HTTPRouteFilter{
+								{
+									Type: gatewayapi.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+										Path: &gatewayapi.HTTPPathModifier{
+											Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+											ReplacePrefixMatch: lo.ToPtr("/bar"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			hostname:   "foo.com",
+			ruleIndex:  0,
+			matchIndex: 0,
+			priority:   RoutePriorityType(2048),
+
+			routeName:      "httproute.default.prefix-path-match-with-url-rewrite.foo.com.0.0",
+			routeExpresion: `(http.host == "foo.com") && ((http.path == "/foo") || (http.path ~ "^/foo(/.*)"))`,
+			tags: []string{
+				"k8s-name:prefix-path-match-with-url-rewrite",
+				"k8s-namespace:default",
+			},
+		},
+		{
+			name: "regex path match and SNI from annotation",
+			httproute: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "regex-path-match-with-sni",
+					Annotations: map[string]string{
+						"konghq.com/snis": "foo.com",
+					},
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Matches:     builder.NewHTTPRouteMatch().WithPathRegex("/users/[a-z0-9]+").ToSlice(),
+							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+						},
+					},
+				},
+			},
+
+			ruleIndex:  0,
+			matchIndex: 0,
+			priority:   RoutePriorityType(1024),
+
+			routeName:      "httproute.default.regex-path-match-with-sni._.0.0",
+			routeExpresion: `(tls.sni == "foo.com") && (http.path ~ "^/users/[a-z0-9]+")`,
+			tags: []string{
+				"k8s-name:regex-path-match-with-sni",
+				"k8s-namespace:default",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			matchWithPriority := SplitHTTPRouteMatchToKongRoutePriority{
+				Match: SplitHTTPRouteMatch{
+					Match:                  tc.httproute.Spec.Rules[tc.ruleIndex].Matches[tc.matchIndex],
+					Source:                 tc.httproute,
+					Hostname:               tc.hostname,
+					OptionalNamedRouteRule: tc.namedRouteRule,
+					RuleIndex:              tc.ruleIndex,
+					MatchIndex:             tc.matchIndex,
+				},
+				Priority: tc.priority,
+			}
+
+			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, tc.supportRedirectPlugin)
+			if tc.hasError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.routeName, *route.Name, "Should have expected route name")
+			require.True(t, route.ExpressionRoutes, "Should be expression route")
+			require.Equal(t, tc.routeExpresion, *route.Expression, "Should translate to expected expression")
+			require.Equal(t, tc.priority, *route.Priority, "Should have expected priority")
+			require.ElementsMatch(t, tc.tags, lo.FromSlicePtr(route.Tags), "Tags should be the same")
+		})
+	}
 }

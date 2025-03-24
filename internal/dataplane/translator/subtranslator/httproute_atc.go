@@ -64,8 +64,12 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayapi.HTTPPathMatch, containRe
 		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.PathMatchType
 		path = normalizePath(path)
 		pathIsRoot := isPathRoot(path)
-		// When the path match type is `prefix` and the rule contains a URLRewrite filtre with `ReplacePrefixMatch`,
-		// we should generate a regex matcher with a capture group for the match to let the plugin to extract the path segment to replace.
+		// When the path match type is `prefix` and the rule contains a URLRewrite filtre with `ReplacePrefixMatch`, we generate two predicates:
+		// One of the paths will match the exact path, and the other will match subpaths with a capture group.
+		// The capture group can be used in the request-transformer plugin to replace the path.
+		// Please note that depending on the path, the capture group will:
+		// - Exclude the leading slash if the path is root.
+		// - Include the leading slash otherwise.
 		if containReplacePrefixMatchURLRewriteFilter {
 			exactPrefixPredicate := atc.NewPredicateHTTPPath(atc.OpEqual, path)
 			subpathsPredicate := func() atc.Predicate {
@@ -482,10 +486,16 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		match.MatchIndex,
 	)
 
-	containReplacePrefixMatchURLRewriteFilter := lo.ContainsBy(httproute.Spec.Rules[match.RuleIndex].Filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
-			filter.URLRewrite.Path != nil && filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier
-	})
+	// If the rule contains a URLRewrite filter with `ReplacePrefixMatch` modifier,
+	// we should translate the prefix path match to a regex match to create a capture group to make sure that path is correctly modified.
+	// For example, to replace `/prefix/*` to `/replace/*`, we should capture the part after `/prefix/` into group $1 and modify the path to `/replace/$1`.
+	containReplacePrefixMatchURLRewriteFilter := lo.ContainsBy(
+		httproute.Spec.Rules[match.RuleIndex].Filters,
+		func(filter gatewayapi.HTTPRouteFilter) bool {
+			return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
+				filter.URLRewrite.Path != nil &&
+				filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier
+		})
 
 	r := &kongstate.Route{
 		Route: kong.Route{

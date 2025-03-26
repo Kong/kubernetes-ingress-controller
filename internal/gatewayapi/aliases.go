@@ -25,7 +25,7 @@ type (
 	CommonRouteSpec                           = gatewayv1.CommonRouteSpec
 	Duration                                  = gatewayv1.Duration
 	Gateway                                   = gatewayv1.Gateway
-	GatewayAddress                            = gatewayv1.GatewayAddress
+	GatewaySpecAddress                        = gatewayv1.GatewaySpecAddress
 	GatewayClass                              = gatewayv1.GatewayClass
 	GatewayClassList                          = gatewayv1.GatewayClassList
 	GatewayClassSpec                          = gatewayv1.GatewayClassSpec

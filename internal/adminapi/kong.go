@@ -44,11 +44,7 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	if wsName == "" {
 		return NewClient(client), nil
 	}
-
-	// Ensure that the client is ready to be used by performing a status check.
-	if _, err = client.Status(ctx); err != nil {
-		return nil, KongClientNotReadyError{Err: err}
-	}
+	// Do not check `/status` endpoint when workspace is given because KIC may not be granted to call /status and only allowed to access the given workspace.
 
 	// If a workspace was provided, verify whether or not it exists.
 	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))

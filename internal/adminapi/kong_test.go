@@ -110,7 +110,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 		name            string
 		adminAPIReady   bool
 		workspaceExists bool
-		expectError     error
+		expectError error
 	}{
 		{
 			name:            "admin api is ready and workspace exists",
@@ -121,11 +121,6 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			name:            "admin api is ready and workspace doesn't exist",
 			adminAPIReady:   true,
 			workspaceExists: false,
-		},
-		{
-			name:          "admin api is not ready",
-			adminAPIReady: false,
-			expectError:   adminapi.KongClientNotReadyError{},
 		},
 	}
 
@@ -147,7 +142,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			)
 
 			if tc.expectError != nil {
-				require.IsType(t, err, tc.expectError)
+				require.IsType(t, tc.expectError, err)
 				return
 			}
 			require.NoError(t, err)

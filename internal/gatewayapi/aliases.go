@@ -25,7 +25,6 @@ type (
 	CommonRouteSpec                           = gatewayv1.CommonRouteSpec
 	Duration                                  = gatewayv1.Duration
 	Gateway                                   = gatewayv1.Gateway
-	GatewaySpecAddress                        = gatewayv1.GatewaySpecAddress
 	GatewayClass                              = gatewayv1.GatewayClass
 	GatewayClassList                          = gatewayv1.GatewayClassList
 	GatewayClassSpec                          = gatewayv1.GatewayClassSpec
@@ -33,6 +32,7 @@ type (
 	GatewayController                         = gatewayv1.GatewayController
 	GatewayList                               = gatewayv1.GatewayList
 	GatewaySpec                               = gatewayv1.GatewaySpec
+	GatewaySpecAddress                        = gatewayv1.GatewaySpecAddress
 	GatewayStatus                             = gatewayv1.GatewayStatus
 	GatewayStatusAddress                      = gatewayv1.GatewayStatusAddress
 	GatewayTLSConfig                          = gatewayv1.GatewayTLSConfig
@@ -141,6 +141,7 @@ const (
 	HTTPMethodGet                         = gatewayv1.HTTPMethodGet
 	HTTPProtocolType                      = gatewayv1.HTTPProtocolType
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
+	HTTPRouteFilterCORS                   = gatewayv1.HTTPRouteFilterCORS
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	HTTPRouteFilterRequestMirror          = gatewayv1.HTTPRouteFilterRequestMirror
 	HTTPRouteFilterRequestRedirect        = gatewayv1.HTTPRouteFilterRequestRedirect

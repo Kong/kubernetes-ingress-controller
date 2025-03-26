@@ -110,7 +110,6 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 		name            string
 		adminAPIReady   bool
 		workspaceExists bool
-
 		expectError error
 	}{
 		{

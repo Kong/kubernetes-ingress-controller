@@ -165,11 +165,11 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef, pa
 
 	for _, hRef := range httpBackendRef {
 		backendRef := hRef.BackendRef
-		if backendRef.BackendObjectReference.Group == nil {
-			backendRef.BackendObjectReference.Group = lo.ToPtr(gatewayapi.Group(""))
+		if backendRef.Group == nil {
+			backendRef.Group = lo.ToPtr(gatewayapi.Group(""))
 		}
-		if backendRef.BackendObjectReference.Namespace == nil {
-			backendRef.BackendObjectReference.Namespace = lo.ToPtr(gatewayapi.Namespace(parentRoute.Namespace))
+		if backendRef.Namespace == nil {
+			backendRef.Namespace = lo.ToPtr(gatewayapi.Namespace(parentRoute.Namespace))
 		}
 		backendRefs = append(backendRefs, backendRef)
 	}
@@ -296,9 +296,9 @@ func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 	if backendRequestTimeout == DefaultServiceTimeout {
 		return
 	}
-	svc.Service.ReadTimeout = kong.Int(backendRequestTimeout)
-	svc.Service.ConnectTimeout = kong.Int(backendRequestTimeout)
-	svc.Service.WriteTimeout = kong.Int(backendRequestTimeout)
+	svc.ReadTimeout = kong.Int(backendRequestTimeout)
+	svc.ConnectTimeout = kong.Int(backendRequestTimeout)
+	svc.WriteTimeout = kong.Int(backendRequestTimeout)
 }
 
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
@@ -728,7 +728,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{}, err
 	}
 	if len(headers) > 0 {
-		r.Route.Headers = headers
+		r.Headers = headers
 	}
 
 	// stripPath needs to be disabled by default to be conformant with the Gateway API
@@ -844,7 +844,7 @@ func getRoutesFromMatches(
 			if match.Path != nil {
 				paths := generateKongRoutePathFromHTTPRouteMatch(match)
 				for _, p := range paths {
-					matchRoute.Route.Paths = append(matchRoute.Route.Paths, kong.String(p))
+					matchRoute.Paths = append(matchRoute.Paths, kong.String(p))
 				}
 			}
 
@@ -853,7 +853,7 @@ func getRoutesFromMatches(
 			if match.Method != nil {
 				method := string(*match.Method)
 				if _, ok := seenMethods[method]; !ok {
-					matchRoute.Route.Methods = append(matchRoute.Route.Methods, kong.String(string(*match.Method)))
+					matchRoute.Methods = append(matchRoute.Methods, kong.String(string(*match.Method)))
 					seenMethods[method] = struct{}{}
 				}
 			}
@@ -879,14 +879,14 @@ func getRoutesFromMatches(
 			// For exact matches, we transform the path into a regular expression that terminates after the value.
 			if match.Path != nil {
 				for _, path := range generateKongRoutePathFromHTTPRouteMatch(match) {
-					route.Route.Paths = append(route.Route.Paths, kong.String(path))
+					route.Paths = append(route.Paths, kong.String(path))
 				}
 			}
 
 			if match.Method != nil {
 				method := string(*match.Method)
 				if _, ok := seenMethods[method]; !ok {
-					route.Route.Methods = append(route.Route.Methods, kong.String(string(*match.Method)))
+					route.Methods = append(route.Methods, kong.String(string(*match.Method)))
 					seenMethods[method] = struct{}{}
 				}
 			}
@@ -1503,7 +1503,7 @@ func generateKongRouteModifierForURLRewritePrefixMatch(path string, expressionsR
 				// route "/prefix" to "/replacement" and "/prefix/" to "/replacement/" correctly.
 				return atc.NewPredicateHTTPPath(atc.OpRegexMatch, fmt.Sprintf("^%s(/.*)", path))
 			}()
-			route.Route.Expression = lo.ToPtr(atc.Or(exactPrefixPredicate, subpathsPredicate).Expression())
+			route.Expression = lo.ToPtr(atc.Or(exactPrefixPredicate, subpathsPredicate).Expression())
 		}
 	}
 

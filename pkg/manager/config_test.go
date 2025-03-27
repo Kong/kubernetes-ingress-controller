@@ -14,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -103,7 +102,7 @@ func TestNewConfig(t *testing.T) {
 			EnableConfigDumps:    false,
 			DumpSensitiveConfig:  false,
 			DiagnosticServerPort: consts.DiagnosticsPort,
-			FeatureGates:         config.GetFeatureGatesDefaults(),
+			FeatureGates:         managercfg.GetFeatureGatesDefaults(),
 			TermDelay:            0,
 			Konnect: managercfg.KonnectConfig{
 				Address:                     "https://us.kic.api.konghq.com",

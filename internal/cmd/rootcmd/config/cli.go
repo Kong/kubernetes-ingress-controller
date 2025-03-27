@@ -17,7 +17,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
@@ -192,7 +191,7 @@ func (c *CLIConfig) bindFlagSet() {
 
 	// Feature Gates (see FEATURE_GATES.md).
 	flagSet.Var(flags.NewMapStringBoolForFeatureGatesWithDefaults(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+
-		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", config.DocsURL))
+		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", managercfg.DocsURL))
 
 	// SIGTERM or SIGINT signal delay.
 	flagSet.DurationVar(&c.TermDelay, "term-delay", 0, "The time delay to sleep before SIGTERM or SIGINT will shut down the ingress controller.")

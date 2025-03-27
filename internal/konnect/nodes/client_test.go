@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
@@ -30,7 +30,7 @@ func TestNodesClientUserAgent(t *testing.T) {
 	ts := httptest.NewServer(newMockNodesServer(t))
 	t.Cleanup(ts.Close)
 
-	c, err := nodes.NewClient(config.KonnectConfig{Address: ts.URL})
+	c, err := nodes.NewClient(managercfg.KonnectConfig{Address: ts.URL})
 	require.NoError(t, err)
 
 	_, err = c.GetNode(t.Context(), "test-node-id")

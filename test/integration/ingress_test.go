@@ -27,7 +27,7 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -316,8 +316,8 @@ func TestIngressServiceUpstream(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service.ObjectMeta.Annotations = map[string]string{}
-	service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
+	service.Annotations = map[string]string{}
+	service.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
@@ -1072,7 +1072,7 @@ func TestIngressMatchByHost(t *testing.T) {
 func TestIngressRewriteURI(t *testing.T) {
 	ctx := t.Context()
 
-	if !strings.Contains(testenv.ControllerFeatureGates(), config.RewriteURIsFeature) {
+	if !strings.Contains(testenv.ControllerFeatureGates(), managercfg.RewriteURIsFeature) {
 		t.Skipf("rewrite uri feature is disabled")
 	}
 

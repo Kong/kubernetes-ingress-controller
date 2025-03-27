@@ -155,7 +155,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Contex
 		return nil
 	}
 	httproutes := &gatewayapi.HTTPRouteList{}
-	if err := r.Client.List(ctx, httproutes); err != nil {
+	if err := r.List(ctx, httproutes); err != nil {
 		r.Log.Error(err, "Failed to list httproutes in watch", "referencegrant", grant.Name)
 		return nil
 	}
@@ -206,7 +206,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 
 	// map all Gateway objects
 	gatewayList := gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, &gatewayList); err != nil {
+	if err := r.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "Failed to list gateway objects from the cached client")
 		return nil
 	}
@@ -236,7 +236,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 
 	// map all HTTPRoute objects
 	httprouteList := gatewayapi.HTTPRouteList{}
-	if err := r.Client.List(ctx, &httprouteList); err != nil {
+	if err := r.List(ctx, &httprouteList); err != nil {
 		r.Log.Error(err, "Failed to list httproute objects from the cached client")
 		return nil
 	}
@@ -303,7 +303,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 
 	// map all HTTPRoute objects
 	httprouteList := gatewayapi.HTTPRouteList{}
-	if err := r.Client.List(ctx, &httprouteList); err != nil {
+	if err := r.List(ctx, &httprouteList); err != nil {
 		r.Log.Error(err, "Failed to list httproute objects from the cached client")
 		return nil
 	}
@@ -592,8 +592,8 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 		var conditionFound bool
 		for i, cond := range parentStatus.Conditions {
 			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
-				if !(cond.Status == resolvedRefsStatus &&
-					cond.Reason == string(reason)) {
+				if cond.Status != resolvedRefsStatus ||
+					cond.Reason != string(reason) {
 					parentStatus.Conditions[i] = resolvedRefsCondition
 					changed = true
 				}
@@ -632,7 +632,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			// Check if all the objects referenced actually exist
 			// Only services are currently supported as BackendRef objects
 			service := &corev1.Service{}
-			if err := r.Client.Get(ctx, targetNN, service); err != nil {
+			if err := r.Get(ctx, targetNN, service); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return "", "", err
 				}
@@ -650,7 +650,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				}
 
 				referenceGrantList := &gatewayapi.ReferenceGrantList{}
-				if err := r.Client.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
+				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
 					return "", "", err
 				}
 				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"

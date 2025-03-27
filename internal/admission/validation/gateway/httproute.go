@@ -158,13 +158,13 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 			}
 
 			// We don't support any backendRef types except Kubernetes Services.
-			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
+			if ref.Group != nil && *ref.Group != "core" && *ref.Group != "" {
 				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported group for httproute backendRefs, only core is supported",
-					ruleIndex, refIndex, *ref.BackendRef.Group)
+					ruleIndex, refIndex, *ref.Group)
 			}
-			if ref.BackendRef.Kind != nil && *ref.BackendRef.Kind != KindService {
+			if ref.Kind != nil && *ref.Kind != KindService {
 				return fmt.Errorf("rules[%d].backendRefs[%d]: %s is not a supported kind for httproute backendRefs, only %s is supported",
-					ruleIndex, refIndex, *ref.BackendRef.Kind, KindService)
+					ruleIndex, refIndex, *ref.Kind, KindService)
 			}
 		}
 

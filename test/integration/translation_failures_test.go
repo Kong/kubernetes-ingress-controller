@@ -138,7 +138,7 @@ func TestTranslationFailures(t *testing.T) {
 			name: "missing client-cert for service",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				service := validService()
-				service.ObjectMeta.Annotations = map[string]string{
+				service.Annotations = map[string]string{
 					"konghq.com/client-cert": "not-existing-secret",
 				}
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
@@ -182,7 +182,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				ingress := ingressWithPathBackedByService(service)
 				const notMatchingPort = 90
-				ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service.Port = netv1.ServiceBackendPort{
+				ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port = netv1.ServiceBackendPort{
 					Number: notMatchingPort,
 				}
 				ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})

@@ -593,5 +593,5 @@ func TestServiceOverride_DeterministicOrderWhenMoreThan1KubernetesService(t *tes
 	// We expect default/service-3 to be the last one to be processed effectively overriding the previous annotations.
 	const expectedRetries = 3
 	require.NoError(t, service.override())
-	require.Equal(t, expectedRetries, *service.Service.Retries)
+	require.Equal(t, expectedRetries, *service.Retries)
 }

@@ -34,7 +34,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
@@ -253,7 +253,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 				controllerDeployment.Spec.Template.Spec.Containers[i].Env,
 				corev1.EnvVar{
 					Name:  "CONTROLLER_FEATURE_GATES",
-					Value: fmt.Sprintf("%s=true", config.GatewayAlphaFeature),
+					Value: fmt.Sprintf("%s=true", managercfg.GatewayAlphaFeature),
 				},
 			)
 		}
@@ -480,7 +480,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	t.Logf("making our class a default IngressClass")
 	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, "kong", metav1.GetOptions{})
 	require.NoError(t, err)
-	class.ObjectMeta.Annotations["ingressclass.kubernetes.io/is-default-class"] = "true"
+	class.Annotations["ingressclass.kubernetes.io/is-default-class"] = "true"
 	_, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
 	require.NoError(t, err)
 

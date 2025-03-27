@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
@@ -157,7 +157,7 @@ func TestLicenseClient(t *testing.T) {
 			ts := httptest.NewServer(server)
 			defer ts.Close()
 
-			c, err := license.NewClient(config.KonnectConfig{Address: ts.URL})
+			c, err := license.NewClient(managercfg.KonnectConfig{Address: ts.URL})
 			require.NoError(t, err)
 			tc.assertions(t, c)
 		})

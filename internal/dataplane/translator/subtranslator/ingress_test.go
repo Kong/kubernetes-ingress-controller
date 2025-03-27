@@ -1596,7 +1596,7 @@ func TestTranslateIngress(t *testing.T) {
 			// order is not required on this level of translation and that would be an unnecessary performance hit.
 			for _, service := range translatedServices {
 				sort.Slice(service.Routes, func(i, j int) bool {
-					return *service.Routes[i].Route.Name > *service.Routes[j].Route.Name
+					return *service.Routes[i].Name > *service.Routes[j].Name
 				})
 			}
 

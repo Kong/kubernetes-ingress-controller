@@ -16,7 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and
@@ -209,14 +209,14 @@ func (c *Client) PodReference() (k8stypes.NamespacedName, bool) {
 type ClientFactory struct {
 	logger     logr.Logger
 	workspace  string
-	opts       config.AdminAPIClientConfig
+	opts       managercfg.AdminAPIClientConfig
 	adminToken string
 }
 
 func NewClientFactoryForWorkspace(
 	logger logr.Logger,
 	workspace string,
-	clientOpts config.AdminAPIClientConfig,
+	clientOpts managercfg.AdminAPIClientConfig,
 	adminToken string,
 ) ClientFactory {
 	return ClientFactory{

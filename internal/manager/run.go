@@ -44,7 +44,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
@@ -84,11 +83,11 @@ func New(
 	if err := c.Validate(); err != nil {
 		return nil, fmt.Errorf("config invalid: %w", err)
 	}
-	existingFeatureGates := config.GetFeatureGatesDefaults()
+	existingFeatureGates := managercfg.GetFeatureGatesDefaults()
 	for feature, enabled := range c.FeatureGates {
 		logger.Info("Found configuration option for gated feature", "feature", feature, "enabled", enabled)
 		if _, ok := existingFeatureGates[feature]; !ok {
-			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, config.DocsURL)
+			return nil, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, managercfg.DocsURL)
 		}
 	}
 
@@ -156,8 +155,8 @@ func New(
 		SkipCACertificates:            c.SkipCACertificates,
 		EnableReverseSync:             c.EnableReverseSync,
 		ExpressionRoutes:              dpconf.ShouldEnableExpressionRoutes(routerFlavor),
-		SanitizeKonnectConfigDumps:    c.FeatureGates.Enabled(config.SanitizeKonnectConfigDumpsFeature),
-		FallbackConfiguration:         c.FeatureGates.Enabled(config.FallbackConfigurationFeature),
+		SanitizeKonnectConfigDumps:    c.FeatureGates.Enabled(managercfg.SanitizeKonnectConfigDumpsFeature),
+		FallbackConfiguration:         c.FeatureGates.Enabled(managercfg.FallbackConfigurationFeature),
 		UseLastValidConfigForFallback: c.UseLastValidConfigForFallback,
 	}
 
